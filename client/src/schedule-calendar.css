@@ -1,0 +1,403 @@
+/* ============================================================================
+   schedule-calendar.css — BuildFlow Schedule redesign
+   Adds a month calendar layout, a Month/Week/List segmented switch, a
+   crew-availability + upcoming-milestones rail, and a trade legend — all in the
+   AI Command Center design language (white cards, --wx-* tokens, soft shadows).
+   Scoped to `.sched-rx`; reuses the existing data-reveal / dx-tilt motion so
+   every current animation keeps running. New calendar cells get their own
+   pure-CSS entrance so switching views still animates (the IntersectionObserver
+   in useHudMotion only scans once on mount).
+   ========================================================================== */
+
+.sched-rx {
+  /* trade palette — mirrors the dashboard cc-* tones, keyed to the legend */
+  --sc-concrete: #2f6bff;
+  --sc-framing: #c2410c;
+  --sc-mep: #6d28d9;
+  --sc-finishes: #188038;
+  --sc-sitework: #0e7490;
+  --sc-inspections: #b0338c;
+  --sc-milestone: #c5221f;
+  --sc-holiday: #8a877e;
+}
+
+/* ============================ view segmented switch ==================== */
+.sched-rx .sched-seg {
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 12px;
+  background: var(--wx-card);
+  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.04);
+}
+.sched-rx .sched-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 15px;
+  background: none;
+  color: var(--wx-mut);
+  font-family: var(--cc-sans, Inter, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.sched-rx .sched-seg button svg { width: 15px; height: 15px; }
+.sched-rx .sched-seg button:hover { color: var(--wx-ink); }
+.sched-rx .sched-seg button.active {
+  background: var(--wx-ink);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(28, 28, 26, 0.18);
+}
+
+/* + New Activity */
+.sched-rx .sched-new-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--sc-concrete);
+  border-radius: 11px;
+  padding: 9px 16px;
+  background: var(--sc-concrete);
+  color: #fff;
+  font-family: var(--cc-sans, Inter, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(47, 107, 255, 0.28);
+  transition: transform 0.16s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.sched-rx .sched-new-activity:hover { background: #245ae0; transform: translateY(-1px); box-shadow: 0 12px 24px rgba(47, 107, 255, 0.34); }
+.sched-rx .sched-new-activity:active { transform: scale(0.98); }
+.sched-rx .sched-new-activity svg { width: 16px; height: 16px; }
+
+/* month stepper (‹ May 2026 ›) + Today */
+.sched-rx .sched-monthbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sched-rx .sched-monthnav { display: inline-flex; align-items: center; gap: 8px; }
+.sched-rx .sched-monthnav .sched-icon-btn,
+.sched-rx .sched-today-btn {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--wx-line);
+  border-radius: 10px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.16s ease;
+}
+.sched-rx .sched-monthnav .sched-icon-btn { width: 36px; height: 36px; }
+.sched-rx .sched-today-btn { padding: 0 16px; height: 36px; font-family: var(--cc-sans, Inter, sans-serif); font-size: 13px; font-weight: 600; }
+.sched-rx .sched-monthnav .sched-icon-btn:hover,
+.sched-rx .sched-today-btn:hover { background: var(--wx-bg-2); border-color: var(--wx-line); }
+.sched-rx .sched-today-btn:active { transform: scale(0.97); }
+.sched-rx .sched-month-title {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+  min-width: 168px;
+  text-align: center;
+}
+
+/* ============================ month calendar ========================== */
+.sched-rx .sched-cal { width: 100%; }
+.sched-rx .sched-cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--wx-line-soft);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  background: var(--wx-bg-2);
+}
+.sched-rx .sched-cal-dow span {
+  padding: 11px 12px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  background: var(--wx-line-soft);
+  gap: 1px;
+}
+.sched-rx .sched-cal-cell {
+  position: relative;
+  min-height: 116px;
+  padding: 8px 8px 10px;
+  background: var(--wx-card);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: schedCellIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0) * 55ms);
+}
+@keyframes schedCellIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.sched-rx .sched-cal-cell.out-month { background: color-mix(in srgb, var(--wx-bg-2) 55%, var(--wx-card)); }
+.sched-rx .sched-cal-cell.out-month .sched-cal-daynum { color: var(--wx-faint); }
+.sched-rx .sched-cal-cell.is-weekend { background: color-mix(in srgb, var(--wx-bg-2) 30%, var(--wx-card)); }
+.sched-rx .sched-cal-cell.is-holiday { background: color-mix(in srgb, var(--sc-holiday) 9%, var(--wx-card)); }
+.sched-rx .sched-cal-daynum {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  align-self: flex-start;
+  min-width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-cal-cell.is-today .sched-cal-daynum {
+  background: var(--sc-concrete);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
+}
+.sched-rx .sched-holiday-tag { font-size: 10.5px; font-weight: 600; color: var(--sc-holiday); margin-top: -2px; }
+
+/* activity chips */
+.sched-rx .sched-act {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 11%, var(--wx-card));
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.18s ease;
+}
+.sched-rx .sched-act:hover { transform: translateX(2px); background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 20%, var(--wx-card)); }
+.sched-rx .sched-act-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--sc-tone, var(--sc-concrete)); }
+.sched-rx .sched-act-text { min-width: 0; flex: 1; line-height: 1.25; }
+.sched-rx .sched-act-text strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-act-text em {
+  font-size: 10.5px;
+  font-style: normal;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.sched-rx .sched-act.is-milestone { background: color-mix(in srgb, var(--sc-milestone) 12%, var(--wx-card)); }
+.sched-rx .sched-act.is-milestone .sched-act-dot { border-radius: 2px; }
+.sched-rx .sched-act-more {
+  border: 0;
+  background: none;
+  color: var(--wx-mut);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 8px;
+  align-self: flex-start;
+}
+.sched-rx .sched-act-more:hover { color: var(--sc-concrete); }
+
+/* ============================ trade legend ============================ */
+.sched-rx .sched-trade-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 14px 4px 2px;
+}
+.sched-rx .sched-trade-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-trade-legend i { width: 9px; height: 9px; border-radius: 50%; }
+.sched-rx .sched-trade-legend i.milestone { border-radius: 2px; }
+
+/* ============================ rail panels ============================= */
+.sched-rx .sched-rail-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 18px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+}
+.sched-rx .sched-rail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sched-rx .sched-rail-head h2 { font-family: var(--cc-sans, Inter, sans-serif); font-size: 15px; font-weight: 700; color: var(--wx-ink); }
+.sched-rx .sched-rail-link {
+  border: 0;
+  background: none;
+  color: var(--sc-concrete);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.sched-rx .sched-rail-link:hover { opacity: 0.7; }
+.sched-rx .sched-rail-foot-btn {
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.sched-rx .sched-rail-foot-btn:hover { background: var(--wx-bg-2); }
+
+/* crew availability rows */
+.sched-rx .sched-avail-list { display: grid; gap: 13px; }
+.sched-rx .sched-avail-row { display: flex; align-items: center; gap: 10px; }
+.sched-rx .sched-avail-name { flex: 1; min-width: 0; font-family: var(--cc-sans, Inter, sans-serif); font-size: 13.5px; font-weight: 600; color: var(--wx-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched-rx .sched-avail-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sched-rx .sched-avail-badge.available { background: var(--cc-green-soft, #e2f1e6); color: var(--sc-finishes); }
+.sched-rx .sched-avail-badge.limited { background: #fdf0dc; color: var(--sc-framing); }
+.sched-rx .sched-avail-badge.busy { background: #efe8f8; color: var(--sc-mep); }
+.sched-rx .sched-avail-ratio { font-family: var(--cc-sans, Inter, sans-serif); font-size: 12.5px; font-weight: 650; color: var(--wx-mut); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 34px; text-align: right; }
+
+/* upcoming milestones rows */
+.sched-rx .sched-miles-list { display: grid; gap: 14px; }
+.sched-rx .sched-mile-row { display: flex; align-items: center; gap: 11px; }
+.sched-rx .sched-mile-ico {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 13%, transparent);
+  color: var(--sc-tone, var(--sc-concrete));
+}
+.sched-rx .sched-mile-ico svg { width: 16px; height: 16px; }
+.sched-rx .sched-mile-body { flex: 1; min-width: 0; }
+.sched-rx .sched-mile-body strong { display: block; font-family: var(--cc-sans, Inter, sans-serif); font-size: 13px; font-weight: 650; color: var(--wx-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched-rx .sched-mile-body span { font-size: 12px; color: var(--wx-faint); font-weight: 500; }
+.sched-rx .sched-mile-date { font-family: var(--cc-sans, Inter, sans-serif); font-size: 12px; font-weight: 600; color: var(--wx-mut); white-space: nowrap; flex: none; }
+
+/* schedule alert rows restyled to the dashboard cc-alert language */
+.sched-rx .sched-alert2 {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--wx-line-soft);
+  background: none;
+  padding: 0 0 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+.sched-rx .sched-alert2:hover { opacity: 0.72; }
+.sched-rx .sched-alert2:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.sched-rx .sched-alert2-ico {
+  display: grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.sched-rx .sched-alert2-ico svg { width: 16px; height: 16px; }
+.sched-rx .sched-alert2.danger { color: var(--sc-milestone); }
+.sched-rx .sched-alert2.warning { color: var(--sc-framing); }
+.sched-rx .sched-alert2.info { color: var(--sc-concrete); }
+.sched-rx .sched-alert2-body { flex: 1; min-width: 0; }
+.sched-rx .sched-alert2-body strong { display: block; font-family: var(--cc-sans, Inter, sans-serif); font-size: 13px; font-weight: 650; color: var(--wx-ink); }
+.sched-rx .sched-alert2-body span { font-size: 12px; color: var(--wx-faint); font-weight: 500; }
+.sched-rx .sched-alert2-time { font-size: 11px; color: var(--wx-faint); font-weight: 500; white-space: nowrap; flex: none; }
+
+/* ============================ drag & drop ============================= */
+/* draggable job chips / rows advertise themselves with a grab cursor */
+.sched-rx .sched-act[draggable],
+.sched-rx .sched-act,
+.sched-rx .schedule-list-view button { cursor: grab; }
+.sched-rx .sched-act.dragging,
+.sched-rx .schedule-list-view button.dragging { cursor: grabbing; }
+.sched-rx .sched-act.dragging { box-shadow: 0 14px 30px rgba(28, 28, 26, 0.18); }
+
+/* month calendar cell: highlight as a drop target while a job hovers over it */
+.sched-rx .sched-cal-cell.drop-over {
+  background: color-mix(in srgb, var(--sc-concrete) 12%, var(--wx-card));
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+
+/* list view grouped by day — each day block is a reschedule drop target */
+.sched-rx .sched-list-day { display: block; }
+.sched-rx .sched-list-dayhead {
+  padding: 8px 20px;
+  background: var(--wx-bg-2);
+  border-bottom: 1px solid var(--wx-line-soft);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-list-day.drop-over { box-shadow: inset 0 0 0 2px var(--sc-concrete); }
+.sched-rx .sched-list-day.drop-over .sched-list-dayhead {
+  background: color-mix(in srgb, var(--sc-concrete) 16%, var(--wx-card));
+  color: var(--sc-concrete);
+}
+
+/* ============================ responsive ============================== */
+@media (max-width: 1180px) {
+  .sched-rx .sched-cal-cell { min-height: 96px; }
+}
+@media (max-width: 900px) {
+  .sched-rx .sched-cal-cell { min-height: 78px; padding: 6px; }
+  .sched-rx .sched-act-text em { display: none; }
+  .sched-rx .sched-month-title { font-size: 17px; min-width: 130px; }
+}

@@ -1,0 +1,7 @@
+# Secrets & local config — never commit (analytics keys live here)
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/

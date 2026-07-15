@@ -1,0 +1,412 @@
+/* ============================================================================
+   BuildFlow — Redesign Refinement Layer
+   ----------------------------------------------------------------------------
+   Loaded LAST (after styles.css + overrides) so it wins at equal specificity.
+   Goal: keep the reference identity (navy + orange, light theme, same layout)
+   and elevate it to a premium modern SaaS feel — refined depth, consistent
+   radii, calmer neutrals, tighter type, and smooth micro-interactions.
+   Non-destructive: overrides only, no structural/markup assumptions.
+   ============================================================================ */
+
+:root {
+  /* Layered soft shadows (replace the single flat card shadow) */
+  --shadow-xs: 0 1px 2px rgba(15, 35, 58, 0.05);
+  --shadow-card: 0 1px 2px rgba(15, 35, 58, 0.04), 0 6px 16px rgba(15, 35, 58, 0.06);
+  --shadow-card-hover: 0 2px 6px rgba(15, 35, 58, 0.07), 0 18px 38px rgba(15, 35, 58, 0.12);
+  --shadow-pop: 0 10px 24px rgba(15, 35, 58, 0.12), 0 30px 60px rgba(15, 35, 58, 0.16);
+  --shadow-accent: 0 10px 24px rgba(251, 133, 0, 0.26);
+
+  /* Consistent radii */
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+
+  /* Refined neutrals */
+  --line-soft: #e7edf6;
+  --ink-strong: #0d1f3c;
+  --ink-soft: #5b6b82;
+  --focus: rgba(251, 133, 0, 0.3);
+}
+
+/* ---- Base polish ---------------------------------------------------------- */
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.app-shell {
+  background:
+    radial-gradient(1200px 460px at 80% -10%, rgba(21, 104, 201, 0.05), transparent 62%),
+    linear-gradient(180deg, #eef3f9, #f5f6fe 44%);
+}
+
+::selection {
+  background: rgba(251, 133, 0, 0.22);
+  color: inherit;
+}
+
+/* Refined scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c6d3e5 transparent;
+}
+*::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #c6d3e5;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #a9bcd4;
+  background-clip: content-box;
+}
+
+/* Global smoother focus ring */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ---- Cards & panels: unified refined depth -------------------------------- */
+.kpi-card,
+.dashboard-feed-panel,
+.panel,
+.resource-card,
+.project-hero,
+.project-switcher {
+  border-color: var(--line-soft);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 220ms ease,
+    transform 220ms ease,
+    border-color 220ms ease;
+}
+
+.dashboard-feed-panel:hover,
+.panel:hover,
+.resource-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ---- KPI cards ------------------------------------------------------------ */
+.kpi-grid {
+  gap: 18px;
+}
+
+.kpi-card {
+  gap: 20px;
+  padding: 20px 22px;
+}
+
+.kpi-card-button {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.kpi-card-button:hover,
+.kpi-card-button.active {
+  border-color: rgba(251, 133, 0, 0.34);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+}
+
+.kpi-card strong {
+  color: var(--ink-strong);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-icon,
+.large-icon {
+  box-shadow:
+    0 10px 22px rgba(15, 35, 58, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* ---- Sidebar (keep navy identity, refine interactions) -------------------- */
+.nav-item {
+  border-radius: var(--r-sm);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 120ms ease;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.nav-item:active {
+  transform: translateX(1px);
+}
+
+.sidebar-card {
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ---- Topbar & search ------------------------------------------------------ */
+.topbar {
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom-color: var(--line-soft);
+  backdrop-filter: saturate(1.4) blur(11px);
+}
+
+.search-box {
+  border-radius: var(--r-sm);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.search-box:focus-within {
+  border-color: rgba(251, 133, 0, 0.55);
+  box-shadow: 0 0 0 4px var(--focus);
+  background: #fff;
+}
+
+/* ---- Buttons -------------------------------------------------------------- */
+.icon-button,
+.outline-button,
+.export-button,
+.toggle-button,
+.tutorial-start-button {
+  border-radius: var(--r-sm);
+  border-color: var(--line-soft);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.icon-button:hover,
+.outline-button:hover,
+.export-button:hover,
+.toggle-button:hover {
+  border-color: #c6d5e8;
+  box-shadow: var(--shadow-xs);
+  transform: translateY(-1px);
+}
+
+.icon-button:active,
+.outline-button:active,
+.export-button:active,
+.toggle-button:active {
+  transform: translateY(0);
+}
+
+.primary-button {
+  border: 0;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #2e69ff, #2f6bff);
+  color: #fff;
+  box-shadow: var(--shadow-accent);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    filter 150ms ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(251, 133, 0, 0.36);
+  filter: brightness(1.04);
+}
+
+.primary-button:active {
+  transform: translateY(0);
+}
+
+/* ---- Badges & legend dots ------------------------------------------------- */
+.badge {
+  border-radius: 999px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+
+.legend-list i {
+  box-shadow: 0 0 0 3px rgba(15, 35, 58, 0.04);
+}
+
+/* ---- Tables --------------------------------------------------------------- */
+.table-head {
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.table-row {
+  transition: background 140ms ease;
+}
+
+.table-row:hover {
+  background: rgba(21, 104, 201, 0.04);
+}
+
+/* ---- Project cards -------------------------------------------------------- */
+.project-card {
+  border-color: var(--line-soft);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease;
+}
+
+.project-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+/* ---- Empty states (calmer, more refined) ---------------------------------- */
+.empty-state {
+  color: var(--ink-soft);
+}
+
+.empty-state strong,
+.empty-state h3,
+.empty-state h4 {
+  color: var(--ink-strong);
+}
+
+.panel-note {
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(247, 181, 0, 0.28);
+}
+
+/* ============================================================================
+   GLOBAL PASS 2 — per-module surfaces so the refresh is consistent everywhere
+   ============================================================================ */
+
+/* ---- Every module's stat / directory / content cards --------------------- */
+.crew-stat-card,
+.crew-directory-card,
+.crew-review-panel,
+.equipment-stat-card,
+.equipment-directory-card,
+.material-stat-card,
+.material-directory-card,
+.field-stat-card,
+.field-entry-card,
+.field-update-directory-card,
+.reports-card,
+.reports-chart-card,
+.reports-efficiency-card,
+.reports-kpi-card,
+.forecast-card,
+.fuel-efficiency-card,
+.optimization-result-card,
+.review-card,
+.weather-card,
+.schedule-side-panel,
+.schedule-filter-panel,
+.schedule-ai-profile-panel,
+.unassigned-card,
+.map-today-jobs-panel,
+.map-field-updates-panel,
+.map-route-card,
+.map-weather-card,
+.live-tracking-panel,
+.settings-panel,
+.settings-account-card {
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease,
+    border-color 200ms ease;
+}
+
+/* Interactive directory cards get a subtle lift */
+.crew-directory-card:hover,
+.equipment-directory-card:hover,
+.material-directory-card:hover,
+.field-update-directory-card:hover,
+.reports-card:hover,
+.review-card:hover,
+.map-route-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+/* Stat number crispness across modules */
+.crew-stat-card strong,
+.equipment-stat-card strong,
+.material-stat-card strong,
+.field-stat-card strong,
+.reports-kpi-card strong {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Section eyebrows & panel titles: calmer, more refined --------------- */
+.dashboard-feed-panel header span {
+  color: #7c8aa1;
+  letter-spacing: 0.09em;
+}
+
+.panel-header h2 {
+  color: #1a2c49;
+  letter-spacing: 0.04em;
+}
+
+.page-title h1 {
+  letter-spacing: -0.02em;
+}
+
+/* ---- Empty states: make them look intentional, not unfinished ------------ */
+.dashboard-feed-empty {
+  gap: 4px;
+  margin-top: 2px;
+  padding: 16px;
+  border-top: 0;
+  border: 1px dashed #d4deec;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, rgba(245, 248, 252, 0.7), rgba(245, 248, 252, 0.25));
+}
+
+.dashboard-feed-empty strong {
+  font-size: 14px;
+}
+
+/* Centered empty state (module lists) — softer icon + rhythm */
+.empty-state svg {
+  opacity: 0.9;
+}
+
+/* ---- 'View all' / link buttons: crisper affordance ----------------------- */
+.panel-header button,
+.dashboard-feed-panel header a,
+.view-all-alerts {
+  border-radius: var(--r-sm);
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.panel-header button:hover {
+  color: #0a4ea0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Notifications / popover panels: refined depth ----------------------- */
+.notifications-panel,
+.support-chat-panel {
+  border-radius: var(--r-md);
+  border-color: var(--line-soft);
+  box-shadow: var(--shadow-pop);
+}

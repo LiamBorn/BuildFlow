@@ -1,0 +1,56 @@
+/* ============================================================================
+   assistant-global.css — makes the floating "Ask AI" launcher button
+   available and styled on every BuildFlow app page, not just the Help
+   Center. The Help Center's own styles are scoped to `.help-center-page`, so
+   these unscoped `.hc-*` rules (with self-contained welcome tokens) light it
+   up anywhere the button renders. In the Help Center the more-specific
+   `.help-center-page .hc-*` rules win, so its look is unchanged.
+   ========================================================================== */
+
+.hc-assistant {
+  --wx-bg: #f5f6fa;
+  --wx-bg-2: #eaedf3;
+  --wx-ink: #1c1c1a;
+  --wx-mut: #575550;
+  --wx-faint: #8a877e;
+  --wx-line: rgba(28, 28, 26, 0.13);
+  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-card: #ffffff;
+  --wx-blue: #2f6bff;
+
+  position: fixed;
+  right: clamp(16px, 3vw, 32px);
+  bottom: clamp(16px, 3vw, 32px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+.hc-assistant-fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wx-ink);
+  color: #f9fafd;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 18px 40px -14px rgba(28, 28, 26, 0.5);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
+}
+.hc-assistant-fab:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 50px -14px rgba(28, 28, 26, 0.55);
+}
+.hc-assistant-fab.open {
+  width: 52px;
+  padding: 0;
+  justify-content: center;
+}

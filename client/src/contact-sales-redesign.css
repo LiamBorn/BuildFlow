@@ -1,0 +1,187 @@
+/* =========================================================================
+   Contact Sales page  (Company → Contact Sales, Enterprise card, #contact-sales)
+
+   Built on the shared crew-scheduling `.cs-page` system so it inherits the
+   welcome theme exactly: same --wx-* colors + --wx-serif (Inter), aurora
+   background, [data-reveal] reveals, pointer-reactive cursor tint, and
+   WxTilt / WxMagnetic mouse interactivity. Reuses .cmp-hero / .cmp-title /
+   .cmp-sub and .cs-cta from the compare + crew-scheduling pages, then adds a
+   2-up "what you get" + contact-form layout and a "what happens next" strip.
+   ========================================================================= */
+
+.welcome-rx #contact-sales {
+  --tone-green: #2f9760;
+}
+
+/* hero reuses .cmp-hero / .cmp-title / .cmp-sub */
+.welcome-rx .csx-hero { padding-bottom: clamp(18px, 3.5vh, 40px); }
+
+/* ============================== info + form grid ============================== */
+.welcome-rx .csx-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: clamp(20px, 3vw, 44px);
+  align-items: start;
+  margin-top: 8px;
+}
+
+/* ---- left column: what you get ---- */
+.welcome-rx .csx-info-title {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(21px, 2.2vw, 27px);
+  letter-spacing: -0.01em;
+  margin: 0 0 20px;
+  color: var(--wx-ink);
+}
+.welcome-rx .csx-includes { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.welcome-rx .csx-include { display: flex; gap: 14px; align-items: flex-start; }
+.welcome-rx .csx-include-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(26, 115, 232, 0.1);
+  color: var(--wx-blue);
+}
+.welcome-rx .csx-include strong { display: block; font-size: 14.5px; font-weight: 600; color: var(--wx-ink); }
+.welcome-rx .csx-include p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--wx-mut); }
+
+.welcome-rx .csx-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.welcome-rx .csx-trust-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 500; color: var(--wx-mut); }
+.welcome-rx .csx-trust-item svg { color: var(--wx-blue); }
+
+/* ---- right column: form card ---- */
+.welcome-rx .csx-form-tilt { height: 100%; }
+.welcome-rx .csx-form-card {
+  position: relative;
+  border-radius: 18px;
+  border: 1px solid var(--wx-line-soft);
+  background: linear-gradient(180deg, #ffffff, #fbfaf7);
+  box-shadow: 0 40px 80px -46px rgba(28, 28, 26, 0.5);
+  padding: clamp(20px, 2.4vw, 30px);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.welcome-rx .csx-form-card:hover { box-shadow: 0 46px 92px -44px rgba(28, 28, 26, 0.55); }
+.welcome-rx .csx-form-title {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(20px, 2vw, 25px);
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--wx-ink);
+}
+.welcome-rx .csx-form-sub { margin: 6px 0 20px; font-size: 13.5px; color: var(--wx-mut); }
+
+.welcome-rx .csx-form { display: grid; gap: 15px; }
+.welcome-rx .csx-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.welcome-rx .csx-field { display: grid; gap: 6px; min-width: 0; }
+.welcome-rx .csx-field > span { font-size: 12.5px; font-weight: 600; color: var(--wx-mut); }
+.welcome-rx .csx-optional { font-weight: 500; color: var(--wx-faint); }
+.welcome-rx .csx-field input,
+.welcome-rx .csx-field select,
+.welcome-rx .csx-field textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  color: var(--wx-ink);
+  background: #fff;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 10px;
+  padding: 11px 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.welcome-rx .csx-field select { cursor: pointer; }
+.welcome-rx .csx-field textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
+.welcome-rx .csx-field input::placeholder,
+.welcome-rx .csx-field textarea::placeholder { color: var(--wx-faint); }
+.welcome-rx .csx-field input:focus,
+.welcome-rx .csx-field select:focus,
+.welcome-rx .csx-field textarea:focus {
+  border-color: var(--wx-blue);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.16);
+}
+.welcome-rx .csx-submit { width: 100%; justify-content: center; margin-top: 4px; }
+.welcome-rx .csx-submit:disabled { opacity: 0.62; cursor: default; }
+.welcome-rx .csx-form-error {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #d1483a;
+  text-align: center;
+}
+.welcome-rx .csx-form-fine { margin: 2px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--wx-faint); text-align: center; }
+
+/* success state */
+.welcome-rx .csx-success { text-align: center; padding: 14px 6px; }
+.welcome-rx .csx-success-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(47, 151, 96, 0.12);
+  color: var(--tone-green);
+  margin-bottom: 14px;
+}
+.welcome-rx .csx-success h3 {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(22px, 2.4vw, 26px);
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+  color: var(--wx-ink);
+}
+.welcome-rx .csx-success p { margin: 0 auto; max-width: 42ch; font-size: 14px; line-height: 1.6; color: var(--wx-mut); }
+.welcome-rx .csx-success-actions { display: flex; justify-content: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+
+/* ============================== what happens next ============================== */
+.welcome-rx .csx-steps-sec { margin-top: clamp(52px, 9vh, 104px); }
+.welcome-rx .csx-steps-head { text-align: center; max-width: 620px; margin: 0 auto 32px; }
+.welcome-rx .csx-steps-head h2 {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: -0.015em;
+  margin: 12px 0 0;
+  color: var(--wx-ink);
+}
+.welcome-rx .csx-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.welcome-rx .csx-step {
+  border-radius: 16px;
+  border: 1px solid var(--wx-line-soft);
+  background: linear-gradient(180deg, #ffffff, #fbfaf7);
+  box-shadow: 0 30px 60px -48px rgba(28, 28, 26, 0.5);
+  padding: 22px 20px;
+}
+.welcome-rx .csx-step-n {
+  display: inline-block;
+  font-family: var(--wx-serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--wx-blue);
+  margin-bottom: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.welcome-rx .csx-step strong { display: block; font-size: 15px; color: var(--wx-ink); margin-bottom: 5px; }
+.welcome-rx .csx-step p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--wx-mut); }
+
+/* ============================== responsive ============================== */
+@media (max-width: 900px) {
+  .welcome-rx .csx-grid { grid-template-columns: 1fr; }
+  .welcome-rx .csx-steps { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .welcome-rx .csx-field-row { grid-template-columns: 1fr; }
+  .welcome-rx .csx-success-actions { flex-direction: column; }
+}

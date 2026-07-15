@@ -1,0 +1,329 @@
+/* ============================================================================
+   field-updates-redesign.css — "Antigravity" HUD (Field Updates)
+   Re-skins the BuildFlow Field Updates page to match the welcome page + the
+   other redesigned pages: warm paper, serif display type, monochrome ink, soft
+   floating cards, scroll reveals, cursor parallax + card tilt.
+   Scoped entirely to `.field-rx` so every other app page is untouched.
+   ========================================================================== */
+
+.field-rx {
+  --wx-bg: #f5f6fa;
+  --wx-bg-2: #eaedf3;
+  --wx-ink: #1c1c1a;
+  --wx-mut: #575550;
+  --wx-faint: #8a877e;
+  --wx-line: rgba(28, 28, 26, 0.13);
+  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-card: #ffffff;
+  --wx-blue: #2f6bff;
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+  --wx-green: #188038;
+  --wx-amber: #0032b0;
+  --wx-red: #c5221f;
+  --wx-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --wx-radius: 20px;
+
+  position: relative;
+  margin: -22px -28px -34px;
+  padding: clamp(26px, 4.5vh, 52px) clamp(20px, 4vw, 56px) clamp(56px, 9vh, 100px);
+  min-height: calc(100vh - 87px);
+  background: var(--wx-bg);
+  color: var(--wx-ink);
+  overflow: clip;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================ background field ============================ */
+.field-rx .dx-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.field-rx .dx-aurora { position: absolute; border-radius: 50%; filter: blur(50px); opacity: 0.55; will-change: transform; }
+.field-rx .dx-aurora-1 {
+  width: 42vw; height: 42vw; top: -18vw; left: -12vw;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.12), transparent 62%);
+  transform: translate(calc(var(--px, 0) * 16px), calc(var(--py, 0) * 12px));
+}
+.field-rx .dx-aurora-2 {
+  width: 38vw; height: 38vw; top: -12vw; right: -12vw;
+  background: radial-gradient(circle, rgba(155, 114, 203, 0.1), transparent 62%);
+  transform: translate(calc(var(--px, 0) * -20px), calc(var(--py, 0) * 14px));
+}
+.field-rx .dx-aurora-3 {
+  width: 50vw; height: 50vw; top: 44vw; left: 32vw;
+  background: radial-gradient(circle, rgba(217, 101, 112, 0.07), transparent 60%);
+  transform: translate(calc(var(--px, 0) * 12px), calc(var(--py, 0) * -10px));
+}
+.field-rx .dx-cursor {
+  position: fixed; left: var(--mx, -400px); top: var(--my, -400px);
+  width: 480px; height: 480px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.05), transparent 62%);
+  pointer-events: none; z-index: -1;
+}
+
+/* ---- scroll reveal (progressive enhancement) ---- */
+.field-rx.dx-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.field-rx.dx-ready [data-reveal].in { opacity: 1; transform: none; }
+.field-rx.dx-ready [data-reveal-stagger] > * {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.field-rx.dx-ready [data-reveal-stagger].in > * { opacity: 1; transform: none; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1) { transition-delay: 0.04s; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2) { transition-delay: 0.1s; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3) { transition-delay: 0.16s; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4) { transition-delay: 0.22s; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5) { transition-delay: 0.28s; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6) { transition-delay: 0.34s; }
+.field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(n + 7) { transition-delay: 0.4s; }
+
+/* ============================ hero header =============================== */
+.field-rx .field-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.field-rx .dx-hero-copy { max-width: 48ch; }
+.field-rx .dx-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 7px 15px 7px 12px; border: 1px solid var(--wx-line); border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7); color: var(--wx-mut);
+  font-size: 12.5px; font-weight: 600;
+}
+.field-rx .dx-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--wx-blue); box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.12);
+  animation: dx-pulse 2.6s ease-in-out infinite;
+}
+@keyframes dx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.field-rx .dx-title {
+  margin: 20px 0 0;
+  font-family: var(--wx-serif);
+  font-size: clamp(34px, 4.6vw, 58px);
+  line-height: 1.05; font-weight: 500; letter-spacing: -0.015em; color: var(--wx-ink);
+}
+.field-rx .dx-title em {
+  font-style: italic; font-weight: 500;
+  background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+}
+.field-rx .dx-sub {
+  margin: 16px 0 0; max-width: 56ch;
+  font-size: clamp(15px, 1.2vw, 17px); line-height: 1.6; color: var(--wx-mut);
+}
+
+/* add field update -> ink pill */
+.field-rx .crew-add-button {
+  min-height: 46px;
+  padding: 0 22px;
+  border: 1px solid var(--wx-ink);
+  border-radius: 999px;
+  background: var(--wx-ink);
+  color: #f9fafd;
+  font-size: 14.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 22px rgba(28, 28, 26, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.field-rx .crew-add-button:hover { background: #000; box-shadow: 0 14px 32px rgba(28, 28, 26, 0.28); transform: translateY(-1px); }
+
+/* ============================ stat cards =============================== */
+.field-rx .crew-stat-grid { gap: 18px; }
+.field-rx .dx-tilt { perspective: 1100px; display: flex; }
+.field-rx .dx-tilt > * { width: 100%; }
+.field-rx .crew-stat-card {
+  min-height: 120px;
+  padding: 22px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+  transform-style: preserve-3d;
+  transform: translateY(var(--lift, 0px)) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.34s ease, border-color 0.34s ease;
+}
+.field-rx .dx-tilt:hover .crew-stat-card {
+  --lift: -6px;
+  border-color: var(--wx-line);
+  box-shadow: 0 30px 62px rgba(28, 28, 26, 0.14);
+}
+.field-rx .crew-stat-card span {
+  color: var(--wx-blue); font-size: 11.5px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+}
+.field-rx .crew-stat-card strong {
+  color: var(--wx-ink); font-family: var(--wx-serif); font-size: 44px; font-weight: 500; line-height: 0.95;
+  letter-spacing: -0.01em; font-variant-numeric: tabular-nums;
+}
+.field-rx .crew-stat-card strong.green { color: var(--wx-green); }
+.field-rx .crew-stat-card strong.red { color: var(--wx-red); }
+
+/* ============================ search box ============================= */
+.field-rx .crew-search-box {
+  min-height: 46px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #fffdf9;
+  color: var(--wx-faint);
+  transition: border-color 0.2s ease;
+}
+.field-rx .crew-search-box:focus-within { border-color: rgba(28, 28, 26, 0.25); }
+.field-rx .crew-search-box input { color: var(--wx-ink); font-weight: 600; }
+.field-rx .crew-search-box input::placeholder { color: var(--wx-faint); font-weight: 500; }
+
+/* ============================ update + entry cards ==================== */
+.field-rx .crew-directory-grid { gap: 20px; }
+.field-rx .crew-directory-card {
+  padding: 24px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease, border-color 0.32s ease;
+}
+.field-rx .crew-directory-card:hover,
+.field-rx .crew-directory-card:focus-within {
+  transform: translateY(-5px);
+  border-color: var(--wx-line);
+  box-shadow: 0 32px 64px rgba(28, 28, 26, 0.14);
+}
+/* the inline entry form shouldn't lift on hover (it holds inputs) */
+.field-rx .field-entry-card:hover { transform: none; }
+
+.field-rx .crew-card-icon,
+.field-rx .field-card-icon {
+  border-radius: 14px;
+  background: #e8f0fe;
+  color: var(--wx-blue);
+  box-shadow: inset 0 0 0 1px var(--wx-line-soft);
+}
+.field-rx .field-update-avatar {
+  border-radius: 14px;
+  background: var(--wx-bg-2);
+  color: var(--wx-ink);
+  box-shadow: inset 0 0 0 1px var(--wx-line-soft);
+}
+.field-rx .crew-card-header h2 {
+  font-family: var(--wx-serif);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--wx-ink);
+}
+.field-rx .crew-card-header p { color: var(--wx-faint); font-weight: 500; }
+.field-rx .field-card-message { color: var(--wx-mut); font-weight: 500; }
+
+/* status pills — field statuses (On Site / Ready to Start / Delayed / Complete) */
+.field-rx .crew-status-pill { border-radius: 999px; background: #e2f1e6; color: var(--wx-green); font-weight: 700; font-size: 12px; }
+.field-rx .crew-status-pill.ready-to-start,
+.field-rx .crew-status-pill.planned,
+.field-rx .crew-status-pill.on-job,
+.field-rx .crew-status-pill.ordered,
+.field-rx .crew-status-pill.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
+.field-rx .crew-status-pill.delayed,
+.field-rx .crew-status-pill.at-risk,
+.field-rx .crew-status-pill.missing,
+.field-rx .crew-status-pill.overbooked { background: #fbe4e2; color: var(--wx-red); }
+.field-rx .crew-status-pill.in-progress { background: #e8f0fe; color: var(--wx-blue); }
+.field-rx .crew-status-pill.unavailable { background: #ebedfb; color: var(--wx-mut); }
+
+/* detail list */
+.field-rx .crew-detail-list svg,
+.field-rx .crew-detail-list dt { color: var(--wx-faint); }
+.field-rx .crew-detail-list dd { color: var(--wx-ink); font-weight: 600; }
+
+/* photo strip */
+.field-rx .field-card-photo-strip .field-photo-image,
+.field-rx .field-card-photo-strip .field-photo-file,
+.field-rx .photo-strip .field-photo-image,
+.field-rx .photo-strip .field-photo-file { border: 1px solid var(--wx-line-soft); border-radius: 10px; }
+.field-rx .field-photo-file { background: var(--wx-bg-2); color: var(--wx-blue); }
+
+/* current-job / photos footer */
+.field-rx .crew-current-job { border-top: 1px solid var(--wx-line-soft); }
+.field-rx .crew-current-job span { color: var(--wx-faint); font-weight: 700; letter-spacing: 0.08em; }
+.field-rx .crew-current-job strong { color: var(--wx-ink); }
+
+/* ============================ entry form ============================= */
+.field-rx .field-entry-body { border-top: 1px solid var(--wx-line-soft); }
+.field-rx .field-entry-body label { color: var(--wx-mut); font-weight: 600; }
+.field-rx .field-entry-body input,
+.field-rx .field-entry-body select,
+.field-rx .field-entry-body textarea {
+  border: 1px solid var(--wx-line); border-radius: 12px; background: #fffdf9; color: var(--wx-ink);
+}
+.field-rx .field-entry-body input:focus,
+.field-rx .field-entry-body select:focus,
+.field-rx .field-entry-body textarea:focus { border-color: var(--wx-blue); outline: none; }
+.field-rx .field-upload-title { color: var(--wx-mut); font-weight: 700; }
+.field-rx .field-upload-title em { color: var(--wx-faint); }
+
+.field-rx .field-dropzone {
+  border: 2px dashed var(--wx-line);
+  border-radius: 16px;
+  background: #fffdf9;
+}
+.field-rx .field-dropzone:hover,
+.field-rx .field-dropzone:focus-visible,
+.field-rx .field-dropzone.dragging { border-color: var(--wx-blue); background: #eef4fd; }
+.field-rx .field-dropzone strong { color: var(--wx-ink); }
+.field-rx .field-dropzone-hint { color: var(--wx-faint); }
+.field-rx .field-dropzone-hint em { color: var(--wx-blue); }
+.field-rx .field-dropzone-icon { background: #e8f0fe; color: var(--wx-blue); border-radius: 14px; }
+
+.field-rx .field-attachment {
+  border: 1px solid var(--wx-line-soft); border-radius: 12px; background: #fffdf9;
+}
+.field-rx .field-attachment img,
+.field-rx .field-attachment-fileicon { border: 1px solid var(--wx-line-soft); border-radius: 10px; }
+.field-rx .field-attachment-fileicon { background: var(--wx-bg-2); color: var(--wx-blue); }
+.field-rx .field-attachment-meta strong { color: var(--wx-ink); }
+.field-rx .field-attachment-meta em { color: var(--wx-faint); }
+.field-rx .field-attachment-remove { background: rgba(28, 28, 26, 0.6); }
+.field-rx .field-attachment-remove:hover { background: var(--wx-red); }
+
+.field-rx .field-entry-body .primary-button {
+  border-radius: 999px; background: var(--wx-ink); color: #f9fafd; border: 1px solid var(--wx-ink);
+}
+.field-rx .field-entry-body .primary-button:hover:not(:disabled) { background: #000; }
+
+/* ============================ empty state ============================= */
+.field-rx .empty-state,
+.field-rx .field-search-empty {
+  border: 1px dashed var(--wx-line);
+  border-radius: var(--wx-radius);
+  background: #fffdf9;
+  color: var(--wx-mut);
+}
+.field-rx .field-search-empty svg { color: var(--wx-faint); }
+.field-rx .field-search-empty strong { color: var(--wx-ink); font-family: var(--wx-serif); font-weight: 500; }
+.field-rx .field-search-empty p { color: var(--wx-faint); }
+
+/* ============================ responsive ============================= */
+@media (max-width: 1080px) {
+  .field-rx .crew-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field-rx .crew-directory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .field-rx { padding: 24px clamp(14px, 4vw, 24px) 56px; }
+  .field-rx .crew-stat-grid { grid-template-columns: 1fr; }
+  .field-rx .crew-directory-grid { grid-template-columns: 1fr; }
+  .field-rx .field-hero { align-items: flex-start; }
+}
+
+/* ============================ reduced motion ========================= */
+@media (prefers-reduced-motion: reduce) {
+  .field-rx .dx-dot { animation: none; }
+  .field-rx.dx-ready [data-reveal],
+  .field-rx.dx-ready [data-reveal-stagger] > * { transition-duration: 0.3s; }
+  .field-rx .crew-stat-card,
+  .field-rx .crew-directory-card { transition-duration: 0.2s; }
+  .field-rx .dx-aurora { transform: none !important; }
+}

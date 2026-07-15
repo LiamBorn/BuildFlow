@@ -1,0 +1,21 @@
+{
+  "name": "buildflow-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm --workspace client run dev -- --host 0.0.0.0",
+    "dev:server": "npm --workspace server run dev",
+    "build": "npm --workspace shared run build && npm --workspace client run build",
+    "test": "npm --workspaces --if-present test"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}

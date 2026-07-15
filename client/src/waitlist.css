@@ -1,0 +1,273 @@
+/* =========================================================================
+   Waitlist / "launching soon" page  (welcome hash #waitlist)
+
+   ⚠️ REMOVABLE FEATURE — this whole page is designed to be deleted at any time.
+   To remove the waitlist entirely:
+     1. delete this file AND src/components/ui/background-beams.tsx
+     2. remove their imports from main.tsx / App.tsx  (search: waitlist / background-beams)
+     3. in App.tsx, remove everything tagged `waitlist`  (grep -n waitlist src/App.tsx):
+        the WelcomeWaitlistPage block, the WelcomeView union member, the
+        getWelcomeViewFromHash case, the isReskinView clause, the render-switch
+        branch, the nav-hide clause, and the "Join the waitlist" hero button.
+   Nothing else depends on it. Submitted emails live in localStorage
+   ("buildflow.waitlist") — harmless orphan data if left behind.
+
+   Light "launch" theme with the animated Background Beams behind the content
+   (see components/ui/background-beams.tsx). Scoped under `.welcome-rx #waitlist`.
+   ========================================================================= */
+
+.welcome-rx #waitlist {
+  --wl-cyan: #18ccfc;
+  --wl-indigo: #6344f5;
+  --wl-purple: #ae48ff;
+  position: relative;
+  z-index: 2; /* above the fixed light .welcome-rx::before (z-index: -1) */
+  min-height: 100vh;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: clamp(56px, 12vh, 140px) 24px;
+  background: #ffffff;
+  color: #1c1c1a;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* subtle vignette so the centered content reads clearly and the beams fade
+   softly into the white edges */
+.welcome-rx #waitlist::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(80% 68% at 50% 44%, transparent 58%, rgba(255, 255, 255, 0.55));
+}
+
+/* The Background Beams were tuned for a dark bg (stroke-opacity 0.4); lift it so
+   the cyan→purple beams still read against white. The component itself is
+   unchanged — this only overrides the animated beam paths' opacity (not the
+   faint base "fan" path, which uses a radial gradient, not a linearGradient). */
+.welcome-rx #waitlist svg path[stroke*="linearGradient"] {
+  stroke-opacity: 0.8;
+}
+
+.welcome-rx .wl-content {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 0 6px;
+  animation: wl-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.welcome-rx .wl-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 26px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1c1c1a;
+}
+.welcome-rx .wl-brand svg { width: 24px; height: 24px; }
+
+.welcome-rx .wl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.07);
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.welcome-rx .wl-badge .wl-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--wl-purple);
+  box-shadow: 0 0 10px var(--wl-purple);
+  animation: wl-pulse 1.8s ease-out infinite;
+}
+
+/* Match the welcome-home hero headline (.wx-title) exactly: same font, weight,
+   size, line-height and letter-spacing, driven by the same <WxTypewriter> so it
+   types out on open. position:relative is required for the typewriter's absolute
+   .wx-type-real overlay. */
+.welcome-rx .wl-title {
+  position: relative;
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+  font-size: clamp(44px, 6.4vw, 88px);
+  margin: 22px 0 0;
+  color: var(--wx-ink);
+}
+.welcome-rx .wl-title em {
+  font-style: italic;
+  font-weight: 500;
+  background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.welcome-rx .wl-sub {
+  margin: 18px auto 0;
+  max-width: 46ch;
+  font-size: clamp(14px, 1.25vw, 16px);
+  line-height: 1.65;
+  color: #575550;
+}
+
+/* ============================== form ============================== */
+.welcome-rx .wl-form {
+  display: flex;
+  gap: 10px;
+  margin: 30px auto 0;
+  max-width: 470px;
+}
+.welcome-rx .wl-field { position: relative; flex: 1; min-width: 0; }
+.welcome-rx .wl-input {
+  width: 100%;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(28, 28, 26, 0.14);
+  background: #ffffff;
+  color: #1c1c1a;
+  font-size: 15px;
+  box-shadow: 0 1px 2px rgba(28, 28, 26, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.welcome-rx .wl-input::placeholder { color: #9ca3af; }
+.welcome-rx .wl-input:focus {
+  outline: none;
+  border-color: rgba(24, 204, 252, 0.7);
+  box-shadow: 0 0 0 3px rgba(24, 204, 252, 0.16);
+  background: #ffffff;
+}
+.welcome-rx .wl-input.err {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+.welcome-rx .wl-submit {
+  flex: none;
+  height: 50px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #18ccfc, #6344f5 55%, #ae48ff);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 30px -12px rgba(99, 68, 245, 0.6);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+.welcome-rx .wl-submit:hover { transform: translateY(-1px); box-shadow: 0 12px 34px -12px rgba(99, 68, 245, 0.75); }
+.welcome-rx .wl-submit:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+
+.welcome-rx .wl-error {
+  margin: 10px 2px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #dc2626;
+  text-align: left;
+}
+
+/* ============================ social proof ============================ */
+.welcome-rx .wl-proof {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  margin: 28px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.welcome-rx .wl-avatars { display: flex; }
+.welcome-rx .wl-avatars i {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  margin-left: -8px;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+}
+.welcome-rx .wl-avatars i:first-child { margin-left: 0; }
+.welcome-rx .wl-avatars i:nth-child(1) { background: linear-gradient(135deg, #18ccfc, #1a73e8); }
+.welcome-rx .wl-avatars i:nth-child(2) { background: linear-gradient(135deg, #6344f5, #4f2fd6); }
+.welcome-rx .wl-avatars i:nth-child(3) { background: linear-gradient(135deg, #ae48ff, #8b2fe0); }
+.welcome-rx .wl-avatars i:nth-child(4) { background: rgba(28, 28, 26, 0.12); color: #575550; }
+.welcome-rx .wl-proof b { color: #1c1c1a; }
+
+.welcome-rx .wl-back {
+  display: inline-block;
+  margin: 28px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #71717a;
+  cursor: pointer;
+}
+.welcome-rx .wl-back:hover { color: #1c1c1a; }
+
+/* ============================== success ============================== */
+.welcome-rx .wl-check {
+  display: inline-grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+  color: #2f9760;
+  background: rgba(75, 177, 122, 0.14);
+  border: 1px solid rgba(75, 177, 122, 0.3);
+}
+.welcome-rx .wl-position {
+  display: inline-block;
+  margin: 18px 0 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.07);
+  border: 1px solid rgba(124, 58, 237, 0.22);
+  font-size: 14px;
+  font-weight: 600;
+  color: #7c3aed;
+}
+.welcome-rx .wl-position b { font-variant-numeric: tabular-nums; }
+
+@keyframes wl-pop {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wl-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(174, 72, 255, 0.5); }
+  70%, 100% { box-shadow: 0 0 0 9px transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-rx .wl-content,
+  .welcome-rx .wl-badge .wl-live { animation: none; }
+}
+
+@media (max-width: 520px) {
+  .welcome-rx .wl-form { flex-direction: column; }
+  .welcome-rx .wl-submit { width: 100%; justify-content: center; }
+}

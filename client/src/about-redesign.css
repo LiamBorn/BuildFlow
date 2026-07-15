@@ -1,0 +1,641 @@
+/* ============================================================
+   About BuildFlow — Welcome-page (wx) redesign
+   Loaded LAST in main.tsx. Scoped to .about-buildflow-page so it
+   never leaks into other views. Mirrors the welcome page's exact
+   color tokens (--wx-*) and animation language (reveal easing,
+   levitating dark media card, footer word-wave).
+   ============================================================ */
+
+/* cream page canvas behind the about view (scoped via :has so the
+   sibling "updates-open" wrapper for other views is untouched) */
+.welcome-page:has(.about-buildflow-page) {
+  background: var(--wx-bg);
+}
+
+.about-buildflow-page {
+  /* Core wx tokens (bg, ink, card, blue, serif…) now inherit from the
+     .welcome-rx wrapper, so this page matches the welcome palette and gets dark
+     mode. Only page-specific tokens are kept here. */
+  --wx-win: #202124;
+  --wx-radius: 20px;
+
+  /* decorative accent tones (avatars / icon chips) */
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+  --wx-g-green: #34a853;
+  --wx-g-amber: #f9ab00;
+
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 96px) clamp(18px, 5vw, 60px) clamp(28px, 4vw, 48px);
+  background: transparent;
+  color: var(--wx-ink);
+}
+
+/* ---- scroll-reveal, copied 1:1 from the welcome page ---- */
+.about-buildflow-page [data-reveal] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 100ms);
+  will-change: opacity, transform;
+}
+.about-buildflow-page [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .about-buildflow-page [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* shared blue uppercase eyebrow (= .wx-eyebrow-2) */
+.about-buildflow-page .about-eyebrow {
+  display: inline-block;
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wx-blue);
+}
+
+/* ============================================================
+   Hero
+   ============================================================ */
+.about-buildflow-page .about-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1.02fr);
+  align-items: stretch;
+  gap: clamp(20px, 3vw, 40px);
+  min-height: clamp(340px, 42vw, 460px);
+}
+.about-buildflow-page .about-hero-copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 22px;
+  padding: clamp(8px, 2vw, 28px) clamp(24px, 4vw, 56px) clamp(8px, 2vw, 28px) 0;
+}
+.about-buildflow-page .about-hero-copy h1 {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--wx-serif);
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .about-hero-sub {
+  margin: 0;
+  max-width: 46ch;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+
+/* explore pill (= .wx-explore) */
+.about-buildflow-page .about-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--wx-line);
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.about-buildflow-page .about-explore svg {
+  transition: transform 0.25s ease;
+}
+.about-buildflow-page .about-explore:hover {
+  background: var(--wx-ink);
+  color: var(--wx-card);
+  border-color: var(--wx-ink);
+  box-shadow: 0 12px 28px rgba(28, 28, 26, 0.18);
+}
+.about-buildflow-page .about-explore:hover svg {
+  transform: translateX(3px);
+}
+
+/* animated dark media card (rainbow arc + levitating wordmark) */
+.about-buildflow-page .about-hero-media {
+  position: relative;
+  min-height: clamp(300px, 38vw, 440px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--wx-radius);
+  background: var(--wx-win);
+  box-shadow: 0 40px 90px -40px rgba(28, 28, 26, 0.55);
+}
+.about-buildflow-page .about-media-glow {
+  position: absolute;
+  inset: -25%;
+  background: radial-gradient(46% 40% at 50% 60%, rgba(66, 133, 244, 0.55), transparent 70%);
+  animation: abt-glow 5.5s ease-in-out infinite;
+}
+.about-buildflow-page .about-media-arc {
+  position: absolute;
+  bottom: 24%;
+  width: min(58%, 300px);
+  aspect-ratio: 2 / 1;
+  border-radius: 999px 999px 0 0;
+  background: conic-gradient(
+    from 180deg at 50% 100%,
+    #4285f4,
+    #9b72cb,
+    #d96570,
+    #f9ab00,
+    #34a853,
+    #4285f4
+  );
+  -webkit-mask: radial-gradient(112% 112% at 50% 100%, transparent 58%, #000 59%);
+  mask: radial-gradient(112% 112% at 50% 100%, transparent 58%, #000 59%);
+  filter: blur(0.5px) saturate(1.05);
+  opacity: 0.92;
+  animation: abt-float 8s ease-in-out infinite;
+}
+.about-buildflow-page .about-media-logo {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--wx-card);
+  font-size: clamp(22px, 2.5vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  animation: abt-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.35s;
+}
+.about-buildflow-page .about-media-logo .buildflow-logo-mark {
+  width: 30px;
+  height: 30px;
+}
+
+@keyframes abt-glow {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes abt-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@keyframes abt-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .about-buildflow-page .about-media-glow,
+  .about-buildflow-page .about-media-arc,
+  .about-buildflow-page .about-media-logo {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Shared section head
+   ============================================================ */
+.about-buildflow-page .about-section-head {
+  max-width: 24ch;
+  margin-bottom: clamp(28px, 4vw, 48px);
+}
+.about-buildflow-page .about-section-head h2 {
+  margin: 0;
+  font-family: var(--wx-serif);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.012em;
+  color: var(--wx-ink);
+}
+
+/* ============================================================
+   Mission
+   ============================================================ */
+.about-buildflow-page .about-mission {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  margin-top: clamp(64px, 9vw, 120px);
+  padding: clamp(40px, 6vw, 80px) clamp(20px, 4vw, 48px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: linear-gradient(180deg, var(--wx-card), var(--wx-bg-2));
+}
+.about-buildflow-page .about-mission-statement {
+  margin: 0;
+  max-width: 22ch;
+  font-family: var(--wx-serif);
+  font-size: clamp(28px, 4.4vw, 54px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+  color: var(--wx-ink);
+}
+
+/* ============================================================
+   Stats
+   ============================================================ */
+.about-buildflow-page .about-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: clamp(56px, 8vw, 96px);
+}
+.about-buildflow-page .about-stat {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: clamp(20px, 2.4vw, 30px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.about-buildflow-page .about-stat:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 50px -30px rgba(28, 28, 26, 0.4);
+  border-color: var(--wx-line);
+}
+.about-buildflow-page .about-stat-ic {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--wx-bg-2);
+  color: var(--wx-blue);
+}
+.about-buildflow-page .about-stat-value {
+  font-family: var(--wx-serif);
+  font-size: clamp(32px, 3.6vw, 46px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .about-stat-label {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--wx-mut);
+}
+
+/* ============================================================
+   Story timeline
+   ============================================================ */
+.about-buildflow-page .about-story {
+  margin-top: clamp(64px, 9vw, 120px);
+}
+.about-buildflow-page .about-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.about-buildflow-page .about-timeline::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 7px;
+  width: 2px;
+  background: linear-gradient(var(--wx-line), var(--wx-line-soft));
+}
+.about-buildflow-page .about-tl-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 6px 34px;
+  align-items: baseline;
+  padding: 0 0 clamp(28px, 4vw, 44px) 34px;
+}
+.about-buildflow-page .about-tl-item:last-child {
+  padding-bottom: 0;
+}
+.about-buildflow-page .about-tl-dot {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--wx-blue);
+  box-shadow: 0 0 0 5px var(--wx-bg), 0 0 0 6px var(--wx-line-soft);
+}
+.about-buildflow-page .about-tl-year {
+  font-family: var(--wx-serif);
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--wx-blue);
+}
+.about-buildflow-page .about-tl-body h3 {
+  margin: 0 0 8px;
+  font-size: clamp(17px, 1.7vw, 21px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .about-tl-body p {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+
+/* ============================================================
+   Values
+   ============================================================ */
+.about-buildflow-page .about-values {
+  margin-top: clamp(64px, 9vw, 120px);
+}
+.about-buildflow-page .about-values-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.about-buildflow-page .about-value {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: clamp(24px, 3vw, 36px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.about-buildflow-page .about-value:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 55px -32px rgba(28, 28, 26, 0.42);
+  border-color: var(--wx-line);
+}
+.about-buildflow-page .about-value-ic {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--wx-bg-2);
+  color: var(--wx-blue);
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.about-buildflow-page .about-value:hover .about-value-ic {
+  background: var(--wx-blue);
+  color: #fff;
+  box-shadow: 0 10px 22px -8px rgba(26, 115, 232, 0.6);
+}
+.about-buildflow-page .about-value h3 {
+  margin: 0;
+  font-size: clamp(18px, 1.9vw, 22px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .about-value p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+
+/* ============================================================
+   Team / leadership
+   ============================================================ */
+.about-buildflow-page .about-team {
+  margin-top: clamp(64px, 9vw, 120px);
+}
+.about-buildflow-page .about-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.about-buildflow-page .about-leader {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: clamp(22px, 2.6vw, 30px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.about-buildflow-page .about-leader:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 50px -30px rgba(28, 28, 26, 0.4);
+  border-color: var(--wx-line);
+}
+.about-buildflow-page .about-leader-avatar {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  font-family: var(--wx-serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--wx-ink);
+}
+.about-buildflow-page .about-leader.tone-blue .about-leader-avatar { background: var(--wx-g-blue); }
+.about-buildflow-page .about-leader.tone-purple .about-leader-avatar { background: var(--wx-g-purple); }
+.about-buildflow-page .about-leader.tone-coral .about-leader-avatar { background: var(--wx-g-coral); }
+.about-buildflow-page .about-leader.tone-green .about-leader-avatar { background: var(--wx-g-green); }
+.about-buildflow-page .about-leader.tone-amber .about-leader-avatar { background: var(--wx-g-amber); color: #3a2c00; }
+.about-buildflow-page .about-leader.tone-ink .about-leader-avatar { background: var(--wx-ink); }
+.about-buildflow-page .about-leader strong {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .about-leader-role {
+  font-size: 13.5px;
+  color: var(--wx-faint);
+}
+
+/* ============================================================
+   CTA
+   ============================================================ */
+.about-buildflow-page .about-cta {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: clamp(60px, 9vw, 110px);
+  text-align: center;
+}
+.about-buildflow-page .about-cta h2 {
+  max-width: 18ch;
+  margin: 0 0 12px;
+  font-family: var(--wx-serif);
+  font-size: clamp(30px, 4.4vw, 52px);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .about-cta-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ============================================================
+   Welcome-page footer (= .wx-footer): tagline + link columns +
+   giant wave wordmark + legal row. Re-scoped from .welcome-rx,
+   broken out full-bleed so the wordmark spans edge-to-edge.
+   ============================================================ */
+.about-buildflow-page .wx-footer {
+  position: relative;
+  z-index: 2;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: clamp(48px, 7vw, 92px);
+  border-top: 1px solid var(--wx-line-soft);
+  overflow: hidden;
+}
+.about-buildflow-page .wx-footer-top {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 64px clamp(20px, 5vw, 60px) 30px;
+  display: grid;
+  grid-template-columns: 1fr 1.7fr;
+  gap: clamp(30px, 5vw, 72px);
+  align-items: start;
+}
+.about-buildflow-page .wx-footer-tagline {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--wx-serif);
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.18;
+  font-weight: 500;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .wx-footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+}
+.about-buildflow-page .wx-footer h3 {
+  margin: 0 0 16px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+}
+.about-buildflow-page .wx-footer a {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--wx-mut);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+.about-buildflow-page .wx-footer a:hover { color: var(--wx-ink); }
+
+.about-buildflow-page .wx-footer-word {
+  margin: 10px 0 0;
+  padding: 0 clamp(12px, 2vw, 34px);
+  font-weight: 500;
+  font-size: 22vw;
+  line-height: 0.82;
+  letter-spacing: -0.03em;
+  color: var(--wx-ink);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+.about-buildflow-page .wx-footer-word span {
+  display: inline-block;
+  animation: abt-word-wave 3s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.09s);
+  will-change: transform;
+}
+@keyframes abt-word-wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.05em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .about-buildflow-page .wx-footer-word span { animation: none; }
+}
+
+.about-buildflow-page .wx-footer-legal {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 20px clamp(20px, 5vw, 60px) 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.about-buildflow-page .wx-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--wx-ink);
+}
+.about-buildflow-page .wx-footer-brand strong { font-size: 18px; }
+.about-buildflow-page .wx-footer-brand .buildflow-logo-mark { width: 26px; height: 26px; }
+.about-buildflow-page .wx-footer-legal-links { display: flex; flex-wrap: wrap; gap: 22px; }
+.about-buildflow-page .wx-footer-legal-links a {
+  display: inline;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--wx-mut);
+}
+.about-buildflow-page .wx-footer-legal-links a:hover { color: var(--wx-ink); }
+
+@media (max-width: 760px) {
+  .about-buildflow-page .wx-footer-top { grid-template-columns: 1fr; }
+  .about-buildflow-page .wx-footer-links { grid-template-columns: repeat(2, 1fr); }
+  .about-buildflow-page .wx-footer-word { font-size: 23vw; }
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 900px) {
+  .about-buildflow-page .about-hero { grid-template-columns: 1fr; }
+  .about-buildflow-page .about-hero-copy { padding-right: 0; }
+  .about-buildflow-page .about-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-buildflow-page .about-team-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .about-buildflow-page .about-values-grid { grid-template-columns: 1fr; }
+  .about-buildflow-page .about-team-grid { grid-template-columns: 1fr; }
+  .about-buildflow-page .about-tl-item { grid-template-columns: 1fr; gap: 4px; }
+  .about-buildflow-page .wx-footer-word { font-size: 26vw; }
+}

@@ -1,0 +1,34 @@
+.schedule-account-topbar {
+  min-height: 102px;
+  padding: 18px 34px;
+}
+
+.schedule-user-button {
+  grid-template-columns: 68px minmax(0, 1fr) 28px;
+  gap: 14px;
+  width: min(300px, 100%);
+  min-height: 64px;
+}
+
+.schedule-user-button .reports-avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.schedule-user-button strong {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.schedule-user-button em {
+  margin-top: 8px;
+  font-size: 20px;
+}
+
+.schedule-user-button > svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.25;
+}

@@ -1,0 +1,345 @@
+/* =========================================================================
+   Compare all Plans page  (Plans → any plan → "Compare all plans", #compare-plans)
+
+   Built on the shared crew-scheduling `.cs-page` system so it inherits the
+   welcome theme exactly: same --wx-* colors, aurora background, [data-reveal]
+   reveals, pointer-reactive cursor, WxTilt / WxMagnetic mouse interactivity.
+   Adds a 4-up plan-card grid and a grouped feature comparison table with the
+   recommended plan (Business) highlighted.
+   ========================================================================= */
+
+.welcome-rx #compare-plans {
+  --tone-blue: #1a73e8;
+  --tone-green: #2f9760;
+  --tone-orange: #cf8a1f;
+  --tone-violet: #7c3aed;
+}
+
+/* ============================== hero ============================== */
+.welcome-rx .cmp-hero {
+  text-align: center;
+  padding: clamp(52px, 10vh, 116px) 0 clamp(20px, 4vh, 44px);
+}
+.welcome-rx .cmp-hero .wx-eyebrow { margin-inline: auto; }
+.welcome-rx .cmp-title {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+  font-size: clamp(38px, 5.6vw, 66px);
+  margin: 20px auto 0;
+  max-width: 16ch;
+}
+.welcome-rx .cmp-title em { font-style: normal; color: var(--wx-blue); }
+.welcome-rx .cmp-sub {
+  margin: 18px auto 0;
+  max-width: 58ch;
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+.welcome-rx .cmp-toggle-wrap { display: flex; justify-content: center; margin: 28px 0 0; }
+
+/* transparent "starting at" price + book-a-demo path in the hero */
+.welcome-rx .cmp-starting {
+  max-width: 640px;
+  margin: 18px auto 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--wx-mut);
+  text-align: center;
+}
+.welcome-rx .cmp-starting strong { color: var(--wx-ink); font-weight: 700; }
+.welcome-rx .cmp-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 18px auto 0;
+  padding: 10px 10px 10px 20px;
+  border-radius: 999px;
+  background: var(--wx-card);
+  border: 1px solid var(--wx-line-soft);
+  box-shadow: 0 22px 46px -32px rgba(28, 28, 26, 0.5);
+}
+.welcome-rx .cmp-hero-cta > span { font-size: 14px; font-weight: 500; color: var(--wx-mut); }
+.welcome-rx .cmp-demo-btn { padding: 9px 18px; font-size: 14px; }
+@media (max-width: 560px) {
+  .welcome-rx .cmp-hero-cta { flex-direction: column; padding: 16px; border-radius: 18px; }
+}
+
+/* ============================== plan cards ============================== */
+.welcome-rx .cmp-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  padding: clamp(20px, 4vh, 40px) 0 0;
+}
+.welcome-rx .cmp-card-tilt { height: 100%; }
+.welcome-rx .cmp-card {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  padding: 22px 20px;
+  background: linear-gradient(180deg, #ffffff, #fbfaf7);
+  border: 1px solid var(--wx-line-soft);
+  box-shadow: 0 30px 60px -46px rgba(28, 28, 26, 0.5);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.welcome-rx .cmp-card:hover { box-shadow: 0 40px 80px -44px rgba(28, 28, 26, 0.55); }
+.welcome-rx .cmp-card.rec {
+  border-color: rgba(26, 115, 232, 0.5);
+  box-shadow: 0 34px 70px -40px rgba(26, 115, 232, 0.45);
+}
+.welcome-rx .cmp-card.rec::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(26, 115, 232, 0.55), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.welcome-rx .cmp-card-top { display: flex; align-items: center; gap: 10px; }
+.welcome-rx .cmp-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  flex: none;
+  background: rgba(26, 115, 232, 0.1);
+  color: var(--tone-blue);
+}
+.welcome-rx .cmp-card.tone-green .cmp-ic { background: rgba(47, 151, 96, 0.1); color: var(--tone-green); }
+.welcome-rx .cmp-card.tone-orange .cmp-ic { background: rgba(207, 138, 31, 0.12); color: var(--tone-orange); }
+.welcome-rx .cmp-card.tone-violet .cmp-ic { background: rgba(124, 58, 237, 0.1); color: var(--tone-violet); }
+.welcome-rx .cmp-name { font-size: 18px; font-weight: 600; color: var(--wx-ink); }
+.welcome-rx .cmp-rec-badge {
+  margin-left: auto;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(26, 115, 232, 0.12);
+  color: var(--wx-blue);
+  border: 1px solid rgba(26, 115, 232, 0.24);
+}
+.welcome-rx .cmp-detail { margin: 12px 0 0; font-size: 13px; line-height: 1.5; color: var(--wx-faint); min-height: 2.6em; }
+.welcome-rx .cmp-price {
+  margin: 14px 0 0;
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--wx-ink);
+  letter-spacing: -0.02em;
+}
+.welcome-rx .cmp-price-note { margin: 6px 0 0; font-size: 12px; color: var(--wx-faint); }
+.welcome-rx .cmp-save { display: inline-block; margin: 8px 0 0; font-size: 11.5px; font-weight: 700; color: var(--tone-green); }
+.welcome-rx .cmp-bestfor {
+  margin: 16px 0 0;
+  padding: 11px 12px;
+  border-radius: 11px;
+  background: #f4f2ec;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--wx-mut);
+}
+.welcome-rx .cmp-bestfor b { color: var(--wx-ink); font-weight: 600; }
+.welcome-rx .cmp-card-feats { display: grid; gap: 8px; margin: 16px 0 20px; }
+.welcome-rx .cmp-card-feats li { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.45; color: var(--wx-mut); }
+.welcome-rx .cmp-card-feats svg { color: var(--wx-blue); flex: none; margin-top: 1px; }
+.welcome-rx .cmp-card .wx-btn { margin-top: auto; width: 100%; justify-content: center; }
+
+/* ============================== comparison table ============================== */
+.welcome-rx .cmp-compare { padding: clamp(40px, 8vh, 90px) 0 0; }
+.welcome-rx .cmp-compare-head { text-align: center; max-width: 620px; margin: 0 auto 34px; }
+.welcome-rx .cmp-compare-head h2 {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 12px 0 0;
+}
+.welcome-rx .cmp-compare-head p { margin: 14px 0 0; font-size: 16px; line-height: 1.6; color: var(--wx-mut); }
+
+.welcome-rx .cmp-table-scroll { overflow-x: auto; border-radius: 20px; }
+.welcome-rx .cmp-table {
+  min-width: 720px;
+  display: grid;
+  grid-template-columns: minmax(190px, 1.7fr) repeat(4, minmax(96px, 1fr));
+  background: #ffffff;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 20px;
+  overflow: hidden;
+}
+/* header */
+.welcome-rx .cmp-th {
+  padding: 16px 14px 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  text-align: center;
+  border-bottom: 1px solid var(--wx-line);
+  background: #fbfaf7;
+}
+.welcome-rx .cmp-th:first-child { text-align: left; font-weight: 600; color: var(--wx-mut); }
+.welcome-rx .cmp-th .cmp-th-sub { display: block; font-size: 11px; font-weight: 600; color: var(--wx-faint); margin-top: 2px; }
+.welcome-rx .cmp-th.rec { background: rgba(26, 115, 232, 0.07); color: var(--wx-blue); }
+.welcome-rx .cmp-th.rec .cmp-th-sub { color: rgba(26, 115, 232, 0.75); }
+/* group header row */
+.welcome-rx .cmp-group {
+  grid-column: 1 / -1;
+  padding: 13px 14px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+  background: #faf9f5;
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+/* cells */
+.welcome-rx .cmp-cell {
+  padding: 13px 14px;
+  font-size: 13px;
+  color: var(--wx-mut);
+  border-bottom: 1px solid var(--wx-line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+}
+.welcome-rx .cmp-cell.label { justify-content: flex-start; color: var(--wx-ink); font-weight: 500; }
+.welcome-rx .cmp-cell.rec { background: rgba(26, 115, 232, 0.045); }
+.welcome-rx .cmp-row:last-child .cmp-cell { border-bottom: none; }
+.welcome-rx .cmp-check { color: var(--wx-blue); }
+.welcome-rx .cmp-cell.rec .cmp-check { color: var(--wx-blue); }
+.welcome-rx .cmp-dash { width: 14px; height: 2px; border-radius: 2px; background: var(--wx-line); }
+.welcome-rx .cmp-val { font-size: 12.5px; font-weight: 600; color: var(--wx-ink); text-align: center; }
+
+/* the grid renders row-by-row; wrap each feature row's 5 cells in display:contents */
+.welcome-rx .cmp-row { display: contents; }
+
+/* dark mode: the table + best-for boxes hardcode light fills; darken them so the
+   (now-light) cell text stays readable. Cells are transparent → inherit these. */
+.welcome-rx.wx-dark .cmp-bestfor { background: rgba(255, 255, 255, 0.05); }
+.welcome-rx.wx-dark .cmp-table { background: #16181e; }
+.welcome-rx.wx-dark .cmp-th { background: #1c1e26; }
+.welcome-rx.wx-dark .cmp-group { background: #101217; }
+
+/* ============================== why pick ============================== */
+.welcome-rx .cmp-why { padding: clamp(44px, 8vh, 96px) 0 0; }
+.welcome-rx .cmp-why-head { max-width: 620px; margin: 0 0 34px; }
+.welcome-rx .cmp-why-head h2 {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(27px, 3.4vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 12px 0 0;
+}
+.welcome-rx .cmp-why-head p { margin: 14px 0 0; max-width: 56ch; font-size: 16px; line-height: 1.6; color: var(--wx-mut); }
+.welcome-rx .cmp-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.welcome-rx .cmp-step {
+  position: relative;
+  border-radius: 16px;
+  padding: 20px 18px;
+  background: linear-gradient(180deg, #ffffff, #fbfaf7);
+  border: 1px solid var(--wx-line-soft);
+}
+.welcome-rx .cmp-step.rec { border-color: rgba(26, 115, 232, 0.4); background: rgba(26, 115, 232, 0.04); }
+.welcome-rx .cmp-step-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--wx-ink); }
+.welcome-rx .cmp-step-name .cmp-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.welcome-rx .cmp-step-name .cmp-dot.tone-blue { background: var(--tone-blue); }
+.welcome-rx .cmp-step-name .cmp-dot.tone-green { background: var(--tone-green); }
+.welcome-rx .cmp-step-name .cmp-dot.tone-orange { background: var(--tone-orange); }
+.welcome-rx .cmp-step-name .cmp-dot.tone-violet { background: var(--tone-violet); }
+.welcome-rx .cmp-step-pick { margin: 10px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: var(--wx-blue); text-transform: uppercase; }
+.welcome-rx .cmp-step p { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--wx-mut); }
+.welcome-rx .cmp-step .cmp-unlock { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--wx-ink); }
+.welcome-rx .cmp-step .cmp-unlock b { color: var(--wx-blue); font-weight: 600; }
+
+/* ===================== team-size scaling slider (shared track/thumb) ===================== */
+.welcome-rx .cmp-seats-hint {
+  margin: 16px auto 0;
+  font-size: 13px;
+  color: var(--wx-faint);
+  text-align: center;
+}
+.welcome-rx .cmp-seats-range {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  outline: none;
+  background: linear-gradient(90deg, var(--wx-blue) var(--pct, 20%), #e7e5dd var(--pct, 20%));
+}
+.welcome-rx .cmp-seats-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--wx-blue);
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.35);
+  cursor: grab;
+  transition: transform 0.12s ease;
+}
+.welcome-rx .cmp-seats-range:active::-webkit-slider-thumb { transform: scale(1.15); cursor: grabbing; }
+.welcome-rx .cmp-seats-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--wx-blue);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.35);
+  cursor: grab;
+}
+.welcome-rx .cmp-seats-range::-moz-range-track { background: transparent; }
+.welcome-rx .cmp-seats-range:focus-visible { box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.2); }
+/* per-card team-size slider */
+.welcome-rx .cmp-card-seats {
+  margin: 4px 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #fbfaf7);
+  border: 1px solid var(--wx-line-soft);
+}
+.welcome-rx .cmp-card-seats-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.welcome-rx .cmp-card-seats-label { font-size: 12px; font-weight: 600; color: var(--wx-mut); }
+.welcome-rx .cmp-card-seats-val { font-size: 12.5px; color: var(--wx-mut); white-space: nowrap; }
+.welcome-rx .cmp-card-seats-val strong { font-size: 15px; color: var(--wx-ink); font-variant-numeric: tabular-nums; }
+.welcome-rx .cmp-card-seats .cmp-seats-range { display: block; width: 100%; }
+
+.welcome-rx .cmp-price-suffix { font-size: 16px; font-weight: 500; color: var(--wx-faint); letter-spacing: 0; }
+
+/* ============================== responsive ============================== */
+@media (max-width: 980px) {
+  .welcome-rx .cmp-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .welcome-rx .cmp-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .welcome-rx .cmp-cards { grid-template-columns: 1fr; }
+  .welcome-rx .cmp-steps { grid-template-columns: 1fr; }
+}

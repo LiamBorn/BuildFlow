@@ -1,0 +1,11 @@
+# Secrets & local config — never commit
+.env
+.env.local
+
+# Local database
+data/*.sqlite
+data/*.sqlite.bak-*
+
+# Dependencies / build
+node_modules/
+dist/

@@ -1,0 +1,962 @@
+/* ============================================================================
+   settings-redesign.css — BuildFlow Settings, reskinned to the AI Command
+   Center language used by the Dashboard.
+
+   Scoped entirely to `.settings-rx`. Re-declares the dashboard's wx + cc
+   tokens so the page reads as one system with the Command Center: warm-neutral
+   ink, blue accent, blue→purple gradient, aurora background, soft-shadow cards,
+   tone chips, and entrance / hover motion.
+
+   Every rule is prefixed with `.settings-rx` so it overrides the older flat
+   `.settings-*` rules in styles.css on specificity alone — the previous
+   navy + orange styling is left untouched but no longer paints anything.
+   ========================================================================== */
+
+.settings-rx {
+  /* type + surfaces (from .dash-rx) */
+  --cc-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --wx-bg: #f5f6fa;
+  --wx-bg-2: #eaedf3;
+  --wx-ink: #1c1c1a;
+  --wx-mut: #575550;
+  --wx-faint: #8a877e;
+  --wx-line: rgba(28, 28, 26, 0.13);
+  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-card: #ffffff;
+  /* accent + tones (from command-center.css) */
+  --cc-blue: #2f6bff;
+  --cc-blue-soft: #e8f0fe;
+  --cc-green: #188038;
+  --cc-green-soft: #e2f1e6;
+  --cc-amber: #b45309;
+  --cc-amber-soft: #fdf0dc;
+  --cc-red: #c5221f;
+  --cc-red-soft: #fbe4e2;
+  --cc-violet: #6d28d9;
+  --cc-violet-soft: #efe8f8;
+  /* gradient (from .dash-rx) */
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--wx-bg);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  overflow: clip;
+  -webkit-font-smoothing: antialiased;
+  /* Force native controls (and their OS-drawn <select> popups) to the light
+     scheme so dropdowns match the light UI instead of following an OS dark
+     mode. Inherits to every select in the settings subtree. */
+  color-scheme: light;
+}
+
+/* ============================ aurora background ========================= */
+.settings-rx .dx-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.settings-rx .dx-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.settings-rx .dx-aurora-1 {
+  width: 42vw; height: 42vw; top: -18vw; left: -12vw;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.12), transparent 62%);
+  transform: translate(calc(var(--px, 0) * 16px), calc(var(--py, 0) * 12px));
+}
+.settings-rx .dx-aurora-2 {
+  width: 38vw; height: 38vw; top: -12vw; right: -12vw;
+  background: radial-gradient(circle, rgba(155, 114, 203, 0.1), transparent 62%);
+  transform: translate(calc(var(--px, 0) * -20px), calc(var(--py, 0) * 14px));
+}
+.settings-rx .dx-aurora-3 {
+  width: 50vw; height: 50vw; top: 44vw; left: 26vw;
+  background: radial-gradient(circle, rgba(217, 101, 112, 0.07), transparent 60%);
+  transform: translate(calc(var(--px, 0) * 12px), calc(var(--py, 0) * -10px));
+}
+.settings-rx .dx-cursor {
+  position: fixed;
+  left: var(--mx, -400px);
+  top: var(--my, -400px);
+  width: 480px; height: 480px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.05), transparent 62%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================ two-pane layout ========================== */
+.settings-rx .settings-page {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr);
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  background: transparent;
+  color: var(--wx-ink);
+}
+
+/* ---- left rail ---- */
+.settings-rx .settings-rail {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 22px 16px 24px;
+  border-right: 1px solid var(--wx-line-soft);
+  background: color-mix(in srgb, var(--wx-card) 78%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.settings-rx .settings-account-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 16px;
+  border-bottom: 1px solid var(--wx-line-soft);
+  animation: sx-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: 0.04s;
+}
+.settings-rx .settings-account-card .reports-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-family: var(--cc-sans);
+  font-size: 17px;
+  font-weight: 750;
+  color: #fff;
+  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
+  box-shadow: 0 10px 22px rgba(66, 92, 244, 0.3);
+}
+.settings-rx .settings-account-card strong,
+.settings-rx .settings-account-card em {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-rx .settings-account-card strong {
+  color: var(--wx-ink);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.settings-rx .settings-account-card em {
+  margin-top: 3px;
+  color: var(--wx-faint);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.settings-rx .settings-nav-groups { display: grid; gap: 18px; }
+.settings-rx .settings-nav-group {
+  display: grid;
+  gap: 3px;
+  animation: sx-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.settings-rx .settings-nav-group:nth-child(1) { animation-delay: 0.10s; }
+.settings-rx .settings-nav-group:nth-child(2) { animation-delay: 0.16s; }
+.settings-rx .settings-nav-group:nth-child(3) { animation-delay: 0.22s; }
+.settings-rx .settings-nav-group:nth-child(4) { animation-delay: 0.28s; }
+.settings-rx .settings-nav-group h2 {
+  margin: 0 0 5px;
+  padding: 0 10px;
+  color: var(--wx-faint);
+  font-family: var(--cc-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-rx .settings-nav-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 0 11px;
+  background: transparent;
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.settings-rx .settings-nav-item svg { color: var(--wx-faint); transition: color 0.18s ease; }
+.settings-rx .settings-nav-item:hover {
+  background: var(--wx-bg-2);
+  color: var(--wx-ink);
+  transform: translateX(2px);
+}
+.settings-rx .settings-nav-item:hover svg { color: var(--cc-blue); }
+.settings-rx .settings-nav-item:focus-visible {
+  outline: 0;
+  border-color: var(--cc-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+}
+.settings-rx .settings-nav-item.active {
+  background: var(--cc-blue-soft);
+  color: var(--cc-blue);
+  box-shadow: none;
+}
+.settings-rx .settings-nav-item.active svg { color: var(--cc-blue); }
+
+.settings-rx .settings-ai-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: auto;
+  border: 1px solid var(--wx-line);
+  border-radius: 12px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(28, 28, 26, 0.05);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  animation: sx-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: 0.36s;
+}
+.settings-rx .settings-ai-button svg { color: var(--cc-violet); }
+.settings-rx .settings-ai-button:hover {
+  transform: translateY(-2px);
+  border-color: var(--cc-blue);
+  color: var(--cc-blue);
+  box-shadow: 0 12px 26px rgba(47, 107, 255, 0.16);
+}
+.settings-rx .settings-ai-button.active,
+.settings-rx .settings-ai-button:focus-visible {
+  outline: 0;
+  border-color: var(--cc-blue);
+  color: var(--cc-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.14);
+}
+
+/* ============================ right panel ============================== */
+.settings-rx .settings-panel {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  padding: 46px clamp(28px, 6vw, 90px) 72px;
+}
+.settings-rx .settings-close-button {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--wx-line);
+  border-radius: 12px;
+  background: var(--wx-card);
+  color: var(--wx-mut);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(28, 28, 26, 0.06);
+  transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  z-index: 3;
+}
+.settings-rx .settings-close-button:hover,
+.settings-rx .settings-close-button:focus-visible {
+  outline: 0;
+  transform: translateY(-1px) rotate(90deg);
+  border-color: var(--cc-blue);
+  color: var(--cc-blue);
+  box-shadow: 0 10px 22px rgba(47, 107, 255, 0.18);
+}
+
+.settings-rx .settings-panel-inner {
+  width: min(920px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 22px;
+}
+/* every child of the panel rises + staggers — replays on each category switch
+   because the panel-inner is keyed by the active view in the JSX. */
+.settings-rx .settings-panel-inner > * {
+  animation: sx-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.settings-rx .settings-panel-inner > *:nth-child(1) { animation-delay: 0.02s; }
+.settings-rx .settings-panel-inner > *:nth-child(2) { animation-delay: 0.10s; }
+.settings-rx .settings-panel-inner > *:nth-child(3) { animation-delay: 0.18s; }
+.settings-rx .settings-panel-inner > *:nth-child(4) { animation-delay: 0.26s; }
+.settings-rx .settings-panel-inner > *:nth-child(5) { animation-delay: 0.34s; }
+.settings-rx .settings-panel-inner > *:nth-child(6) { animation-delay: 0.42s; }
+
+/* ---- header: eyebrow pill + gradient icon (mirrors .cc-hero) ---- */
+.settings-rx .settings-page-header {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+.settings-rx .sx-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  padding: 6px 14px 6px 11px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+.settings-rx .sx-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
+}
+.settings-rx .sx-header-head { display: flex; align-items: flex-start; gap: 15px; }
+.settings-rx .sx-header-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
+  box-shadow: 0 12px 26px rgba(66, 92, 244, 0.32);
+}
+.settings-rx .settings-page-header h1 {
+  margin: 2px 0 0;
+  font-family: var(--cc-sans);
+  font-size: clamp(26px, 3vw, 33px);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--wx-ink);
+}
+.settings-rx .settings-page-header p {
+  max-width: 640px;
+  margin: 8px 0 0;
+  color: var(--wx-mut);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ============================ section cards ============================= */
+.settings-rx .settings-section {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 6px 20px 10px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.settings-rx .settings-section:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 48px rgba(28, 28, 26, 0.1);
+  border-color: var(--wx-line);
+}
+.settings-rx .settings-section + .settings-section { margin-top: 0; }
+.settings-rx .settings-section h2 {
+  margin: 0;
+  padding: 16px 0 10px;
+  font-family: var(--cc-sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+
+.settings-rx .settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  min-width: 0;
+  min-height: 72px;
+  border-top: 1px solid var(--wx-line-soft);
+  padding: 14px 8px;
+  margin: 0 -8px;
+  border-radius: 12px;
+  transition: background 0.18s ease;
+}
+.settings-rx .settings-row:hover { background: var(--wx-bg); }
+.settings-rx .settings-row strong {
+  display: block;
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 14px;
+  font-weight: 650;
+}
+.settings-rx .settings-row p {
+  max-width: 620px;
+  margin: 4px 0 0;
+  color: var(--wx-faint);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ============================ controls ================================= */
+.settings-rx .settings-row select,
+.settings-rx .settings-member-controls select,
+.settings-rx .settings-invite-fields input,
+.settings-rx .settings-invite-fields select {
+  min-height: 42px;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  outline: 0;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.settings-rx .settings-row select,
+.settings-rx .settings-member-controls select,
+.settings-rx .settings-invite-fields select {
+  min-width: 188px;
+  max-width: 100%;
+  padding: 0 38px 0 13px;
+  cursor: pointer;
+}
+.settings-rx .settings-invite-fields input { width: 100%; padding: 0 13px; }
+.settings-rx .settings-row select:focus,
+.settings-rx .settings-member-controls select:focus,
+.settings-rx .settings-invite-fields input:focus,
+.settings-rx .settings-invite-fields select:focus {
+  border-color: var(--cc-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+}
+
+.settings-rx .settings-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  padding: 0 16px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+.settings-rx .settings-action-button:hover,
+.settings-rx .settings-action-button:focus-visible {
+  outline: 0;
+  transform: translateY(-1px);
+  border-color: var(--cc-blue);
+  color: var(--cc-blue);
+  box-shadow: 0 10px 22px rgba(47, 107, 255, 0.14);
+}
+
+/* toggle switch — blue when on (matches dashboard accent) */
+.settings-rx .settings-toggle {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: #c8cdd7;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.settings-rx .settings-toggle span {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(28, 28, 26, 0.22);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.settings-rx .settings-toggle.active { background: var(--cc-blue); }
+.settings-rx .settings-toggle.active span { transform: translateX(20px); }
+.settings-rx .settings-toggle:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.18);
+}
+
+/* ============================ people / team ============================ */
+.settings-rx .settings-team-section {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 20px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+}
+.settings-rx .settings-team-section + .settings-section { margin-top: 0; }
+
+.settings-rx .settings-team-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 18px;
+  min-width: 0;
+}
+.settings-rx .settings-team-heading > div { min-width: 0; }
+.settings-rx .settings-team-heading h2 {
+  margin: 8px 0 0;
+  font-family: var(--cc-sans);
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.settings-rx .settings-team-heading p,
+.settings-rx .settings-invite-form p {
+  margin: 6px 0 0;
+  color: var(--wx-faint);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.settings-rx .settings-members-heading h3,
+.settings-rx .settings-invite-form h3 {
+  margin: 0;
+  font-family: var(--cc-sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+
+.settings-rx .settings-team-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--cc-violet);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.settings-rx .settings-owner-summary,
+.settings-rx .settings-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 107, 255, 0.24);
+  background: var(--cc-blue-soft);
+  color: var(--cc-blue);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+
+.settings-rx .settings-workspace-line {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  min-height: 58px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: var(--wx-bg);
+}
+.settings-rx .settings-workspace-line span,
+.settings-rx .settings-members-heading span,
+.settings-rx .settings-invite-fields label span {
+  color: var(--wx-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.settings-rx .settings-workspace-line strong {
+  color: var(--wx-ink);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+.settings-rx .settings-workspace-line em {
+  color: var(--wx-faint);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.settings-rx .settings-members-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.settings-rx .settings-member-list {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: var(--wx-card);
+  overflow: hidden;
+}
+.settings-rx .settings-member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  min-height: 74px;
+  padding: 14px 16px;
+  transition: background 0.18s ease;
+}
+.settings-rx .settings-member-row:hover { background: var(--wx-bg); }
+.settings-rx .settings-member-row + .settings-member-row { border-top: 1px solid var(--wx-line-soft); }
+.settings-rx .settings-member-identity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.settings-rx .settings-member-identity > div { min-width: 0; }
+.settings-rx .settings-member-avatar {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
+  color: #fff;
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(66, 92, 244, 0.26);
+}
+.settings-rx .settings-member-identity strong {
+  display: block;
+  color: var(--wx-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.settings-rx .settings-member-identity p {
+  margin: 3px 0 0;
+  color: var(--wx-faint);
+  font-size: 12.5px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.settings-rx .settings-member-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  min-width: 0;
+}
+.settings-rx .settings-member-remove {
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  background: var(--wx-card);
+  color: var(--cc-red);
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.settings-rx .settings-member-remove:hover,
+.settings-rx .settings-member-remove:focus-visible {
+  outline: 0;
+  transform: translateY(-1px);
+  border-color: var(--cc-red);
+  background: var(--cc-red-soft);
+  box-shadow: 0 8px 18px rgba(197, 34, 31, 0.16);
+}
+
+.settings-rx .settings-invite-form {
+  container-type: inline-size;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  padding: 18px;
+  background: var(--wx-bg);
+}
+.settings-rx .settings-invite-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 188px auto;
+  align-items: end;
+  gap: 12px;
+  min-width: 0;
+}
+.settings-rx .settings-invite-fields label { display: grid; gap: 7px; min-width: 0; }
+.settings-rx .settings-invite-fields > * { min-width: 0; }
+@container (max-width: 620px) {
+  .settings-rx .settings-invite-fields { grid-template-columns: minmax(0, 1fr) auto; }
+  .settings-rx .settings-invite-fields label:first-child { grid-column: 1 / -1; }
+}
+
+.settings-rx .settings-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 11px;
+  padding: 0 18px;
+  background: var(--cc-blue);
+  color: #fff;
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(47, 107, 255, 0.32);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.settings-rx .settings-primary-action:hover,
+.settings-rx .settings-primary-action:focus-visible {
+  outline: 0;
+  transform: translateY(-1px);
+  background: #245ae0;
+  box-shadow: 0 12px 26px rgba(47, 107, 255, 0.42);
+}
+.settings-rx .settings-invite-status {
+  min-height: 19px;
+  color: var(--wx-mut);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* ============================ entrance keyframe ======================== */
+/* fill-mode: backwards → applies the hidden start during the stagger delay but
+   releases after finishing, so hover transforms are never clobbered. */
+@keyframes sx-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ============================ responsive =============================== */
+@media (max-width: 900px) {
+  .settings-rx .settings-page { grid-template-columns: 1fr; }
+  .settings-rx .settings-rail {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+  .settings-rx .settings-account-card { border-bottom: 0; padding: 0 4px; }
+  .settings-rx .settings-nav-groups {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    gap: 22px;
+  }
+  .settings-rx .settings-ai-button { margin-top: 0; }
+  .settings-rx .settings-panel { padding: 34px clamp(20px, 5vw, 44px) 60px; }
+}
+@media (max-width: 560px) {
+  .settings-rx .settings-row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .settings-rx .settings-team-heading { grid-template-columns: 1fr; }
+  .settings-rx .settings-workspace-line { grid-template-columns: 1fr; gap: 6px; }
+}
+
+/* ============================ reduced motion =========================== */
+@media (prefers-reduced-motion: reduce) {
+  .settings-rx .settings-account-card,
+  .settings-rx .settings-nav-group,
+  .settings-rx .settings-ai-button,
+  .settings-rx .settings-panel-inner > * {
+    animation: none;
+  }
+  .settings-rx .dx-aurora { transform: none; }
+}
+
+/* ============================================================================
+   Billing — "Plans that grow with you" (two-card upgrade layout)
+   ============================================================================ */
+.settings-rx .sx-plans { max-width: 940px; margin: 2px auto 0; }
+.settings-rx .sx-plans-title {
+  margin: 4px 0 20px;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+
+/* Individual / Team segmented control — indicator slides between two equal halves */
+.settings-rx .sx-seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: fit-content;
+  margin: 0 auto 28px;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--wx-bg-2);
+  border: 1px solid var(--wx-line);
+}
+.settings-rx .sx-seg-ind {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  border-radius: 8px;
+  background: var(--wx-card);
+  border: 1.5px solid var(--cc-blue);
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.12);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+.settings-rx .sx-seg-ind-team { transform: translateX(100%); }
+.settings-rx .sx-seg-opt {
+  position: relative;
+  z-index: 1;
+  padding: 9px 24px;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wx-mut);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.settings-rx .sx-seg-opt.on { color: var(--wx-ink); }
+
+/* two plan cards */
+.settings-rx .sx-plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.settings-rx .sx-plan-card {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 26px 30px;
+  border-radius: 18px;
+  background: var(--wx-card);
+  border: 1px solid var(--wx-line);
+  box-shadow: 0 20px 46px rgba(28, 28, 26, 0.06);
+  animation: sx-plan-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.08s);
+}
+.settings-rx .sx-plan-card.current {
+  border-color: rgba(47, 107, 255, 0.4);
+  box-shadow: 0 20px 46px rgba(47, 107, 255, 0.13);
+}
+@keyframes sx-plan-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-rx .sx-plan-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 16px;
+}
+.settings-rx .sx-plan-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--wx-bg-2);
+  color: var(--cc-blue);
+}
+.settings-rx .sx-plan-icon.tone-green { background: rgba(24, 128, 56, 0.1); color: #188038; }
+.settings-rx .sx-plan-icon.tone-blue { background: rgba(47, 107, 255, 0.1); color: var(--cc-blue); }
+.settings-rx .sx-plan-icon.tone-violet { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
+.settings-rx .sx-plan-icon.tone-teal { background: rgba(13, 148, 136, 0.1); color: #0d9488; }
+/* reuse the existing Monthly/Yearly toggle, drop its centering margin */
+.settings-rx .sx-plan-toggle.plans-billing { margin: 0; }
+
+.settings-rx .sx-plan-name { margin: 0 0 4px; font-size: 24px; font-weight: 700; color: var(--wx-ink); }
+.settings-rx .sx-plan-tag { margin: 0 0 18px; font-size: 14px; line-height: 1.4; color: var(--wx-mut); }
+.settings-rx .sx-plan-price { display: flex; align-items: baseline; gap: 11px; margin-bottom: 18px; flex-wrap: wrap; }
+.settings-rx .sx-plan-price strong { font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; color: var(--wx-ink); }
+.settings-rx .sx-plan-unit { font-size: 13px; line-height: 1.3; color: var(--wx-mut); max-width: 140px; }
+
+.settings-rx .sx-plan-cta {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--wx-ink);
+  border-radius: 12px;
+  background: var(--wx-ink);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.settings-rx .sx-plan-cta:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(28, 28, 26, 0.18); }
+.settings-rx .sx-plan-cta.primary { background: var(--cc-blue); border-color: var(--cc-blue); }
+.settings-rx .sx-plan-cta.primary:hover { box-shadow: 0 12px 26px rgba(47, 107, 255, 0.34); }
+.settings-rx .sx-plan-note { display: block; margin-top: 10px; text-align: center; font-size: 12px; color: var(--wx-faint); }
+
+.settings-rx .sx-plan-sep { height: 1px; background: var(--wx-line); margin: 22px 0 18px; }
+.settings-rx .sx-plan-feat-head { display: block; margin-bottom: 13px; font-size: 13.5px; font-weight: 600; color: var(--wx-ink); }
+.settings-rx .sx-plan-feat ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.settings-rx .sx-plan-feat li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.4; color: var(--wx-mut); }
+.settings-rx .sx-plan-feat li svg { flex: 0 0 auto; margin-top: 1px; color: var(--cc-blue); }
+
+.settings-rx .sx-plans-foot { margin: 26px auto 0; max-width: 640px; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--wx-faint); }
+.settings-rx .sx-plans-foot a { color: var(--wx-mut); text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .settings-rx .sx-plan-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,2434 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
+import { hashPassword, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
+import type {
+  BootstrapPayload,
+  BusinessTypeId,
+  CreateEquipmentInput,
+  CreateCrewInput,
+  CreateJobInput,
+  CreateMaterialInput,
+  CreateProjectInput,
+  Crew,
+  CrewLaborMixItem,
+  Delay,
+  Equipment,
+  FieldUpdate,
+  Inspection,
+  Job,
+  Material,
+  Phase,
+  Project,
+  ReadinessItem,
+  ResourcesPayload,
+  ScheduleAssignment,
+  Status,
+  UpdateCrewInput,
+  UpdateEquipmentInput,
+  UpdateProjectInput,
+  User,
+  WeatherAlert
+} from "@buildflow/shared";
+
+type Primitive = string | number | null;
+
+// ── Auth model (see auth.ts + stores.ts) ────────────────────────────────────
+export type Org = { id: string; name: string; plan: string; createdAt: string };
+export type Account = { id: string; orgId: string; email: string; name: string; role: string; createdAt: string };
+type AccountRow = Account & { passwordHash: string };
+export type SessionContext = { account: Account; org: Org };
+export const DEMO_ORG_ID = "org-demo";
+export const DEMO_ACCOUNT_EMAIL = "demo@buildflow.com";
+export const DEMO_ACCOUNT_PASSWORD = "buildflow-demo";
+
+/** Strip the password hash so an account is safe to return to the client. */
+export function toAccount(row: AccountRow): Account {
+  const { passwordHash: _passwordHash, ...account } = row;
+  return account;
+}
+
+type AssignmentRow = Omit<ScheduleAssignment, "conflicts"> & { conflicts: string };
+type CrewRow = Omit<Crew, "laborMix">;
+type CrewRoleCountRow = CrewLaborMixItem & { id: string; crewId: string };
+type FieldUpdateRow = Omit<FieldUpdate, "photos"> & { photos: string };
+
+// ── Sales & Customer-Service Desk row shapes (see migrate()) ────────────────
+export type SalesLeadStatus = "New" | "Contacted" | "Qualified" | "Proposal" | "Won" | "Lost";
+export type SalesLeadRow = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  teamSize: string;
+  interest: string;
+  status: SalesLeadStatus;
+  value: number;
+  owner: string;
+  source: string;
+  notes: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+};
+export type Department = "sales" | "support";
+export type SalesTaskRow = {
+  id: string;
+  leadId: string | null;
+  title: string;
+  dueAt: string;
+  done: number;
+  department: Department;
+  createdAt: string;
+};
+export type SalesActivityRow = {
+  id: string;
+  leadId: string;
+  type: "note" | "call" | "email" | "meeting" | "stage";
+  summary: string;
+  createdAt: string;
+};
+export type SupportConversationRow = {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  subject: string;
+  status: "open" | "pending" | "closed";
+  priority: "Low" | "Normal" | "High" | "Urgent";
+  department: Department;
+  createdAt: string;
+  lastMessageAt: string;
+};
+export type SupportMessageRow = {
+  id: string;
+  conversationId: string;
+  author: "customer" | "agent";
+  body: string;
+  createdAt: string;
+};
+export type SupportAgentRole = "Owner" | "Admin" | "Agent";
+export type SupportAgentRow = {
+  id: string;
+  name: string;
+  email: string;
+  role: SupportAgentRole;
+  status: "Active" | "Invited";
+  createdAt: string;
+};
+
+const jobColumns = [
+  "id",
+  "projectId",
+  "name",
+  "phase",
+  "location",
+  "startDate",
+  "endDate",
+  "startTime",
+  "endTime",
+  "requiredLabor",
+  "requiredEquipment",
+  "materialsStatus",
+  "status",
+  "priority",
+  "notes"
+].join(", ");
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const defaultDataFile = path.resolve(__dirname, "../data/buildflow.sqlite");
+
+function parseJsonArray(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    return JSON.parse(value) as string[];
+  } catch {
+    return [];
+  }
+}
+
+function toAssignment(row: AssignmentRow): ScheduleAssignment {
+  return { ...row, conflicts: parseJsonArray(row.conflicts) };
+}
+
+function toFieldUpdate(row: FieldUpdateRow): FieldUpdate {
+  return { ...row, photos: parseJsonArray(row.photos) };
+}
+
+function slugify(value: string, fallback = "crew") {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+}
+
+function projectImageForType(type: string) {
+  const value = type.toLowerCase();
+  if (value.includes("multi") || value.includes("apartment") || value.includes("residential")) return "apartments";
+  if (value.includes("health") || value.includes("medical") || value.includes("clinic")) return "medical-center";
+  if (value.includes("industrial") || value.includes("warehouse") || value.includes("logistics")) return "warehouse";
+  if (value.includes("parking") || value.includes("garage")) return "parking-garage";
+  return "office-building";
+}
+
+const onboardingUsers: User[] = [
+  { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
+  { id: "u-jessica", name: "Jessica Lee", role: "Superintendent", title: "Superintendent", avatar: "JL" },
+  { id: "u-carlos", name: "Carlos Ramirez", role: "Crew Lead", title: "Crew Lead", avatar: "CR" }
+];
+
+// Monday of the demo seed's primary week. The seed is shifted so this lands on
+// the current week, keeping the demo evergreen (always "this week / this month").
+const SEED_ANCHOR_MONDAY = Date.UTC(2026, 5, 15); // 2026-06-15
+
+// Per-table fields whose values are dates that must ride along when the seed is
+// shifted onto the current calendar. Only applied while seeding (never to user data).
+const SEED_DATE_FIELDS: Record<string, string[]> = {
+  projects: ["targetCompletion"],
+  phases: ["startDate", "endDate"],
+  jobs: ["startDate", "endDate"],
+  materials: ["deliveryDate"],
+  assignments: ["date"],
+  field_updates: ["createdAt"],
+  delays: ["reportedAt"],
+  readiness: ["dueDate"],
+  inspections: ["scheduledAt"],
+  weather_alerts: ["startsAt"]
+};
+
+function shiftSeedDate(value: unknown, days: number): unknown {
+  if (days === 0 || typeof value !== "string") return value;
+  const datePart = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return value; // leave non-dates (e.g. "Pending") alone
+  const shifted = new Date(`${datePart}T00:00:00Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted.toISOString().slice(0, 10) + value.slice(10);
+}
+
+/* ── Schema migrations ──────────────────────────────────────────────────────
+   Forward, versioned migrations applied on top of the baseline CREATE TABLE
+   block in migrate(). Tracked per-database via SQLite's PRAGMA user_version, so
+   every store — the main/demo DB AND each per-tenant org-<id>.sqlite — converges
+   to LATEST_SCHEMA_VERSION on open.
+
+   Adding one: append { version: <next int>, name, up }. Put NEW COLUMNS in a
+   migration (ALTER TABLE … ADD COLUMN), NOT in the baseline, so fresh and
+   existing databases stay in lockstep. Keep each `up` idempotent (IF NOT EXISTS)
+   — a crash mid-run re-applies from the last committed version. Never edit or
+   renumber a shipped migration. */
+type Migration = { version: number; name: string; up: (db: Database) => void };
+
+const SCHEMA_MIGRATIONS: Migration[] = [
+  {
+    version: 1,
+    name: "performance indexes",
+    up: (db) =>
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_jobs_projectId ON jobs(projectId);
+        CREATE INDEX IF NOT EXISTS idx_assignments_date ON assignments(date);
+        CREATE INDEX IF NOT EXISTS idx_assignments_jobId ON assignments(jobId);
+        CREATE INDEX IF NOT EXISTS idx_assignments_crewId ON assignments(crewId);
+        CREATE INDEX IF NOT EXISTS idx_field_updates_projectId ON field_updates(projectId);
+        CREATE INDEX IF NOT EXISTS idx_delays_projectId ON delays(projectId);
+        CREATE INDEX IF NOT EXISTS idx_materials_projectId ON materials(projectId);
+        CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+        CREATE INDEX IF NOT EXISTS idx_sessions_expiresAt ON sessions(expiresAt);
+        CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email);
+        CREATE INDEX IF NOT EXISTS idx_accounts_orgId ON accounts(orgId);
+      `)
+  }
+];
+
+export const LATEST_SCHEMA_VERSION = SCHEMA_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);
+
+export interface SubscriptionRow {
+  id: string;
+  customerId: string | null;
+  email: string | null;
+  planId: string | null;
+  priceId: string | null;
+  period: string | null;
+  status: string | null;
+  seats: number | null;
+  currentPeriodEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+  raw: string | null;
+}
+
+export class BuildFlowStore {
+  private seeding = false;
+
+  private constructor(
+    private readonly SQL: SqlJsStatic,
+    private readonly db: Database,
+    private readonly dataFile: string
+  ) {}
+
+  static async create(dataFile = defaultDataFile, reset = false, opts: { seedDemo?: boolean } = {}) {
+    // seedDemo=true (default) → the main/demo store: full demo data + demo account.
+    // seedDemo=false → a fresh tenant's store: schema only, empty workspace.
+    const seedDemo = opts.seedDemo ?? true;
+    const SQL = await initSqlJs();
+    fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+    if (reset && fs.existsSync(dataFile)) {
+      fs.unlinkSync(dataFile);
+    }
+
+    const fileBuffer = fs.existsSync(dataFile) ? fs.readFileSync(dataFile) : undefined;
+    const db = fileBuffer ? new SQL.Database(fileBuffer) : new SQL.Database();
+    const store = new BuildFlowStore(SQL, db, dataFile);
+    store.migrate();
+    if (seedDemo) {
+      store.seed();
+      if (store.hasStarterWorkspace()) {
+        store.ensureReferenceCrewData();
+      }
+      store.ensureCrewRoleCounts();
+      store.seedSalesDesk();
+      store.ensureSalesDeskDepartments();
+      store.seedDemoAccount();
+    }
+    store.save();
+    return store;
+  }
+
+  private save() {
+    fs.writeFileSync(this.dataFile, Buffer.from(this.db.export()));
+  }
+
+  /** Absolute path of this store's SQLite file (used to co-locate per-org files). */
+  get dataFilePath(): string {
+    return this.dataFile;
+  }
+
+  /** Write a timestamped snapshot of this store's file into <dataDir>/backups/,
+   *  pruning to the newest `retain`. Returns the backup file path. */
+  backup(retain = 20): string {
+    this.save(); // snapshot the latest in-memory state to disk first
+    const dir = path.join(path.dirname(this.dataFile), "backups");
+    fs.mkdirSync(dir, { recursive: true });
+    const base = path.basename(this.dataFile, path.extname(this.dataFile));
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const dest = path.join(dir, `${base}-${stamp}.sqlite`);
+    fs.copyFileSync(this.dataFile, dest);
+    // ISO timestamps sort chronologically — drop all but the newest `retain`.
+    const mine = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith(`${base}-`) && f.endsWith(".sqlite"))
+      .sort();
+    for (const old of mine.slice(0, Math.max(0, mine.length - Math.max(1, retain)))) {
+      try {
+        fs.unlinkSync(path.join(dir, old));
+      } catch {
+        /* best-effort prune */
+      }
+    }
+    return dest;
+  }
+
+  private getUserVersion(): number {
+    const res = this.db.exec("PRAGMA user_version");
+    const raw = res[0]?.values?.[0]?.[0];
+    return typeof raw === "number" ? raw : Number(raw ?? 0);
+  }
+
+  /** Apply any SCHEMA_MIGRATIONS newer than this DB's recorded user_version. */
+  private runMigrations() {
+    let version = this.getUserVersion();
+    for (const migration of SCHEMA_MIGRATIONS) {
+      if (migration.version <= version) continue;
+      migration.up(this.db);
+      this.db.exec(`PRAGMA user_version = ${Math.floor(migration.version)}`);
+      version = migration.version;
+      console.log(`🗄️  DB migrate → v${migration.version} (${migration.name}) [${path.basename(this.dataFile)}]`);
+    }
+  }
+
+  private migrate() {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        title TEXT NOT NULL,
+        avatar TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        location TEXT NOT NULL,
+        address TEXT NOT NULL,
+        type TEXT NOT NULL,
+        contractType TEXT NOT NULL,
+        managerId TEXT NOT NULL,
+        targetCompletion TEXT NOT NULL,
+        percentComplete INTEGER NOT NULL,
+        scheduleHealth TEXT NOT NULL,
+        status TEXT NOT NULL,
+        image TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS phases (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        percentComplete INTEGER NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        color TEXT NOT NULL,
+        sequence INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS jobs (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phase TEXT NOT NULL,
+        location TEXT NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        startTime TEXT NOT NULL,
+        endTime TEXT NOT NULL,
+        requiredLabor INTEGER NOT NULL,
+        requiredEquipment TEXT NOT NULL,
+        materialsStatus TEXT NOT NULL,
+        status TEXT NOT NULL,
+        priority TEXT NOT NULL,
+        notes TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS crews (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        specialty TEXT NOT NULL,
+        lead TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        capacity INTEGER NOT NULL,
+        utilization INTEGER NOT NULL,
+        icon TEXT NOT NULL,
+        status TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS crew_role_counts (
+        id TEXT PRIMARY KEY,
+        crewId TEXT NOT NULL,
+        category TEXT NOT NULL,
+        role TEXT NOT NULL,
+        count INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS equipment (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        assignedTo TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS materials (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        deliveryDate TEXT NOT NULL,
+        quantity TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS assignments (
+        id TEXT PRIMARY KEY,
+        jobId TEXT NOT NULL,
+        crewId TEXT NOT NULL,
+        date TEXT NOT NULL,
+        status TEXT NOT NULL,
+        conflicts TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS field_updates (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        jobId TEXT,
+        userId TEXT NOT NULL,
+        message TEXT NOT NULL,
+        status TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        photos TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS delays (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        category TEXT NOT NULL,
+        title TEXT NOT NULL,
+        impactDays INTEGER NOT NULL,
+        severity TEXT NOT NULL,
+        status TEXT NOT NULL,
+        reportedAt TEXT NOT NULL,
+        description TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS readiness (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        label TEXT NOT NULL,
+        complete INTEGER NOT NULL,
+        dueDate TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS inspections (
+        id TEXT PRIMARY KEY,
+        projectId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        scheduledAt TEXT NOT NULL,
+        status TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS weather_alerts (
+        id TEXT PRIMARY KEY,
+        projectId TEXT,
+        title TEXT NOT NULL,
+        details TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        startsAt TEXT NOT NULL
+      );
+
+      /* waitlist (removable feature): pre-launch email signups */
+      CREATE TABLE IF NOT EXISTS waitlist (
+        email TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        notifiedAt TEXT
+      );
+
+      /* ── Sales & Customer-Service Desk ───────────────────────────────────────
+         Backs the standalone "BuildFlow Sales & Support Desk" console (its own
+         Vite app at sales-desk/, proxied to this backend). Additive tables, kept
+         out of clearWorkspace() so this cross-cutting staff data survives an
+         onboarding reset. Seeded once by seedSalesDesk() (guards on sales_leads). */
+      CREATE TABLE IF NOT EXISTS sales_leads (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT NOT NULL DEFAULT '',
+        company TEXT NOT NULL,
+        teamSize TEXT NOT NULL DEFAULT '',
+        interest TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL,
+        value INTEGER NOT NULL DEFAULT 0,
+        owner TEXT NOT NULL DEFAULT '',
+        source TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        createdAt TEXT NOT NULL,
+        lastActivityAt TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS sales_tasks (
+        id TEXT PRIMARY KEY,
+        leadId TEXT,
+        title TEXT NOT NULL,
+        dueAt TEXT NOT NULL,
+        done INTEGER NOT NULL DEFAULT 0,
+        department TEXT NOT NULL DEFAULT 'sales',
+        createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS sales_activities (
+        id TEXT PRIMARY KEY,
+        leadId TEXT NOT NULL,
+        type TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS support_conversations (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        company TEXT NOT NULL DEFAULT '',
+        subject TEXT NOT NULL,
+        status TEXT NOT NULL,
+        priority TEXT NOT NULL,
+        department TEXT NOT NULL DEFAULT 'support',
+        createdAt TEXT NOT NULL,
+        lastMessageAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS support_messages (
+        id TEXT PRIMARY KEY,
+        conversationId TEXT NOT NULL,
+        author TEXT NOT NULL,
+        body TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+
+      /* Customer Support team roster — the owner/admin adds teammates here. */
+      CREATE TABLE IF NOT EXISTS support_agents (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        role TEXT NOT NULL,
+        status TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+
+      /* billing: Stripe subscriptions, keyed by Stripe subscription id. Written
+         by the /api/billing/webhook handler; stays empty until Stripe is
+         connected. Attach these to real orgs/users here once the app has auth. */
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id TEXT PRIMARY KEY,
+        customerId TEXT,
+        email TEXT,
+        planId TEXT,
+        priceId TEXT,
+        period TEXT,
+        status TEXT,
+        seats INTEGER,
+        currentPeriodEnd TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        raw TEXT
+      );
+
+      -- Authentication (global, main store only): orgs = tenants, accounts =
+      -- login identities (distinct from the demo "users" team-member table),
+      -- sessions = opaque login tokens. See auth.ts + stores.ts.
+      CREATE TABLE IF NOT EXISTS orgs (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        plan TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS accounts (
+        id TEXT PRIMARY KEY,
+        orgId TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        passwordHash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS sessions (
+        token TEXT PRIMARY KEY,
+        accountId TEXT NOT NULL,
+        orgId TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        expiresAt TEXT NOT NULL
+      );
+    `);
+
+    // Apply forward-versioned migrations on top of the baseline schema above.
+    this.runMigrations();
+  }
+
+  private seed() {
+    const count = this.get<{ count: number }>("SELECT COUNT(*) AS count FROM users")?.count ?? 0;
+    if (count > 0) return;
+
+    const users: User[] = [
+      {
+        id: "u-matt",
+        name: "Matt Johnson",
+        role: "Project Manager",
+        title: "Project Manager",
+        avatar: "MJ"
+      },
+      {
+        id: "u-jessica",
+        name: "Jessica Lee",
+        role: "Superintendent",
+        title: "Superintendent",
+        avatar: "JL"
+      },
+      {
+        id: "u-carlos",
+        name: "Carlos Ramirez",
+        role: "Crew Lead",
+        title: "Crew Lead - Crew 2",
+        avatar: "CR"
+      }
+    ];
+
+    const projects: Project[] = [
+      {
+        id: "p-riverside",
+        name: "Riverside Office Building",
+        slug: "riverside-office",
+        location: "Downtown, Austin, TX",
+        address: "123 Riverfront Blvd, Austin, TX 78701",
+        type: "Commercial",
+        contractType: "Fixed Price",
+        managerId: "u-matt",
+        targetCompletion: "2026-09-04",
+        percentComplete: 62,
+        scheduleHealth: "On Track",
+        status: "In Progress",
+        image: "office-building",
+        latitude: 30.2672,
+        longitude: -97.7431
+      },
+      {
+        id: "p-harborview",
+        name: "Harborview Apartments",
+        slug: "harborview-apartments",
+        location: "Harbor District, Austin, TX",
+        address: "2100 E 5th St, Austin, TX 78702",
+        type: "Multifamily",
+        contractType: "GMP",
+        managerId: "u-jessica",
+        targetCompletion: "2026-10-15",
+        percentComplete: 48,
+        scheduleHealth: "On Track",
+        status: "In Progress",
+        image: "apartments",
+        latitude: 30.2633,
+        longitude: -97.7167
+      },
+      {
+        id: "p-pinecrest",
+        name: "Pinecrest Medical Center",
+        slug: "pinecrest-medical",
+        location: "North Austin, TX",
+        address: "4800 Seton Center Pkwy, Austin, TX 78759",
+        type: "Healthcare",
+        contractType: "Cost Plus",
+        managerId: "u-matt",
+        targetCompletion: "2026-11-20",
+        percentComplete: 35,
+        scheduleHealth: "At Risk",
+        status: "Delayed",
+        image: "medical-center",
+        latitude: 30.4011,
+        longitude: -97.7479
+      },
+      {
+        id: "p-logistics",
+        name: "Logistics Warehouse",
+        slug: "logistics-warehouse",
+        location: "Kyle, TX",
+        address: "6201 McKinney Falls Pkwy, Austin, TX 78744",
+        type: "Industrial",
+        contractType: "Fixed Price",
+        managerId: "u-jessica",
+        targetCompletion: "2026-08-21",
+        percentComplete: 0,
+        scheduleHealth: "Monitor",
+        status: "Ready to Start",
+        image: "warehouse",
+        latitude: 30.1837,
+        longitude: -97.7211
+      },
+      {
+        id: "p-techridge",
+        name: "Tech Ridge Parking Garage",
+        slug: "tech-ridge-garage",
+        location: "Tech Ridge, Austin, TX",
+        address: "9100 Research Blvd, Austin, TX 78758",
+        type: "Commercial",
+        contractType: "Design Build",
+        managerId: "u-matt",
+        targetCompletion: "2026-07-30",
+        percentComplete: 100,
+        scheduleHealth: "Complete",
+        status: "Complete",
+        image: "parking-garage",
+        latitude: 30.3749,
+        longitude: -97.7137
+      }
+    ];
+
+    const phases: Phase[] = [
+      ["preconstruction", "Preconstruction", "On Track", 100, "2026-05-11", "2026-06-01", "#16a34a"],
+      ["permits", "Permits", "On Track", 100, "2026-05-25", "2026-06-08", "#16a34a"],
+      ["site-prep", "Site Prep", "On Track", 100, "2026-06-02", "2026-06-22", "#16a34a"],
+      ["foundation", "Foundation", "At Risk", 78, "2026-06-17", "2026-07-14", "#1976d2"],
+      ["framing", "Framing", "On Track", 45, "2026-07-07", "2026-08-04", "#1976d2"],
+      ["rough-in", "MEP Rough-In", "On Track", 30, "2026-07-29", "2026-08-24", "#7c3aed"],
+      ["inspections", "Inspections", "At Risk", 0, "2026-08-22", "2026-09-04", "#f59e0b"],
+      ["finishes", "Finishes", "Not Started", 0, "2026-09-01", "2026-09-22", "#fb8500"],
+      ["punch", "Punch List", "Delayed", 0, "2026-09-18", "2026-09-28", "#ef4444"],
+      ["closeout", "Closeout", "Delayed", 0, "2026-09-24", "2026-10-05", "#ef4444"]
+    ].map(([key, name, status, percentComplete, startDate, endDate, color], index) => ({
+      id: `phase-riverside-${key}`,
+      projectId: "p-riverside",
+      name: String(name),
+      status: status as Phase["status"],
+      percentComplete: Number(percentComplete),
+      startDate: String(startDate),
+      endDate: String(endDate),
+      color: String(color),
+      sequence: index + 1
+    }));
+
+    const jobs: Job[] = [
+      {
+        id: "j-riverside-concrete",
+        projectId: "p-riverside",
+        name: "Riverside Office Building",
+        phase: "Concrete - Level 3 Slab",
+        location: "Downtown, Austin",
+        startDate: "2026-06-15",
+        endDate: "2026-06-17",
+        startTime: "7:00 AM",
+        endTime: "3:30 PM",
+        requiredLabor: 8,
+        requiredEquipment: "Concrete Pump",
+        materialsStatus: "Delivered",
+        status: "Confirmed",
+        priority: "High",
+        notes: "Slab pour and foundation tie-ins."
+      },
+      {
+        id: "j-harborview-framing",
+        projectId: "p-harborview",
+        name: "Harborview Apartments",
+        phase: "Framing - Levels 2-4",
+        location: "East Austin",
+        startDate: "2026-06-16",
+        endDate: "2026-06-20",
+        startTime: "7:00 AM",
+        endTime: "3:00 PM",
+        requiredLabor: 6,
+        requiredEquipment: "Boom Lift",
+        materialsStatus: "Delivered",
+        status: "On Site",
+        priority: "High",
+        notes: "Exterior wall framing and podium connectors."
+      },
+      {
+        id: "j-pinecrest-foundation",
+        projectId: "p-pinecrest",
+        name: "Pinecrest Medical Center",
+        phase: "Concrete - Foundation",
+        location: "North Austin",
+        startDate: "2026-06-17",
+        endDate: "2026-06-18",
+        startTime: "7:00 AM",
+        endTime: "3:30 PM",
+        requiredLabor: 10,
+        requiredEquipment: "Excavator",
+        materialsStatus: "Missing",
+        status: "Delayed",
+        priority: "High",
+        notes: "Rebar delivery is behind schedule."
+      },
+      {
+        id: "j-logistics-site",
+        projectId: "p-logistics",
+        name: "Logistics Warehouse",
+        phase: "Site Utilities",
+        location: "South Austin",
+        startDate: "2026-06-18",
+        endDate: "2026-06-19",
+        startTime: "9:00 AM",
+        endTime: "3:00 PM",
+        requiredLabor: 5,
+        requiredEquipment: "Utility Truck",
+        materialsStatus: "Ordered",
+        status: "Ready to Start",
+        priority: "Medium",
+        notes: "Stage utility crew after locates are confirmed."
+      },
+      {
+        id: "j-techridge-paving",
+        projectId: "p-techridge",
+        name: "Tech Ridge Parking Garage",
+        phase: "Paving - Top Deck",
+        location: "Tech Ridge",
+        startDate: "2026-06-19",
+        endDate: "2026-06-19",
+        startTime: "7:00 AM",
+        endTime: "3:00 PM",
+        requiredLabor: 6,
+        requiredEquipment: "Paver",
+        materialsStatus: "Delivered",
+        status: "Ready",
+        priority: "Normal",
+        notes: "Final striping prep after paving cure window."
+      },
+      {
+        id: "j-steelyard-conduit",
+        projectId: "p-riverside",
+        name: "Steel Yard Expansion",
+        phase: "Underground Conduit",
+        location: "East Austin",
+        startDate: "2026-06-19",
+        endDate: "2026-06-20",
+        startTime: "7:00 AM",
+        endTime: "3:00 PM",
+        requiredLabor: 5,
+        requiredEquipment: "Utility Truck",
+        materialsStatus: "Waiting on Delivery",
+        status: "Delayed",
+        priority: "Medium",
+        notes: "Conduit reels are pending."
+      },
+      {
+        id: "j-downtown-retail",
+        projectId: "p-riverside",
+        name: "Downtown Retail Buildout",
+        phase: "Interior Finishes",
+        location: "Downtown, Austin",
+        startDate: "2026-06-16",
+        endDate: "2026-06-17",
+        startTime: "8:00 AM",
+        endTime: "2:00 PM",
+        requiredLabor: 4,
+        requiredEquipment: "Scissor Lift",
+        materialsStatus: "Delivered",
+        status: "Planned",
+        priority: "Normal",
+        notes: "Tenant improvement finish package."
+      },
+      {
+        id: "j-riverwalk-framing",
+        projectId: "p-harborview",
+        name: "Riverwalk Apartments",
+        phase: "Framing - Level 5",
+        location: "Riverside",
+        startDate: "2026-06-22",
+        endDate: "2026-06-23",
+        startTime: "7:00 AM",
+        endTime: "3:00 PM",
+        requiredLabor: 6,
+        requiredEquipment: "Boom Lift",
+        materialsStatus: "Delivered",
+        status: "Planned",
+        priority: "Normal",
+        notes: "Follow-on framing package."
+      },
+      {
+        id: "j-pinecrest-mep",
+        projectId: "p-pinecrest",
+        name: "Pinecrest Medical Center",
+        phase: "MEP Rough-In",
+        location: "North Austin",
+        startDate: "2026-06-20",
+        endDate: "2026-06-21",
+        startTime: "7:30 AM",
+        endTime: "3:30 PM",
+        requiredLabor: 7,
+        requiredEquipment: "Scissor Lift",
+        materialsStatus: "Delivered",
+        status: "Planned",
+        priority: "High",
+        notes: "Coordinate rough-in before inspection window."
+      }
+    ];
+
+    const crews: CrewRow[] = [
+      {
+        id: "crew-concrete",
+        name: "Concrete Crew 1",
+        specialty: "Concrete",
+        lead: "Mike Johnson",
+        size: 8,
+        capacity: 40,
+        utilization: 80,
+        icon: "cement-truck",
+        status: "Scheduled"
+      },
+      {
+        id: "crew-framing",
+        name: "Framing Crew 2",
+        specialty: "Framing",
+        lead: "Carlos Ramirez",
+        size: 6,
+        capacity: 40,
+        utilization: 75,
+        icon: "frame",
+        status: "Scheduled"
+      },
+      {
+        id: "crew-utility",
+        name: "Utility Crew 3",
+        specialty: "Utilities",
+        lead: "Jessica Lee",
+        size: 5,
+        capacity: 32,
+        utilization: 60,
+        icon: "pipe",
+        status: "Available"
+      },
+      {
+        id: "crew-paving",
+        name: "Paving Crew 4",
+        specialty: "Paving",
+        lead: "Sam Patel",
+        size: 4,
+        capacity: 32,
+        utilization: 50,
+        icon: "road",
+        status: "Available"
+      },
+      {
+        id: "crew-mep",
+        name: "MEP Crew 5",
+        specialty: "Mechanical / Electrical",
+        lead: "Priya Patel",
+        size: 7,
+        capacity: 40,
+        utilization: 88,
+        icon: "wrench",
+        status: "Scheduled"
+      },
+      {
+        id: "crew-finish",
+        name: "Finish Crew 6",
+        specialty: "Finishes",
+        lead: "Anthony Russo",
+        size: 5,
+        capacity: 32,
+        utilization: 42,
+        icon: "paint",
+        status: "Available"
+      }
+    ];
+
+    const equipment: Equipment[] = [
+      { id: "eq-crane", name: "Tower Crane #2", type: "Crane", status: "In Use", assignedTo: "p-harborview" },
+      { id: "eq-lift", name: "Boom Lift #4", type: "Lift", status: "In Use", assignedTo: "p-harborview" },
+      { id: "eq-pump", name: "Concrete Pump #2", type: "Pump", status: "In Use", assignedTo: "p-riverside" },
+      { id: "eq-excavator", name: "Excavator 320", type: "Excavator", status: "Maintenance", assignedTo: "p-pinecrest" },
+      { id: "eq-scissor-lift", name: "Scissor Lift #6", type: "Lift", status: "In Use", assignedTo: "p-pinecrest" },
+      { id: "eq-truck", name: "Utility Truck #8", type: "Truck", status: "Available" }
+    ];
+
+    const materials: Material[] = [
+      { id: "mat-rebar", projectId: "p-pinecrest", name: "Rebar Package", status: "Waiting on Delivery", deliveryDate: "2026-06-24", quantity: "14 tons" },
+      { id: "mat-concrete", projectId: "p-riverside", name: "Ready Mix Concrete", status: "Ready", deliveryDate: "2026-06-16", quantity: "120 yd3" },
+      { id: "mat-steel", projectId: "p-harborview", name: "Wall Framing Steel", status: "Ready", deliveryDate: "2026-06-14", quantity: "34 bundles" },
+      { id: "mat-conduit", projectId: "p-riverside", name: "Electrical Conduit", status: "Missing", deliveryDate: "2026-06-21", quantity: "900 ft" },
+      { id: "mat-asphalt", projectId: "p-techridge", name: "Asphalt Surface Mix", status: "Ordered", deliveryDate: "2026-06-19", quantity: "64 tons" }
+    ];
+
+    const assignments: ScheduleAssignment[] = [
+      { id: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15", status: "Confirmed", conflicts: [] },
+      { id: "as-2", jobId: "j-harborview-framing", crewId: "crew-framing", date: "2026-06-16", status: "Confirmed", conflicts: [] },
+      { id: "as-3", jobId: "j-harborview-framing", crewId: "crew-framing", date: "2026-06-17", status: "Confirmed", conflicts: [] },
+      { id: "as-4", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: "2026-06-19", status: "Delayed", conflicts: ["Missing materials"] },
+      { id: "as-5", jobId: "j-logistics-site", crewId: "crew-utility", date: "2026-06-18", status: "Ready", conflicts: [] },
+      { id: "as-6", jobId: "j-techridge-paving", crewId: "crew-paving", date: "2026-06-19", status: "Ready", conflicts: [] },
+      { id: "as-7", jobId: "j-steelyard-conduit", crewId: "crew-utility", date: "2026-06-19", status: "Delayed", conflicts: ["Missing materials"] },
+      { id: "as-8", jobId: "j-pinecrest-mep", crewId: "crew-mep", date: "2026-06-20", status: "Planned", conflicts: [] }
+    ];
+
+    const fieldUpdates: FieldUpdate[] = [
+      {
+        id: "fu-1",
+        projectId: "p-harborview",
+        jobId: "j-harborview-framing",
+        userId: "u-carlos",
+        message: "Steel framing installation progressing on Level 4. All material on site.",
+        status: "On Site",
+        createdAt: "2026-06-16T09:18:00.000Z",
+        photos: ["steel-frame", "jobsite", "crane"]
+      },
+      {
+        id: "fu-2",
+        projectId: "p-pinecrest",
+        jobId: "j-pinecrest-foundation",
+        userId: "u-jessica",
+        message: "Waiting on MEP rough-in inspection. Inspector running behind.",
+        status: "Delayed",
+        createdAt: "2026-06-16T08:45:00.000Z",
+        photos: []
+      },
+      {
+        id: "fu-3",
+        projectId: "p-logistics",
+        jobId: "j-logistics-site",
+        userId: "u-matt",
+        message: "Crew on site and staging materials. Ready to begin at 9:00 AM.",
+        status: "Ready to Start",
+        createdAt: "2026-06-16T08:02:00.000Z",
+        photos: []
+      }
+    ];
+
+    const delays: Delay[] = [
+      {
+        id: "delay-rain",
+        projectId: "p-riverside",
+        category: "Weather",
+        title: "Heavy Rain Delay",
+        impactDays: 4,
+        severity: "Medium",
+        status: "Monitoring",
+        reportedAt: "2026-06-12",
+        description: "Site prep and foundation activities slowed by rain."
+      },
+      {
+        id: "delay-rebar",
+        projectId: "p-pinecrest",
+        category: "Material shortage",
+        title: "Rebar Material Shortage",
+        impactDays: 6,
+        severity: "High",
+        status: "Open",
+        reportedAt: "2026-06-14",
+        description: "Foundation and MEP rough-in cannot proceed until rebar arrives."
+      },
+      {
+        id: "delay-inspection",
+        projectId: "p-pinecrest",
+        category: "Inspection delay",
+        title: "MEP Inspection Delay",
+        impactDays: 2,
+        severity: "Medium",
+        status: "Open",
+        reportedAt: "2026-06-16",
+        description: "Inspector availability pushed rough-in signoff."
+      }
+    ];
+
+    const readiness: ReadinessItem[] = [
+      { id: "ready-1", projectId: "p-riverside", label: "Contract Signed", complete: true, dueDate: "2026-03-12" },
+      { id: "ready-2", projectId: "p-riverside", label: "Permit Approved", complete: true, dueDate: "2026-05-02" },
+      { id: "ready-3", projectId: "p-riverside", label: "Materials Ordered", complete: true, dueDate: "2026-05-06" },
+      { id: "ready-4", projectId: "p-riverside", label: "Materials Delivered", complete: false, dueDate: "Pending" },
+      { id: "ready-5", projectId: "p-riverside", label: "Site Access Confirmed", complete: true, dueDate: "2026-05-08" },
+      { id: "ready-6", projectId: "p-riverside", label: "Utility Locates Complete", complete: false, dueDate: "Pending" },
+      { id: "ready-7", projectId: "p-riverside", label: "Subcontractors Confirmed", complete: true, dueDate: "2026-05-09" }
+    ];
+
+    const inspections: Inspection[] = [
+      { id: "insp-1", projectId: "p-riverside", title: "Foundation Inspection", scheduledAt: "2026-06-23T10:00:00.000Z", status: "Upcoming" },
+      { id: "insp-2", projectId: "p-harborview", title: "Framing Inspection", scheduledAt: "2026-06-20T10:00:00.000Z", status: "Upcoming" },
+      { id: "insp-3", projectId: "p-pinecrest", title: "MEP Rough-In Inspection", scheduledAt: "2026-07-18T10:00:00.000Z", status: "Upcoming" },
+      { id: "insp-4", projectId: "p-riverside", title: "Substantial Completion", scheduledAt: "2026-09-04T15:00:00.000Z", status: "Ready" }
+    ];
+
+    const weatherAlerts: WeatherAlert[] = [
+      {
+        id: "wa-1",
+        projectId: "p-riverside",
+        title: "Heavy rain expected",
+        details: "1.25-2.00 in of rain with wind gusts up to 30 mph.",
+        severity: "Medium",
+        startsAt: "2026-06-18T12:00:00.000Z"
+      }
+    ];
+
+    this.seeding = true;
+    users.forEach((item) => this.insert("users", item));
+    projects.forEach((item) => this.insert("projects", item));
+    phases.forEach((item) => this.insert("phases", item));
+    jobs.forEach((item) => this.insert("jobs", item));
+    crews.forEach((item) => this.insert("crews", item));
+    equipment.forEach((item) => this.insert("equipment", item));
+    materials.forEach((item) => this.insert("materials", item));
+    assignments.forEach((item) => this.insert("assignments", { ...item, conflicts: JSON.stringify(item.conflicts) }));
+    fieldUpdates.forEach((item) => this.insert("field_updates", { ...item, photos: JSON.stringify(item.photos) }));
+    delays.forEach((item) => this.insert("delays", item));
+    readiness.forEach((item) => this.insert("readiness", { ...item, complete: item.complete ? 1 : 0 }));
+    inspections.forEach((item) => this.insert("inspections", item));
+    weatherAlerts.forEach((item) => this.insert("weather_alerts", item));
+    this.seeding = false;
+  }
+
+  private ensureReferenceCrewData() {
+    this.seeding = true;
+    const referenceCrews: CrewRow[] = [
+      {
+        id: "crew-mep",
+        name: "MEP Crew 5",
+        specialty: "Mechanical / Electrical",
+        lead: "Priya Patel",
+        size: 7,
+        capacity: 40,
+        utilization: 88,
+        icon: "wrench",
+        status: "Scheduled"
+      },
+      {
+        id: "crew-finish",
+        name: "Finish Crew 6",
+        specialty: "Finishes",
+        lead: "Anthony Russo",
+        size: 5,
+        capacity: 32,
+        utilization: 42,
+        icon: "paint",
+        status: "Available"
+      }
+    ];
+    referenceCrews.forEach((crew) => {
+      if (!this.get<CrewRow>("SELECT * FROM crews WHERE id = ?", [crew.id])) {
+        this.insert("crews", crew);
+      }
+    });
+
+    const referenceEquipment: Equipment[] = [
+      { id: "eq-scissor-lift", name: "Scissor Lift #6", type: "Lift", status: "In Use", assignedTo: "p-pinecrest" }
+    ];
+    referenceEquipment.forEach((equipment) => {
+      if (!this.get<Equipment>("SELECT * FROM equipment WHERE id = ?", [equipment.id])) {
+        this.insert("equipment", equipment);
+      }
+    });
+
+    const referenceJobs: Job[] = [
+      {
+        id: "j-pinecrest-mep",
+        projectId: "p-pinecrest",
+        name: "Pinecrest Medical Center",
+        phase: "MEP Rough-In",
+        location: "North Austin",
+        startDate: "2026-06-20",
+        endDate: "2026-06-21",
+        startTime: "7:30 AM",
+        endTime: "3:30 PM",
+        requiredLabor: 7,
+        requiredEquipment: "Scissor Lift",
+        materialsStatus: "Delivered",
+        status: "Planned",
+        priority: "High",
+        notes: "Coordinate rough-in before inspection window."
+      }
+    ];
+    referenceJobs.forEach((job) => {
+      if (!this.get<Job>("SELECT * FROM jobs WHERE id = ?", [job.id])) {
+        this.insert("jobs", job);
+      }
+    });
+
+    const referenceAssignments: ScheduleAssignment[] = [
+      { id: "as-8", jobId: "j-pinecrest-mep", crewId: "crew-mep", date: "2026-06-20", status: "Planned", conflicts: [] }
+    ];
+    referenceAssignments.forEach((assignment) => {
+      if (!this.get<AssignmentRow>("SELECT * FROM assignments WHERE id = ?", [assignment.id])) {
+        this.insert("assignments", { ...assignment, conflicts: JSON.stringify(assignment.conflicts) });
+      }
+    });
+    this.seeding = false;
+  }
+
+  private hasStarterWorkspace() {
+    return Boolean(this.get<Project>("SELECT * FROM projects WHERE id = ?", ["p-riverside"]));
+  }
+
+  private clearWorkspace() {
+    [
+      "weather_alerts",
+      "inspections",
+      "readiness",
+      "delays",
+      "field_updates",
+      "assignments",
+      "materials",
+      "equipment",
+      "crew_role_counts",
+      "crews",
+      "jobs",
+      "phases",
+      "projects",
+      "users"
+    ].forEach((table) => this.run(`DELETE FROM ${table}`));
+  }
+
+  private insertBootstrapPayload(payload: BootstrapPayload) {
+    payload.users.forEach((item) => this.insert("users", item));
+    payload.projects.forEach((item) => this.insert("projects", item));
+    payload.phases.forEach((item) => this.insert("phases", item));
+    payload.jobs.forEach((item) => this.insert("jobs", item));
+    payload.crews.forEach((item) => {
+      const { laborMix, ...crewRow } = item;
+      this.insert("crews", crewRow);
+      this.insertCrewRoleCounts(item.id, laborMix);
+    });
+    payload.equipment.forEach((item) => this.insert("equipment", { ...item, assignedTo: item.assignedTo ?? null }));
+    payload.materials.forEach((item) => this.insert("materials", item));
+    payload.assignments.forEach((item) => this.insert("assignments", { ...item, conflicts: JSON.stringify(item.conflicts) }));
+    payload.fieldUpdates.forEach((item) => this.insert("field_updates", { ...item, jobId: item.jobId ?? null, photos: JSON.stringify(item.photos) }));
+    payload.delays.forEach((item) => this.insert("delays", item));
+    payload.readiness.forEach((item) => this.insert("readiness", { ...item, complete: item.complete ? 1 : 0 }));
+    payload.inspections.forEach((item) => this.insert("inspections", item));
+    payload.weatherAlerts.forEach((item) => this.insert("weather_alerts", item));
+  }
+
+  private ensureCrewRoleCounts() {
+    const defaultMixes: Record<string, CrewLaborMixItem[]> = {
+      "crew-concrete": [
+        { category: "Labor", role: "Finishers", count: 4 },
+        { category: "Labor", role: "Laborers", count: 2 },
+        { category: "Operator", role: "Pump Operator", count: 1 }
+      ],
+      "crew-framing": [
+        { category: "Labor", role: "Framers", count: 3 },
+        { category: "Labor", role: "Laborer", count: 1 },
+        { category: "Operator", role: "Lift Operator", count: 1 }
+      ],
+      "crew-utility": [
+        { category: "Labor", role: "Utility Laborers", count: 2 },
+        { category: "Labor", role: "Pipe Layer", count: 1 },
+        { category: "Operator", role: "Excavator Operator", count: 1 }
+      ],
+      "crew-paving": [
+        { category: "Labor", role: "Paving Laborers", count: 2 },
+        { category: "Operator", role: "Roller Operator", count: 1 }
+      ],
+      "crew-mep": [
+        { category: "Labor", role: "Electricians", count: 3 },
+        { category: "Labor", role: "Pipefitters", count: 2 },
+        { category: "Operator", role: "Lift Operator", count: 1 }
+      ],
+      "crew-finish": [
+        { category: "Labor", role: "Finish Carpenters", count: 2 },
+        { category: "Labor", role: "Painters", count: 2 }
+      ]
+    };
+
+    this.all<CrewRow>("SELECT * FROM crews").forEach((crew) => {
+      const existingCount =
+        this.get<{ count: number }>("SELECT COUNT(*) AS count FROM crew_role_counts WHERE crewId = ?", [crew.id])
+          ?.count ?? 0;
+      if (existingCount > 0) return;
+
+      const fallbackCount = Math.max(crew.size - 1, 1);
+      const mix = defaultMixes[crew.id] ?? [{ category: "Labor", role: "General Labor", count: fallbackCount }];
+      this.insertCrewRoleCounts(crew.id, mix);
+    });
+  }
+
+  // Whole-week offset moving the seed's primary week (Mon 2026-06-15) onto the
+  // current week, so the demo always opens on the current day & month with data.
+  private seedShiftDays(): number {
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const dow = new Date(todayUtc).getUTCDay(); // 0=Sun..6=Sat
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const currentMonday = todayUtc + mondayOffset * 86_400_000;
+    return Math.round((currentMonday - SEED_ANCHOR_MONDAY) / 86_400_000);
+  }
+
+  private insert(table: string, values: Record<string, unknown>) {
+    if (this.seeding) {
+      const dateFields = SEED_DATE_FIELDS[table];
+      if (dateFields) {
+        const days = this.seedShiftDays();
+        if (days !== 0) {
+          const shifted: Record<string, unknown> = { ...values };
+          for (const field of dateFields) shifted[field] = shiftSeedDate(shifted[field], days);
+          values = shifted;
+        }
+      }
+    }
+    const keys = Object.keys(values);
+    const placeholders = keys.map(() => "?").join(", ");
+    this.run(
+      `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`,
+      keys.map((key) => values[key] as Primitive)
+    );
+  }
+
+  private insertCrewRoleCounts(crewId: string, laborMix: CrewLaborMixItem[]) {
+    laborMix.forEach((item, index) => {
+      this.insert("crew_role_counts", {
+        id: `${crewId}-role-${Date.now()}-${index}`,
+        crewId,
+        category: item.category,
+        role: item.role,
+        count: item.count
+      });
+    });
+  }
+
+  private uniqueProjectSlug(name: string) {
+    const baseSlug = slugify(name, "project");
+    let slug = baseSlug;
+    let suffix = 2;
+    while (this.get<Project>("SELECT * FROM projects WHERE slug = ?", [slug])) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+    return slug;
+  }
+
+  all<T>(sql: string, params: Primitive[] = []): T[] {
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    const rows: T[] = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject() as T);
+    }
+    stmt.free();
+    return rows;
+  }
+
+  get<T>(sql: string, params: Primitive[] = []): T | undefined {
+    return this.all<T>(sql, params)[0];
+  }
+
+  run(sql: string, params: Primitive[] = []) {
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    stmt.run();
+    stmt.free();
+  }
+
+  /* ── authentication: orgs, accounts, sessions ─────────────────────────────
+     Global to the MAIN store (auth is not per-tenant). Passwords are scrypt-
+     hashed via auth.ts; sessions are opaque tokens. Per-tenant DATA isolation
+     is handled separately in stores.ts (database-per-org). */
+  createOrg(name: string, plan = "Free"): Org {
+    const org: Org = { id: newId("org"), name: name.trim() || "My Company", plan, createdAt: new Date().toISOString() };
+    this.insert("orgs", org);
+    this.save();
+    return org;
+  }
+
+  getOrg(id: string): Org | undefined {
+    return this.get<Org>("SELECT * FROM orgs WHERE id = ?", [id]);
+  }
+
+  emailExists(email: string): boolean {
+    return Boolean(this.get<{ id: string }>("SELECT id FROM accounts WHERE email = ?", [email.trim().toLowerCase()]));
+  }
+
+  createAccount(input: { orgId: string; email: string; password: string; name: string; role?: string }): Account {
+    const row: AccountRow = {
+      id: newId("acct"),
+      orgId: input.orgId,
+      email: input.email.trim().toLowerCase(),
+      passwordHash: hashPassword(input.password),
+      name: input.name.trim() || input.email.split("@")[0],
+      role: input.role ?? "owner",
+      createdAt: new Date().toISOString()
+    };
+    this.insert("accounts", row);
+    this.save();
+    return toAccount(row);
+  }
+
+  /** Full row incl. passwordHash — for login verification only, never returned to a client. */
+  getAccountRowByEmail(email: string): AccountRow | undefined {
+    return this.get<AccountRow>("SELECT * FROM accounts WHERE email = ?", [email.trim().toLowerCase()]);
+  }
+
+  getAccountById(id: string): Account | undefined {
+    const row = this.get<AccountRow>("SELECT * FROM accounts WHERE id = ?", [id]);
+    return row ? toAccount(row) : undefined;
+  }
+
+  createSession(accountId: string, orgId: string): { token: string; expiresAt: string } {
+    const token = newSessionToken();
+    const now = Date.now();
+    const expiresAt = new Date(now + SESSION_TTL_MS).toISOString();
+    this.insert("sessions", { token, accountId, orgId, createdAt: new Date(now).toISOString(), expiresAt });
+    this.save();
+    return { token, expiresAt };
+  }
+
+  /** Resolve a session token → {account, org}, rejecting (and pruning) expired ones. */
+  getSession(token: string): SessionContext | undefined {
+    if (!token) return undefined;
+    const row = this.get<{ accountId: string; orgId: string; expiresAt: string }>(
+      "SELECT accountId, orgId, expiresAt FROM sessions WHERE token = ?",
+      [token]
+    );
+    if (!row) return undefined;
+    if (new Date(row.expiresAt).getTime() < Date.now()) {
+      this.deleteSession(token);
+      return undefined;
+    }
+    const account = this.getAccountById(row.accountId);
+    const org = this.getOrg(row.orgId);
+    if (!account || !org) return undefined;
+    return { account, org };
+  }
+
+  deleteSession(token: string) {
+    if (!token) return;
+    this.run("DELETE FROM sessions WHERE token = ?", [token]);
+    this.save();
+  }
+
+  /** Idempotently seed the demo org + demo account so the credential-free
+      "Preview the live demo" logs into this seeded workspace. */
+  seedDemoAccount() {
+    if (!this.getOrg(DEMO_ORG_ID)) {
+      this.insert("orgs", { id: DEMO_ORG_ID, name: "BuildFlow Demo Co.", plan: "Business", createdAt: new Date().toISOString() });
+    }
+    if (!this.emailExists(DEMO_ACCOUNT_EMAIL)) {
+      this.insert("accounts", {
+        id: newId("acct"),
+        orgId: DEMO_ORG_ID,
+        email: DEMO_ACCOUNT_EMAIL,
+        passwordHash: hashPassword(DEMO_ACCOUNT_PASSWORD),
+        name: "Demo User",
+        role: "owner",
+        createdAt: new Date().toISOString()
+      });
+    }
+    this.save();
+  }
+
+  /* ── billing: Stripe subscriptions (written by the webhook handler) ───────── */
+  upsertSubscription(row: {
+    id: string;
+    customerId?: string | null;
+    email?: string | null;
+    planId?: string | null;
+    priceId?: string | null;
+    period?: string | null;
+    status?: string | null;
+    seats?: number | null;
+    currentPeriodEnd?: string | null;
+    raw?: unknown;
+  }): SubscriptionRow {
+    const now = new Date().toISOString();
+    const existing = this.get<SubscriptionRow>("SELECT * FROM subscriptions WHERE id = ?", [row.id]);
+    const merged: SubscriptionRow = {
+      id: row.id,
+      customerId: row.customerId ?? existing?.customerId ?? null,
+      email: row.email ?? existing?.email ?? null,
+      planId: row.planId ?? existing?.planId ?? null,
+      priceId: row.priceId ?? existing?.priceId ?? null,
+      period: row.period ?? existing?.period ?? null,
+      status: row.status ?? existing?.status ?? null,
+      seats: row.seats ?? existing?.seats ?? null,
+      currentPeriodEnd: row.currentPeriodEnd ?? existing?.currentPeriodEnd ?? null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+      raw: row.raw === undefined ? existing?.raw ?? null : JSON.stringify(row.raw)
+    };
+    this.run(
+      `INSERT OR REPLACE INTO subscriptions
+         (id, customerId, email, planId, priceId, period, status, seats, currentPeriodEnd, createdAt, updatedAt, raw)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        merged.id, merged.customerId, merged.email, merged.planId, merged.priceId, merged.period,
+        merged.status, merged.seats, merged.currentPeriodEnd, merged.createdAt, merged.updatedAt, merged.raw
+      ]
+    );
+    this.save();
+    return merged;
+  }
+
+  listSubscriptions(): SubscriptionRow[] {
+    return this.all<SubscriptionRow>("SELECT * FROM subscriptions ORDER BY updatedAt DESC");
+  }
+
+  getSubscriptionByEmail(email: string): SubscriptionRow | undefined {
+    return this.get<SubscriptionRow>("SELECT * FROM subscriptions WHERE email = ? ORDER BY updatedAt DESC", [email]);
+  }
+
+  getSubscriptionByCustomer(customerId: string): SubscriptionRow | undefined {
+    return this.get<SubscriptionRow>("SELECT * FROM subscriptions WHERE customerId = ? ORDER BY updatedAt DESC", [customerId]);
+  }
+
+  bootstrap(): BootstrapPayload {
+    return {
+      users: this.all<User>("SELECT * FROM users ORDER BY name"),
+      activeUser: this.get<User>("SELECT * FROM users WHERE id = ?", ["u-matt"])!,
+      projects: this.projects(),
+      jobs: this.jobs(),
+      crews: this.crews(),
+      equipment: this.equipment(),
+      materials: this.materials(),
+      assignments: this.assignments(),
+      fieldUpdates: this.fieldUpdates(),
+      delays: this.delays(),
+      readiness: this.readiness(),
+      phases: this.phases(),
+      inspections: this.inspections(),
+      weatherAlerts: this.weatherAlerts()
+    };
+  }
+
+  applyBusinessProfile(_businessType: BusinessTypeId) {
+    this.clearWorkspace();
+    onboardingUsers.forEach((item) => this.insert("users", item));
+    this.save();
+    return this.bootstrap();
+  }
+
+  projects(): Project[] {
+    return this.all<Project>("SELECT * FROM projects ORDER BY name");
+  }
+
+  project(idOrSlug: string) {
+    const project = this.get<Project>("SELECT * FROM projects WHERE id = ? OR slug = ?", [idOrSlug, idOrSlug]);
+    if (!project) return undefined;
+
+    return {
+      project,
+      phases: this.phases(project.id),
+      jobs: this.jobs(project.id),
+      readiness: this.readiness(project.id),
+      delays: this.delays(project.id),
+      inspections: this.inspections(project.id)
+    };
+  }
+
+  canManageProject(managerId: string) {
+    return Boolean(
+      this.get<User>("SELECT * FROM users WHERE id = ? AND role IN (?, ?)", [
+        managerId,
+        "Project Manager",
+        "Superintendent"
+      ])
+    );
+  }
+
+  createProject(input: CreateProjectInput) {
+    const project: Project = {
+      id: `p-${slugify(input.name, "project")}-${Date.now()}`,
+      name: input.name.trim(),
+      slug: this.uniqueProjectSlug(input.name),
+      location: input.location.trim(),
+      address: input.address.trim(),
+      type: input.type.trim(),
+      contractType: input.contractType.trim(),
+      managerId: input.managerId,
+      targetCompletion: input.targetCompletion,
+      percentComplete: input.percentComplete,
+      scheduleHealth: input.scheduleHealth,
+      status: input.status,
+      image: projectImageForType(input.type),
+      latitude: 30.2672,
+      longitude: -97.7431
+    };
+
+    this.insert("projects", project);
+    this.save();
+    return project;
+  }
+
+  updateProject(id: string, input: UpdateProjectInput) {
+    const current = this.get<Project>("SELECT * FROM projects WHERE id = ?", [id]);
+    if (!current) return undefined;
+
+    this.run(
+      `
+        UPDATE projects
+        SET name = ?,
+            location = ?,
+            address = ?,
+            type = ?,
+            contractType = ?,
+            managerId = ?,
+            targetCompletion = ?,
+            percentComplete = ?,
+            status = ?,
+            scheduleHealth = ?
+        WHERE id = ?
+      `,
+      [
+        input.name.trim(),
+        input.location.trim(),
+        input.address.trim(),
+        input.type.trim(),
+        input.contractType.trim(),
+        input.managerId,
+        input.targetCompletion,
+        input.percentComplete,
+        input.status,
+        input.scheduleHealth,
+        id
+      ]
+    );
+    this.save();
+    return this.get<Project>("SELECT * FROM projects WHERE id = ?", [id]);
+  }
+
+  jobs(projectId?: string): Job[] {
+    if (projectId) return this.all<Job>(`SELECT ${jobColumns} FROM jobs WHERE projectId = ? ORDER BY startDate`, [projectId]);
+    return this.all<Job>(`SELECT ${jobColumns} FROM jobs ORDER BY startDate, startTime`);
+  }
+
+  createJob(input: CreateJobInput) {
+    const job: Job = {
+      id: `job-${slugify(input.name)}-${Date.now()}`,
+      projectId: input.projectId,
+      name: input.name.trim(),
+      phase: input.phase.trim(),
+      location: input.location.trim(),
+      startDate: input.startDate,
+      endDate: input.endDate,
+      startTime: input.startTime.trim(),
+      endTime: input.endTime.trim(),
+      requiredLabor: input.requiredLabor,
+      requiredEquipment: input.requiredEquipment.trim(),
+      materialsStatus: input.materialsStatus,
+      status: input.status,
+      priority: input.priority,
+      notes: input.notes.trim()
+    };
+    this.insert("jobs", job);
+    this.save();
+    return job;
+  }
+
+  updateJob(id: string, updates: Partial<Job>) {
+    const allowed = ["status", "startDate", "endDate", "startTime", "endTime", "materialsStatus", "notes", "priority"];
+    const entries = Object.entries(updates).filter(([key]) => allowed.includes(key));
+    if (entries.length === 0) return this.get<Job>(`SELECT ${jobColumns} FROM jobs WHERE id = ?`, [id]);
+    const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
+    this.run(`UPDATE jobs SET ${setClause} WHERE id = ?`, [...entries.map(([, value]) => value as Primitive), id]);
+    this.save();
+    return this.get<Job>(`SELECT ${jobColumns} FROM jobs WHERE id = ?`, [id]);
+  }
+
+  crews(): Crew[] {
+    const laborMixByCrew = this.all<CrewRoleCountRow>(
+      "SELECT * FROM crew_role_counts ORDER BY category, role"
+    ).reduce<Record<string, CrewLaborMixItem[]>>((acc, row) => {
+      acc[row.crewId] = acc[row.crewId] ?? [];
+      acc[row.crewId].push({ category: row.category, role: row.role, count: row.count });
+      return acc;
+    }, {});
+
+    return this.all<CrewRow>("SELECT * FROM crews ORDER BY name").map((crew) => ({
+      ...crew,
+      laborMix: laborMixByCrew[crew.id] ?? []
+    }));
+  }
+
+  createCrew(input: CreateCrewInput) {
+    const laborMix = input.laborMix.map((item) => ({
+      category: item.category,
+      role: item.role.trim(),
+      count: item.count
+    }));
+    const size = 1 + laborMix.reduce((total, item) => total + item.count, 0);
+    const crew: Crew = {
+      id: `crew-${slugify(input.name)}-${Date.now()}`,
+      name: input.name.trim(),
+      specialty: input.specialty.trim(),
+      lead: input.foreman.trim(),
+      size,
+      capacity: 40,
+      utilization: 0,
+      icon: "users",
+      status: "Available",
+      laborMix
+    };
+    const { laborMix: _laborMix, ...crewRow } = crew;
+    this.insert("crews", crewRow);
+    this.insertCrewRoleCounts(crew.id, laborMix);
+    this.save();
+    return crew;
+  }
+
+  updateCrew(id: string, input: UpdateCrewInput) {
+    const current = this.get<CrewRow>("SELECT * FROM crews WHERE id = ?", [id]);
+    if (!current) return undefined;
+
+    const laborMix = input.laborMix.map((item) => ({
+      category: item.category,
+      role: item.role.trim(),
+      count: item.count
+    }));
+    const size = 1 + laborMix.reduce((total, item) => total + item.count, 0);
+    this.run(
+      "UPDATE crews SET name = ?, specialty = ?, lead = ?, size = ? WHERE id = ?",
+      [input.name.trim(), input.specialty.trim(), input.foreman.trim(), size, id]
+    );
+    this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
+    this.insertCrewRoleCounts(id, laborMix);
+    this.save();
+    return this.crews().find((crew) => crew.id === id);
+  }
+
+  deleteCrew(id: string) {
+    const current = this.get<CrewRow>("SELECT * FROM crews WHERE id = ?", [id]);
+    if (!current) return false;
+
+    this.run("DELETE FROM assignments WHERE crewId = ?", [id]);
+    this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
+    this.run("DELETE FROM crews WHERE id = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  equipment(): Equipment[] {
+    return this.all<Equipment>("SELECT * FROM equipment ORDER BY type, name");
+  }
+
+  createEquipment(input: CreateEquipmentInput) {
+    const equipment: Equipment = {
+      id: `eq-${slugify(input.name)}-${Date.now()}`,
+      name: input.name.trim(),
+      type: input.type.trim(),
+      status: input.status,
+      assignedTo: input.assignedTo || undefined
+    };
+    this.insert("equipment", { ...equipment, assignedTo: equipment.assignedTo ?? null });
+    this.save();
+    return equipment;
+  }
+
+  updateEquipment(id: string, input: UpdateEquipmentInput) {
+    const current = this.get<Equipment>("SELECT * FROM equipment WHERE id = ?", [id]);
+    if (!current) return undefined;
+
+    const equipment: Equipment = {
+      id,
+      name: input.name.trim(),
+      type: input.type.trim(),
+      status: input.status,
+      assignedTo: input.assignedTo || undefined
+    };
+    this.run("UPDATE equipment SET name = ?, type = ?, status = ?, assignedTo = ? WHERE id = ?", [
+      equipment.name,
+      equipment.type,
+      equipment.status,
+      equipment.assignedTo ?? null,
+      id
+    ]);
+    this.save();
+    return equipment;
+  }
+
+  deleteEquipment(id: string) {
+    const current = this.get<Equipment>("SELECT * FROM equipment WHERE id = ?", [id]);
+    if (!current) return false;
+
+    this.run("DELETE FROM equipment WHERE id = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  createMaterial(input: CreateMaterialInput) {
+    const material: Material = {
+      id: `mat-${slugify(input.name)}-${Date.now()}`,
+      projectId: input.projectId,
+      name: input.name.trim(),
+      status: input.status,
+      deliveryDate: input.deliveryDate,
+      quantity: input.quantity.trim()
+    };
+    this.insert("materials", material);
+    this.save();
+    return material;
+  }
+
+  materials(): Material[] {
+    return this.all<Material>("SELECT * FROM materials ORDER BY deliveryDate");
+  }
+
+  resources(): ResourcesPayload {
+    return {
+      crews: this.crews(),
+      equipment: this.equipment(),
+      materials: this.materials()
+    };
+  }
+
+  assignments(): ScheduleAssignment[] {
+    return this.all<AssignmentRow>("SELECT * FROM assignments ORDER BY date").map(toAssignment);
+  }
+
+  assignJob(input: { jobId: string; crewId: string; date: string; status?: Status }) {
+    const job = this.get<Job>("SELECT * FROM jobs WHERE id = ?", [input.jobId]);
+    const crew = this.get<Crew>("SELECT * FROM crews WHERE id = ?", [input.crewId]);
+    if (!job || !crew) {
+      throw new Error("Job or crew not found");
+    }
+
+    const conflicts = this.detectConflicts(input.jobId, input.crewId, input.date);
+    const assignment: ScheduleAssignment = {
+      id: `as-${Date.now()}`,
+      jobId: input.jobId,
+      crewId: input.crewId,
+      date: input.date,
+      status: input.status ?? (conflicts.length ? "At Risk" : "Planned"),
+      conflicts
+    };
+
+    this.insert("assignments", { ...assignment, conflicts: JSON.stringify(conflicts) });
+    this.save();
+    return assignment;
+  }
+
+  updateAssignment(id: string, updates: Partial<ScheduleAssignment>) {
+    const current = this.get<AssignmentRow>("SELECT * FROM assignments WHERE id = ?", [id]);
+    if (!current) return undefined;
+    const next = {
+      jobId: updates.jobId ?? current.jobId,
+      crewId: updates.crewId ?? current.crewId,
+      date: updates.date ?? current.date,
+      status: updates.status ?? current.status
+    };
+    const conflicts = this.detectConflicts(next.jobId, next.crewId, next.date, id);
+    this.run(
+      "UPDATE assignments SET jobId = ?, crewId = ?, date = ?, status = ?, conflicts = ? WHERE id = ?",
+      [next.jobId, next.crewId, next.date, next.status, JSON.stringify(conflicts), id]
+    );
+    this.save();
+    return toAssignment({ id, ...next, conflicts: JSON.stringify(conflicts) });
+  }
+
+  deleteAssignment(id: string) {
+    this.run("DELETE FROM assignments WHERE id = ?", [id]);
+    this.save();
+  }
+
+  private detectConflicts(jobId: string, crewId: string, date: string, ignoreAssignmentId?: string) {
+    const conflicts: string[] = [];
+    const existing = this.all<ScheduleAssignment>(
+      `SELECT * FROM assignments WHERE crewId = ? AND date = ?${ignoreAssignmentId ? " AND id != ?" : ""}`,
+      ignoreAssignmentId ? [crewId, date, ignoreAssignmentId] : [crewId, date]
+    );
+    if (existing.length > 0) conflicts.push("Double-booked crew");
+
+    const job = this.get<Job>("SELECT * FROM jobs WHERE id = ?", [jobId]);
+    const crew = this.get<Crew>("SELECT * FROM crews WHERE id = ?", [crewId]);
+    if (job && crew && job.requiredLabor > crew.size) conflicts.push("Crew lacks required labor");
+    if (job?.materialsStatus === "Missing" || job?.materialsStatus === "Waiting on Delivery") conflicts.push("Missing materials");
+
+    const matchingEquipment = this.get<Equipment>("SELECT * FROM equipment WHERE name LIKE ? OR type LIKE ?", [
+      `%${job?.requiredEquipment ?? ""}%`,
+      `%${job?.requiredEquipment ?? ""}%`
+    ]);
+    if (job?.requiredEquipment && matchingEquipment?.status === "Maintenance") conflicts.push("Required equipment unavailable");
+
+    return Array.from(new Set(conflicts));
+  }
+
+  fieldUpdates(): FieldUpdate[] {
+    return this.all<FieldUpdateRow>("SELECT * FROM field_updates ORDER BY createdAt DESC").map(toFieldUpdate);
+  }
+
+  createFieldUpdate(input: {
+    projectId: string;
+    jobId?: string;
+    userId: string;
+    message: string;
+    status: Status;
+    photos?: string[];
+  }) {
+    const update: FieldUpdate = {
+      id: `fu-${Date.now()}`,
+      projectId: input.projectId,
+      jobId: input.jobId,
+      userId: input.userId,
+      message: input.message,
+      status: input.status,
+      createdAt: new Date().toISOString(),
+      photos: input.photos ?? []
+    };
+    this.insert("field_updates", { ...update, jobId: update.jobId ?? null, photos: JSON.stringify(update.photos) });
+    this.save();
+    return update;
+  }
+
+  delays(projectId?: string): Delay[] {
+    if (projectId) return this.all<Delay>("SELECT * FROM delays WHERE projectId = ? ORDER BY reportedAt DESC", [projectId]);
+    return this.all<Delay>("SELECT * FROM delays ORDER BY reportedAt DESC");
+  }
+
+  createDelay(input: Omit<Delay, "id" | "reportedAt">) {
+    const delay: Delay = {
+      id: `delay-${Date.now()}`,
+      reportedAt: new Date().toISOString().slice(0, 10),
+      ...input
+    };
+    this.insert("delays", delay);
+    this.save();
+    return delay;
+  }
+
+  /* ── Sales & Customer-Service Desk ───────────────────────────────────────────
+     Read/write helpers for the standalone Sales & Support Desk console. Seeded
+     once (idempotent — guards on sales_leads) so both fresh and existing DBs get
+     demo leads, tasks, activities, and support threads. ──────────────────────── */
+  private newId(prefix: string) {
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  seedSalesDesk() {
+    const seeded = this.get<{ n: number }>("SELECT COUNT(*) AS n FROM sales_leads")?.n ?? 0;
+    if (seeded > 0) return;
+
+    const now = Date.now();
+    const DAY = 86_400_000;
+    const ago = (d: number) => new Date(now - d * DAY).toISOString();
+    const ahead = (d: number) => new Date(now + d * DAY).toISOString();
+    const agoH = (h: number) => new Date(now - h * 3_600_000).toISOString();
+
+    // Construction-industry prospects (BuildFlow sells scheduling to GCs & trades).
+    const leads: Array<Omit<SalesLeadRow, "createdAt" | "lastActivityAt"> & { createdAt: string; lastActivityAt: string | null }> = [
+      { id: "lead-diego", name: "Diego Alvarez", email: "diego@summitridge.build", phone: "+1 415 555 0142", company: "Summit Ridge Builders", teamSize: "25–50", interest: "Crew Scheduling", status: "New", value: 12000, owner: "Sales Rep", source: "Website", notes: "Inbound from pricing page. Runs 4 concurrent sites.", createdAt: ago(1), lastActivityAt: null },
+      { id: "lead-yuki", name: "Yuki Tanaka", email: "yuki@paccoastconcrete.com", phone: "+1 503 555 0100", company: "Pacific Coast Concrete", teamSize: "50–100", interest: "Schedule AI", status: "New", value: 35000, owner: "Sales Rep", source: "Referral", notes: "Referred by Northwind. Wants AI conflict detection.", createdAt: ago(2), lastActivityAt: null },
+      { id: "lead-marcus", name: "Marcus Holloway", email: "marcus@bluepeaksite.com", phone: "+1 312 555 0177", company: "Bluepeak Site Services", teamSize: "10–25", interest: "Equipment Tracking", status: "Contacted", value: 22500, owner: "Sales Rep", source: "Outbound", notes: "Demo booked. Comparing against spreadsheets.", createdAt: ago(9), lastActivityAt: ago(3) },
+      { id: "lead-rachel", name: "Rachel Mendes", email: "rachel@foundrysteel.com", phone: "+1 617 555 0155", company: "Foundry Steelworks", teamSize: "100–250", interest: "Materials Readiness", status: "Contacted", value: 64000, owner: "Priya Nair", source: "Trade show", notes: "Met at ConExpo. Multi-region rollout.", createdAt: ago(12), lastActivityAt: ago(5) },
+      { id: "lead-sarah", name: "Sarah Chen", email: "sarah.chen@northwindmech.com", phone: "+1 415 555 0142", company: "Northwind Mechanical", teamSize: "50–100", interest: "Production Reports", status: "Qualified", value: 48000, owner: "Sales Rep", source: "Outbound", notes: "Budget approved for Q3. Needs ROI deck.", createdAt: ago(15), lastActivityAt: ago(2) },
+      { id: "lead-priya", name: "Priya Raman", email: "priya.raman@helixinfra.com", phone: "+1 646 555 0193", company: "Helix Infrastructure", teamSize: "250+", interest: "Enterprise", status: "Proposal", value: 96000, owner: "Priya Nair", source: "Website", notes: "Proposal sent. Legal reviewing MSA.", createdAt: ago(24), lastActivityAt: ago(1) },
+      { id: "lead-anna", name: "Anna Kowalski", email: "anna@tidewatercp.com", phone: "+1 206 555 0128", company: "Tidewater Capital Projects", teamSize: "250+", interest: "Enterprise", status: "Won", value: 150000, owner: "Sales Rep", source: "Referral", notes: "Closed — 3-year contract. Onboarding scheduled.", createdAt: ago(40), lastActivityAt: ago(6) },
+      { id: "lead-tom", name: "Tom Becker", email: "tom@cedarvalleygc.com", phone: "+1 720 555 0119", company: "Cedar Valley GC", teamSize: "10–25", interest: "Crew Scheduling", status: "Lost", value: 18000, owner: "Priya Nair", source: "Website", notes: "Chose a competitor on price. Revisit in 6 months.", createdAt: ago(34), lastActivityAt: ago(20) }
+    ];
+    leads.forEach((lead) => this.insert("sales_leads", lead));
+
+    const tasks: SalesTaskRow[] = [
+      // Sales department follow-ups
+      { id: "stask-1", leadId: "lead-yuki", title: "Send personalised intro to Yuki", dueAt: ahead(1), done: 0, department: "sales", createdAt: ago(2) },
+      { id: "stask-2", leadId: "lead-diego", title: "Initial discovery call with Diego", dueAt: ahead(2), done: 0, department: "sales", createdAt: ago(1) },
+      { id: "stask-3", leadId: "lead-sarah", title: "Send tailored ROI deck", dueAt: ahead(3), done: 0, department: "sales", createdAt: ago(2) },
+      { id: "stask-4", leadId: "lead-marcus", title: "Confirm demo time with Marcus", dueAt: ahead(0), done: 0, department: "sales", createdAt: ago(3) },
+      { id: "stask-5", leadId: "lead-priya", title: "Follow up on legal review", dueAt: ahead(4), done: 0, department: "sales", createdAt: ago(1) },
+      { id: "stask-6", leadId: "lead-rachel", title: "Schedule pricing review", dueAt: ahead(5), done: 0, department: "sales", createdAt: ago(2) },
+      { id: "stask-7", leadId: "lead-anna", title: "Kick off onboarding with Tidewater", dueAt: ago(1), done: 1, department: "sales", createdAt: ago(6) },
+      // Customer Support department tasks
+      { id: "stask-s1", leadId: null, title: "Reply to Sarah — mobile sync outage", dueAt: ahead(0), done: 0, department: "support", createdAt: agoH(1) },
+      { id: "stask-s2", leadId: null, title: "Send Leah the PDF export steps", dueAt: ahead(1), done: 0, department: "support", createdAt: ago(1) },
+      { id: "stask-s3", leadId: null, title: "Write help-doc: importing an existing schedule", dueAt: ahead(2), done: 0, department: "support", createdAt: agoH(6) },
+      { id: "stask-s4", leadId: null, title: "Close out resolved Gantt feature-request thread", dueAt: ago(1), done: 1, department: "support", createdAt: ago(4) }
+    ];
+    tasks.forEach((task) => this.insert("sales_tasks", task));
+
+    const activities: SalesActivityRow[] = [
+      { id: "sact-1", leadId: "lead-priya", type: "note", summary: "Note: Stakeholder map — 3 decision makers identified", createdAt: agoH(2) },
+      { id: "sact-2", leadId: "lead-priya", type: "meeting", summary: "Meeting: Proposal review with procurement", createdAt: ago(1) },
+      { id: "sact-3", leadId: "lead-sarah", type: "call", summary: "Call: Discovery — mapped current scheduling pains", createdAt: ago(2) },
+      { id: "sact-4", leadId: "lead-marcus", type: "email", summary: "Email: Sent demo recording + follow-up questions", createdAt: ago(3) },
+      { id: "sact-5", leadId: "lead-rachel", type: "stage", summary: "Stage change: New → Contacted", createdAt: ago(5) },
+      { id: "sact-6", leadId: "lead-anna", type: "note", summary: "Note: Contract signed 🎉 handoff to onboarding", createdAt: ago(6) }
+    ];
+    activities.forEach((activity) => this.insert("sales_activities", activity));
+
+    // Two inboxes, routed by department:
+    //  • department: "support" → General Support (people who need help)
+    //  • department: "sales"   → Sales inquiries (pricing / plans / demos)
+    const conversations: Array<SupportConversationRow & { messages: Array<{ author: "customer" | "agent"; body: string; at: string }> }> = [
+      // ── General Support (Customer Support department) ──────────────────────
+      {
+        id: "conv-sarah", name: "Sarah Chen", email: "sarah.chen@northwindmech.com", company: "Northwind Mechanical",
+        subject: "Crew schedule won't sync to the mobile app", status: "open", priority: "High", department: "support",
+        createdAt: agoH(5), lastMessageAt: agoH(1),
+        messages: [
+          { author: "customer", body: "Hi — my foremen aren't seeing today's assignments on their phones even though the web schedule looks right. Started this morning.", at: agoH(5) },
+          { author: "agent", body: "Thanks Sarah — sorry about that. Can you confirm whether they pulled to refresh, and which crew is affected? I'll check the sync logs on our side now.", at: agoH(4) },
+          { author: "customer", body: "It's the Concrete crew. They pulled to refresh, still nothing.", at: agoH(1) }
+        ]
+      },
+      {
+        id: "conv-leah", name: "Leah Moreno", email: "leah@foundrysteel.com", company: "Foundry Steelworks",
+        subject: "Export weekly production report to PDF", status: "open", priority: "Normal", department: "support",
+        createdAt: ago(1), lastMessageAt: ago(1),
+        messages: [
+          { author: "customer", body: "Is there a way to export the weekly Production Report as a PDF to send to our owner? I can only see the on-screen view.", at: ago(1) }
+        ]
+      },
+      {
+        id: "conv-priya", name: "Priya Raman", email: "priya.raman@helixinfra.com", company: "Helix Infrastructure",
+        subject: "Onboarding: importing our existing schedule", status: "open", priority: "High", department: "support",
+        createdAt: agoH(30), lastMessageAt: agoH(7),
+        messages: [
+          { author: "customer", body: "We're moving off another scheduler. Can you import our current jobs and crews so we don't rebuild from scratch?", at: agoH(30) },
+          { author: "agent", body: "Absolutely — you can upload a photo or export and our AI import will create the projects, jobs and assignments for you. Want me to walk your team through it Thursday?", at: agoH(7) }
+        ]
+      },
+      {
+        id: "conv-james", name: "James Park", email: "james@paccoastconcrete.com", company: "Pacific Coast Concrete",
+        subject: "Feature request: Gantt dependencies", status: "closed", priority: "Low", department: "support",
+        createdAt: ago(6), lastMessageAt: ago(4),
+        messages: [
+          { author: "customer", body: "Would love to link jobs so a delay on one pushes the dependent ones automatically.", at: ago(6) },
+          { author: "agent", body: "Love it — I've logged this with product and tagged your account so you'll hear when it ships. Thanks for the idea!", at: ago(4) }
+        ]
+      },
+      // ── Sales inquiries (Sales department) ────────────────────────────────
+      {
+        id: "conv-diego", name: "Diego Alvarez", email: "diego@summitridge.build", company: "Summit Ridge Builders",
+        subject: "Question about per-seat pricing", status: "pending", priority: "Normal", department: "sales",
+        createdAt: ago(2), lastMessageAt: agoH(20),
+        messages: [
+          { author: "customer", body: "If we add field crews who only clock in/out, do they count as full seats?", at: ago(2) },
+          { author: "agent", body: "Great question — field-only users are free; you're billed for schedulers and PMs. I'll email the breakdown. Anything else before your demo?", at: agoH(20) }
+        ]
+      },
+      {
+        id: "conv-omar", name: "Omar Haddad", email: "omar@granitepeakgc.com", company: "Granite Peak GC",
+        subject: "Pricing for a 40-crew rollout", status: "open", priority: "High", department: "sales",
+        createdAt: agoH(6), lastMessageAt: agoH(6),
+        messages: [
+          { author: "customer", body: "We run about 40 crews across 3 regions and want to move everyone onto BuildFlow this quarter. Can you put together pricing and an onboarding plan?", at: agoH(6) }
+        ]
+      },
+      {
+        id: "conv-nina", name: "Nina Alvarez", email: "nina@harborlinebuild.com", company: "Harborline Build",
+        subject: "Interested in the Enterprise plan — can we get a demo?", status: "open", priority: "Normal", department: "sales",
+        createdAt: ago(1), lastMessageAt: agoH(20),
+        messages: [
+          { author: "customer", body: "Saw BuildFlow at a trade show. We'd like a demo of the Enterprise plan for our leadership team — are you free next week?", at: ago(1) },
+          { author: "agent", body: "Thanks Nina! I'd love to set that up. Does Tuesday or Thursday afternoon work better for your team?", at: agoH(20) }
+        ]
+      }
+    ];
+    conversations.forEach(({ messages, ...conv }) => {
+      this.insert("support_conversations", conv);
+      messages.forEach((m, index) =>
+        this.insert("support_messages", {
+          id: `${conv.id}-m${index + 1}`,
+          conversationId: conv.id,
+          author: m.author,
+          body: m.body,
+          createdAt: m.at
+        })
+      );
+    });
+  }
+
+  // Idempotent upgrade for installs seeded before departments existed: adds the
+  // `department` columns, routes the pricing thread to Sales, and makes sure both
+  // inboxes (Sales inquiries + Support tasks) are populated. Safe to run every boot.
+  ensureSalesDeskDepartments() {
+    const hasColumn = (table: string, column: string) =>
+      this.all<{ name: string }>(`PRAGMA table_info(${table})`).some((c) => c.name === column);
+    if (!hasColumn("support_conversations", "department")) {
+      this.run("ALTER TABLE support_conversations ADD COLUMN department TEXT NOT NULL DEFAULT 'support'");
+    }
+    if (!hasColumn("sales_tasks", "department")) {
+      this.run("ALTER TABLE sales_tasks ADD COLUMN department TEXT NOT NULL DEFAULT 'sales'");
+    }
+    // The per-seat pricing thread is a Sales inquiry, not general support.
+    this.run("UPDATE support_conversations SET department = 'sales' WHERE id = 'conv-diego'");
+
+    const now = Date.now();
+    const DAY = 86_400_000;
+    const ago = (d: number) => new Date(now - d * DAY).toISOString();
+    const ahead = (d: number) => new Date(now + d * DAY).toISOString();
+    const agoH = (h: number) => new Date(now - h * 3_600_000).toISOString();
+
+    const ensureConversation = (
+      conv: SupportConversationRow,
+      messages: Array<{ author: "customer" | "agent"; body: string; at: string }>
+    ) => {
+      if (this.get("SELECT id FROM support_conversations WHERE id = ?", [conv.id])) return;
+      this.insert("support_conversations", conv);
+      messages.forEach((m, i) =>
+        this.insert("support_messages", { id: `${conv.id}-m${i + 1}`, conversationId: conv.id, author: m.author, body: m.body, createdAt: m.at })
+      );
+    };
+    ensureConversation(
+      { id: "conv-omar", name: "Omar Haddad", email: "omar@granitepeakgc.com", company: "Granite Peak GC", subject: "Pricing for a 40-crew rollout", status: "open", priority: "High", department: "sales", createdAt: agoH(6), lastMessageAt: agoH(6) },
+      [{ author: "customer", body: "We run about 40 crews across 3 regions and want to move everyone onto BuildFlow this quarter. Can you put together pricing and an onboarding plan?", at: agoH(6) }]
+    );
+    ensureConversation(
+      { id: "conv-nina", name: "Nina Alvarez", email: "nina@harborlinebuild.com", company: "Harborline Build", subject: "Interested in the Enterprise plan — can we get a demo?", status: "open", priority: "Normal", department: "sales", createdAt: ago(1), lastMessageAt: agoH(20) },
+      [
+        { author: "customer", body: "Saw BuildFlow at a trade show. We'd like a demo of the Enterprise plan for our leadership team — are you free next week?", at: ago(1) },
+        { author: "agent", body: "Thanks Nina! I'd love to set that up. Does Tuesday or Thursday afternoon work better for your team?", at: agoH(20) }
+      ]
+    );
+
+    const ensureTask = (task: SalesTaskRow) => {
+      if (this.get("SELECT id FROM sales_tasks WHERE id = ?", [task.id])) return;
+      this.insert("sales_tasks", task);
+    };
+    ensureTask({ id: "stask-s1", leadId: null, title: "Reply to Sarah — mobile sync outage", dueAt: ahead(0), done: 0, department: "support", createdAt: agoH(1) });
+    ensureTask({ id: "stask-s2", leadId: null, title: "Send Leah the PDF export steps", dueAt: ahead(1), done: 0, department: "support", createdAt: ago(1) });
+    ensureTask({ id: "stask-s3", leadId: null, title: "Write help-doc: importing an existing schedule", dueAt: ahead(2), done: 0, department: "support", createdAt: agoH(6) });
+    ensureTask({ id: "stask-s4", leadId: null, title: "Close out resolved Gantt feature-request thread", dueAt: ago(1), done: 1, department: "support", createdAt: ago(4) });
+
+    // Seed the Customer Support team roster once (the owner can add more in Settings).
+    if ((this.get<{ n: number }>("SELECT COUNT(*) AS n FROM support_agents")?.n ?? 0) === 0) {
+      const agents: SupportAgentRow[] = [
+        { id: "agent-owner", name: "Jordan Lee", email: "support@buildflow.io", role: "Owner", status: "Active", createdAt: ago(120) },
+        { id: "agent-priya", name: "Priya Nair", email: "priya.nair@buildflow.io", role: "Admin", status: "Active", createdAt: ago(80) },
+        { id: "agent-sam", name: "Sam Rivera", email: "sam.rivera@buildflow.io", role: "Agent", status: "Active", createdAt: ago(40) },
+        { id: "agent-alex", name: "Alex Kim", email: "alex.kim@buildflow.io", role: "Agent", status: "Invited", createdAt: ago(3) }
+      ];
+      agents.forEach((agent) => this.insert("support_agents", agent));
+    }
+
+    this.save();
+  }
+
+  salesLeads(): SalesLeadRow[] {
+    return this.all<SalesLeadRow>("SELECT * FROM sales_leads ORDER BY COALESCE(lastActivityAt, createdAt) DESC");
+  }
+
+  salesTasks(department?: Department): SalesTaskRow[] {
+    if (department) {
+      return this.all<SalesTaskRow>("SELECT * FROM sales_tasks WHERE department = ? ORDER BY done ASC, dueAt ASC", [department]);
+    }
+    return this.all<SalesTaskRow>("SELECT * FROM sales_tasks ORDER BY done ASC, dueAt ASC");
+  }
+
+  salesActivities(): SalesActivityRow[] {
+    return this.all<SalesActivityRow>("SELECT * FROM sales_activities ORDER BY createdAt DESC");
+  }
+
+  salesBootstrap() {
+    return {
+      leads: this.salesLeads(),
+      tasks: this.salesTasks(),
+      activities: this.salesActivities(),
+      conversations: this.supportConversations()
+    };
+  }
+
+  createSalesLead(input: {
+    name: string; email: string; company: string; phone?: string; teamSize?: string;
+    interest?: string; status?: SalesLeadStatus; value?: number; owner?: string; source?: string; notes?: string;
+  }): SalesLeadRow {
+    const nowIso = new Date().toISOString();
+    const lead: SalesLeadRow = {
+      id: this.newId("lead"),
+      name: input.name,
+      email: input.email,
+      phone: input.phone ?? "",
+      company: input.company,
+      teamSize: input.teamSize ?? "",
+      interest: input.interest ?? "",
+      status: input.status ?? "New",
+      value: input.value ?? 0,
+      owner: input.owner ?? "",
+      source: input.source ?? "",
+      notes: input.notes ?? "",
+      createdAt: nowIso,
+      lastActivityAt: null
+    };
+    this.insert("sales_leads", lead);
+    this.save();
+    return lead;
+  }
+
+  updateSalesLead(id: string, patch: Partial<Omit<SalesLeadRow, "id" | "createdAt">>): SalesLeadRow | undefined {
+    const existing = this.get<SalesLeadRow>("SELECT * FROM sales_leads WHERE id = ?", [id]);
+    if (!existing) return undefined;
+    const next: SalesLeadRow = { ...existing, ...patch, lastActivityAt: new Date().toISOString() };
+    this.run(
+      "UPDATE sales_leads SET name=?, email=?, phone=?, company=?, teamSize=?, interest=?, status=?, value=?, owner=?, source=?, notes=?, lastActivityAt=? WHERE id=?",
+      [next.name, next.email, next.phone, next.company, next.teamSize, next.interest, next.status, next.value, next.owner, next.source, next.notes, next.lastActivityAt, id]
+    );
+    this.save();
+    return next;
+  }
+
+  deleteSalesLead(id: string): boolean {
+    if (!this.get("SELECT id FROM sales_leads WHERE id = ?", [id])) return false;
+    this.run("DELETE FROM sales_leads WHERE id = ?", [id]);
+    this.run("DELETE FROM sales_tasks WHERE leadId = ?", [id]);
+    this.run("DELETE FROM sales_activities WHERE leadId = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  createSalesTask(input: { title: string; dueAt: string; leadId?: string | null; department?: Department }): SalesTaskRow {
+    const task: SalesTaskRow = {
+      id: this.newId("stask"),
+      leadId: input.leadId ?? null,
+      title: input.title,
+      dueAt: input.dueAt,
+      done: 0,
+      department: input.department ?? "sales",
+      createdAt: new Date().toISOString()
+    };
+    this.insert("sales_tasks", task);
+    this.save();
+    return task;
+  }
+
+  updateSalesTask(id: string, patch: { done?: boolean; title?: string; dueAt?: string }): SalesTaskRow | undefined {
+    const existing = this.get<SalesTaskRow>("SELECT * FROM sales_tasks WHERE id = ?", [id]);
+    if (!existing) return undefined;
+    const next: SalesTaskRow = {
+      ...existing,
+      title: patch.title ?? existing.title,
+      dueAt: patch.dueAt ?? existing.dueAt,
+      done: patch.done === undefined ? existing.done : patch.done ? 1 : 0
+    };
+    this.run("UPDATE sales_tasks SET title=?, dueAt=?, done=? WHERE id=?", [next.title, next.dueAt, next.done, id]);
+    this.save();
+    return next;
+  }
+
+  deleteSalesTask(id: string): boolean {
+    if (!this.get("SELECT id FROM sales_tasks WHERE id = ?", [id])) return false;
+    this.run("DELETE FROM sales_tasks WHERE id = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  createSalesActivity(input: { leadId: string; type: SalesActivityRow["type"]; summary: string }): SalesActivityRow {
+    const activity: SalesActivityRow = {
+      id: this.newId("sact"),
+      leadId: input.leadId,
+      type: input.type,
+      summary: input.summary,
+      createdAt: new Date().toISOString()
+    };
+    this.insert("sales_activities", activity);
+    this.run("UPDATE sales_leads SET lastActivityAt = ? WHERE id = ?", [activity.createdAt, input.leadId]);
+    this.save();
+    return activity;
+  }
+
+  supportConversations(department?: Department): SupportConversationRow[] {
+    if (department) {
+      return this.all<SupportConversationRow>(
+        "SELECT * FROM support_conversations WHERE department = ? ORDER BY lastMessageAt DESC",
+        [department]
+      );
+    }
+    return this.all<SupportConversationRow>("SELECT * FROM support_conversations ORDER BY lastMessageAt DESC");
+  }
+
+  supportMessages(conversationId: string): SupportMessageRow[] {
+    return this.all<SupportMessageRow>(
+      "SELECT * FROM support_messages WHERE conversationId = ? ORDER BY createdAt ASC",
+      [conversationId]
+    );
+  }
+
+  createSupportConversation(input: {
+    name: string; email: string; company?: string; subject: string; body: string;
+    priority?: SupportConversationRow["priority"]; department?: Department;
+  }): { conversation: SupportConversationRow; message: SupportMessageRow } {
+    const nowIso = new Date().toISOString();
+    const conversation: SupportConversationRow = {
+      id: this.newId("conv"),
+      name: input.name,
+      email: input.email,
+      company: input.company ?? "",
+      subject: input.subject,
+      status: "open",
+      priority: input.priority ?? "Normal",
+      department: input.department ?? "support",
+      createdAt: nowIso,
+      lastMessageAt: nowIso
+    };
+    this.insert("support_conversations", conversation);
+    const message: SupportMessageRow = {
+      id: this.newId("msg"),
+      conversationId: conversation.id,
+      author: "customer",
+      body: input.body,
+      createdAt: nowIso
+    };
+    this.insert("support_messages", message);
+    this.save();
+    return { conversation, message };
+  }
+
+  addSupportMessage(conversationId: string, input: { author: "customer" | "agent"; body: string }): SupportMessageRow | undefined {
+    if (!this.get("SELECT id FROM support_conversations WHERE id = ?", [conversationId])) return undefined;
+    const message: SupportMessageRow = {
+      id: this.newId("msg"),
+      conversationId,
+      author: input.author,
+      body: input.body,
+      createdAt: new Date().toISOString()
+    };
+    this.insert("support_messages", message);
+    // An agent reply moves the thread to "pending" (awaiting customer); a customer
+    // message re-opens it. Either way, bump the activity timestamp.
+    const nextStatus = input.author === "agent" ? "pending" : "open";
+    this.run("UPDATE support_conversations SET lastMessageAt = ?, status = ? WHERE id = ?", [message.createdAt, nextStatus, conversationId]);
+    this.save();
+    return message;
+  }
+
+  updateSupportConversation(id: string, patch: { status?: SupportConversationRow["status"]; priority?: SupportConversationRow["priority"] }): SupportConversationRow | undefined {
+    const existing = this.get<SupportConversationRow>("SELECT * FROM support_conversations WHERE id = ?", [id]);
+    if (!existing) return undefined;
+    const next: SupportConversationRow = {
+      ...existing,
+      status: patch.status ?? existing.status,
+      priority: patch.priority ?? existing.priority
+    };
+    this.run("UPDATE support_conversations SET status=?, priority=? WHERE id=?", [next.status, next.priority, id]);
+    this.save();
+    return next;
+  }
+
+  // ── Customer Support team roster (owner/admin manages this in Settings) ────
+  supportAgents(): SupportAgentRow[] {
+    // Owner first, then Admins, then Agents; alphabetical within a role.
+    return this.all<SupportAgentRow>(
+      "SELECT * FROM support_agents ORDER BY CASE role WHEN 'Owner' THEN 0 WHEN 'Admin' THEN 1 ELSE 2 END, name"
+    );
+  }
+
+  createSupportAgent(input: { name: string; email: string; role?: SupportAgentRole }): SupportAgentRow | { error: string } {
+    const email = input.email.trim().toLowerCase();
+    if (this.get("SELECT id FROM support_agents WHERE lower(email) = ?", [email])) {
+      return { error: "That email is already on the team." };
+    }
+    const agent: SupportAgentRow = {
+      id: this.newId("agent"),
+      name: input.name,
+      email: input.email,
+      // New teammates can be Admin or Agent — the Owner is fixed.
+      role: input.role === "Admin" ? "Admin" : "Agent",
+      status: "Invited",
+      createdAt: new Date().toISOString()
+    };
+    this.insert("support_agents", agent);
+    this.save();
+    return agent;
+  }
+
+  deleteSupportAgent(id: string): { ok: true } | { error: string } {
+    const agent = this.get<SupportAgentRow>("SELECT * FROM support_agents WHERE id = ?", [id]);
+    if (!agent) return { error: "Teammate not found." };
+    if (agent.role === "Owner") return { error: "The workspace owner can't be removed." };
+    this.run("DELETE FROM support_agents WHERE id = ?", [id]);
+    this.save();
+    return { ok: true };
+  }
+
+  /* ── waitlist (removable feature) ─────────────────────────────────────────
+     Pre-launch email signups. To remove: delete this block, the `waitlist`
+     table in migrate(), server/src/email.ts, and the waitlist routes in app.ts.
+     ──────────────────────────────────────────────────────────────────────── */
+  waitlistCount(): number {
+    return this.get<{ n: number }>("SELECT COUNT(*) AS n FROM waitlist")?.n ?? 0;
+  }
+
+  addWaitlistSubscriber(email: string): { email: string; count: number; alreadyJoined: boolean } {
+    const normalized = email.trim().toLowerCase();
+    const existing = this.get<{ email: string }>("SELECT email FROM waitlist WHERE email = ?", [normalized]);
+    if (!existing) {
+      this.insert("waitlist", { email: normalized, createdAt: new Date().toISOString(), notifiedAt: null });
+      this.save();
+    }
+    return { email: normalized, count: this.waitlistCount(), alreadyJoined: Boolean(existing) };
+  }
+
+  pendingWaitlistSubscribers(): string[] {
+    return this.all<{ email: string }>("SELECT email FROM waitlist WHERE notifiedAt IS NULL ORDER BY createdAt").map((row) => row.email);
+  }
+
+  markWaitlistNotified(emails: string[]) {
+    if (emails.length === 0) return;
+    const at = new Date().toISOString();
+    for (const email of emails) this.run("UPDATE waitlist SET notifiedAt = ? WHERE email = ?", [at, email]);
+    this.save();
+  }
+  /* ─────────────────────────── end waitlist ──────────────────────────────── */
+
+  readiness(projectId?: string): ReadinessItem[] {
+    const rows = projectId
+      ? this.all<ReadinessItem & { complete: number }>("SELECT * FROM readiness WHERE projectId = ? ORDER BY id", [projectId])
+      : this.all<ReadinessItem & { complete: number }>("SELECT * FROM readiness ORDER BY id");
+    return rows.map((row) => ({ ...row, complete: Boolean(row.complete) }));
+  }
+
+  phases(projectId?: string): Phase[] {
+    if (projectId) return this.all<Phase>("SELECT * FROM phases WHERE projectId = ? ORDER BY sequence", [projectId]);
+    return this.all<Phase>("SELECT * FROM phases ORDER BY projectId, sequence");
+  }
+
+  inspections(projectId?: string): Inspection[] {
+    if (projectId) return this.all<Inspection>("SELECT * FROM inspections WHERE projectId = ? ORDER BY scheduledAt", [projectId]);
+    return this.all<Inspection>("SELECT * FROM inspections ORDER BY scheduledAt");
+  }
+
+  weatherAlerts(): WeatherAlert[] {
+    return this.all<WeatherAlert>("SELECT * FROM weather_alerts ORDER BY startsAt");
+  }
+}

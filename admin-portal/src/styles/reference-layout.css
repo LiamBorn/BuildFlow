@@ -1,0 +1,195 @@
+/* ============================================================================
+   reference-layout.css — the ONLY thing this redesign adds: the Soft UI
+   "General Statistics" LAYOUT. Colors come entirely from the existing --wx-*/
+   --cc-* tokens and every animation hook (reveal, tilt, sparkline, ring) is
+   untouched. Scoped to .admin-rx, loaded after command-center + admin-redesign
+   so it re-lays-out the stat cards and adds the table+globe row.
+   ========================================================================== */
+
+/* ---- stat cards: label/value/spark on the left, gradient icon on the right ---- */
+.admin-rx .cc-stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(214px, 1fr));
+}
+.admin-rx .cc-stat.adm-soft {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.admin-rx .adm-soft-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.admin-rx .adm-soft .cc-stat-label {
+  font-size: 12.5px;
+}
+.admin-rx .adm-soft-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.admin-rx .adm-soft .cc-stat-value {
+  font-size: 27px;
+  line-height: 1.02;
+}
+.admin-rx .adm-soft .cc-stat-value small {
+  font-size: 13px;
+}
+.admin-rx .adm-soft .cc-trend {
+  align-self: center;
+}
+.admin-rx .adm-soft .cc-spark {
+  width: 100%;
+  max-width: 100%;
+  height: 26px;
+  margin-top: 1px;
+}
+
+/* the gradient icon square (reference treatment, BuildFlow tones) */
+.admin-rx .adm-soft .cc-stat-ico {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  color: #fff;
+}
+.admin-rx .adm-soft .cc-stat-ico svg {
+  width: 23px;
+  height: 23px;
+}
+.admin-rx .adm-soft .cc-stat-ico.tone-blue {
+  background: linear-gradient(135deg, #5b8def, #2f6bff);
+  box-shadow: 0 10px 22px rgba(47, 107, 255, 0.34);
+}
+.admin-rx .adm-soft .cc-stat-ico.tone-green {
+  background: linear-gradient(135deg, #34b36a, #188038);
+  box-shadow: 0 10px 22px rgba(24, 128, 56, 0.32);
+}
+.admin-rx .adm-soft .cc-stat-ico.tone-violet {
+  background: linear-gradient(135deg, #9b6ff0, #6d28d9);
+  box-shadow: 0 10px 22px rgba(109, 40, 217, 0.32);
+}
+.admin-rx .adm-soft .cc-stat-ico.tone-orange {
+  background: linear-gradient(135deg, #f59e42, #c2410c);
+  box-shadow: 0 10px 22px rgba(194, 65, 12, 0.3);
+}
+.admin-rx .adm-soft .cc-stat-ico.tone-amber {
+  background: linear-gradient(135deg, #eab04a, #b45309);
+  box-shadow: 0 10px 22px rgba(180, 83, 9, 0.3);
+}
+.admin-rx .adm-soft .cc-stat-ico.tone-red {
+  background: linear-gradient(135deg, #ef5f5c, #c5221f);
+  box-shadow: 0 10px 22px rgba(197, 34, 31, 0.3);
+}
+
+/* ---- row 2: table beside the globe ---- */
+.admin-rx .adm-overview-row {
+  display: grid;
+  grid-template-columns: 1.42fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+.admin-rx .adm-overview-row .cc-panel {
+  display: flex;
+  flex-direction: column;
+}
+.admin-rx .adm-panel-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+.admin-rx .adm-panel-sub svg {
+  color: var(--cc-green);
+}
+
+/* ---- dotted globe ---- */
+.admin-rx .adm-globe {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 10px 0 6px;
+  min-height: 232px;
+}
+.admin-rx .adm-globe-svg {
+  width: min(290px, 84%);
+  height: auto;
+  overflow: visible;
+}
+.admin-rx .adm-globe-grid {
+  opacity: 0.5;
+  animation: adm-globe-flow 7s linear infinite;
+}
+@keyframes adm-globe-flow {
+  to {
+    stroke-dashoffset: -65;
+  }
+}
+.admin-rx .adm-globe-pin {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cc-blue);
+  box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.5);
+  animation: adm-globe-pin 2.6s ease-out infinite;
+}
+.admin-rx .adm-globe-pin.p2 {
+  background: var(--cc-green);
+  animation-delay: 0.7s;
+}
+.admin-rx .adm-globe-pin.p3 {
+  background: var(--cc-violet);
+  animation-delay: 1.4s;
+}
+@keyframes adm-globe-pin {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 13px rgba(47, 107, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+  }
+}
+.admin-rx .adm-globe-foot {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.admin-rx .adm-globe-foot > div {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+.admin-rx .adm-globe-foot b {
+  font-family: var(--cc-sans);
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.admin-rx .adm-globe-foot span {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+
+/* ---- responsive ---- */
+@media (max-width: 900px) {
+  .admin-rx .adm-overview-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

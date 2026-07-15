@@ -1,0 +1,675 @@
+/* ============================================================
+   Customers — Welcome-page (wx) redesign
+   Loaded LAST in main.tsx. Scoped to .customers-page so it never
+   leaks into other views (note: distinct from .customer-reviews-page).
+   Mirrors the welcome page's exact color tokens (--wx-*) and
+   animation language (reveal easing, floating chips, card hovers,
+   footer word-wave).
+   ============================================================ */
+
+/* cream page canvas behind the customers view */
+.welcome-page:has(.customers-page) {
+  background: var(--wx-bg);
+}
+
+.customers-page {
+  /* Core wx tokens inherit from the .welcome-rx wrapper (palette + dark mode). */
+  --wx-win: #202124;
+  --wx-radius: 20px;
+
+  /* decorative accent tones (avatars / icon chips) */
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+  --wx-g-green: #34a853;
+  --wx-g-amber: #f9ab00;
+
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(40px, 6vw, 96px) clamp(18px, 5vw, 60px) clamp(28px, 4vw, 48px);
+  background: transparent;
+  color: var(--wx-ink);
+}
+
+/* ---- scroll-reveal, copied 1:1 from the welcome page ---- */
+.customers-page [data-reveal] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 100ms);
+  will-change: opacity, transform;
+}
+.customers-page [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .customers-page [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* shared blue uppercase eyebrow (= .wx-eyebrow-2) */
+.customers-page .customers-eyebrow {
+  display: inline-block;
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wx-blue);
+}
+
+/* shared tone → color (avatars, chips, case accents) */
+.customers-page .tone-blue { --tone: var(--wx-g-blue); }
+.customers-page .tone-purple { --tone: var(--wx-g-purple); }
+.customers-page .tone-coral { --tone: var(--wx-g-coral); }
+.customers-page .tone-green { --tone: var(--wx-g-green); }
+.customers-page .tone-amber { --tone: var(--wx-g-amber); }
+.customers-page .tone-ink { --tone: var(--wx-ink); }
+
+/* ============================================================
+   Hero
+   ============================================================ */
+.customers-page .cust-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1.02fr);
+  align-items: stretch;
+  gap: clamp(20px, 3vw, 40px);
+  min-height: clamp(340px, 42vw, 460px);
+}
+.customers-page .cust-hero-copy {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 22px;
+  padding: clamp(8px, 2vw, 28px) clamp(24px, 4vw, 56px) clamp(8px, 2vw, 28px) 0;
+}
+.customers-page .cust-hero-copy h1 {
+  margin: 0;
+  max-width: 15ch;
+  font-family: var(--wx-serif);
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+  color: var(--wx-ink);
+}
+.customers-page .cust-hero-sub {
+  margin: 0;
+  max-width: 46ch;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+.customers-page .cust-hero-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* explore pill (= .wx-explore) */
+.customers-page .cust-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--wx-line);
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.customers-page .cust-explore svg { transition: transform 0.25s ease; }
+.customers-page .cust-explore:hover {
+  background: var(--wx-ink);
+  color: var(--wx-card);
+  border-color: var(--wx-ink);
+  box-shadow: 0 12px 28px rgba(28, 28, 26, 0.18);
+}
+.customers-page .cust-explore:hover svg { transform: translateX(3px); }
+
+/* floating customer-chip cluster (light gradient panel + glow) */
+.customers-page .cust-hero-cluster {
+  position: relative;
+  min-height: clamp(300px, 38vw, 440px);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  place-items: center;
+  gap: clamp(14px, 2.2vw, 30px);
+  padding: clamp(28px, 4vw, 52px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: linear-gradient(160deg, var(--wx-card), var(--wx-bg-2));
+  box-shadow: 0 40px 90px -50px rgba(28, 28, 26, 0.4);
+  overflow: hidden;
+}
+.customers-page .cust-cluster-glow {
+  position: absolute;
+  inset: -25%;
+  background: radial-gradient(42% 38% at 50% 45%, rgba(66, 133, 244, 0.24), transparent 70%);
+  animation: cst-glow 6s ease-in-out infinite;
+}
+.customers-page .cust-chip {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: clamp(56px, 7vw, 84px);
+  height: clamp(56px, 7vw, 84px);
+  border-radius: 999px;
+  font-family: var(--wx-serif);
+  font-size: clamp(22px, 2.6vw, 32px);
+  font-weight: 500;
+  color: #fff;
+  background: var(--tone, var(--wx-ink));
+  box-shadow: 0 16px 32px -14px rgba(28, 28, 26, 0.55);
+  animation: cst-float-bob var(--dur, 7s) ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.35s);
+  will-change: transform;
+}
+.customers-page .cust-chip.tone-amber { color: #3a2c00; }
+
+@keyframes cst-glow {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@keyframes cst-float-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customers-page .cust-chip,
+  .customers-page .cust-cluster-glow { animation: none; }
+}
+
+/* ============================================================
+   Shared section head
+   ============================================================ */
+.customers-page .cust-section-head {
+  max-width: 26ch;
+  margin-bottom: clamp(28px, 4vw, 48px);
+}
+.customers-page .cust-section-head h2 {
+  margin: 0;
+  font-family: var(--wx-serif);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.012em;
+  color: var(--wx-ink);
+}
+
+/* ============================================================
+   Logo wall
+   ============================================================ */
+.customers-page .cust-logos-section { margin-top: clamp(64px, 9vw, 120px); }
+.customers-page .cust-logos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.customers-page .cust-logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.customers-page .cust-logo:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 44px -28px rgba(28, 28, 26, 0.4);
+  border-color: var(--wx-line);
+}
+.customers-page .cust-logo-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  font-family: var(--wx-serif);
+  font-size: 19px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--tone, var(--wx-ink));
+}
+.customers-page .cust-logo.tone-amber .cust-logo-avatar { color: #3a2c00; }
+.customers-page .cust-logo-body { display: grid; gap: 2px; min-width: 0; }
+.customers-page .cust-logo-body strong {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.customers-page .cust-logo-trade {
+  font-size: 12.5px;
+  color: var(--wx-faint);
+}
+
+/* ============================================================
+   Case studies
+   ============================================================ */
+.customers-page .cust-cases { margin-top: clamp(64px, 9vw, 120px); }
+.customers-page .cust-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.customers-page .cust-case {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: clamp(22px, 2.6vw, 30px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  overflow: hidden;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.customers-page .cust-case::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--tone, var(--wx-blue));
+  opacity: 0.9;
+}
+.customers-page .cust-case:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 55px -32px rgba(28, 28, 26, 0.42);
+  border-color: var(--wx-line);
+}
+.customers-page .cust-case-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.customers-page .cust-case-avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-family: var(--wx-serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--tone, var(--wx-ink));
+}
+.customers-page .cust-case.tone-amber .cust-case-avatar { color: #3a2c00; }
+.customers-page .cust-case-id { display: grid; gap: 1px; }
+.customers-page .cust-case-id strong {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.customers-page .cust-case-id span {
+  font-size: 12.5px;
+  color: var(--wx-faint);
+}
+.customers-page .cust-case h3 {
+  margin: 0;
+  font-size: clamp(17px, 1.7vw, 20px);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.customers-page .cust-case-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--wx-blue);
+}
+.customers-page .cust-case-summary {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+.customers-page .cust-case-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--wx-ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.customers-page .cust-case-link svg { transition: transform 0.2s ease; }
+.customers-page .cust-case-link:hover svg { transform: translateX(3px); }
+
+/* ============================================================
+   Stats band
+   ============================================================ */
+.customers-page .cust-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: clamp(56px, 8vw, 96px);
+}
+.customers-page .cust-stat {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: clamp(20px, 2.4vw, 30px);
+  border-radius: var(--wx-radius);
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.customers-page .cust-stat:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 50px -30px rgba(28, 28, 26, 0.4);
+  border-color: var(--wx-line);
+}
+.customers-page .cust-stat-ic {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--wx-bg-2);
+  color: var(--wx-blue);
+}
+.customers-page .cust-stat-value {
+  font-family: var(--wx-serif);
+  font-size: clamp(30px, 3.4vw, 44px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+}
+.customers-page .cust-stat-label {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--wx-mut);
+}
+
+/* ============================================================
+   Industries
+   ============================================================ */
+.customers-page .cust-industries { margin-top: clamp(64px, 9vw, 120px); }
+.customers-page .cust-industries-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.customers-page .cust-industry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--wx-ink);
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.customers-page .cust-industry:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 38px -26px rgba(28, 28, 26, 0.42);
+  border-color: var(--wx-line);
+}
+.customers-page .cust-industry-ic {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--wx-bg-2);
+  color: var(--wx-blue);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+.customers-page .cust-industry:hover .cust-industry-ic {
+  background: var(--wx-blue);
+  color: #fff;
+}
+
+/* ============================================================
+   Featured quote
+   ============================================================ */
+.customers-page .cust-quote {
+  position: relative;
+  margin-top: clamp(64px, 9vw, 120px);
+  padding: clamp(40px, 6vw, 80px) clamp(28px, 5vw, 72px);
+  border-radius: var(--wx-radius);
+  background: var(--wx-win);
+  color: #f5f4ef;
+  overflow: hidden;
+}
+.customers-page .cust-quote-mark {
+  position: absolute;
+  top: clamp(-8px, 1vw, 6px);
+  left: clamp(16px, 3vw, 40px);
+  font-family: var(--wx-serif);
+  font-size: clamp(120px, 18vw, 220px);
+  line-height: 1;
+  color: rgba(138, 180, 248, 0.22);
+  pointer-events: none;
+}
+.customers-page .cust-quote blockquote {
+  position: relative;
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--wx-serif);
+  font-size: clamp(24px, 3.2vw, 40px);
+  font-weight: 500;
+  line-height: 1.24;
+  letter-spacing: -0.012em;
+}
+.customers-page .cust-quote cite {
+  display: grid;
+  gap: 2px;
+  margin-top: clamp(20px, 3vw, 34px);
+  font-style: normal;
+  font-family: var(--wx-serif);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--wx-win-mut, #9aa0a6);
+}
+.customers-page .cust-quote cite strong {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #f5f4ef;
+}
+
+/* ============================================================
+   CTA
+   ============================================================ */
+.customers-page .cust-cta {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: clamp(60px, 9vw, 110px);
+  text-align: center;
+}
+.customers-page .cust-cta h2 {
+  max-width: 18ch;
+  margin: 0 0 12px;
+  font-family: var(--wx-serif);
+  font-size: clamp(30px, 4.4vw, 52px);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.customers-page .cust-cta-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ============================================================
+   Welcome-page footer (= .wx-footer): tagline + link columns +
+   giant wave wordmark + legal row. Re-scoped from .welcome-rx,
+   broken out full-bleed so the wordmark spans edge-to-edge.
+   ============================================================ */
+.customers-page .wx-footer {
+  position: relative;
+  z-index: 2;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: clamp(48px, 7vw, 92px);
+  border-top: 1px solid var(--wx-line-soft);
+  overflow: hidden;
+}
+.customers-page .wx-footer-top {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 64px clamp(20px, 5vw, 60px) 30px;
+  display: grid;
+  grid-template-columns: 1fr 1.7fr;
+  gap: clamp(30px, 5vw, 72px);
+  align-items: start;
+}
+.customers-page .wx-footer-tagline {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--wx-serif);
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.18;
+  font-weight: 500;
+  color: var(--wx-ink);
+}
+.customers-page .wx-footer-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+}
+.customers-page .wx-footer h3 {
+  margin: 0 0 16px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+}
+.customers-page .wx-footer a {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--wx-mut);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+.customers-page .wx-footer a:hover { color: var(--wx-ink); }
+
+.customers-page .wx-footer-word {
+  margin: 10px 0 0;
+  padding: 0 clamp(12px, 2vw, 34px);
+  font-weight: 500;
+  font-size: 22vw;
+  line-height: 0.82;
+  letter-spacing: -0.03em;
+  color: var(--wx-ink);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+.customers-page .wx-footer-word span {
+  display: inline-block;
+  animation: cst-word-wave 3s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.09s);
+  will-change: transform;
+}
+@keyframes cst-word-wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.05em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .customers-page .wx-footer-word span { animation: none; }
+}
+
+.customers-page .wx-footer-legal {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 20px clamp(20px, 5vw, 60px) 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.customers-page .wx-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--wx-ink);
+}
+.customers-page .wx-footer-brand strong { font-size: 18px; }
+.customers-page .wx-footer-brand .buildflow-logo-mark { width: 26px; height: 26px; }
+.customers-page .wx-footer-legal-links { display: flex; flex-wrap: wrap; gap: 22px; }
+.customers-page .wx-footer-legal-links a {
+  display: inline;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--wx-mut);
+}
+.customers-page .wx-footer-legal-links a:hover { color: var(--wx-ink); }
+
+@media (max-width: 760px) {
+  .customers-page .wx-footer-top { grid-template-columns: 1fr; }
+  .customers-page .wx-footer-links { grid-template-columns: repeat(2, 1fr); }
+  .customers-page .wx-footer-word { font-size: 23vw; }
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 960px) {
+  .customers-page .cust-hero { grid-template-columns: 1fr; }
+  .customers-page .cust-hero-copy { padding-right: 0; }
+  .customers-page .cust-logos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customers-page .cust-cases-grid { grid-template-columns: 1fr; }
+  .customers-page .cust-industries-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .customers-page .cust-logos { grid-template-columns: 1fr; }
+  .customers-page .cust-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .customers-page .cust-hero-cluster { grid-template-columns: repeat(3, 1fr); }
+  .customers-page .wx-footer-word { font-size: 26vw; }
+}

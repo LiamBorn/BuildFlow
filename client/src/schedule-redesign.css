@@ -1,0 +1,437 @@
+/* ============================================================================
+   schedule-redesign.css — "Antigravity" HUD (Schedule)
+   Re-skins the BuildFlow Crew Scheduling page to match the welcome page and the
+   redesigned dashboard: warm paper, serif display type, monochrome ink, soft
+   floating cards, scroll reveals, cursor parallax + KPI tilt.
+   Scoped entirely to `.sched-rx` so every other app page is untouched.
+   ========================================================================== */
+
+.sched-rx {
+  --wx-bg: #f5f6fa;
+  --wx-bg-2: #eaedf3;
+  --wx-ink: #1c1c1a;
+  --wx-mut: #575550;
+  --wx-faint: #8a877e;
+  --wx-line: rgba(28, 28, 26, 0.13);
+  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-card: #ffffff;
+  --wx-blue: #2f6bff;
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+  --wx-green: #188038;
+  --wx-amber: #0032b0;
+  --wx-red: #c5221f;
+  --wx-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --cc-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --wx-radius: 20px;
+
+  position: relative;
+  margin: -22px -28px -34px;
+  padding: clamp(26px, 4.5vh, 52px) clamp(20px, 4vw, 56px) clamp(56px, 9vh, 100px);
+  min-height: calc(100vh - 87px);
+  background: var(--wx-bg);
+  color: var(--wx-ink);
+  overflow: clip;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================ background field ============================ */
+/* z-index -1 keeps the aurora behind the (non-positioned) content but above the
+   paper bg, so no wrapper/inner element is needed around the schedule content. */
+.sched-rx .dx-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.sched-rx .dx-aurora { position: absolute; border-radius: 50%; filter: blur(50px); opacity: 0.55; will-change: transform; }
+.sched-rx .dx-aurora-1 {
+  width: 42vw; height: 42vw; top: -18vw; left: -12vw;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.12), transparent 62%);
+  transform: translate(calc(var(--px, 0) * 16px), calc(var(--py, 0) * 12px));
+}
+.sched-rx .dx-aurora-2 {
+  width: 38vw; height: 38vw; top: -12vw; right: -12vw;
+  background: radial-gradient(circle, rgba(155, 114, 203, 0.1), transparent 62%);
+  transform: translate(calc(var(--px, 0) * -20px), calc(var(--py, 0) * 14px));
+}
+.sched-rx .dx-aurora-3 {
+  width: 50vw; height: 50vw; top: 44vw; left: 32vw;
+  background: radial-gradient(circle, rgba(217, 101, 112, 0.07), transparent 60%);
+  transform: translate(calc(var(--px, 0) * 12px), calc(var(--py, 0) * -10px));
+}
+.sched-rx .dx-cursor {
+  position: fixed; left: var(--mx, -400px); top: var(--my, -400px);
+  width: 480px; height: 480px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.05), transparent 62%);
+  pointer-events: none; z-index: -1;
+}
+
+/* ---- scroll reveal (progressive enhancement) ---- */
+.sched-rx.dx-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.sched-rx.dx-ready [data-reveal].in { opacity: 1; transform: none; }
+.sched-rx.dx-ready [data-reveal-stagger] > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sched-rx.dx-ready [data-reveal-stagger].in > * { opacity: 1; transform: none; }
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1) { transition-delay: 0.04s; }
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2) { transition-delay: 0.12s; }
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3) { transition-delay: 0.2s; }
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4) { transition-delay: 0.28s; }
+
+/* ============================ hero header =============================== */
+.sched-rx .schedule-title-row { display: block; padding: 0; border: 0; }
+.sched-rx .dx-hero { max-width: 44ch; }
+.sched-rx .dx-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 7px 15px 7px 12px; border: 1px solid var(--wx-line); border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7); color: var(--wx-mut);
+  font-size: 12.5px; font-weight: 600;
+}
+.sched-rx .dx-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--wx-blue); box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.12);
+  animation: dx-pulse 2.6s ease-in-out infinite;
+}
+@keyframes dx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.sched-rx .schedule-title-row h1,
+.sched-rx .dx-title {
+  margin: 18px 0 0;
+  font-family: var(--cc-sans);
+  font-size: clamp(27px, 3vw, 38px);
+  line-height: 1.05; font-weight: 750; letter-spacing: -0.02em; color: var(--wx-ink);
+  text-transform: none;
+}
+.sched-rx .dx-title em {
+  font-style: normal; font-weight: 750;
+  background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+}
+.sched-rx .schedule-title-row p,
+.sched-rx .dx-sub {
+  margin: 18px 0 0; max-width: 54ch;
+  font-size: clamp(15px, 1.2vw, 17px); line-height: 1.6; color: var(--wx-mut);
+}
+
+/* ============================ control row =============================== */
+.sched-rx .schedule-control-row { align-items: center; }
+.sched-rx .filter-strip { gap: 12px; }
+
+/* selects */
+.sched-rx .schedule-select {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.sched-rx .schedule-select:hover { border-color: rgba(28, 28, 26, 0.25); }
+.sched-rx .schedule-select label,
+.sched-rx .schedule-select span { color: var(--wx-faint); }
+.sched-rx .schedule-select strong,
+.sched-rx .schedule-select select { color: var(--wx-ink); }
+
+/* week stepper */
+.sched-rx .week-stepper {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: none;
+}
+.sched-rx .week-stepper strong { color: var(--wx-ink); font-weight: 600; }
+.sched-rx .week-stepper button { color: var(--wx-mut); background: transparent; }
+.sched-rx .week-stepper button:hover,
+.sched-rx .week-stepper button:focus-visible { background: var(--wx-bg-2); color: var(--wx-ink); }
+
+/* filters / outline button */
+.sched-rx .outline-button,
+.sched-rx .schedule-page .outline-button {
+  min-height: 44px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--wx-mut);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.sched-rx .outline-button:hover,
+.sched-rx .outline-button.active {
+  background: var(--wx-ink);
+  color: #f9fafd;
+  border-color: var(--wx-ink);
+}
+
+/* ============================ filter panel ============================= */
+.sched-rx .schedule-filter-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+  animation: dx-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dx-fade-up {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+.sched-rx .schedule-filter-panel h2 { font-family: var(--cc-sans); font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--wx-ink); }
+.sched-rx .schedule-filter-panel p { color: var(--wx-faint); font-weight: 500; }
+.sched-rx .schedule-filter-panel header button {
+  border: 1px solid var(--wx-line); border-radius: 999px; background: #ffffff; color: var(--wx-mut);
+}
+.sched-rx .schedule-filter-panel header button:hover { background: var(--wx-ink); color: #f9fafd; border-color: var(--wx-ink); }
+.sched-rx .schedule-filter-chips button { border: 1px solid var(--wx-line-soft); border-radius: 999px; background: #ffffff; }
+.sched-rx .schedule-filter-chips button.active { border-color: rgba(26, 115, 232, 0.4); background: #e8f0fe; }
+
+/* ============================ shared card look ========================== */
+.sched-rx .kpi-card,
+.sched-rx .schedule-board,
+.sched-rx .schedule-side-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+}
+
+/* ============================ KPI cards ================================= */
+.sched-rx .schedule-kpis { gap: 18px; }
+.sched-rx .dx-tilt { perspective: 1000px; display: flex; }
+.sched-rx .dx-tilt > * { width: 100%; }
+.sched-rx .schedule-kpis .kpi-card {
+  min-height: 132px;
+  padding: 22px;
+  gap: 16px;
+  transform-style: preserve-3d;
+  transform: translateY(var(--lift, 0px)) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.34s ease, border-color 0.34s ease;
+}
+.sched-rx .dx-tilt:hover .kpi-card {
+  --lift: -6px;
+  box-shadow: 0 30px 62px rgba(28, 28, 26, 0.14);
+  border-color: var(--wx-line);
+}
+.sched-rx .schedule-kpis .kpi-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--wx-bg-2); color: var(--wx-ink);
+  box-shadow: inset 0 0 0 1px var(--wx-line-soft);
+  transform: translateZ(30px);
+}
+.sched-rx .schedule-kpis .kpi-icon svg { width: 26px; height: 26px; }
+.sched-rx .kpi-icon.orange { background: #e9ecfd; color: #0c40c2; }
+.sched-rx .kpi-icon.blue { background: #e8f0fe; color: var(--wx-blue); }
+.sched-rx .kpi-icon.yellow { background: #d2defb; color: #0733a1; }
+.sched-rx .kpi-icon.red { background: #fbe4e2; color: var(--wx-red); }
+.sched-rx .kpi-icon.green { background: #e2f1e6; color: var(--wx-green); }
+.sched-rx .kpi-icon.violet { background: #efe8f8; color: #6d28d9; }
+.sched-rx .schedule-kpis .kpi-card p {
+  color: var(--wx-mut); font-family: var(--cc-sans); font-size: 12.5px; font-weight: 600; letter-spacing: 0.005em; text-transform: none;
+}
+.sched-rx .schedule-kpis .kpi-card strong {
+  margin: 8px 0 6px; color: var(--wx-ink);
+  font-family: var(--cc-sans); font-size: 34px; font-weight: 750; line-height: 1; letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .schedule-kpis .kpi-card span:not(.kpi-icon) { color: var(--wx-faint); font-family: var(--cc-sans); font-size: 12.5px; font-weight: 500; text-transform: none; }
+
+/* ============================ board ==================================== */
+.sched-rx .schedule-layout { gap: 22px; }
+.sched-rx .schedule-board { overflow: hidden; }
+.sched-rx .schedule-header { background: #ffffff; border-bottom: 1px solid var(--wx-line-soft); }
+.sched-rx .schedule-header > span,
+.sched-rx .schedule-header strong { border-left: 1px solid var(--wx-line-soft); }
+.sched-rx .schedule-header > span { border-left: 0; color: var(--wx-mut); font-weight: 700; }
+.sched-rx .schedule-header strong { color: var(--wx-ink); font-weight: 700; }
+.sched-rx .schedule-header em { color: var(--wx-faint); }
+.sched-rx .crew-row { border-bottom: 1px solid var(--wx-line-soft); }
+.sched-rx .crew-label { border-right: 1px solid var(--wx-line-soft); }
+.sched-rx .crew-label strong { color: var(--wx-ink); font-weight: 600; }
+.sched-rx .crew-label span { color: var(--wx-faint); }
+.sched-rx .crew-label em { color: var(--wx-blue); font-weight: 700; }
+.sched-rx .schedule-cell { border-right: 1px solid var(--wx-line-soft); background: transparent; }
+.sched-rx .schedule-cell.over { box-shadow: inset 0 0 0 2px var(--wx-blue); background: #e8f0fe; }
+.sched-rx .schedule-add-job-button { color: var(--wx-faint); border-radius: 12px; }
+.sched-rx .schedule-add-job-button:hover,
+.sched-rx .schedule-add-job-button:focus-visible { color: var(--wx-blue); background: var(--wx-bg-2); }
+
+/* job cards — soft paper status tints */
+.sched-rx .schedule-job {
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sched-rx .schedule-job:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(28, 28, 26, 0.12); }
+.sched-rx .schedule-job.confirmed,
+.sched-rx .schedule-job.on-site,
+.sched-rx .schedule-job.complete { border-color: #b7ddc2; background: #eef7f0; }
+.sched-rx .schedule-job.ready,
+.sched-rx .schedule-job.ready-to-start { border-color: #9ab1ec; background: #e3eafb; }
+.sched-rx .schedule-job.delayed,
+.sched-rx .schedule-job.at-risk { border-color: #eeb4b1; background: #fbeceb; }
+.sched-rx .schedule-job.in-progress { border-color: #b3ccf5; background: #eaf1fd; }
+.sched-rx .schedule-job.planned { border-color: var(--wx-line); background: #ffffff; }
+.sched-rx .schedule-job strong { color: var(--wx-ink); font-weight: 700; }
+.sched-rx .schedule-job span,
+.sched-rx .schedule-job em,
+.sched-rx .schedule-job footer span { color: var(--wx-mut); }
+.sched-rx .schedule-job p { color: var(--wx-red); }
+.sched-rx .schedule-job.focused,
+.sched-rx .unassigned-card.focused,
+.sched-rx .schedule-list-view button.focused { box-shadow: inset 0 0 0 2px var(--wx-blue); }
+
+/* board footer */
+.sched-rx .schedule-board-footer { background: #ffffff; border-top: 1px solid var(--wx-line-soft); }
+.sched-rx .schedule-legend { color: var(--wx-faint); font-size: 13px; }
+.sched-rx .schedule-legend .confirmed { background: var(--wx-green); }
+.sched-rx .schedule-legend .ready { background: #003dd9; }
+.sched-rx .schedule-legend .delayed { background: var(--wx-red); }
+.sched-rx .schedule-legend .in-progress { background: var(--wx-blue); }
+.sched-rx .schedule-legend .planned { background: var(--wx-faint); }
+.sched-rx .export-button,
+.sched-rx .schedule-board-footer .export-button {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--wx-mut);
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.sched-rx .export-button:hover:not(:disabled),
+.sched-rx .schedule-board-footer .export-button:hover:not(:disabled) {
+  background: var(--wx-ink); color: #f9fafd; border-color: var(--wx-ink);
+}
+
+/* list view */
+.sched-rx .schedule-list-view header { background: #ffffff; border-bottom: 1px solid var(--wx-line-soft); color: var(--wx-faint); }
+.sched-rx .schedule-list-view button { border-bottom: 1px solid var(--wx-line-soft); background: transparent; }
+.sched-rx .schedule-list-view button:hover { background: var(--wx-bg-2); box-shadow: inset 0 0 0 2px var(--wx-blue); }
+.sched-rx .schedule-list-view strong { color: var(--wx-ink); }
+.sched-rx .schedule-list-view em { color: var(--wx-faint); }
+
+/* empty states */
+.sched-rx .schedule-empty-state,
+.sched-rx .schedule-list-empty {
+  color: var(--wx-mut);
+}
+.sched-rx .schedule-empty-state strong,
+.sched-rx .schedule-list-empty strong { color: var(--wx-ink); font-family: var(--cc-sans); font-weight: 700; letter-spacing: -0.01em; }
+
+/* ============================ side rail =============================== */
+.sched-rx .side-stack { gap: 22px; }
+.sched-rx .schedule-side-panel { overflow: hidden; }
+.sched-rx .schedule-panel-header { border-bottom: 1px solid var(--wx-line-soft); }
+.sched-rx .schedule-panel-header h2 {
+  font-family: var(--cc-sans); font-size: 15px; font-weight: 700; letter-spacing: -0.01em;
+  text-transform: none; color: var(--wx-ink);
+}
+.sched-rx .schedule-panel-header > span {
+  background: #e8f0fe; color: var(--wx-blue); font-weight: 700;
+}
+
+/* unassigned job cards */
+.sched-rx .unassigned-card {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.sched-rx .unassigned-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(28, 28, 26, 0.1); }
+.sched-rx .unassigned-card.ready,
+.sched-rx .unassigned-card.ready-to-start { border-color: #9ab1ec; background: #e3eafb; }
+.sched-rx .unassigned-card.delayed,
+.sched-rx .unassigned-card.at-risk { border-color: #eeb4b1; background: #fbeceb; }
+.sched-rx .unassigned-card strong { color: var(--wx-ink); font-weight: 700; }
+.sched-rx .unassigned-card em,
+.sched-rx .unassigned-card b { color: var(--wx-faint); font-weight: 500; }
+.sched-rx .drag-grip { color: var(--wx-faint); }
+.sched-rx .helper-text { color: var(--wx-faint); }
+
+/* alerts */
+.sched-rx .schedule-alert {
+  border: 1px solid #9ab1ec;
+  border-radius: 14px;
+  background: #e3eafb;
+}
+.sched-rx .schedule-alert.danger { border-color: #eeb4b1; background: #fbeceb; }
+.sched-rx .schedule-alert svg { color: #003dd9; }
+.sched-rx .schedule-alert.danger svg { color: var(--wx-red); }
+.sched-rx .schedule-alert strong { color: var(--wx-ink); font-weight: 700; }
+.sched-rx .schedule-alert em { color: var(--wx-mut); }
+.sched-rx .schedule-alert button,
+.sched-rx .view-all-alerts {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--wx-mut);
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.sched-rx .schedule-alert button:hover,
+.sched-rx .view-all-alerts:hover { background: var(--wx-ink); color: #f9fafd; border-color: var(--wx-ink); }
+
+/* ============================ badges =================================== */
+.sched-rx .badge {
+  border-radius: 999px; background: #ebedfb; color: var(--wx-mut);
+  font-weight: 700; font-size: 11.5px; letter-spacing: 0.01em;
+}
+.sched-rx .badge.confirmed,
+.sched-rx .badge.on-site,
+.sched-rx .badge.ready,
+.sched-rx .badge.complete,
+.sched-rx .badge.available,
+.sched-rx .badge.scheduled,
+.sched-rx .badge.upcoming { background: #e2f1e6; color: var(--wx-green); }
+.sched-rx .badge.ready-to-start,
+.sched-rx .badge.planned,
+.sched-rx .badge.medium,
+.sched-rx .badge.monitor,
+.sched-rx .badge.ordered,
+.sched-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
+.sched-rx .badge.delayed,
+.sched-rx .badge.high,
+.sched-rx .badge.maintenance,
+.sched-rx .badge.missing,
+.sched-rx .badge.at-risk,
+.sched-rx .badge.open,
+.sched-rx .badge.overbooked { background: #fbe4e2; color: var(--wx-red); }
+
+/* ============================ page footer ============================= */
+.sched-rx .schedule-page-footer { color: var(--wx-faint); border-top: 1px solid var(--wx-line-soft); }
+.sched-rx .schedule-page-footer button { color: var(--wx-mut); }
+.sched-rx .schedule-page-footer button:hover { color: var(--wx-ink); }
+
+/* ============================ dialogs ================================= */
+.sched-rx .schedule-dialog,
+.sched-rx .schedule-picker-dialog {
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  border: 1px solid var(--wx-line-soft);
+  box-shadow: 0 40px 90px rgba(28, 28, 26, 0.28);
+}
+.sched-rx .schedule-dialog h2,
+.sched-rx .schedule-picker-dialog h2 { font-family: var(--cc-sans); font-weight: 700; letter-spacing: -0.01em; color: var(--wx-ink); }
+
+/* ============================ responsive ============================= */
+@media (max-width: 1080px) {
+  .sched-rx .schedule-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .sched-rx { padding: 24px clamp(14px, 4vw, 24px) 56px; }
+  .sched-rx .schedule-kpis { grid-template-columns: 1fr; }
+}
+
+/* ============================ reduced motion ========================= */
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .dx-dot { animation: none; }
+  .sched-rx.dx-ready [data-reveal],
+  .sched-rx.dx-ready [data-reveal-stagger] > * { transition-duration: 0.3s; }
+  .sched-rx .schedule-kpis .kpi-card,
+  .sched-rx .schedule-job,
+  .sched-rx .unassigned-card { transition-duration: 0.2s; }
+  .sched-rx .dx-aurora { transform: none !important; }
+}

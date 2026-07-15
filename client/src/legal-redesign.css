@@ -1,0 +1,280 @@
+/* =========================================================================
+   Legal pages — Privacy Policy / Terms of Service / Security
+   Routes: #privacy · #terms · #security   (WelcomeLegalPage in App.tsx)
+
+   Built on the shared `.cs-page` welcome system so it inherits the theme
+   exactly: --wx-* tokens (auto light/dark), --wx-serif, the wx-bg auroras,
+   .wx-cursor tint, [data-reveal] reveal tweens, and the wx-footer — identical
+   motion + styling to the Contact Sales page. Only the doc layout (sticky
+   table-of-contents + article sections) is page-specific here.
+   All surfaces use --wx-* tokens so dark mode (.welcome-rx.wx-dark) just works.
+   ========================================================================= */
+
+.welcome-rx .lgx-hero {
+  max-width: 760px;
+  padding-bottom: clamp(6px, 1.6vh, 20px);
+}
+.welcome-rx .lgx-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 18px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+.welcome-rx .lgx-updated svg { color: var(--wx-blue); }
+
+/* ============================== draft / not-binding banner ============================== */
+/* Shown on every legal page while LEGAL_DRAFT is true (App.tsx). Amber "caution"
+   callout so template copy can't be mistaken for a binding, in-effect policy.
+   Never gated by [data-reveal] — a legal status notice must not depend on scroll. */
+.welcome-rx .lgx-draft {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+  margin-top: clamp(18px, 3vh, 30px);
+  border-radius: 16px;
+  border: 1px solid #e6b566;
+  border-left: 4px solid #cf8a1f;
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgba(207, 138, 31, 0.12), transparent 60%),
+    #fff8ea;
+  box-shadow: 0 30px 60px -50px rgba(28, 28, 26, 0.5);
+  padding: clamp(16px, 2vw, 22px) clamp(18px, 2.2vw, 26px);
+}
+.welcome-rx .lgx-draft-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(207, 138, 31, 0.16);
+  color: #b45309;
+}
+.welcome-rx .lgx-draft-title {
+  display: block;
+  font-family: var(--wx-serif);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  margin: 1px 0 4px;
+  color: #7c4a03;
+}
+.welcome-rx .lgx-draft p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+.welcome-rx .lgx-draft b { color: var(--wx-ink); font-weight: 600; }
+.welcome-rx .lgx-draft a {
+  color: #b45309;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+}
+.welcome-rx .lgx-draft a:hover { text-decoration: underline; }
+
+/* dark mode — amber reads on the dark welcome chrome */
+.welcome-rx.wx-dark .lgx-draft {
+  border-color: rgba(230, 169, 75, 0.4);
+  border-left-color: #e6a94b;
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgba(230, 169, 75, 0.14), transparent 60%),
+    rgba(230, 169, 75, 0.05);
+}
+.welcome-rx.wx-dark .lgx-draft-ic { background: rgba(230, 169, 75, 0.18); color: #f0c680; }
+.welcome-rx.wx-dark .lgx-draft-title { color: #f4cf8c; }
+.welcome-rx.wx-dark .lgx-draft a { color: #f0c680; }
+
+/* ============================== body: TOC + article ============================== */
+.welcome-rx .lgx-body {
+  display: grid;
+  grid-template-columns: minmax(0, 236px) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 58px);
+  align-items: start;
+  margin-top: clamp(22px, 4vh, 46px);
+}
+
+/* sticky table of contents */
+.welcome-rx .lgx-toc {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 4px;
+}
+.welcome-rx .lgx-toc-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+  margin-bottom: 6px;
+}
+.welcome-rx .lgx-toc nav { display: grid; gap: 1px; }
+.welcome-rx .lgx-toc nav a {
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--wx-mut);
+  cursor: pointer;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border-left: 2px solid transparent;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+.welcome-rx .lgx-toc nav a:hover {
+  color: var(--wx-ink);
+  background: var(--wx-bg-2);
+}
+
+/* doc switcher — Privacy / Terms / Security */
+.welcome-rx .lgx-switch {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--wx-line-soft);
+  display: grid;
+  gap: 4px;
+}
+.welcome-rx .lgx-switch a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--wx-mut);
+  text-decoration: none;
+  padding: 8px 11px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+.welcome-rx .lgx-switch a svg { color: var(--wx-faint); transition: color 0.16s ease; }
+.welcome-rx .lgx-switch a:hover { color: var(--wx-ink); background: var(--wx-bg-2); }
+.welcome-rx .lgx-switch a:hover svg { color: var(--wx-blue); }
+.welcome-rx .lgx-switch a.is-active {
+  color: var(--wx-ink);
+  font-weight: 600;
+  background: var(--wx-card);
+  border-color: var(--wx-line-soft);
+  box-shadow: 0 10px 26px -20px rgba(28, 28, 26, 0.5);
+}
+.welcome-rx .lgx-switch a.is-active svg { color: var(--wx-blue); }
+
+/* ============================== article ============================== */
+.welcome-rx .lgx-doc { display: grid; gap: 14px; min-width: 0; }
+.welcome-rx .lgx-section {
+  scroll-margin-top: 92px;
+  border-radius: 16px;
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-card);
+  box-shadow: 0 30px 60px -50px rgba(28, 28, 26, 0.5);
+  padding: clamp(20px, 2.4vw, 30px);
+}
+.welcome-rx .lgx-section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(18px, 1.9vw, 23px);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0 0 13px;
+  color: var(--wx-ink);
+}
+.welcome-rx .lgx-num {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wx-blue);
+  font-variant-numeric: tabular-nums;
+  transform: translateY(-1px);
+}
+.welcome-rx .lgx-section p {
+  margin: 0 0 11px;
+  font-size: 14.5px;
+  line-height: 1.68;
+  color: var(--wx-mut);
+}
+.welcome-rx .lgx-section p:last-child { margin-bottom: 0; }
+.welcome-rx .lgx-section ul {
+  margin: 0 0 11px;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+.welcome-rx .lgx-section ul:last-child { margin-bottom: 0; }
+.welcome-rx .lgx-section li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+  padding-left: 4px;
+}
+.welcome-rx .lgx-section li::marker { color: var(--wx-blue); }
+.welcome-rx .lgx-section strong { color: var(--wx-ink); font-weight: 600; }
+.welcome-rx .lgx-section a { color: var(--wx-blue); text-decoration: none; }
+.welcome-rx .lgx-section a:hover { text-decoration: underline; }
+
+/* closing "questions?" note */
+.welcome-rx .lgx-note {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-top: 4px;
+  border-radius: 16px;
+  border: 1px solid var(--wx-line-soft);
+  background:
+    radial-gradient(120% 150% at 0% 0%, rgba(26, 115, 232, 0.09), transparent 60%),
+    var(--wx-card);
+  box-shadow: 0 30px 60px -50px rgba(28, 28, 26, 0.5);
+  padding: clamp(20px, 2.4vw, 28px);
+}
+.welcome-rx .lgx-note-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(26, 115, 232, 0.1);
+  color: var(--wx-blue);
+}
+.welcome-rx .lgx-note h3 {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  margin: 2px 0 5px;
+  color: var(--wx-ink);
+}
+.welcome-rx .lgx-note p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--wx-mut); }
+.welcome-rx .lgx-note a {
+  color: var(--wx-blue);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+}
+.welcome-rx .lgx-note a:hover { text-decoration: underline; }
+
+/* ============================== responsive ============================== */
+@media (max-width: 860px) {
+  .welcome-rx .lgx-body { grid-template-columns: 1fr; }
+  .welcome-rx .lgx-toc { position: static; top: auto; }
+  /* the in-page section list is a desktop convenience — hide it on mobile,
+     keep the doc switcher as a horizontal row */
+  .welcome-rx .lgx-toc > nav { display: none; }
+  .welcome-rx .lgx-switch {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+  .welcome-rx .lgx-switch a { justify-content: center; }
+}
+@media (max-width: 520px) {
+  .welcome-rx .lgx-switch { grid-auto-flow: row; }
+  .welcome-rx .lgx-note { flex-direction: column; gap: 12px; }
+}
