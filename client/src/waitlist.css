@@ -20,6 +20,11 @@
   --wl-cyan: #18ccfc;
   --wl-indigo: #6344f5;
   --wl-purple: #ae48ff;
+  /* This page is always light (forced white bg per design), so pin the welcome
+     ink token to its light value. Otherwise dark mode flips --wx-ink near-white
+     and the var(--wx-ink)-colored headline (.wl-title — "You're on the list." /
+     "Join the ") disappears against the white background. */
+  --wx-ink: #1c1c1a;
   position: relative;
   z-index: 2; /* above the fixed light .welcome-rx::before (z-index: -1) */
   min-height: 100vh;
@@ -253,6 +258,83 @@
 }
 .welcome-rx .wl-position b { font-variant-numeric: tabular-nums; }
 
+/* ============================ countdown ============================ */
+.welcome-rx .wl-countdown {
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 16px);
+  margin: 32px auto 0;
+}
+.welcome-rx .wl-cd-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+.welcome-rx .wl-cd-box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: clamp(58px, 15vw, 80px);
+  height: clamp(58px, 15vw, 80px);
+  padding: 0 6px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff, #fbfaff);
+  border: 1px solid rgba(99, 68, 245, 0.16);
+  box-shadow: 0 12px 30px -18px rgba(99, 68, 245, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+/* faint brand accent line along the top edge of each box */
+.welcome-rx .wl-cd-box::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14%;
+  right: 14%;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, var(--wl-cyan), var(--wl-indigo) 55%, var(--wl-purple));
+  opacity: 0.85;
+}
+.welcome-rx .wl-cd-num {
+  font-family: var(--wx-serif);
+  font-size: clamp(28px, 6.6vw, 42px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #1c1c1a, #4b4368);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: wl-cd-roll 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.welcome-rx .wl-cd-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #8a877e;
+}
+/* post-launch state (remaining <= 0) */
+.welcome-rx .wl-countdown-live { margin: 32px auto 0; }
+.welcome-rx .wl-cd-livemsg {
+  display: inline-block;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, #18ccfc, #6344f5 55%, #ae48ff);
+  box-shadow: 0 10px 30px -12px rgba(99, 68, 245, 0.6);
+}
+
+@keyframes wl-cd-roll {
+  from { opacity: 0; transform: translateY(0.7em); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes wl-pop {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
@@ -264,7 +346,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .welcome-rx .wl-content,
-  .welcome-rx .wl-badge .wl-live { animation: none; }
+  .welcome-rx .wl-badge .wl-live,
+  .welcome-rx .wl-cd-num { animation: none; }
 }
 
 @media (max-width: 520px) {

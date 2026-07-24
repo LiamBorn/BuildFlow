@@ -54,7 +54,8 @@ export const bootstrapFixture: BootstrapPayload = {
       materialsStatus: "Delivered",
       status: "Confirmed",
       priority: "High",
-      notes: "Slab pour."
+      notes: "Slab pour.",
+      percentComplete: 0
     },
     {
       id: "j-unassigned",
@@ -71,7 +72,8 @@ export const bootstrapFixture: BootstrapPayload = {
       materialsStatus: "Delivered",
       status: "Planned",
       priority: "Normal",
-      notes: "Tenant improvement finish package."
+      notes: "Tenant improvement finish package.",
+      percentComplete: 0
     }
   ],
   crews: [
@@ -115,6 +117,8 @@ export const bootstrapFixture: BootstrapPayload = {
       conflicts: []
     }
   ],
+  dependencies: [],
+  variances: [],
   fieldUpdates: [
     {
       id: "fu-1",
@@ -127,12 +131,12 @@ export const bootstrapFixture: BootstrapPayload = {
       photos: []
     }
   ],
-  delays: [
+  delayIQs: [
     {
-      id: "delay-rain",
+      id: "delayIQ-rain",
       projectId: "p-riverside",
       category: "Weather",
-      title: "Heavy Rain Delay",
+      title: "Heavy Rain DelayIQ",
       impactDays: 4,
       severity: "Medium",
       status: "Monitoring",

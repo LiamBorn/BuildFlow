@@ -1,0 +1,619 @@
+/* =========================================================================
+   Account / login — two-column split redesign.
+
+   Left: the auth form. Right: a BuildFlow-branded aurora panel with a
+   WxTypewriter quote. Keeps the program's palette (#2f6bff blue, white
+   surfaces) and its typewriter/tween conventions — fresh `.acct-*` classes so
+   it doesn't fight the old `.account-*` rules in styles.css. Light-mode to
+   match the rest of the auth flow.
+   ========================================================================= */
+
+.acct-split {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: #ffffff;
+  color: #141922;
+  font-family: inherit;
+}
+@media (min-width: 900px) {
+  .acct-split { grid-template-columns: 1.04fr 1fr; }
+}
+
+/* ───────────────────────── left: form column ───────────────────────── */
+.acct-form-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(28px, 5vh, 56px) clamp(20px, 5vw, 48px);
+}
+.acct-form-inner {
+  width: min(100%, 400px);
+  display: grid;
+  gap: 16px;
+  animation: acct-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes acct-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.acct-back {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #637083;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+.acct-back:hover { color: #2f6bff; }
+
+.acct-brand { display: flex; align-items: center; gap: 9px; }
+.acct-brand .buildflow-logo-mark { width: 32px; height: 32px; }
+.acct-brand strong { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: #0b0e14; }
+
+.acct-head { display: grid; gap: 5px; margin-top: 2px; }
+.acct-head h1 {
+  margin: 0;
+  font-size: clamp(24px, 3.2vw, 30px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #070b12;
+  font-weight: 800;
+}
+.acct-head p { margin: 0; font-size: 15px; color: #6f7785; font-weight: 500; }
+
+.acct-form { display: grid; gap: 12px; margin-top: 4px; }
+.acct-field { display: grid; gap: 6px; }
+.acct-field label { font-size: 13px; font-weight: 700; color: #47505f; }
+.acct-optional { color: #9aa0ab; font-weight: 500; }
+
+.acct-input-wrap { position: relative; display: grid; }
+.acct-input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  border: 1.5px solid #d7dbe2;
+  border-radius: 11px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #141922;
+  font-size: 15px;
+  font-weight: 500;
+  outline: 0;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.acct-input::placeholder { color: #a7adb7; font-weight: 400; }
+.acct-input:focus { border-color: #2f6bff; box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.14); }
+.acct-input.has-toggle { padding-right: 44px; }
+
+/* Business-type step: same field metrics as .acct-input (it carries both classes),
+   with the native chevron swapped for the lucide one so it matches the program. */
+.acct-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 42px;
+  cursor: pointer;
+}
+/* placeholder-grey until a trade is chosen, matching .acct-input::placeholder */
+.acct-select[data-empty] { color: #a7adb7; font-weight: 400; }
+.acct-select option { color: #141922; font-weight: 500; }
+.acct-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  color: #2f6bff;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: transform 0.16s ease;
+}
+.acct-select:focus + .acct-select-chevron { transform: translateY(-50%) rotate(180deg); }
+
+.acct-pw-toggle {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #8a909b;
+  cursor: pointer;
+  transition: color 0.16s ease;
+}
+.acct-pw-toggle:hover { color: #2f6bff; }
+
+.acct-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdc9;
+  border-radius: 9px;
+  padding: 8px 12px;
+}
+
+/* "Keep me signed in" — login step only. Checked (default) keeps the 30-day
+   cookie; unchecked asks the server for a browser-session cookie instead. */
+.acct-remember {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #47505f;
+  cursor: pointer;
+  user-select: none;
+}
+.acct-remember input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #2f6bff;
+  cursor: pointer;
+}
+.acct-remember input:focus-visible {
+  outline: 2px solid #2f6bff;
+  outline-offset: 2px;
+}
+
+.acct-primary {
+  margin-top: 4px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 11px;
+  background: #2f6bff;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px -8px rgba(47, 107, 255, 0.5);
+  transition: transform 0.14s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+.acct-primary:hover:not(:disabled) {
+  background: #2560f0;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px -10px rgba(47, 107, 255, 0.55);
+}
+.acct-primary:active:not(:disabled) { transform: translateY(0); }
+.acct-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.acct-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0;
+}
+.acct-divider span { height: 1px; background: #e6e8ec; }
+.acct-divider em { font-style: normal; font-size: 12.5px; color: #9aa0ab; font-weight: 500; }
+
+.acct-providers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.acct-provider {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  border: 1.5px solid #e0e3e9;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #3a3f4a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+.acct-google-mark { font-weight: 800; color: #4285f4; font-size: 15px; }
+.acct-ms-mark {
+  display: grid;
+  grid-template-columns: 7px 7px;
+  grid-template-rows: 7px 7px;
+  gap: 2px;
+}
+.acct-ms-mark i { display: block; border-radius: 1px; }
+.acct-ms-mark i:nth-child(1) { background: #f25022; }
+.acct-ms-mark i:nth-child(2) { background: #7fba00; }
+.acct-ms-mark i:nth-child(3) { background: #00a4ef; }
+.acct-ms-mark i:nth-child(4) { background: #ffb900; }
+
+.acct-note { margin: 0; text-align: center; font-size: 12.5px; color: #9aa0ab; }
+.acct-toggle-copy { margin: 2px 0 0; text-align: center; font-size: 14px; color: #47505f; }
+.acct-toggle-copy button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #2f6bff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.acct-toggle-copy button:hover { text-decoration: underline; }
+.acct-legal { margin: 0; text-align: center; font-size: 12px; line-height: 1.5; color: #9aa0ab; }
+.acct-legal a { color: #6f7785; text-decoration: underline; }
+
+/* ─────────── wide variant: the products/plan step (#additional-products) ───────────
+   Same split, but this step carries far more than an auth form (7 product cards +
+   4 plans), so the form column gets more room and the panel sticks while the
+   taller-than-viewport form scrolls past it. */
+@media (min-width: 900px) {
+  .acct-split-wide { grid-template-columns: 1.32fr 1fr; }
+  /* This step's form runs taller than the viewport, and the panel must not slide
+     away with it. `position: sticky` is not an option — the `.welcome-page`
+     ancestor sets `overflow: hidden auto`, which makes IT the scroll container, so
+     a sticky child has nothing to stick to. Instead the split becomes its own
+     scroll container: pinned to the viewport, with only the form column scrolling.
+     Top-aligned rather than centred on purpose — `justify-content: center` in a
+     scroll container puts overflowing content above the scrollport, out of reach. */
+  .acct-split-wide { height: 100vh; height: 100dvh; overflow: hidden; }
+  .acct-split-wide .acct-form-col { justify-content: flex-start; overflow-y: auto; }
+}
+.acct-split-wide .acct-form-inner { width: min(100%, 640px); }
+
+.acct-eyebrow {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  padding: 7px 15px 7px 12px;
+  border: 1px solid #e6e8ec;
+  border-radius: 999px;
+  background: #f8f9fb;
+  color: #6f7785;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.acct-eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2f6bff;
+  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
+  animation: acct-dot-pulse 2.6s ease-in-out infinite;
+}
+@keyframes acct-dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.acct-sec { display: grid; gap: 10px; }
+.acct-sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.acct-sec-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: #070b12; }
+.acct-sec-head span { font-size: 12.5px; font-weight: 600; color: #9aa0ab; }
+
+/* product cards */
+.acct-pick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.acct-pick {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1.5px solid #d7dbe2;
+  border-radius: 13px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease, border-color 0.16s ease, background 0.16s ease;
+  /* same staggered entrance as the old hud-onb grid, on the .acct-* rise */
+  animation: acct-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.26s + var(--i, 0) * 0.045s);
+}
+.acct-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.acct-pick:hover { transform: translateY(-2px); border-color: #c3c9d4; box-shadow: 0 14px 30px -12px rgba(11, 14, 20, 0.28); }
+.acct-pick:focus-within { border-color: #2f6bff; box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.14); }
+.acct-pick.selected { border-color: #2f6bff; background: #f5f9ff; box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12); }
+.acct-pick-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; }
+.acct-pick-copy { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.acct-pick-copy strong { font-size: 13.5px; font-weight: 700; color: #141922; }
+.acct-pick-copy em { font-size: 12px; font-style: normal; font-weight: 500; line-height: 1.45; color: #8a909c; }
+.acct-pick-check {
+  flex: none;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #d7dbe2;
+  border-radius: 50%;
+  color: #ffffff;
+  background: transparent;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.acct-pick-check svg { opacity: 0; transform: scale(0.4); transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.acct-pick.selected .acct-pick-check { background: #2f6bff; border-color: #2f6bff; }
+.acct-pick.selected .acct-pick-check svg { opacity: 1; transform: none; }
+
+/* icon tones — same values the command center / hud-onb grid uses */
+.acct-pick-ico.tone-blue { background: #e8f0fe; color: #2f6bff; }
+.acct-pick-ico.tone-violet,
+.acct-pick-ico.tone-purple { background: #efe8f8; color: #6d28d9; }
+.acct-pick-ico.tone-green { background: #e2f1e6; color: #188038; }
+.acct-pick-ico.tone-teal { background: #d9f1f0; color: #0f766e; }
+.acct-pick-ico.tone-orange { background: #feecdc; color: #c2410c; }
+
+/* plan cards */
+.acct-plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.acct-plan {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  text-align: left;
+  padding: 13px 14px;
+  border: 1.5px solid #d7dbe2;
+  border-radius: 13px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease, border-color 0.16s ease, background 0.16s ease;
+  animation: acct-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.4s + var(--i, 0) * 0.05s);
+}
+.acct-plan:hover { transform: translateY(-2px); border-color: #c3c9d4; box-shadow: 0 14px 30px -12px rgba(11, 14, 20, 0.28); }
+.acct-plan:focus-visible { outline: 2px solid #2f6bff; outline-offset: 2px; }
+.acct-plan.selected { border-color: #2f6bff; background: #f5f9ff; box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12); }
+.acct-plan strong { font-size: 14px; font-weight: 700; color: #141922; }
+.acct-plan-price { font-size: 19px; font-weight: 800; letter-spacing: -0.01em; color: #2f6bff; font-variant-numeric: tabular-nums; }
+.acct-plan em { font-size: 11px; font-style: normal; font-weight: 500; color: #9aa0ab; }
+.acct-plan-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #d7dbe2;
+  border-radius: 50%;
+  color: #ffffff;
+  background: transparent;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, border-color 0.2s ease;
+}
+.acct-plan.selected .acct-plan-check { opacity: 1; transform: none; background: #2f6bff; border-color: #2f6bff; }
+
+/* the CTA carries a trailing arrow on this step */
+.acct-primary svg { transition: transform 0.24s ease; }
+.acct-primary:hover:not(:disabled) svg { transform: translateX(3px); }
+
+/* the aside eats half the width, so the two-up grids need room to breathe before
+   the aside drops away at 900px */
+@media (min-width: 900px) and (max-width: 1180px) {
+  .acct-split-wide .acct-pick-grid { grid-template-columns: 1fr; }
+  .acct-split-wide .acct-plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .acct-pick-grid { grid-template-columns: 1fr; }
+  .acct-plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ───────────────────────── right: branded aurora panel ───────────────────────── */
+.acct-aside {
+  position: relative;
+  overflow: hidden;
+  display: none;
+  padding: clamp(32px, 4vw, 48px);
+  color: #ffffff;
+  background: radial-gradient(125% 120% at 18% 12%, #2a4bff 0%, #1b2a6b 46%, #0b1030 100%);
+}
+@media (min-width: 900px) {
+  .acct-aside { display: flex; flex-direction: column; justify-content: space-between; }
+}
+
+.acct-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  pointer-events: none;
+}
+.acct-aurora-1 { width: 420px; height: 420px; top: -90px; right: -70px; background: #4f7bff; opacity: 0.55; }
+.acct-aurora-2 { width: 360px; height: 360px; bottom: -110px; left: -70px; background: #9b6ecb; opacity: 0.42; }
+.acct-aurora-3 { width: 300px; height: 300px; top: 42%; left: 34%; background: #d96570; opacity: 0.26; }
+
+.acct-aside-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.acct-aside-brand .buildflow-logo-mark { width: 30px; height: 30px; }
+
+.acct-aside-quote { position: relative; z-index: 1; margin: 0; max-width: 15ch; }
+.acct-aside-type {
+  position: relative;
+  margin: 0;
+  font-size: clamp(28px, 3vw, 40px);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+.acct-aside-type em { color: #bcd0ff; font-style: normal; }
+/* WxTypewriter internals (normally scoped under .welcome-rx) — replicated here
+   so the program's typewriter works on this standalone page. */
+.acct-aside-type .wx-type-ghost { visibility: hidden; }
+.acct-aside-type .wx-type-real { position: absolute; inset: 0; }
+.acct-aside-type .wx-caret {
+  display: inline-block;
+  width: 0.5ch;
+  height: 0.78em;
+  margin-left: 0.05em;
+  transform: translateY(0.09em);
+  background: currentColor;
+  border-radius: 2px;
+  animation: wx-blink 1.05s steps(1) infinite;
+}
+.acct-aside-type .wx-caret.done { animation: none; opacity: 0; transition: opacity 0.5s ease 0.3s; }
+.acct-aside-quote cite {
+  display: block;
+  margin-top: 18px;
+  font-style: normal;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+/* ─────────── signature visual: the schedule assembling itself (decorative) ──────────
+   Pure CSS, no JS timers. Every animation runs on the same 12s period so the
+   per-block `animation-delay` stagger stays locked on every repeat (a delayIQ only
+   offsets the first iteration; equal periods keep them permanently offset).
+   Colors are hardcoded on purpose — this panel is always the dark blue gradient,
+   so it must not inherit theme tokens that flip in dark mode. */
+.acct-viz {
+  position: relative;
+  z-index: 1;
+  /* absorb the free space between the brand and the quote so the card sits in the
+     true optical middle instead of floating high (the aside is space-between, and
+     the quote block is much taller than the brand row) */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+}
+.acct-viz-card {
+  position: relative;
+  overflow: hidden;
+  width: min(100%, 430px);
+  padding: 15px 16px 17px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 26px 60px -30px rgba(0, 0, 0, 0.75);
+  animation: acct-viz-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) backwards 0.15s;
+}
+.acct-viz-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 13px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+.acct-viz-live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #48e5a3;
+  animation: acct-viz-pulse 2.4s ease-out infinite;
+}
+.acct-viz-week { margin-left: auto; font-weight: 500; color: rgba(255, 255, 255, 0.5); }
+
+.acct-viz-lanes { display: grid; gap: 9px; }
+.acct-viz-lane { display: flex; align-items: center; gap: 10px; }
+.acct-viz-crew {
+  flex: none;
+  width: 58px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+.acct-viz-track {
+  position: relative;
+  flex: 1;
+  height: 18px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.06);
+  /* faint day gridlines (5 columns = Mon–Fri) */
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 20% 100%;
+}
+.acct-viz-job {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 4px;
+  transform-origin: left center;
+  animation: acct-viz-job-in 12s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.acct-viz-job-blue { background-color: #4f7bff; box-shadow: 0 2px 10px -2px rgba(79, 123, 255, 0.85); }
+.acct-viz-job-cyan { background-color: #35c8f0; box-shadow: 0 2px 10px -2px rgba(53, 200, 240, 0.7); }
+.acct-viz-job-violet { background-color: #9b6ecb; box-shadow: 0 2px 10px -2px rgba(155, 110, 203, 0.7); }
+
+/* the double-booked block: lands overlapping its lane-mate, holds amber, then
+   moves itself into the next free slot and settles to brand blue */
+.acct-viz-job.is-fix {
+  z-index: 2;
+  animation:
+    acct-viz-job-fix 12s cubic-bezier(0.22, 1, 0.36, 1) infinite,
+    acct-viz-job-tone 12s ease-in-out infinite;
+}
+
+.acct-viz-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.13), transparent);
+  animation: acct-viz-sweep 12s ease-in-out infinite;
+}
+
+@keyframes acct-viz-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes acct-viz-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(72, 229, 163, 0.55); }
+  70%, 100% { box-shadow: 0 0 0 7px rgba(72, 229, 163, 0); }
+}
+@keyframes acct-viz-job-in {
+  0% { opacity: 0; transform: scaleX(0.35); }
+  7% { opacity: 1; transform: scaleX(1); }
+  85% { opacity: 1; transform: scaleX(1); }
+  95%, 100% { opacity: 0; transform: scaleX(0.92); }
+}
+@keyframes acct-viz-job-fix {
+  0% { opacity: 0; transform: translateX(0) scaleX(0.35); }
+  7% { opacity: 1; transform: translateX(0) scaleX(1); }
+  40% { transform: translateX(0) scaleX(1); }
+  50% { transform: translateX(150%) scaleX(1); }
+  85% { opacity: 1; transform: translateX(150%) scaleX(1); }
+  95%, 100% { opacity: 0; transform: translateX(150%) scaleX(0.92); }
+}
+@keyframes acct-viz-job-tone {
+  0%, 40% { background-color: #f2a63b; box-shadow: 0 2px 12px -2px rgba(242, 166, 59, 0.9); }
+  45% { background-color: #f2a63b; box-shadow: 0 0 0 4px rgba(242, 166, 59, 0.3); }
+  52%, 100% { background-color: #4f7bff; box-shadow: 0 2px 10px -2px rgba(79, 123, 255, 0.85); }
+}
+@keyframes acct-viz-sweep {
+  0%, 8% { transform: translateX(0); opacity: 0; }
+  16% { opacity: 1; }
+  46% { transform: translateX(380%); opacity: 1; }
+  54%, 100% { transform: translateX(380%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acct-form-inner,
+  .acct-eyebrow-dot,
+  .acct-pick,
+  .acct-plan,
+  .acct-viz-card,
+  .acct-viz-live,
+  .acct-viz-sweep,
+  .acct-viz-job,
+  .acct-viz-job.is-fix { animation: none; }
+  .acct-pick:hover,
+  .acct-plan:hover { transform: none; }
+  /* park the double-booked block in its resolved slot so the static board
+     doesn't read as an overlap bug */
+  .acct-viz-job.is-fix { transform: translateX(150%); }
+  .acct-viz-sweep { opacity: 0; }
+}

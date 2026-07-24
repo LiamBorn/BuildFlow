@@ -39,12 +39,16 @@ import {
   Moon,
   Sun,
   Download,
+  Eye,
+  EyeOff,
   DollarSign,
+  GanttChartSquare,
   Gauge,
   Globe2,
   Grid2X2,
   GripVertical,
   FileText,
+  FileUp,
   Hammer,
   HardHat,
   HelpCircle,
@@ -52,6 +56,9 @@ import {
   Layers,
   LineChart,
   List,
+  Lock,
+  SquareKanban,
+  Table2,
   LogOut,
   Loader2,
   Map,
@@ -117,31 +124,45 @@ import {
   type Crew,
   type CrewLaborMixItem,
   type CreateJobInput,
-  type Delay,
+  type DelayIQ,
   type FieldUpdate,
   type Job,
+  type JobDependency,
   type Material,
   type OnboardingProductId,
   type Project,
   type ScheduleAssignment,
+  type ScheduleVariance,
   type Status,
   type Equipment,
   type User,
   type WeatherAlert
 } from "@buildflow/shared";
 import {
+  calculateCpm,
+  compareToBaseline,
+  createWorkCalendar,
+  plannedPercentAt,
+  scheduleCalendar,
+  type CpmLink,
+  type CpmTask
+} from "@buildflow/shared";
+import {
   applyBusinessProfile,
   assignJob,
   createCrew,
-  createDelay,
+  createDelayIQ,
   createEquipment,
+  acceptVariance,
   createFieldUpdate,
+  rejectVariance,
   createJob,
   createMaterial,
   createProject,
   deleteCrew,
   deleteEquipment,
   loadBootstrap,
+  setScheduleBaseline,
   updateCrew,
   updateEquipment,
   updateJob,
@@ -157,6 +178,8 @@ import {
 } from "./api";
 import { assignmentsForCell, getUnassignedJobs, statusTone, weekDays } from "./scheduleUtils";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
+import { ScheduleImportDialog } from "./ScheduleImportDialog";
+import { DelayEarlyWarning } from "./DelayEarlyWarning";
 import { GlobePulse } from "./components/ui/cobe-globe-pulse";
 import { TextShimmer } from "./components/ui/text-shimmer";
 import { BackgroundBeams } from "./components/ui/background-beams"; // waitlist (removable feature)
@@ -175,7 +198,7 @@ type Page =
   | "field"
   | "map"
   | "mapProgram"
-  | "delays"
+  | "delayIQs"
   | "reports"
   | "timecard"
   | "programLanding"
@@ -193,7 +216,7 @@ type WelcomeView =
   | "weatherIntegration"
   | "scheduleSuggestions"
   | "crewSuggestions"
-  | "delayDetection"
+  | "delayIQDetection"
   | "routeOptimization"
   | "updates"
   | "reviews"
@@ -220,7 +243,7 @@ type WelcomeView =
   | "tonnageTracking"
   | "crewScheduling"
   | "mapFieldOps"
-  | "fieldUpdatesDelays"
+  | "fieldUpdatesDelayIQs"
   | "materialsReadiness"
   | "equipmentTracking"
   | "productionReports"
@@ -249,7 +272,7 @@ type WelcomeHash =
   | "#weather-integration"
   | "#schedule-suggestions"
   | "#crew-suggestions"
-  | "#delay-detection"
+  | "#delayIQ-detection"
   | "#route-optimization"
   | "#crew-scheduling"
   | "#updates"
@@ -260,7 +283,7 @@ type WelcomeHash =
   | "#careers"
   | "#apply"
   | "#solutions-schedule"
-  | "#solutions-field-updates-delays"
+  | "#solutions-field-updates-delayIQs"
   | "#solutions-map-field-ops"
   | "#solutions-reports"
   | "#solutions-startups"
@@ -273,7 +296,7 @@ type WelcomeHash =
   | "#enterprise-plan"
   | "#tonnage-tracking"
   | "#map-field-ops"
-  | "#field-updates-delays"
+  | "#field-updates-delayIQs"
   | "#materials-readiness"
   | "#equipment-tracking"
   | "#production-reports"
@@ -355,7 +378,7 @@ function getWelcomeViewFromHash(): WelcomeView {
   if (window.location.hash === "#weather-integration") return "weatherIntegration";
   if (window.location.hash === "#schedule-suggestions") return "scheduleSuggestions";
   if (window.location.hash === "#crew-suggestions") return "crewSuggestions";
-  if (window.location.hash === "#delay-detection") return "delayDetection";
+  if (window.location.hash === "#delayIQ-detection") return "delayIQDetection";
   if (window.location.hash === "#route-optimization") return "routeOptimization";
   if (window.location.hash === "#updates") return "updates";
   if (window.location.hash === "#customer-reviews") return "reviews";
@@ -365,7 +388,7 @@ function getWelcomeViewFromHash(): WelcomeView {
   if (window.location.hash === "#careers") return "careers";
   if (window.location.hash === "#apply") return "apply";
   if (window.location.hash === "#solutions-schedule") return "solutionSchedule";
-  if (window.location.hash === "#solutions-field-updates-delays") return "solutionField";
+  if (window.location.hash === "#solutions-field-updates-delayIQs") return "solutionField";
   if (window.location.hash === "#solutions-map-field-ops") return "solutionMap";
   if (window.location.hash === "#solutions-reports") return "solutionReports";
   if (window.location.hash === "#solutions-startups") return "businessStartups";
@@ -379,7 +402,7 @@ function getWelcomeViewFromHash(): WelcomeView {
   if (window.location.hash === "#tonnage-tracking") return "tonnageTracking";
   if (window.location.hash === "#crew-scheduling") return "crewScheduling";
   if (window.location.hash === "#map-field-ops") return "mapFieldOps";
-  if (window.location.hash === "#field-updates-delays") return "fieldUpdatesDelays";
+  if (window.location.hash === "#field-updates-delayIQs") return "fieldUpdatesDelayIQs";
   if (window.location.hash === "#materials-readiness") return "materialsReadiness";
   if (window.location.hash === "#equipment-tracking") return "equipmentTracking";
   if (window.location.hash === "#production-reports") return "productionReports";
@@ -404,7 +427,7 @@ const navItems: Array<{ page: Page; label: string; icon: typeof Grid2X2 }> = [
   { page: "equipment", label: "Equipment", icon: Wrench },
   { page: "materials", label: "Materials", icon: Boxes },
   { page: "field", label: "Field Updates", icon: ClipboardList },
-  { page: "delays", label: "Delays", icon: ShieldAlert },
+  { page: "delayIQs", label: "DelayIQs", icon: ShieldAlert },
   { page: "reports", label: "Reports", icon: LineChart }
 ];
 
@@ -450,22 +473,22 @@ const programRegistry: Record<OnboardingProductId, ProgramRegistryEntry> = {
       }
     ]
   },
-  "field-updates-delays": {
-    id: "field-updates-delays",
-    label: "Field Updates & Delays",
-    description: "Capture crew updates, delay causes, photos, and recovery notes.",
+  "field-updates-delayIQs": {
+    id: "field-updates-delayIQs",
+    label: "Field Updates & DelayIQs",
+    description: "Capture crew updates, delayIQ causes, photos, and recovery notes.",
     icon: ClipboardList,
     tone: "green",
     primaryPage: "field",
     primaryActionLabel: "Open field updates",
-    landingTitle: "Field Updates & Delays",
-    landingCopy: "Collect field progress, jobsite notes, delay causes, photos, and recovery actions from one focused program page.",
-    focusAreas: ["Crew notes", "Photos", "Delay causes", "Recovery work"],
+    landingTitle: "Field Updates & DelayIQs",
+    landingCopy: "Collect field progress, jobsite notes, delayIQ causes, photos, and recovery actions from one focused program page.",
+    focusAreas: ["Crew notes", "Photos", "DelayIQ causes", "Recovery work"],
     relatedActions: [
       {
-        label: "Delay Management",
-        description: "Review delay owners, causes, and schedule impact.",
-        page: "delays",
+        label: "DelayIQ Management",
+        description: "Review delayIQ owners, causes, and schedule impact.",
+        page: "delayIQs",
         icon: ShieldAlert
       }
     ]
@@ -584,7 +607,7 @@ const projectAvatarThemes: Record<string, string> = {
 
 const projectStatusOrder: Record<string, number> = {
   "In Progress": 0,
-  Delayed: 1,
+  DelayIQed: 1,
   "At Risk": 1,
   "Ready to Start": 2,
   Ready: 2,
@@ -601,7 +624,7 @@ const projectEditableStatuses: Status[] = [
   "Confirmed",
   "In Progress",
   "On Site",
-  "Delayed",
+  "DelayIQed",
   "Complete",
   "At Risk"
 ];
@@ -663,7 +686,7 @@ const welcomeDemoScenes = [
     id: "field",
     label: "Field Updates",
     title: "Bring jobsite updates into the plan",
-    caption: "Crew leads report progress, delays, photos, and status changes from the field."
+    caption: "Crew leads report progress, delayIQs, photos, and status changes from the field."
   },
   {
     id: "map",
@@ -674,7 +697,7 @@ const welcomeDemoScenes = [
   {
     id: "reports",
     label: "Reports",
-    title: "Forecast bottlenecks before they hit",
+    title: "ForecastIQ bottlenecks before they hit",
     caption: "Review backlog, labor demand, equipment conflicts, and schedule health in one view."
   }
 ] as const;
@@ -682,55 +705,55 @@ const welcomeDemoScenes = [
 // Stable marker set for the home CTA globe (crew locations across the US).
 // Defined at module scope so the reference doesn't change per render — a new
 // array each render would re-initialise the cobe globe every frame.
-const ctaGlobeMarkers: Array<{ id: string; location: [number, number]; delay: number; pulse?: boolean }> = [
+const ctaGlobeMarkers: Array<{ id: string; location: [number, number]; delayIQ: number; pulse?: boolean }> = [
   // Each dot is a company that uses BuildFlow. A globally-distributed handful
   // keep the pulse-ring highlight so live signals stay visible as it rotates.
   // North America
-  { id: "c-atx", location: [30.27, -97.74], delay: 0, pulse: true },
-  { id: "c-nyc", location: [40.71, -74.01], delay: 0.6, pulse: true },
-  { id: "c-la", location: [34.05, -118.24], delay: 0 },
-  { id: "c-chi", location: [41.88, -87.63], delay: 0 },
-  { id: "c-den", location: [39.74, -104.99], delay: 0 },
-  { id: "c-sea", location: [47.61, -122.33], delay: 0 },
-  { id: "c-mia", location: [25.76, -80.19], delay: 0 },
-  { id: "c-tor", location: [43.65, -79.38], delay: 0 },
-  { id: "c-mex", location: [19.43, -99.13], delay: 0 },
-  { id: "c-van", location: [49.28, -123.12], delay: 0 },
+  { id: "c-atx", location: [30.27, -97.74], delayIQ: 0, pulse: true },
+  { id: "c-nyc", location: [40.71, -74.01], delayIQ: 0.6, pulse: true },
+  { id: "c-la", location: [34.05, -118.24], delayIQ: 0 },
+  { id: "c-chi", location: [41.88, -87.63], delayIQ: 0 },
+  { id: "c-den", location: [39.74, -104.99], delayIQ: 0 },
+  { id: "c-sea", location: [47.61, -122.33], delayIQ: 0 },
+  { id: "c-mia", location: [25.76, -80.19], delayIQ: 0 },
+  { id: "c-tor", location: [43.65, -79.38], delayIQ: 0 },
+  { id: "c-mex", location: [19.43, -99.13], delayIQ: 0 },
+  { id: "c-van", location: [49.28, -123.12], delayIQ: 0 },
   // South America
-  { id: "c-sao", location: [-23.55, -46.63], delay: 1.2, pulse: true },
-  { id: "c-bue", location: [-34.6, -58.38], delay: 0 },
-  { id: "c-bog", location: [4.71, -74.07], delay: 0 },
-  { id: "c-lim", location: [-12.05, -77.04], delay: 0 },
-  { id: "c-scl", location: [-33.45, -70.67], delay: 0 },
+  { id: "c-sao", location: [-23.55, -46.63], delayIQ: 1.2, pulse: true },
+  { id: "c-bue", location: [-34.6, -58.38], delayIQ: 0 },
+  { id: "c-bog", location: [4.71, -74.07], delayIQ: 0 },
+  { id: "c-lim", location: [-12.05, -77.04], delayIQ: 0 },
+  { id: "c-scl", location: [-33.45, -70.67], delayIQ: 0 },
   // Europe
-  { id: "c-lon", location: [51.51, -0.13], delay: 0.3, pulse: true },
-  { id: "c-par", location: [48.85, 2.35], delay: 0 },
-  { id: "c-ber", location: [52.52, 13.4], delay: 0 },
-  { id: "c-mad", location: [40.42, -3.7], delay: 0 },
-  { id: "c-ams", location: [52.37, 4.9], delay: 0 },
-  { id: "c-sto", location: [59.33, 18.07], delay: 0 },
-  { id: "c-rom", location: [41.9, 12.5], delay: 0 },
+  { id: "c-lon", location: [51.51, -0.13], delayIQ: 0.3, pulse: true },
+  { id: "c-par", location: [48.85, 2.35], delayIQ: 0 },
+  { id: "c-ber", location: [52.52, 13.4], delayIQ: 0 },
+  { id: "c-mad", location: [40.42, -3.7], delayIQ: 0 },
+  { id: "c-ams", location: [52.37, 4.9], delayIQ: 0 },
+  { id: "c-sto", location: [59.33, 18.07], delayIQ: 0 },
+  { id: "c-rom", location: [41.9, 12.5], delayIQ: 0 },
   // Middle East & Africa
-  { id: "c-dxb", location: [25.2, 55.27], delay: 0.9, pulse: true },
-  { id: "c-ist", location: [41.01, 28.98], delay: 0 },
-  { id: "c-cai", location: [30.04, 31.24], delay: 0 },
-  { id: "c-lag", location: [6.52, 3.38], delay: 0 },
-  { id: "c-jnb", location: [-26.2, 28.05], delay: 0 },
-  { id: "c-nbo", location: [-1.29, 36.82], delay: 0 },
+  { id: "c-dxb", location: [25.2, 55.27], delayIQ: 0.9, pulse: true },
+  { id: "c-ist", location: [41.01, 28.98], delayIQ: 0 },
+  { id: "c-cai", location: [30.04, 31.24], delayIQ: 0 },
+  { id: "c-lag", location: [6.52, 3.38], delayIQ: 0 },
+  { id: "c-jnb", location: [-26.2, 28.05], delayIQ: 0 },
+  { id: "c-nbo", location: [-1.29, 36.82], delayIQ: 0 },
   // Asia
-  { id: "c-tyo", location: [35.68, 139.65], delay: 0.5, pulse: true },
-  { id: "c-sin", location: [1.35, 103.82], delay: 1.5, pulse: true },
-  { id: "c-bom", location: [19.08, 72.88], delay: 0 },
-  { id: "c-blr", location: [12.97, 77.59], delay: 0 },
-  { id: "c-hkg", location: [22.32, 114.17], delay: 0 },
-  { id: "c-sha", location: [31.23, 121.47], delay: 0 },
-  { id: "c-sel", location: [37.57, 126.98], delay: 0 },
-  { id: "c-bkk", location: [13.76, 100.5], delay: 0 },
-  { id: "c-jkt", location: [-6.21, 106.85], delay: 0 },
+  { id: "c-tyo", location: [35.68, 139.65], delayIQ: 0.5, pulse: true },
+  { id: "c-sin", location: [1.35, 103.82], delayIQ: 1.5, pulse: true },
+  { id: "c-bom", location: [19.08, 72.88], delayIQ: 0 },
+  { id: "c-blr", location: [12.97, 77.59], delayIQ: 0 },
+  { id: "c-hkg", location: [22.32, 114.17], delayIQ: 0 },
+  { id: "c-sha", location: [31.23, 121.47], delayIQ: 0 },
+  { id: "c-sel", location: [37.57, 126.98], delayIQ: 0 },
+  { id: "c-bkk", location: [13.76, 100.5], delayIQ: 0 },
+  { id: "c-jkt", location: [-6.21, 106.85], delayIQ: 0 },
   // Oceania
-  { id: "c-syd", location: [-33.87, 151.21], delay: 0.8, pulse: true },
-  { id: "c-mel", location: [-37.81, 144.96], delay: 0 },
-  { id: "c-akl", location: [-36.85, 174.76], delay: 0 }
+  { id: "c-syd", location: [-33.87, 151.21], delayIQ: 0.8, pulse: true },
+  { id: "c-mel", location: [-37.81, 144.96], delayIQ: 0 },
+  { id: "c-akl", location: [-36.85, 174.76], delayIQ: 0 }
 ];
 
 const welcomeNavMenus = [
@@ -744,7 +767,7 @@ const welcomeNavMenus = [
           "Crew Scheduling",
           "Schedule AI",
           "Map & Field Ops",
-          "Field Updates & Delays",
+          "Field Updates & DelayIQs",
           "Materials Readiness",
           "Equipment Tracking",
           "Production Reports"
@@ -796,7 +819,7 @@ const welcomeNavMenus = [
       },
       {
         heading: "Automation",
-        items: ["Weather Integration", "Schedule Suggestions", "Crew Suggestions", "Delay Detection", "Route Optimization"]
+        items: ["Weather Integration", "Schedule Suggestions", "Crew Suggestions", "DelayIQ Detection", "Route Optimization"]
       }
     ]
   }
@@ -821,7 +844,7 @@ const welcomeMenuIcons: Record<string, typeof Sparkles> = {
   "Equipment Tracking": Wrench,
   "Production Reports": LineChart,
   Schedule: CalendarDays,
-  "Field Updates & Delays": ClipboardList,
+  "Field Updates & DelayIQs": ClipboardList,
   "Map & Field Ops": Map,
   Reports: LineChart,
   Startups: Sparkles,
@@ -839,7 +862,7 @@ const welcomeMenuIcons: Record<string, typeof Sparkles> = {
   "Weather Integration": CloudSun,
   "Schedule Suggestions": CalendarDays,
   "Crew Suggestions": Users,
-  "Delay Detection": AlertTriangle,
+  "DelayIQ Detection": AlertTriangle,
   "Route Optimization": Route
 };
 
@@ -909,7 +932,7 @@ const scheduleAiConfidenceCards: Array<{ title: string; text: string; icon: type
   },
   {
     title: "Connected context",
-    text: "Uses jobs, crews, materials, field updates, delays, maps, and reports together.",
+    text: "Uses jobs, crews, materials, field updates, delayIQs, maps, and reports together.",
     icon: Layers
   },
   {
@@ -922,7 +945,7 @@ const scheduleAiConfidenceCards: Array<{ title: string; text: string; icon: type
 const scheduleAiAutomationCards: Array<{ title: string; text: string; icon: typeof Grid2X2; tone: string }> = [
   {
     title: "Weather Integration",
-    text: "Monitors forecasts beside the production board, flags weather-sensitive jobs, and recommends safer work windows before crews are dispatched.",
+    text: "Monitors forecastIQs beside the production board, flags weather-sensitive jobs, and recommends safer work windows before crews are dispatched.",
     icon: CloudSun,
     tone: "blue"
   },
@@ -939,8 +962,8 @@ const scheduleAiAutomationCards: Array<{ title: string; text: string; icon: type
     tone: "orange"
   },
   {
-    title: "Delay Detection",
-    text: "Watches field updates, missing materials, blocked tasks, and missed milestones so teams can see delay risk early and recover faster.",
+    title: "DelayIQ Detection",
+    text: "Watches field updates, missing materials, blocked tasks, and missed milestones so teams can see delayIQ risk early and recover faster.",
     icon: ShieldAlert,
     tone: "red"
   },
@@ -963,7 +986,7 @@ const scheduleAiFaqs = [
   ],
   [
     "What information does it use?",
-    "It works from BuildFlow schedule data, project phases, crew capacity, material readiness, equipment, maps, delays, and field updates."
+    "It works from BuildFlow schedule data, project phases, crew capacity, material readiness, equipment, maps, delayIQs, and field updates."
   ],
   [
     "Who benefits most from it?",
@@ -1168,7 +1191,7 @@ const productPlans: ProductPlan[] = [
     proofTitle: "Connect project planning to field execution.",
     proofCards: [
       { icon: BriefcaseBusiness, title: "Portfolio view", text: "See schedule pressure across active jobs and project phases." },
-      { icon: Route, title: "Route-aware dispatch", text: "Coordinate nearby jobs and crew moves before travel becomes delay." },
+      { icon: Route, title: "Route-aware dispatch", text: "Coordinate nearby jobs and crew moves before travel becomes delayIQ." },
       { icon: ShieldAlert, title: "Permission control", text: "Separate manager review from field updates and crew notes." }
     ],
     finalCta: "Start Business from the same BuildFlow demo flow."
@@ -1368,7 +1391,7 @@ type TutorialTargetId =
   | "schedule-job-submit"
   | "map-page-title"
   | "field-page-title"
-  | "delays-page-title"
+  | "delayIQs-page-title"
   | "reports-page-title"
   | "materials-page-title"
   | "equipment-page-title"
@@ -1595,7 +1618,7 @@ function buildTutorialSteps({
         targetId: "map-page-title"
       }
     ],
-    "field-updates-delays": [
+    "field-updates-delayIQs": [
       {
         id: "product-field-updates",
         title: "Field Updates lesson",
@@ -1605,12 +1628,12 @@ function buildTutorialSteps({
         targetId: "field-page-title"
       },
       {
-        id: "product-delays",
-        title: "Delay Management lesson",
-        shortTitle: "Delay Management lesson",
-        body: "Delay Management turns weather, site, labor, material, and inspection issues into visible schedule impact.",
-        page: "delays",
-        targetId: "delays-page-title"
+        id: "product-delayIQs",
+        title: "DelayIQ Management lesson",
+        shortTitle: "DelayIQ Management lesson",
+        body: "DelayIQ Management turns weather, site, labor, material, and inspection issues into visible schedule impact.",
+        page: "delayIQs",
+        targetId: "delayIQs-page-title"
       }
     ],
     "production-reports": [
@@ -1800,7 +1823,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     migrationKicker: "Move without the manual work",
     migrationTitle: "Bring the old schedule in, then plan from one live workspace.",
     migrationCopy:
-      "Import the spreadsheet, map crew capacity, and publish the week with the same route, material, and delay context your field team already needs.",
+      "Import the spreadsheet, map crew capacity, and publish the week with the same route, material, and delayIQ context your field team already needs.",
     importStatus: "Clean start",
     importItems: [
       { label: "Excel", icon: CalendarDays },
@@ -1808,7 +1831,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
       { label: "Google Sheets", icon: Share2 },
       { label: "Crew notes", icon: ClipboardList },
       { label: "Materials", icon: PackageCheck },
-      { label: "Delay log", icon: ShieldAlert }
+      { label: "DelayIQ log", icon: ShieldAlert }
     ],
     finalTitle: "Get a scheduling workspace your crews can trust.",
     finalCopy: "Start from the Schedule solution page, then open the live board when you are ready to assign work."
@@ -1816,31 +1839,31 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
   field: {
     id: "field",
     view: "solutionField",
-    hash: "#solutions-field-updates-delays",
-    menuLabel: "Field Updates & Delays",
+    hash: "#solutions-field-updates-delayIQs",
+    menuLabel: "Field Updates & DelayIQs",
     page: "field",
-    title: "Field Updates & Delays",
+    title: "Field Updates & DelayIQs",
     heroCopy:
-      "Capture progress, photos, delay causes, and recovery notes from the field while the office still has time to adjust the plan.",
+      "Capture progress, photos, delayIQ causes, and recovery notes from the field while the office still has time to adjust the plan.",
     primaryCta: "Open field updates",
-    browserTitle: "Field Updates & Delays",
+    browserTitle: "Field Updates & DelayIQs",
     metricLines: (data) => [
       `${data?.fieldUpdates.length ?? 14} field updates`,
-      `${data?.delays.length ?? 3} active delay flags`,
+      `${data?.delayIQs.length ?? 3} active delayIQ flags`,
       "2 manager reviews pending"
     ],
     boardDate: "Live field feed",
     boardHeading: "Jobsite signals",
     boardRows: [
       { label: "Progress", title: "Harborview slab photos", detail: "Crew lead update", tone: "blue" },
-      { label: "Delay", title: "Pinecrest inspection hold", detail: "Recovery needed", tone: "amber" },
+      { label: "DelayIQ", title: "Pinecrest inspection hold", detail: "Recovery needed", tone: "amber" },
       { label: "Note", title: "Riverside pour complete", detail: "Ready for review", tone: "green" },
       { label: "Risk", title: "Tech Ridge access gate", detail: "Superintendent flagged", tone: "violet" }
     ],
     phoneTitle: "Field log",
-    phoneItems: ["Photo update added", "Delay cause assigned", "Recovery task due"],
+    phoneItems: ["Photo update added", "DelayIQ cause assigned", "Recovery task due"],
     logoRowLabel: "Trusted by crews reporting field reality every day",
-    showcaseTitle: "A clean field log for progress, photos, delay causes, and recovery steps.",
+    showcaseTitle: "A clean field log for progress, photos, delayIQ causes, and recovery steps.",
     documentTitle: "Field Log",
     documentIcon: ClipboardList,
     featureColumns: [
@@ -1853,7 +1876,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
         ]
       },
       {
-        heading: "Delays",
+        heading: "DelayIQs",
         items: [
           { icon: AlertTriangle, label: "Cause tracking" },
           { icon: CloudSun, label: "Weather holds" },
@@ -1870,7 +1893,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
       }
     ],
     miniDocIcon: ClipboardList,
-    miniDocTitle: "Pinecrest Delay Review",
+    miniDocTitle: "Pinecrest DelayIQ Review",
     miniDocNotes: [
       { name: "Carlos Ramirez", text: "posted photos from the west entrance." },
       { name: "Jessica Lee", text: "assigned the inspection follow-up." },
@@ -1878,12 +1901,12 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     ],
     quoteTitle: "\"Field updates arrive with the context needed to act on them.\"",
     quoteCopy:
-      "BuildFlow turns scattered jobsite notes into structured updates, delay reasons, owners, and recovery actions that can feed the next schedule decision.",
+      "BuildFlow turns scattered jobsite notes into structured updates, delayIQ reasons, owners, and recovery actions that can feed the next schedule decision.",
     quoteCite: "Superintendent team, Pinecrest",
     migrationKicker: "Capture the field without cleanup",
-    migrationTitle: "Bring field notes in, then turn delays into accountable recovery work.",
+    migrationTitle: "Bring field notes in, then turn delayIQs into accountable recovery work.",
     migrationCopy:
-      "Import daily reports, photo logs, weather notes, and inspection holds so the delay story stays attached to the job it affects.",
+      "Import daily reports, photo logs, weather notes, and inspection holds so the delayIQ story stays attached to the job it affects.",
     importStatus: "Signal ready",
     importItems: [
       { label: "Photo log", icon: ClipboardList },
@@ -1894,7 +1917,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
       { label: "Daily report", icon: LineChart }
     ],
     finalTitle: "Get field updates that are ready for decision-making.",
-    finalCopy: "Start from the Field Updates & Delays solution page, then open the live field log when the crew reports in."
+    finalCopy: "Start from the Field Updates & DelayIQs solution page, then open the live field log when the crew reports in."
   },
   map: {
     id: "map",
@@ -1904,7 +1927,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     page: "mapProgram",
     title: "Map & Field Ops",
     heroCopy:
-      "See crews, project locations, routes, site status, and dispatch handoffs together before travel time becomes a hidden delay.",
+      "See crews, project locations, routes, site status, and dispatch handoffs together before travel time becomes a hidden delayIQ.",
     primaryCta: "Open map ops",
     browserTitle: "Map & Field Ops",
     metricLines: (data) => [
@@ -1987,13 +2010,13 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     page: "reports",
     title: "Reports",
     heroCopy:
-      "Turn schedule movement, field updates, delays, labor demand, and equipment conflicts into reports your team can act on.",
+      "Turn schedule movement, field updates, delayIQs, labor demand, and equipment conflicts into reports your team can act on.",
     primaryCta: "Open reports",
     browserTitle: "Production Reports",
     metricLines: (data) => [
       `${data?.projects.length ?? 5} active projects`,
       "92% schedule health",
-      `${data?.delays.length ?? 4} bottlenecks flagged`
+      `${data?.delayIQs.length ?? 4} bottlenecks flagged`
     ],
     boardDate: "Weekly reporting",
     boardHeading: "Production insight",
@@ -2011,7 +2034,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     documentIcon: LineChart,
     featureColumns: [
       {
-        heading: "Forecasts",
+        heading: "ForecastIQs",
         items: [
           { icon: TrendingUp, label: "Schedule variance" },
           { icon: Users, label: "Labor demand" },
@@ -2021,7 +2044,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
       {
         heading: "Bottlenecks",
         items: [
-          { icon: AlertTriangle, label: "Delay causes" },
+          { icon: AlertTriangle, label: "DelayIQ causes" },
           { icon: Wrench, label: "Equipment conflicts" },
           { icon: PackageCheck, label: "Material gaps" }
         ]
@@ -2039,7 +2062,7 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     miniDocTitle: "Weekly Production Brief",
     miniDocNotes: [
       { name: "Matt Torres", text: "reviewed the backlog trend." },
-      { name: "Jessica Lee", text: "confirmed the labor forecast." },
+      { name: "Jessica Lee", text: "confirmed the labor forecastIQ." },
       { name: "Molly Miller", text: "exported the bottleneck report." }
     ],
     quoteTitle: "\"Reports show where the week is drifting before it becomes a surprise.\"",
@@ -2049,12 +2072,12 @@ const solutionPages: Record<SolutionPageId, SolutionPageConfig> = {
     migrationKicker: "Report without rebuilding the data",
     migrationTitle: "Bring schedule history in, then publish reporting from one live workspace.",
     migrationCopy:
-      "Import schedule data, field updates, crew hours, equipment notes, and delay logs so reports reflect the work as it is happening.",
+      "Import schedule data, field updates, crew hours, equipment notes, and delayIQ logs so reports reflect the work as it is happening.",
     importStatus: "Report ready",
     importItems: [
       { label: "Schedule data", icon: CalendarDays },
       { label: "Field updates", icon: ClipboardList },
-      { label: "Delay log", icon: ShieldAlert },
+      { label: "DelayIQ log", icon: ShieldAlert },
       { label: "Crew hours", icon: Users },
       { label: "Materials", icon: PackageCheck },
       { label: "Equipment", icon: Wrench }
@@ -2203,7 +2226,9 @@ function App() {
     [selectedBusinessType, selectedPlanId, selectedProductIds]
   );
 
-  const reload = async () => {
+  // Returns the payload so callers can branch on the workspace state (see
+  // enterAfterAuth). reload() below is the void-returning form used as a prop.
+  const loadWorkspace = async (): Promise<BootstrapPayload> => {
     let payload;
     try {
       payload = await loadBootstrap();
@@ -2221,6 +2246,11 @@ function App() {
     }
     setData(payload);
     setActiveUserId((current) => current || payload.activeUser.id);
+    return payload;
+  };
+
+  const reload = async (): Promise<void> => {
+    await loadWorkspace();
   };
 
   const runBootstrap = () => {
@@ -2271,17 +2301,40 @@ function App() {
     setPage(nextPage);
   };
 
+  // The welcome subpages render off the hash (WelcomePage syncs on "hashchange"),
+  // so this is how App hands an account over to the onboarding questions.
+  const showOnboarding = () => {
+    setPage("welcome");
+    if (typeof window !== "undefined") {
+      window.location.hash = "#business-type";
+    }
+  };
+
   // Auth: after a real sign-up/login the session cookie is set, so reload() loads
-  // that account's own workspace (empty for a brand-new org), then enter the app.
+  // that account's own workspace, then enter the app.
+  //
+  // A brand-new org's workspace is empty until onboarding provisions it, so those
+  // accounts go to the business-type question rather than the dashboard, which has
+  // no active user yet and would render the "data is unavailable" screen. The test
+  // is the workspace itself, not which form was submitted, so logging back in after
+  // abandoning onboarding resumes it instead of dead-ending.
+  //
+  // If the workspace can't load at all, let the error reach the caller: the auth
+  // form catches it, shows the reason inline, and the user stays on the login page.
+  // Entering the app anyway (with no payload) stranded them on the "data is
+  // unavailable" screen, whose only action is "Try again" — no route back to login.
   const enterAfterAuth = async () => {
     setError(null);
     setIsLoading(true);
+    let payload: BootstrapPayload;
     try {
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load your workspace");
+      payload = await loadWorkspace();
     } finally {
       setIsLoading(false);
+    }
+    if (payload.users.length === 0) {
+      showOnboarding();
+      return;
     }
     openAppPage("dashboard");
   };
@@ -2289,13 +2342,20 @@ function App() {
     await apiSignup(input); // throws on failure (e.g. email taken) — surfaced by the form
     await enterAfterAuth();
   };
-  const handleLoginSubmit = async (input: { email: string; password: string }) => {
+  const handleLoginSubmit = async (input: { email: string; password: string; remember?: boolean }) => {
     await apiLogin(input);
     await enterAfterAuth();
   };
   const handleLogout = async () => {
     try { await apiLogout(); } catch { /* clear locally regardless */ }
     setData(null);
+    setPage("welcome");
+  };
+
+  // Escape hatch off the data-error screen, so a failed load is never a dead end:
+  // it always leaves a way back to the welcome page (and its Log in / Sign up).
+  const returnToWelcome = () => {
+    setError(null);
     setPage("welcome");
   };
 
@@ -2410,9 +2470,14 @@ function App() {
       <div className="loading-screen error-screen">
         <AlertTriangle />
         <span>{error ?? "BuildFlow data is unavailable."}</span>
-        <button type="button" className="primary-button" style={{ marginTop: 16 }} onClick={runBootstrap}>
-          Try again
-        </button>
+        <div className="error-screen-actions">
+          <button type="button" className="primary-button" onClick={runBootstrap}>
+            Try again
+          </button>
+          <button type="button" className="error-screen-back" onClick={returnToWelcome}>
+            Back to log in
+          </button>
+        </div>
       </div>
     );
   }
@@ -2531,7 +2596,7 @@ function App() {
           {page === "materials" && <MaterialsPage data={data} reload={reload} />}
           {page === "field" && <FieldUpdatesPage data={data} activeUser={activeUser} reload={reload} />}
           {page === "map" && <MapOpsPage data={data} />}
-          {page === "delays" && <DelaysPage data={data} activeUser={activeUser} reload={reload} />}
+          {page === "delayIQs" && <DelayIQsPage data={data} activeUser={activeUser} reload={reload} />}
           {page === "reports" && <ReportsPage data={data} />}
           {page === "timecard" && <TimeCardPage data={data} />}
           {page === "settings" && <SettingsPage onClose={closeSettingsPage} />}
@@ -2582,7 +2647,7 @@ function WelcomePage({
   onOpenSchedule: () => void;
   onOpenSettings: () => void;
   onSignup: (input: { email: string; password: string; name: string; orgName?: string }) => Promise<void>;
-  onLoginSubmit: (input: { email: string; password: string }) => Promise<void>;
+  onLoginSubmit: (input: { email: string; password: string; remember?: boolean }) => Promise<void>;
 }) {
   // Representative marketing figures for the welcome stats. The pre-login demo
   // dataset is tiny (often empty), so floor these so the AI-section counters read
@@ -2620,7 +2685,7 @@ function WelcomePage({
     welcomeView === "crewScheduling" ||
     welcomeView === "scheduleAi" ||
     welcomeView === "mapFieldOps" ||
-    welcomeView === "fieldUpdatesDelays" ||
+    welcomeView === "fieldUpdatesDelayIQs" ||
     welcomeView === "materialsReadiness" ||
     welcomeView === "equipmentTracking" ||
     welcomeView === "productionReports" ||
@@ -2639,7 +2704,7 @@ function WelcomePage({
     welcomeView === "weatherIntegration" ||
     welcomeView === "scheduleSuggestions" ||
     welcomeView === "crewSuggestions" ||
-    welcomeView === "delayDetection" ||
+    welcomeView === "delayIQDetection" ||
     welcomeView === "routeOptimization" ||
     welcomeView === "reviews" ||
     welcomeView === "waitlist" || // waitlist (removable)
@@ -2827,7 +2892,7 @@ function WelcomePage({
   const showTonnagePage = () => showWelcomeSubpage("tonnageTracking", "#tonnage-tracking");
   const showCrewSchedulingPage = () => showWelcomeSubpage("crewScheduling", "#crew-scheduling");
   const showMapFieldOpsPage = () => showWelcomeSubpage("mapFieldOps", "#map-field-ops");
-  const showFieldUpdatesDelaysPage = () => showWelcomeSubpage("fieldUpdatesDelays", "#field-updates-delays");
+  const showFieldUpdatesDelayIQsPage = () => showWelcomeSubpage("fieldUpdatesDelayIQs", "#field-updates-delayIQs");
   const showMaterialsReadinessPage = () => showWelcomeSubpage("materialsReadiness", "#materials-readiness");
   const showEquipmentTrackingPage = () => showWelcomeSubpage("equipmentTracking", "#equipment-tracking");
   const showProductionReportsPage = () => showWelcomeSubpage("productionReports", "#production-reports");
@@ -2897,8 +2962,8 @@ function WelcomePage({
       showMapFieldOpsPage();
       return;
     }
-    if (itemTitle === "Field Updates & Delays") {
-      showFieldUpdatesDelaysPage();
+    if (itemTitle === "Field Updates & DelayIQs") {
+      showFieldUpdatesDelayIQsPage();
       return;
     }
     if (itemTitle === "Materials Readiness") {
@@ -3002,7 +3067,7 @@ function WelcomePage({
     if (menuId === "product" && itemTitle === "Crew Scheduling") return "#crew-scheduling";
     if (menuId === "product" && itemTitle === "Schedule AI") return "#schedule-ai";
     if (menuId === "product" && itemTitle === "Map & Field Ops") return "#map-field-ops";
-    if (menuId === "product" && itemTitle === "Field Updates & Delays") return "#field-updates-delays";
+    if (menuId === "product" && itemTitle === "Field Updates & DelayIQs") return "#field-updates-delayIQs";
     if (menuId === "product" && itemTitle === "Materials Readiness") return "#materials-readiness";
     if (menuId === "product" && itemTitle === "Equipment Tracking") return "#equipment-tracking";
     if (menuId === "product" && itemTitle === "Production Reports") return "#production-reports";
@@ -3024,7 +3089,10 @@ function WelcomePage({
 
   return (
     <div className={`welcome-page ${isReskinView ? "welcome-rx" : ""} ${welcomeTheme === "dark" ? "wx-dark" : ""} ${isReskinView ? "" : "updates-open"}`}>
-      {welcomeView !== "createAccount" && welcomeView !== "programHud" && welcomeView !== "waitlist" /* waitlist (removable) */ && (
+      {/* createAccount + businessType + additionalProducts are full-bleed `.acct-split`
+          screens (100vh, own brand mark) — the marketing nav would push them down and
+          clip the panel. */}
+      {welcomeView !== "createAccount" && welcomeView !== "businessType" && welcomeView !== "additionalProducts" && welcomeView !== "programHud" && welcomeView !== "waitlist" /* waitlist (removable) */ && (
         <>
         <header className="welcome-nav">
           <button className="welcome-brand" type="button" onClick={showWelcomeHome}>
@@ -3239,8 +3307,8 @@ function WelcomePage({
         <WelcomeScheduleAiPage onBack={showWelcomeHome} onOpenSchedule={onOpenSchedule} onEnterDashboard={showCreateAccountPage} />
       ) : welcomeView === "mapFieldOps" ? (
         <WelcomeMapFieldOpsPage onBack={showWelcomeHome} onOpenMap={() => onOpenPage("map")} onGetStarted={showCreateAccountPage} />
-      ) : welcomeView === "fieldUpdatesDelays" ? (
-        <WelcomeFieldUpdatesDelaysPage onBack={showWelcomeHome} onOpenField={() => onOpenPage("field")} onGetStarted={showCreateAccountPage} />
+      ) : welcomeView === "fieldUpdatesDelayIQs" ? (
+        <WelcomeFieldUpdatesDelayIQsPage onBack={showWelcomeHome} onOpenField={() => onOpenPage("field")} onGetStarted={showCreateAccountPage} />
       ) : welcomeView === "materialsReadiness" ? (
         <WelcomeMaterialsReadinessPage onBack={showWelcomeHome} onOpenMaterials={() => onOpenPage("materials")} onGetStarted={showCreateAccountPage} />
       ) : welcomeView === "equipmentTracking" ? (
@@ -3648,7 +3716,7 @@ const scheduleAiPhrases = [
   "ahead of risk.",
   "before you do.",
   "one step ahead.",
-  "ahead of delays."
+  "ahead of delayIQs."
 ];
 
 // Interchangeable closers for the Map & Field Ops hero — each matches "on one map"
@@ -3662,7 +3730,7 @@ const mapFieldOpsPhrases = [
   "at a glance."
 ];
 
-// Interchangeable closers for the Field Updates & Delays hero — each matches
+// Interchangeable closers for the Field Updates & DelayIQs hero — each matches
 // "on the record" and fits "The whole field, ___" (stable ref for the rotator).
 const fieldUpdatesPhrases = [
   "on the record.",
@@ -4151,13 +4219,13 @@ function WelcomeExperience({
         <section className="wx-hero">
           <WxHeroMedia />
           <div className="wx-eyebrow">
-            <span className="wx-dot" /> Launching soon
+            <span className="wx-dot" /> Launching {LAUNCH_DATE_LABEL}
           </div>
           <h1 className="wx-title">
             <WxRotatingHeadline prefix="Where crews, projects, and schedules " phrases={heroTaglinePhrases} />
           </h1>
           <p className="wx-sub">
-            Coordinate crews, project phases, materials, field updates, and delays from one clean command center.
+            Coordinate crews, project phases, materials, field updates, and delayIQs from one clean command center.
           </p>
           <div className="wx-cta-row">
             {/* waitlist (removable feature): primary pre-launch CTA. At go-live, swap
@@ -4366,7 +4434,7 @@ function WelcomeExperience({
             Conflicts spotted. <WxRotatingWord phrases={aiRecoveryPhrases} className="wx-grad-ai" />
           </h2>
           <p>
-            Schedule AI ranks ready work, flags double-booked crews, and turns weather and delay signals into
+            Schedule AI ranks ready work, flags double-booked crews, and turns weather and delayIQ signals into
             recovery plans before the morning meeting.
           </p>
         </section>
@@ -4588,7 +4656,7 @@ function WelcomeExperience({
             <h2>
               Ready when <em>your crews</em> are.
             </h2>
-            <p>Coordinate crews, materials, field updates, and delays from one clean command center.</p>
+            <p>Coordinate crews, materials, field updates, and delayIQs from one clean command center.</p>
             <div className="wx-cta-row">
               <WxMagnetic className="wx-btn wx-btn-paper" onClick={onGetStarted} ariaLabel="Get BuildFlow">
                 Get BuildFlow <ArrowRight size={18} />
@@ -4704,7 +4772,7 @@ const productOverview: OverviewVariant = {
   titleNormal: "One workspace for everything you ",
   titleEm: "build.",
   titleEmPhrases: ["build.", "run.", "manage.", "coordinate.", "deliver.", "schedule."],
-  sub: "From the first crew assignment to the final report — schedules, projects, materials, field updates, maps, and delays, all connected in one command center.",
+  sub: "From the first crew assignment to the final report — schedules, projects, materials, field updates, maps, and delayIQs, all connected in one command center.",
   introA: "The office plans and the field executes — but the data usually scatters across spreadsheets, texts, and a half-dozen disconnected apps.",
   introB: "BuildFlow keeps crews, jobs, materials, and routes in one live model, so schedule risk is visible early and nothing slips between systems.",
   stageCap: "The whole operation, one screen",
@@ -4718,27 +4786,27 @@ const productOverview: OverviewVariant = {
     { page: "materials", kicker: "Materials", title: "Material readiness", text: "Deliveries, permits, and locates ranked so crews only roll to work that can start.", icon: Boxes },
     { page: "map", kicker: "Map Ops", title: "Map & field ops", text: "Group jobs by location and travel time, plan truck routes, and read site status at a glance.", icon: Map },
     { page: "field", kicker: "Field Updates", title: "Field updates", text: "Daily progress, photos, and jobsite signals pinned to the timeline the office watches.", icon: ClipboardList },
-    { page: "delays", kicker: "Delays", title: "Delay management", text: "Categorize causes, measure schedule impact, and turn setbacks into recovery plans.", icon: ShieldAlert },
+    { page: "delayIQs", kicker: "DelayIQs", title: "DelayIQ management", text: "Categorize causes, measure schedule impact, and turn setbacks into recovery plans.", icon: ShieldAlert },
     { page: "reports", kicker: "Reports", title: "Production reports", text: "Utilization, backlog, and schedule health — ready for the weekly review, export included.", icon: LineChart }
   ],
   bandEyebrow: "BuildFlow AI",
   bandLead: "Conflicts spotted.",
   bandGrad: "Recovery suggested.",
   bandGradPhrases: aiRecoveryPhrases,
-  bandText: "Schedule AI ranks ready work, flags double-booked crews, and turns weather and delay signals into recovery plans before the morning meeting.",
+  bandText: "Schedule AI ranks ready work, flags double-booked crews, and turns weather and delayIQ signals into recovery plans before the morning meeting.",
   galleryEyebrow: "Built for the field",
   galleryTitleNormal: "See what teams ",
   galleryTitleEm: "run on BuildFlow.",
   gallery: [
     { title: "Concrete crews", theme: "office-building", stat: "94%", label: "on-time pours", text: "Pre-dispatch readiness checks keep trucks and crews from rolling to blocked work." },
-    { title: "Framing & GC", theme: "apartments", stat: "2.4x", label: "more field updates", text: "Progress, photos, and delays flow straight onto the schedule the office plans from." },
+    { title: "Framing & GC", theme: "apartments", stat: "2.4x", label: "more field updates", text: "Progress, photos, and delayIQs flow straight onto the schedule the office plans from." },
     { title: "Utilities & sitework", theme: "warehouse", stat: "0.6d", label: "less schedule variance", text: "Locates, permits, and inspections tracked beside the jobs that depend on them." },
     { title: "Paving & routes", theme: "parking-garage", stat: "82%", label: "crew utilization", text: "Group work by location and travel time so the day is planned before it starts." }
   ],
   ctaLead: "Ready when ",
   ctaEm: "your crews",
   ctaTail: " are.",
-  ctaText: "Coordinate crews, materials, field updates, and delays from one clean command center.",
+  ctaText: "Coordinate crews, materials, field updates, and delayIQs from one clean command center.",
   accentBg: "#eef4ff",
   accentInk: "#1a73e8"
 };
@@ -4757,7 +4825,7 @@ const plansOverview: OverviewVariant = {
   modules: [
     { hash: "#free-plan", kicker: "Free", title: "For the first crews", text: "Scheduling, field updates, and readiness for a single crew — no card required.", icon: HardHat },
     { hash: "#pro-plan", kicker: "Pro", title: "For growing teams", text: "Multi-crew scheduling, materials, and reporting with weekly production insight.", icon: TrendingUp },
-    { hash: "#business-plan", kicker: "Business", title: "For multi-division ops", text: "Map ops, delay management, and role-based review across divisions.", icon: BriefcaseBusiness },
+    { hash: "#business-plan", kicker: "Business", title: "For multi-division ops", text: "Map ops, delayIQ management, and role-based review across divisions.", icon: BriefcaseBusiness },
     { hash: "#enterprise-plan", kicker: "Enterprise", title: "For large organizations", text: "SSO, custom controls, and reporting tuned to how your org already runs.", icon: ShieldAlert },
     { kicker: "Free demo", title: "Try before you buy", text: "Explore the full command center with sample data — no signup needed.", icon: PlayCircle },
     { kicker: "Transparent", title: "No per-seat surprises", text: "Simple tiers that map to how many crews and modules you actually run.", icon: DollarSign },
@@ -4802,7 +4870,7 @@ const resourcesOverview: OverviewVariant = {
     { hash: "#customer-reviews", kicker: "See it live", title: "Customer stories", text: "How real crews run their week on BuildFlow.", icon: Users },
     { kicker: "Start faster", title: "Templates", text: "Schedule, crew, and reporting templates you can adapt to your work.", icon: Layers },
     { kicker: "Roll it out", title: "Onboarding", text: "A guided path to get crews and managers live in days, not weeks.", icon: PlayCircle },
-    { kicker: "Do it right", title: "Best practices", text: "Field-tested playbooks for scheduling, readiness, and delay recovery.", icon: CheckCircle2 },
+    { kicker: "Do it right", title: "Best practices", text: "Field-tested playbooks for scheduling, readiness, and delayIQ recovery.", icon: CheckCircle2 },
     { kicker: "Learn live", title: "Webinars", text: "Sessions on production control, map ops, and reporting.", icon: CalendarDays },
     { kicker: "Grow together", title: "Partner programs", text: "Tools and support for partners building on BuildFlow.", icon: Share2 }
   ],
@@ -4882,10 +4950,10 @@ const aiOverview: OverviewVariant = {
   modulesTitleEm: "Recovery out.",
   modules: [
     { hash: "#buildflow-ai", kicker: "The core", title: "Schedule AI", text: "Ranks ready work and flags conflicts before dispatch.", icon: Sparkles },
-    { hash: "#weather-integration", kicker: "See it coming", title: "Weather risk", text: "Turns forecasts into schedule risk on the jobs it affects.", icon: CloudSun },
+    { hash: "#weather-integration", kicker: "See it coming", title: "Weather risk", text: "Turns forecastIQs into schedule risk on the jobs it affects.", icon: CloudSun },
     { hash: "#schedule-suggestions", kicker: "Plan smarter", title: "Schedule suggestions", text: "Recommends the sequence that keeps crews and trades flowing.", icon: CalendarDays },
     { hash: "#crew-suggestions", kicker: "Right crew, right job", title: "Crew suggestions", text: "Matches crews to work by capacity, skill, and location.", icon: Users },
-    { hash: "#delay-detection", kicker: "Catch it early", title: "Delay detection", text: "Spots slipping milestones and blocked tasks automatically.", icon: AlertTriangle },
+    { hash: "#delayIQ-detection", kicker: "Catch it early", title: "DelayIQ detection", text: "Spots slipping milestones and blocked tasks automatically.", icon: AlertTriangle },
     { hash: "#route-optimization", kicker: "Less windshield time", title: "Route optimization", text: "Groups jobs and plans routes by travel time.", icon: Route },
     { kicker: "Start what can start", title: "Readiness scoring", text: "Ranks jobs by prerequisites so crews skip blocked work.", icon: Gauge },
     { kicker: "Fix it fast", title: "Recovery plans", text: "Suggests the moves that get a slipping schedule back on track.", icon: TrendingUp }
@@ -4893,12 +4961,12 @@ const aiOverview: OverviewVariant = {
   bandEyebrow: "BuildFlow AI",
   bandLead: "Conflicts spotted.",
   bandGrad: "Recovery suggested.",
-  bandText: "Weather, delays, and field signals become ranked recovery plans — right where you plan the week, before the morning meeting.",
+  bandText: "Weather, delayIQs, and field signals become ranked recovery plans — right where you plan the week, before the morning meeting.",
   galleryEyebrow: "AI in the field",
   galleryTitleNormal: "What the AI ",
   galleryTitleEm: "catches for you.",
   gallery: [
-    { title: "Weather delays", theme: "office-building", stat: "3 days", label: "earlier warning", text: "Rain on a pour day flagged before the crew rolls." },
+    { title: "Weather delayIQs", theme: "office-building", stat: "3 days", label: "earlier warning", text: "Rain on a pour day flagged before the crew rolls." },
     { title: "Double-bookings", theme: "apartments", stat: "0", label: "surprise conflicts", text: "Overbooked crews caught before dispatch." },
     { title: "Missing materials", theme: "warehouse", stat: "100%", label: "readiness checks", text: "Blocked work flagged before crews arrive." },
     { title: "Missed milestones", theme: "parking-garage", stat: "-40%", label: "fewer slips", text: "Recovery suggested the moment a task slips." }
@@ -4906,7 +4974,7 @@ const aiOverview: OverviewVariant = {
   ctaLead: "Let the schedule ",
   ctaEm: "watch itself.",
   ctaTail: "",
-  ctaText: "Turn weather, delays, and field signals into recovery plans automatically.",
+  ctaText: "Turn weather, delayIQs, and field signals into recovery plans automatically.",
   accentBg: "#efe9fb",
   accentInk: "#7b3ff4"
 };
@@ -5228,7 +5296,7 @@ function WelcomeOverviewPage({
               <a onClick={() => onExplore("crews")}>Crews</a>
               <a onClick={() => onExplore("materials")}>Materials</a>
               <a onClick={() => onExplore("field")}>Field updates</a>
-              <a onClick={() => onExplore("delays")}>Delays</a>
+              <a onClick={() => onExplore("delayIQs")}>DelayIQs</a>
             </div>
             <div>
               <h3>Get started</h3>
@@ -5318,6 +5386,64 @@ function AccountPreviewBackdrop() {
   );
 }
 
+// Decorative signature visual for the login/signup aside: a "live schedule" that
+// assembles itself, with one double-booked block that moves into a free slot.
+// Rendered as pure CSS animation (see the .acct-viz block in account-redesign.css);
+// every animation shares one 12s period so the per-block animation-delay stagger
+// stays locked on every repeat. `fix` marks the double-booked block.
+type AcctVizJob = { left: number; width: number; tone: "blue" | "cyan" | "violet"; delayIQ: number; fix?: boolean };
+const ACCT_VIZ_LANES: { crew: string; jobs: AcctVizJob[] }[] = [
+  { crew: "Framing", jobs: [
+    { left: 2, width: 30, tone: "blue", delayIQ: 0.2 },
+    { left: 40, width: 26, tone: "cyan", delayIQ: 0.55 }
+  ] },
+  { crew: "Concrete", jobs: [
+    { left: 6, width: 24, tone: "violet", delayIQ: 0.9 },
+    { left: 68, width: 28, tone: "blue", delayIQ: 1.25 }
+  ] },
+  { crew: "Electrical", jobs: [
+    { left: 6, width: 26, tone: "cyan", delayIQ: 1.6 },
+    { left: 20, width: 24, tone: "blue", delayIQ: 1.95, fix: true }
+  ] },
+  { crew: "Roofing", jobs: [
+    { left: 34, width: 30, tone: "violet", delayIQ: 2.3 },
+    { left: 72, width: 22, tone: "cyan", delayIQ: 2.65 }
+  ] }
+];
+
+// Shared by every step of the auth/onboarding flow, so the branded panel reads as
+// one continuous surface while the form column advances.
+function AcctScheduleViz() {
+  return (
+    <div className="acct-viz">
+      <div className="acct-viz-card">
+        <div className="acct-viz-head">
+          <span className="acct-viz-live" />
+          <span>Live schedule</span>
+          <span className="acct-viz-week">Mon &mdash; Fri</span>
+        </div>
+        <div className="acct-viz-lanes">
+          {ACCT_VIZ_LANES.map((lane) => (
+            <div className="acct-viz-lane" key={lane.crew}>
+              <span className="acct-viz-crew">{lane.crew}</span>
+              <span className="acct-viz-track">
+                {lane.jobs.map((job, index) => (
+                  <i
+                    key={index}
+                    className={`acct-viz-job acct-viz-job-${job.tone}${job.fix ? " is-fix" : ""}`}
+                    style={{ left: `${job.left}%`, width: `${job.width}%`, animationDelay: `${job.delayIQ}s` }}
+                  />
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+        <span className="acct-viz-sweep" />
+      </div>
+    </div>
+  );
+}
+
 function WelcomeCreateAccountPage({
   onBack,
   onSignup,
@@ -5326,7 +5452,7 @@ function WelcomeCreateAccountPage({
 }: {
   onBack: () => void;
   onSignup: (input: { email: string; password: string; name: string; orgName?: string }) => Promise<void>;
-  onLoginSubmit: (input: { email: string; password: string }) => Promise<void>;
+  onLoginSubmit: (input: { email: string; password: string; remember?: boolean }) => Promise<void>;
   initialMode?: "signup" | "login";
 }) {
   const [mode, setMode] = useState<"signup" | "login">(initialMode);
@@ -5336,6 +5462,11 @@ function WelcomeCreateAccountPage({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  // "Keep me signed in" — on by default, which matches the previous behaviour
+  // (a 30-day cookie). Unchecking asks the server for a browser-session cookie,
+  // so closing the browser signs this account out (shared/site computers).
+  const [remember, setRemember] = useState(true);
   const isSignup = mode === "signup";
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -5349,7 +5480,7 @@ function WelcomeCreateAccountPage({
     setBusy(true);
     try {
       if (isSignup) await onSignup({ email: mail, password, name: name.trim(), orgName: company.trim() || undefined });
-      else await onLoginSubmit({ email: mail, password });
+      else await onLoginSubmit({ email: mail, password, remember });
       // On success the parent navigates into the app; this component unmounts.
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -5358,106 +5489,169 @@ function WelcomeCreateAccountPage({
   };
 
   return (
-    <main className="account-page" id="create-account" aria-labelledby="create-account-title">
-      <AccountPreviewBackdrop />
+    <main className="acct-split" id="create-account" aria-labelledby="create-account-title">
+      <div className="acct-form-col">
+        <div className="acct-form-inner">
+          <button type="button" className="acct-back" onClick={onBack}>
+            ← Back to BuildFlow
+          </button>
+          <div className="acct-brand">
+            <BuildFlowLogoMark />
+            <strong>BuildFlow</strong>
+          </div>
+          <div className="acct-head">
+            <h1 id="create-account-title">{isSignup ? "Create your workspace." : "Welcome back."}</h1>
+            <p>{isSignup ? "Coordinate crews, materials, and schedules in one place." : "Sign in to your production workspace."}</p>
+          </div>
 
-      <section className="account-card">
-        <button type="button" className="account-back-button" onClick={onBack}>
-          Back to BuildFlow
-        </button>
-        <BuildFlowLogoMark />
-        <div className="account-card-copy">
-          <h1 id="create-account-title">{isSignup ? "BuildFlow: your production workspace." : "Welcome back to BuildFlow."}</h1>
-          <p>{isSignup ? "Create your account with a work email" : "Sign in to your workspace"}</p>
+          <form className="acct-form" onSubmit={submit}>
+            {isSignup && (
+              <>
+                <div className="acct-field">
+                  <label htmlFor="account-name">Your name</label>
+                  <div className="acct-input-wrap">
+                    <input
+                      id="account-name"
+                      className="acct-input"
+                      type="text"
+                      value={name}
+                      onChange={(event) => { setName(event.target.value); if (error) setError(""); }}
+                      placeholder="Jordan Reyes"
+                      autoComplete="name"
+                    />
+                  </div>
+                </div>
+                <div className="acct-field">
+                  <label htmlFor="account-company">Company <span className="acct-optional">(optional)</span></label>
+                  <div className="acct-input-wrap">
+                    <input
+                      id="account-company"
+                      className="acct-input"
+                      type="text"
+                      value={company}
+                      onChange={(event) => setCompany(event.target.value)}
+                      placeholder="Reyes Construction"
+                      autoComplete="organization"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="acct-field">
+              <label htmlFor="account-email">Work email</label>
+              <div className="acct-input-wrap">
+                <input
+                  id="account-email"
+                  className="acct-input"
+                  type="email"
+                  value={email}
+                  onChange={(event) => { setEmail(event.target.value); if (error) setError(""); }}
+                  placeholder="name@company.com"
+                  autoComplete="email"
+                  aria-describedby={error ? "account-error" : undefined}
+                />
+              </div>
+            </div>
+            <div className="acct-field">
+              <label htmlFor="account-password">Password</label>
+              <div className="acct-input-wrap">
+                <input
+                  id="account-password"
+                  className="acct-input has-toggle"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => { setPassword(event.target.value); if (error) setError(""); }}
+                  placeholder={isSignup ? "At least 8 characters" : "Your password"}
+                  autoComplete={isSignup ? "new-password" : "current-password"}
+                />
+                <button
+                  type="button"
+                  className="acct-pw-toggle"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            {/* Login only — a brand-new signup always starts a fresh session. */}
+            {!isSignup && (
+              <label className="acct-remember">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
+                />
+                <span>Keep me signed in for 30 days</span>
+              </label>
+            )}
+            {error && (
+              <p className="acct-error" id="account-error" role="alert">
+                {error}
+              </p>
+            )}
+            <button type="submit" className="acct-primary" disabled={busy}>
+              {busy ? (isSignup ? "Creating your workspace…" : "Signing in…") : isSignup ? "Create account" : "Sign in"}
+            </button>
+          </form>
+
+          <div className="acct-divider">
+            <span />
+            <em>or continue with</em>
+            <span />
+          </div>
+
+          <div className="acct-providers">
+            <button type="button" className="acct-provider" disabled aria-disabled="true" title="Coming soon — use your email for now">
+              <span className="acct-google-mark" aria-hidden="true">G</span>
+              Google
+            </button>
+            <button type="button" className="acct-provider" disabled aria-disabled="true" title="Coming soon — use your email for now">
+              <span className="acct-ms-mark" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+              Microsoft
+            </button>
+          </div>
+          <p className="acct-note">Social sign-in is coming soon — use your email above for now.</p>
+
+          <p className="acct-toggle-copy">
+            {isSignup ? "Existing user? " : "New to BuildFlow? "}
+            <button type="button" onClick={() => { setMode(isSignup ? "login" : "signup"); setError(""); }}>
+              {isSignup ? "Log in" : "Create an account"}
+            </button>
+          </p>
+
+          <p className="acct-legal">
+            By continuing, you agree to the <a href="#terms">Terms &amp; Conditions</a> and <a href="#privacy">Privacy Policy</a>.
+          </p>
         </div>
+      </div>
 
-        <form className="account-form" onSubmit={submit}>
-          {isSignup && (
-            <>
-              <label htmlFor="account-name">Your name</label>
-              <input
-                id="account-name"
-                type="text"
-                value={name}
-                onChange={(event) => { setName(event.target.value); if (error) setError(""); }}
-                placeholder="Jordan Reyes"
-                autoComplete="name"
-              />
-              <label htmlFor="account-company">Company <span className="account-optional">(optional)</span></label>
-              <input
-                id="account-company"
-                type="text"
-                value={company}
-                onChange={(event) => setCompany(event.target.value)}
-                placeholder="Reyes Construction"
-                autoComplete="organization"
-              />
-            </>
-          )}
-          <label htmlFor="account-email">Work email</label>
-          <input
-            id="account-email"
-            type="email"
-            value={email}
-            onChange={(event) => { setEmail(event.target.value); if (error) setError(""); }}
-            placeholder="name@company.com"
-            autoComplete="email"
-            aria-describedby={error ? "account-error" : undefined}
-          />
-          <label htmlFor="account-password">Password</label>
-          <input
-            id="account-password"
-            type="password"
-            value={password}
-            onChange={(event) => { setPassword(event.target.value); if (error) setError(""); }}
-            placeholder={isSignup ? "At least 8 characters" : "Your password"}
-            autoComplete={isSignup ? "new-password" : "current-password"}
-          />
-          {error && (
-            <p className="account-error" id="account-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button type="submit" className="account-primary-button" disabled={busy}>
-            {busy ? (isSignup ? "Creating your workspace…" : "Signing in…") : isSignup ? "Create account" : "Sign in"}
-          </button>
-        </form>
-
-        <div className="account-divider">
-          <span />
-          <em>or continue with</em>
-          <span />
+      <aside className="acct-aside" aria-hidden="true">
+        <div className="acct-aurora acct-aurora-1" />
+        <div className="acct-aurora acct-aurora-2" />
+        <div className="acct-aurora acct-aurora-3" />
+        <div className="acct-aside-brand">
+          <BuildFlowLogoMark /> BuildFlow
         </div>
-
-        <div className="account-provider-grid">
-          <button type="button" className="account-provider-button" disabled aria-disabled="true" title="Coming soon — use your email for now">
-            <span className="account-google-mark" aria-hidden="true">G</span>
-            Google
-          </button>
-          <button type="button" className="account-provider-button" disabled aria-disabled="true" title="Coming soon — use your email for now">
-            <span className="account-microsoft-mark" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-            Microsoft
-          </button>
-        </div>
-        <p className="account-provider-note">Social sign-in is coming soon — use your email above for now.</p>
-
-        <p className="account-login-copy">
-          {isSignup ? "Existing user? " : "New to BuildFlow? "}
-          <button type="button" onClick={() => { setMode(isSignup ? "login" : "signup"); setError(""); }}>
-            {isSignup ? "Log in" : "Create an account"}
-          </button>
-        </p>
-
-        <p className="account-legal">
-          By continuing, you acknowledge that you understand and agree to the{" "}
-          <a href="#terms">Terms & Conditions</a> and <a href="#privacy">Privacy Policy</a>.
-        </p>
-      </section>
+        {/* signature visual: the schedule assembling itself (decorative; the whole
+            aside is already aria-hidden). Pure CSS — see account-redesign.css. */}
+        <AcctScheduleViz />
+        <blockquote className="acct-aside-quote">
+          <p className="acct-aside-type">
+            <WxTypewriter
+              key={mode}
+              normal={isSignup ? "Where crews, projects, and schedules " : "Welcome back to your "}
+              em={isSignup ? "run as one." : "command center."}
+            />
+          </p>
+          <cite>Run the whole jobsite from one place.</cite>
+        </blockquote>
+      </aside>
     </main>
   );
 }
@@ -5483,50 +5677,82 @@ function WelcomeBusinessTypePage({
   };
 
   return (
-    <main className="account-page" id="business-type" aria-labelledby="business-type-title">
-      <AccountPreviewBackdrop />
-
-      <section className="account-card account-card-business-type">
-        <button type="button" className="account-back-button" onClick={onBack}>
-          Back to work email
-        </button>
-        <BuildFlowLogoMark />
-        <div className="account-card-copy">
-          <h1 id="business-type-title">What type of Business do you own</h1>
-          <p>Choose your construction trade</p>
-        </div>
-
-        <form className="account-form" onSubmit={submitBusinessType}>
-          <label htmlFor="business-type-select">Business type</label>
-          <div className="account-select-wrap">
-            <select
-              id="business-type-select"
-              value={businessType}
-              onChange={(event) => {
-                setBusinessType(event.target.value);
-                if (businessTypeError) setBusinessTypeError("");
-              }}
-              aria-describedby={businessTypeError ? "business-type-error" : undefined}
-            >
-              <option value="">Select a business type</option>
-              {businessTypeOptions.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={20} aria-hidden="true" />
-          </div>
-          {businessTypeError && (
-            <p className="account-error" id="business-type-error">
-              {businessTypeError}
-            </p>
-          )}
-          <button type="submit" className="account-primary-button">
-            Get BuildFlow
+    <main className="acct-split" id="business-type" aria-labelledby="business-type-title">
+      <div className="acct-form-col">
+        <div className="acct-form-inner">
+          <button type="button" className="acct-back" onClick={onBack}>
+            ← Back to work email
           </button>
-        </form>
-      </section>
+          <div className="acct-brand">
+            <BuildFlowLogoMark />
+            <strong>BuildFlow</strong>
+          </div>
+          <div className="acct-head">
+            <h1 id="business-type-title">What type of Business do you own</h1>
+            <p>Choose your construction trade</p>
+          </div>
+
+          <form className="acct-form" onSubmit={submitBusinessType}>
+            <div className="acct-field">
+              <label htmlFor="business-type-select">Business type</label>
+              <div className="acct-input-wrap">
+                <select
+                  id="business-type-select"
+                  className="acct-input acct-select"
+                  // Greys the select to placeholder-grey until a real trade is picked.
+                  // A data-attribute rather than a className so the reveal classes the
+                  // welcome pages add imperatively can never be clobbered by a re-render.
+                  data-empty={businessType ? undefined : "true"}
+                  value={businessType}
+                  onChange={(event) => {
+                    setBusinessType(event.target.value);
+                    if (businessTypeError) setBusinessTypeError("");
+                  }}
+                  aria-describedby={businessTypeError ? "business-type-error" : undefined}
+                >
+                  <option value="">Select a business type</option>
+                  {businessTypeOptions.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="acct-select-chevron" size={20} aria-hidden="true" />
+              </div>
+            </div>
+            {businessTypeError && (
+              <p className="acct-error" id="business-type-error" role="alert">
+                {businessTypeError}
+              </p>
+            )}
+            <button type="submit" className="acct-primary">
+              Get BuildFlow
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <aside className="acct-aside" aria-hidden="true">
+        <div className="acct-aurora acct-aurora-1" />
+        <div className="acct-aurora acct-aurora-2" />
+        <div className="acct-aurora acct-aurora-3" />
+        <div className="acct-aside-brand">
+          <BuildFlowLogoMark /> BuildFlow
+        </div>
+        <AcctScheduleViz />
+        <blockquote className="acct-aside-quote">
+          <p className="acct-aside-type">
+            {/* Re-keying on the trade replays the typewriter, so the panel answers the
+                selection with the same phrasing the dashboard uses for the profile. */}
+            <WxTypewriter
+              key={businessType || "empty"}
+              normal={businessType ? "Production scheduling tuned for " : "Production scheduling for "}
+              em={businessType ? `${businessType.toLowerCase()} crews.` : "every trade."}
+            />
+          </p>
+          <cite>Run the whole jobsite from one place.</cite>
+        </blockquote>
+      </aside>
     </main>
   );
 }
@@ -5575,118 +5801,128 @@ function WelcomeAdditionalProductsPage({
   };
 
   return (
-    <main className="hud-onb-rx hud-rx" id="additional-products" aria-labelledby="additional-products-title">
-      <div className="dx-bg" aria-hidden="true">
-        <span className="dx-aurora dx-aurora-1" />
-        <span className="dx-aurora dx-aurora-2" />
-        <span className="dx-aurora dx-aurora-3" />
-      </div>
+    <main className="acct-split acct-split-wide" id="additional-products" aria-labelledby="additional-products-title">
+      <div className="acct-form-col">
+        <div className="acct-form-inner">
+          <button type="button" className="acct-back" onClick={onBack}>
+            ← Back to business type
+          </button>
+          <div className="acct-brand">
+            <BuildFlowLogoMark />
+            <strong>BuildFlow</strong>
+          </div>
 
-      <section className="hud-onb-card">
-        <button type="button" className="hud-onb-back" onClick={onBack}>
-          <ChevronLeft size={16} />
-          Back to business type
-        </button>
-
-        <span className="dx-eyebrow">
-          <span className="dx-dot" />
-          Set up your workspace
-        </span>
-
-        <div className="hud-onb-head">
-          <span className="hud-onb-icon" aria-hidden="true">
-            <Sparkles size={26} />
+          <span className="acct-eyebrow">
+            <span className="acct-eyebrow-dot" />
+            Set up your workspace
           </span>
-          <div className="hud-onb-headings">
+
+          <div className="acct-head">
             <h1 id="additional-products-title">What additional products do you want to use?</h1>
             <p>{businessType ? `BuildFlow for ${businessType}` : "Choose your BuildFlow setup"}</p>
           </div>
-        </div>
 
-        <form className="hud-onb-form" onSubmit={submitProducts}>
-          <section className="hud-onb-section" aria-labelledby="additional-products-products-title">
-            <div className="hud-onb-sec-head">
-              <h2 id="additional-products-products-title">Additional products</h2>
-              <span>Choose one or more</span>
-            </div>
-            <div className="hud-onb-product-grid">
-              {onboardingProductOptions.map((product, i) => {
-                const program = programRegistry[product.id];
-                const Icon = program.icon;
-                const checked = selectedProducts.includes(product.id);
-                return (
-                  <label
-                    key={product.id}
-                    className={checked ? "hud-onb-product selected" : "hud-onb-product"}
+          <form className="acct-form" onSubmit={submitProducts}>
+            <section className="acct-sec" aria-labelledby="additional-products-products-title">
+              <div className="acct-sec-head">
+                <h2 id="additional-products-products-title">Additional products</h2>
+                <span>Choose one or more</span>
+              </div>
+              <div className="acct-pick-grid">
+                {onboardingProductOptions.map((product, i) => {
+                  const program = programRegistry[product.id];
+                  const Icon = program.icon;
+                  const checked = selectedProducts.includes(product.id);
+                  return (
+                    <label
+                      key={product.id}
+                      className={checked ? "acct-pick selected" : "acct-pick"}
+                      style={{ "--i": i } as CSSProperties}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleProduct(product.id)}
+                      />
+                      <span className={`acct-pick-ico tone-${program.tone}`}>
+                        <Icon size={18} />
+                      </span>
+                      <span className="acct-pick-copy">
+                        <strong>{product.label}</strong>
+                        <em>{product.description}</em>
+                      </span>
+                      <span className="acct-pick-check" aria-hidden="true">
+                        <Check size={13} />
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="acct-sec" aria-labelledby="additional-products-plan-title">
+              <div className="acct-sec-head">
+                <h2 id="additional-products-plan-title">What type of plan?</h2>
+                <span>Choose one</span>
+              </div>
+              <div className="acct-plan-grid" role="radiogroup" aria-label="BuildFlow plan">
+                {productPlans.map((plan, i) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    className={selectedPlan === plan.id ? "acct-plan selected" : "acct-plan"}
+                    aria-pressed={selectedPlan === plan.id}
+                    aria-label={`Select ${plan.name} plan`}
                     style={{ "--i": i } as CSSProperties}
+                    onClick={() => {
+                      setSelectedPlan(plan.id);
+                      if (productError) setProductError("");
+                    }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleProduct(product.id)}
-                    />
-                    <span className={`hud-onb-product-ico tone-${program.tone}`}>
-                      <Icon size={18} />
-                    </span>
-                    <span className="hud-onb-product-copy">
-                      <strong>{product.label}</strong>
-                      <em>{product.description}</em>
-                    </span>
-                    <span className="hud-onb-check" aria-hidden="true">
-                      <Check size={13} />
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </section>
+                    <span className="acct-plan-check" aria-hidden="true"><Check size={12} /></span>
+                    <strong>{plan.name}</strong>
+                    <span className="acct-plan-price">{plan.price}</span>
+                    <em>{plan.priceNote}</em>
+                  </button>
+                ))}
+              </div>
+            </section>
 
-          <section className="hud-onb-section" aria-labelledby="additional-products-plan-title">
-            <div className="hud-onb-sec-head">
-              <h2 id="additional-products-plan-title">What type of plan?</h2>
-              <span>Choose one</span>
-            </div>
-            <div className="hud-onb-plan-grid" role="radiogroup" aria-label="BuildFlow plan">
-              {productPlans.map((plan, i) => (
-                <button
-                  key={plan.id}
-                  type="button"
-                  className={selectedPlan === plan.id ? "hud-onb-plan selected" : "hud-onb-plan"}
-                  aria-pressed={selectedPlan === plan.id}
-                  aria-label={`Select ${plan.name} plan`}
-                  style={{ "--i": i } as CSSProperties}
-                  onClick={() => {
-                    setSelectedPlan(plan.id);
-                    if (productError) setProductError("");
-                  }}
-                >
-                  <span className="hud-onb-plan-check" aria-hidden="true"><Check size={12} /></span>
-                  <strong>{plan.name}</strong>
-                  <span className="hud-onb-plan-price">{plan.price}</span>
-                  <em>{plan.priceNote}</em>
-                </button>
-              ))}
-            </div>
-          </section>
+            {productError && (
+              <p className="acct-error" id="additional-products-error" role="alert">
+                {productError}
+              </p>
+            )}
 
-          {productError && (
-            <p className="hud-onb-error" id="additional-products-error">
-              {productError}
-            </p>
-          )}
+            <button type="submit" className="acct-primary" disabled={!canContinue || isSubmitting}>
+              {isSubmitting ? "Building workspace..." : "Continue to BuildFlow"}
+              {!isSubmitting && <ArrowRight size={18} />}
+            </button>
+          </form>
+        </div>
+      </div>
 
-          <button type="submit" className="hud-onb-primary" disabled={!canContinue || isSubmitting}>
-            {isSubmitting ? "Building workspace..." : "Continue to BuildFlow"}
-            {!isSubmitting && <ArrowRight size={18} />}
-          </button>
-        </form>
-      </section>
+      <aside className="acct-aside" aria-hidden="true">
+        <div className="acct-aurora acct-aurora-1" />
+        <div className="acct-aurora acct-aurora-2" />
+        <div className="acct-aurora acct-aurora-3" />
+        <div className="acct-aside-brand">
+          <BuildFlowLogoMark /> BuildFlow
+        </div>
+        <AcctScheduleViz />
+        <blockquote className="acct-aside-quote">
+          <p className="acct-aside-type">
+            <WxTypewriter normal="Pick the tools your " em="crews run on." />
+          </p>
+          <cite>Run the whole jobsite from one place.</cite>
+        </blockquote>
+      </aside>
     </main>
   );
 }
 
 // Typewriter effect for the HUD greeting, mirroring the welcome hero.
-function useTypewriter(text: string, speed = 55, startDelay = 260) {
+function useTypewriter(text: string, speed = 55, startDelayIQ = 260) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     setCount(0);
@@ -5696,12 +5932,12 @@ function useTypewriter(text: string, speed = 55, startDelay = 260) {
       step += 1;
       setCount(step);
       if (step < text.length) tick = window.setTimeout(type, speed);
-    }, startDelay);
+    }, startDelayIQ);
     return () => {
       window.clearTimeout(start);
       window.clearTimeout(tick);
     };
-  }, [text, speed, startDelay]);
+  }, [text, speed, startDelayIQ]);
   return { typed: text.slice(0, count), done: count >= text.length };
 }
 
@@ -5739,7 +5975,7 @@ function WelcomeProgramHudPage({
   >(() => [
     { id: "n1", icon: CheckCircle2, tone: "green", title: "This week's schedule is published", detail: "6 crews assigned across 9 jobs", meta: "2m", unread: true },
     { id: "n2", icon: AlertTriangle, tone: "amber", title: "A crew is over capacity Thursday", detail: "2 jobs need to rebalance", meta: "18m", unread: true },
-    { id: "n3", icon: Boxes, tone: "red", title: "Materials delayed — Riverside", detail: "Rebar delivery slipped to Friday", meta: "1h", unread: true },
+    { id: "n3", icon: Boxes, tone: "red", title: "Materials delayIQed — Riverside", detail: "Rebar delivery slipped to Friday", meta: "1h", unread: true },
     { id: "n4", icon: LineChart, tone: "blue", title: "Weekly production report is ready", detail: "Schedule health up 3% vs last week", meta: "3h", unread: false },
     { id: "n5", icon: ClipboardList, tone: "violet", title: "New field update from a crew", detail: "Photos and a note on Summit Builders", meta: "Yesterday", unread: false }
   ]);
@@ -6378,7 +6614,7 @@ function MapFieldOpsProgramPage({
 
 const automationParticles = Array.from({ length: 30 }, (_, i) => ({
   x: (i * 37) % 100,
-  delay: ((i * 17) % 50) / 10,
+  delayIQ: ((i * 17) % 50) / 10,
   dur: 4 + ((i * 11) % 45) / 10,
   size: 2 + (i % 3),
   drift: (i % 2 === 0 ? 1 : -1) * (6 + (i % 4) * 4)
@@ -6437,7 +6673,7 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
     eyebrow: "Weather Integration",
     heroTitle: "Plan the week around the weather, not against it.",
     heroSub:
-      "BuildFlow watches the forecast for every jobsite and flags weather-sensitive work before crews are dispatched — so the plan bends with the sky instead of breaking on it.",
+      "BuildFlow watches the forecastIQ for every jobsite and flags weather-sensitive work before crews are dispatched — so the plan bends with the sky instead of breaking on it.",
     glow: "rgba(253, 214, 99, 0.5)",
     cardIcon: CloudSun,
     cardTitle: "This week",
@@ -6453,7 +6689,7 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
     showcaseTitle: "Weather where you plan the work.",
     showcase: [
       {
-        title: "Forecast on the board",
+        title: "ForecastIQ on the board",
         text: "See the 7-day outlook right beside the week's crews and jobs — the weather lives where you plan, not in a second tab.",
         tone: "blue",
         mock: {
@@ -6484,26 +6720,26 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
         }
       }
     ],
-    featuresTitle: "Everything the forecast should tell your schedule.",
+    featuresTitle: "Everything the forecastIQ should tell your schedule.",
     features: [
-      { title: "Live forecast overlay", text: "Hourly and daily forecasts for every jobsite, mapped onto the production board automatically.", icon: CloudSun },
+      { title: "Live forecastIQ overlay", text: "Hourly and daily forecastIQs for every jobsite, mapped onto the production board automatically.", icon: CloudSun },
       { title: "Risk thresholds", text: "Set rain, wind, heat, and freeze limits per trade so the right jobs get flagged, not all of them.", icon: AlertTriangle },
       { title: "Safe work windows", text: "BuildFlow finds the dry, workable hours and suggests when weather-sensitive work should run.", icon: CheckCircle2 },
       { title: "Crew alerts", text: "Supers and crews get a heads-up the evening before when tomorrow's weather puts a job at risk.", icon: Bell },
-      { title: "Delay prevention", text: "Reschedule around the forecast in a click, keeping ready work moving and margin protected.", icon: ShieldAlert },
-      { title: "Historical patterns", text: "Seasonal trends and past delays help you plan weather-heavy phases with realistic dates.", icon: LineChart }
+      { title: "DelayIQ prevention", text: "Reschedule around the forecastIQ in a click, keeping ready work moving and margin protected.", icon: ShieldAlert },
+      { title: "Historical patterns", text: "Seasonal trends and past delayIQs help you plan weather-heavy phases with realistic dates.", icon: LineChart }
     ],
-    consoleTitle: "Forecast console — Riverside",
+    consoleTitle: "ForecastIQ console — Riverside",
     consoleLines: [
       { tag: "rule", text: "No concrete pours below 35°F" },
       { tag: "alert", text: "Fri storms — 3 jobs flagged for review" },
       { tag: "moved", text: "Parking deck pour → Mon 7:00 AM", ok: true }
     ],
-    stepsTitle: "Set it once, then let the forecast do the watching.",
+    stepsTitle: "Set it once, then let the forecastIQ do the watching.",
     steps: [
-      { title: "Connect your regions", text: "Add each jobsite location once. BuildFlow pulls the local forecast for every active project automatically." },
+      { title: "Connect your regions", text: "Add each jobsite location once. BuildFlow pulls the local forecastIQ for every active project automatically." },
       { title: "Set weather rules", text: "Describe the thresholds that matter — no pours below freezing, no lifts above 25mph wind — per trade and phase." },
-      { title: "Reschedule with confidence", text: "When the forecast turns, review flagged jobs and move them into the next safe window, with reasons attached." }
+      { title: "Reschedule with confidence", text: "When the forecastIQ turns, review flagged jobs and move them into the next safe window, with reasons attached." }
     ],
     quote:
       "We used to lose a day every time a storm rolled through. Now the schedule reshuffles itself before the first drop — the crews just see the new plan.",
@@ -6672,12 +6908,12 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
     ctaTitle: "Match every job to its best crew.",
     ctaText: "Let BuildFlow weigh availability, skill, and location so assignments just fit."
   },
-  delayDetection: {
-    id: "delay-detection",
-    eyebrow: "Delay Detection",
-    heroTitle: "See the delay coming while there's still time to move.",
+  delayIQDetection: {
+    id: "delayIQ-detection",
+    eyebrow: "DelayIQ Detection",
+    heroTitle: "See the delayIQ coming while there's still time to move.",
     heroSub:
-      "BuildFlow watches field updates, missing materials, blocked tasks, and missed milestones so delay risk surfaces early — and recovery starts before the day is lost.",
+      "BuildFlow watches field updates, missing materials, blocked tasks, and missed milestones so delayIQ risk surfaces early — and recovery starts before the day is lost.",
     glow: "rgba(217, 101, 112, 0.42)",
     cardIcon: AlertTriangle,
     cardTitle: "At-risk jobs",
@@ -6728,12 +6964,12 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
     features: [
       { title: "Early warning", text: "Flags jobs trending late before the milestone is actually missed.", icon: Bell },
       { title: "Root-cause signals", text: "Ties each risk to the real cause: materials, crew, access, or inspection.", icon: Search },
-      { title: "Field-driven", text: "Reads progress notes, photos, and delay reports coming in from the jobsite.", icon: ClipboardList },
+      { title: "Field-driven", text: "Reads progress notes, photos, and delayIQ reports coming in from the jobsite.", icon: ClipboardList },
       { title: "Impact mapping", text: "Shows what a slip does to downstream phases and the dates you've promised.", icon: Layers },
       { title: "Recovery options", text: "Suggests the moves that pull the schedule back the fastest, ranked by impact.", icon: RefreshCcw },
       { title: "Nothing slips silently", text: "Every at-risk job stays visible until it's resolved or moved.", icon: ShieldAlert }
     ],
-    consoleTitle: "Delay watch — Today",
+    consoleTitle: "DelayIQ watch — Today",
     consoleLines: [
       { tag: "watch", text: "38 active jobs monitored" },
       { tag: "alert", text: "Tech Ridge slab — delivery slipped 2 days" },
@@ -6741,7 +6977,7 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
     ],
     stepsTitle: "Connect the field, then let BuildFlow keep watch.",
     steps: [
-      { title: "Keep the field connected", text: "Progress notes, photos, and delay reports flow in from the crews all day." },
+      { title: "Keep the field connected", text: "Progress notes, photos, and delayIQ reports flow in from the crews all day." },
       { title: "Let BuildFlow watch", text: "It compares the plan to reality and scores what's trending late." },
       { title: "Recover early", text: "Review flagged jobs and apply the recovery move while it still helps." }
     ],
@@ -6749,7 +6985,7 @@ const automationConfigs: Partial<Record<WelcomeView, AutomationConfig>> = {
       "We find out a job is slipping days earlier now. That's the difference between a small shuffle and a blown deadline.",
     quoteName: "Project executive",
     quoteOrg: "BuildFlow demo workspace",
-    ctaTitle: "Catch delays while they're still small.",
+    ctaTitle: "Catch delayIQs while they're still small.",
     ctaText: "Connect the field, let BuildFlow watch the plan, and recover before the day is gone."
   },
   routeOptimization: {
@@ -6933,7 +7169,7 @@ function WelcomeAutomationPage({
                   left: `${p.x}%`,
                   width: `${p.size}px`,
                   height: `${p.size}px`,
-                  "--delay": `${p.delay}s`,
+                  "--delayIQ": `${p.delayIQ}s`,
                   "--dur": `${p.dur}s`,
                   "--drift": `${p.drift}px`
                 } as CSSProperties}
@@ -6941,14 +7177,14 @@ function WelcomeAutomationPage({
             ))}
           </div>
           <span className="wi-sun-glow" />
-          <div className="wi-forecast-card">
-            <div className="wi-forecast-head">
+          <div className="wi-forecastIQ-card">
+            <div className="wi-forecastIQ-head">
               <span><CardIcon size={16} /> {config.cardTitle}</span>
               <strong>{config.cardSubject}</strong>
             </div>
-            <div className="wi-forecast-days">
+            <div className="wi-forecastIQ-days">
               {config.cardRows.map((row, i) => (
-                <div className={`wi-forecast-day tone-${row.tone}`} key={i}>
+                <div className={`wi-forecastIQ-day tone-${row.tone}`} key={i}>
                   <span className="wi-fd-day">{row.a}</span>
                   <span className="wi-fd-dot" />
                   <span className="wi-fd-temp">{row.b}</span>
@@ -7015,7 +7251,7 @@ function WelcomeAutomationPage({
                     left: `${p.x}%`,
                     width: `${p.size}px`,
                     height: `${p.size}px`,
-                    "--delay": `${p.delay}s`,
+                    "--delayIQ": `${p.delayIQ}s`,
                     "--dur": `${p.dur}s`,
                     "--drift": `${p.drift}px`
                   } as CSSProperties}
@@ -7952,7 +8188,7 @@ type MfoPin = {
   x: number;
   y: number;
   right?: boolean;
-  delay?: boolean;
+  delayIQ?: boolean;
 };
 
 // Signature "live dispatch map" mock — a topographic surface with animated
@@ -7963,7 +8199,7 @@ function MfoMap({ mode }: { mode: "live" | "route" }) {
     { kind: "truck", icon: Truck, label: "Truck 4", meta: "8 min out", x: 20, y: 75 },
     { kind: "crew", icon: HardHat, label: "Concrete 1", meta: "on site", x: 32, y: 39 },
     { kind: "crew", icon: HardHat, label: "Framing 2", meta: "en route", x: 55, y: 68 },
-    { kind: "job", icon: MapPin, label: "Deck pour", x: 83, y: 30, right: true, delay: true }
+    { kind: "job", icon: MapPin, label: "Deck pour", x: 83, y: 30, right: true, delayIQ: true }
   ];
   const routePins: MfoPin[] = [
     { kind: "truck", icon: Truck, label: "Central Yard", meta: "6:40a", x: 15, y: 70 },
@@ -8009,7 +8245,7 @@ function MfoMap({ mode }: { mode: "live" | "route" }) {
             key={pin.label}
             style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
           >
-            <span className={`mfo-dot ${pin.kind}${pin.delay ? " delay" : ""}`}>
+            <span className={`mfo-dot ${pin.kind}${pin.delayIQ ? " delayIQ" : ""}`}>
               <Icon />
             </span>
             <span className="mfo-tag">
@@ -8317,7 +8553,7 @@ function WelcomeMapFieldOpsPage({
             </div>
           </div>
           <h3>Read the site before you roll out</h3>
-          <p>Local weather, forecast risk, and access notes sit on the map for every jobsite, so nobody drives to a rained-out pour or a gate they can&rsquo;t open.</p>
+          <p>Local weather, forecastIQ risk, and access notes sit on the map for every jobsite, so nobody drives to a rained-out pour or a gate they can&rsquo;t open.</p>
         </article>
       </section>
 
@@ -8458,7 +8694,7 @@ function FudUpdate({ item }: { item: FudUpdateData }) {
   );
 }
 
-function WelcomeFieldUpdatesDelaysPage({
+function WelcomeFieldUpdatesDelayIQsPage({
   onBack,
   onOpenField,
   onGetStarted
@@ -8529,7 +8765,7 @@ function WelcomeFieldUpdatesDelaysPage({
       who: "Framing Crew 2 · Pinecrest",
       time: "9:15 AM",
       msg: "Inspection pushed to Friday — holding rough-in until it clears.",
-      badge: "DELAYED",
+      badge: "DELAYIQED",
       tone: "risk",
       photos: ["d"]
     }
@@ -8542,13 +8778,13 @@ function WelcomeFieldUpdatesDelaysPage({
   ];
 
   const impactRows: Array<{ cause: string; detail: string; days: number; w: number; cls: string; icon: typeof Grid2X2 }> = [
-    { cause: "Weather delay", detail: "Rain 80% · 2 pours exposed", days: 3, w: 100, cls: "high", icon: CloudSun },
+    { cause: "Weather delayIQ", detail: "Rain 80% · 2 pours exposed", days: 3, w: 100, cls: "high", icon: CloudSun },
     { cause: "Inspection hold", detail: "Pinecrest moved to Friday", days: 2, w: 66, cls: "", icon: ClipboardCheck },
     { cause: "Material shortage", detail: "Rebar for warehouse slab", days: 1, w: 33, cls: "low", icon: PackageCheck }
   ];
 
-  const delayRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Weather delay", detail: "Rain 80% · 2 pours exposed", badge: "HIGH", tone: "risk", icon: CloudSun },
+  const delayIQRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
+    { strong: "Weather delayIQ", detail: "Rain 80% · 2 pours exposed", badge: "HIGH", tone: "risk", icon: CloudSun },
     { strong: "Inspection hold", detail: "Pinecrest moved to Friday", badge: "MED", tone: "wait", icon: ClipboardCheck },
     { strong: "Rebar shortage", detail: "Warehouse slab waiting", badge: "MED", tone: "wait", icon: PackageCheck }
   ];
@@ -8563,7 +8799,7 @@ function WelcomeFieldUpdatesDelaysPage({
     {
       icon: ClipboardList,
       title: "One source of truth for the day",
-      text: "Progress, photos, notes, and delays live in a single field log — no more chasing texts, group chats, and voicemails to piece together what happened on site."
+      text: "Progress, photos, notes, and delayIQs live in a single field log — no more chasing texts, group chats, and voicemails to piece together what happened on site."
     },
     {
       icon: ImagePlus,
@@ -8573,12 +8809,12 @@ function WelcomeFieldUpdatesDelaysPage({
     {
       icon: ShieldAlert,
       title: "Catch the slip before it spreads",
-      text: "A cause and a schedule impact on every delay means the office sees the day forming and can re-plan while there is still time to protect the date."
+      text: "A cause and a schedule impact on every delayIQ means the office sees the day forming and can re-plan while there is still time to protect the date."
     }
   ];
 
   return (
-    <main className="cs-page" id="field-updates-delays" ref={rootRef}>
+    <main className="cs-page" id="field-updates-delayIQs" ref={rootRef}>
       <div className="wx-bg" aria-hidden="true">
         <div className="wx-aurora wx-aurora-1" />
         <div className="wx-aurora wx-aurora-2" />
@@ -8589,19 +8825,19 @@ function WelcomeFieldUpdatesDelaysPage({
       {/* Hero */}
       <section className="cs-hero" data-reveal>
         <div className="cs-hero-copy">
-          <span className="wx-eyebrow"><span className="wx-dot" /> Field Updates &amp; Delays</span>
+          <span className="wx-eyebrow"><span className="wx-dot" /> Field Updates &amp; DelayIQs</span>
           <h1 className="cs-hero-title">
             <WxRotatingHeadline prefix="The whole field, " phrases={fieldUpdatesPhrases} />
           </h1>
           <p className="cs-hero-sub">
-            Capture crew check-ins, jobsite photos, and delay causes the moment they happen — then turn every slip
+            Capture crew check-ins, jobsite photos, and delayIQ causes the moment they happen — then turn every slip
             into a recovery plan while the office still has time to adjust the schedule.
           </p>
           <div className="cs-hero-actions">
             <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
               Get BuildFlow <ArrowRight size={18} />
             </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenField} ariaLabel="See Field Updates & Delays live">
+            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenField} ariaLabel="See Field Updates & DelayIQs live">
               <PlayCircle size={18} /> See it live
             </WxMagnetic>
           </div>
@@ -8614,7 +8850,7 @@ function WelcomeFieldUpdatesDelaysPage({
                 <div className="fud-stats">
                   <div className="fud-stat"><strong>14</strong><span>Updates</span></div>
                   <div className="fud-stat green"><strong>6</strong><span>On Site</span></div>
-                  <div className="fud-stat rose"><strong>2</strong><span>Delayed</span></div>
+                  <div className="fud-stat rose"><strong>2</strong><span>DelayIQed</span></div>
                   <div className="fud-stat"><strong>9</strong><span>Photos</span></div>
                 </div>
                 <div className="fud-feed">
@@ -8631,16 +8867,16 @@ function WelcomeFieldUpdatesDelaysPage({
         <span className="wx-eyebrow-2">The field reporting suite</span>
         <h2 className="cs-explore-title">Everything the field should tell the office.</h2>
         <p className="cs-explore-sub">
-          From a crew&rsquo;s 7 AM photo to the delay that moves a milestone, BuildFlow keeps progress, proof, and
+          From a crew&rsquo;s 7 AM photo to the delayIQ that moves a milestone, BuildFlow keeps progress, proof, and
           problems in one log the whole team can act on.
         </p>
       </section>
 
-      {/* Lead feature — delay impact forecast */}
+      {/* Lead feature — delayIQ impact forecastIQ */}
       <section className="cs-lead" data-reveal>
         <div className="cs-panel cs-lead-panel">
           <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar"><i /><i /><i /><strong>Delay impact &middot; this month</strong></div>
+            <div className="cs-mock-bar"><i /><i /><i /><strong>DelayIQ impact &middot; this month</strong></div>
             <div className="cs-mock-body">
               <div className="fud-impact">
                 {impactRows.map((row) => {
@@ -8665,7 +8901,7 @@ function WelcomeFieldUpdatesDelaysPage({
         <div className="cs-feature-meta">
           <h3>Turn slips into recovery, not surprises.</h3>
           <p>
-            Every delay gets a cause, a severity, and a schedule impact in days &mdash; so the office sees the slip
+            Every delayIQ gets a cause, a severity, and a schedule impact in days &mdash; so the office sees the slip
             forming and can re-plan before it ever reaches the completion date.
           </p>
         </div>
@@ -8714,7 +8950,7 @@ function WelcomeFieldUpdatesDelaysPage({
         <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
           <div className="cs-panel">
             <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar"><i /><i /><i /><strong>Delay log</strong></div>
+              <div className="cs-mock-bar"><i /><i /><i /><strong>DelayIQ log</strong></div>
               <div className="cs-mock-body">
                 <div className="cs-tabs">
                   <span className="cs-tab on">Weather</span>
@@ -8725,7 +8961,7 @@ function WelcomeFieldUpdatesDelaysPage({
                   <span className="cs-tab">Site</span>
                 </div>
                 <div className="cs-list">
-                  {delayRows.map((row) => {
+                  {delayIQRows.map((row) => {
                     const Icon = row.icon;
                     return (
                       <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
@@ -8739,8 +8975,8 @@ function WelcomeFieldUpdatesDelaysPage({
               </div>
             </div>
           </div>
-          <h3>Log every delay with a cause</h3>
-          <p>Weather, materials, labor, equipment, inspections, site conditions — every delay is categorized with a severity and an owner, so patterns surface long before they repeat.</p>
+          <h3>Log every delayIQ with a cause</h3>
+          <p>Weather, materials, labor, equipment, inspections, site conditions — every delayIQ is categorized with a severity and an owner, so patterns surface long before they repeat.</p>
         </article>
         <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
           <div className="cs-panel">
@@ -8763,7 +8999,7 @@ function WelcomeFieldUpdatesDelaysPage({
             </div>
           </div>
           <h3>Recover the day with a clear plan</h3>
-          <p>Each delay carries recovery notes and next steps, so a slip becomes an action list — not a surprise on the schedule two weeks later.</p>
+          <p>Each delayIQ carries recovery notes and next steps, so a slip becomes an action list — not a surprise on the schedule two weeks later.</p>
         </article>
       </section>
 
@@ -8773,7 +9009,7 @@ function WelcomeFieldUpdatesDelaysPage({
           <span className="wx-eyebrow-2">Why it matters</span>
           <h2>What happens on site should reach the office by lunch.</h2>
           <p>
-            Field Updates &amp; Delays exists to close the gap between the jobsite and the schedule &mdash; so progress
+            Field Updates &amp; DelayIQs exists to close the gap between the jobsite and the schedule &mdash; so progress
             is proven, problems are named, and the office is never the last to know.
           </p>
         </div>
@@ -8796,8 +9032,8 @@ function WelcomeFieldUpdatesDelaysPage({
         <div className="cs-cta-field" aria-hidden="true" />
         <div className="cs-cta-copy">
           <span className="wx-eyebrow"><span className="wx-dot" /> Get started</span>
-          <h2>Put every update and delay in one field log.</h2>
-          <p>Open the live field log, post an update with photos, flag a delay with its cause &mdash; and give the office the real jobsite picture in real time.</p>
+          <h2>Put every update and delayIQ in one field log.</h2>
+          <p>Open the live field log, post an update with photos, flag a delayIQ with its cause &mdash; and give the office the real jobsite picture in real time.</p>
           <div className="cs-cta-actions">
             <WxMagnetic className="wx-btn wx-btn-paper" onClick={onOpenField} ariaLabel="Open field log">
               Open field log <ArrowRight size={17} />
@@ -8822,7 +9058,7 @@ function WelcomeFieldUpdatesDelaysPage({
               <a href="#crew-scheduling">Crew Scheduling</a>
               <a href="#schedule-ai">Schedule AI</a>
               <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#field-updates-delays">Field Updates &amp; Delays</a>
+              <a href="#field-updates-delayIQs">Field Updates &amp; DelayIQs</a>
               <a href="#production-reports">Production Reports</a>
             </div>
             <div>
@@ -8964,7 +9200,7 @@ function WelcomeMaterialsReadinessPage({
   const gateRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
     { strong: "Parking deck pour", detail: "All materials on site", badge: "READY", tone: "ready", icon: CheckCircle2 },
     { strong: "Warehouse slab", detail: "Rebar #5 not delivered", badge: "BLOCKED", tone: "risk", icon: AlertTriangle },
-    { strong: "Harborview HVAC", detail: "Units delayed to Fri", badge: "WAIT", tone: "wait", icon: Clock }
+    { strong: "Harborview HVAC", detail: "Units delayIQed to Fri", badge: "WAIT", tone: "wait", icon: Clock }
   ];
 
   const vendorRows: Array<{ label: string; value: string; icon: typeof Grid2X2 }> = [
@@ -9099,7 +9335,7 @@ function WelcomeMaterialsReadinessPage({
                 </div>
                 <div className="mat-day">
                   <span className="mat-day-label">Fri</span>
-                  <div className="mat-delivery late"><span className="mat-del-head"><AlertTriangle size={13} /> HVAC</span><small>Delayed</small></div>
+                  <div className="mat-delivery late"><span className="mat-del-head"><AlertTriangle size={13} /> HVAC</span><small>DelayIQed</small></div>
                 </div>
               </div>
             </div>
@@ -9277,7 +9513,7 @@ function WelcomeMaterialsReadinessPage({
               <a href="#crew-scheduling">Crew Scheduling</a>
               <a href="#schedule-ai">Schedule AI</a>
               <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#field-updates-delays">Field Updates &amp; Delays</a>
+              <a href="#field-updates-delayIQs">Field Updates &amp; DelayIQs</a>
               <a href="#materials-readiness">Materials Readiness</a>
             </div>
             <div>
@@ -9780,7 +10016,7 @@ function PrBars({ data, maxY }: { data: Array<{ month: string; planned: number; 
   );
 }
 
-// Backlog-forecast area chart mock — the line draws itself in on reveal
+// Backlog-forecastIQ area chart mock — the line draws itself in on reveal
 // (pathLength=1 normalizes the dash so no path-length math is needed).
 function PrLine({ data, maxY }: { data: Array<{ month: string; v: number }>; maxY: number }) {
   const W = 320;
@@ -9931,7 +10167,7 @@ function WelcomeProductionReportsPage({
     {
       icon: TrendingUp,
       title: "Walk into the weekly review ready",
-      text: "The report is built the moment the field updates — every KPI, chart, and forecast is current, and the export is one click when the meeting starts."
+      text: "The report is built the moment the field updates — every KPI, chart, and forecastIQ is current, and the export is one click when the meeting starts."
     }
   ];
 
@@ -9995,11 +10231,11 @@ function WelcomeProductionReportsPage({
         </p>
       </section>
 
-      {/* Lead feature — backlog forecast chart */}
+      {/* Lead feature — backlog forecastIQ chart */}
       <section className="cs-lead" data-reveal>
         <div className="cs-panel cs-lead-panel">
           <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar"><i /><i /><i /><strong>Backlog forecast &middot; hours</strong></div>
+            <div className="cs-mock-bar"><i /><i /><i /><strong>Backlog forecastIQ &middot; hours</strong></div>
             <div className="cs-mock-body">
               <PrLine data={backlog} maxY={8000} />
             </div>
@@ -10140,7 +10376,7 @@ function WelcomeProductionReportsPage({
         <div className="cs-cta-copy">
           <span className="wx-eyebrow"><span className="wx-dot" /> Get started</span>
           <h2>Run the weekly review off live numbers.</h2>
-          <p>Open the live reports workspace, watch the KPIs and forecasts update as the field does, and export the review the moment you need it &mdash; the call is always yours.</p>
+          <p>Open the live reports workspace, watch the KPIs and forecastIQs update as the field does, and export the review the moment you need it &mdash; the call is always yours.</p>
           <div className="cs-cta-actions">
             <WxMagnetic className="wx-btn wx-btn-paper" onClick={onOpenReports} ariaLabel="Open reports workspace">
               Open reports workspace <ArrowRight size={17} />
@@ -10222,6 +10458,20 @@ function WelcomeProductionReportsPage({
 const WAITLIST_STORAGE_KEY = "buildflow.waitlist";
 const WAITLIST_BASE_COUNT = 2137;
 
+// waitlist (removable feature): target launch date — the single source of truth
+// for the "Launching …" eyebrows + waitlist hero. Change this one line to move
+// the date. (Month is 0-indexed, so 8 = September.)
+const LAUNCH_DATE = new Date(2026, 8, 21);
+const LAUNCH_DATE_LABEL = (() => {
+  const month = LAUNCH_DATE.toLocaleDateString("en-US", { month: "long" });
+  const day = LAUNCH_DATE.getDate();
+  const ord =
+    day % 10 === 1 && day !== 11 ? "st" :
+    day % 10 === 2 && day !== 12 ? "nd" :
+    day % 10 === 3 && day !== 13 ? "rd" : "th";
+  return `${month} ${day}${ord}`; // e.g. "September 21st"
+})();
+
 function readWaitlistEmails(): string[] {
   if (typeof window === "undefined") return [];
   try {
@@ -10230,6 +10480,59 @@ function readWaitlistEmails(): string[] {
   } catch {
     return [];
   }
+}
+
+// waitlist (removable feature): animated live countdown to LAUNCH_DATE. Re-renders
+// every second; each unit's number is re-keyed on change so the CSS roll animation
+// (wl-cd-roll in waitlist.css) replays on every tick. role="timer" carries the
+// state for screen readers (implicit aria-live=off, so no per-second spam); the
+// digits themselves are aria-hidden.
+function WaitlistCountdown() {
+  const msLeft = () => Math.max(0, LAUNCH_DATE.getTime() - Date.now());
+  const [remaining, setRemaining] = useState(msLeft);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setRemaining(msLeft()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  if (remaining <= 0) {
+    return (
+      <div className="wl-countdown wl-countdown-live" role="status">
+        <span className="wl-cd-livemsg">We&rsquo;re live &mdash; early access is open 🚀</span>
+      </div>
+    );
+  }
+
+  const totalSeconds = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const units = [
+    { label: "Days", value: String(days) },
+    { label: "Hours", value: pad(hours) },
+    { label: "Minutes", value: pad(minutes) },
+    { label: "Seconds", value: pad(seconds) }
+  ];
+
+  return (
+    <div
+      className="wl-countdown"
+      role="timer"
+      aria-label={`${days} days, ${hours} hours, ${minutes} minutes until BuildFlow launches on ${LAUNCH_DATE_LABEL}`}
+    >
+      {units.map((unit) => (
+        <div className="wl-cd-unit" key={unit.label} aria-hidden="true">
+          <div className="wl-cd-box">
+            <span className="wl-cd-num" key={unit.value}>{unit.value}</span>
+          </div>
+          <span className="wl-cd-label">{unit.label}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function WelcomeWaitlistPage({ onBack }: { onBack: () => void }) {
@@ -10321,21 +10624,25 @@ function WelcomeWaitlistPage({ onBack }: { onBack: () => void }) {
           <span className="wl-check"><CheckCircle2 size={30} /></span>
           <h1 className="wl-title">You&rsquo;re on the list.</h1>
           <p className="wl-sub">
-            Thanks for signing up. We&rsquo;ll email <strong style={{ color: "#ededed" }}>{submittedEmail}</strong> the
+            Thanks for signing up. We&rsquo;ll email <strong style={{ color: "#1c1c1a" }}>{submittedEmail}</strong> the
             moment early access opens &mdash; keep an eye on your inbox.
           </p>
           <div className="wl-position">You&rsquo;re builder <b>#{position.toLocaleString()}</b> in line</div>
+          {/* waitlist (removable feature): same live launch countdown on the confirmation screen */}
+          <WaitlistCountdown />
           <a className="wl-back" onClick={onBack} role="button" tabIndex={0}>&larr; Back to home</a>
         </div>
       ) : (
         <div className="wl-content">
           <span className="wl-brand"><BuildFlowLogoMark /> BuildFlow</span>
-          <div><span className="wl-badge"><span className="wl-live" /> Launching soon</span></div>
+          <div><span className="wl-badge"><span className="wl-live" /> Launching {LAUNCH_DATE_LABEL}</span></div>
           <h1 className="wl-title"><WxTypewriter normal="Join the " em="waitlist" /></h1>
           <p className="wl-sub">
-            BuildFlow is the command center for construction crews, schedules, and materials &mdash; launching soon.
+            BuildFlow is the command center for construction crews, schedules, and materials &mdash; launching {LAUNCH_DATE_LABEL}.
             Get on the list for early access before launch, founding-member pricing, and a heads-up the day we go live.
           </p>
+          {/* waitlist (removable feature): animated live countdown to launch */}
+          <WaitlistCountdown />
           <form className="wl-form" onSubmit={submit} noValidate>
             <div className="wl-field">
               <input
@@ -11281,7 +11588,7 @@ const scheduleTemplates: TemplateItem[] = [
   { name: "Multi-Project Dispatch", category: "Scheduling", meta: "multi-site", icon: Route, desc: "Coordinate crews and trucks across concurrent sites by location and travel time." },
   { name: "Equipment Maintenance Rotation", category: "Field & Ops", meta: "recurring", icon: Wrench, desc: "A preventive-maintenance cadence so machines never block a dispatch." },
   { name: "Materials Readiness Checklist", category: "Field & Ops", meta: "per job", icon: PackageCheck, desc: "Deliveries, permits, and locates tracked so crews only roll to work that can start." },
-  { name: "Production Report Pack", category: "Reporting", meta: "CSV / PDF", icon: LineChart, desc: "Weekly production, delays, and utilization — ready to export for the owner." }
+  { name: "Production Report Pack", category: "Reporting", meta: "CSV / PDF", icon: LineChart, desc: "Weekly production, delayIQs, and utilization — ready to export for the owner." }
 ];
 const templateCategories: Array<TemplateCategory | "All"> = ["All", "Projects", "Scheduling", "Field & Ops", "Reporting"];
 
@@ -11710,9 +12017,9 @@ function WelcomeIntegrationsPage({
       accent: "#2e9bd6",
       name: "Weather",
       tag: "Live field data",
-      text: "Ten-day forecasts on every job site, watching weather-sensitive tasks before they slip.",
+      text: "Ten-day forecastIQs on every job site, watching weather-sensitive tasks before they slip.",
       points: [
-        "Site-level forecasts pulled to each project",
+        "Site-level forecastIQs pulled to each project",
         "Weather-sensitive tasks flagged ahead of a storm",
         "Auto-suggested reschedules when conditions turn"
       ],
@@ -12563,7 +12870,7 @@ function WelcomeSolutionPage({
 const businessSizeSavingsTools = [
   { id: "crew-scheduling", label: "Crew scheduling", monthlySavingsPerUser: 39 },
   { id: "field-update-capture", label: "Field update capture", monthlySavingsPerUser: 31 },
-  { id: "delay-recovery", label: "Delay recovery", monthlySavingsPerUser: 28 },
+  { id: "delayIQ-recovery", label: "DelayIQ recovery", monthlySavingsPerUser: 28 },
   { id: "map-dispatch", label: "Map dispatch", monthlySavingsPerUser: 34 },
   { id: "production-reports", label: "Production reports", monthlySavingsPerUser: 33 },
   { id: "material-readiness", label: "Material readiness", monthlySavingsPerUser: 29 },
@@ -12651,12 +12958,12 @@ const businessSizePages: Record<BusinessSizePageId, BusinessSizePageConfig> = {
       {
         icon: ClipboardList,
         title: "Capture updates automatically",
-        text: "Keep progress photos, delay causes, and crew notes beside the work they affect."
+        text: "Keep progress photos, delayIQ causes, and crew notes beside the work they affect."
       },
       {
         icon: LineChart,
         title: "Create investor-ready reporting",
-        text: "Show production health, backlog movement, labor demand, and delay recovery in one clean view."
+        text: "Show production health, backlog movement, labor demand, and delayIQ recovery in one clean view."
       },
       {
         icon: Search,
@@ -12716,7 +13023,7 @@ const businessSizePages: Record<BusinessSizePageId, BusinessSizePageConfig> = {
       {
         icon: ClipboardList,
         title: "Turn field updates into action",
-        text: "Capture delays, photos, and notes, then connect them to the schedule they affect."
+        text: "Capture delayIQs, photos, and notes, then connect them to the schedule they affect."
       },
       {
         icon: Route,
@@ -12726,7 +13033,7 @@ const businessSizePages: Record<BusinessSizePageId, BusinessSizePageConfig> = {
       {
         icon: LineChart,
         title: "Report without rebuilding spreadsheets",
-        text: "Show schedule health, backlog, delay recovery, and labor needs from one live workspace."
+        text: "Show schedule health, backlog, delayIQ recovery, and labor needs from one live workspace."
       }
     ],
     partnersTitle: "Run with the same structure growing contractors use.",
@@ -12736,7 +13043,7 @@ const businessSizePages: Record<BusinessSizePageId, BusinessSizePageConfig> = {
       ["Who is this for?", "Small construction, trade, and field-service businesses that need a cleaner way to coordinate work across crews and jobs."],
       ["Can my team start without a long setup?", "Yes. Start with the schedule, then add field updates, maps, and reporting as the team uses the workspace."],
       ["Does it replace spreadsheets?", "It can replace the weekly schedule spreadsheet, field update tracker, map notes, and recurring production report."],
-      ["Can owners and crew leads use different views?", "Yes. Keep day-to-day crew work focused while managers review schedule health, delays, and reports."]
+      ["Can owners and crew leads use different views?", "Yes. Keep day-to-day crew work focused while managers review schedule health, delayIQs, and reports."]
     ]
   },
   enterprise: {
@@ -13703,13 +14010,13 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
     position: "CEO",
     title: "Map-aware dispatch from anywhere in the plan",
     description:
-      "Route context is now part of dispatch planning — BuildFlow compares job locations, crew assignments, and handoff windows before travel time becomes a hidden delay.",
+      "Route context is now part of dispatch planning — BuildFlow compares job locations, crew assignments, and handoff windows before travel time becomes a hidden delayIQ.",
     sections: [
       {
         label: "Improvements",
         items: [
           "Crew positions appear next to active work in Map & Field Ops.",
-          "Nearby jobs can be sequenced before travel time becomes a hidden delay.",
+          "Nearby jobs can be sequenced before travel time becomes a hidden delayIQ.",
           "Route context carries back into the schedule without rebuilding the plan."
         ]
       },
@@ -13734,10 +14041,10 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
       {
         label: "Improvements",
         items: [
-          "Field Updates: crew leads can post progress, photos, and delay signals from one page.",
+          "Field Updates: crew leads can post progress, photos, and delayIQ signals from one page.",
           "Readiness Reports: managers can spot missing prerequisites before publishing the schedule.",
           "Daily Plan: job packets now group crew, material, route, and inspection context together.",
-          "Delay Recovery: weather and inspection delays can be tracked against impacted jobs."
+          "DelayIQ Recovery: weather and inspection delayIQs can be tracked against impacted jobs."
         ]
       },
       { label: "Fixes", items: ["Resolved duplicate photo uploads on slow connections."] },
@@ -13812,7 +14119,7 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
         label: "Improvements",
         items: [
           "Drag-and-drop weekly Schedule with crews, equipment, and materials.",
-          "Field Updates and Delays captured from the jobsite.",
+          "Field Updates and DelayIQs captured from the jobsite.",
           "Reports workspace with CSV export for weekly review."
         ]
       },
@@ -14188,8 +14495,8 @@ const customerReviewCards: CustomerReviewCardData[] = [
   {
     kind: "story",
     company: "Harborview",
-    title: "How Harborview recovered delayed work without rebuilding the week",
-    metric: "3 delay recovery plans shipped in one day",
+    title: "How Harborview recovered delayIQed work without rebuilding the week",
+    metric: "3 delayIQ recovery plans shipped in one day",
     imageTone: "harborview"
   }
 ];
@@ -15045,7 +15352,7 @@ const aboutValues: Array<{ title: string; text: string; icon: typeof Grid2X2 }> 
   },
   {
     title: "Everything moves together",
-    text: "Crews, project phases, materials, field updates, and delays stay in sync, so a change in one place updates the whole plan.",
+    text: "Crews, project phases, materials, field updates, and delayIQs stay in sync, so a change in one place updates the whole plan.",
     icon: Navigation
   }
 ];
@@ -15064,7 +15371,7 @@ const aboutTimeline: Array<{ year: string; title: string; text: string }> = [
   {
     year: "2023",
     title: "Readiness and field updates",
-    text: "Readiness checks, progress notes, photos, and delay reports brought the jobsite and the office onto the same page."
+    text: "Readiness checks, progress notes, photos, and delayIQ reports brought the jobsite and the office onto the same page."
   },
   {
     year: "2024",
@@ -15123,7 +15430,7 @@ function WelcomeAboutPage({
           <h1 id="about-hero-title">We keep construction moving — one coordinated week at a time.</h1>
           <p className="about-hero-sub">
             BuildFlow is the production command center for the field. We bring crews, project phases, materials,
-            field updates, and delays together so the plan stays ready long after it leaves the office.
+            field updates, and delayIQs together so the plan stays ready long after it leaves the office.
           </p>
           <button type="button" className="about-explore" onClick={onOpenSchedule}>
             See the product <ArrowRight size={16} />
@@ -15577,7 +15884,7 @@ const helpCenterNav: Array<{ title: string; items: Array<{ title: string; text: 
     title: "Workspace basics",
     items: [
       { title: "Navigation & search", text: "Move between modules from the top bar and press Ctrl/Cmd+K to search projects, crews, equipment, and materials instantly." },
-      { title: "Notifications", text: "The bell surfaces delays, overbooked crews, and readiness changes so nothing slips before dispatch." },
+      { title: "Notifications", text: "The bell surfaces delayIQs, overbooked crews, and readiness changes so nothing slips before dispatch." },
       { title: "Keyboard shortcuts", text: "Use Ctrl/Cmd+K to search and quick keys to jump between the weekly board, crews, and reports." },
       { title: "Account settings", text: "Update your name, role, region, and preferences from the account menu in the top-right." }
     ]
@@ -15612,18 +15919,18 @@ const helpCenterNav: Array<{ title: string; items: Array<{ title: string; text: 
   {
     title: "Automation & alerts",
     items: [
-      { title: "Delay alerts", text: "Get notified when a job is delayed by weather, inspection, or a late crew so you can recover the plan." },
+      { title: "DelayIQ alerts", text: "Get notified when a job is delayIQed by weather, inspection, or a late crew so you can recover the plan." },
       { title: "Overbooking warnings", text: "BuildFlow flags overbooked crew slots as you build the week so you never double-book a crew." },
       { title: "Daily digest", text: "A daily summary of the day's assignments, readiness, and any new field updates." },
-      { title: "Custom notifications", text: "Choose which events notify you — delays, readiness changes, field updates, or schedule edits." }
+      { title: "Custom notifications", text: "Choose which events notify you — delayIQs, readiness changes, field updates, or schedule edits." }
     ]
   },
   {
     title: "Map & field ops",
     items: [
       { title: "Crew locations", text: "See crew positions next to active work in Map & Field Ops to plan the day around where teams actually are." },
-      { title: "Route planning", text: "Compare job locations and handoff windows so you can sequence nearby work before travel time becomes a hidden delay." },
-      { title: "Field updates", text: "Crew leads post progress, photos, and delay signals from the jobsite, and they flow back into the plan." },
+      { title: "Route planning", text: "Compare job locations and handoff windows so you can sequence nearby work before travel time becomes a hidden delayIQ." },
+      { title: "Field updates", text: "Crew leads post progress, photos, and delayIQ signals from the jobsite, and they flow back into the plan." },
       { title: "Site check-ins", text: "Track when crews arrive on site and whether work can start based on readiness." }
     ]
   },
@@ -15674,7 +15981,7 @@ const helpPopularTopics: Array<{ title: string; text: string; icon: typeof Grid2
   },
   {
     title: "Field updates",
-    text: "Review progress notes, photos, delay reports, and jobsite signals.",
+    text: "Review progress notes, photos, delayIQ reports, and jobsite signals.",
     icon: ClipboardList
   },
   {
@@ -15726,7 +16033,7 @@ const helpFaqs: Array<{ q: string; a: string }> = [
   },
   {
     q: "Can we undo a change or recover a schedule?",
-    a: "Yes. Schedule history lets you roll back, and delay-recovery plans reshuffle the affected jobs when weather or an inspection slips — without rebuilding the week from scratch."
+    a: "Yes. Schedule history lets you roll back, and delayIQ-recovery plans reshuffle the affected jobs when weather or an inspection slips — without rebuilding the week from scratch."
   },
   {
     q: "What does it cost?",
@@ -16402,7 +16709,7 @@ function WelcomeDemoHelpers({ sceneId }: { sceneId: (typeof welcomeDemoScenes)[n
     reports: {
       icon: <LineChart size={20} />,
       tone: "purple",
-      text: "Backlog forecast highlights next week's bottleneck"
+      text: "Backlog forecastIQ highlights next week's bottleneck"
     }
   }[sceneId];
 
@@ -16432,7 +16739,7 @@ function WelcomeDemoScene({
   const jobs = data?.jobs.slice(0, 3) ?? [];
   const firstJob = jobs[0]?.name ?? "Riverside Office Building";
   const secondJob = jobs[1]?.name ?? "Harborview Apartments";
-  const delayedJob = data?.jobs.find((job) => job.status === "Delayed")?.name ?? "Pinecrest Medical Center";
+  const delayIQedJob = data?.jobs.find((job) => job.status === "DelayIQed")?.name ?? "Pinecrest Medical Center";
 
   if (sceneId === "schedule") {
     return (
@@ -16511,12 +16818,12 @@ function WelcomeDemoScene({
             <strong>Jessica Lee</strong>
             <p>Waiting on MEP rough-in inspection. Inspector running behind.</p>
           </div>
-          <Badge status="Delay Reported" />
+          <Badge status="DelayIQ Reported" />
         </article>
-        <article className="delay-note">
+        <article className="delayIQ-note">
           <AlertTriangle size={18} />
-          <strong>Inspection delay reported</strong>
-          <Badge status="Delayed" />
+          <strong>Inspection delayIQ reported</strong>
+          <Badge status="DelayIQed" />
         </article>
       </div>
     );
@@ -16550,7 +16857,7 @@ function WelcomeDemoScene({
         </aside>
         <article>
           <AlertTriangle size={17} />
-          <span>{delayedJob}</span>
+          <span>{delayIQedJob}</span>
           <Badge status="At Risk" />
         </article>
       </div>
@@ -16563,7 +16870,7 @@ function WelcomeDemoScene({
         {[
           { label: "To schedule", count: 8, tone: "purple", cards: [firstJob, "Downtown Retail Buildout", "Tech Ridge Garage"] },
           { label: "In progress", count: 5, tone: "amber", cards: [secondJob, "Logistics Warehouse", "Steel Yard Expansion"] },
-          { label: "At risk", count: 2, tone: "blue", cards: [delayedJob, "MEP Rough-In"] },
+          { label: "At risk", count: 2, tone: "blue", cards: [delayIQedJob, "MEP Rough-In"] },
           { label: "Complete", count: 18, tone: "green", cards: ["Site access confirmed", "Subcontractors confirmed", "Permit package"] }
         ].map((column) => (
           <section className={`demo-kanban-column ${column.tone}`} key={column.label}>
@@ -16720,7 +17027,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       title: "Field update posted",
       detail: `${user.name} updated ${projectName(data, update.projectId)}: ${update.message}`,
       timestamp: update.createdAt,
-      tone: update.status === "Delayed" || update.status === "At Risk" ? "red" : "green",
+      tone: update.status === "DelayIQed" || update.status === "At Risk" ? "red" : "green",
       icon: ClipboardList
     });
   });
@@ -16736,13 +17043,13 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
     });
   });
 
-  data.delays.forEach((delay) => {
+  data.delayIQs.forEach((delayIQ) => {
     items.push({
-      id: `delay-${delay.id}`,
-      title: "Delay being tracked",
-      detail: `${delay.title} is ${delay.status.toLowerCase()} on ${projectName(data, delay.projectId)} with ${delay.impactDays} day impact.`,
-      timestamp: delay.reportedAt,
-      tone: delay.severity === "High" ? "red" : delay.severity === "Medium" ? "amber" : "slate",
+      id: `delayIQ-${delayIQ.id}`,
+      title: "DelayIQ being tracked",
+      detail: `${delayIQ.title} is ${delayIQ.status.toLowerCase()} on ${projectName(data, delayIQ.projectId)} with ${delayIQ.impactDays} day impact.`,
+      timestamp: delayIQ.reportedAt,
+      tone: delayIQ.severity === "High" ? "red" : delayIQ.severity === "Medium" ? "amber" : "slate",
       icon: ShieldAlert
     });
   });
@@ -17300,7 +17607,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
     }>;
   };
 
-  type WorkspaceRole = "Workspace Owner" | "Project Manager" | "Crew Lead" | "Viewer";
+  type WorkspaceRole = "Workspace Owner" | "Admin" | "Member" | "Visitor";
 
   type WorkspaceMember = {
     id: string;
@@ -17328,8 +17635,23 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
   const [activeSettingsView, setActiveSettingsView] = useState<SettingsView>("preferences");
   const settingsRootRef = useRef<HTMLDivElement>(null);
   useHudMotion(settingsRootRef);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileBio, setProfileBio] = useState(
+    "Project manager keeping crews, schedules, and field updates moving together."
+  );
+  const profilePhotoRef = useRef<HTMLInputElement>(null);
+  const handleProfilePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setProfileImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<WorkspaceRole>("Project Manager");
+  const [inviteRole, setInviteRole] = useState<WorkspaceRole>("Member");
   const [inviteStatus, setInviteStatus] = useState("Ready to invite teammates into this workspace.");
   const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([
     {
@@ -17344,18 +17666,34 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
       id: "maria-chen",
       name: "Maria Chen",
       email: "maria.chen@buildflow.test",
-      role: "Project Manager",
+      role: "Admin",
       joined: "Joined Jun 12, 2026"
     },
     {
       id: "devin-brooks",
       name: "Devin Brooks",
       email: "devin.brooks@buildflow.test",
-      role: "Crew Lead",
+      role: "Member",
       joined: "Joined Jun 18, 2026"
     }
   ]);
-  const memberRoleOptions: WorkspaceRole[] = ["Project Manager", "Crew Lead", "Viewer"];
+  const memberRoleOptions: WorkspaceRole[] = ["Admin", "Member", "Visitor"];
+  // Workspace role = permission level, assigned by the workspace owner. It is
+  // read-only for the person it applies to (see the profile view). "Workspace
+  // Owner" is fixed to the owner; the rest are the invitable roles.
+  const rolePermissions: Record<WorkspaceRole, string> = {
+    "Workspace Owner": "adjust billing, invite and remove people, and edit and create jobs",
+    Admin: "add and remove people, and edit and create jobs",
+    Member: "edit and create jobs",
+    Visitor: "view schedules and reports (viewing only)"
+  };
+  const currentUserRole: WorkspaceRole = workspaceMembers.find((member) => member.owner)?.role ?? "Workspace Owner";
+  const roleBadge = (role: WorkspaceRole) => (
+    <span className="settings-role-readonly" title="Set by the workspace owner">
+      <Lock size={14} aria-hidden="true" />
+      {role}
+    </span>
+  );
   const settingsNavGroups = [
     {
       title: "Account",
@@ -17470,6 +17808,59 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
   const removeMember = (memberId: string) => {
     setWorkspaceMembers((members) => members.filter((member) => member.id !== memberId || member.owner));
   };
+
+  const renderProfileManagement = () => (
+    <section className="settings-profile-section">
+      <div className="settings-avatar-edit">
+        <span className="settings-avatar-preview">
+          {profileImage ? <img src={profileImage} alt="Your profile picture" /> : accountDisplayAvatar}
+        </span>
+        <div className="settings-avatar-actions">
+          <strong>Profile picture</strong>
+          <p>Upload a photo, or keep a simple initial for fast recognition in field and office views.</p>
+          <div className="settings-avatar-buttons">
+            <button type="button" className="settings-primary-action" onClick={() => profilePhotoRef.current?.click()}>
+              <ImagePlus size={16} />
+              {profileImage ? "Change photo" : "Upload photo"}
+            </button>
+            {profileImage && (
+              <button type="button" className="settings-action-button" onClick={() => setProfileImage(null)}>
+                Remove
+              </button>
+            )}
+          </div>
+          <input
+            ref={profilePhotoRef}
+            className="settings-avatar-file"
+            type="file"
+            accept="image/*"
+            aria-label="Upload profile picture"
+            onChange={handleProfilePhoto}
+          />
+        </div>
+      </div>
+
+      <label className="settings-bio-field">
+        <span className="settings-bio-label">About you</span>
+        <textarea
+          value={profileBio}
+          onChange={(event) => setProfileBio(event.target.value)}
+          rows={3}
+          maxLength={280}
+          placeholder="Write a little about yourself — your trade, focus, and what you manage."
+        />
+        <em className="settings-bio-count">{profileBio.length}/280</em>
+      </label>
+
+      <div className="settings-profile-role">
+        <div>
+          <strong>Role</strong>
+          <p>Set by the workspace owner. As {currentUserRole}, you can {rolePermissions[currentUserRole]}.</p>
+        </div>
+        {roleBadge(currentUserRole)}
+      </div>
+    </section>
+  );
 
   const renderPeopleManagement = () => (
     <section className="settings-team-section" aria-labelledby="settings-workspace-team-title">
@@ -17598,16 +17989,8 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
       eyebrow: "Account settings",
       title: "Liam",
       description: "Manage the profile details that appear across BuildFlow workspaces and reports.",
-      sections: [
-        {
-          title: "Profile",
-          rows: [
-            { title: "Display name", description: "This name appears in schedule updates, reports, and activity feeds.", control: actionButton("Edit") },
-            { title: "Role", description: "Keep the workspace role aligned with the work you manage.", control: selectControl("Role", ["Project Manager", "Superintendent", "Crew Lead"]) },
-            { title: "Avatar", description: "Use a simple initial for fast recognition in field and office views.", control: actionButton("Change") }
-          ]
-        }
-      ]
+      feature: renderProfileManagement(),
+      sections: []
     },
     preferences: {
       eyebrow: "Account settings",
@@ -17625,7 +18008,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
           rows: [
             {
               title: "Use Enter to add a new line",
-              description: "Applies to notes, field updates, delay comments, and support messages.",
+              description: "Applies to notes, field updates, delayIQ comments, and support messages.",
               control: <SettingsToggle checked={enterAddsLine} label="Use Enter to add a new line" onChange={setEnterAddsLine} />
             }
           ]
@@ -17658,7 +18041,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
           rows: [
             {
               title: "Schedule alert summaries",
-              description: "Show compact readiness and delay alerts when opening the production schedule.",
+              description: "Show compact readiness and delayIQ alerts when opening the production schedule.",
               control: <SettingsToggle checked={scheduleAlerts} label="Schedule alert summaries" onChange={setScheduleAlerts} />
             },
             { title: "Default landing page", description: "Choose where BuildFlow opens after login.", control: selectControl("Default landing page", ["Dashboard", "Schedule", "Reports"]) }
@@ -17676,7 +18059,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
           rows: [
             { title: "Desktop digest", description: "Bundle lower-priority updates into a single desktop summary.", control: <SettingsToggle checked={desktopDigest} label="Desktop digest" onChange={setDesktopDigest} /> },
             { title: "Field push alerts", description: "Notify you immediately when field updates affect the active schedule.", control: <SettingsToggle checked={fieldPushAlerts} label="Field push alerts" onChange={setFieldPushAlerts} /> },
-            { title: "Weekly summary", description: "Send a Monday overview of schedule health, backlog, and delay recovery.", control: <SettingsToggle checked={weeklySummary} label="Weekly summary" onChange={setWeeklySummary} /> }
+            { title: "Weekly summary", description: "Send a Monday overview of schedule health, backlog, and delayIQ recovery.", control: <SettingsToggle checked={weeklySummary} label="Weekly summary" onChange={setWeeklySummary} /> }
           ]
         }
       ]
@@ -17721,7 +18104,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
           title: "Access defaults",
           rows: [
             { title: "Invite approvals", description: "Require an admin review before new members join BuildFlow.", control: <SettingsToggle checked={inviteApprovals} label="Invite approvals" onChange={setInviteApprovals} /> },
-            { title: "Default role", description: "Choose the starting role for newly invited users.", control: selectControl("Default role", ["Viewer", "Crew Lead", "Project Manager"]) },
+            { title: "Default role", description: "Choose the starting role for newly invited users.", control: selectControl("Default role", ["Member", "Admin", "Visitor"]) },
             { title: "Seat management", description: "Review active members, pending invites, and team assignments.", control: actionButton("Manage") }
           ]
         }
@@ -17782,7 +18165,7 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
           rows: [
             { title: "Public schedule links", description: "Allow shareable read-only views for selected projects.", control: <SettingsToggle checked={publicSchedules} label="Public schedule links" onChange={setPublicSchedules} /> },
             { title: "Link expiration", description: "Choose how long public links remain active.", control: selectControl("Link expiration", ["7 days", "30 days", "Never"]) },
-            { title: "Visible details", description: "Decide whether public views include crews, materials, and delay notes.", control: selectControl("Visible details", ["Milestones only", "Milestones and crews", "Full read-only view"]) }
+            { title: "Visible details", description: "Decide whether public views include crews, materials, and delayIQ notes.", control: selectControl("Visible details", ["Milestones only", "Milestones and crews", "Full read-only view"]) }
           ]
         }
       ]
@@ -17853,7 +18236,9 @@ function SettingsPage({ onClose }: { onClose: () => void }) {
       <section className="settings-page" aria-labelledby="settings-title">
       <aside className="settings-rail" aria-label="Settings categories">
         <div className="settings-account-card">
-          <span className="reports-avatar">I</span>
+          <span className="reports-avatar">
+            {profileImage ? <img src={profileImage} alt="" className="settings-avatar-img" /> : accountDisplayAvatar}
+          </span>
           <div>
             <strong>Liam Santos</strong>
             <em>Project Manager</em>
@@ -17954,7 +18339,7 @@ const initialSupportMessages: SupportChatMessage[] = [
   {
     id: "agent-welcome",
     author: "agent",
-    text: "Hi, I am BuildFlow AI Agent. I can help with schedules, crews, projects, materials, delays, reports, and where to click next.",
+    text: "Hi, I am BuildFlow AI Agent. I can help with schedules, crews, projects, materials, delayIQs, reports, and where to click next.",
     timestamp: "Now"
   },
   {
@@ -18040,11 +18425,11 @@ function getSupportAgentReply(message: string): SupportChatMessage {
     };
   }
 
-  if (/\b(delay|delays|late|blocked|weather|rain|risk|issue)\b/.test(normalizedMessage)) {
+  if (/\b(delayIQ|delayIQs|late|blocked|weather|rain|risk|issue)\b/.test(normalizedMessage)) {
     return {
       ...baseReply,
       text:
-        "For delays, open Delays to log the cause, severity, owner, and impact days. Weather and field updates can also create schedule risk, so check the affected job and update the recovery plan before moving crews."
+        "For delayIQs, open DelayIQs to log the cause, severity, owner, and impact days. Weather and field updates can also create schedule risk, so check the affected job and update the recovery plan before moving crews."
     };
   }
 
@@ -18203,7 +18588,7 @@ const dashboardToday = (() => {
 })();
 const dashboardLastWeekSameDay = shiftDate(dashboardToday, -7);
 
-type DashboardFeedKey = "jobs" | "crews" | "equipment" | "delays";
+type DashboardFeedKey = "jobs" | "crews" | "equipment" | "delayIQs";
 
 type DashboardFeedItem = {
   id: string;
@@ -18377,7 +18762,7 @@ const DASH_SECTION_TITLES: Record<string, string> = {
   workflows: "Active AI Workflows"
 };
 const DASH_STAT_DEFAULT = ["st-sched", "st-ontrack", "st-workflows", "st-labor", "st-cost"];
-const DASH_KPI_DEFAULT = ["kpi-jobs", "kpi-crews", "kpi-equip", "kpi-delays"];
+const DASH_KPI_DEFAULT = ["kpi-jobs", "kpi-crews", "kpi-equip", "kpi-delayIQs"];
 const DASH_RAIL_DEFAULT = ["approvals", "alerts", "recommendations"];
 const DASH_RAIL_TITLES: Record<string, string> = {
   approvals: "Pending Approvals",
@@ -18615,19 +19000,46 @@ const AI_TOOLS: Array<{ id: string; label: string; desc: string; model: string; 
   { id: "weather", label: "Weather Integration", desc: "Live conditions + site-impact reads", model: "Claude Haiku 4.5", icon: CloudSun },
   { id: "schedule", label: "Schedule Suggestions", desc: "Sequencing & week look-ahead", model: "Claude Sonnet 5", icon: CalendarDays },
   { id: "crew", label: "Crew Suggestions", desc: "Load balancing & assignments", model: "Claude Sonnet 5", icon: Users },
-  { id: "delay", label: "Delay Detection", desc: "Real-time schedule-risk signals", model: "Claude Haiku 4.5", icon: AlertTriangle },
+  { id: "delayIQ", label: "DelayIQ Detection", desc: "Real-time schedule-risk signals", model: "Claude Haiku 4.5", icon: AlertTriangle },
   { id: "route", label: "Route Optimization", desc: "Crew & material routing", model: "Claude Opus 4.8", icon: Route }
 ];
 
 // Instructional ("how do I…") answers about the app's features.
+// How-to answers spanning the WHOLE app, not just scheduling. Each entry is
+// matched when its keywords appear in an instructional ("how do I…") question.
 const AI_FEATURE_HELP: Array<{ keys: string[]; text: string }> = [
-  { keys: ["assign crew", "assign a crew", "schedule a crew", "assign job", "add activity", "new activity"], text: "Open Schedule and drag a job onto a crew's row for the day, or use “New Activity”. Conflicts flag automatically as you go." },
-  { keys: ["publish", "share schedule", "send the schedule"], text: "In Schedule, review the week, then use the publish/share action in the top bar to push it out to the crews." },
-  { keys: ["log delay", "report delay", "add delay", "record delay"], text: "Go to Delays and add one with a category, severity, and impact days — it rolls straight into the project's schedule health." },
-  { keys: ["field update", "post update", "add update", "log update"], text: "Field Updates lets the crew post status and photos; you'll see them on the dashboard and on each project." },
-  { keys: ["material", "order material", "track material", "delivery"], text: "Materials tracks each item's status (Ready / Ordered / Waiting on Delivery / Missing) and delivery date per project." },
-  { keys: ["report", "export"], text: "Reports builds schedule-health and progress summaries you can export or share." },
-  { keys: ["readiness", "ready to start"], text: "Readiness is the pre-start checklist per project — clear the open items to move work into Ready." }
+  // Scheduling
+  { keys: ["assign crew", "assign a crew", "schedule a crew", "schedule a job", "assign job", "add activity", "new activity", "book a crew", "put a job on"], text: "Open Schedule, pick Month / Week / List, then drag a job onto a crew's row for the day — or use “New Activity”. Conflicts flag automatically as you place work." },
+  { keys: ["move a job", "reschedule", "change the date", "resolve conflict", "double book", "drag a job", "how scheduling", "schedule work"], text: "In Schedule, drag a job to a new day or crew; if it clashes you'll see a conflict badge. You can also open the job to edit its dates directly." },
+  { keys: ["publish", "share schedule", "send the schedule", "push the schedule"], text: "In Schedule, review the week, then use the publish/share action in the top bar to push it to the crews on their devices." },
+  // Projects
+  { keys: ["create a project", "add a project", "new project", "start a project", "set up a project"], text: "Go to Projects → “New Project” and add the name, location, type, manager, and target completion. It then flows into the Dashboard, Schedule, and Reports." },
+  { keys: ["edit a project", "update a project", "project status", "project health", "percent complete"], text: "Open any project from Projects to edit its details, status, and schedule health, and see the jobs and % complete rolling up to it." },
+  // Crews, equipment & people
+  { keys: ["add a crew", "create a crew", "new crew", "manage crew", "crew size", "labor mix"], text: "Go to Crews to add a crew with its specialty, lead, and labor mix. Its utilization and Available / Scheduled / Overbooked status update as you assign work." },
+  { keys: ["add equipment", "track equipment", "assign equipment", "machine", "excavator"], text: "Equipment tracks each machine's status (Available / In Use / Maintenance) and who it's assigned to — add and reassign items there." },
+  { keys: ["add people", "invite", "add a member", "add a user", "add teammate", "invite team", "add someone", "manage users"], text: "Open Settings → People to invite teammates by email and set their role (Project Manager, Superintendent, or Crew Lead)." },
+  // Materials, readiness, field updates
+  { keys: ["material", "order material", "track material", "add material", "delivery", "supply"], text: "Materials tracks each item's status (Ready / Ordered / Waiting on Delivery / Missing) and delivery date per project — add items and update status as they arrive." },
+  { keys: ["readiness", "ready to start", "pre-start", "prestart", "checklist"], text: "Readiness is the pre-start checklist per project — clear the open items (materials, permits, access) to move work into Ready." },
+  { keys: ["field update", "post update", "add update", "log update", "site photo", "from the field"], text: "Field Updates lets the crew post status and photos from the site; you'll see them on the Dashboard and on each project." },
+  // Risk: delays, inspections, weather
+  { keys: ["delay", "delayiq", "log a delay", "report a delay", "add a delay", "record a delay"], text: "Go to DelayIQ and add a delay with a category, severity, and impact days — it rolls straight into the project's schedule health." },
+  { keys: ["inspection", "schedule inspection", "log inspection"], text: "Inspections show per project with an Upcoming / Ready / Complete status — confirm crews and site access ahead of each one." },
+  { keys: ["weather", "weather alert", "rain", "storm"], text: "Weather alerts surface on the Dashboard and Map with a severity — line up indoor work as a backup when high-impact weather hits a site." },
+  // Map, timecard, reports
+  { keys: ["map", "route", "route optimization", "job location", "travel time", "map ops", "directions"], text: "Map (Map Ops) plots your jobs and crews geographically and plans routes by travel time so crews spend less time driving between sites." },
+  { keys: ["timecard", "time card", "log hours", "timesheet", "clock in", "track time", "payroll"], text: "TimeCard is where crews log hours against jobs; review and approve timesheets there for payroll and job costing." },
+  { keys: ["report", "export", "pdf", "print", "share report", "download"], text: "Reports builds schedule-health and progress summaries you can export (CSV / PDF) or share with owners and stakeholders." },
+  // BuildFlow AI
+  { keys: ["ask ai", "buildflow ai", "use the ai", "the assistant", "voice", "talk to the ai", "mic", "ask a question"], text: "The “Ask AI” prompt on the Dashboard answers questions about your live projects, crews, schedule, and risks — type, tap the mic to speak, or attach a photo/video. It also gives suggestions to optimize your week." },
+  { keys: ["import schedule", "switch from", "another scheduler", "migrate", "move from", "old schedule", "switch to buildflow", "coming from"], text: "In “Ask AI”, attach a photo or video of your current schedule (Excel, Procore, a whiteboard) and say “import my schedule” — BuildFlow reads it and builds the jobs, projects, and schedule for you." },
+  { keys: ["forecast", "forecastiq", "predict", "trending"], text: "ForecastIQ projects where your schedule is trending; use it with DelayIQ to catch risk before it lands on a crew." },
+  // Settings & billing
+  { keys: ["setting", "preference", "change setting", "profile", "notification", "connection", "integration"], text: "Settings (the top-right account menu) covers your profile, preferences, notifications, people, connections/integrations, and billing." },
+  { keys: ["billing", "upgrade", "change plan", "downgrade", "subscription", "pricing", "invoice", "seats"], text: "Open Settings → Billing to compare plans (Pro / Business / Enterprise), switch Monthly/Yearly, upgrade or downgrade, and download invoices." },
+  // Getting started
+  { keys: ["get started", "getting started", "use buildflow", "how does buildflow", "what can buildflow", "overview", "new here", "onboard", "tour"], text: "Start on the Dashboard (your AI Command Center) for the week at a glance, build the plan in Schedule (drag jobs onto crews), track Materials and Readiness, log Field Updates and DelayIQ as work runs, and pull Reports for owners. Ask me “how do I …” for any of these." }
 ];
 
 // Scan the whole program for the highest-leverage things a PM should act on.
@@ -18653,10 +19065,10 @@ function buildOptimizationSuggestions(data: BootstrapPayload): string[] {
     out.push(`${blockedJobs.length} job${blockedJobs.length > 1 ? "s are" : " is"} blocked on materials (e.g. “${blockedJobs[0].name}” — ${blockedJobs[0].materialsStatus}). Expedite delivery or resequence work that can proceed.`);
   }
 
-  const highDelays = data.delays.filter((d) => d.status !== "Resolved" && d.severity === "High");
-  if (highDelays.length) {
-    const worst = [...highDelays].sort((a, b) => b.impactDays - a.impactDays)[0];
-    out.push(`Tackle the “${worst.title}” delay on ${projectName(worst.projectId)} first — it's High severity and adds ${worst.impactDays} day${worst.impactDays === 1 ? "" : "s"}.`);
+  const highDelayIQs = data.delayIQs.filter((d) => d.status !== "Resolved" && d.severity === "High");
+  if (highDelayIQs.length) {
+    const worst = [...highDelayIQs].sort((a, b) => b.impactDays - a.impactDays)[0];
+    out.push(`Tackle the “${worst.title}” delayIQ on ${projectName(worst.projectId)} first — it's High severity and adds ${worst.impactDays} day${worst.impactDays === 1 ? "" : "s"}.`);
   }
 
   const conflicts = data.assignments.filter((a) => a.conflicts && a.conflicts.length > 0);
@@ -18706,18 +19118,31 @@ function buildAiAnswer(question: string, data: BootstrapPayload): AiAnswer {
     return { text: "Here's where I'd focus to keep your projects moving:", bullets: suggestions, suggestions: ["What's at risk?", "How's crew capacity?", "Any material shortages?"] };
   }
 
-  // How-to (instructional) — checked before data domains so "how do I assign a crew" isn't read as a crew-status query.
-  if (has("how do i", "how to", "how can i", "where do i", "where can i", "walk me through", "steps to")) {
+  // How-to (instructional) — checked before data domains so "how do I add a crew"
+  // isn't read as a crew-status query. Spans the whole app, not just scheduling.
+  if (has("how do i", "how do you", "how to", "how can i", "how does", "where do i", "where can i", "show me how", "walk me through", "steps to", "guide me", "set up", "turn on", "enable", "get started", "how to use")) {
     const hit = AI_FEATURE_HELP.find((f) => f.keys.some((k) => q.includes(k)));
-    if (hit) return { text: hit.text, suggestions: ["Suggestions to optimize my week", "What's at risk?"] };
-    return { text: "I can walk you through scheduling crews, publishing the week, logging delays, tracking materials, posting field updates, and building reports — which one?", suggestions: ["How do I assign a crew?", "How do I log a delay?", "How do I create a report?"] };
+    if (hit) return { text: hit.text, suggestions: ["How do I create a project?", "How do I import my schedule?", "Suggestions to optimize my week"] };
+    return {
+      text: "I can walk you through pretty much anything in BuildFlow — not just scheduling. A few areas:",
+      bullets: [
+        "Scheduling — assign crews, publish the week, fix conflicts",
+        "Projects, crews, equipment & people — create and manage them",
+        "Materials, readiness & field updates — track work as it runs",
+        "DelayIQ, inspections & weather — stay ahead of risk",
+        "Map & routes, TimeCard, and exporting Reports",
+        "BuildFlow AI — import a schedule from another app, or optimize your week",
+        "Settings & billing — plans, notifications, connections"
+      ],
+      suggestions: ["How do I create a project?", "How do I import my schedule?", "How do I export a report?", "How do I add a crew?"]
+    };
   }
 
   // At risk
   if (has("risk", "attention", "problem", "issue", "concern", "worry", "trouble", "red flag")) {
     const bullets: string[] = [];
     data.projects.filter((p) => p.scheduleHealth === "At Risk").forEach((p) => bullets.push(`Project at risk: ${p.name} (${p.percentComplete}% complete)`));
-    data.delays.filter((d) => d.status !== "Resolved" && d.severity === "High").forEach((d) => bullets.push(`High delay: ${d.title} on ${projectName(d.projectId)} (+${d.impactDays}d)`));
+    data.delayIQs.filter((d) => d.status !== "Resolved" && d.severity === "High").forEach((d) => bullets.push(`High delayIQ: ${d.title} on ${projectName(d.projectId)} (+${d.impactDays}d)`));
     data.jobs.filter((j) => j.materialsStatus === "Missing").forEach((j) => {
       const proj = projectName(j.projectId);
       bullets.push(`Missing materials: ${j.name}${j.name === proj ? "" : ` on ${proj}`}`);
@@ -18727,13 +19152,13 @@ function buildAiAnswer(question: string, data: BootstrapPayload): AiAnswer {
     return { text: `${bullets.length} thing${bullets.length > 1 ? "s" : ""} I'd keep an eye on:`, bullets: bullets.slice(0, 8), suggestions: ["What should I prioritize?", "How's crew capacity?"] };
   }
 
-  // Delays
-  if (has("delay", "behind", "slip", "running late", "over schedule")) {
-    const open = data.delays.filter((d) => d.status !== "Resolved");
-    if (!open.length) return { text: `No open delays right now — all ${data.delays.length} logged delays are resolved.`, suggestions: followups };
+  // DelayIQs
+  if (has("delayIQ", "behind", "slip", "running late", "over schedule")) {
+    const open = data.delayIQs.filter((d) => d.status !== "Resolved");
+    if (!open.length) return { text: `No open delayIQs right now — all ${data.delayIQs.length} logged delayIQs are resolved.`, suggestions: followups };
     const totalDays = open.reduce((sum, d) => sum + d.impactDays, 0);
     return {
-      text: `${open.length} open delay${open.length > 1 ? "s" : ""} adding up to ${totalDays} day${totalDays === 1 ? "" : "s"} of impact:`,
+      text: `${open.length} open delayIQ${open.length > 1 ? "s" : ""} adding up to ${totalDays} day${totalDays === 1 ? "" : "s"} of impact:`,
       bullets: [...open].sort((a, b) => b.impactDays - a.impactDays).map((d) => `${d.title} — ${projectName(d.projectId)} · ${d.severity} · +${d.impactDays}d · ${d.status}`),
       suggestions: ["What should I prioritize?", "What's at risk?"]
     };
@@ -18781,7 +19206,7 @@ function buildAiAnswer(question: string, data: BootstrapPayload): AiAnswer {
   }
 
   // Weather
-  if (has("weather", "rain", "storm", "wind", "forecast", "cold", "heat")) {
+  if (has("weather", "rain", "storm", "wind", "forecastIQ", "cold", "heat")) {
     if (!data.weatherAlerts.length) return { text: "No active weather alerts.", suggestions: followups };
     return { text: `${data.weatherAlerts.length} weather alert${data.weatherAlerts.length > 1 ? "s" : ""}:`, bullets: data.weatherAlerts.map((w) => `${w.title} — ${w.severity}${w.projectId ? ` · ${projectName(w.projectId)}` : ""}${w.startsAt ? ` · ${w.startsAt}` : ""}`), suggestions: ["What's at risk?"] };
   }
@@ -18820,14 +19245,14 @@ function buildAiAnswer(question: string, data: BootstrapPayload): AiAnswer {
 
   // Capabilities / greeting
   if (has("what can you", "what do you do", "who are you", "capab", "hello", "hey", "how do you work") || q.trim() === "hi" || q.startsWith("hi ")) {
-    return { text: "I'm your BuildFlow assistant. I read your live projects, crews, schedule, delays, readiness, materials, inspections, and weather — ask about any of them, or ask for suggestions to optimize your week.", suggestions: AI_STARTERS };
+    return { text: "I'm your BuildFlow assistant. I read your live projects, crews, schedule, delayIQs, readiness, materials, inspections, and weather — ask about any of them, or ask for suggestions to optimize your week.", suggestions: AI_STARTERS };
   }
 
   // Fallback: a quick grounded read + what's worth attention.
   const suggestions = buildOptimizationSuggestions(data);
-  const open = data.delays.filter((d) => d.status !== "Resolved").length;
+  const open = data.delayIQs.filter((d) => d.status !== "Resolved").length;
   return {
-    text: `Here's a quick read on your ${data.projects.length} projects (${data.crews.length} crews, ${open} open delay${open === 1 ? "" : "s"}), and a few things worth your attention:`,
+    text: `Here's a quick read on your ${data.projects.length} projects (${data.crews.length} crews, ${open} open delayIQ${open === 1 ? "" : "s"}), and a few things worth your attention:`,
     bullets: suggestions.length ? suggestions.slice(0, 4) : ["Nothing urgent flagged right now."],
     suggestions: AI_STARTERS
   };
@@ -19524,16 +19949,16 @@ function Dashboard({
   const todaysCrews = data.crews.filter((crew) => todaysCrewIds.has(crew.id));
   const todaysCrewNames = todaysCrews.map((crew) => crew.name);
   const equipmentInUse = data.equipment.filter((item) => item.status === "In Use");
-  const delayedProjects = data.projects.filter((project) => project.status === "Delayed");
-  const lastWeekDelayedProjectIds = new Set(
-    data.delays
+  const delayIQedProjects = data.projects.filter((project) => project.status === "DelayIQed");
+  const lastWeekDelayIQedProjectIds = new Set(
+    data.delayIQs
       .filter(
-        (delay) =>
-          delay.status !== "Resolved" &&
-          delay.reportedAt >= shiftDate(weekDays[0].date, -7) &&
-          delay.reportedAt < weekDays[0].date
+        (delayIQ) =>
+          delayIQ.status !== "Resolved" &&
+          delayIQ.reportedAt >= shiftDate(weekDays[0].date, -7) &&
+          delayIQ.reportedAt < weekDays[0].date
       )
-      .map((delay) => delay.projectId)
+      .map((delayIQ) => delayIQ.projectId)
   );
   const materialCounts = materialReadiness(data);
   const weatherJobImpacts = weatherImpactsForActiveJobs(data.weatherAlerts, todaysJobs, dashboardToday);
@@ -19585,17 +20010,17 @@ function Dashboard({
         };
       })
     },
-    delays: {
-      title: "Delayed Projects",
-      summary: `${delayedProjects.length} ${pluralizeDashboardLabel(delayedProjects.length, "project")} delayed. ${compareDashboardCounts(delayedProjects.length, lastWeekDelayedProjectIds.size, "last week")}.`,
-      items: delayedProjects.map((project) => {
-        const activeDelay = data.delays.find((delay) => delay.projectId === project.id && delay.status !== "Resolved");
-        const delayDetail = activeDelay ? `${activeDelay.title} · ${activeDelay.impactDays} day impact` : project.scheduleHealth;
+    delayIQs: {
+      title: "DelayIQed Projects",
+      summary: `${delayIQedProjects.length} ${pluralizeDashboardLabel(delayIQedProjects.length, "project")} delayIQed. ${compareDashboardCounts(delayIQedProjects.length, lastWeekDelayIQedProjectIds.size, "last week")}.`,
+      items: delayIQedProjects.map((project) => {
+        const activeDelayIQ = data.delayIQs.find((delayIQ) => delayIQ.projectId === project.id && delayIQ.status !== "Resolved");
+        const delayIQDetail = activeDelayIQ ? `${activeDelayIQ.title} · ${activeDelayIQ.impactDays} day impact` : project.scheduleHealth;
 
         return {
           id: project.id,
           title: project.name,
-          detail: `${project.location} · ${delayDetail}`,
+          detail: `${project.location} · ${delayIQDetail}`,
           badge: project.status
         };
       })
@@ -19620,9 +20045,9 @@ function Dashboard({
   const avgUtilization = data.crews.length
     ? Math.round(data.crews.reduce((sum, crew) => sum + crew.utilization, 0) / data.crews.length)
     : 0;
-  const openDelays = data.delays.filter((delay) => delay.status !== "Resolved");
-  const delayImpactDays = openDelays.reduce((sum, delay) => sum + delay.impactDays, 0);
-  const costPerf = Math.max(80, 100 - delayImpactDays);
+  const openDelayIQs = data.delayIQs.filter((delayIQ) => delayIQ.status !== "Resolved");
+  const delayIQImpactDays = openDelayIQs.reduce((sum, delayIQ) => sum + delayIQ.impactDays, 0);
+  const costPerf = Math.max(80, 100 - delayIQImpactDays);
   const shortMaterials = data.materials.filter(
     (material) => material.status === "Missing" || material.status === "Waiting on Delivery"
   );
@@ -19632,7 +20057,7 @@ function Dashboard({
   const ccStats: CcStatItem[] = [
     { id: "st-sched", icon: Gauge, tone: "blue" as CcTone, label: "Schedule Performance", value: `${schedulePerf}%`, small: "", trend: "up" as const, delta: "+3%", note: "vs last 7 days", spark: [58, 62, 60, 66, 63, 70, 68, Math.max(schedulePerf, 40)] },
     { id: "st-ontrack", icon: CheckCircle2, tone: "green" as CcTone, label: "Projects On Track", value: `${onTrackCount}`, small: `of ${projectsTotal}`, trend: "up" as const, delta: "+2", note: "vs last 7 days", spark: [8, 9, 9, 10, 11, 10, 11, onTrackCount + 1] },
-    { id: "st-workflows", icon: Sparkles, tone: "violet" as CcTone, label: "Active Workflows", value: "3", small: "", trend: "flag" as const, delta: `${openDelays.length}`, note: "require attention", spark: [3, 4, 5, 4, 6, 5, 6, 5] },
+    { id: "st-workflows", icon: Sparkles, tone: "violet" as CcTone, label: "Active Workflows", value: "3", small: "", trend: "flag" as const, delta: `${openDelayIQs.length}`, note: "require attention", spark: [3, 4, 5, 4, 6, 5, 6, 5] },
     { id: "st-labor", icon: HardHat, tone: "amber" as CcTone, label: "Labor Utilization", value: `${avgUtilization}%`, small: "", trend: "up" as const, delta: "+5%", note: "vs last 7 days", spark: [64, 66, 70, 68, 72, 74, 76, Math.max(avgUtilization, 50)] },
     { id: "st-cost", icon: DollarSign, tone: "green" as CcTone, label: "Cost Performance", value: `${costPerf}%`, small: "", trend: "down" as const, delta: "-2%", note: "vs last 7 days", spark: [98, 97, 99, 96, 97, 95, 96, Math.max(costPerf, 80)] }
   ];
@@ -19640,13 +20065,13 @@ function Dashboard({
   const ccWorkflows = [
     { id: "wf-lookahead", icon: Route, tone: "green" as CcTone, title: `Lookahead Risk Scan${firstProject ? ` — ${firstProject.name}` : ""}`, sub: "Scanning activities 2–6 weeks ahead", progress: 76, ago: "2 mins ago", page: "schedule" as Page },
     { id: "wf-crew", icon: Users, tone: "amber" as CcTone, title: `Crew Rebalance${secondProject ? ` — ${secondProject.name}` : ""}`, sub: "Reallocating crews based on productivity", progress: 58, ago: "5 mins ago", page: "crews" as Page },
-    { id: "wf-material", icon: Boxes, tone: "blue" as CcTone, title: "Material Forecast — MEP Package", sub: "Analyzing delivery timelines and constraints", progress: 42, ago: "8 mins ago", page: "materials" as Page }
+    { id: "wf-material", icon: Boxes, tone: "blue" as CcTone, title: "Material ForecastIQ — MEP Package", sub: "Analyzing delivery timelines and constraints", progress: 42, ago: "8 mins ago", page: "materials" as Page }
   ];
 
   const ccApps: Array<{ id: string; icon: typeof Gauge; tone: CcTone; name: string; desc: string; page: Page }> = [
     { id: "app-schedule", icon: Gauge, tone: "blue", name: "Schedule Intelligence", desc: "AI-powered lookahead and risk detection.", page: "schedule" },
     { id: "app-crew", icon: Users, tone: "green", name: "Crew Planner", desc: "Optimize crew allocation and demand.", page: "crews" },
-    { id: "app-material", icon: Boxes, tone: "amber", name: "Material Navigator", desc: "Track, forecast, and align material needs.", page: "materials" },
+    { id: "app-material", icon: Boxes, tone: "amber", name: "Material Navigator", desc: "Track, forecastIQ, and align material needs.", page: "materials" },
     { id: "app-field", icon: ImagePlus, tone: "violet", name: "Field Insights", desc: "Daily logs, photos, and field summaries.", page: "field" },
     { id: "app-cost", icon: DollarSign, tone: "orange", name: "Cost Analyzer", desc: "Monitor budgets and cost trends.", page: "reports" }
   ];
@@ -19680,13 +20105,13 @@ function Dashboard({
       feed: "equipment"
     },
     {
-      id: "kpi-delays",
+      id: "kpi-delayIQs",
       icon: AlertTriangle,
       tone: "red",
-      label: "Delayed Projects",
-      value: delayedProjects.length,
-      delta: `${summarizeDashboardFeed(delayedProjects.map((project) => project.name), "No delayed projects")} · ${compareDashboardCounts(delayedProjects.length, lastWeekDelayedProjectIds.size, "last week")}`,
-      feed: "delays"
+      label: "DelayIQed Projects",
+      value: delayIQedProjects.length,
+      delta: `${summarizeDashboardFeed(delayIQedProjects.map((project) => project.name), "No delayIQed projects")} · ${compareDashboardCounts(delayIQedProjects.length, lastWeekDelayIQedProjectIds.size, "last week")}`,
+      feed: "delayIQs"
     }
   ];
 
@@ -19697,20 +20122,20 @@ function Dashboard({
   ].filter((item) => !resolvedApprovals.has(item.id));
 
   const ccAlerts: Array<{ id: string; icon: typeof AlertTriangle; tone: CcTone; title: string; meta: string; ago: string }> = [];
-  openDelays.slice(0, 1).forEach((delay) =>
-    ccAlerts.push({ id: `al-${delay.id}`, icon: AlertTriangle, tone: "red", title: delay.title, meta: `${projectName(data, delay.projectId)} · ${delay.impactDays} day impact`, ago: "10m ago" })
+  openDelayIQs.slice(0, 1).forEach((delayIQ) =>
+    ccAlerts.push({ id: `al-${delayIQ.id}`, icon: AlertTriangle, tone: "red", title: delayIQ.title, meta: `${projectName(data, delayIQ.projectId)} · ${delayIQ.impactDays} day impact`, ago: "10m ago" })
   );
   data.weatherAlerts.slice(0, 1).forEach((alert) =>
-    ccAlerts.push({ id: `al-${alert.id}`, icon: CloudSun, tone: "amber", title: "Weather delay expected", meta: `${alert.projectId ? projectName(data, alert.projectId) : "All sites"} · ${alert.title}`, ago: "45m ago" })
+    ccAlerts.push({ id: `al-${alert.id}`, icon: CloudSun, tone: "amber", title: "Weather delayIQ expected", meta: `${alert.projectId ? projectName(data, alert.projectId) : "All sites"} · ${alert.title}`, ago: "45m ago" })
   );
   shortMaterials.slice(0, 1).forEach((material) =>
-    ccAlerts.push({ id: `al-${material.id}`, icon: Truck, tone: "blue", title: "Material delivery delayed", meta: `${material.name} · ${projectName(data, material.projectId)}`, ago: "2h ago" })
+    ccAlerts.push({ id: `al-${material.id}`, icon: Truck, tone: "blue", title: "Material delivery delayIQed", meta: `${material.name} · ${projectName(data, material.projectId)}`, ago: "2h ago" })
   );
 
   const ccRecommendations = [
     { id: "rec-drywall", icon: TrendingUp, title: "Re-sequence drywall activities", meta: "Improve finish package flow by 4 days", page: "schedule" as Page },
     { id: "rec-crew", icon: Users, title: "Add 1 carpentry crew next week", meta: "Demand spike detected on Level 14", page: "crews" as Page },
-    { id: "rec-rebar", icon: Boxes, title: "Expedite rebar for Core Walls", meta: "At risk of delaying critical path", page: "materials" as Page }
+    { id: "rec-rebar", icon: Boxes, title: "Expedite rebar for Core Walls", meta: "At risk of slipping critical path", page: "materials" as Page }
   ];
 
   const ccQuickActions: Array<{ id: string; icon: typeof RefreshCcw; label: string; page?: Page }> = [
@@ -19932,7 +20357,7 @@ function Dashboard({
       <section className="cc-panel" data-reveal>
         <div className="cc-panel-head">
           <h2>Project Alerts</h2>
-          <button type="button" className="cc-link" onClick={() => setPage("delays")}>
+          <button type="button" className="cc-link" onClick={() => setPage("delayIQs")}>
             View all
           </button>
         </div>
@@ -20112,7 +20537,7 @@ function Dashboard({
             )}
           </Panel>
           {activeWeatherImpact && (
-            <Panel title="Weather Impact Alerts" action="View forecast" reveal>
+            <Panel title="Weather Impact Alerts" action="View forecastIQ" reveal>
               <div className="weather-alert">
                 <CloudSun size={74} />
                 <div>
@@ -20584,9 +21009,19 @@ function formatJobDateRange(job: Job) {
     : `${formatScheduleDate(job.startDate)} - ${formatScheduleDate(job.endDate)}`;
 }
 
-const scheduleStatusFilterOptions: Status[] = ["Confirmed", "Ready", "Ready to Start", "Planned", "On Site", "Delayed", "At Risk"];
+const scheduleStatusFilterOptions: Status[] = ["Confirmed", "Ready", "Ready to Start", "Planned", "On Site", "DelayIQed", "At Risk"];
 
-type ScheduleViewMode = "Month" | "Week" | "List";
+type ScheduleViewMode = "Month" | "Week" | "List" | "Gantt" | "Kanban" | "Matrix";
+
+// Kanban lanes group the raw job statuses into the five stages crews actually work in.
+// `status` is what a card is set to when dropped into the lane.
+const KANBAN_LANES: Array<{ key: string; label: string; status: Status; match: Status[]; tone: string }> = [
+  { key: "planned", label: "Planned", status: "Planned", match: ["Not Started", "Planned"], tone: "slate" },
+  { key: "ready", label: "Ready", status: "Ready", match: ["Ready", "Ready to Start", "Confirmed"], tone: "blue" },
+  { key: "progress", label: "In Progress", status: "In Progress", match: ["In Progress", "On Site"], tone: "violet" },
+  { key: "blocked", label: "Blocked", status: "DelayIQed", match: ["DelayIQed", "At Risk"], tone: "red" },
+  { key: "done", label: "Complete", status: "Complete", match: ["Complete"], tone: "green" }
+];
 
 type ScheduleAlert = {
   tone: "danger" | "warning" | "info";
@@ -20750,7 +21185,8 @@ function ScheduleMonthView({
   projects,
   today,
   onOpenProject,
-  onOpenDay
+  onOpenDay,
+  onAddJob
 }: {
   cells: ScheduleMonthCell[];
   jobsByDate: Map<string, Job[]>;
@@ -20759,6 +21195,7 @@ function ScheduleMonthView({
   today: string;
   onOpenProject: (projectId: string) => void;
   onOpenDay: (date: string) => void;
+  onAddJob: (date: string) => void;
 }) {
   const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const projectName = (id: string) => projects.find((project) => project.id === id)?.name ?? "";
@@ -20780,6 +21217,7 @@ function ScheduleMonthView({
             today={today}
             onOpenProject={onOpenProject}
             onOpenDay={onOpenDay}
+            onAddJob={onAddJob}
           />
         ))}
       </div>
@@ -20796,7 +21234,8 @@ function MonthDayCell({
   projectName,
   today,
   onOpenProject,
-  onOpenDay
+  onOpenDay,
+  onAddJob
 }: {
   cell: ScheduleMonthCell;
   jobs: Job[];
@@ -20805,6 +21244,7 @@ function MonthDayCell({
   today: string;
   onOpenProject: (projectId: string) => void;
   onOpenDay: (date: string) => void;
+  onAddJob: (date: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `month-${cell.date}`, data: { date: cell.date } });
   const total = jobs.length + milestones.length;
@@ -20818,8 +21258,12 @@ function MonthDayCell({
       ref={setNodeRef}
       className={`sched-cal-cell${cell.inMonth ? "" : " out-month"}${cell.weekend ? " is-weekend" : ""}${
         cell.date === today ? " is-today" : ""
-      }${holiday ? " is-holiday" : ""}${isOver ? " drop-over" : ""}`}
+      }${holiday ? " is-holiday" : ""}${isOver ? " drop-over" : ""}${cell.inMonth ? " is-addable" : ""}`}
       style={{ "--d": cell.weekIndex } as CSSProperties}
+      // Click the empty part of an in-month day to add a job there — the Week
+      // board's click-to-add, brought to the calendar. `target === currentTarget`
+      // keeps chip/button clicks (and drags) from triggering it.
+      onClick={cell.inMonth ? (event) => { if (event.target === event.currentTarget) onAddJob(cell.date); } : undefined}
     >
       <span className="sched-cal-daynum">{cell.dayNum}</span>
       {holiday && <span className="sched-holiday-tag">{holiday}</span>}
@@ -20848,6 +21292,17 @@ function MonthDayCell({
       {extra > 0 && (
         <button type="button" className="sched-act-more" onClick={() => onOpenDay(cell.date)}>
           +{extra} more
+        </button>
+      )}
+      {cell.inMonth && (
+        <button
+          type="button"
+          className="sched-cal-add"
+          onClick={() => onAddJob(cell.date)}
+          aria-label={`Add a job on ${formatScheduleDate(cell.date)}`}
+          title="Add a job on this day"
+        >
+          <Plus size={14} />
         </button>
       )}
     </div>
@@ -20907,6 +21362,470 @@ function ScheduleTradeLegend() {
           {trade.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+// ============================ Gantt =========================================
+// Every job that touches the visible month, as a trade-coloured bar across a
+// day axis. Bars clamp to the month edges so multi-month work still reads.
+/**
+ * Run the CPM engine over the whole job network.
+ *
+ * Always schedules against *every* job — never a filtered subset — because a
+ * hidden predecessor would silently break the chain and produce a wrong
+ * critical path. Filtering is a display concern only.
+ */
+function buildScheduleCpm(jobs: Job[], dependencies: JobDependency[]) {
+  if (jobs.length === 0) return null;
+  const epoch = jobs.reduce((min, job) => (job.startDate < min ? job.startDate : min), jobs[0].startDate);
+  // Crews work Mon–Sat and never on a holiday, so the network is scheduled on a
+  // working-day axis. Durations, lags and float are therefore working days —
+  // on a raw calendar axis a Saturday finish + "1 day" would land on a Sunday.
+  const calendar = createWorkCalendar(epoch, { holidays: Object.keys(scheduleHolidays) });
+  const tasks: CpmTask[] = jobs.map((job) => ({
+    id: job.id,
+    duration: calendar.duration(job.startDate, job.endDate),
+    constraintType: job.constraintType,
+    constraintDate: job.constraintDate ? calendar.toIndex(job.constraintDate) : undefined
+  }));
+  const links: CpmLink[] = dependencies.map((dependency) => ({
+    predecessorId: dependency.predecessorId,
+    successorId: dependency.successorId,
+    type: dependency.type,
+    lag: dependency.lagDays
+  }));
+  const result = calculateCpm(tasks, links);
+
+  // Project finish as an inclusive last working day, plus slip against baseline.
+  const finishDate = result.cycle ? null : calendar.fromIndex(Math.max(result.projectFinish - 1, 0));
+  const baselineEnds = jobs.map((job) => job.baselineEnd).filter(isText);
+  const baselineFinish = baselineEnds.length ? baselineEnds.reduce((max, date) => (date > max ? date : max)) : null;
+  // measured in working days too, so a weekend never reads as two days of slip
+  const slipDays =
+    finishDate && baselineFinish ? calendar.toIndex(finishDate) - calendar.toIndex(baselineFinish) : null;
+
+  return { result, epoch, calendar, finishDate, baselineFinish, slipDays };
+}
+
+function ScheduleGanttView({
+  jobs,
+  allJobs,
+  dependencies,
+  projects,
+  monthCells,
+  today,
+  busy,
+  onOpenProject,
+  onSetBaseline
+}: {
+  jobs: Job[];
+  allJobs: Job[];
+  dependencies: JobDependency[];
+  projects: Project[];
+  monthCells: ScheduleMonthCell[];
+  today: string;
+  busy: boolean;
+  onOpenProject: (projectId: string) => void;
+  onSetBaseline: () => void;
+}) {
+  const days = monthCells.filter((cell) => cell.inMonth);
+  const cpm = buildScheduleCpm(allJobs, dependencies);
+  if (days.length === 0) return null;
+  const first = days[0].date;
+  const last = days[days.length - 1].date;
+  const rows = jobs
+    .filter((job) => job.endDate >= first && job.startDate <= last)
+    .sort((left, right) => left.startDate.localeCompare(right.startDate) || left.name.localeCompare(right.name));
+
+  const indexOf = (date: string) => days.findIndex((day) => day.date === date);
+  const clampIndex = (date: string, fallbackEnd = false) => {
+    if (date < first) return 0;
+    if (date > last) return days.length - 1;
+    const found = indexOf(date);
+    return found < 0 ? (fallbackEnd ? days.length - 1 : 0) : found;
+  };
+  const projectName = (id: string) => projects.find((project) => project.id === id)?.name ?? "";
+
+  return (
+    <>
+      {cpm && <ScheduleCpmSummary cpm={cpm} busy={busy} onSetBaseline={onSetBaseline} />}
+      {rows.length === 0 ? (
+        <div className="schedule-empty-state">
+          <strong>Nothing scheduled this month.</strong>
+          <span>Step to another month, or add a new activity to see it on the timeline.</span>
+        </div>
+      ) : (
+        <div className="sched-gantt" style={{ "--gantt-days": days.length } as CSSProperties}>
+          <div className="sched-gantt-head">
+            <span className="sched-gantt-corner">
+              {rows.length} {rows.length === 1 ? "activity" : "activities"}
+            </span>
+            <div className="sched-gantt-axis">
+              {days.map((day) => (
+                <span
+                  key={day.date}
+                  className={`sched-gantt-day${day.weekend ? " is-weekend" : ""}${day.date === today ? " is-today" : ""}`}
+                >
+                  {day.dayNum}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="sched-gantt-body">
+            {rows.map((job) => {
+              const tone = tradeForText(`${job.phase} ${job.name}`);
+              const start = clampIndex(job.startDate);
+              const end = Math.max(clampIndex(job.endDate, true), start);
+              const task = cpm?.result.tasks[job.id];
+              const critical = Boolean(task?.critical);
+              const float = task?.totalFloat ?? null;
+              const variance = compareToBaseline(job, job);
+
+              // Float tail: how far this bar could slide before it moves the finish.
+              const floatEnd = float && float > 0 ? Math.min(end + float, days.length - 1) : null;
+              // Baseline ghost: only worth drawing once the plan has moved off it.
+              const baselineShifted =
+                job.baselineStart && job.baselineEnd && (job.baselineStart !== job.startDate || job.baselineEnd !== job.endDate);
+              const baseStart = baselineShifted ? clampIndex(job.baselineStart!) : null;
+              const baseEnd = baselineShifted ? Math.max(clampIndex(job.baselineEnd!, true), baseStart!) : null;
+
+              return (
+                <div className={`sched-gantt-row${critical ? " is-critical" : ""}`} key={job.id}>
+                  <button
+                    type="button"
+                    className="sched-gantt-label"
+                    onClick={() => onOpenProject(job.projectId)}
+                    title={`${job.name} · ${job.phase}`}
+                  >
+                    <strong>{job.name}</strong>
+                    <em>
+                      {critical ? (
+                        <b className="sched-gantt-crit">Critical</b>
+                      ) : float != null ? (
+                        <b className="sched-gantt-float">{float}d float</b>
+                      ) : null}
+                      {projectName(job.projectId) || job.location}
+                    </em>
+                  </button>
+                  <div className="sched-gantt-track">
+                    {days.map((day) => (
+                      <span
+                        key={day.date}
+                        className={`sched-gantt-cell${day.weekend ? " is-weekend" : ""}${day.date === today ? " is-today" : ""}`}
+                      />
+                    ))}
+                    {baseStart != null && baseEnd != null && (
+                      <span
+                        className="sched-gantt-baseline"
+                        style={{ "--s": baseStart, "--e": baseEnd } as CSSProperties}
+                        title={`Baseline: ${formatScheduleDate(job.baselineStart!)} → ${formatScheduleDate(job.baselineEnd!)}`}
+                      />
+                    )}
+                    {floatEnd != null && floatEnd > end && (
+                      <span
+                        className="sched-gantt-floatbar"
+                        style={{ "--s": end + 1, "--e": floatEnd } as CSSProperties}
+                        title={`${float} day${float === 1 ? "" : "s"} of total float`}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      className={`sched-gantt-bar${critical ? " is-critical" : ""}`}
+                      style={{ "--s": start, "--e": end, "--sc-tone": tradeColorVar(tone) } as CSSProperties}
+                      onClick={() => onOpenProject(job.projectId)}
+                      title={[
+                        `${job.name} · ${formatScheduleDate(job.startDate)} → ${formatScheduleDate(job.endDate)}`,
+                        critical ? "On the critical path (zero float)" : float != null ? `${float} days total float` : "",
+                        variance && variance.finishVariance !== 0
+                          ? `${Math.abs(variance.finishVariance)}d ${variance.slipped ? "behind" : "ahead of"} baseline`
+                          : ""
+                      ]
+                        .filter(Boolean)
+                        .join("\n")}
+                    >
+                      <span>{job.phase}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** CPM readout: what the network says about the finish, the critical path and the baseline. */
+function ScheduleCpmSummary({
+  cpm,
+  busy,
+  onSetBaseline
+}: {
+  cpm: NonNullable<ReturnType<typeof buildScheduleCpm>>;
+  busy: boolean;
+  onSetBaseline: () => void;
+}) {
+  const { result, finishDate, slipDays } = cpm;
+  if (result.cycle) {
+    return (
+      <div className="sched-cpm sched-cpm-error" role="alert">
+        <span className="sched-cpm-ico">
+          <AlertTriangle size={16} />
+        </span>
+        <div>
+          <strong>Circular dependency — the network can't be scheduled.</strong>
+          <em>{result.cycle.join(" → ")}</em>
+        </div>
+      </div>
+    );
+  }
+  const totalFloat = Object.values(result.tasks).map((task) => task.totalFloat);
+  const behind = totalFloat.filter((value) => value < 0).length;
+
+  return (
+    <div className="sched-cpm">
+      <span className="sched-cpm-ico">
+        <GanttChartSquare size={16} />
+      </span>
+      <div className="sched-cpm-stat">
+        <em>Project finish</em>
+        <strong>{finishDate ? formatScheduleDate(finishDate) : "—"}</strong>
+      </div>
+      <div className="sched-cpm-stat">
+        <em>Critical path</em>
+        <strong>
+          {result.criticalPath.length} <small>of {Object.keys(result.tasks).length}</small>
+        </strong>
+      </div>
+      <div className="sched-cpm-stat">
+        <em>vs baseline</em>
+        <strong className={slipDays == null ? "" : slipDays > 0 ? "is-late" : slipDays < 0 ? "is-early" : "is-on"}>
+          {slipDays == null ? "—" : slipDays === 0 ? "On plan" : `${slipDays > 0 ? "+" : ""}${slipDays}d`}
+        </strong>
+      </div>
+      {behind > 0 && (
+        <div className="sched-cpm-stat">
+          <em>Negative float</em>
+          <strong className="is-late">{behind}</strong>
+        </div>
+      )}
+      <button type="button" className="sched-cpm-baseline" disabled={busy} onClick={onSetBaseline}>
+        {busy ? "Saving…" : "Re-baseline"}
+      </button>
+    </div>
+  );
+}
+
+// ============================ Kanban ========================================
+// Jobs grouped into the five working stages. Drag a card to another lane to
+// change that job's status (same DndContext as the Week board).
+function ScheduleKanbanView({
+  jobs,
+  projects,
+  focusedJobId,
+  onOpenProject
+}: {
+  jobs: Job[];
+  projects: Project[];
+  focusedJobId: string | null;
+  onOpenProject: (projectId: string) => void;
+}) {
+  const projectName = (id: string) => projects.find((project) => project.id === id)?.name ?? "";
+  if (jobs.length === 0) {
+    return (
+      <div className="schedule-empty-state">
+        <strong>No jobs match these filters.</strong>
+        <span>Reset the filters, or add a new activity to start the board.</span>
+      </div>
+    );
+  }
+  return (
+    <div className="sched-kanban">
+      {KANBAN_LANES.map((lane) => (
+        <ScheduleKanbanLane
+          key={lane.key}
+          lane={lane}
+          jobs={jobs.filter((job) => lane.match.includes(job.status))}
+          projectName={projectName}
+          focusedJobId={focusedJobId}
+          onOpenProject={onOpenProject}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ScheduleKanbanLane({
+  lane,
+  jobs,
+  projectName,
+  focusedJobId,
+  onOpenProject
+}: {
+  lane: (typeof KANBAN_LANES)[number];
+  jobs: Job[];
+  projectName: (id: string) => string;
+  focusedJobId: string | null;
+  onOpenProject: (projectId: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `kanban-${lane.key}`, data: { status: lane.status } });
+  return (
+    <section ref={setNodeRef} className={`sched-kan-lane tone-${lane.tone}${isOver ? " drop-over" : ""}`}>
+      <header className="sched-kan-head">
+        <span className="sched-kan-dot" />
+        <h3>{lane.label}</h3>
+        <b>{jobs.length}</b>
+      </header>
+      <div className="sched-kan-cards">
+        {jobs.map((job) => (
+          <ScheduleKanbanCard
+            key={job.id}
+            job={job}
+            subtitle={projectName(job.projectId) || job.location}
+            isFocused={focusedJobId === job.id}
+            onOpenProject={onOpenProject}
+          />
+        ))}
+        {jobs.length === 0 && <p className="sched-kan-empty">Drop a job here</p>}
+      </div>
+    </section>
+  );
+}
+
+function ScheduleKanbanCard({
+  job,
+  subtitle,
+  isFocused,
+  onOpenProject
+}: {
+  job: Job;
+  subtitle: string;
+  isFocused: boolean;
+  onOpenProject: (projectId: string) => void;
+}) {
+  const tone = tradeForText(`${job.phase} ${job.name}`);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `kanban-job-${job.id}`,
+    data: { jobId: job.id, status: job.status }
+  });
+  const style: CSSProperties = {
+    "--sc-tone": tradeColorVar(tone),
+    transform: CSS.Translate.toString(transform),
+    ...(isDragging ? { opacity: 0.55, zIndex: 30 } : {})
+  } as CSSProperties;
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      className={`sched-kan-card${isDragging ? " dragging" : ""}${isFocused ? " focused" : ""}`}
+      style={style}
+      onClick={() => onOpenProject(job.projectId)}
+      title={`${job.name} · ${job.phase}`}
+      {...listeners}
+      {...attributes}
+    >
+      <span className="sched-kan-card-top">
+        <span className="sched-kan-card-dot" />
+        <strong>{job.name}</strong>
+      </span>
+      <em>{subtitle}</em>
+      <footer>
+        <span className="sched-kan-phase">{job.phase}</span>
+        <ScheduleBadge status={job.status} />
+      </footer>
+      <div className="sched-kan-meta">
+        <span>
+          <CalendarDays size={12} /> {formatScheduleDate(job.startDate)}
+        </span>
+        <span>
+          <Users size={12} /> {job.requiredLabor}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ============================ Matrix ========================================
+// Crew × day load grid: how booked each crew is this week, where the conflicts
+// are, and each crew's overall utilisation.
+function ScheduleMatrixView({
+  crews,
+  assignments,
+  jobs,
+  weekDays: displayedWeekDays,
+  onOpenProject
+}: {
+  crews: Crew[];
+  assignments: ScheduleAssignment[];
+  jobs: Job[];
+  weekDays: typeof weekDays;
+  onOpenProject: (projectId: string) => void;
+}) {
+  if (crews.length === 0) {
+    return (
+      <div className="schedule-empty-state">
+        <strong>No crews match these filters.</strong>
+        <span>Add a crew, or reset the filters to see the allocation matrix.</span>
+      </div>
+    );
+  }
+  return (
+    <div className="sched-matrix" style={{ "--matrix-cols": displayedWeekDays.length } as CSSProperties}>
+      <div className="sched-matrix-head">
+        <span className="sched-matrix-corner">Crew</span>
+        {displayedWeekDays.map((day) => (
+          <span key={day.date} className="sched-matrix-col">
+            <b>{day.day}</b>
+            <em>{day.label}</em>
+          </span>
+        ))}
+        <span className="sched-matrix-col is-total">Load</span>
+      </div>
+      {crews.map((crew) => {
+        const cells = displayedWeekDays.map((day) => assignmentsForCell(assignments, crew.id, day.date));
+        const total = cells.reduce((sum, cell) => sum + cell.length, 0);
+        const availability = crewAvailability(crew);
+        return (
+          <div className="sched-matrix-row" key={crew.id}>
+            <div className="sched-matrix-crew">
+              <strong>{crew.name}</strong>
+              <em>{crew.specialty}</em>
+            </div>
+            {cells.map((cell, index) => {
+              const level = Math.min(cell.length, 3);
+              const conflicted = cell.some((assignment) => assignment.conflicts.length > 0);
+              const names = cell
+                .map((assignment) => jobs.find((job) => job.id === assignment.jobId)?.name)
+                .filter(isText);
+              const day = displayedWeekDays[index];
+              return (
+                <button
+                  type="button"
+                  key={day.date}
+                  className={`sched-matrix-cell load-${level}${conflicted ? " is-conflict" : ""}`}
+                  title={
+                    cell.length
+                      ? `${crew.name} · ${day.label}: ${names.join(", ")}${conflicted ? " (conflict)" : ""}`
+                      : `${crew.name} · ${day.label}: open`
+                  }
+                  onClick={() => {
+                    const job = jobs.find((item) => item.id === cell[0]?.jobId);
+                    if (job) onOpenProject(job.projectId);
+                  }}
+                >
+                  {cell.length > 0 && <b>{cell.length}</b>}
+                </button>
+              );
+            })}
+            <div className="sched-matrix-total">
+              <b>{total}</b>
+              <span className={`sched-matrix-util ${availability.cls}`}>{crew.utilization}%</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -20985,6 +21904,136 @@ function UpcomingMilestonesPanel({
   );
 }
 
+/* ── Field variance review ──────────────────────────────────────────────────
+   The PM half of the field-progress loop. Everything in this drawer is a
+   *proposal*: the field said the plan is wrong, the server priced what it would
+   cost to agree, and nothing has moved. Accept applies it to the master
+   schedule; Reject keeps the plan and preserves the disagreement as history.
+
+   The evidence (photo, note, who said it) sits next to the consequence
+   (forecastIQ, ripple, project slip) on purpose — a PM can't judge one without
+   the other, and making them navigate elsewhere for the photo is how a variance
+   gets accepted without being read. */
+
+function formatVarianceDate(iso: string) {
+  return new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function VarianceReviewCard({
+  variance,
+  job,
+  project,
+  update,
+  reporter,
+  busy,
+  onAccept,
+  onReject
+}: {
+  variance: ScheduleVariance;
+  job?: Job;
+  project?: Project;
+  update?: FieldUpdate;
+  reporter?: User;
+  busy: boolean;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
+  const { proposal } = variance;
+  const drift = Math.abs(variance.varianceDays);
+  const late = variance.varianceDays > 0;
+
+  return (
+    <article className={`sv-card sv-sev-${variance.severity.toLowerCase()}`}>
+      <header className="sv-card-head">
+        <div>
+          <h3>{job?.phase ?? job?.name ?? "Unknown job"}</h3>
+          <p>{project?.name ?? "—"}</p>
+        </div>
+        <span className={`sv-sev-pill sv-sev-${variance.severity.toLowerCase()}`}>{variance.severity}</span>
+      </header>
+
+      {/* What the field actually said. */}
+      <div className="sv-evidence">
+        {update?.photos[0] && <img src={update.photos[0]} alt="" className="sv-photo" />}
+        <blockquote>
+          <p>{update?.message ?? "No note attached."}</p>
+          <cite>
+            {reporter?.name ?? "Field"} · {formatVarianceDate(variance.detectedAt)}
+          </cite>
+        </blockquote>
+      </div>
+
+      {/* The numbers behind the flag. */}
+      <div className="sv-numbers">
+        <div className="sv-metric">
+          <span>Reported</span>
+          <strong>{variance.reportedPercent}%</strong>
+        </div>
+        <div className="sv-metric">
+          <span>Planned</span>
+          <strong>{variance.plannedPercent}%</strong>
+        </div>
+        <div className="sv-metric">
+          <span>ForecastIQ finish</span>
+          <strong className={late ? "sv-late" : "sv-early"}>{formatVarianceDate(proposal.proposedEnd)}</strong>
+          <em>plan {formatVarianceDate(proposal.currentEnd)}</em>
+        </div>
+      </div>
+
+      {/* The consequence — the reason this is a decision and not a notification. */}
+      <ul className="sv-impact">
+        {proposal.criticalPath && (
+          <li className="sv-impact-critical">
+            <Zap size={14} /> On the critical path
+          </li>
+        )}
+        {!proposal.criticalPath && proposal.totalFloatDays > 0 && (
+          <li>
+            <Clock size={14} /> {proposal.totalFloatDays} day{proposal.totalFloatDays === 1 ? "" : "s"} of float
+          </li>
+        )}
+        <li>
+          <TrendingUp size={14} /> ForecastIQs {drift} day{drift === 1 ? "" : "s"} {late ? "late" : "early"}
+        </li>
+        <li className={proposal.projectSlipDays > 0 ? "sv-impact-critical" : ""}>
+          <ArrowRight size={14} />
+          {proposal.projectSlipDays > 0
+            ? `Project finish moves ${proposal.projectSlipDays} day${proposal.projectSlipDays === 1 ? "" : "s"}`
+            : "Project finish holds — float absorbs it"}
+        </li>
+      </ul>
+
+      {proposal.ripple.length > 0 && (
+        <details className="sv-ripple">
+          <summary>
+            Pushes {proposal.ripple.length} downstream job{proposal.ripple.length === 1 ? "" : "s"}
+          </summary>
+          <ul>
+            {proposal.ripple.map((item) => (
+              <li key={item.jobId}>
+                <span className="sv-ripple-name">{item.jobName}</span>
+                <span className="sv-ripple-move">
+                  {formatVarianceDate(item.currentStart)} → {formatVarianceDate(item.proposedStart)}
+                  <em>+{item.shiftDays}d</em>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      <footer className="sv-actions">
+        <button type="button" className="sv-reject" disabled={busy} onClick={onReject}>
+          Keep the plan
+        </button>
+        <button type="button" className="sv-accept" disabled={busy} onClick={onAccept}>
+          <Check size={15} /> Accept → schedule
+        </button>
+      </footer>
+    </article>
+  );
+}
+
 function SchedulePage({
   data,
   reload
@@ -21005,6 +22054,30 @@ function SchedulePage({
   const [focusedJobId, setFocusedJobId] = useState<string | null>(null);
   const [scheduleDialog, setScheduleDialog] = useState<ScheduleDialog | null>(null);
   const [schedulePickerCell, setSchedulePickerCell] = useState<SchedulePickerCell | null>(null);
+  const [varianceDrawerOpen, setVarianceDrawerOpen] = useState(false);
+  const [resolvingVarianceId, setResolvingVarianceId] = useState<string | null>(null);
+  const pendingVariances = data.variances.filter((variance) => variance.status === "pending");
+  const hasHighSeverityVariance = pendingVariances.some((variance) => variance.severity === "High");
+
+  /**
+   * The only path by which a field report reaches the master schedule. Accept
+   * moves the dates the proposal named; reject leaves the plan untouched and
+   * keeps the report on the record either way.
+   */
+  async function resolveVariance(id: string, decision: "accept" | "reject") {
+    if (resolvingVarianceId) return;
+    setResolvingVarianceId(id);
+    try {
+      if (decision === "accept") await acceptVariance(id, data.activeUser.id);
+      else await rejectVariance(id, data.activeUser.id);
+      await reload();
+    } catch {
+      // Leave the card in place: an unresolved variance is the safe failure —
+      // it means the schedule wasn't changed and the decision is still waiting.
+    } finally {
+      setResolvingVarianceId(null);
+    }
+  }
   const suppressProjectClickRef = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
@@ -21019,6 +22092,12 @@ function SchedulePage({
     const matchesStatus = activeStatusSet.has(job.status);
     return matchesRegion && matchesStatus;
   });
+  // The Kanban *is* the status view, so it deliberately skips the status filter —
+  // otherwise stages the filter omits (Complete / In Progress / Not Started) could
+  // never hold a card, and dragging one there would make it vanish.
+  const kanbanJobs = data.jobs.filter(
+    (job) => selectedRegion === "Austin, TX" || job.location === selectedRegion
+  );
   const visibleJobIds = new Set(visibleJobs.map((job) => job.id));
   const visibleAssignments = data.assignments.filter(
     (assignment) => visibleJobIds.has(assignment.jobId) && activeStatusSet.has(assignment.status)
@@ -21038,7 +22117,7 @@ function SchedulePage({
   const laborCost = scheduledHours > 0 ? `$${Math.round(scheduledHours * 95).toLocaleString()}` : "$0";
   const missingMaterialsJob = visibleJobs.find((job) => job.materialsStatus === "Missing");
   const firstConflict = conflictAssignments[0];
-  const openScheduleDelay = data.delays.find((delay) => delay.status !== "Resolved");
+  const openScheduleDelayIQ = data.delayIQs.find((delayIQ) => delayIQ.status !== "Resolved");
   const firstWeatherAlert = data.weatherAlerts[0];
   const scheduleAlerts: ScheduleAlert[] = [
     ...(firstConflict ? [{
@@ -21050,11 +22129,11 @@ function SchedulePage({
       jobId: firstConflict.jobId,
       date: firstConflict.date
     }] : []),
-    ...(openScheduleDelay ? [{
+    ...(openScheduleDelayIQ ? [{
       tone: "danger" as const,
       icon: AlertTriangle,
-      title: openScheduleDelay.title,
-      detail: `${projectName(data, openScheduleDelay.projectId)} · ${openScheduleDelay.impactDays} day impact`,
+      title: openScheduleDelayIQ.title,
+      detail: `${projectName(data, openScheduleDelayIQ.projectId)} · ${openScheduleDelayIQ.impactDays} day impact`,
       ago: "22m ago",
       jobId: null,
       date: null
@@ -21062,7 +22141,7 @@ function SchedulePage({
     ...(firstWeatherAlert ? [{
       tone: "warning" as const,
       icon: CloudSun,
-      title: "Weather delay expected",
+      title: "Weather delayIQ expected",
       detail: `${firstWeatherAlert.projectId ? projectName(data, firstWeatherAlert.projectId) : "All sites"} · ${firstWeatherAlert.title}`,
       ago: "45m ago",
       jobId: null,
@@ -21103,7 +22182,7 @@ function SchedulePage({
   const atRiskItems =
     conflictAssignments.length +
     visibleJobs.filter(
-      (job) => job.status === "At Risk" || job.status === "Delayed" || job.materialsStatus === "Missing"
+      (job) => job.status === "At Risk" || job.status === "DelayIQed" || job.materialsStatus === "Missing"
     ).length;
 
   function handleDragStart() {
@@ -21114,6 +22193,17 @@ function SchedulePage({
     window.setTimeout(() => {
       suppressProjectClickRef.current = false;
     }, 0);
+  }
+
+  // Snapshot the current plan as the baseline CPM variance is measured against.
+  async function saveScheduleBaseline() {
+    setBusy(true);
+    try {
+      await setScheduleBaseline();
+      await reload();
+    } finally {
+      setBusy(false);
+    }
   }
 
   // Move a job (and its planned span) to a new start date, preserving its duration.
@@ -21142,6 +22232,22 @@ function SchedulePage({
     const sourceDate = event.active.data.current?.date as string | undefined;
     const crewId = event.over?.data.current?.crewId as string | undefined;
     const date = event.over?.data.current?.date as string | undefined;
+    const targetStatus = event.over?.data.current?.status as Status | undefined;
+
+    // Kanban: dropping a card into another lane moves that job's status.
+    if (targetStatus) {
+      const sourceStatus = event.active.data.current?.status as Status | undefined;
+      if (!jobId || targetStatus === sourceStatus) return;
+      setBusy(true);
+      try {
+        await updateJob(jobId, { status: targetStatus });
+        await reload();
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (!date) return;
 
     // Month calendar / List views reschedule by day only (no crew column). Keep the
@@ -21181,12 +22287,12 @@ function SchedulePage({
     }
   }
 
-  async function createAndAssignJobFromPicker(input: CreateJobInput) {
+  async function createAndAssignJobFromPicker(input: CreateJobInput, crewId: string) {
     if (!schedulePickerCell) return;
     setBusy(true);
     try {
       const job = await createJob(input);
-      await assignJob({ jobId: job.id, crewId: schedulePickerCell.crewId, date: schedulePickerCell.date, status: input.status });
+      await assignJob({ jobId: job.id, crewId, date: schedulePickerCell.date, status: input.status });
       setFocusedJobId(job.id);
       setSchedulePickerCell(null);
       await reload();
@@ -21274,6 +22380,21 @@ function SchedulePage({
         ...dayJobs.map((job) => `${job.name} — ${job.phase} · ${job.location}`)
       ]
     });
+  }
+
+  // Click-to-add on a calendar day: open the same job picker the Week board uses,
+  // seeded with this day and a default crew (the crew is choosable in the dialog
+  // since a calendar day isn't tied to one).
+  function openMonthDayAdd(date: string) {
+    const targetCrew = scheduleCrews[0] ?? data.crews[0];
+    if (!targetCrew) {
+      setScheduleDialog({
+        title: "Add a crew first",
+        description: "Create a crew before scheduling jobs on the calendar."
+      });
+      return;
+    }
+    setSchedulePickerCell({ crewId: targetCrew.id, date });
   }
 
   function createNewActivity() {
@@ -21428,7 +22549,31 @@ function SchedulePage({
               <button type="button" className={selectedView === "List" ? "active" : ""} aria-pressed={selectedView === "List"} onClick={() => setSelectedView("List")}>
                 <List size={15} /> List
               </button>
+              <button type="button" className={selectedView === "Gantt" ? "active" : ""} aria-pressed={selectedView === "Gantt"} onClick={() => setSelectedView("Gantt")}>
+                <GanttChartSquare size={15} /> Gantt
+              </button>
+              <button type="button" className={selectedView === "Kanban" ? "active" : ""} aria-pressed={selectedView === "Kanban"} onClick={() => setSelectedView("Kanban")}>
+                <SquareKanban size={15} /> Kanban
+              </button>
+              <button type="button" className={selectedView === "Matrix" ? "active" : ""} aria-pressed={selectedView === "Matrix"} onClick={() => setSelectedView("Matrix")}>
+                <Table2 size={15} /> Matrix
+              </button>
             </div>
+            {/* Field variances live beside the view switcher rather than inside
+                any one view: a report can land while you're on the Kanban, and
+                the whole point is that it isn't easy to miss. */}
+            {pendingVariances.length > 0 && (
+              <button
+                type="button"
+                className={`sv-pill${varianceDrawerOpen ? " active" : ""}${hasHighSeverityVariance ? " urgent" : ""}`}
+                aria-expanded={varianceDrawerOpen}
+                onClick={() => setVarianceDrawerOpen((current) => !current)}
+              >
+                <ShieldAlert size={16} />
+                Field variances
+                <em>{pendingVariances.length}</em>
+              </button>
+            )}
             <button
               type="button"
               className={`outline-button${filtersOpen ? " active" : ""}`}
@@ -21443,6 +22588,42 @@ function SchedulePage({
             </button>
           </div>
         </div>
+
+        {varianceDrawerOpen && pendingVariances.length > 0 && (
+          <section className="sv-drawer" aria-label="Field variance review">
+            <header className="sv-drawer-head">
+              <div>
+                <h2>
+                  <ShieldAlert size={18} /> Field variances
+                </h2>
+                <p>
+                  The field reported progress that disagrees with the plan. Nothing has changed yet — accepting applies
+                  the forecastIQ and its knock-ons to the master schedule.
+                </p>
+              </div>
+              <button type="button" onClick={() => setVarianceDrawerOpen(false)} aria-label="Close variance review">
+                <X size={16} />
+              </button>
+            </header>
+            <div className="sv-drawer-list">
+              {pendingVariances.map((variance) => (
+                <VarianceReviewCard
+                  key={variance.id}
+                  variance={variance}
+                  job={data.jobs.find((job) => job.id === variance.jobId)}
+                  project={data.projects.find((project) => project.id === variance.projectId)}
+                  update={data.fieldUpdates.find((item) => item.id === variance.fieldUpdateId)}
+                  reporter={data.users.find(
+                    (user) => user.id === data.fieldUpdates.find((item) => item.id === variance.fieldUpdateId)?.userId
+                  )}
+                  busy={resolvingVarianceId === variance.id}
+                  onAccept={() => void resolveVariance(variance.id, "accept")}
+                  onReject={() => void resolveVariance(variance.id, "reject")}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {filtersOpen && (
           <section className="schedule-filter-panel" aria-label="Schedule filters">
@@ -21510,6 +22691,7 @@ function SchedulePage({
                   today={dashboardToday}
                   onOpenProject={openProjectFromJob}
                   onOpenDay={openMonthDay}
+                  onAddJob={openMonthDayAdd}
                 />
               </>
             ) : selectedView === "Week" ? (
@@ -21547,6 +22729,49 @@ function SchedulePage({
                   </div>
                 )}
               </>
+            ) : selectedView === "Gantt" ? (
+              <>
+                <div className="sched-monthbar">
+                  <div className="sched-monthnav">
+                    <button type="button" className="sched-icon-btn" aria-label="Previous month" onClick={() => changeMonth(-1)}>
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span className="sched-month-title">{monthLabel}</span>
+                    <button type="button" className="sched-icon-btn" aria-label="Next month" onClick={() => changeMonth(1)}>
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                  <button type="button" className="sched-today-btn" onClick={goToToday}>
+                    Today
+                  </button>
+                </div>
+                <ScheduleGanttView
+                  jobs={visibleJobs}
+                  allJobs={data.jobs}
+                  dependencies={data.dependencies ?? []}
+                  projects={data.projects}
+                  monthCells={monthCells}
+                  today={dashboardToday}
+                  busy={busy}
+                  onOpenProject={openProjectFromJob}
+                  onSetBaseline={saveScheduleBaseline}
+                />
+              </>
+            ) : selectedView === "Kanban" ? (
+              <ScheduleKanbanView
+                jobs={kanbanJobs}
+                projects={data.projects}
+                focusedJobId={focusedJobId}
+                onOpenProject={openProjectFromJob}
+              />
+            ) : selectedView === "Matrix" ? (
+              <ScheduleMatrixView
+                crews={scheduleCrews}
+                assignments={visibleAssignments}
+                jobs={visibleJobs}
+                weekDays={displayWeekDays}
+                onOpenProject={openProjectFromJob}
+              />
             ) : (
               <ScheduleListView
                 assignments={visibleAssignments}
@@ -21558,13 +22783,13 @@ function SchedulePage({
               />
             )}
             <footer className="schedule-board-footer">
-              {selectedView === "Month" ? (
+              {selectedView === "Month" || selectedView === "Gantt" ? (
                 <ScheduleTradeLegend />
               ) : (
                 <div className="schedule-legend" aria-label="Schedule statuses">
                   <span><i className="confirmed" /> Confirmed</span>
                   <span><i className="ready" /> Ready</span>
-                  <span><i className="delayed" /> Delayed</span>
+                  <span><i className="delayIQed" /> DelayIQed</span>
                   <span><i className="in-progress" /> In Progress</span>
                   <span><i className="planned" /> Planned</span>
                 </div>
@@ -21640,6 +22865,7 @@ function SchedulePage({
         {schedulePickerCell && schedulePickerCrew && (
           <ScheduleJobPickerDialog
             crew={schedulePickerCrew}
+            crews={scheduleCrews.length > 0 ? scheduleCrews : data.crews}
             date={schedulePickerCell.date}
             projects={data.projects}
             busy={busy}
@@ -21711,6 +22937,7 @@ function ScheduleDialogPanel({ dialog, onClose }: { dialog: ScheduleDialog; onCl
 
 function ScheduleJobPickerDialog({
   crew,
+  crews,
   date,
   projects,
   busy,
@@ -21718,13 +22945,19 @@ function ScheduleJobPickerDialog({
   onCreateJob
 }: {
   crew: Crew;
+  crews: Crew[];
   date: string;
   projects: Project[];
   busy: boolean;
   onClose: () => void;
-  onCreateJob: (input: CreateJobInput) => Promise<void>;
+  onCreateJob: (input: CreateJobInput, crewId: string) => Promise<void>;
 }) {
   const dateLabel = formatScheduleDate(date);
+  // The crew is fixed when this opens from a Week cell (that cell's row), but a
+  // calendar-day add has no row — so the crew is chosen here, pre-set to the one
+  // we opened with.
+  const [selectedCrewId, setSelectedCrewId] = useState(crew.id);
+  const selectedCrew = crews.find((item) => item.id === selectedCrewId) ?? crew;
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const selectedProject = projects.find((project) => project.id === projectId);
   const [jobName, setJobName] = useState("");
@@ -21767,22 +23000,25 @@ function ScheduleJobPickerDialog({
       setFormError("Labor must be a whole number above 0.");
       return;
     }
-    await onCreateJob({
-      projectId,
-      name: jobName,
-      phase,
-      location,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      requiredLabor: laborCount,
-      requiredEquipment,
-      materialsStatus,
-      status,
-      priority,
-      notes
-    });
+    await onCreateJob(
+      {
+        projectId,
+        name: jobName,
+        phase,
+        location,
+        startDate,
+        endDate,
+        startTime,
+        endTime,
+        requiredLabor: laborCount,
+        requiredEquipment,
+        materialsStatus,
+        status,
+        priority,
+        notes
+      },
+      selectedCrewId
+    );
   }
 
   return (
@@ -21797,7 +23033,7 @@ function ScheduleJobPickerDialog({
         <header>
           <div>
             <h2>Add job to schedule</h2>
-            <p>{crew.name} - {dateLabel}</p>
+            <p>{selectedCrew.name} · {dateLabel}</p>
           </div>
           <button type="button" className="icon-button" aria-label="Close Add job to schedule" onClick={onClose}>
             <X size={18} />
@@ -21815,6 +23051,14 @@ function ScheduleJobPickerDialog({
               <select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>{project.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field">
+              <span>Crew</span>
+              <select value={selectedCrewId} onChange={(event) => setSelectedCrewId(event.target.value)}>
+                {crews.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
                 ))}
               </select>
             </label>
@@ -22433,6 +23677,7 @@ function ProjectsPage({
   const [managerFilter, setManagerFilter] = useState("all");
   const [projectModalMode, setProjectModalMode] = useState<ProjectEditorMode | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [scheduleImportOpen, setScheduleImportOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
 
@@ -22487,7 +23732,7 @@ function ProjectsPage({
   ).length;
   const atRiskCount = data.projects.filter(
     (project) =>
-      (project.scheduleHealth === "At Risk" || project.scheduleHealth === "Monitor" || project.status === "Delayed") &&
+      (project.scheduleHealth === "At Risk" || project.scheduleHealth === "Monitor" || project.status === "DelayIQed") &&
       project.scheduleHealth !== "Complete" &&
       project.status !== "Complete"
   ).length;
@@ -22514,19 +23759,19 @@ function ProjectsPage({
     { id: "ps-complete", icon: ClipboardCheck, tone: "orange", label: "Completed", value: `${completedCount}`, trend: "up", delta: "+2", note: "this quarter", spark: [2, 2, 3, 3, 4, 4, 5, Math.max(completedCount, 0)] }
   ];
 
-  const openDelays = data.delays.filter((delay) => delay.status !== "Resolved");
+  const openDelayIQs = data.delayIQs.filter((delayIQ) => delayIQ.status !== "Resolved");
   const shortMaterials = data.materials.filter(
     (material) => material.status === "Missing" || material.status === "Waiting on Delivery"
   );
   const projAlerts: Array<{ id: string; icon: typeof AlertTriangle; tone: CcTone; title: string; meta: string; ago: string }> = [];
-  openDelays.slice(0, 2).forEach((delay) =>
-    projAlerts.push({ id: `pa-${delay.id}`, icon: AlertTriangle, tone: "red", title: delay.title, meta: `${projectName(data, delay.projectId)} · ${delay.impactDays} day impact`, ago: "10m ago" })
+  openDelayIQs.slice(0, 2).forEach((delayIQ) =>
+    projAlerts.push({ id: `pa-${delayIQ.id}`, icon: AlertTriangle, tone: "red", title: delayIQ.title, meta: `${projectName(data, delayIQ.projectId)} · ${delayIQ.impactDays} day impact`, ago: "10m ago" })
   );
   data.weatherAlerts.slice(0, 1).forEach((alert) =>
-    projAlerts.push({ id: `pa-${alert.id}`, icon: CloudSun, tone: "amber", title: "Weather delay expected", meta: `${alert.projectId ? projectName(data, alert.projectId) : "All sites"} · ${alert.title}`, ago: "45m ago" })
+    projAlerts.push({ id: `pa-${alert.id}`, icon: CloudSun, tone: "amber", title: "Weather delayIQ expected", meta: `${alert.projectId ? projectName(data, alert.projectId) : "All sites"} · ${alert.title}`, ago: "45m ago" })
   );
   shortMaterials.slice(0, 1).forEach((material) =>
-    projAlerts.push({ id: `pa-${material.id}`, icon: Truck, tone: "blue", title: "Material delivery delayed", meta: `${material.name} · ${projectName(data, material.projectId)}`, ago: "2h ago" })
+    projAlerts.push({ id: `pa-${material.id}`, icon: Truck, tone: "blue", title: "Material delivery delayIQed", meta: `${material.name} · ${projectName(data, material.projectId)}`, ago: "2h ago" })
   );
 
   const upcomingMilestones = deriveScheduleMilestones(data)
@@ -22583,10 +23828,16 @@ function ProjectsPage({
           </h1>
           <p className="dx-sub">All active and upcoming construction projects.</p>
         </div>
-        <button className="new-project-button" type="button" onClick={openCreateProject}>
-          <Plus size={19} />
-          New Project
-        </button>
+        <div className="projects-hero-actions">
+          <button className="import-schedule-button" type="button" onClick={() => setScheduleImportOpen(true)}>
+            <FileUp size={18} />
+            Import schedule
+          </button>
+          <button className="new-project-button" type="button" onClick={openCreateProject}>
+            <Plus size={19} />
+            New Project
+          </button>
+        </div>
       </header>
 
       <div className="cc-stat-grid proj-stat-grid" data-reveal-stagger>
@@ -22690,7 +23941,7 @@ function ProjectsPage({
           <section className="proj-panel" data-reveal>
             <div className="proj-panel-head">
               <h2>Project Alerts</h2>
-              <button type="button" className="proj-rail-link" onClick={() => setPage("delays")}>
+              <button type="button" className="proj-rail-link" onClick={() => setPage("delayIQs")}>
                 View all
               </button>
             </div>
@@ -22807,6 +24058,10 @@ function ProjectsPage({
           onClose={closeProjectModal}
           onSaved={handleProjectSaved}
         />
+      )}
+
+      {scheduleImportOpen && (
+        <ScheduleImportDialog onClose={() => setScheduleImportOpen(false)} onImported={reload} />
       )}
     </div>
   );
@@ -22936,16 +24191,16 @@ function ProgressDonut({ value }: { value: number }) {
   );
 }
 
-function DelayRow({ delay }: { delay: Delay }) {
+function DelayIQRow({ delayIQ }: { delayIQ: DelayIQ }) {
   return (
-    <div className="delay-row">
+    <div className="delayIQ-row">
       <AlertTriangle />
       <span>
-        <strong>{delay.title}</strong>
-        <em>{delay.description}</em>
+        <strong>{delayIQ.title}</strong>
+        <em>{delayIQ.description}</em>
       </span>
-      <b>{delay.impactDays} days</b>
-      <Badge status={delay.severity} />
+      <b>{delayIQ.impactDays} days</b>
+      <Badge status={delayIQ.severity} />
     </div>
   );
 }
@@ -22954,7 +24209,7 @@ const mapLayers = ["Production", "Traffic", "Satellite"] as const;
 const mapTabs = ["Live Map", "Route Optimization", "Jobs", "Vehicles", "Alerts"] as const;
 const liveTrackingTabs = ["Crews", "Trucks", "Jobs"] as const;
 const routeGoalOptions = ["Fastest Time", "Least Fuel", "Balanced"] as const;
-const mapStatusOptions: Status[] = ["Ready", "Ready to Start", "Planned", "Confirmed", "In Progress", "On Site", "Delayed", "Complete", "At Risk"];
+const mapStatusOptions: Status[] = ["Ready", "Ready to Start", "Planned", "Confirmed", "In Progress", "On Site", "DelayIQed", "Complete", "At Risk"];
 
 type MapBounds = {
   west: number;
@@ -23527,13 +24782,13 @@ type MapFilters = {
 
 type MapProjectDraft = Pick<Project, "name" | "address" | "status">;
 type MapJobDraft = Pick<Job, "name" | "location" | "startTime" | "status">;
-type LocalForecastDay = {
+type LocalForecastIQDay = {
   day: string;
   high: number;
   low: number;
   condition: string;
 };
-type LocalForecast = {
+type LocalForecastIQ = {
   id: string;
   location: string;
   zipCode?: string;
@@ -23542,9 +24797,9 @@ type LocalForecast = {
   precip: string;
   wind: string;
   humidity: string;
-  days: LocalForecastDay[];
+  days: LocalForecastIQDay[];
 };
-type ForecastLocationResolution = {
+type ForecastIQLocationResolution = {
   location: string;
   zipCode?: string;
   resolved: boolean;
@@ -23554,7 +24809,7 @@ function uniqueOptions(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-const forecastZipLocations: Record<string, string> = {
+const forecastIQZipLocations: Record<string, string> = {
   "10001": "New York, NY",
   "19103": "Philadelphia, PA",
   "20001": "Washington, DC",
@@ -23620,10 +24875,10 @@ function baseZipCode(value: string) {
 }
 
 function getKnownZipLocation(zipCode: string) {
-  return forecastZipLocations[zipCode] ?? (zipCode.startsWith("787") ? "Austin, TX" : "");
+  return forecastIQZipLocations[zipCode] ?? (zipCode.startsWith("787") ? "Austin, TX" : "");
 }
 
-function normalizeForecastLocationName(value: string) {
+function normalizeForecastIQLocationName(value: string) {
   const trimmed = value.trim().replace(/\s+/g, " ");
   return trimmed
     .split(" ")
@@ -23631,18 +24886,18 @@ function normalizeForecastLocationName(value: string) {
     .join(" ");
 }
 
-function getForecastLocationPreview(value: string) {
+function getForecastIQLocationPreview(value: string) {
   const trimmed = value.trim();
   if (trimmed.length === 0) return "";
-  if (!isZipCode(trimmed)) return normalizeForecastLocationName(trimmed);
+  if (!isZipCode(trimmed)) return normalizeForecastIQLocationName(trimmed);
   return getKnownZipLocation(baseZipCode(trimmed));
 }
 
-async function resolveForecastLocation(value: string): Promise<ForecastLocationResolution> {
+async function resolveForecastIQLocation(value: string): Promise<ForecastIQLocationResolution> {
   const trimmed = value.trim();
 
   if (!isZipCode(trimmed)) {
-    return { location: normalizeForecastLocationName(trimmed), resolved: true };
+    return { location: normalizeForecastIQLocationName(trimmed), resolved: true };
   }
 
   const zipCode = baseZipCode(trimmed);
@@ -23665,14 +24920,14 @@ async function resolveForecastLocation(value: string): Promise<ForecastLocationR
       if (city && state) return { location: `${city}, ${state}`, zipCode, resolved: true };
     }
   } catch {
-    // Keep the forecast flow usable if the external lookup is unavailable.
+    // Keep the forecastIQ flow usable if the external lookup is unavailable.
   }
 
   return { location: `ZIP ${zipCode}`, zipCode, resolved: false };
 }
 
-function createLocalForecast(locationInput: string, zipCode?: string): LocalForecast {
-  const location = normalizeForecastLocationName(locationInput);
+function createLocalForecastIQ(locationInput: string, zipCode?: string): LocalForecastIQ {
+  const location = normalizeForecastIQLocationName(locationInput);
   const seed = Array.from(location).reduce((total, character) => total + character.charCodeAt(0), 0);
   const conditionOptions = ["Partly Cloudy", "Sunny", "Light Rain", "Breezy", "Cloudy"];
   const windDirections = ["NNE", "ESE", "SSE", "SW", "WNW"];
@@ -23693,7 +24948,7 @@ function createLocalForecast(locationInput: string, zipCode?: string): LocalFore
   });
 
   return {
-    id: zipCode ? `zip-${zipCode}` : location.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "local-forecast",
+    id: zipCode ? `zip-${zipCode}` : location.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "local-forecastIQ",
     location,
     zipCode,
     temperature,
@@ -23732,11 +24987,11 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
   const [editingJobId, setEditingJobId] = useState("");
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [showAllFieldUpdates, setShowAllFieldUpdates] = useState(false);
-  const [showFullForecast, setShowFullForecast] = useState(false);
-  const [forecastLocation, setForecastLocation] = useState("");
-  const [forecastError, setForecastError] = useState("");
-  const [forecastResolving, setForecastResolving] = useState(false);
-  const [localForecasts, setLocalForecasts] = useState<LocalForecast[]>(() => [createLocalForecast("Austin, TX")]);
+  const [showFullForecastIQ, setShowFullForecastIQ] = useState(false);
+  const [forecastIQLocation, setForecastIQLocation] = useState("");
+  const [forecastIQError, setForecastIQError] = useState("");
+  const [forecastIQResolving, setForecastIQResolving] = useState(false);
+  const [localForecastIQs, setLocalForecastIQs] = useState<LocalForecastIQ[]>(() => [createLocalForecastIQ("Austin, TX")]);
   const [showFieldUpdateComposer, setShowFieldUpdateComposer] = useState(false);
   const [fieldUpdateDraft, setFieldUpdateDraft] = useState("Crew on site and staging materials. Ready to begin at 9:00 AM.");
   const [weather, setWeather] = useState({
@@ -24044,7 +25299,7 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
   const referenceMapMarkers: Array<{ id: string; label: string; status: Status; meta: string; tone: string; left: string; top: string; projectId?: string }> = [
     { id: "reference-riverside", label: "Riverside Office Bldg", status: "In Progress", meta: "En Route • 18 min", tone: "en-route", ...geoToMapPosition(30.2672, -97.7431, activeMapBounds) },
     { id: "reference-harborview", label: "Harborview Apts", status: "On Site", meta: "On Site", tone: "on-site", ...geoToMapPosition(30.2633, -97.7167, activeMapBounds) },
-    { id: "reference-pinecrest", label: "Pinecrest Medical Center", status: "Delayed", meta: "Delayed", tone: "delayed", ...geoToMapPosition(30.4011, -97.7479, activeMapBounds) },
+    { id: "reference-pinecrest", label: "Pinecrest Medical Center", status: "DelayIQed", meta: "DelayIQed", tone: "delayIQed", ...geoToMapPosition(30.4011, -97.7479, activeMapBounds) },
     { id: "reference-logistics", label: "Logistics Warehouse", status: "Ready to Start", meta: "Ready to Start", tone: "ready-to-start", ...geoToMapPosition(30.1837, -97.7211, activeMapBounds) }
   ];
   const mapMarkerRows =
@@ -24072,7 +25327,7 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
   const todayJobs = showAllJobs ? filteredJobs : filteredJobs.slice(0, 5);
   const fieldUpdatesForMap = showAllFieldUpdates ? data.fieldUpdates : data.fieldUpdates.slice(0, 3);
   const travelRows = data.crews.slice(0, 4);
-  const forecastLocationPreview = getForecastLocationPreview(forecastLocation);
+  const forecastIQLocationPreview = getForecastIQLocationPreview(forecastIQLocation);
 
   function projectForJob(job: Job) {
     return data.projects.find((project) => project.id === job.projectId);
@@ -24091,43 +25346,43 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
     return data.crews.find((crew) => crew.id === assignment?.crewId) ?? data.crews[fallbackIndex % Math.max(1, data.crews.length)];
   }
 
-  function applyLocalForecast(forecast: LocalForecast) {
+  function applyLocalForecastIQ(forecastIQ: LocalForecastIQ) {
     setWeather({
-      temperature: `${forecast.temperature} F`,
-      location: forecast.location,
-      precip: forecast.precip,
-      wind: forecast.wind,
-      humidity: forecast.humidity
+      temperature: `${forecastIQ.temperature} F`,
+      location: forecastIQ.location,
+      precip: forecastIQ.precip,
+      wind: forecastIQ.wind,
+      humidity: forecastIQ.humidity
     });
     setLastSynced(new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
   }
 
-  async function addLocalForecast(event: FormEvent<HTMLFormElement>) {
+  async function addLocalForecastIQ(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const query = forecastLocation.trim();
+    const query = forecastIQLocation.trim();
 
     if (query.length < 3) {
-      setForecastError("Enter a ZIP code, town, or city.");
+      setForecastIQError("Enter a ZIP code, town, or city.");
       return;
     }
 
-    setForecastResolving(true);
-    const resolvedLocation = await resolveForecastLocation(query);
-    const forecast = createLocalForecast(resolvedLocation.location, resolvedLocation.zipCode);
-    setLocalForecasts((current) => [forecast, ...current.filter((item) => item.id !== forecast.id)].slice(0, 5));
-    setForecastLocation("");
-    setForecastError(resolvedLocation.resolved ? "" : "That ZIP could not be matched to a city, so it was saved by ZIP.");
-    setForecastResolving(false);
-    applyLocalForecast(forecast);
+    setForecastIQResolving(true);
+    const resolvedLocation = await resolveForecastIQLocation(query);
+    const forecastIQ = createLocalForecastIQ(resolvedLocation.location, resolvedLocation.zipCode);
+    setLocalForecastIQs((current) => [forecastIQ, ...current.filter((item) => item.id !== forecastIQ.id)].slice(0, 5));
+    setForecastIQLocation("");
+    setForecastIQError(resolvedLocation.resolved ? "" : "That ZIP could not be matched to a city, so it was saved by ZIP.");
+    setForecastIQResolving(false);
+    applyLocalForecastIQ(forecastIQ);
   }
 
-  function deleteLocalForecast(forecast: LocalForecast) {
-    const nextForecast = localForecasts.find((item) => item.id !== forecast.id);
+  function deleteLocalForecastIQ(forecastIQ: LocalForecastIQ) {
+    const nextForecastIQ = localForecastIQs.find((item) => item.id !== forecastIQ.id);
 
-    setLocalForecasts((current) => current.filter((item) => item.id !== forecast.id));
+    setLocalForecastIQs((current) => current.filter((item) => item.id !== forecastIQ.id));
 
-    if (forecast.location === weather.location && nextForecast) {
-      applyLocalForecast(nextForecast);
+    if (forecastIQ.location === weather.location && nextForecastIQ) {
+      applyLocalForecastIQ(nextForecastIQ);
     }
   }
 
@@ -24335,7 +25590,7 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
                 </button>
                 <span><i className="ready" /> Crews</span>
                 <span><i className="planned" /> Trucks</span>
-                <span><i className="delayed" /> Jobs</span>
+                <span><i className="delayIQed" /> Jobs</span>
                 <span><i className="traffic" /> Traffic</span>
                 <span><i className="geofence" /> Geofence</span>
               </div>
@@ -24348,7 +25603,7 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
           </section>
 
           <div className="map-bottom-grid map-reference-bottom-grid">
-            <Panel title="Weather at Job Sites" action={showFullForecast ? "Hide full forecast" : "View full forecast"} onAction={() => setShowFullForecast((current) => !current)} actionPressed={showFullForecast}>
+            <Panel title="Weather at Job Sites" action={showFullForecastIQ ? "Hide full forecastIQ" : "View full forecastIQ"} onAction={() => setShowFullForecastIQ((current) => !current)} actionPressed={showFullForecastIQ}>
               <div className="map-weather-card">
                 <CloudSun size={58} />
                 <div className="map-weather-primary">
@@ -24361,84 +25616,84 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
                   <span>Wind: {weather.wind}</span>
                   <span>Humidity: {weather.humidity}</span>
                 </div>
-                <div className="map-forecast-row">
+                <div className="map-forecastIQ-row">
                   {["THU 82 / 64", "FRI 85 / 66", "SAT 87 / 68", "SUN 83 / 64"].map((day) => (
-                    <button type="button" key={day} onClick={() => setShowFullForecast(true)}>
+                    <button type="button" key={day} onClick={() => setShowFullForecastIQ(true)}>
                       <CloudSun size={23} />
                       <span>{day}</span>
                     </button>
                   ))}
                 </div>
               </div>
-              {showFullForecast && (
-                <div className="map-full-forecast" role="region" aria-label="Full local forecast">
-                  <form className="map-forecast-search" onSubmit={addLocalForecast}>
+              {showFullForecastIQ && (
+                <div className="map-full-forecastIQ" role="region" aria-label="Full local forecastIQ">
+                  <form className="map-forecastIQ-search" onSubmit={addLocalForecastIQ}>
                     <label>
-                      <span>Add local forecast</span>
+                      <span>Add local forecastIQ</span>
                       <input
-                        value={forecastLocation}
-                        onChange={(event) => setForecastLocation(event.target.value)}
+                        value={forecastIQLocation}
+                        onChange={(event) => setForecastIQLocation(event.target.value)}
                         placeholder="City, town, or ZIP code"
                         aria-label="City, town, or ZIP code"
                       />
-                      {forecastLocationPreview && (
-                        <small className="map-forecast-location-preview">
-                          {isZipCode(forecastLocation) ? `ZIP resolves to ${forecastLocationPreview}` : forecastLocationPreview}
+                      {forecastIQLocationPreview && (
+                        <small className="map-forecastIQ-location-preview">
+                          {isZipCode(forecastIQLocation) ? `ZIP resolves to ${forecastIQLocationPreview}` : forecastIQLocationPreview}
                         </small>
                       )}
                     </label>
-                    <button type="submit" className="outline-button" disabled={forecastResolving}>
-                      <Plus size={16} /> {forecastResolving ? "Adding..." : "Add Forecast"}
+                    <button type="submit" className="outline-button" disabled={forecastIQResolving}>
+                      <Plus size={16} /> {forecastIQResolving ? "Adding..." : "Add ForecastIQ"}
                     </button>
                   </form>
-                  {forecastError && <p className="form-error" role="alert">{forecastError}</p>}
-                  <div className="map-local-forecast-list">
-                    {localForecasts.length === 0 && (
-                      <div className="map-forecast-empty-state">
+                  {forecastIQError && <p className="form-error" role="alert">{forecastIQError}</p>}
+                  <div className="map-local-forecastIQ-list">
+                    {localForecastIQs.length === 0 && (
+                      <div className="map-forecastIQ-empty-state">
                         <CloudSun size={20} />
-                        <span>No saved forecasts yet.</span>
+                        <span>No saved forecastIQs yet.</span>
                       </div>
                     )}
-                    {localForecasts.map((forecast) => (
-                      <article key={forecast.id} className={forecast.location === weather.location ? "active" : ""}>
+                    {localForecastIQs.map((forecastIQ) => (
+                      <article key={forecastIQ.id} className={forecastIQ.location === weather.location ? "active" : ""}>
                         <header>
-                          <strong>{forecast.location}</strong>
-                          <span>{forecast.zipCode ? `ZIP ${forecast.zipCode}` : forecast.condition}</span>
+                          <strong>{forecastIQ.location}</strong>
+                          <span>{forecastIQ.zipCode ? `ZIP ${forecastIQ.zipCode}` : forecastIQ.condition}</span>
                         </header>
-                        <div className="map-local-forecast-summary">
+                        <div className="map-local-forecastIQ-summary">
                           <CloudSun size={34} />
                           <span>
-                            <b>{forecast.temperature} F</b>
-                            <em>Precip {forecast.precip} • Wind {forecast.wind}</em>
+                            <b>{forecastIQ.temperature} F</b>
+                            <em>Precip {forecastIQ.precip} • Wind {forecastIQ.wind}</em>
                           </span>
                         </div>
                         <dl>
                           <div>
                             <dt>Humidity</dt>
-                            <dd>{forecast.humidity}</dd>
+                            <dd>{forecastIQ.humidity}</dd>
                           </div>
                           <div>
                             <dt>Condition</dt>
-                            <dd>{forecast.condition}</dd>
+                            <dd>{forecastIQ.condition}</dd>
                           </div>
                         </dl>
-                        <div className="map-local-forecast-days">
-                          {forecast.days.map((day) => (
-                            <span key={`${forecast.id}-${day.day}`}>
+                        <div className="map-local-forecastIQ-days">
+                          {forecastIQ.days.map((day) => (
+                            <span key={`${forecastIQ.id}-${day.day}`}>
                               <b>{day.day}</b>
                               <em>{day.high} / {day.low} F</em>
                             </span>
                           ))}
                         </div>
-                        <div className="map-local-forecast-actions">
-                          <button type="button" onClick={() => applyLocalForecast(forecast)}>
-                            Use Forecast
+                        <div className="map-local-forecastIQ-actions">
+                          <button type="button" onClick={() => applyLocalForecastIQ(forecastIQ)}>
+                            Use ForecastIQ
                           </button>
                           <button
                             type="button"
-                            className="map-delete-forecast-button"
-                            onClick={() => deleteLocalForecast(forecast)}
-                            aria-label={`Delete forecast for ${forecast.zipCode ? `${forecast.location} ZIP ${forecast.zipCode}` : forecast.location}`}
+                            className="map-delete-forecastIQ-button"
+                            onClick={() => deleteLocalForecastIQ(forecastIQ)}
+                            aria-label={`Delete forecastIQ for ${forecastIQ.zipCode ? `${forecastIQ.location} ZIP ${forecastIQ.zipCode}` : forecastIQ.location}`}
                           >
                             <Trash2 size={15} /> Delete
                           </button>
@@ -25402,7 +26657,7 @@ function CrewDirectoryCard({
 
 function activeAssignmentForCrew(data: BootstrapPayload, crewId: string) {
   const assignments = data.assignments.filter((assignment) => assignment.crewId === crewId);
-  const activeAssignments = assignments.filter((assignment) => assignment.status !== "Delayed");
+  const activeAssignments = assignments.filter((assignment) => assignment.status !== "DelayIQed");
   return [...(activeAssignments.length > 0 ? activeAssignments : assignments)].sort((a, b) => a.date.localeCompare(b.date))[0];
 }
 
@@ -26204,6 +27459,9 @@ function FieldUpdatesPage({
   const [fieldSearch, setFieldSearch] = useState("");
   const [fieldProjectId, setFieldProjectId] = useState(data.projects[0]?.id ?? "");
   const [fieldJobId, setFieldJobId] = useState(data.jobs.find((job) => job.projectId === (data.projects[0]?.id ?? ""))?.id ?? "");
+  const [reportProgress, setReportProgress] = useState(false);
+  const [percentComplete, setPercentComplete] = useState(0);
+  const [lastVariance, setLastVariance] = useState<ScheduleVariance | null>(null);
   const [isSubmittingFieldUpdate, setIsSubmittingFieldUpdate] = useState(false);
   const [fieldUpdateError, setFieldUpdateError] = useState("");
   const [attachments, setAttachments] = useState<FieldAttachment[]>([]);
@@ -26226,10 +27484,25 @@ function FieldUpdatesPage({
       .includes(query);
   });
   const onSiteUpdates = data.fieldUpdates.filter((update) => update.status === "On Site").length;
-  const delayedUpdates = data.fieldUpdates.filter((update) => update.status === "Delayed").length;
+  const delayIQedUpdates = data.fieldUpdates.filter((update) => update.status === "DelayIQed").length;
   const updatesWithPhotos = data.fieldUpdates.filter((update) => update.photos.length > 0).length;
   const fieldProjectJobs = data.jobs.filter((job) => job.projectId === fieldProjectId);
   const canSubmitFieldUpdate = fieldProjectId.trim().length > 0 && message.trim().length >= 3;
+
+  // Progress is reported against a job, so the control only makes sense once
+  // one is linked. Same maths the server flags against — see shared/progress.ts.
+  const progressJob = fieldJobId ? data.jobs.find((job) => job.id === fieldJobId) : undefined;
+  const canReportProgress = Boolean(progressJob);
+  const plannedToday = progressJob
+    ? plannedPercentAt(
+        progressJob,
+        dashboardToday,
+        scheduleCalendar(
+          data.jobs.reduce((min, job) => (job.startDate < min ? job.startDate : min), progressJob.startDate)
+        )
+      )
+    : 0;
+  const progressDrift = percentComplete - plannedToday;
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
 
@@ -26304,17 +27577,23 @@ function FieldUpdatesPage({
     setFieldUpdateError("");
 
     try {
-      await createFieldUpdate({
+      const result = await createFieldUpdate({
         projectId: fieldProjectId,
         jobId: fieldJobId || undefined,
         userId: activeUser.id,
         message: message.trim(),
         status,
-        photos: attachments.map((item) => item.dataUrl)
+        photos: attachments.map((item) => item.dataUrl),
+        // Only send a number when the crew actually reported one — a note-only
+        // update must stay a log entry and never touch the schedule.
+        percentComplete: reportProgress && canReportProgress ? percentComplete : undefined
       });
       setMessage("");
       setAttachments([]);
       setAttachmentError("");
+      // Tell the crew their number landed and whether it raised a question for
+      // the PM — the report is never silently swallowed.
+      setLastVariance(result.variance);
       await reload();
     } catch (error) {
       setFieldUpdateError(error instanceof Error ? error.message : "Field update could not be added.");
@@ -26340,7 +27619,7 @@ function FieldUpdatesPage({
           <h1 className="dx-title">
             From the field, <em>in real time.</em>
           </h1>
-          <p className="dx-sub">Daily progress check-ins, delay reports, notes, and jobsite signals.</p>
+          <p className="dx-sub">Daily progress check-ins, delayIQ reports, notes, and jobsite signals.</p>
         </div>
         <button
           className="primary-button crew-add-button"
@@ -26354,7 +27633,7 @@ function FieldUpdatesPage({
       <div className="crew-stat-grid field-stat-grid" data-reveal-stagger>
         <DxTilt><CrewStatCard label="Total Updates" value={data.fieldUpdates.length} /></DxTilt>
         <DxTilt><CrewStatCard label="On Site" value={onSiteUpdates} tone="green" /></DxTilt>
-        <DxTilt><FieldStatCard label="Delayed" value={delayedUpdates} tone={delayedUpdates > 0 ? "red" : "green"} /></DxTilt>
+        <DxTilt><FieldStatCard label="DelayIQed" value={delayIQedUpdates} tone={delayIQedUpdates > 0 ? "red" : "green"} /></DxTilt>
         <DxTilt><CrewStatCard label="With Photos" value={updatesWithPhotos} /></DxTilt>
       </div>
 
@@ -26428,10 +27707,65 @@ function FieldUpdatesPage({
               <select value={status} onChange={(event) => setStatus(event.target.value as Status)}>
                 <option>On Site</option>
                 <option>Ready to Start</option>
-                <option>Delayed</option>
+                <option>DelayIQed</option>
                 <option>Complete</option>
               </select>
             </label>
+
+            {/* Percent complete — the field half of the schedule loop. Optional
+                by design: reporting a number is a claim about the plan, and a
+                crew with nothing to claim should be able to just leave a note. */}
+            <div className="fp-progress" data-reporting={reportProgress && canReportProgress ? "on" : "off"}>
+              <label className="fp-progress-toggle">
+                <input
+                  type="checkbox"
+                  checked={reportProgress && canReportProgress}
+                  disabled={!canReportProgress}
+                  onChange={(event) => setReportProgress(event.target.checked)}
+                />
+                <span>
+                  <Gauge size={16} /> Report percent complete
+                </span>
+              </label>
+
+              {!canReportProgress && (
+                <p className="fp-progress-hint">Link a job above to report progress against it.</p>
+              )}
+
+              {reportProgress && canReportProgress && (
+                <div className="fp-progress-body">
+                  <div className="fp-progress-readout">
+                    <strong>{percentComplete}%</strong>
+                    <span>complete</span>
+                  </div>
+                  <input
+                    className="fp-progress-slider"
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={percentComplete}
+                    aria-label="Percent complete"
+                    aria-describedby="fp-progress-plan"
+                    onChange={(event) => setPercentComplete(Number(event.target.value))}
+                  />
+                  <div className="fp-progress-scale" aria-hidden="true">
+                    <span>0</span>
+                    <span>50</span>
+                    <span>100</span>
+                  </div>
+                  <p className="fp-progress-plan" id="fp-progress-plan">
+                    Planned today: <strong>{plannedToday}%</strong>
+                    {progressDrift <= -5 && (
+                      <em className="fp-drift behind">{Math.abs(progressDrift)}% behind plan</em>
+                    )}
+                    {progressDrift >= 5 && <em className="fp-drift ahead">{progressDrift}% ahead of plan</em>}
+                    {progressDrift > -5 && progressDrift < 5 && <em className="fp-drift on">on plan</em>}
+                  </p>
+                </div>
+              )}
+            </div>
+
               <label>
                 Update
                 <textarea
@@ -26516,6 +27850,29 @@ function FieldUpdatesPage({
               </div>
 
             {fieldUpdateError && <p className="form-error" role="alert">{fieldUpdateError}</p>}
+
+            {/* Close the loop back to the crew: their number landed, and if it
+                contradicted the plan, someone is now looking at it. Without
+                this the field reports into a void and stops bothering. */}
+            {lastVariance && (
+              <div className="fp-raised" role="status">
+                <ShieldAlert size={16} />
+                <div>
+                  <strong>Progress logged — and it flagged a schedule variance.</strong>
+                  <p>
+                    You reported {lastVariance.reportedPercent}% against a plan of {lastVariance.plannedPercent}%.
+                    {lastVariance.proposal.projectSlipDays > 0
+                      ? ` That forecastIQs the project ${lastVariance.proposal.projectSlipDays} day${lastVariance.proposal.projectSlipDays === 1 ? "" : "s"} late.`
+                      : " The schedule has float to absorb it."}{" "}
+                    The dates haven't changed — a project manager reviews it first.
+                  </p>
+                </div>
+                <button type="button" className="fp-raised-dismiss" onClick={() => setLastVariance(null)} aria-label="Dismiss">
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+
             <button className="primary-button" disabled={!canSubmitFieldUpdate || isSubmittingFieldUpdate || isReadingFiles} type="submit">
               <Plus size={17} /> {isSubmittingFieldUpdate ? "Adding Field Update" : "Add Field Update"}
             </button>
@@ -26636,7 +27993,7 @@ function FieldUpdateList({ data, compact = false, limit }: { data: BootstrapPayl
   );
 }
 
-function DelaysPage({
+function DelayIQsPage({
   data,
   activeUser,
   reload
@@ -26647,98 +28004,99 @@ function DelaysPage({
 }) {
   const canCreate = activeUser.role !== "Crew Lead" && data.projects.length > 0;
   const [title, setTitle] = useState("");
-  const [delayProjectId, setDelayProjectId] = useState(data.projects[0]?.id ?? "");
+  const [delayIQProjectId, setDelayIQProjectId] = useState(data.projects[0]?.id ?? "");
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
 
   useEffect(() => {
-    if (delayProjectId && data.projects.some((project) => project.id === delayProjectId)) return;
-    setDelayProjectId(data.projects[0]?.id ?? "");
-  }, [data.projects, delayProjectId]);
+    if (delayIQProjectId && data.projects.some((project) => project.id === delayIQProjectId)) return;
+    setDelayIQProjectId(data.projects[0]?.id ?? "");
+  }, [data.projects, delayIQProjectId]);
 
-  async function submitDelay() {
-    if (!title.trim() || !delayProjectId) return;
-    await createDelay({
-      projectId: delayProjectId,
+  async function submitDelayIQ() {
+    if (!title.trim() || !delayIQProjectId) return;
+    await createDelayIQ({
+      projectId: delayIQProjectId,
       category: "Site condition",
       title,
       impactDays: 2,
       severity: "Medium",
       status: "Open",
-      description: "Logged from the delay management hub."
+      description: "Logged from the delayIQ management hub."
     });
     setTitle("");
     await reload();
   }
 
   return (
-    <div className="page-stack delay-rx" ref={rootRef}>
+    <div className="page-stack delayIQ-rx" ref={rootRef}>
       <div className="dx-bg" aria-hidden="true">
         <span className="dx-aurora dx-aurora-1" />
         <span className="dx-aurora dx-aurora-2" />
         <span className="dx-aurora dx-aurora-3" />
       </div>
       <div className="dx-cursor" aria-hidden="true" />
-      <header className="delays-hero" data-reveal data-tutorial-id="delays-page-title">
+      <header className="delayIQs-hero" data-reveal data-tutorial-id="delayIQs-page-title">
         <span className="dx-eyebrow">
           <span className="dx-dot" />
-          Risk &amp; Delays
+          Risk &amp; DelayIQs
         </span>
         <h1 className="dx-title">
           Stay ahead of <em>the slip.</em>
         </h1>
-        <p className="dx-sub">Categorize delay causes and understand schedule impact.</p>
+        <p className="dx-sub">Categorize delayIQ causes and understand schedule impact.</p>
       </header>
       <div className="dashboard-grid">
-        <Panel className="span-2" title="Open Delay Log" reveal>
-          {data.delays.length > 0 ? (
-            data.delays.map((delay) => (
-              <DelayRow key={delay.id} delay={delay} />
+        <DelayEarlyWarning />
+        <Panel className="span-2" title="Open DelayIQ Log" reveal>
+          {data.delayIQs.length > 0 ? (
+            data.delayIQs.map((delayIQ) => (
+              <DelayIQRow key={delayIQ.id} delayIQ={delayIQ} />
             ))
           ) : (
-            <InlineEmptyState icon={AlertTriangle} title="No delays logged yet" detail="Delay records will appear after projects are created and reported." />
+            <InlineEmptyState icon={AlertTriangle} title="No delayIQs logged yet" detail="DelayIQ records will appear after projects are created and reported." />
           )}
         </Panel>
-        <Panel title={activeUser.role === "Crew Lead" ? "Crew View" : "Log Delay"} reveal>
+        <Panel title={activeUser.role === "Crew Lead" ? "Crew View" : "Log DelayIQ"} reveal>
           {canCreate ? (
             <div className="form-stack">
               <label>
                 Project
-                <select value={delayProjectId} onChange={(event) => setDelayProjectId(event.target.value)}>
+                <select value={delayIQProjectId} onChange={(event) => setDelayIQProjectId(event.target.value)}>
                   {data.projects.map((project) => (
                     <option key={project.id} value={project.id}>{project.name}</option>
                   ))}
                 </select>
               </label>
               <label>
-                Delay title
+                DelayIQ title
                 <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Example: Inspection moved to Friday" />
               </label>
-              <button className="primary-button" onClick={submitDelay}><Plus size={17} /> Add Delay</button>
+              <button className="primary-button" onClick={submitDelayIQ}><Plus size={17} /> Add DelayIQ</button>
             </div>
           ) : activeUser.role !== "Crew Lead" ? (
             <div className="empty-state">
               <AlertTriangle />
               <strong>Create a project first</strong>
-              <p>Delays need a project before they can be logged.</p>
+              <p>DelayIQs need a project before they can be logged.</p>
             </div>
           ) : (
             <div className="empty-state">
               <ShieldAlert />
-              <strong>Report delays through field updates</strong>
+              <strong>Report delayIQs through field updates</strong>
               <p>Crew leads can flag status from the Field Updates page.</p>
             </div>
           )}
         </Panel>
-        <Panel title="Delay Categories" reveal>
-          {["Weather", "Material shortage", "Labor shortage", "Equipment issue", "Inspection delay", "Site condition"].map((item) => (
+        <Panel title="DelayIQ Categories" reveal>
+          {["Weather", "Material shortage", "Labor shortage", "Equipment issue", "Inspection delayIQ", "Site condition"].map((item) => (
             <ResourceRow key={item} icon={AlertTriangle} title={item} detail="Tracked impact category" badge="Monitor" />
           ))}
         </Panel>
-        <Panel title="Impact Forecast" reveal>
-          {data.delays.length > 0 ? (
+        <Panel title="Impact ForecastIQ" reveal>
+          {data.delayIQs.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={data.delays.map((delay) => ({ name: delay.title.slice(0, 12), days: delay.impactDays }))}>
+              <BarChart data={data.delayIQs.map((delayIQ) => ({ name: delayIQ.title.slice(0, 12), days: delayIQ.impactDays }))}>
                 <CartesianGrid stroke="rgba(28, 28, 26, 0.07)" />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} />
                 <YAxis tickLine={false} axisLine={false} />
@@ -26747,7 +28105,7 @@ function DelaysPage({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <InlineEmptyState icon={LineChart} title="No delay forecast yet" detail="Forecasting starts once delays are logged." />
+            <InlineEmptyState icon={LineChart} title="No delayIQ forecastIQ yet" detail="ForecastIQ starts once delayIQs are logged." />
           )}
         </Panel>
       </div>
@@ -26771,7 +28129,7 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
     { month: "Apr", planned: 5250, actual: 4900 },
     { month: "May", planned: 5650, actual: 5100 }
   ];
-  const backlogForecast = [
+  const backlogForecastIQ = [
     { month: "Jun", backlog: 5200 },
     { month: "Jul", backlog: 6100 },
     { month: "Aug", backlog: 5800 },
@@ -26790,7 +28148,7 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
     <div className="page-stack reports-page">
       <PageTitle
         title="Reports"
-        subtitle="Production analytics, utilization, and backlog forecasting."
+        subtitle="Production analytics, utilization, and backlog ForecastIQ."
         tutorialId="reports-page-title"
         actions={
           <div className="reports-actions">
@@ -26856,11 +28214,11 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
 
         <article className="reports-card reports-chart-card">
           <header>
-            <h2>Backlog Forecast (Hours)</h2>
+            <h2>Backlog ForecastIQ (Hours)</h2>
           </header>
           <div className="reports-chart-canvas">
             <ResponsiveContainer width="100%" height={260}>
-              <RechartsLineChart data={backlogForecast} margin={{ top: 10, right: 18, bottom: 6, left: -8 }}>
+              <RechartsLineChart data={backlogForecastIQ} margin={{ top: 10, right: 18, bottom: 6, left: -8 }}>
                 <CartesianGrid stroke="#dde6ef" strokeDasharray="4 6" vertical={false} />
                 <XAxis
                   dataKey="month"

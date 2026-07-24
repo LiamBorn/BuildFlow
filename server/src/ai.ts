@@ -24,7 +24,7 @@ export function isAiConfigured(): boolean {
 
 export type AiResult = { mode: "live" | "demo"; answer?: string };
 
-const SYSTEM = `You are BuildFlow AI, an assistant embedded in a construction production-scheduling command center. You help project managers and superintendents run their week — crews, jobs, schedules, materials readiness, delays, and schedule risk.
+const SYSTEM = `You are BuildFlow AI, an assistant embedded in a construction production-scheduling command center. You help project managers and superintendents run their week — crews, jobs, schedules, materials readiness, delayIQs, and schedule risk.
 
 Answer using ONLY the workspace snapshot provided in the user message. Be concrete: reference the real project names, crews, dates, and numbers from the snapshot. Never invent projects, crews, or figures that aren't there — if the snapshot doesn't contain the answer, say so plainly.
 
@@ -49,17 +49,17 @@ export function buildAiContext(data: BootstrapPayload): string {
   }
 
   const jobs = data.jobs ?? [];
-  const atRisk = jobs.filter((j) => ["At Risk", "Delayed", "On Site"].includes(j.status) || j.materialsStatus === "Missing");
-  lines.push(`\nJobs: ${jobs.length} total; ${atRisk.length} at-risk/delayed/waiting-on-materials.`);
+  const atRisk = jobs.filter((j) => ["At Risk", "DelayIQed", "On Site"].includes(j.status) || j.materialsStatus === "Missing");
+  lines.push(`\nJobs: ${jobs.length} total; ${atRisk.length} at-risk/delayIQed/waiting-on-materials.`);
   for (const j of cap(atRisk, 10)) {
     lines.push(`- ${j.name} (${j.phase}) — status ${j.status}, priority ${j.priority}, materials ${j.materialsStatus}, ${j.startDate}→${j.endDate}`);
   }
 
-  const delays = data.delays ?? [];
-  if (delays.length) {
-    lines.push(`\nOpen delays (${delays.length}):`);
-    for (const d of cap(delays, 8)) {
-      lines.push(`- ${(d as { title?: string; reason?: string }).title ?? (d as { reason?: string }).reason ?? "Delay"} — ${(d as { days?: number }).days ?? "?"} day(s), ${(d as { severity?: string }).severity ?? ""} ${(d as { description?: string }).description ?? ""}`.trim());
+  const delayIQs = data.delayIQs ?? [];
+  if (delayIQs.length) {
+    lines.push(`\nOpen delayIQs (${delayIQs.length}):`);
+    for (const d of cap(delayIQs, 8)) {
+      lines.push(`- ${(d as { title?: string; reason?: string }).title ?? (d as { reason?: string }).reason ?? "DelayIQ"} — ${(d as { days?: number }).days ?? "?"} day(s), ${(d as { severity?: string }).severity ?? ""} ${(d as { description?: string }).description ?? ""}`.trim());
     }
   }
 

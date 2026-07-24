@@ -1,17 +1,17 @@
 /* =========================================================================
-   Field Updates & Delays product page  (Product → Field Updates & Delays)
+   Field Updates & DelayIQs product page  (Product → Field Updates & DelayIQs)
    Built on the shared crew-scheduling `.cs-page` system (same tilted hero,
    aurora panels, feature grids, dark globe CTA, wordmark footer) so it reads
    as a sibling of Crew Scheduling, Schedule AI, and Map & Field Ops.
 
    Signature visuals: a live "field feed" of crew check-in cards (avatar,
-   message, shimmering jobsite-photo thumbnails, status pill) and a delay
-   "impact forecast" of severity-coloured bars that grow when revealed. The
-   accent identity is rose/coral — leaning into the risk/delay half — with
+   message, shimmering jobsite-photo thumbnails, status pill) and a delayIQ
+   "impact forecastIQ" of severity-coloured bars that grow when revealed. The
+   accent identity is rose/coral — leaning into the risk/delayIQ half — with
    green kept for on-site progress and amber for warnings.
    ========================================================================= */
 
-.welcome-rx #field-updates-delays {
+.welcome-rx #field-updates-delayIQs {
   --fud-rose: #d05a66;
   --fud-rose-2: #e0808a;
   --fud-green: #2f9760;
@@ -19,18 +19,18 @@
 }
 
 /* Rose identity for the shared chrome */
-.welcome-rx #field-updates-delays .wx-eyebrow .wx-dot { background: var(--fud-rose); }
-.welcome-rx #field-updates-delays .cs-hero-title em { color: var(--fud-rose); }
-.welcome-rx #field-updates-delays .cs-icon {
+.welcome-rx #field-updates-delayIQs .wx-eyebrow .wx-dot { background: var(--fud-rose); }
+.welcome-rx #field-updates-delayIQs .cs-hero-title em { color: var(--fud-rose); }
+.welcome-rx #field-updates-delayIQs .cs-icon {
   color: var(--fud-rose);
   background: rgba(208, 90, 102, 0.1);
   border-color: rgba(208, 90, 102, 0.18);
 }
-.welcome-rx #field-updates-delays .cs-item .cs-ic {
+.welcome-rx #field-updates-delayIQs .cs-item .cs-ic {
   background: rgba(208, 90, 102, 0.1);
   color: var(--fud-rose);
 }
-.welcome-rx #field-updates-delays .cs-tab.on {
+.welcome-rx #field-updates-delayIQs .cs-tab.on {
   background: rgba(208, 90, 102, 0.12);
   color: var(--fud-rose);
   border-color: rgba(208, 90, 102, 0.28);
@@ -154,7 +154,7 @@
 }
 .welcome-rx .fud-attach svg { color: var(--fud-rose); flex: none; }
 
-/* ======================= delay impact forecast ======================= */
+/* ======================= delayIQ impact forecastIQ ======================= */
 .welcome-rx .fud-impact { display: grid; gap: 13px; }
 .welcome-rx .fud-impact-row { display: grid; gap: 6px; }
 .welcome-rx .fud-impact-top {

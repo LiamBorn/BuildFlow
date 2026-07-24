@@ -1,12 +1,12 @@
 /* ============================================================================
-   delays-redesign.css — "Antigravity" HUD (Delay Management)
-   Re-skins the BuildFlow Delays page to match the welcome page + the other
-   redesigned pages. The Delays page is a dashboard-style panel grid, so this
+   delayIQs-redesign.css — "Antigravity" HUD (DelayIQ Management)
+   Re-skins the BuildFlow DelayIQs page to match the welcome page + the other
+   redesigned pages. The DelayIQs page is a dashboard-style panel grid, so this
    mirrors the dashboard treatment (paper panels, serif titles) plus a hero.
-   Scoped entirely to `.delay-rx` so every other app page is untouched.
+   Scoped entirely to `.delayIQ-rx` so every other app page is untouched.
    ========================================================================== */
 
-.delay-rx {
+.delayIQ-rx {
   --wx-bg: #f5f6fa;
   --wx-bg-2: #eaedf3;
   --wx-ink: #1c1c1a;
@@ -37,24 +37,24 @@
 }
 
 /* ============================ background field ============================ */
-.delay-rx .dx-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-.delay-rx .dx-aurora { position: absolute; border-radius: 50%; filter: blur(50px); opacity: 0.55; will-change: transform; }
-.delay-rx .dx-aurora-1 {
+.delayIQ-rx .dx-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.delayIQ-rx .dx-aurora { position: absolute; border-radius: 50%; filter: blur(50px); opacity: 0.55; will-change: transform; }
+.delayIQ-rx .dx-aurora-1 {
   width: 42vw; height: 42vw; top: -18vw; left: -12vw;
   background: radial-gradient(circle, rgba(66, 133, 244, 0.12), transparent 62%);
   transform: translate(calc(var(--px, 0) * 16px), calc(var(--py, 0) * 12px));
 }
-.delay-rx .dx-aurora-2 {
+.delayIQ-rx .dx-aurora-2 {
   width: 38vw; height: 38vw; top: -12vw; right: -12vw;
   background: radial-gradient(circle, rgba(217, 101, 112, 0.1), transparent 62%);
   transform: translate(calc(var(--px, 0) * -20px), calc(var(--py, 0) * 14px));
 }
-.delay-rx .dx-aurora-3 {
+.delayIQ-rx .dx-aurora-3 {
   width: 50vw; height: 50vw; top: 44vw; left: 32vw;
   background: radial-gradient(circle, rgba(155, 114, 203, 0.07), transparent 60%);
   transform: translate(calc(var(--px, 0) * 12px), calc(var(--py, 0) * -10px));
 }
-.delay-rx .dx-cursor {
+.delayIQ-rx .dx-cursor {
   position: fixed; left: var(--mx, -400px); top: var(--my, -400px);
   width: 480px; height: 480px; transform: translate(-50%, -50%); border-radius: 50%;
   background: radial-gradient(circle, rgba(66, 133, 244, 0.05), transparent 62%);
@@ -62,47 +62,47 @@
 }
 
 /* ---- scroll reveal (progressive enhancement) ---- */
-.delay-rx.dx-ready [data-reveal] {
+.delayIQ-rx.dx-ready [data-reveal] {
   opacity: 0;
   transform: translateY(26px);
   transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: calc(var(--i, 0) * 80ms);
 }
-.delay-rx.dx-ready [data-reveal].in { opacity: 1; transform: none; }
+.delayIQ-rx.dx-ready [data-reveal].in { opacity: 1; transform: none; }
 
 /* ============================ hero header =============================== */
-.delay-rx .delays-hero { max-width: 46ch; }
-.delay-rx .dx-eyebrow {
+.delayIQ-rx .delayIQs-hero { max-width: 46ch; }
+.delayIQ-rx .dx-eyebrow {
   display: inline-flex; align-items: center; gap: 9px;
   padding: 7px 15px 7px 12px; border: 1px solid var(--wx-line); border-radius: 999px;
   background: rgba(255, 255, 255, 0.7); color: var(--wx-mut);
   font-size: 12.5px; font-weight: 600;
 }
-.delay-rx .dx-dot {
+.delayIQ-rx .dx-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--wx-g-coral); box-shadow: 0 0 0 4px rgba(217, 101, 112, 0.14);
   animation: dx-pulse 2.6s ease-in-out infinite;
 }
 @keyframes dx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.delay-rx .dx-title {
+.delayIQ-rx .dx-title {
   margin: 20px 0 0;
   font-family: var(--wx-serif);
   font-size: clamp(34px, 4.6vw, 58px);
   line-height: 1.05; font-weight: 500; letter-spacing: -0.015em; color: var(--wx-ink);
 }
-.delay-rx .dx-title em {
+.delayIQ-rx .dx-title em {
   font-style: italic; font-weight: 500;
   background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
 }
-.delay-rx .dx-sub {
+.delayIQ-rx .dx-sub {
   margin: 16px 0 0; max-width: 54ch;
   font-size: clamp(15px, 1.2vw, 17px); line-height: 1.6; color: var(--wx-mut);
 }
 
 /* ============================ panels =================================== */
-.delay-rx .dashboard-grid { gap: 20px; }
-.delay-rx .panel {
+.delayIQ-rx .dashboard-grid { gap: 20px; }
+.delayIQ-rx .panel {
   border: 1px solid var(--wx-line-soft);
   border-radius: var(--wx-radius);
   background: var(--wx-card);
@@ -110,13 +110,13 @@
   padding: 24px;
   transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.34s ease, border-color 0.34s ease;
 }
-.delay-rx .panel:hover {
+.delayIQ-rx .panel:hover {
   transform: translateY(-4px);
   box-shadow: 0 30px 60px rgba(28, 28, 26, 0.12);
   border-color: var(--wx-line);
 }
-.delay-rx .panel-header { margin-bottom: 18px; align-items: baseline; }
-.delay-rx .panel-header h2 {
+.delayIQ-rx .panel-header { margin-bottom: 18px; align-items: baseline; }
+.delayIQ-rx .panel-header h2 {
   font-family: var(--wx-serif);
   font-size: 20px;
   font-weight: 500;
@@ -124,89 +124,89 @@
   text-transform: none;
   color: var(--wx-ink);
 }
-.delay-rx .panel-header button {
+.delayIQ-rx .panel-header button {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 13px; border: 1px solid var(--wx-line); border-radius: 999px;
   background: #fffdf9; color: var(--wx-mut); font-size: 12.5px; font-weight: 600;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
-.delay-rx .panel-header button:hover { background: var(--wx-ink); color: #f9fafd; border-color: var(--wx-ink); }
+.delayIQ-rx .panel-header button:hover { background: var(--wx-ink); color: #f9fafd; border-color: var(--wx-ink); }
 
-/* ============================ delay rows ============================== */
-.delay-rx .delay-row { border-bottom: 1px solid var(--wx-line-soft); border-radius: 10px; transition: background 0.18s ease; }
-.delay-rx .delay-row:hover { background: var(--wx-bg-2); }
-.delay-rx .delay-row svg { color: var(--wx-g-coral); }
-.delay-rx .delay-row strong { color: var(--wx-ink); font-weight: 600; }
-.delay-rx .delay-row em { color: var(--wx-faint); }
-.delay-rx .delay-row b { color: var(--wx-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* ============================ delayIQ rows ============================== */
+.delayIQ-rx .delayIQ-row { border-bottom: 1px solid var(--wx-line-soft); border-radius: 10px; transition: background 0.18s ease; }
+.delayIQ-rx .delayIQ-row:hover { background: var(--wx-bg-2); }
+.delayIQ-rx .delayIQ-row svg { color: var(--wx-g-coral); }
+.delayIQ-rx .delayIQ-row strong { color: var(--wx-ink); font-weight: 600; }
+.delayIQ-rx .delayIQ-row em { color: var(--wx-faint); }
+.delayIQ-rx .delayIQ-row b { color: var(--wx-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* resource rows (delay categories) */
-.delay-rx .resource-row { border-bottom: 1px solid var(--wx-line-soft); border-radius: 10px; transition: background 0.18s ease; }
-.delay-rx .resource-row:hover { background: var(--wx-bg-2); }
-.delay-rx .resource-row svg { color: var(--wx-g-coral); }
-.delay-rx .resource-row strong { color: var(--wx-ink); font-weight: 600; }
-.delay-rx .resource-row em { color: var(--wx-faint); }
+/* resource rows (delayIQ categories) */
+.delayIQ-rx .resource-row { border-bottom: 1px solid var(--wx-line-soft); border-radius: 10px; transition: background 0.18s ease; }
+.delayIQ-rx .resource-row:hover { background: var(--wx-bg-2); }
+.delayIQ-rx .resource-row svg { color: var(--wx-g-coral); }
+.delayIQ-rx .resource-row strong { color: var(--wx-ink); font-weight: 600; }
+.delayIQ-rx .resource-row em { color: var(--wx-faint); }
 
-/* ============================ log-delay form ========================= */
-.delay-rx .form-stack label { color: var(--wx-mut); font-weight: 600; }
-.delay-rx .form-stack input,
-.delay-rx .form-stack select {
+/* ============================ log-delayIQ form ========================= */
+.delayIQ-rx .form-stack label { color: var(--wx-mut); font-weight: 600; }
+.delayIQ-rx .form-stack input,
+.delayIQ-rx .form-stack select {
   border: 1px solid var(--wx-line); border-radius: 12px; background: #fffdf9; color: var(--wx-ink);
 }
-.delay-rx .form-stack input:focus,
-.delay-rx .form-stack select:focus { border-color: var(--wx-blue); outline: none; }
-.delay-rx .primary-button {
+.delayIQ-rx .form-stack input:focus,
+.delayIQ-rx .form-stack select:focus { border-color: var(--wx-blue); outline: none; }
+.delayIQ-rx .primary-button {
   border-radius: 999px; background: var(--wx-ink); color: #f9fafd; border: 1px solid var(--wx-ink);
   transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
-.delay-rx .primary-button:hover:not(:disabled) { background: #000; transform: translateY(-1px); }
+.delayIQ-rx .primary-button:hover:not(:disabled) { background: #000; transform: translateY(-1px); }
 
 /* ============================ empty states =========================== */
-.delay-rx .inline-empty-state,
-.delay-rx .empty-state {
+.delayIQ-rx .inline-empty-state,
+.delayIQ-rx .empty-state {
   border: 1px dashed var(--wx-line);
   border-radius: 14px;
   background: #fffdf9;
   color: var(--wx-mut);
 }
-.delay-rx .inline-empty-state svg,
-.delay-rx .empty-state svg { color: var(--wx-faint); }
-.delay-rx .inline-empty-state strong,
-.delay-rx .empty-state strong { color: var(--wx-ink); }
-.delay-rx .empty-state strong { font-family: var(--wx-serif); font-weight: 500; }
-.delay-rx .inline-empty-state em,
-.delay-rx .empty-state p { color: var(--wx-faint); }
+.delayIQ-rx .inline-empty-state svg,
+.delayIQ-rx .empty-state svg { color: var(--wx-faint); }
+.delayIQ-rx .inline-empty-state strong,
+.delayIQ-rx .empty-state strong { color: var(--wx-ink); }
+.delayIQ-rx .empty-state strong { font-family: var(--wx-serif); font-weight: 500; }
+.delayIQ-rx .inline-empty-state em,
+.delayIQ-rx .empty-state p { color: var(--wx-faint); }
 
 /* ============================ badges ================================= */
-.delay-rx .badge {
+.delayIQ-rx .badge {
   border-radius: 999px; background: #ebedfb; color: var(--wx-mut);
   font-weight: 700; font-size: 11.5px; letter-spacing: 0.01em;
 }
-.delay-rx .badge.confirmed,
-.delay-rx .badge.on-site,
-.delay-rx .badge.ready,
-.delay-rx .badge.complete,
-.delay-rx .badge.available,
-.delay-rx .badge.scheduled,
-.delay-rx .badge.low { background: #e2f1e6; color: var(--wx-green); }
-.delay-rx .badge.ready-to-start,
-.delay-rx .badge.planned,
-.delay-rx .badge.medium,
-.delay-rx .badge.monitor,
-.delay-rx .badge.ordered,
-.delay-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
-.delay-rx .badge.delayed,
-.delay-rx .badge.high,
-.delay-rx .badge.maintenance,
-.delay-rx .badge.missing,
-.delay-rx .badge.at-risk,
-.delay-rx .badge.open,
-.delay-rx .badge.overbooked { background: #fbe4e2; color: var(--wx-red); }
+.delayIQ-rx .badge.confirmed,
+.delayIQ-rx .badge.on-site,
+.delayIQ-rx .badge.ready,
+.delayIQ-rx .badge.complete,
+.delayIQ-rx .badge.available,
+.delayIQ-rx .badge.scheduled,
+.delayIQ-rx .badge.low { background: #e2f1e6; color: var(--wx-green); }
+.delayIQ-rx .badge.ready-to-start,
+.delayIQ-rx .badge.planned,
+.delayIQ-rx .badge.medium,
+.delayIQ-rx .badge.monitor,
+.delayIQ-rx .badge.ordered,
+.delayIQ-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
+.delayIQ-rx .badge.delayIQed,
+.delayIQ-rx .badge.high,
+.delayIQ-rx .badge.maintenance,
+.delayIQ-rx .badge.missing,
+.delayIQ-rx .badge.at-risk,
+.delayIQ-rx .badge.open,
+.delayIQ-rx .badge.overbooked { background: #fbe4e2; color: var(--wx-red); }
 
 /* ============================ recharts polish ======================== */
-.delay-rx .recharts-cartesian-grid line { stroke: var(--wx-line-soft); }
-.delay-rx .recharts-text { fill: var(--wx-faint); font-size: 12px; }
-.delay-rx .recharts-default-tooltip {
+.delayIQ-rx .recharts-cartesian-grid line { stroke: var(--wx-line-soft); }
+.delayIQ-rx .recharts-text { fill: var(--wx-faint); font-size: 12px; }
+.delayIQ-rx .recharts-default-tooltip {
   border-radius: 12px !important;
   border: 1px solid var(--wx-line-soft) !important;
   box-shadow: 0 16px 36px rgba(28, 28, 26, 0.14) !important;
@@ -214,13 +214,13 @@
 
 /* ============================ responsive ============================= */
 @media (max-width: 720px) {
-  .delay-rx { padding: 24px clamp(14px, 4vw, 24px) 56px; }
+  .delayIQ-rx { padding: 24px clamp(14px, 4vw, 24px) 56px; }
 }
 
 /* ============================ reduced motion ========================= */
 @media (prefers-reduced-motion: reduce) {
-  .delay-rx .dx-dot { animation: none; }
-  .delay-rx.dx-ready [data-reveal] { transition-duration: 0.3s; }
-  .delay-rx .panel { transition-duration: 0.2s; }
-  .delay-rx .dx-aurora { transform: none !important; }
+  .delayIQ-rx .dx-dot { animation: none; }
+  .delayIQ-rx.dx-ready [data-reveal] { transition-duration: 0.3s; }
+  .delayIQ-rx .panel { transition-duration: 0.2s; }
+  .delayIQ-rx .dx-aurora { transform: none !important; }
 }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import { hashPassword, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
+import { createBusinessProfile } from "./businessProfiles.js";
 import type {
   BootstrapPayload,
   BusinessTypeId,
@@ -13,22 +14,25 @@ import type {
   CreateProjectInput,
   Crew,
   CrewLaborMixItem,
-  Delay,
+  DelayIQ,
   Equipment,
   FieldUpdate,
   Inspection,
   Job,
+  JobDependency,
   Material,
   Phase,
   Project,
   ReadinessItem,
   ResourcesPayload,
   ScheduleAssignment,
+  ScheduleVariance,
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
   UpdateProjectInput,
   User,
+  VarianceProposal,
   WeatherAlert
 } from "@buildflow/shared";
 
@@ -39,6 +43,15 @@ export type Org = { id: string; name: string; plan: string; createdAt: string };
 export type Account = { id: string; orgId: string; email: string; name: string; role: string; createdAt: string };
 type AccountRow = Account & { passwordHash: string };
 export type SessionContext = { account: Account; org: Org };
+
+/** One project's worth of an imported schedule — see `importSchedule`. Ids and
+ *  projectIds are assigned by the store, so callers supply neither. */
+export type ImportedScheduleProject = {
+  input: CreateProjectInput;
+  phases: Omit<Phase, "id" | "projectId">[];
+  jobs: Omit<CreateJobInput, "projectId">[];
+};
+
 export const DEMO_ORG_ID = "org-demo";
 export const DEMO_ACCOUNT_EMAIL = "demo@buildflow.com";
 export const DEMO_ACCOUNT_PASSWORD = "buildflow-demo";
@@ -52,7 +65,23 @@ export function toAccount(row: AccountRow): Account {
 type AssignmentRow = Omit<ScheduleAssignment, "conflicts"> & { conflicts: string };
 type CrewRow = Omit<Crew, "laborMix">;
 type CrewRoleCountRow = CrewLaborMixItem & { id: string; crewId: string };
-type FieldUpdateRow = Omit<FieldUpdate, "photos"> & { photos: string };
+type FieldUpdateRow = Omit<FieldUpdate, "photos" | "percentComplete"> & {
+  photos: string;
+  percentComplete: number | null;
+};
+
+type VarianceRow = Omit<
+  ScheduleVariance,
+  "proposal" | "kind" | "severity" | "status" | "resolvedAt" | "resolvedBy" | "resolutionNote"
+> & {
+  proposal: string;
+  kind: string;
+  severity: string;
+  status: string;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolutionNote: string | null;
+};
 
 // ── Sales & Customer-Service Desk row shapes (see migrate()) ────────────────
 export type SalesLeadStatus = "New" | "Contacted" | "Qualified" | "Proposal" | "Won" | "Lost";
@@ -133,7 +162,16 @@ const jobColumns = [
   "materialsStatus",
   "status",
   "priority",
-  "notes"
+  "notes",
+  // CPM: the constraint + baseline the schedule is calculated against
+  "constraintType",
+  "constraintDate",
+  "baselineStart",
+  "baselineEnd",
+  // As-built: what the field reported, vs the planned dates above
+  "percentComplete",
+  "actualStart",
+  "actualFinish"
 ].join(", ");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -153,7 +191,25 @@ function toAssignment(row: AssignmentRow): ScheduleAssignment {
 }
 
 function toFieldUpdate(row: FieldUpdateRow): FieldUpdate {
-  return { ...row, photos: parseJsonArray(row.photos) };
+  const { percentComplete, ...rest } = row;
+  const update: FieldUpdate = { ...rest, photos: parseJsonArray(row.photos) };
+  // SQLite hands back NULL for "no percent reported"; the domain says absent.
+  if (percentComplete != null) update.percentComplete = percentComplete;
+  return update;
+}
+
+function toVariance(row: VarianceRow): ScheduleVariance {
+  const variance: ScheduleVariance = {
+    ...row,
+    kind: row.kind as ScheduleVariance["kind"],
+    severity: row.severity as ScheduleVariance["severity"],
+    status: row.status as ScheduleVariance["status"],
+    proposal: JSON.parse(row.proposal) as VarianceProposal,
+    resolvedAt: row.resolvedAt ?? undefined,
+    resolvedBy: row.resolvedBy ?? undefined,
+    resolutionNote: row.resolutionNote ?? undefined
+  };
+  return variance;
 }
 
 function slugify(value: string, fallback = "crew") {
@@ -174,12 +230,6 @@ function projectImageForType(type: string) {
   return "office-building";
 }
 
-const onboardingUsers: User[] = [
-  { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
-  { id: "u-jessica", name: "Jessica Lee", role: "Superintendent", title: "Superintendent", avatar: "JL" },
-  { id: "u-carlos", name: "Carlos Ramirez", role: "Crew Lead", title: "Crew Lead", avatar: "CR" }
-];
-
 // Monday of the demo seed's primary week. The seed is shifted so this lands on
 // the current week, keeping the demo evergreen (always "this week / this month").
 const SEED_ANCHOR_MONDAY = Date.UTC(2026, 5, 15); // 2026-06-15
@@ -189,11 +239,12 @@ const SEED_ANCHOR_MONDAY = Date.UTC(2026, 5, 15); // 2026-06-15
 const SEED_DATE_FIELDS: Record<string, string[]> = {
   projects: ["targetCompletion"],
   phases: ["startDate", "endDate"],
-  jobs: ["startDate", "endDate"],
+  jobs: ["startDate", "endDate", "constraintDate", "baselineStart", "baselineEnd", "actualStart", "actualFinish"],
+  schedule_variances: ["detectedAt", "resolvedAt"],
   materials: ["deliveryDate"],
   assignments: ["date"],
   field_updates: ["createdAt"],
-  delays: ["reportedAt"],
+  delayIQs: ["reportedAt"],
   readiness: ["dueDate"],
   inspections: ["scheduledAt"],
   weather_alerts: ["startsAt"]
@@ -232,13 +283,120 @@ const SCHEMA_MIGRATIONS: Migration[] = [
         CREATE INDEX IF NOT EXISTS idx_assignments_jobId ON assignments(jobId);
         CREATE INDEX IF NOT EXISTS idx_assignments_crewId ON assignments(crewId);
         CREATE INDEX IF NOT EXISTS idx_field_updates_projectId ON field_updates(projectId);
-        CREATE INDEX IF NOT EXISTS idx_delays_projectId ON delays(projectId);
+        CREATE INDEX IF NOT EXISTS idx_delayIQs_projectId ON delayIQs(projectId);
         CREATE INDEX IF NOT EXISTS idx_materials_projectId ON materials(projectId);
         CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
         CREATE INDEX IF NOT EXISTS idx_sessions_expiresAt ON sessions(expiresAt);
         CREATE INDEX IF NOT EXISTS idx_accounts_email ON accounts(email);
         CREATE INDEX IF NOT EXISTS idx_accounts_orgId ON accounts(orgId);
       `)
+  },
+  {
+    version: 2,
+    name: "cpm: dependency network, date constraints, baseline",
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS job_dependencies (
+          id TEXT PRIMARY KEY,
+          predecessorId TEXT NOT NULL,
+          successorId TEXT NOT NULL,
+          type TEXT NOT NULL,
+          lagDays INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_job_deps_pred ON job_dependencies(predecessorId);
+        CREATE INDEX IF NOT EXISTS idx_job_deps_succ ON job_dependencies(successorId);
+      `);
+      // SQLite has no "ADD COLUMN IF NOT EXISTS", so read the table first — this
+      // keeps the migration idempotent if it re-runs after a crash.
+      const existing = new Set<string>();
+      const info = db.exec("PRAGMA table_info(jobs)");
+      if (info[0]) for (const row of info[0].values) existing.add(String(row[1]));
+      for (const column of ["constraintType", "constraintDate", "baselineStart", "baselineEnd"]) {
+        if (!existing.has(column)) db.exec(`ALTER TABLE jobs ADD COLUMN ${column} TEXT`);
+      }
+    }
+  },
+  {
+    version: 3,
+    name: "field progress → schedule variance loop",
+    up: (db) => {
+      const addColumns = (table: string, columns: Record<string, string>) => {
+        const existing = new Set<string>();
+        const info = db.exec(`PRAGMA table_info(${table})`);
+        if (info[0]) for (const row of info[0].values) existing.add(String(row[1]));
+        for (const [column, decl] of Object.entries(columns)) {
+          if (!existing.has(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+        }
+      };
+
+      // Progress is a field-owned fact on the job; dates stay planner-owned.
+      addColumns("jobs", {
+        percentComplete: "INTEGER NOT NULL DEFAULT 0",
+        actualStart: "TEXT",
+        actualFinish: "TEXT"
+      });
+      // Nullable: a note-only update reports no percent and stays a log entry.
+      addColumns("field_updates", { percentComplete: "INTEGER" });
+
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS schedule_variances (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          jobId TEXT NOT NULL,
+          fieldUpdateId TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          severity TEXT NOT NULL,
+          status TEXT NOT NULL,
+          reportedPercent INTEGER NOT NULL,
+          plannedPercent INTEGER NOT NULL,
+          varianceDays INTEGER NOT NULL,
+          detectedAt TEXT NOT NULL,
+          proposal TEXT NOT NULL,
+          resolvedAt TEXT,
+          resolvedBy TEXT,
+          resolutionNote TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_variances_status ON schedule_variances(status);
+        CREATE INDEX IF NOT EXISTS idx_variances_jobId ON schedule_variances(jobId);
+        CREATE INDEX IF NOT EXISTS idx_variances_projectId ON schedule_variances(projectId);
+      `);
+    }
+  },
+  {
+    version: 4,
+    name: "rename delays → delayIQs (DelayIQ rebrand)",
+    // The whole "delay" vocabulary was rebranded to "DelayIQ". The baseline block
+    // above now creates `delayIQs`, so an existing DB reaches here with an EMPTY
+    // `delayIQs` (just created) alongside the old populated `delays` — move the
+    // rows across, then rewrite the persisted "Delayed" status + delay categories.
+    // Idempotent: guarded on the old table's existence; INSERT OR IGNORE + the
+    // narrow WHEREs make a re-run after a crash a no-op.
+    up: (db) => {
+      const names = new Set<string>();
+      const master = db.exec("SELECT name FROM sqlite_master WHERE type='table'");
+      if (master[0]) for (const row of master[0].values) names.add(String(row[0]));
+
+      // 1. Carry the old table's data into the new one, then drop the old.
+      if (names.has("delays")) {
+        db.exec("INSERT OR IGNORE INTO delayIQs SELECT * FROM delays");
+        db.exec("DROP TABLE delays");
+      }
+      db.exec("CREATE INDEX IF NOT EXISTS idx_delayIQs_projectId ON delayIQs(projectId)");
+
+      // 2. Persisted "Delayed" job/phase status → "DelayIQed", in every table that
+      //    has a `status` column (harmless where the value never occurs).
+      for (const table of names) {
+        if (table === "delays") continue; // dropped above
+        const info = db.exec(`PRAGMA table_info(${table})`);
+        const hasStatus = Boolean(info[0]) && info[0].values.some((c) => String(c[1]) === "status");
+        if (hasStatus) db.exec(`UPDATE ${table} SET status = 'DelayIQed' WHERE status = 'Delayed'`);
+      }
+
+      // 3. Stored delay category values ("Inspection delay" → "Inspection delayIQ"),
+      //    case-preserving so "Delay"→"DelayIQ" and "delay"→"delayIQ".
+      db.exec("UPDATE delayIQs SET category = REPLACE(category, 'Delay', 'DelayIQ') WHERE category LIKE '%Delay%'");
+      db.exec("UPDATE delayIQs SET category = REPLACE(category, 'delay', 'delayIQ') WHERE category LIKE '%delay%'");
+    }
   }
 ];
 
@@ -463,7 +621,7 @@ export class BuildFlowStore {
         photos TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS delays (
+      CREATE TABLE IF NOT EXISTS delayIQs (
         id TEXT PRIMARY KEY,
         projectId TEXT NOT NULL,
         category TEXT NOT NULL,
@@ -704,7 +862,7 @@ export class BuildFlowStore {
         targetCompletion: "2026-11-20",
         percentComplete: 35,
         scheduleHealth: "At Risk",
-        status: "Delayed",
+        status: "DelayIQed",
         image: "medical-center",
         latitude: 30.4011,
         longitude: -97.7479
@@ -754,8 +912,8 @@ export class BuildFlowStore {
       ["rough-in", "MEP Rough-In", "On Track", 30, "2026-07-29", "2026-08-24", "#7c3aed"],
       ["inspections", "Inspections", "At Risk", 0, "2026-08-22", "2026-09-04", "#f59e0b"],
       ["finishes", "Finishes", "Not Started", 0, "2026-09-01", "2026-09-22", "#fb8500"],
-      ["punch", "Punch List", "Delayed", 0, "2026-09-18", "2026-09-28", "#ef4444"],
-      ["closeout", "Closeout", "Delayed", 0, "2026-09-24", "2026-10-05", "#ef4444"]
+      ["punch", "Punch List", "DelayIQed", 0, "2026-09-18", "2026-09-28", "#ef4444"],
+      ["closeout", "Closeout", "DelayIQed", 0, "2026-09-24", "2026-10-05", "#ef4444"]
     ].map(([key, name, status, percentComplete, startDate, endDate, color], index) => ({
       id: `phase-riverside-${key}`,
       projectId: "p-riverside",
@@ -784,7 +942,8 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "Confirmed",
         priority: "High",
-        notes: "Slab pour and foundation tie-ins."
+        notes: "Slab pour and foundation tie-ins.",
+        percentComplete: 0
       },
       {
         id: "j-harborview-framing",
@@ -801,7 +960,9 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "On Site",
         priority: "High",
-        notes: "Exterior wall framing and podium connectors."
+        notes: "Exterior wall framing and podium connectors.",
+        percentComplete: 55,
+        actualStart: "2026-06-16"
       },
       {
         id: "j-pinecrest-foundation",
@@ -816,9 +977,11 @@ export class BuildFlowStore {
         requiredLabor: 10,
         requiredEquipment: "Excavator",
         materialsStatus: "Missing",
-        status: "Delayed",
+        status: "DelayIQed",
         priority: "High",
-        notes: "Rebar delivery is behind schedule."
+        notes: "Rebar delivery is behind schedule.",
+        percentComplete: 20,
+        actualStart: "2026-06-17"
       },
       {
         id: "j-logistics-site",
@@ -835,7 +998,8 @@ export class BuildFlowStore {
         materialsStatus: "Ordered",
         status: "Ready to Start",
         priority: "Medium",
-        notes: "Stage utility crew after locates are confirmed."
+        notes: "Stage utility crew after locates are confirmed.",
+        percentComplete: 0
       },
       {
         id: "j-techridge-paving",
@@ -852,7 +1016,8 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "Ready",
         priority: "Normal",
-        notes: "Final striping prep after paving cure window."
+        notes: "Final striping prep after paving cure window.",
+        percentComplete: 0
       },
       {
         id: "j-steelyard-conduit",
@@ -867,9 +1032,11 @@ export class BuildFlowStore {
         requiredLabor: 5,
         requiredEquipment: "Utility Truck",
         materialsStatus: "Waiting on Delivery",
-        status: "Delayed",
+        status: "DelayIQed",
         priority: "Medium",
-        notes: "Conduit reels are pending."
+        notes: "Conduit reels are pending.",
+        percentComplete: 15,
+        actualStart: "2026-06-19"
       },
       {
         id: "j-downtown-retail",
@@ -886,7 +1053,8 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "Planned",
         priority: "Normal",
-        notes: "Tenant improvement finish package."
+        notes: "Tenant improvement finish package.",
+        percentComplete: 0
       },
       {
         id: "j-riverwalk-framing",
@@ -903,7 +1071,8 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "Planned",
         priority: "Normal",
-        notes: "Follow-on framing package."
+        notes: "Follow-on framing package.",
+        percentComplete: 0
       },
       {
         id: "j-pinecrest-mep",
@@ -920,7 +1089,8 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "Planned",
         priority: "High",
-        notes: "Coordinate rough-in before inspection window."
+        notes: "Coordinate rough-in before inspection window.",
+        percentComplete: 0
       }
     ];
 
@@ -1014,10 +1184,10 @@ export class BuildFlowStore {
       { id: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15", status: "Confirmed", conflicts: [] },
       { id: "as-2", jobId: "j-harborview-framing", crewId: "crew-framing", date: "2026-06-16", status: "Confirmed", conflicts: [] },
       { id: "as-3", jobId: "j-harborview-framing", crewId: "crew-framing", date: "2026-06-17", status: "Confirmed", conflicts: [] },
-      { id: "as-4", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: "2026-06-19", status: "Delayed", conflicts: ["Missing materials"] },
+      { id: "as-4", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: "2026-06-19", status: "DelayIQed", conflicts: ["Missing materials"] },
       { id: "as-5", jobId: "j-logistics-site", crewId: "crew-utility", date: "2026-06-18", status: "Ready", conflicts: [] },
       { id: "as-6", jobId: "j-techridge-paving", crewId: "crew-paving", date: "2026-06-19", status: "Ready", conflicts: [] },
-      { id: "as-7", jobId: "j-steelyard-conduit", crewId: "crew-utility", date: "2026-06-19", status: "Delayed", conflicts: ["Missing materials"] },
+      { id: "as-7", jobId: "j-steelyard-conduit", crewId: "crew-utility", date: "2026-06-19", status: "DelayIQed", conflicts: ["Missing materials"] },
       { id: "as-8", jobId: "j-pinecrest-mep", crewId: "crew-mep", date: "2026-06-20", status: "Planned", conflicts: [] }
     ];
 
@@ -1038,7 +1208,7 @@ export class BuildFlowStore {
         jobId: "j-pinecrest-foundation",
         userId: "u-jessica",
         message: "Waiting on MEP rough-in inspection. Inspector running behind.",
-        status: "Delayed",
+        status: "DelayIQed",
         createdAt: "2026-06-16T08:45:00.000Z",
         photos: []
       },
@@ -1054,12 +1224,12 @@ export class BuildFlowStore {
       }
     ];
 
-    const delays: Delay[] = [
+    const delayIQs: DelayIQ[] = [
       {
-        id: "delay-rain",
+        id: "delayIQ-rain",
         projectId: "p-riverside",
         category: "Weather",
-        title: "Heavy Rain Delay",
+        title: "Heavy Rain DelayIQ",
         impactDays: 4,
         severity: "Medium",
         status: "Monitoring",
@@ -1067,7 +1237,7 @@ export class BuildFlowStore {
         description: "Site prep and foundation activities slowed by rain."
       },
       {
-        id: "delay-rebar",
+        id: "delayIQ-rebar",
         projectId: "p-pinecrest",
         category: "Material shortage",
         title: "Rebar Material Shortage",
@@ -1078,10 +1248,10 @@ export class BuildFlowStore {
         description: "Foundation and MEP rough-in cannot proceed until rebar arrives."
       },
       {
-        id: "delay-inspection",
+        id: "delayIQ-inspection",
         projectId: "p-pinecrest",
-        category: "Inspection delay",
-        title: "MEP Inspection Delay",
+        category: "Inspection delayIQ",
+        title: "MEP Inspection DelayIQ",
         impactDays: 2,
         severity: "Medium",
         status: "Open",
@@ -1118,17 +1288,62 @@ export class BuildFlowStore {
       }
     ];
 
+    /* ── CPM network ──────────────────────────────────────────────────────
+       Real precedence logic over the seeded plan, chosen so the forward pass
+       reproduces the planned dates exactly (each link below is driving). The
+       three network roots carry a Start-No-Earlier-Than so CPM anchors them to
+       their planned start instead of collapsing everything to day zero. */
+    const CPM_ROOT_STARTS: Record<string, string> = {
+      "j-riverside-concrete": "2026-06-15",
+      "j-harborview-framing": "2026-06-16",
+      "j-pinecrest-foundation": "2026-06-17"
+    };
+
+    const dependencies: JobDependency[] = [
+      // slab finishes, site utilities follow
+      { id: "dep-slab-utilities", predecessorId: "j-riverside-concrete", successorId: "j-logistics-site", type: "FS", lagDays: 0 },
+      // interior fit-out trails the slab by a day
+      { id: "dep-slab-interiors", predecessorId: "j-riverside-concrete", successorId: "j-downtown-retail", type: "SS", lagDays: 1 },
+      // conduit waits a day after the slab for access
+      { id: "dep-slab-conduit", predecessorId: "j-riverside-concrete", successorId: "j-steelyard-conduit", type: "FS", lagDays: 1 },
+      // paving starts a day into the utilities work
+      { id: "dep-utilities-paving", predecessorId: "j-logistics-site", successorId: "j-techridge-paving", type: "SS", lagDays: 1 },
+      // concrete cure day before MEP rough-in
+      { id: "dep-foundation-mep", predecessorId: "j-pinecrest-foundation", successorId: "j-pinecrest-mep", type: "FS", lagDays: 1 },
+      // the framing crew rolls straight from Harborview onto Riverwalk. Lag 0 on a
+      // working-day calendar already means "the next working day" — Harborview
+      // finishes Saturday, so Riverwalk picks up Monday without a lag day.
+      { id: "dep-framing-crew", predecessorId: "j-harborview-framing", successorId: "j-riverwalk-framing", type: "FS", lagDays: 0 }
+    ];
+
     this.seeding = true;
     users.forEach((item) => this.insert("users", item));
     projects.forEach((item) => this.insert("projects", item));
     phases.forEach((item) => this.insert("phases", item));
-    jobs.forEach((item) => this.insert("jobs", item));
+    jobs.forEach((item) =>
+      this.insert("jobs", {
+        ...item,
+        constraintType: CPM_ROOT_STARTS[item.id] ? "SNET" : null,
+        constraintDate: CPM_ROOT_STARTS[item.id] ?? null,
+        // baseline the plan as seeded, so variance starts at zero and any
+        // re-plan (a drag, a delayIQ) is measured against the original intent
+        baselineStart: item.startDate,
+        baselineEnd: item.endDate
+      })
+    );
+    dependencies.forEach((item) => this.insert("job_dependencies", item));
     crews.forEach((item) => this.insert("crews", item));
     equipment.forEach((item) => this.insert("equipment", item));
     materials.forEach((item) => this.insert("materials", item));
     assignments.forEach((item) => this.insert("assignments", { ...item, conflicts: JSON.stringify(item.conflicts) }));
-    fieldUpdates.forEach((item) => this.insert("field_updates", { ...item, photos: JSON.stringify(item.photos) }));
-    delays.forEach((item) => this.insert("delays", item));
+    fieldUpdates.forEach((item) =>
+      this.insert("field_updates", {
+        ...item,
+        photos: JSON.stringify(item.photos),
+        percentComplete: item.percentComplete ?? null
+      })
+    );
+    delayIQs.forEach((item) => this.insert("delayIQs", item));
     readiness.forEach((item) => this.insert("readiness", { ...item, complete: item.complete ? 1 : 0 }));
     inspections.forEach((item) => this.insert("inspections", item));
     weatherAlerts.forEach((item) => this.insert("weather_alerts", item));
@@ -1192,7 +1407,8 @@ export class BuildFlowStore {
         materialsStatus: "Delivered",
         status: "Planned",
         priority: "High",
-        notes: "Coordinate rough-in before inspection window."
+        notes: "Coordinate rough-in before inspection window.",
+        percentComplete: 0
       }
     ];
     referenceJobs.forEach((job) => {
@@ -1221,9 +1437,11 @@ export class BuildFlowStore {
       "weather_alerts",
       "inspections",
       "readiness",
-      "delays",
+      "delayIQs",
+      "schedule_variances",
       "field_updates",
       "assignments",
+      "job_dependencies",
       "materials",
       "equipment",
       "crew_role_counts",
@@ -1248,8 +1466,27 @@ export class BuildFlowStore {
     payload.equipment.forEach((item) => this.insert("equipment", { ...item, assignedTo: item.assignedTo ?? null }));
     payload.materials.forEach((item) => this.insert("materials", item));
     payload.assignments.forEach((item) => this.insert("assignments", { ...item, conflicts: JSON.stringify(item.conflicts) }));
-    payload.fieldUpdates.forEach((item) => this.insert("field_updates", { ...item, jobId: item.jobId ?? null, photos: JSON.stringify(item.photos) }));
-    payload.delays.forEach((item) => this.insert("delays", item));
+    // The dependency network has to ride along or the restored workspace has no
+    // CPM edges — every job looks independent and the variance ripple goes quiet.
+    payload.dependencies?.forEach((item) => this.insert("job_dependencies", item));
+    payload.fieldUpdates.forEach((item) =>
+      this.insert("field_updates", {
+        ...item,
+        jobId: item.jobId ?? null,
+        photos: JSON.stringify(item.photos),
+        percentComplete: item.percentComplete ?? null
+      })
+    );
+    payload.variances?.forEach((item) =>
+      this.insert("schedule_variances", {
+        ...item,
+        proposal: JSON.stringify(item.proposal),
+        resolvedAt: item.resolvedAt ?? null,
+        resolvedBy: item.resolvedBy ?? null,
+        resolutionNote: item.resolutionNote ?? null
+      })
+    );
+    payload.delayIQs.forEach((item) => this.insert("delayIQs", item));
     payload.readiness.forEach((item) => this.insert("readiness", { ...item, complete: item.complete ? 1 : 0 }));
     payload.inspections.forEach((item) => this.insert("inspections", item));
     payload.weatherAlerts.forEach((item) => this.insert("weather_alerts", item));
@@ -1317,7 +1554,12 @@ export class BuildFlowStore {
         const days = this.seedShiftDays();
         if (days !== 0) {
           const shifted: Record<string, unknown> = { ...values };
-          for (const field of dateFields) shifted[field] = shiftSeedDate(shifted[field], days);
+          // Only shift fields the row actually carries. Assigning unconditionally
+          // would materialise the key on rows that omit it (an optional date like
+          // actualStart), and the binder would then try to bind `undefined`.
+          for (const field of dateFields) {
+            if (field in shifted) shifted[field] = shiftSeedDate(shifted[field], days);
+          }
           values = shifted;
         }
       }
@@ -1536,8 +1778,10 @@ export class BuildFlowStore {
       equipment: this.equipment(),
       materials: this.materials(),
       assignments: this.assignments(),
+      dependencies: this.dependencies(),
       fieldUpdates: this.fieldUpdates(),
-      delays: this.delays(),
+      variances: this.variances(),
+      delayIQs: this.delayIQs(),
       readiness: this.readiness(),
       phases: this.phases(),
       inspections: this.inspections(),
@@ -1545,10 +1789,41 @@ export class BuildFlowStore {
     };
   }
 
-  applyBusinessProfile(_businessType: BusinessTypeId) {
-    this.clearWorkspace();
-    onboardingUsers.forEach((item) => this.insert("users", item));
+  /** The CPM precedence network (job → job links with type + lag). */
+  dependencies(): JobDependency[] {
+    return this.all<JobDependency>("SELECT * FROM job_dependencies");
+  }
+
+  /** Snapshot the current plan as the baseline every job is measured against. */
+  setBaseline() {
+    this.run("UPDATE jobs SET baselineStart = startDate, baselineEnd = endDate");
     this.save();
+    return this.bootstrap();
+  }
+
+  applyBusinessProfile(businessType: BusinessTypeId) {
+    // Onboarding runs this when an owner picks their trade. Seed a realistic
+    // starter workspace for that trade (projects, jobs, crews, a week of
+    // schedule) so a brand-new account is immediately usable instead of blank.
+    //
+    // CRUCIAL: only ever seed an EMPTY workspace. The client fires this from the
+    // "Launch Dashboard" onboarding path, which can run on more than the first
+    // visit — so if any real work already exists we must leave everything
+    // untouched and simply return it. Seeding used to be a clearWorkspace(),
+    // which is why real accounts kept coming back empty.
+    const hasWork = (this.get<{ n: number }>("SELECT COUNT(*) AS n FROM projects")?.n ?? 0) > 0;
+    if (!hasWork) {
+      this.clearWorkspace();
+      // Seed in seeding-mode so the profile's anchor-week dates shift onto the
+      // current calendar (evergreen), exactly like the demo seed.
+      this.seeding = true;
+      try {
+        this.insertBootstrapPayload(createBusinessProfile(businessType));
+      } finally {
+        this.seeding = false;
+      }
+      this.save();
+    }
     return this.bootstrap();
   }
 
@@ -1565,7 +1840,7 @@ export class BuildFlowStore {
       phases: this.phases(project.id),
       jobs: this.jobs(project.id),
       readiness: this.readiness(project.id),
-      delays: this.delays(project.id),
+      delayIQs: this.delayIQs(project.id),
       inspections: this.inspections(project.id)
     };
   }
@@ -1662,21 +1937,100 @@ export class BuildFlowStore {
       materialsStatus: input.materialsStatus,
       status: input.status,
       priority: input.priority,
-      notes: input.notes.trim()
+      notes: input.notes.trim(),
+      // A new job starts un-reported; only the field moves this off zero.
+      percentComplete: input.percentComplete ?? 0
     };
     this.insert("jobs", job);
     this.save();
     return job;
   }
 
-  updateJob(id: string, updates: Partial<Job>) {
-    const allowed = ["status", "startDate", "endDate", "startTime", "endTime", "materialsStatus", "notes", "priority"];
-    const entries = Object.entries(updates).filter(([key]) => allowed.includes(key));
-    if (entries.length === 0) return this.get<Job>(`SELECT ${jobColumns} FROM jobs WHERE id = ?`, [id]);
-    const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
-    this.run(`UPDATE jobs SET ${setClause} WHERE id = ?`, [...entries.map(([, value]) => value as Primitive), id]);
+  /**
+   * Bulk-create an imported schedule (P6 / MS Project) in one shot.
+   *
+   * Deliberately NOT a loop over createProject/createJob, for two reasons that
+   * only bite at import scale:
+   *  - those stamp ids with `Date.now()`, which collides as soon as two
+   *    activities share a name inside one millisecond — routine in a real
+   *    schedule ("Pour slab" on twenty levels). Here a monotonic counter is
+   *    mixed in, so ids stay unique no matter the name.
+   *  - each of them calls save(), and save() re-exports and rewrites the WHOLE
+   *    SQLite file. A 2,000-activity import would be 2,000 full-file writes.
+   *    This inserts everything and saves exactly once.
+   */
+  importSchedule(entries: ImportedScheduleProject[]): { projects: Project[]; jobs: number; phases: number } {
+    const stamp = Date.now();
+    let seq = 0;
+    const projects: Project[] = [];
+    let jobs = 0;
+    let phases = 0;
+
+    for (const entry of entries) {
+      const project: Project = {
+        id: `p-${slugify(entry.input.name, "project")}-${stamp}-${seq++}`,
+        name: entry.input.name.trim(),
+        slug: this.uniqueProjectSlug(entry.input.name),
+        location: entry.input.location.trim(),
+        address: entry.input.address.trim(),
+        type: entry.input.type.trim(),
+        contractType: entry.input.contractType.trim(),
+        managerId: entry.input.managerId,
+        targetCompletion: entry.input.targetCompletion,
+        percentComplete: entry.input.percentComplete,
+        scheduleHealth: entry.input.scheduleHealth,
+        status: entry.input.status,
+        image: projectImageForType(entry.input.type),
+        latitude: 30.2672,
+        longitude: -97.7431
+      };
+      this.insert("projects", project);
+      projects.push(project);
+
+      for (const phase of entry.phases) {
+        this.insert("phases", { id: `ph-${stamp}-${seq++}`, projectId: project.id, ...phase });
+        phases += 1;
+      }
+      for (const job of entry.jobs) {
+        this.insert("jobs", { id: `job-${slugify(job.name)}-${stamp}-${seq++}`, projectId: project.id, ...job });
+        jobs += 1;
+      }
+    }
+
     this.save();
+    return { projects, jobs, phases };
+  }
+
+  job(id: string): Job | undefined {
     return this.get<Job>(`SELECT ${jobColumns} FROM jobs WHERE id = ?`, [id]);
+  }
+
+  updateJob(id: string, updates: Partial<Job>) {
+    const allowed = [
+      "status",
+      "startDate",
+      "endDate",
+      "startTime",
+      "endTime",
+      "materialsStatus",
+      "notes",
+      "priority",
+      // As-built progress, written by the field reporting loop
+      "percentComplete",
+      "actualStart",
+      "actualFinish"
+    ];
+    const entries = Object.entries(updates).filter(([key]) => allowed.includes(key));
+    if (entries.length === 0) return this.job(id);
+    const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
+    this.run(`UPDATE jobs SET ${setClause} WHERE id = ?`, [
+      // `undefined` clears a column (e.g. reopened work drops actualFinish);
+      // sql.js only binds primitives, so it has to travel as an explicit NULL.
+      ...entries.map(([, value]) => (value === undefined ? null : (value as Primitive))),
+      id
+    ]);
+    this.save();
+    return this.job(id);
   }
 
   crews(): Crew[] {
@@ -1907,6 +2261,7 @@ export class BuildFlowStore {
     message: string;
     status: Status;
     photos?: string[];
+    percentComplete?: number;
   }) {
     const update: FieldUpdate = {
       id: `fu-${Date.now()}`,
@@ -1916,27 +2271,148 @@ export class BuildFlowStore {
       message: input.message,
       status: input.status,
       createdAt: new Date().toISOString(),
-      photos: input.photos ?? []
+      photos: input.photos ?? [],
+      percentComplete: input.percentComplete
     };
-    this.insert("field_updates", { ...update, jobId: update.jobId ?? null, photos: JSON.stringify(update.photos) });
+    this.insert("field_updates", {
+      ...update,
+      jobId: update.jobId ?? null,
+      photos: JSON.stringify(update.photos),
+      percentComplete: update.percentComplete ?? null
+    });
     this.save();
     return update;
   }
 
-  delays(projectId?: string): Delay[] {
-    if (projectId) return this.all<Delay>("SELECT * FROM delays WHERE projectId = ? ORDER BY reportedAt DESC", [projectId]);
-    return this.all<Delay>("SELECT * FROM delays ORDER BY reportedAt DESC");
+  /* ── Field progress → schedule variance loop ───────────────────────────────
+     applyFieldProgress writes the crew's number through to the job (a fact they
+     own). recordVariance parks the *schedule* consequence for review.
+     acceptVariance is the only path that moves planned dates from a field
+     report, and it only runs when a PM says so. */
+
+  /**
+   * Write reported progress onto the job. Percent always lands; dates never move
+   * here. Stamps actualStart on the first report of real work and actualFinish
+   * at 100% so the job carries its own as-built record.
+   */
+  applyFieldProgress(jobId: string, percentComplete: number, asOf: string): Job | undefined {
+    const job = this.job(jobId);
+    if (!job) return undefined;
+    const date = asOf.slice(0, 10);
+    const updates: Partial<Job> = { percentComplete };
+    if (percentComplete > 0 && !job.actualStart) updates.actualStart = date;
+    if (percentComplete >= 100 && !job.actualFinish) updates.actualFinish = date;
+    // Reopened work (100% → less) drops the finish stamp; it isn't finished.
+    if (percentComplete < 100 && job.actualFinish) updates.actualFinish = undefined;
+    return this.updateJob(jobId, updates);
   }
 
-  createDelay(input: Omit<Delay, "id" | "reportedAt">) {
-    const delay: Delay = {
-      id: `delay-${Date.now()}`,
+  variances(status?: ScheduleVariance["status"]): ScheduleVariance[] {
+    if (status)
+      return this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE status = ? ORDER BY detectedAt DESC", [
+        status
+      ]).map(toVariance);
+    return this.all<VarianceRow>("SELECT * FROM schedule_variances ORDER BY detectedAt DESC").map(toVariance);
+  }
+
+  variance(id: string): ScheduleVariance | undefined {
+    return this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE id = ?", [id]).map(toVariance)[0];
+  }
+
+  recordVariance(input: Omit<ScheduleVariance, "id" | "status" | "detectedAt"> & { detectedAt?: string }): ScheduleVariance {
+    // One open question per job. A newer report supersedes the last one rather
+    // than stacking — the PM should answer "where is this job now", not work
+    // through every guess the crew made on the way there.
+    const open = this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE jobId = ? AND status = 'pending'", [
+      input.jobId
+    ]);
+    for (const row of open) {
+      this.db.run("UPDATE schedule_variances SET status = 'superseded', resolvedAt = ? WHERE id = ?", [
+        new Date().toISOString(),
+        row.id
+      ]);
+    }
+
+    const variance: ScheduleVariance = {
+      ...input,
+      id: `var-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      status: "pending",
+      detectedAt: input.detectedAt ?? new Date().toISOString()
+    };
+    this.insert("schedule_variances", {
+      ...variance,
+      proposal: JSON.stringify(variance.proposal),
+      resolvedAt: null,
+      resolvedBy: null,
+      resolutionNote: null
+    });
+    this.save();
+    return variance;
+  }
+
+  /**
+   * Believe the field: move the reporting job's dates onto the forecastIQ, then
+   * push the successors the CPM ripple named. The baseline is deliberately left
+   * alone — that is what the slip stays measurable against.
+   */
+  acceptVariance(id: string, userId: string, note?: string): { variance: ScheduleVariance; movedJobIds: string[] } | undefined {
+    const variance = this.variance(id);
+    if (!variance || variance.status !== "pending") return undefined;
+
+    const movedJobIds: string[] = [];
+    const applyDates = (jobId: string, startDate: string, endDate: string) => {
+      const job = this.job(jobId);
+      if (!job || (job.startDate === startDate && job.endDate === endDate)) return;
+      this.updateJob(jobId, { startDate, endDate });
+      movedJobIds.push(jobId);
+    };
+
+    applyDates(variance.jobId, variance.proposal.proposedStart, variance.proposal.proposedEnd);
+    for (const item of variance.proposal.ripple) applyDates(item.jobId, item.proposedStart, item.proposedEnd);
+
+    const resolvedAt = new Date().toISOString();
+    this.db.run(
+      "UPDATE schedule_variances SET status = 'accepted', resolvedAt = ?, resolvedBy = ?, resolutionNote = ? WHERE id = ?",
+      [resolvedAt, userId, note ?? null, id]
+    );
+    this.save();
+    return {
+      variance: { ...variance, status: "accepted", resolvedAt, resolvedBy: userId, resolutionNote: note },
+      movedJobIds
+    };
+  }
+
+  /**
+   * Keep the plan. The report stays on the record and the job keeps the
+   * reported percent — the PM is overriding the *schedule* conclusion, not
+   * disputing what the crew saw.
+   */
+  rejectVariance(id: string, userId: string, note?: string): ScheduleVariance | undefined {
+    const variance = this.variance(id);
+    if (!variance || variance.status !== "pending") return undefined;
+    const resolvedAt = new Date().toISOString();
+    this.db.run(
+      "UPDATE schedule_variances SET status = 'rejected', resolvedAt = ?, resolvedBy = ?, resolutionNote = ? WHERE id = ?",
+      [resolvedAt, userId, note ?? null, id]
+    );
+    this.save();
+    return { ...variance, status: "rejected", resolvedAt, resolvedBy: userId, resolutionNote: note };
+  }
+
+  delayIQs(projectId?: string): DelayIQ[] {
+    if (projectId) return this.all<DelayIQ>("SELECT * FROM delayIQs WHERE projectId = ? ORDER BY reportedAt DESC", [projectId]);
+    return this.all<DelayIQ>("SELECT * FROM delayIQs ORDER BY reportedAt DESC");
+  }
+
+  createDelayIQ(input: Omit<DelayIQ, "id" | "reportedAt">) {
+    const delayIQ: DelayIQ = {
+      id: `delayIQ-${Date.now()}`,
       reportedAt: new Date().toISOString().slice(0, 10),
       ...input
     };
-    this.insert("delays", delay);
+    this.insert("delayIQs", delayIQ);
     this.save();
-    return delay;
+    return delayIQ;
   }
 
   /* ── Sales & Customer-Service Desk ───────────────────────────────────────────
@@ -2034,7 +2510,7 @@ export class BuildFlowStore {
         subject: "Feature request: Gantt dependencies", status: "closed", priority: "Low", department: "support",
         createdAt: ago(6), lastMessageAt: ago(4),
         messages: [
-          { author: "customer", body: "Would love to link jobs so a delay on one pushes the dependent ones automatically.", at: ago(6) },
+          { author: "customer", body: "Would love to link jobs so a delayIQ on one pushes the dependent ones automatically.", at: ago(6) },
           { author: "agent", body: "Love it — I've logged this with product and tagged your account so you'll hear when it ships. Thanks for the idea!", at: ago(4) }
         ]
       },

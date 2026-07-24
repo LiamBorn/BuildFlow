@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { bootstrapFixture } from "./test/fixture";
 
+// The workspace a business profile provisions: real people, no production data yet.
 const blankWorkspaceFixture: typeof bootstrapFixture = {
   ...bootstrapFixture,
   projects: [],
@@ -14,23 +15,55 @@ const blankWorkspaceFixture: typeof bootstrapFixture = {
   materials: [],
   assignments: [],
   fieldUpdates: [],
-  delays: [],
+  delayIQs: [],
   readiness: [],
   inspections: [],
   weatherAlerts: []
 };
 
+// A brand-new org before onboarding provisions it — no users at all. `enterAfterAuth`
+// branches on `users.length === 0` to send a fresh signup to the business-type
+// question instead of the dashboard, so the onboarding tests need /api/bootstrap to
+// answer with this rather than the populated fixture.
+const newOrgWorkspaceFixture: typeof bootstrapFixture = { ...blankWorkspaceFixture, users: [] };
+
+// The /api/bootstrap response for the test in flight. `signUp()` points this at the
+// new-org payload; `beforeEach` resets it to the populated workspace.
+let bootstrapPayload: typeof bootstrapFixture = bootstrapFixture;
+
+// What applying a business profile provisions. Blank by default — that's the point of
+// onboarding — but the map/routing tests need real jobs and crews to plan across.
+let businessProfilePayload: typeof bootstrapFixture = blankWorkspaceFixture;
+
+const ACCOUNT = { name: "Jordan Reyes", email: "ops@buildflow.test", password: "password123" };
+
+// The HUD/topbar greet whoever `accountDisplayName` says is signed in, which is
+// currently a hardcoded constant rather than the name the signup form collected.
+const GREETING = "Good afternoon, Liam";
+
+/** The default BuildFlow API responder. Tests that stub fetch to intercept a
+    third-party API (routing, geocoding) must delegate everything else here rather
+    than answering bootstrap themselves — otherwise `bootstrapPayload` is ignored
+    and signup never reaches the onboarding questions. */
+function respondToBuildflowApi(input: RequestInfo | URL) {
+  const url = String(input);
+  if (url.includes("/api/business-profile")) {
+    return new Response(JSON.stringify(businessProfilePayload), { status: 200 });
+  }
+  if (url.includes("/api/bootstrap")) {
+    return new Response(JSON.stringify(bootstrapPayload), { status: 200 });
+  }
+  // Everything else (auth, creates, patches) just needs a 200 with a plausible body.
+  return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
+}
+
+// The clock is pinned to 2026-06-16 in src/test/setup.ts, inside the week the
+// fixtures are dated in — see the comment there for why it has to happen that early.
 describe("BuildFlow app", () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
-        if (String(input).includes("/api/business-profile")) {
-          return new Response(JSON.stringify(blankWorkspaceFixture), { status: 200 });
-        }
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
-      })
-    );
+    bootstrapPayload = bootstrapFixture;
+    businessProfilePayload = blankWorkspaceFixture;
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => respondToBuildflowApi(input)));
   });
 
   afterEach(() => {
@@ -39,15 +72,59 @@ describe("BuildFlow app", () => {
     window.history.pushState(null, "", "/");
   });
 
+  /** Sign in through the real login form. The workspace has users, so this lands
+      straight on the dashboard. */
   async function enterDashboard() {
-    fireEvent.click(await screen.findByRole("button", { name: /^Login$/ }));
-    await screen.findByText("Crew Scheduling");
-    fireEvent.click(await screen.findByRole("button", { name: /^Dashboard$/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Login from welcome navigation$/ }));
+    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: ACCOUNT.email } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: ACCOUNT.password } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await screen.findByText("Weekly Production Schedule");
   }
 
+  /** Open the Schedule page from the app sidebar. The board opens on Month, so the
+      crew-by-day grid, its queue, and the week controls need an explicit view. */
+  async function openSchedule(view?: "Month" | "Week" | "List" | "Gantt" | "Kanban" | "Matrix") {
+    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await screen.findByRole("heading", { name: "Assign the week, in minutes." });
+    if (view) {
+      fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${view}$`) }));
+    }
+  }
+
+  /** Register through the real signup form as a brand-new org, which lands on the
+      first onboarding question. Leaves the caller on #business-type. */
+  async function signUp({ email = ACCOUNT.email }: { email?: string } = {}) {
+    bootstrapPayload = newOrgWorkspaceFixture;
+    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
+    fireEvent.change(await screen.findByLabelText("Your name"), { target: { value: ACCOUNT.name } });
+    fireEvent.change(screen.getByLabelText("Work email"), { target: { value: email } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: ACCOUNT.password } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    await screen.findByRole("heading", { name: "What type of Business do you own" });
+  }
+
+  /** Answer the business-type question, landing on #additional-products. */
+  async function chooseBusinessType(businessType: string) {
+    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: businessType } });
+    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await screen.findByRole("heading", { name: "What additional products do you want to use?" });
+  }
+
+  /** Pick products and a plan, then continue — landing on the program HUD. */
+  async function chooseProductsAndPlan(products: string[], plan: string) {
+    for (const product of products) {
+      const productCheckbox = await screen.findByLabelText(new RegExp(product));
+      if (!(productCheckbox as HTMLInputElement).checked) {
+        fireEvent.click(productCheckbox);
+      }
+    }
+    fireEvent.click(screen.getByRole("button", { name: `Select ${plan} plan` }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
+  }
+
   async function completeOnboarding({
-    email = "ops@buildflow.test",
+    email = ACCOUNT.email,
     businessType = "Concrete",
     products = ["Map & Field Ops"],
     plan = "Pro"
@@ -57,33 +134,21 @@ describe("BuildFlow app", () => {
     products?: string[];
     plan?: "Free" | "Pro" | "Business" | "Enterprise";
   } = {}) {
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: email } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: businessType } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
-    for (const product of products) {
-      const productCheckbox = await screen.findByLabelText(new RegExp(product));
-      if (!(productCheckbox as HTMLInputElement).checked) {
-        fireEvent.click(productCheckbox);
-      }
-    }
-    fireEvent.click(screen.getByRole("button", { name: `Select ${plan} plan` }));
-    fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
-    await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" });
+    await signUp({ email });
+    await chooseBusinessType(businessType);
+    await chooseProductsAndPlan(products, plan);
+    await screen.findByRole("heading", { name: GREETING });
+    // Applying the business profile provisions the workspace, so bootstrap answers
+    // with it from here on rather than with the pre-onboarding new-org payload.
+    bootstrapPayload = businessProfilePayload;
     fireEvent.click(screen.getByRole("button", { name: "Open BuildFlow Dashboard" }));
     await screen.findByText("Weekly Production Schedule");
   }
 
   async function openMapFieldOps() {
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "route@buildflow.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
-    fireEvent.click(await screen.findByLabelText(/Map & Field Ops/));
-    fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
-    fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
+    await signUp({ email: "route@buildflow.test" });
+    await chooseBusinessType("Asphalt");
+    await chooseProductsAndPlan(["Map & Field Ops"], "Business");
     fireEvent.click(await screen.findByRole("button", { name: "Open Map & Field Ops" }));
     fireEvent.click(await screen.findByRole("button", { name: "Skip Tutorial" }));
     await screen.findByRole("heading", { name: "Map & Field Ops" });
@@ -97,8 +162,9 @@ describe("BuildFlow app", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Get BuildFlow$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Login from welcome navigation$/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("BuildFlow guided demo")).toBeInTheDocument();
-    expect(screen.getByText("Start with the command center")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Join the waitlist from welcome navigation$/ })).toBeInTheDocument();
+    expect(screen.getByText("See how BuildFlow works — a live product tour")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Preview the live demo$/ })).toBeInTheDocument();
   });
 
   it("opens the create account page from Get BuildFlow", async () => {
@@ -106,9 +172,11 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
 
-    expect(await screen.findByRole("heading", { name: "BuildFlow: your production workspace." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Your name")).toBeInTheDocument();
     expect(screen.getByLabelText("Work email")).toHaveAttribute("placeholder", "name@company.com");
-    expect(screen.getByText("Sign up with your work email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create account" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Google" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Microsoft" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
@@ -116,12 +184,42 @@ describe("BuildFlow app", () => {
     expect(window.location.hash).toBe("#create-account");
   });
 
-  it("prompts for business type after work email registration", async () => {
+  it("switches between the signup and login forms", async () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "ops@buildflow.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+
+    expect(await screen.findByRole("heading", { name: "Welcome back." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    // Login only needs credentials — the signup-only fields are gone.
+    expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create an account" }));
+
+    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
+    expect(screen.getByLabelText("Your name")).toBeInTheDocument();
+  });
+
+  it("requires a password of at least 8 characters to create an account", async () => {
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
+    fireEvent.change(await screen.findByLabelText("Your name"), { target: { value: ACCOUNT.name } });
+    fireEvent.change(screen.getByLabelText("Work email"), { target: { value: ACCOUNT.email } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "short" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Password must be at least 8 characters.");
+    expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).includes("/api/auth/signup"))).toBe(false);
+  });
+
+  it("prompts for business type after registering a new workspace", async () => {
+    render(<App />);
+
+    await signUp();
 
     expect(await screen.findByRole("heading", { name: "What type of Business do you own" })).toBeInTheDocument();
     expect(screen.getByLabelText("Business type")).toBeInTheDocument();
@@ -140,11 +238,8 @@ describe("BuildFlow app", () => {
   it("requires a plan and at least one additional product before entering BuildFlow", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "ops@buildflow.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp();
+    await chooseBusinessType("Asphalt");
 
     expect(await screen.findByText("Map & Field Ops")).toBeInTheDocument();
     expect(screen.getByText("Track vehicles, equipment, and design traffic routes.")).toBeInTheDocument();
@@ -166,17 +261,14 @@ describe("BuildFlow app", () => {
   it("opens the selected programs HUD before applying the blank workspace", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "ops@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp({ email: "ops@asphalt.test" });
+    await chooseBusinessType("Asphalt");
     fireEvent.click(await screen.findByLabelText(/Map & Field Ops/));
     fireEvent.click(screen.getByLabelText(/Production Reports/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     expect(window.location.hash).toBe("#program-hud");
     expect(screen.getByText("Asphalt workspace")).toBeInTheDocument();
     expect(screen.getByText("Business plan")).toBeInTheDocument();
@@ -201,16 +293,13 @@ describe("BuildFlow app", () => {
   it("shows Map & Field Ops as a permanent HUD app even when it was not selected", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "ops@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp({ email: "ops@asphalt.test" });
+    await chooseBusinessType("Asphalt");
     fireEvent.click(await screen.findByLabelText(/Production Reports/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     expect(screen.getByText("1 selected program")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open BuildFlow Schedule" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Map & Field Ops" })).toBeInTheDocument();
@@ -230,16 +319,13 @@ describe("BuildFlow app", () => {
   it("opens a blank workspace after the selected onboarding setup", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "ops@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp({ email: "ops@asphalt.test" });
+    await chooseBusinessType("Asphalt");
     fireEvent.click(await screen.findByLabelText(/Map & Field Ops/));
     fireEvent.click(screen.getByLabelText(/Production Reports/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open BuildFlow Dashboard" }));
 
     expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
@@ -269,8 +355,9 @@ describe("BuildFlow app", () => {
     expect(screen.queryByText("Paving Crew 2")).not.toBeInTheDocument();
     expect(screen.queryByText("HMA Surface Mix")).not.toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
-    expect(await screen.findByText("No crews created yet.")).toBeInTheDocument();
+    await openSchedule("Week");
+    // Both the crew grid and the availability card report the empty workspace.
+    expect((await screen.findAllByText("No crews created yet.")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Concrete Pump #2")).not.toBeInTheDocument();
     expect(screen.queryByText("Double-booked crew")).not.toBeInTheDocument();
 
@@ -286,16 +373,13 @@ describe("BuildFlow app", () => {
   it("launches Map & Field Ops from the HUD into its dedicated program page", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "ops@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp({ email: "ops@asphalt.test" });
+    await chooseBusinessType("Asphalt");
     fireEvent.click(await screen.findByLabelText(/Map & Field Ops/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open BuildFlow Schedule" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Map & Field Ops" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open Production Reports" })).not.toBeInTheDocument();
@@ -352,9 +436,11 @@ describe("BuildFlow app", () => {
             { status: 200 }
           );
         }
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
+        return respondToBuildflowApi(input);
       })
     );
+    // The router has nothing to plan across on a blank workspace.
+    businessProfilePayload = bootstrapFixture;
 
     render(<App />);
 
@@ -425,7 +511,7 @@ describe("BuildFlow app", () => {
             { status: 200 }
           );
         }
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
+        return respondToBuildflowApi(input);
       })
     );
 
@@ -479,7 +565,7 @@ describe("BuildFlow app", () => {
             { status: 200 }
           );
         }
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
+        return respondToBuildflowApi(input);
       })
     );
 
@@ -502,13 +588,14 @@ describe("BuildFlow app", () => {
   });
 
   it("labels map pins by role (jobsite, crew, and fleet)", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(bootstrapFixture), { status: 200 })));
+    // Crew and fleet pins only exist where there are crews and equipment to pin.
+    businessProfilePayload = bootstrapFixture;
 
     render(<App />);
     await openMapFieldOps();
 
-    // Jobsite pins carry a role chip.
-    expect(screen.getByText("Jobsite")).toBeInTheDocument();
+    // Jobsite pins carry a role chip — one per site on the map.
+    expect(screen.getAllByText("Jobsite").length).toBeGreaterThan(0);
 
     // Crew pin shows the crew name alongside a "Crew" tag.
     const crewPin = screen.getByRole("button", { name: "Filter to Concrete Crew 1" });
@@ -521,43 +608,37 @@ describe("BuildFlow app", () => {
     expect(within(fleetPin).getByText("Fleet")).toBeInTheDocument();
   });
 
-  it("shows related actions for the Field Updates & Delays program landing", async () => {
+  it("shows related actions for the Field Updates & DelayIQs program landing", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "field@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
-    fireEvent.click(await screen.findByLabelText(/Field Updates & Delays/));
+    await signUp({ email: "field@asphalt.test" });
+    await chooseBusinessType("Asphalt");
+    fireEvent.click(await screen.findByLabelText(/Field Updates & DelayIQs/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open Field Updates & Delays" }));
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open Field Updates & DelayIQs" }));
     expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Skip Tutorial" }));
 
-    expect(await screen.findByRole("heading", { name: "Field Updates & Delays" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Field Updates & DelayIQs" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open field updates" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Delay Management" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Open Delay Management" }));
-    expect(await screen.findByRole("heading", { name: "Delay Management" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open DelayIQ Management" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open DelayIQ Management" }));
+    expect(await screen.findByRole("heading", { name: "Stay ahead of the slip." })).toBeInTheDocument();
   });
 
   it("shows related actions for the Equipment Tracking program landing", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "equipment@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp({ email: "equipment@asphalt.test" });
+    await chooseBusinessType("Asphalt");
     fireEvent.click(await screen.findByLabelText(/Equipment Tracking/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open Equipment Tracking" }));
     expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Skip Tutorial" }));
@@ -573,16 +654,13 @@ describe("BuildFlow app", () => {
   it("returns from a program landing page to the HUD icon page", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.change(await screen.findByLabelText("Work email"), { target: { value: "hud@asphalt.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    fireEvent.change(await screen.findByLabelText("Business type"), { target: { value: "Asphalt" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    await signUp({ email: "hud@asphalt.test" });
+    await chooseBusinessType("Asphalt");
     fireEvent.click(await screen.findByLabelText(/Map & Field Ops/));
     fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open Map & Field Ops" }));
     expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Skip Tutorial" }));
@@ -590,7 +668,7 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open HUD" }));
 
-    expect(await screen.findByRole("heading", { name: "Good afternoon, BuildFlow" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: GREETING })).toBeInTheDocument();
     expect(window.location.hash).toBe("#program-hud");
     expect(screen.getByRole("button", { name: "Open BuildFlow Schedule" })).toBeInTheDocument();
   });
@@ -599,8 +677,8 @@ describe("BuildFlow app", () => {
     window.history.pushState(null, "", "/#program-hud");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Your BuildFlow HUD" })).toBeInTheDocument();
-    expect(screen.getAllByText("Finish setup first").length).toBeGreaterThan(0);
+    expect(await screen.findByRole("heading", { name: "Finish setup first" })).toBeInTheDocument();
+    expect(screen.getByText("Your BuildFlow HUD")).toBeInTheDocument();
     expect(screen.getByText("Select a business type, plan, and at least one program before opening BuildFlow.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Return to additional products" })).toBeInTheDocument();
     expect(
@@ -660,7 +738,7 @@ describe("BuildFlow app", () => {
     await completeOnboarding();
     fireEvent.click(await screen.findByRole("button", { name: "Skip Tutorial" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Tutorial" }));
+    fireEvent.click(screen.getByRole("button", { name: "Help and tutorial" }));
 
     expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
   });
@@ -680,18 +758,15 @@ describe("BuildFlow app", () => {
     let crewCreated = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
       const url = String(input);
-      if (url.includes("/api/business-profile")) {
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
-      }
       if (url === "/api/crews") {
         crewCreated = true;
         expect(options?.method).toBe("POST");
         return new Response(JSON.stringify(newCrew), { status: 201 });
       }
-      return new Response(
-        JSON.stringify(crewCreated ? { ...bootstrapFixture, crews: [...bootstrapFixture.crews, newCrew] } : bootstrapFixture),
-        { status: 200 }
-      );
+      if (crewCreated && url.includes("/api/bootstrap")) {
+        return new Response(JSON.stringify({ ...bootstrapPayload, crews: [...bootstrapPayload.crews, newCrew] }), { status: 200 });
+      }
+      return respondToBuildflowApi(input);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -750,7 +825,9 @@ describe("BuildFlow app", () => {
     const scheduledAssignment = {
       id: "as-tutorial-schedule",
       jobId: createdJob.id,
-      crewId: "crew-concrete",
+      // The tutorial schedules onto the crew it just created — the only one in a
+      // freshly provisioned workspace.
+      crewId: newCrew.id,
       date: "2026-06-16",
       status: "Planned" as const,
       conflicts: []
@@ -760,9 +837,6 @@ describe("BuildFlow app", () => {
     let assignmentCreated = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
       const url = String(input);
-      if (url.includes("/api/business-profile")) {
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
-      }
       if (url === "/api/crews") {
         crewCreated = true;
         return new Response(JSON.stringify(newCrew), { status: 201 });
@@ -777,17 +851,24 @@ describe("BuildFlow app", () => {
         expect(options?.method).toBe("POST");
         return new Response(JSON.stringify(scheduledAssignment), { status: 201 });
       }
-      return new Response(
-        JSON.stringify({
-          ...bootstrapFixture,
-          crews: crewCreated ? [...bootstrapFixture.crews, newCrew] : bootstrapFixture.crews,
-          jobs: jobCreated ? [...bootstrapFixture.jobs, createdJob] : bootstrapFixture.jobs,
-          assignments: assignmentCreated ? [...bootstrapFixture.assignments, scheduledAssignment] : bootstrapFixture.assignments
-        }),
-        { status: 200 }
-      );
+      if (url.includes("/api/bootstrap")) {
+        return new Response(
+          JSON.stringify({
+            ...bootstrapPayload,
+            crews: crewCreated ? [...bootstrapPayload.crews, newCrew] : bootstrapPayload.crews,
+            jobs: jobCreated ? [...bootstrapPayload.jobs, createdJob] : bootstrapPayload.jobs,
+            assignments: assignmentCreated ? [...bootstrapPayload.assignments, scheduledAssignment] : bootstrapPayload.assignments
+          }),
+          { status: 200 }
+        );
+      }
+      return respondToBuildflowApi(input);
     });
     vi.stubGlobal("fetch", fetchMock);
+    // A job has to belong to a project, and its location defaults from one, so this
+    // tutorial needs a workspace that was provisioned with a project — the crew and
+    // job are still the tutorial's to create.
+    businessProfilePayload = { ...blankWorkspaceFixture, projects: bootstrapFixture.projects };
 
     render(<App />);
     await completeOnboarding();
@@ -809,7 +890,11 @@ describe("BuildFlow app", () => {
 
     expect(await screen.findByRole("heading", { name: "Add a job to the schedule" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-    fireEvent.click(await screen.findByRole("button", { name: "Add job to Concrete Crew 1 on Jun 16" }));
+    // The tutorial lands on the schedule but not on a particular view; the per-cell
+    // Add job buttons it points at only exist on the Week board.
+    fireEvent.click(screen.getByRole("button", { name: "Week" }));
+    // Onboarding provisions an empty workspace, so the crew made above is the only one.
+    fireEvent.click(await screen.findByRole("button", { name: "Add job to Tutorial Crew 1 on Jun 16" }));
     expect(await screen.findByRole("dialog", { name: "Add job to schedule" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("button", { name: "Next" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -822,18 +907,13 @@ describe("BuildFlow app", () => {
     fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Created during the tutorial." } });
     fireEvent.click(screen.getByRole("button", { name: "Create & Schedule Job" }));
 
-    expect(await screen.findByText("Tutorial Schedule Job")).toBeInTheDocument();
+    // The gate opens only once the job is both created and assigned.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/jobs", expect.objectContaining({ method: "POST" })));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/schedule/assign", expect.objectContaining({ method: "POST" }))
+    );
     await waitFor(() => expect(screen.getByRole("button", { name: "Next" })).toBeEnabled());
-  });
-
-  it("opens the login flow from the create account page", async () => {
-    render(<App />);
-
-    fireEvent.click(await screen.findByRole("button", { name: /^Get BuildFlow$/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "Log in" }));
-
-    expect(await screen.findByText("Crew Scheduling")).toBeInTheDocument();
-    expect(screen.getByText("Downtown Retail Buildout")).toBeInTheDocument();
+    expect((await screen.findAllByText("Tutorial Schedule Job")).length).toBeGreaterThan(0);
   });
 
   it("opens the welcome category dropdowns", async () => {
@@ -842,24 +922,29 @@ describe("BuildFlow app", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Product" }));
 
     expect(screen.getByRole("menu", { name: "Product menu" })).toBeInTheDocument();
-    expect(screen.getByText("Plans")).toBeInTheDocument();
-    expect(screen.getByText("Free")).toBeInTheDocument();
-    expect(screen.getByText("Pro")).toBeInTheDocument();
-    expect(screen.getByText("Business")).toBeInTheDocument();
-    expect(screen.getByText("Enterprise")).toBeInTheDocument();
-    expect(screen.getByText("Features")).toBeInTheDocument();
-    expect(screen.getByText("Tonnage Tracking")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Crew Scheduling" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Map & Field Ops" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Production Reports" })).toBeInTheDocument();
+
+    // The plans live in their own menu, not under Product.
+    fireEvent.click(screen.getByRole("button", { name: "Plans" }));
+
+    expect(screen.getByRole("menu", { name: "Plans menu" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Free" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Pro" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Business" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Enterprise" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Company" }));
 
     expect(screen.getByRole("menu", { name: "Company menu" })).toBeInTheDocument();
-    expect(screen.getByText("About BuildFlow")).toBeInTheDocument();
-    expect(screen.getByText("Contact Sales")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "About BuildFlow" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Contact Sales" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "AI" }));
 
     expect(screen.getByRole("menu", { name: "AI menu" })).toBeInTheDocument();
-    expect(screen.getByText("BuildFlow AI")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /BuildFlow AI/ })).toBeInTheDocument();
     expect(screen.getByText("AI tools for work")).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Schedule AI" })).not.toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Readiness AI" })).not.toBeInTheDocument();
@@ -869,27 +954,17 @@ describe("BuildFlow app", () => {
     expect(screen.getByText("Route Optimization")).toBeInTheDocument();
   });
 
-  it("opens the Free plan page from the product menu", async () => {
+  it("opens the Free plan page from the plans menu", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Product" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Plans" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Free" }));
 
     expect(await screen.findByRole("heading", { name: "Try BuildFlow for free." })).toBeInTheDocument();
-    expect(screen.getByText("Demo of BuildFlow")).toBeInTheDocument();
+    expect(
+      screen.getByText("Experience BuildFlow without a subscription — a 14-day demo of crews, jobs, materials, and exports.")
+    ).toBeInTheDocument();
     expect(window.location.hash).toBe("#free-plan");
-  });
-
-  it("opens the Schedule solution page from the solutions menu", async () => {
-    render(<App />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Solutions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Schedule" }));
-
-    expect(await screen.findByRole("heading", { level: 1, name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("Weekly Production Schedule")).toBeInTheDocument();
-    expect(screen.getByText("Bring the old schedule in, then plan from one live workspace.")).toBeInTheDocument();
-    expect(window.location.hash).toBe("#solutions-schedule");
   });
 
   it("opens the Schedule AI page from the BuildFlow AI menu item", async () => {
@@ -898,15 +973,11 @@ describe("BuildFlow app", () => {
     fireEvent.click(await screen.findByRole("button", { name: "AI" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /BuildFlow AI/ }));
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Schedule AI keeps every crew moving." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Perks of having Schedule AI." })).toBeInTheDocument();
-    expect(screen.getByText("Find conflicts early")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "What BuildFlow AI automations can do." })).toBeInTheDocument();
-    expect(screen.getByText("Weather Integration")).toBeInTheDocument();
-    expect(screen.getByText("Schedule Suggestions")).toBeInTheDocument();
-    expect(screen.getByText("Crew Suggestions")).toBeInTheDocument();
-    expect(screen.getByText("Delay Detection")).toBeInTheDocument();
-    expect(screen.getByText("Route Optimization")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Schedule AI that thinks a day ahead." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Everything Schedule AI should do." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Spot conflicts before they cost a day" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Rank ready work automatically" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Draft recovery plans in seconds" })).toBeInTheDocument();
     expect(window.location.hash).toBe("#buildflow-ai");
   });
 
@@ -914,18 +985,19 @@ describe("BuildFlow app", () => {
     window.history.pushState(null, "", "/#buildflow-ai");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Schedule AI keeps every crew moving." })).toBeInTheDocument();
-    expect(screen.getByText("Create your own scheduling rules.")).toBeInTheDocument();
-    expect(screen.getByText("Monitors forecasts beside the production board, flags weather-sensitive jobs, and recommends safer work windows before crews are dispatched.")).toBeInTheDocument();
-    expect(screen.getByText("Built for production confidence.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Schedule AI that thinks a day ahead." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "An always-on planning assistant." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI that protects the day, with humans in charge." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Keep humans in control" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Let Schedule AI prep the next plan." })).toBeInTheDocument();
   });
 
   it.each([
     [
-      "Field Updates & Delays",
-      "#solutions-field-updates-delays",
-      "A clean field log for progress, photos, delay causes, and recovery steps.",
-      "Bring field notes in, then turn delays into accountable recovery work."
+      "Field Updates & DelayIQs",
+      "#solutions-field-updates-delayIQs",
+      "A clean field log for progress, photos, delayIQ causes, and recovery steps.",
+      "Bring field notes in, then turn delayIQs into accountable recovery work."
     ],
     [
       "Map & Field Ops",
@@ -939,13 +1011,11 @@ describe("BuildFlow app", () => {
       "A clean reporting workspace for schedule variance, bottlenecks, backlog, and crew demand.",
       "Bring schedule history in, then publish reporting from one live workspace."
     ]
-  ])("opens the %s solution page from the solutions menu", async (menuItem, hash, featureHeading, migrationHeading) => {
+  ])("opens the %s solution page from the direct hash route", async (pageTitle, hash, featureHeading, migrationHeading) => {
+    window.history.pushState(null, "", `/${hash}`);
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Solutions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: menuItem }));
-
-    expect(await screen.findByRole("heading", { level: 1, name: menuItem })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: pageTitle })).toBeInTheDocument();
     expect(screen.getByText(featureHeading)).toBeInTheDocument();
     expect(screen.getByText(migrationHeading)).toBeInTheDocument();
     expect(window.location.hash).toBe(hash);
@@ -957,18 +1027,8 @@ describe("BuildFlow app", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Schedule" })).toBeInTheDocument();
     expect(screen.getByText("A clean production board for crews, jobs, blockers, and handoffs.")).toBeInTheDocument();
-  });
-
-  it("opens the Startups business size page from the solutions menu", async () => {
-    render(<App />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Solutions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Startups" }));
-
-    expect(await screen.findByRole("heading", { level: 1, name: "One workspace. Every startup tool." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Move faster, cut scheduling costs." })).toBeInTheDocument();
-    expect(screen.getByText("Questions & answers")).toBeInTheDocument();
-    expect(window.location.hash).toBe("#solutions-startups");
+    expect(screen.getByText("Weekly Production Schedule")).toBeInTheDocument();
+    expect(screen.getByText("Bring the old schedule in, then plan from one live workspace.")).toBeInTheDocument();
   });
 
   it("opens the Startups business size page from the direct hash route", async () => {
@@ -976,59 +1036,43 @@ describe("BuildFlow app", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "One workspace. Every startup tool." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Move faster, cut scheduling costs." })).toBeInTheDocument();
     expect(screen.getByText("The tool of choice for startups.")).toBeInTheDocument();
     expect(screen.getByText("Join our partner network alongside top VCs and accelerators.")).toBeInTheDocument();
+    expect(screen.getByText("Questions & answers")).toBeInTheDocument();
   });
 
   it.each([
     [
-      "Small Businesses",
       "#solutions-small-businesses",
       "One workspace. Every small business tool.",
       "The tool of choice for small businesses.",
-      "Run with the same structure growing contractors use."
-    ],
-    [
-      "Enterprise",
-      "#solutions-enterprise",
-      "One workspace. Every enterprise tool.",
-      "The tool of choice for enterprise teams.",
-      "Connect enterprise planning with trusted operating systems."
-    ]
-  ])("opens the %s business size page from the solutions menu", async (menuItem, hash, heading, choiceHeading, partnerHeading) => {
-    render(<App />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Solutions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: menuItem }));
-
-    expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: choiceHeading })).toBeInTheDocument();
-    expect(screen.getByText(partnerHeading)).toBeInTheDocument();
-    expect(screen.getByText("Questions & answers")).toBeInTheDocument();
-    expect(window.location.hash).toBe(hash);
-  });
-
-  it.each([
-    [
-      "#solutions-small-businesses",
-      "One workspace. Every small business tool.",
+      "Run with the same structure growing contractors use.",
       "Build and run your small business with one workspace.",
       "QuickBooks"
     ],
     [
       "#solutions-enterprise",
       "One workspace. Every enterprise tool.",
+      "The tool of choice for enterprise teams.",
+      "Connect enterprise planning with trusted operating systems.",
       "Scale enterprise operations with one workspace.",
       "Microsoft"
     ]
-  ])("opens the %s business size page from the direct hash route", async (hash, heading, useCasesHeading, partnerLogo) => {
-    window.history.pushState(null, "", `/${hash}`);
-    render(<App />);
+  ])(
+    "opens the %s business size page from the direct hash route",
+    async (hash, heading, choiceHeading, partnerHeading, useCasesHeading, partnerLogo) => {
+      window.history.pushState(null, "", `/${hash}`);
+      render(<App />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
-    expect(screen.getByText(useCasesHeading)).toBeInTheDocument();
-    expect(screen.getByText(partnerLogo)).toBeInTheDocument();
-  });
+      expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: choiceHeading })).toBeInTheDocument();
+      expect(screen.getByText(partnerHeading)).toBeInTheDocument();
+      expect(screen.getByText(useCasesHeading)).toBeInTheDocument();
+      expect(screen.getByText(partnerLogo)).toBeInTheDocument();
+      expect(screen.getByText("Questions & answers")).toBeInTheDocument();
+    }
+  );
 
   it("updates the Startups savings totals when calculator tools are toggled", async () => {
     window.history.pushState(null, "", "/#solutions-startups");
@@ -1056,8 +1100,8 @@ describe("BuildFlow app", () => {
 
   it.each([
     [
-      "#solutions-field-updates-delays",
-      "Field Updates & Delays",
+      "#solutions-field-updates-delayIQs",
+      "Field Updates & DelayIQs",
       "Cause tracking"
     ],
     [
@@ -1082,25 +1126,22 @@ describe("BuildFlow app", () => {
     ["Pro", "#pro-plan", "Run BuildFlow Pro."],
     ["Business", "#business-plan", "Scale with BuildFlow Business."],
     ["Enterprise", "#enterprise-plan", "Customize BuildFlow Enterprise."]
-  ])("opens the %s plan page from the product menu", async (planName, hash, heading) => {
+  ])("opens the %s plan page from the plans menu", async (planName, hash, heading) => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Product" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Plans" }));
     fireEvent.click(screen.getByRole("menuitem", { name: planName }));
 
     expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
     expect(window.location.hash).toBe(hash);
   });
 
-  it("opens the product plans overview from the direct hash route", async () => {
+  it("routes the product hash to the Free plan page", async () => {
     window.history.pushState(null, "", "/#product");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Choose the production workspace that fits your team." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Try BuildFlow for free." })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Free" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Pro" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Business" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Enterprise" })).toBeInTheDocument();
   });
 
   it.each([
@@ -1114,72 +1155,38 @@ describe("BuildFlow app", () => {
     expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
   });
 
-  it.each([
-    ["Free", "#free-plan", "Try BuildFlow for free."],
-    ["Pro", "#pro-plan", "Run BuildFlow Pro."],
-    ["Business", "#business-plan", "Scale with BuildFlow Business."],
-    ["Enterprise", "#enterprise-plan", "Customize BuildFlow Enterprise."]
-  ])("shows the savings calculator on the %s plan page", async (_planName, hash, heading) => {
-    window.history.pushState(null, "", `/${hash}`);
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
-    expect(screen.getByText("Too many tools? Calculate potential savings here.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Crew scheduling/)).toBeChecked();
-    expect(screen.getByText("Monthly savings")).toBeInTheDocument();
-    expect(screen.getByText("Annual savings")).toBeInTheDocument();
-  });
-
-  it.each([
-    ["Pro", "Run BuildFlow Pro."],
-    ["Business", "Scale with BuildFlow Business."],
-    ["Enterprise", "Customize BuildFlow Enterprise."]
-  ])("opens the %s plan page from the product overview card", async (planName, heading) => {
-    window.history.pushState(null, "", "/#product");
-    render(<App />);
-
-    fireEvent.click(await screen.findByRole("button", { name: `View ${planName} plan` }));
-
-    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
-  });
-
-  it("opens the Free plan page from the direct hash route", async () => {
+  it("lists the plan's features on the Free plan page", async () => {
     window.history.pushState(null, "", "/#free-plan");
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Try BuildFlow for free." })).toBeInTheDocument();
-    expect(screen.getByText("Start the 14 day Free trial, then choose the plan that fits.")).toBeInTheDocument();
-    expect(screen.getByText("14 day free trial")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Plan includes" })).toBeInTheDocument();
+
+    // Each "Label: detail" feature renders as a label/detail pair, not one string.
+    expect(screen.getByText("Production Calendar")).toBeInTheDocument();
     expect(
-      screen.getByText("Production Calendar: basic calendar view for scheduled jobs, work orders, and production dates")
+      screen.getByText("basic calendar view for scheduled jobs, work orders, and production dates")
     ).toBeInTheDocument();
-    expect(screen.getByText("Limited Users: 5 users included")).toBeInTheDocument();
-    expect(
-      screen.getByText("Trial Limits: limited number of jobs, users, resources, and historical data")
-    ).toBeInTheDocument();
-    expect(screen.getByText("Free workspace")).toBeInTheDocument();
-  });
-
-  it("starts the dashboard demo from the Free plan page", async () => {
-    window.history.pushState(null, "", "/#free-plan");
-    render(<App />);
-
-    fireEvent.click((await screen.findAllByRole("button", { name: /^Start free demo/ }))[0]);
-
-    expect(await screen.findByText("Weekly Production Schedule")).toBeInTheDocument();
+    expect(screen.getByText("Limited Users")).toBeInTheDocument();
+    expect(screen.getByText("5 users included")).toBeInTheDocument();
+    expect(screen.getByText("Trial Limits")).toBeInTheDocument();
+    expect(screen.getByText("limited number of jobs, users, resources, and historical data")).toBeInTheDocument();
   });
 
   it.each([
+    ["#free-plan", /^Start free demo/],
     ["#pro-plan", /^Start Pro demo/],
     ["#business-plan", /^Start Business demo/],
     ["#enterprise-plan", /^Start Enterprise demo/]
-  ])("starts the dashboard demo from the %s page", async (hash, buttonName) => {
+  ])("starts registration from the %s page", async (hash, buttonName) => {
     window.history.pushState(null, "", `/${hash}`);
     render(<App />);
 
     fireEvent.click((await screen.findAllByRole("button", { name: buttonName }))[0]);
 
-    expect(await screen.findByText("Weekly Production Schedule")).toBeInTheDocument();
+    // The plan CTAs register first — the workspace is created after signup, not before.
+    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
+    expect(window.location.hash).toBe("#create-account");
   });
 
   it("opens the updates page from the resources menu", async () => {
@@ -1190,9 +1197,11 @@ describe("BuildFlow app", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Updates" }));
 
     expect(await screen.findByRole("heading", { name: "What is new in production scheduling." })).toBeInTheDocument();
-    expect(screen.getByText("3.6: Readiness rules now shape the weekly board")).toBeInTheDocument();
-    expect(screen.getAllByText("Liam Santos")).toHaveLength(3);
-    expect(screen.getAllByText("CEO")).toHaveLength(3);
+    // The release version is its own tag now, not a prefix on the title.
+    expect(screen.getByRole("heading", { name: "Readiness rules now shape the weekly board" })).toBeInTheDocument();
+    // Every published update is credited to the same author.
+    expect(screen.getAllByText("Liam Santos")).toHaveLength(6);
+    expect(screen.getAllByText("CEO")).toHaveLength(6);
     expect(screen.queryByText("Field Guides")).not.toBeInTheDocument();
   });
 
@@ -1202,9 +1211,11 @@ describe("BuildFlow app", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Resources" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Customer Reviews" }));
 
-    expect(await screen.findByRole("heading", { name: "Customers" })).toBeInTheDocument();
-    expect(screen.getByText("Riverside's new default: production plans that stay ready in the field.")).toBeInTheDocument();
-    expect(screen.getByText("34% fewer same-day dispatch changes")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Production plans that stay ready." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Teams that build on BuildFlow." })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Riverside runs its concrete weeks from one BuildFlow schedule" })
+    ).toBeInTheDocument();
     expect(window.location.hash).toBe("#customer-reviews");
   });
 
@@ -1212,8 +1223,8 @@ describe("BuildFlow app", () => {
     window.history.pushState(null, "", "/#customer-reviews");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Customers" })).toBeInTheDocument();
-    expect(screen.getByText("Get scheduling help, demos, use-cases, and more.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Production plans that stay ready." })).toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: "Filter customer reviews" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "What is new in production scheduling." })).not.toBeInTheDocument();
   });
 
@@ -1224,7 +1235,7 @@ describe("BuildFlow app", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Help Center" }));
 
     expect(await screen.findByRole("heading", { name: "Hi, how can we help you?" })).toBeInTheDocument();
-    expect(screen.getByText("Popular topics")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Popular topics" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "BuildFlow Academy" })).toBeInTheDocument();
     expect(window.location.hash).toBe("#help-center");
   });
@@ -1254,22 +1265,10 @@ describe("BuildFlow app", () => {
     expect(screen.queryByText("Weekly Production Schedule")).not.toBeInTheDocument();
   });
 
-  it("changes the footer language selector", async () => {
-    render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /English \(US\)/ }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Español" }));
-
-    expect(screen.getByRole("button", { name: /Español/ })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /Español/ }));
-    fireEvent.change(screen.getByLabelText("Custom language"), { target: { value: "Klingon" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
-
-    expect(screen.getByRole("button", { name: /Klingon/ })).toBeInTheDocument();
-  });
-
-  it("toggles the welcome demo playback", async () => {
+  // The guided demo player sits on the overview pages now, not the welcome home.
+  it("toggles the guided demo playback on the product overview", async () => {
+    window.history.pushState(null, "", "/#overview");
     render(<App />);
 
     const pauseButton = await screen.findByRole("button", { name: "Pause demo" });
@@ -1278,10 +1277,11 @@ describe("BuildFlow app", () => {
     expect(screen.getByRole("button", { name: "Play demo" })).toBeInTheDocument();
   });
 
-  it("switches welcome demo scenes manually", async () => {
+  it("switches guided demo scenes manually on the product overview", async () => {
+    window.history.pushState(null, "", "/#overview");
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Show Schedule demo" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Open Schedule demo" }));
 
     expect(screen.getByText("Drag work onto the right crew")).toBeInTheDocument();
     expect(screen.getByText("Conflict warning")).toBeInTheDocument();
@@ -1323,46 +1323,6 @@ describe("BuildFlow app", () => {
     expect(screen.getByText("1 active job(s) may be impacted")).toBeInTheDocument();
   });
 
-  it("opens the support chat from the main app", async () => {
-    render(<App />);
-
-    await enterDashboard();
-
-    const chatButton = screen.getByRole("button", { name: "Open support chat" });
-    expect(chatButton).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Support chat" })).not.toBeInTheDocument();
-
-    fireEvent.click(chatButton);
-
-    const chatPanel = screen.getByRole("region", { name: "Support chat" });
-    expect(within(chatPanel).getByText(/BuildFlow AI Agent/)).toBeInTheDocument();
-    expect(within(chatPanel).getByText("AI Agent is answering first.")).toBeInTheDocument();
-
-    const messageBox = within(chatPanel).getByLabelText("Message AI Agent");
-    fireEvent.change(messageBox, { target: { value: "Need help with a crew conflict" } });
-    fireEvent.click(within(chatPanel).getByRole("button", { name: "Send support message" }));
-
-    expect(within(chatPanel).getByText("Need help with a crew conflict")).toBeInTheDocument();
-    expect(within(chatPanel).getByText(/For scheduling help/)).toBeInTheDocument();
-    expect(messageBox).toHaveValue("");
-
-    fireEvent.change(messageBox, { target: { value: "Support Team Member" } });
-    fireEvent.click(within(chatPanel).getByRole("button", { name: "Send support message" }));
-
-    expect(within(chatPanel).getByText("Support Team Member")).toBeInTheDocument();
-    expect(within(chatPanel).getByText(/Support Team Member requested/)).toBeInTheDocument();
-    expect(within(chatPanel).getAllByText(/Your note was added for the support team/)).toHaveLength(1);
-    expect(within(chatPanel).getByText("A Support Team Member handoff is queued.")).toBeInTheDocument();
-    const supportTeamBox = within(chatPanel).getByLabelText("Message support team");
-    expect(supportTeamBox).toBeInTheDocument();
-    expect(within(chatPanel).queryByRole("button", { name: "Support Team Member" })).not.toBeInTheDocument();
-
-    fireEvent.change(supportTeamBox, { target: { value: "How do I fix schedule conflicts?" } });
-    fireEvent.click(within(chatPanel).getByRole("button", { name: "Send support message" }));
-
-    expect(within(chatPanel).getByText("How do I fix schedule conflicts?")).toBeInTheDocument();
-    expect(within(chatPanel).getAllByText(/Your note was added for the support team/)).toHaveLength(1);
-  });
 
   it("opens live feed panels from the dashboard KPI cards", async () => {
     render(<App />);
@@ -1377,7 +1337,8 @@ describe("BuildFlow app", () => {
     expect(todaysJobsCard).toHaveAttribute("aria-expanded", "true");
     const jobsFeed = screen.getByRole("region", { name: "Today's Jobs live feed" });
     expect(within(jobsFeed).getByRole("heading", { name: "Today's Jobs" })).toBeInTheDocument();
-    expect(within(jobsFeed).getByText("No items to show")).toBeInTheDocument();
+    expect(within(jobsFeed).getByText("Riverside Office Building")).toBeInTheDocument();
+    expect(within(jobsFeed).getByText("Downtown Retail Buildout")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Equipment In Use/ }));
 
@@ -1396,8 +1357,9 @@ describe("BuildFlow app", () => {
     const notificationsButton = screen.getByRole("button", { name: "Notifications" });
     const hudButton = screen.getByRole("button", { name: "Open HUD" });
 
-    expect(notificationsButton.compareDocumentPosition(hudButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(hudButton.compareDocumentPosition(accountButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Topbar order: HUD, then notifications, then the account control.
+    expect(hudButton.compareDocumentPosition(notificationsButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(notificationsButton.compareDocumentPosition(accountButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(notificationsButton);
 
@@ -1414,18 +1376,20 @@ describe("BuildFlow app", () => {
     await enterDashboard();
     fireEvent.click(screen.getByRole("button", { name: "Open HUD" }));
 
-    expect(await screen.findByRole("heading", { name: "Your BuildFlow HUD" })).toBeInTheDocument();
+    // Signing in doesn't pick programs, so the HUD opens on its setup-recovery screen.
+    expect(await screen.findByRole("heading", { name: "Finish setup first" })).toBeInTheDocument();
     expect(window.location.hash).toBe("#program-hud");
   });
 
-  it("opens the schedule from the welcome page", async () => {
+  it("opens the schedule from the welcome page demo link", async () => {
     render(<App />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Login$/ }));
+    // "Preview the live demo" is the credential-free way into the product; the
+    // welcome page's "Login" CTA now opens the login form instead.
+    fireEvent.click(await screen.findByRole("button", { name: /^Preview the live demo$/ }));
 
-    expect(await screen.findByText("Crew Scheduling")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Assign the week, in minutes." })).toBeInTheDocument();
     expect(screen.getByText("Downtown Retail Buildout")).toBeInTheDocument();
-    expect(screen.getByText("Drag a job onto the schedule to assign")).toBeInTheDocument();
   });
 
   it("renders Field Updates with the crew-style directory layout", async () => {
@@ -1434,7 +1398,7 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^Field Updates$/i }));
 
-    expect(await screen.findByRole("heading", { name: "Field Updates" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "From the field, in real time." })).toBeInTheDocument();
     expect(screen.getByText("Total Updates")).toBeInTheDocument();
     expect(screen.getAllByText("On Site").length).toBeGreaterThan(0);
     expect(screen.getByText("With Photos")).toBeInTheDocument();
@@ -1525,15 +1489,14 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
 
-    const accountButton = screen.getByRole("button", { name: "liam santos account" });
-    expect(accountButton).toHaveTextContent("liam santos");
-    expect(accountButton).toHaveTextContent("Project Manager");
-
-    fireEvent.click(accountButton);
+    // The topbar control is avatar-only; the name and role live in the menu it opens.
+    fireEvent.click(screen.getByRole("button", { name: "liam santos account" }));
 
     const accountMenu = screen.getByRole("menu", { name: "Account menu" });
+    expect(within(accountMenu).getByText("liam santos")).toBeInTheDocument();
+    expect(within(accountMenu).getByText("Project Manager")).toBeInTheDocument();
     expect(within(accountMenu).getByRole("menuitem", { name: "Settings" })).toHaveAttribute("title", "Settings");
   });
 
@@ -1549,7 +1512,7 @@ describe("BuildFlow app", () => {
       "Equipment",
       "Materials",
       "Field Updates",
-      "Delays",
+      "DelayIQs",
       "Reports"
     ];
 
@@ -1559,12 +1522,11 @@ describe("BuildFlow app", () => {
       fireEvent.click(screen.getByRole("button", { name: label }));
 
       const accountButton = await screen.findByRole("button", { name: "liam santos account" });
-      expect(accountButton).toHaveTextContent("liam santos");
-      expect(accountButton).toHaveTextContent("Project Manager");
-
       fireEvent.click(accountButton);
 
       const accountMenu = screen.getByRole("menu", { name: "Account menu" });
+      expect(within(accountMenu).getByText("liam santos")).toBeInTheDocument();
+      expect(within(accountMenu).getByText("Project Manager")).toBeInTheDocument();
       expect(within(accountMenu).getByRole("menuitem", { name: "Settings" })).toHaveAttribute("title", "Settings");
       expect(within(accountMenu).queryByText("Demo role")).not.toBeInTheDocument();
 
@@ -1662,7 +1624,7 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^Projects$/i }));
 
-    expect(screen.getByRole("heading", { name: "Projects" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Every build, in view." })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search projects...")).toBeInTheDocument();
     expect(screen.getByLabelText("Filter projects by status")).toBeInTheDocument();
     expect(screen.getByLabelText("Filter projects by manager")).toBeInTheDocument();
@@ -1759,7 +1721,7 @@ describe("BuildFlow app", () => {
       if (url === "/api/projects") {
         return new Response(JSON.stringify({ error: "Project could not be created." }), { status: 500 });
       }
-      return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
+      return respondToBuildflowApi(input);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1846,7 +1808,7 @@ describe("BuildFlow app", () => {
       if (url === "/api/projects/p-riverside") {
         return new Response(JSON.stringify({ error: "Project could not be updated." }), { status: 500 });
       }
-      return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
+      return respondToBuildflowApi(input);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1866,9 +1828,8 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
 
-    expect(screen.getByText("Crew Scheduling")).toBeInTheDocument();
     expect(screen.getByText("Downtown Retail Buildout")).toBeInTheDocument();
     expect(screen.getByText("Drag a job onto the schedule to assign")).toBeInTheDocument();
   });
@@ -1877,20 +1838,23 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
 
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     expect(screen.getByLabelText("Schedule filters")).toBeInTheDocument();
 
-    const delayedFilter = screen.getByRole("button", { name: "Delayed" });
-    expect(delayedFilter).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(delayedFilter);
-    expect(delayedFilter).toHaveAttribute("aria-pressed", "false");
+    const delayIQedFilter = screen.getByRole("button", { name: "DelayIQed" });
+    expect(delayIQedFilter).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(delayIQedFilter);
+    expect(delayIQedFilter).toHaveAttribute("aria-pressed", "false");
 
-    fireEvent.change(screen.getByLabelText("View"), { target: { value: "List" } });
-    expect(screen.getByText("Date")).toBeInTheDocument();
+    // The view is a button group now, not a select.
+    fireEvent.click(screen.getByRole("button", { name: "List" }));
+    expect(screen.getByText("Time")).toBeInTheDocument();
+    expect(screen.getByText("Crew")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Riverside Office Building project from list view" })).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "Week" }));
     fireEvent.click(screen.getByRole("button", { name: "Next week" }));
     expect(screen.getByLabelText("Selected week Jun 22 - Jun 28, 2026")).toBeInTheDocument();
 
@@ -1908,7 +1872,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
     fireEvent.click(await screen.findByRole("button", { name: "Open Riverside Office Building project" }));
 
     expect(screen.getByRole("dialog", { name: "Edit Project" })).toBeInTheDocument();
@@ -1946,7 +1910,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
     fireEvent.click(await screen.findByRole("button", { name: "Open Riverside Office Building project" }));
     fireEvent.change(screen.getByLabelText("Project Name"), { target: { value: "Riverside Office Tower" } });
     fireEvent.change(screen.getByLabelText("% Complete"), { target: { value: "74" } });
@@ -1963,7 +1927,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
     fireEvent.click(await screen.findByRole("button", { name: "Open Downtown Retail Buildout project" }));
 
     expect(screen.getByRole("dialog", { name: "Edit Project" })).toBeInTheDocument();
@@ -1975,7 +1939,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
     fireEvent.click(await screen.findByRole("button", { name: "Add job to Concrete Crew 1 on Jun 16" }));
 
     expect(screen.getByRole("dialog", { name: "Add job to schedule" })).toBeInTheDocument();
@@ -1990,7 +1954,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
     expect(screen.getByRole("button", { name: "Open Riverside Office Building project" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add job to Concrete Crew 1 on Jun 15" }));
@@ -2067,7 +2031,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    fireEvent.click(await screen.findByRole("button", { name: /^Schedule$/i }));
+    await openSchedule("Week");
     fireEvent.click(await screen.findByRole("button", { name: "Add job to Concrete Crew 1 on Jun 16" }));
 
     fireEvent.change(screen.getByLabelText("Job Name"), { target: { value: "Custom Concrete Pour" } });
@@ -2124,7 +2088,7 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^Materials$/i }));
 
-    expect(await screen.findByRole("heading", { name: "Materials" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Every material, on time." })).toBeInTheDocument();
     expect(screen.getByText("Total Materials")).toBeInTheDocument();
     expect(screen.getByText("Ready Now")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add Material" })).toBeInTheDocument();
@@ -2205,7 +2169,7 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /^Equipment$/i }));
 
-    expect(await screen.findByRole("heading", { name: "Equipment" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "The whole fleet, at the ready." })).toBeInTheDocument();
     expect(screen.getByText("Total Equipment")).toBeInTheDocument();
     expect(screen.getByText("Available Now")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add Equipment" })).toBeInTheDocument();

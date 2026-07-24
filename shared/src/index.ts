@@ -26,9 +26,9 @@ export const onboardingProductOptions = [
     description: "Track vehicles, equipment, and design traffic routes."
   },
   {
-    id: "field-updates-delays",
-    label: "Field Updates & Delays",
-    description: "Capture crew updates, delay causes, photos, and recovery notes."
+    id: "field-updates-delayIQs",
+    label: "Field Updates & DelayIQs",
+    description: "Capture crew updates, delayIQ causes, photos, and recovery notes."
   },
   {
     id: "production-reports",
@@ -75,7 +75,7 @@ export type Status =
   | "Confirmed"
   | "In Progress"
   | "On Site"
-  | "Delayed"
+  | "DelayIQed"
   | "Complete"
   | "At Risk";
 
@@ -117,13 +117,51 @@ export type Phase = {
   id: string;
   projectId: string;
   name: string;
-  status: "On Track" | "At Risk" | "Delayed" | "Not Started";
+  status: "On Track" | "At Risk" | "DelayIQed" | "Not Started";
   percentComplete: number;
   startDate: string;
   endDate: string;
   color: string;
   sequence: number;
 };
+
+/* The CPM engine owns the precedence/constraint vocabulary — it is deliberately
+   domain-agnostic, so the schedule network types live there and the domain
+   re-exports them rather than declaring a second, drifting copy. */
+export {
+  calculateCpm,
+  compareToBaseline,
+  createWorkCalendar,
+  toDayIndex,
+  fromDayIndex,
+  inclusiveDuration,
+  type DependencyType,
+  type ConstraintType,
+  type CpmTask,
+  type CpmLink,
+  type CpmTaskResult,
+  type CpmResult,
+  type WorkCalendar,
+  type WorkCalendarOptions,
+  type BaselineVariance
+} from "./cpm";
+
+/* Planned-vs-actual maths, shared so the field's phone and the server's
+   variance check agree on what "behind" means. */
+export { scheduleCalendar, plannedPercentAt, forecastIQFinish, type PlannedWindow } from "./progress";
+
+import type { DependencyType, ConstraintType } from "./cpm";
+
+/** A dependency link in the schedule network. `lagDays` may be negative (lead). */
+export type JobDependency = {
+  id: string;
+  predecessorId: string;
+  successorId: string;
+  type: DependencyType;
+  lagDays: number;
+};
+
+export type CreateJobDependencyInput = Omit<JobDependency, "id">;
 
 export type Job = {
   id: string;
@@ -141,9 +179,31 @@ export type Job = {
   status: Status;
   priority: "High" | "Medium" | "Normal";
   notes: string;
+  /** CPM date constraint. Absent/ASAP means the network alone drives the dates. */
+  constraintType?: ConstraintType;
+  constraintDate?: string;
+  /** Saved baseline the current plan is measured against. */
+  baselineStart?: string;
+  baselineEnd?: string;
+  /**
+   * Work actually done, 0–100, as last reported from the field. This is a
+   * *fact* the crew owns: it writes through on every progress report. The
+   * job's dates are the *plan* and stay under the PM's control — when progress
+   * implies the dates should move, that surfaces as a pending ScheduleVariance
+   * rather than an overwrite.
+   */
+  percentComplete: number;
+  /** First date the field reported work underway. Set on the first report > 0%. */
+  actualStart?: string;
+  /** Date the field reported 100%. */
+  actualFinish?: string;
 };
 
-export type CreateJobInput = Omit<Job, "id">;
+/* Progress fields are owned by the field reporting loop, not the planner, so
+   they are not part of creating a job. */
+export type CreateJobInput = Omit<Job, "id" | "percentComplete" | "actualStart" | "actualFinish"> & {
+  percentComplete?: number;
+};
 
 export type CrewRoleCategory = "Labor" | "Operator";
 
@@ -216,9 +276,88 @@ export type FieldUpdate = {
   status: Status;
   createdAt: string;
   photos: string[];
+  /**
+   * Work complete on `jobId` at the moment of reporting, 0–100. Optional — a
+   * note-only update (no number) stays a plain log entry and never touches the
+   * schedule. Requires `jobId`: progress is meaningless without a job to hang
+   * it on.
+   */
+  percentComplete?: number;
 };
 
-export type Delay = {
+/* ── Field progress → master schedule loop ────────────────────────────────────
+   A field report is evidence, never an edit. When reported progress implies the
+   plan is wrong, the server records a ScheduleVariance holding the *proposed*
+   change plus its downstream ripple, and leaves the master schedule untouched
+   until a PM accepts. Rejecting keeps the plan and preserves the disagreement
+   as history — which is the point: the variance is the signal, and silently
+   overwriting the plan would destroy it. */
+
+/** How a field report and the plan disagree. */
+export type VarianceKind =
+  /** Reported progress trails the plan — the job forecastIQs late. */
+  | "slip"
+  /** Reported progress leads the plan — the job forecastIQs early. */
+  | "ahead"
+  /** Reported 100% before the planned finish. */
+  | "complete"
+  /** Field flagged the work stopped (DelayIQed/At Risk) regardless of percent. */
+  | "blocked";
+
+export type VarianceStatus = "pending" | "accepted" | "rejected" | "superseded";
+
+/** One downstream job the proposed change would move. */
+export type VarianceRippleItem = {
+  jobId: string;
+  jobName: string;
+  currentStart: string;
+  currentEnd: string;
+  proposedStart: string;
+  proposedEnd: string;
+  /** Working days the job shifts. Positive = later. */
+  shiftDays: number;
+  critical: boolean;
+};
+
+/** The schedule change a field report implies, held for review. */
+export type VarianceProposal = {
+  currentStart: string;
+  currentEnd: string;
+  proposedStart: string;
+  proposedEnd: string;
+  /** Successors the change would push. Excludes the reporting job itself. */
+  ripple: VarianceRippleItem[];
+  /** Working days the project finish moves. 0 = absorbed by float. */
+  projectSlipDays: number;
+  /** True when the reporting job sits on the critical path. */
+  criticalPath: boolean;
+  /** Total float the reporting job had under the current plan, in working days. */
+  totalFloatDays: number;
+};
+
+export type ScheduleVariance = {
+  id: string;
+  projectId: string;
+  jobId: string;
+  /** The field report that raised this. */
+  fieldUpdateId: string;
+  kind: VarianceKind;
+  severity: "Low" | "Medium" | "High";
+  status: VarianceStatus;
+  reportedPercent: number;
+  /** Where the plan says the job should have been on `detectedAt`. */
+  plannedPercent: number;
+  /** Working days of drift the report implies. Positive = late. */
+  varianceDays: number;
+  detectedAt: string;
+  proposal: VarianceProposal;
+  resolvedAt?: string;
+  /** User id of the PM who accepted or rejected. */
+  resolvedBy?: string;
+  resolutionNote?: string;
+};
+
+export type DelayIQ = {
   id: string;
   projectId: string;
   category: string;
@@ -270,8 +409,10 @@ export type BootstrapPayload = {
   equipment: Equipment[];
   materials: Material[];
   assignments: ScheduleAssignment[];
+  dependencies: JobDependency[];
   fieldUpdates: FieldUpdate[];
-  delays: Delay[];
+  variances: ScheduleVariance[];
+  delayIQs: DelayIQ[];
   readiness: ReadinessItem[];
   phases: Phase[];
   inspections: Inspection[];

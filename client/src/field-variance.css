@@ -1,0 +1,608 @@
+/* ============================================================================
+   field-variance.css — field progress → master schedule loop
+   ----------------------------------------------------------------------------
+   Two surfaces, one loop:
+     .fp-*  the crew's progress capture on the Field Updates page (.field-rx)
+     .sv-*  the PM's variance review drawer on the Schedule page (.sched-rx)
+
+   Same Command Center language as the rest of the HUD — white cards, --wx-*
+   tokens, Inter, soft shadows. Nothing here invents its own palette.
+   ========================================================================== */
+
+/* ======================== Field: percent complete ======================== */
+
+.field-rx .fp-progress {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--wx-bg-2);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+.field-rx .fp-progress[data-reporting="on"] {
+  border-color: color-mix(in srgb, var(--wx-blue) 40%, var(--wx-line-soft));
+  background: color-mix(in srgb, var(--wx-blue) 4%, var(--wx-card));
+}
+
+.field-rx .fp-progress-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--wx-ink);
+}
+.field-rx .fp-progress-toggle span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.field-rx .fp-progress-toggle input {
+  /* Jobsite target: gloved thumbs, not a mouse. */
+  width: 18px;
+  height: 18px;
+  accent-color: var(--wx-blue);
+  cursor: pointer;
+  flex: none;
+}
+.field-rx .fp-progress-toggle input:disabled {
+  cursor: not-allowed;
+}
+.field-rx .fp-progress-toggle:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.field-rx .fp-progress-hint {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  color: var(--wx-mut);
+}
+
+.field-rx .fp-progress-body {
+  margin-top: 13px;
+}
+
+.field-rx .fp-progress-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.field-rx .fp-progress-readout strong {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.field-rx .fp-progress-readout span {
+  font-size: 13px;
+  color: var(--wx-mut);
+}
+
+.field-rx .fp-progress-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 30px; /* generous hit area; the visible track is drawn on the thumb/track below */
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+.field-rx .fp-progress-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--wx-faint);
+}
+.field-rx .fp-progress-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--wx-faint);
+}
+.field-rx .fp-progress-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -9px;
+  border-radius: 50%;
+  background: var(--wx-blue);
+  border: 3px solid var(--wx-card);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.22);
+  cursor: grab;
+}
+.field-rx .fp-progress-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--wx-blue);
+  border: 3px solid var(--wx-card);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.22);
+  cursor: grab;
+}
+.field-rx .fp-progress-slider:focus-visible {
+  outline: 2px solid var(--wx-blue);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
+.field-rx .fp-progress-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--wx-mut);
+  font-variant-numeric: tabular-nums;
+  margin-top: -2px;
+}
+
+.field-rx .fp-progress-plan {
+  margin: 9px 0 0;
+  font-size: 13px;
+  color: var(--wx-mut);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.field-rx .fp-progress-plan strong {
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.field-rx .fp-drift {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.field-rx .fp-drift.behind {
+  color: var(--wx-g-coral);
+  background: color-mix(in srgb, var(--wx-g-coral) 12%, transparent);
+}
+.field-rx .fp-drift.ahead {
+  color: var(--wx-green);
+  background: color-mix(in srgb, var(--wx-green) 14%, transparent);
+}
+.field-rx .fp-drift.on {
+  color: var(--wx-mut);
+  background: var(--wx-faint);
+}
+
+/* The loop closing back to the crew: their report landed and raised a flag. */
+.field-rx .fp-raised {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  border: 1px solid color-mix(in srgb, var(--wx-amber) 45%, transparent);
+  background: color-mix(in srgb, var(--wx-amber) 9%, var(--wx-card));
+  color: var(--wx-ink);
+}
+.field-rx .fp-raised > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--wx-amber);
+}
+.field-rx .fp-raised strong {
+  display: block;
+  font-size: 13.5px;
+  margin-bottom: 3px;
+}
+.field-rx .fp-raised p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--wx-mut);
+  line-height: 1.5;
+}
+.field-rx .fp-raised-dismiss {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--wx-mut);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 7px;
+  line-height: 0;
+}
+.field-rx .fp-raised-dismiss:hover {
+  background: var(--wx-faint);
+  color: var(--wx-ink);
+}
+
+/* ==================== Schedule: variance review pill ==================== */
+
+.sched-rx .sv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--wx-amber) 50%, transparent);
+  background: color-mix(in srgb, var(--wx-amber) 10%, var(--wx-card));
+  color: var(--wx-ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.sched-rx .sv-pill:hover {
+  background: color-mix(in srgb, var(--wx-amber) 18%, var(--wx-card));
+}
+.sched-rx .sv-pill.active {
+  border-color: var(--wx-amber);
+  background: color-mix(in srgb, var(--wx-amber) 20%, var(--wx-card));
+}
+.sched-rx .sv-pill > svg {
+  color: var(--wx-amber);
+}
+.sched-rx .sv-pill em {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--wx-amber);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Something on the critical path is waiting — earn the extra attention. */
+.sched-rx .sv-pill.urgent {
+  border-color: color-mix(in srgb, var(--wx-g-coral) 55%, transparent);
+  background: color-mix(in srgb, var(--wx-g-coral) 10%, var(--wx-card));
+}
+.sched-rx .sv-pill.urgent > svg {
+  color: var(--wx-g-coral);
+}
+.sched-rx .sv-pill.urgent em {
+  background: var(--wx-g-coral);
+}
+.sched-rx .sv-pill.urgent:hover {
+  background: color-mix(in srgb, var(--wx-g-coral) 18%, var(--wx-card));
+}
+
+/* ======================== Schedule: review drawer ======================= */
+
+.sched-rx .sv-drawer {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 16px;
+  background: var(--wx-card);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.07);
+  overflow: hidden;
+  animation: sv-drawer-in 0.22s ease both;
+}
+
+@keyframes sv-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .sv-drawer {
+    animation: none;
+  }
+}
+
+.sched-rx .sv-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 17px;
+  border-bottom: 1px solid var(--wx-line-soft);
+  background: var(--wx-bg-2);
+}
+.sched-rx .sv-drawer-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--wx-ink);
+}
+.sched-rx .sv-drawer-head h2 > svg {
+  color: var(--wx-amber);
+}
+.sched-rx .sv-drawer-head p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--wx-mut);
+  max-width: 62ch;
+  line-height: 1.5;
+}
+.sched-rx .sv-drawer-head > button {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--wx-mut);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 8px;
+  line-height: 0;
+}
+.sched-rx .sv-drawer-head > button:hover {
+  background: var(--wx-faint);
+  color: var(--wx-ink);
+}
+
+.sched-rx .sv-drawer-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 13px;
+  padding: 15px 17px 17px;
+}
+
+/* ---------------------------- variance card ---------------------------- */
+
+.sched-rx .sv-card {
+  border: 1px solid var(--wx-line-soft);
+  border-left: 3px solid var(--wx-line);
+  border-radius: 13px;
+  background: var(--wx-card);
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.sched-rx .sv-card.sv-sev-high {
+  border-left-color: var(--wx-g-coral);
+}
+.sched-rx .sv-card.sv-sev-medium {
+  border-left-color: var(--wx-amber);
+}
+.sched-rx .sv-card.sv-sev-low {
+  border-left-color: var(--wx-blue);
+}
+
+.sched-rx .sv-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sched-rx .sv-card-head h3 {
+  margin: 0 0 2px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  line-height: 1.3;
+}
+.sched-rx .sv-card-head p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--wx-mut);
+}
+
+.sched-rx .sv-sev-pill {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.sched-rx .sv-sev-pill.sv-sev-high {
+  color: var(--wx-g-coral);
+  background: color-mix(in srgb, var(--wx-g-coral) 13%, transparent);
+}
+.sched-rx .sv-sev-pill.sv-sev-medium {
+  color: var(--wx-amber);
+  background: color-mix(in srgb, var(--wx-amber) 15%, transparent);
+}
+.sched-rx .sv-sev-pill.sv-sev-low {
+  color: var(--wx-blue);
+  background: color-mix(in srgb, var(--wx-blue) 12%, transparent);
+}
+
+/* The evidence. A PM shouldn't have to leave to see what the crew saw. */
+.sched-rx .sv-evidence {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.sched-rx .sv-photo {
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 9px;
+  object-fit: cover;
+  border: 1px solid var(--wx-line-soft);
+  background: var(--wx-faint);
+}
+.sched-rx .sv-evidence blockquote {
+  margin: 0;
+  min-width: 0;
+}
+.sched-rx .sv-evidence blockquote p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--wx-ink);
+  line-height: 1.5;
+}
+.sched-rx .sv-evidence cite {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--wx-mut);
+}
+
+.sched-rx .sv-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--wx-line-soft);
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sv-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.sched-rx .sv-metric span {
+  font-size: 11px;
+  color: var(--wx-mut);
+}
+.sched-rx .sv-metric strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sv-metric strong.sv-late {
+  color: var(--wx-g-coral);
+}
+.sched-rx .sv-metric strong.sv-early {
+  color: var(--wx-green);
+}
+.sched-rx .sv-metric em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--wx-mut);
+}
+
+.sched-rx .sv-impact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sched-rx .sv-impact li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--wx-mut);
+}
+.sched-rx .sv-impact li > svg {
+  flex: none;
+  color: var(--wx-mut);
+}
+.sched-rx .sv-impact li.sv-impact-critical {
+  color: var(--wx-g-coral);
+  font-weight: 600;
+}
+.sched-rx .sv-impact li.sv-impact-critical > svg {
+  color: var(--wx-g-coral);
+}
+
+.sched-rx .sv-ripple {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 9px;
+  background: var(--wx-bg-2);
+  font-size: 12.5px;
+}
+.sched-rx .sv-ripple summary {
+  cursor: pointer;
+  padding: 8px 11px;
+  font-weight: 600;
+  color: var(--wx-ink);
+  list-style: none;
+}
+.sched-rx .sv-ripple summary::-webkit-details-marker {
+  display: none;
+}
+.sched-rx .sv-ripple summary::after {
+  content: "▾";
+  float: right;
+  color: var(--wx-mut);
+  transition: transform 0.16s ease;
+}
+.sched-rx .sv-ripple[open] summary::after {
+  transform: rotate(180deg);
+}
+.sched-rx .sv-ripple ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 11px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sched-rx .sv-ripple li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sched-rx .sv-ripple-name {
+  color: var(--wx-ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sched-rx .sv-ripple-move {
+  flex: none;
+  color: var(--wx-mut);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sched-rx .sv-ripple-move em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--wx-g-coral);
+}
+
+.sched-rx .sv-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+.sched-rx .sv-actions button {
+  flex: 1;
+  height: 36px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.sched-rx .sv-actions button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.sched-rx .sv-reject {
+  border: 1px solid var(--wx-line);
+  background: var(--wx-card);
+  color: var(--wx-ink);
+}
+.sched-rx .sv-reject:hover:not(:disabled) {
+  background: var(--wx-faint);
+}
+.sched-rx .sv-accept {
+  border: 1px solid var(--wx-blue);
+  background: var(--wx-blue);
+  color: #fff;
+}
+.sched-rx .sv-accept:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--wx-blue) 86%, #000);
+}
+
+@media (max-width: 720px) {
+  .sched-rx .sv-drawer-list {
+    grid-template-columns: 1fr;
+  }
+}

@@ -468,7 +468,7 @@
 .dash-rx .badge.monitor,
 .dash-rx .badge.ordered,
 .dash-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
-.dash-rx .badge.delayed,
+.dash-rx .badge.delayIQed,
 .dash-rx .badge.high,
 .dash-rx .badge.maintenance,
 .dash-rx .badge.missing,

@@ -5,3 +5,6 @@ dist
 .env
 server/data
 coverage
+
+# Dev backend log (auto-started by client/vite.config.ts ensureBackend)
+server/.dev-backend.log

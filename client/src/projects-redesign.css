@@ -216,14 +216,14 @@
 .proj-rx .project-health { color: var(--wx-green); }
 .proj-rx .project-health.monitor { color: var(--wx-amber); }
 .proj-rx .project-health.at-risk,
-.proj-rx .project-health.delayed { color: var(--wx-red); }
+.proj-rx .project-health.delayIQed { color: var(--wx-red); }
 .proj-rx .project-health.complete { color: var(--wx-blue); }
 
 .proj-rx .project-progress-track { background: var(--wx-bg-2); }
 .proj-rx .project-progress-track i { background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple)); }
 .proj-rx .project-progress-track.monitor i { background: linear-gradient(90deg, #003fe0, #517ff5); }
 .proj-rx .project-progress-track.at-risk i,
-.proj-rx .project-progress-track.delayed i { background: linear-gradient(90deg, #d93c38, #e8827f); }
+.proj-rx .project-progress-track.delayIQed i { background: linear-gradient(90deg, #d93c38, #e8827f); }
 .proj-rx .project-progress-track.complete i { background: linear-gradient(90deg, var(--wx-g-blue), #7aa7f5); }
 
 .proj-rx .project-card-meta span {
@@ -262,7 +262,7 @@
 .proj-rx .badge.monitor,
 .proj-rx .badge.ordered,
 .proj-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
-.proj-rx .badge.delayed,
+.proj-rx .badge.delayIQed,
 .proj-rx .badge.high,
 .proj-rx .badge.maintenance,
 .proj-rx .badge.missing,

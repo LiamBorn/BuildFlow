@@ -1,0 +1,617 @@
+/* ============================================================================
+   schedule-views.css — Gantt / Kanban / Scheduling Matrix
+   Three additional Schedule layouts in the Command Center language: white
+   cards, --wx-* + --sc-* tokens, Inter, soft shadows, blue accents. Scoped to
+   `.sched-rx` and reusing the same trade palette + motion as the calendar.
+   ========================================================================== */
+
+/* ============================ Gantt ==================================== */
+.sched-rx .sched-gantt {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--wx-card);
+}
+
+.sched-rx .sched-gantt-head,
+.sched-rx .sched-gantt-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) 1fr;
+  align-items: stretch;
+}
+
+.sched-rx .sched-gantt-head {
+  background: var(--wx-bg-2);
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-gantt-corner {
+  display: flex;
+  align-items: center;
+  padding: 9px 14px;
+  border-right: 1px solid var(--wx-line-soft);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+  white-space: nowrap;
+}
+.sched-rx .sched-gantt-axis {
+  display: grid;
+  grid-template-columns: repeat(var(--gantt-days, 31), minmax(0, 1fr));
+}
+.sched-rx .sched-gantt-day {
+  display: grid;
+  place-items: center;
+  padding: 9px 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--wx-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-gantt-day.is-weekend { color: color-mix(in srgb, var(--wx-faint) 70%, transparent); }
+.sched-rx .sched-gantt-day.is-today {
+  color: #fff;
+  background: var(--sc-concrete);
+  border-radius: 999px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  align-self: center;
+  justify-self: center;
+  box-shadow: 0 3px 8px rgba(47, 107, 255, 0.35);
+}
+
+.sched-rx .sched-gantt-body { display: block; }
+.sched-rx .sched-gantt-row { border-top: 1px solid var(--wx-line-soft); }
+.sched-rx .sched-gantt-row:first-child { border-top: 0; }
+.sched-rx .sched-gantt-row:hover .sched-gantt-label { background: var(--wx-bg-2); }
+
+.sched-rx .sched-gantt-label {
+  display: block;
+  text-align: left;
+  border: 0;
+  border-right: 1px solid var(--wx-line-soft);
+  background: transparent;
+  padding: 10px 14px;
+  cursor: pointer;
+  min-width: 0;
+  transition: background 0.16s ease;
+}
+.sched-rx .sched-gantt-label strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-gantt-label em {
+  display: block;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sched-rx .sched-gantt-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--gantt-days, 31), minmax(0, 1fr));
+  align-items: center;
+  min-height: 46px;
+}
+.sched-rx .sched-gantt-cell {
+  grid-row: 1;
+  height: 100%;
+  border-left: 1px solid color-mix(in srgb, var(--wx-line-soft) 60%, transparent);
+}
+.sched-rx .sched-gantt-cell.is-weekend { background: color-mix(in srgb, var(--wx-bg-2) 45%, transparent); }
+.sched-rx .sched-gantt-cell.is-today { background: color-mix(in srgb, var(--sc-concrete) 8%, transparent); }
+
+.sched-rx .sched-gantt-bar {
+  grid-row: 1;
+  grid-column: calc(var(--s) + 1) / calc(var(--e) + 2);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  margin: 0 3px;
+  padding: 0 9px;
+  height: 26px;
+  border: 0;
+  border-left: 3px solid var(--sc-tone, var(--sc-concrete));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 16%, var(--wx-card));
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.16s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+.sched-rx .sched-gantt-bar:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 26%, var(--wx-card));
+  box-shadow: 0 8px 18px rgba(28, 28, 26, 0.14);
+}
+.sched-rx .sched-gantt-bar span {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- CPM readout above the chart ---- */
+.sched-rx .sched-cpm {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: var(--wx-card);
+  box-shadow: 0 6px 18px rgba(28, 28, 26, 0.05);
+}
+.sched-rx .sched-cpm-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, var(--sc-concrete) 13%, transparent);
+  color: var(--sc-concrete);
+}
+.sched-rx .sched-cpm-stat { display: grid; gap: 1px; }
+.sched-rx .sched-cpm-stat em {
+  font-style: normal;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+}
+.sched-rx .sched-cpm-stat strong {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-cpm-stat strong small { font-size: 11.5px; font-weight: 600; color: var(--wx-faint); }
+.sched-rx .sched-cpm-stat strong.is-late { color: var(--sc-milestone); }
+.sched-rx .sched-cpm-stat strong.is-early { color: var(--sc-finishes); }
+.sched-rx .sched-cpm-stat strong.is-on { color: var(--wx-mut); }
+.sched-rx .sched-cpm-baseline {
+  margin-left: auto;
+  border: 1px solid var(--wx-line);
+  border-radius: 10px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.sched-rx .sched-cpm-baseline:hover:not(:disabled) { background: var(--wx-bg-2); }
+.sched-rx .sched-cpm-baseline:disabled { opacity: 0.6; cursor: default; }
+
+.sched-rx .sched-cpm-error {
+  border-color: color-mix(in srgb, var(--sc-milestone) 45%, transparent);
+  background: color-mix(in srgb, var(--sc-milestone) 7%, var(--wx-card));
+}
+.sched-rx .sched-cpm-error .sched-cpm-ico {
+  background: color-mix(in srgb, var(--sc-milestone) 14%, transparent);
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-cpm-error strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-cpm-error em { font-style: normal; font-size: 12px; color: var(--wx-mut); }
+
+/* ---- critical path, float tail, baseline ghost ---- */
+.sched-rx .sched-gantt-crit,
+.sched-rx .sched-gantt-float {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+.sched-rx .sched-gantt-crit { background: color-mix(in srgb, var(--sc-milestone) 14%, transparent); color: var(--sc-milestone); }
+.sched-rx .sched-gantt-float { background: var(--wx-bg-2); color: var(--wx-mut); }
+
+/* a critical bar is driven by the network — it cannot move without moving the finish */
+.sched-rx .sched-gantt-bar.is-critical {
+  border-left-color: var(--sc-milestone);
+  background: color-mix(in srgb, var(--sc-milestone) 18%, var(--wx-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sc-milestone) 35%, transparent);
+}
+.sched-rx .sched-gantt-bar.is-critical:hover {
+  background: color-mix(in srgb, var(--sc-milestone) 28%, var(--wx-card));
+}
+
+/* how far this activity can slide before it starts driving the finish */
+.sched-rx .sched-gantt-floatbar {
+  grid-row: 1;
+  grid-column: calc(var(--s) + 1) / calc(var(--e) + 2);
+  align-self: center;
+  height: 8px;
+  margin: 0 3px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--wx-mut) 32%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+  pointer-events: none;
+}
+
+/* where the activity sat when the plan was baselined */
+.sched-rx .sched-gantt-baseline {
+  grid-row: 1;
+  grid-column: calc(var(--s) + 1) / calc(var(--e) + 2);
+  align-self: end;
+  height: 4px;
+  margin: 0 3px 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--wx-faint) 55%, transparent);
+  pointer-events: none;
+}
+
+/* ============================ Kanban =================================== */
+/* all five lanes share the board width; only very narrow screens scroll */
+.sched-rx .sched-kanban {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.sched-rx .sched-kan-lane {
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--wx-bg-2) 55%, var(--wx-card));
+  padding: 10px;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+.sched-rx .sched-kan-lane.drop-over {
+  background: color-mix(in srgb, var(--sc-concrete) 8%, var(--wx-card));
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+
+/* lane accent — keyed to the stage */
+.sched-rx .sched-kan-lane.tone-slate { --kan-tone: var(--wx-faint); }
+.sched-rx .sched-kan-lane.tone-blue { --kan-tone: var(--sc-concrete); }
+.sched-rx .sched-kan-lane.tone-violet { --kan-tone: var(--sc-mep); }
+.sched-rx .sched-kan-lane.tone-red { --kan-tone: var(--sc-milestone); }
+.sched-rx .sched-kan-lane.tone-green { --kan-tone: var(--sc-finishes); }
+
+.sched-rx .sched-kan-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 10px;
+}
+.sched-rx .sched-kan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--kan-tone, var(--sc-concrete));
+}
+.sched-rx .sched-kan-head h3 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--wx-ink);
+}
+.sched-rx .sched-kan-head b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kan-tone, var(--sc-concrete)) 15%, transparent);
+  color: var(--kan-tone, var(--sc-concrete));
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sched-rx .sched-kan-cards { display: grid; gap: 9px; align-content: start; min-width: 0; }
+.sched-rx .sched-kan-empty {
+  padding: 16px 8px;
+  border: 1px dashed var(--wx-line);
+  border-radius: 10px;
+  text-align: center;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+
+.sched-rx .sched-kan-card {
+  display: block;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 12px;
+  background: var(--wx-card);
+  padding: 11px;
+  cursor: grab;
+  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.05);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.sched-rx .sched-kan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line);
+}
+.sched-rx .sched-kan-card.dragging { cursor: grabbing; box-shadow: 0 18px 34px rgba(28, 28, 26, 0.2); }
+.sched-rx .sched-kan-card.focused { box-shadow: inset 0 0 0 2px var(--sc-concrete); }
+
+.sched-rx .sched-kan-card-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sched-rx .sched-kan-card-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--sc-tone, var(--sc-concrete));
+}
+.sched-rx .sched-kan-card-top strong {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-kan-card > em {
+  display: block;
+  margin: 3px 0 0 14px;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-kan-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 9px;
+  min-width: 0;
+}
+.sched-rx .sched-kan-card footer .badge { flex: none; }
+.sched-rx .sched-kan-phase {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wx-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-kan-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-kan-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+}
+.sched-rx .sched-kan-meta svg { color: var(--wx-faint); }
+
+/* ============================ Matrix =================================== */
+.sched-rx .sched-matrix {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--wx-card);
+}
+.sched-rx .sched-matrix-head,
+.sched-rx .sched-matrix-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) repeat(var(--matrix-cols, 7), minmax(0, 1fr)) 84px;
+  align-items: stretch;
+}
+.sched-rx .sched-matrix-head {
+  background: var(--wx-bg-2);
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-matrix-corner,
+.sched-rx .sched-matrix-col {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  padding: 8px 6px;
+  border-left: 1px solid var(--wx-line-soft);
+  font-family: var(--cc-sans, Inter, sans-serif);
+}
+.sched-rx .sched-matrix-corner {
+  border-left: 0;
+  justify-items: start;
+  padding-left: 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-matrix-col b { font-size: 11px; font-weight: 700; color: var(--wx-ink); letter-spacing: 0.03em; }
+.sched-rx .sched-matrix-col em { font-style: normal; font-size: 10.5px; font-weight: 500; color: var(--wx-faint); }
+.sched-rx .sched-matrix-col.is-total {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+
+.sched-rx .sched-matrix-row { border-top: 1px solid var(--wx-line-soft); }
+.sched-rx .sched-matrix-row:first-of-type { border-top: 0; }
+.sched-rx .sched-matrix-crew {
+  display: grid;
+  align-content: center;
+  padding: 10px 14px;
+  min-width: 0;
+}
+.sched-rx .sched-matrix-crew strong {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-matrix-crew em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* load heat — how many activities that crew has that day */
+.sched-rx .sched-matrix-cell {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  border: 0;
+  border-left: 1px solid var(--wx-line-soft);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+.sched-rx .sched-matrix-cell b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-matrix-cell.load-0 { background: transparent; }
+.sched-rx .sched-matrix-cell.load-1 { background: color-mix(in srgb, var(--sc-concrete) 8%, transparent); }
+.sched-rx .sched-matrix-cell.load-2 { background: color-mix(in srgb, var(--sc-concrete) 17%, transparent); }
+.sched-rx .sched-matrix-cell.load-3 { background: color-mix(in srgb, var(--sc-concrete) 28%, transparent); }
+.sched-rx .sched-matrix-cell.load-1 b,
+.sched-rx .sched-matrix-cell.load-2 b,
+.sched-rx .sched-matrix-cell.load-3 b {
+  background: color-mix(in srgb, var(--sc-concrete) 18%, var(--wx-card));
+  color: var(--sc-concrete);
+}
+.sched-rx .sched-matrix-cell.is-conflict {
+  background: color-mix(in srgb, var(--sc-milestone) 15%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--sc-milestone) 55%, transparent);
+}
+.sched-rx .sched-matrix-cell.is-conflict b {
+  background: color-mix(in srgb, var(--sc-milestone) 18%, var(--wx-card));
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-matrix-cell:hover { box-shadow: inset 0 0 0 2px var(--sc-concrete); }
+
+.sched-rx .sched-matrix-total {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 8px;
+  border-left: 1px solid var(--wx-line-soft);
+  background: color-mix(in srgb, var(--wx-bg-2) 40%, transparent);
+}
+.sched-rx .sched-matrix-total b {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-matrix-util {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.sched-rx .sched-matrix-util.available { background: var(--cc-green-soft, #e2f1e6); color: var(--sc-finishes); }
+.sched-rx .sched-matrix-util.limited { background: #fdf0dc; color: var(--sc-framing); }
+.sched-rx .sched-matrix-util.busy { background: #efe8f8; color: var(--sc-mep); }
+
+/* ============================ responsive =============================== */
+@media (max-width: 1180px) {
+  .sched-rx .sched-gantt-head,
+  .sched-rx .sched-gantt-row { grid-template-columns: 132px 1fr; }
+  .sched-rx .sched-gantt-bar span { display: none; }
+}
+@media (max-width: 1100px) {
+  .sched-rx .sched-kanban {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(184px, 1fr);
+    overflow-x: auto;
+  }
+}
+@media (max-width: 900px) {
+  .sched-rx .sched-matrix-head,
+  .sched-rx .sched-matrix-row { grid-template-columns: 110px repeat(var(--matrix-cols, 7), minmax(0, 1fr)) 64px; }
+  .sched-rx .sched-matrix-col em { display: none; }
+}
+
+/* ============================ reduced motion =========================== */
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .sched-gantt-bar,
+  .sched-rx .sched-kan-card { transition-duration: 0.01s; }
+}

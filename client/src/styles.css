@@ -3117,12 +3117,12 @@ button.program-hud-user:focus-visible {
   animation-delay: 0.36s;
 }
 
-.demo-field-scene .delay-note {
+.demo-field-scene .delayIQ-note {
   grid-template-columns: 30px minmax(0, 1fr) auto;
   background: #edf2ff;
 }
 
-.demo-field-scene .delay-note svg {
+.demo-field-scene .delayIQ-note svg {
   color: #0b4df5;
 }
 
@@ -5067,7 +5067,7 @@ button.program-hud-user:focus-visible {
   box-shadow: 0 12px 22px rgba(15, 42, 75, 0.22);
 }
 
-.map-marker.delayed .map-marker-dot,
+.map-marker.delayIQed .map-marker-dot,
 .map-marker.at-risk .map-marker-dot {
   background: #2f6bff;
 }
@@ -9931,7 +9931,7 @@ button.program-hud-user:focus-visible {
 .field-job,
 .schedule-alert,
 .field-update,
-.delay-row {
+.delayIQ-row {
   display: grid;
   align-items: center;
   gap: 12px;
@@ -9961,7 +9961,7 @@ button.program-hud-user:focus-visible {
 .resource-row span,
 .field-job span,
 .schedule-alert span,
-.delay-row span {
+.delayIQ-row span {
   min-width: 0;
 }
 
@@ -9974,8 +9974,8 @@ button.program-hud-user:focus-visible {
 .field-job small,
 .schedule-alert strong,
 .schedule-alert em,
-.delay-row strong,
-.delay-row em {
+.delayIQ-row strong,
+.delayIQ-row em {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9987,7 +9987,7 @@ button.program-hud-user:focus-visible {
 .field-job em,
 .field-job small,
 .schedule-alert em,
-.delay-row em {
+.delayIQ-row em {
   color: var(--muted);
   font-style: normal;
   font-size: 12px;
@@ -10025,7 +10025,7 @@ button.program-hud-user:focus-visible {
 .weather-alert,
 .weather-card,
 .route-card,
-.forecast-card,
+.forecastIQ-card,
 .empty-state {
   display: grid;
   gap: 8px;
@@ -10060,7 +10060,7 @@ button.program-hud-user:focus-visible {
 }
 
 .resource-row svg,
-.delay-row svg {
+.delayIQ-row svg {
   color: #1f52e0;
 }
 
@@ -10618,7 +10618,7 @@ button.program-hud-user:focus-visible {
   background: #edf2ff;
 }
 
-.schedule-job.delayed,
+.schedule-job.delayIQed,
 .schedule-job.at-risk {
   border-color: #ffb6b6;
   background: #fff2f2;
@@ -10820,7 +10820,7 @@ button.program-hud-user:focus-visible {
   background: #0b4df5;
 }
 
-.schedule-legend .delayed {
+.schedule-legend .delayIQed {
   background: #ff3045;
 }
 
@@ -10910,7 +10910,7 @@ button.program-hud-user:focus-visible {
   background: #edf2ff;
 }
 
-.unassigned-card.delayed,
+.unassigned-card.delayIQed,
 .unassigned-card.at-risk {
   border-color: #ffb6b6;
   background: #fff2f2;
@@ -11409,7 +11409,7 @@ button.program-hud-user:focus-visible {
 }
 
 .project-health.at-risk,
-.project-health.delayed {
+.project-health.delayIQed {
   color: #ff3049;
 }
 
@@ -11438,7 +11438,7 @@ button.program-hud-user:focus-visible {
 }
 
 .project-progress-track.at-risk i,
-.project-progress-track.delayed i {
+.project-progress-track.delayIQed i {
   background: #ff3049;
 }
 
@@ -11657,7 +11657,7 @@ button.program-hud-user:focus-visible {
   font-size: 32px;
 }
 
-.delay-row {
+.delayIQ-row {
   grid-template-columns: 28px minmax(0, 1fr) 64px auto;
   min-height: 70px;
   padding: 10px 0;
@@ -11823,7 +11823,7 @@ button.program-hud-user:focus-visible {
   box-shadow: 0 12px 18px rgba(13, 52, 92, 0.2);
 }
 
-.map-marker.delayed > svg {
+.map-marker.delayIQed > svg {
   background: #ef4444;
 }
 
@@ -11980,7 +11980,7 @@ button.program-hud-user:focus-visible {
   background: #1976d2;
 }
 
-.map-legend .delayed {
+.map-legend .delayIQed {
   background: #ef4444;
 }
 
@@ -12103,7 +12103,7 @@ button.program-hud-user:focus-visible {
 }
 
 .weather-card strong,
-.forecast-card strong,
+.forecastIQ-card strong,
 .route-card strong {
   font-size: 30px;
 }
@@ -12114,7 +12114,7 @@ button.program-hud-user:focus-visible {
 }
 
 .route-card em,
-.forecast-card em {
+.forecastIQ-card em {
   color: #138a42;
   font-style: normal;
   font-size: 13px;
@@ -12232,7 +12232,7 @@ button.program-hud-user:focus-visible {
   box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.18), 0 12px 22px rgba(15, 42, 75, 0.22);
 }
 
-.map-ops-page .map-marker.delayed .map-marker-dot,
+.map-ops-page .map-marker.delayIQed .map-marker-dot,
 .map-ops-page .map-marker.at-risk .map-marker-dot {
   background: #2f6bff;
 }
@@ -13459,7 +13459,7 @@ button.program-hud-user:focus-visible {
   color: var(--muted);
 }
 
-.forecast-card {
+.forecastIQ-card {
   justify-items: center;
   align-content: center;
   min-height: 210px;
@@ -13501,7 +13501,7 @@ button.program-hud-user:focus-visible {
   color: #0032af;
 }
 
-.badge.delayed,
+.badge.delayIQed,
 .badge.high,
 .badge.maintenance,
 .badge.missing,
@@ -14637,6 +14637,30 @@ button.program-hud-user:focus-visible {
   color: #173055;
   background: #f4f7fb;
   font-weight: 800;
+}
+
+/* Actions on the data-error screen. "Back to log in" is the escape hatch that
+   keeps a failed load from being a dead end. */
+.error-screen-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.error-screen-back {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(23, 48, 85, 0.24);
+  background: transparent;
+  color: #173055;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.error-screen-back:hover {
+  background: rgba(23, 48, 85, 0.06);
+  border-color: rgba(23, 48, 85, 0.4);
 }
 
 .spin {
@@ -16415,7 +16439,7 @@ button.program-hud-user:focus-visible {
   box-shadow: 0 10px 22px rgba(15, 42, 75, 0.24);
 }
 
-.map-ops-page .map-marker.delayed .map-marker-dot,
+.map-ops-page .map-marker.delayIQed .map-marker-dot,
 .map-ops-page .map-marker.at-risk .map-marker-dot {
   background: #ef4444;
 }
@@ -16478,7 +16502,7 @@ button.program-hud-user:focus-visible {
   font-weight: 850;
 }
 
-.map-ops-page .map-marker.delayed .map-marker-label em,
+.map-ops-page .map-marker.delayIQed .map-marker-label em,
 .map-ops-page .map-marker.at-risk .map-marker-label em {
   color: #dc2626;
 }
@@ -16905,7 +16929,7 @@ button.program-hud-user:focus-visible {
 
 .map-weather-primary span,
 .map-weather-details span,
-.map-forecast-row span {
+.map-forecastIQ-row span {
   color: #64748b;
   font-size: 11px;
   font-weight: 750;
@@ -16921,7 +16945,7 @@ button.program-hud-user:focus-visible {
   font-size: 12px;
 }
 
-.map-forecast-row {
+.map-forecastIQ-row {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -16929,7 +16953,7 @@ button.program-hud-user:focus-visible {
   border-top: 1px solid #e5edf5;
 }
 
-.map-forecast-row button {
+.map-forecastIQ-row button {
   display: grid;
   gap: 5px;
   justify-items: center;
@@ -16940,11 +16964,11 @@ button.program-hud-user:focus-visible {
   color: #173055;
 }
 
-.map-forecast-row button:last-child {
+.map-forecastIQ-row button:last-child {
   border-right: 0;
 }
 
-.map-full-forecast {
+.map-full-forecastIQ {
   display: grid;
   gap: 12px;
   margin-top: 14px;
@@ -16952,14 +16976,14 @@ button.program-hud-user:focus-visible {
   border-top: 1px solid #e5edf5;
 }
 
-.map-forecast-search {
+.map-forecastIQ-search {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: end;
 }
 
-.map-forecast-search label {
+.map-forecastIQ-search label {
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -16968,7 +16992,7 @@ button.program-hud-user:focus-visible {
   font-weight: 900;
 }
 
-.map-forecast-search input {
+.map-forecastIQ-search input {
   min-height: 40px;
   min-width: 0;
   border: 1px solid #d7e1ec;
@@ -16979,27 +17003,27 @@ button.program-hud-user:focus-visible {
   outline: 0;
 }
 
-.map-forecast-search input:focus {
+.map-forecastIQ-search input:focus {
   border-color: #2f6bff;
   box-shadow: 0 0 0 3px rgba(20, 115, 230, 0.13);
 }
 
-.map-forecast-location-preview {
+.map-forecastIQ-location-preview {
   color: #0f9f62;
   font-size: 11px;
   font-weight: 850;
 }
 
-.map-full-forecast .form-error {
+.map-full-forecastIQ .form-error {
   margin: 0;
 }
 
-.map-local-forecast-list {
+.map-local-forecastIQ-list {
   display: grid;
   gap: 10px;
 }
 
-.map-local-forecast-list article {
+.map-local-forecastIQ-list article {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -17008,31 +17032,31 @@ button.program-hud-user:focus-visible {
   background: #f5f6fe;
 }
 
-.map-local-forecast-list article.active {
+.map-local-forecastIQ-list article.active {
   border-color: rgba(20, 115, 230, 0.45);
   box-shadow: 0 0 0 3px rgba(20, 115, 230, 0.1);
 }
 
-.map-local-forecast-list header,
-.map-local-forecast-summary,
-.map-local-forecast-list dl,
-.map-local-forecast-days {
+.map-local-forecastIQ-list header,
+.map-local-forecastIQ-summary,
+.map-local-forecastIQ-list dl,
+.map-local-forecastIQ-days {
   display: grid;
   gap: 8px;
 }
 
-.map-local-forecast-list header {
+.map-local-forecastIQ-list header {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
 
-.map-local-forecast-list header strong,
-.map-local-forecast-summary b {
+.map-local-forecastIQ-list header strong,
+.map-local-forecastIQ-summary b {
   color: #10203f;
   font-weight: 950;
 }
 
-.map-local-forecast-list header span {
+.map-local-forecastIQ-list header span {
   border-radius: 999px;
   padding: 4px 8px;
   background: #e8f3ff;
@@ -17041,23 +17065,23 @@ button.program-hud-user:focus-visible {
   font-weight: 900;
 }
 
-.map-local-forecast-summary {
+.map-local-forecastIQ-summary {
   grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
 }
 
-.map-local-forecast-summary svg {
+.map-local-forecastIQ-summary svg {
   color: #0045f5;
 }
 
-.map-local-forecast-summary span,
-.map-local-forecast-summary b,
-.map-local-forecast-summary em {
+.map-local-forecastIQ-summary span,
+.map-local-forecastIQ-summary b,
+.map-local-forecastIQ-summary em {
   display: block;
   min-width: 0;
 }
 
-.map-local-forecast-summary em {
+.map-local-forecastIQ-summary em {
   overflow: hidden;
   color: #64748b;
   font-size: 11px;
@@ -17067,27 +17091,27 @@ button.program-hud-user:focus-visible {
   white-space: nowrap;
 }
 
-.map-local-forecast-list dl {
+.map-local-forecastIQ-list dl {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
 }
 
-.map-local-forecast-list dl div {
+.map-local-forecastIQ-list dl div {
   display: grid;
   gap: 3px;
   min-width: 0;
 }
 
-.map-local-forecast-list dt,
-.map-local-forecast-days b {
+.map-local-forecastIQ-list dt,
+.map-local-forecastIQ-days b {
   color: #64748b;
   font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.map-local-forecast-list dd,
-.map-local-forecast-days em {
+.map-local-forecastIQ-list dd,
+.map-local-forecastIQ-days em {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -17099,11 +17123,11 @@ button.program-hud-user:focus-visible {
   white-space: nowrap;
 }
 
-.map-local-forecast-days {
+.map-local-forecastIQ-days {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.map-local-forecast-days span {
+.map-local-forecastIQ-days span {
   display: grid;
   gap: 3px;
   padding: 8px;
@@ -17112,13 +17136,13 @@ button.program-hud-user:focus-visible {
   background: #fff;
 }
 
-.map-local-forecast-actions {
+.map-local-forecastIQ-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.map-local-forecast-actions button {
+.map-local-forecastIQ-actions button {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -17132,13 +17156,13 @@ button.program-hud-user:focus-visible {
   font-weight: 900;
 }
 
-.map-local-forecast-actions .map-delete-forecast-button {
+.map-local-forecastIQ-actions .map-delete-forecastIQ-button {
   border-color: #fecaca;
   background: #fff7f7;
   color: #dc2626;
 }
 
-.map-forecast-empty-state {
+.map-forecastIQ-empty-state {
   display: inline-flex;
   min-height: 48px;
   align-items: center;
@@ -17799,10 +17823,10 @@ button.program-hud-user:focus-visible {
   .map-field-job-main,
   .map-weather-card,
   .map-field-update-row header,
-  .map-forecast-search,
-  .map-local-forecast-actions,
-  .map-local-forecast-list dl,
-  .map-local-forecast-days {
+  .map-forecastIQ-search,
+  .map-local-forecastIQ-actions,
+  .map-local-forecastIQ-list dl,
+  .map-local-forecastIQ-days {
     grid-template-columns: 1fr;
   }
 

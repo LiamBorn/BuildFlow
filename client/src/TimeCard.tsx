@@ -67,7 +67,7 @@ import {
   formatHours,
   formatRate,
   laborCostTrend,
-  laborForecast,
+  laborForecastIQ,
   productivityTrend,
   rateForRole,
   tcWorkDays,
@@ -1127,10 +1127,10 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
     {
       icon: AlertTriangle,
       tone: "red" as PillTone,
-      title: "Delay correlation",
-      status: `${data.delays.length || 3} linked`,
-      copy: "Overtime and extra hours tied back to logged delay reasons.",
-      rows: ["Weather delay → 46 recovery OT hrs", "Rework tagged to responsible phase"]
+      title: "DelayIQ correlation",
+      status: `${data.delayIQs.length || 3} linked`,
+      copy: "Overtime and extra hours tied back to logged delayIQ reasons.",
+      rows: ["Weather delayIQ → 46 recovery OT hrs", "Rework tagged to responsible phase"]
     },
     {
       icon: Boxes,
@@ -1302,12 +1302,12 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
         </div>
       </SectionCard>
 
-      <SectionCard title="Labor forecast" subtitle="Projected hours from current burn rate" icon={Sparkles}>
+      <SectionCard title="Labor forecastIQ" subtitle="Projected hours from current burn rate" icon={Sparkles}>
         <div className="tc-chart">
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={laborForecast} margin={{ top: 10, right: 16, bottom: 4, left: -14 }}>
+            <AreaChart data={laborForecastIQ} margin={{ top: 10, right: 16, bottom: 4, left: -14 }}>
               <defs>
-                <linearGradient id="tcForecast" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="tcForecastIQ" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#1568c9" stopOpacity={0.35} />
                   <stop offset="100%" stopColor="#1568c9" stopOpacity={0} />
                 </linearGradient>
@@ -1316,7 +1316,7 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} domain={[1200, 1800]} />
               <Tooltip cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
-              <Area type="monotone" dataKey="forecast" stroke="#1568c9" strokeWidth={3} fill="url(#tcForecast)" />
+              <Area type="monotone" dataKey="forecastIQ" stroke="#1568c9" strokeWidth={3} fill="url(#tcForecastIQ)" />
               <Line type="monotone" dataKey="actual" stroke="#20b15a" strokeWidth={3} dot={{ r: 4 }} />
             </AreaChart>
           </ResponsiveContainer>

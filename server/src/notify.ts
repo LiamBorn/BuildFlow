@@ -1,7 +1,7 @@
 /* =========================================================================
    notify.ts — outbound OPERATIONAL notifications.
 
-   Alerts the people running a job when something changes: a delay is reported,
+   Alerts the people running a job when something changes: a delayIQ is reported,
    a crew gets a new assignment, or an assignment double-books a crew. Fans out
    across channels, same "wired now, live when configured" pattern as email.ts:
 
@@ -23,7 +23,7 @@ import { sendMail } from "./email.js";
 export type NotifyChannel = "email" | "sms" | "push";
 export type OpsRecipients = { emails: string[]; phones: string[] };
 export type OpsNotice = {
-  kind: "delay" | "assignment" | "conflict";
+  kind: "delayIQ" | "assignment" | "conflict" | "variance";
   subject: string; // email subject / push title
   heading: string; // short headline
   lines: string[]; // body detail lines
@@ -94,7 +94,7 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 function noticeHtml(notice: OpsNotice): string {
-  const accent = notice.kind === "conflict" ? "#c2410c" : notice.kind === "delay" ? "#b45309" : "#1a73e8";
+  const accent = notice.kind === "conflict" ? "#c2410c" : notice.kind === "delayIQ" ? "#b45309" : "#1a73e8";
   const rows = notice.lines
     .map((l) => `<p style="font-size:14px;line-height:1.6;color:#575550;margin:0 0 8px">${escapeHtml(l)}</p>`)
     .join("");
@@ -127,7 +127,7 @@ export function conflictNotice(a: { crew: string; job: string; project?: string;
     sms: `BuildFlow ⚠️: ${a.crew} double-booked on ${a.date} (${a.job}). Review the schedule.`
   };
 }
-export function delayNotice(a: {
+export function delayIQNotice(a: {
   project?: string;
   title: string;
   category: string;
@@ -136,9 +136,9 @@ export function delayNotice(a: {
   description?: string;
 }): OpsNotice {
   return {
-    kind: "delay",
-    subject: `Delay reported${a.project ? ` on ${a.project}` : ""}: ${a.title}`,
-    heading: `${a.severity} delay: ${a.title}`,
+    kind: "delayIQ",
+    subject: `DelayIQ reported${a.project ? ` on ${a.project}` : ""}: ${a.title}`,
+    heading: `${a.severity} delayIQ: ${a.title}`,
     lines: [
       a.project ? `Project: ${a.project}` : "",
       `Category: ${a.category}`,
@@ -146,7 +146,42 @@ export function delayNotice(a: {
       `Severity: ${a.severity}`,
       a.description ? `Details: ${a.description}` : ""
     ].filter(Boolean),
-    sms: `BuildFlow: ${a.severity} delay${a.project ? ` on ${a.project}` : ""} — ${a.title} (+${a.impactDays}d).`
+    sms: `BuildFlow: ${a.severity} delayIQ${a.project ? ` on ${a.project}` : ""} — ${a.title} (+${a.impactDays}d).`
+  };
+}
+
+/**
+ * DelayIQ early-warning: a job is trending late and drags downstream trades with
+ * it. Sent when a PM chooses to warn the affected trades — proactive, before the
+ * slip is a fact, which is the whole point.
+ */
+export function delayImpactNotice(a: {
+  project?: string;
+  jobName: string;
+  trade: string;
+  varianceDays: number;
+  projectSlipDays: number;
+  severity: string;
+  affectedTrades: string[];
+  downstreamCount: number;
+}): OpsNotice {
+  const trades = a.affectedTrades.length ? a.affectedTrades.join(", ") : "no downstream trades yet";
+  return {
+    kind: "delayIQ",
+    subject: `Heads-up: ${a.jobName} trending ${a.varianceDays} day${a.varianceDays === 1 ? "" : "s"} behind${a.project ? ` on ${a.project}` : ""}`,
+    heading: `${a.trade} is trending late — it pushes ${a.downstreamCount} downstream activit${a.downstreamCount === 1 ? "y" : "ies"}`,
+    lines: [
+      a.project ? `Project: ${a.project}` : "",
+      `Activity: ${a.jobName} (${a.trade})`,
+      `Trending: ${a.varianceDays} working day${a.varianceDays === 1 ? "" : "s"} behind its planned finish`,
+      a.projectSlipDays > 0
+        ? `Project finish at risk: +${a.projectSlipDays} day${a.projectSlipDays === 1 ? "" : "s"} if unchecked`
+        : "Downstream buffer is absorbing it for now",
+      `Affected trades: ${trades}`,
+      "",
+      "This is an early warning from BuildFlow DelayIQ — the plan hasn't changed. Plan around it now while there's still room."
+    ].filter((line, index, all) => line !== "" || index < all.length - 1),
+    sms: `BuildFlow DelayIQ: ${a.jobName} trending ${a.varianceDays}d behind${a.project ? ` on ${a.project}` : ""} — pushes ${trades}.`
   };
 }
 
@@ -172,6 +207,39 @@ export async function sendOpsNotice(notice: OpsNotice, recipients: OpsRecipients
 }
 
 /* ── Boot banner ──────────────────────────────────────────────────────────── */
+/**
+ * A field report says the plan is wrong in a way that moves the project finish.
+ * Deliberately reserved for High severity — a variance the network absorbs is a
+ * drawer item, not something worth a PM's phone buzzing on a Saturday.
+ */
+export function varianceNotice(a: {
+  project: string;
+  job: string;
+  reportedPercent: number;
+  plannedPercent: number;
+  varianceDays: number;
+  projectSlipDays: number;
+  reporter: string;
+}): OpsNotice {
+  const late = a.varianceDays > 0;
+  const drift = Math.abs(a.varianceDays);
+  return {
+    kind: "variance",
+    subject: `Schedule variance on ${a.project}: ${a.job} forecastIQs ${drift} day${drift === 1 ? "" : "s"} ${late ? "late" : "early"}`,
+    heading: `${a.job} — reported ${a.reportedPercent}% against a plan of ${a.plannedPercent}%`,
+    lines: [
+      `Project: ${a.project}`,
+      `Reported by: ${a.reporter}`,
+      `Progress: ${a.reportedPercent}% actual vs ${a.plannedPercent}% planned`,
+      `ForecastIQ: ${drift} working day${drift === 1 ? "" : "s"} ${late ? "late" : "early"}`,
+      `Project finish moves: ${a.projectSlipDays} day${a.projectSlipDays === 1 ? "" : "s"}`,
+      "",
+      "The master schedule has NOT been changed. Review and accept or reject this variance in BuildFlow → Schedule → Field variances."
+    ].filter((line, index, all) => line !== "" || index < all.length - 1),
+    sms: `BuildFlow: ${a.job} on ${a.project} reported ${a.reportedPercent}% (plan ${a.plannedPercent}%) — project finish +${a.projectSlipDays}d if accepted. Review in Schedule.`
+  };
+}
+
 export function reportNotifyStatus(): void {
   const channels = [...enabledChannels()];
   const detail = channels
@@ -190,6 +258,6 @@ export function reportNotifyStatus(): void {
   const extra = [process.env.OPS_NOTIFY_EMAIL && "OPS_NOTIFY_EMAIL", process.env.OPS_NOTIFY_SMS && "OPS_NOTIFY_SMS"].filter(Boolean);
   console.log(
     `🔔 Notifications: channels [${channels.join(", ") || "none"}]${detail ? ` — ${detail}` : ""}. ` +
-      `Recipients: org account emails${extra.length ? ` + ${extra.join(" + ")}` : ""}. Events: delays · new assignments · crew conflicts.`
+      `Recipients: org account emails${extra.length ? ` + ${extra.join(" + ")}` : ""}. Events: delayIQs · new assignments · crew conflicts · critical-path field variances.`
   );
 }

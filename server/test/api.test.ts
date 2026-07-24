@@ -38,28 +38,36 @@ describe("BuildFlow API", () => {
     await agent.post("/api/business-profile").send({ businessType: "Solar" }).expect(400);
   });
 
-  it("replaces starter data with a blank Asphalt workspace", async () => {
-    const agent = await testApp();
-    const response = await agent.post("/api/business-profile").send({ businessType: "Asphalt" }).expect(200);
+  it("seeds a populated starter workspace when a new account picks its trade", async () => {
+    // A brand-new account, not the shared demo — its own empty, isolated workspace.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-seed-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    await agent
+      .post("/api/auth/signup")
+      .send({ email: "dana@asphaltco.com", password: "buildflow123", name: "Dana Brooks", orgName: "Asphalt Co" })
+      .expect(201);
 
-    expect(response.body.activeUser.role).toBe("Project Manager");
-    expect(response.body.users).toHaveLength(3);
-    expect(response.body.projects).toEqual([]);
-    expect(response.body.jobs).toEqual([]);
-    expect(response.body.crews).toEqual([]);
-    expect(response.body.equipment).toEqual([]);
-    expect(response.body.materials).toEqual([]);
-    expect(response.body.assignments).toEqual([]);
-    expect(response.body.fieldUpdates).toEqual([]);
-    expect(response.body.delays).toEqual([]);
-    expect(response.body.readiness).toEqual([]);
-    expect(response.body.phases).toEqual([]);
-    expect(response.body.inspections).toEqual([]);
-    expect(response.body.weatherAlerts).toEqual([]);
+    // Fresh signup starts blank — this is what used to be all a real account ever had.
+    const empty = await agent.get("/api/bootstrap").expect(200);
+    expect(empty.body.projects).toEqual([]);
+    expect(empty.body.jobs).toEqual([]);
 
-    const bootstrap = await agent.get("/api/bootstrap").expect(200);
-    expect(bootstrap.body.projects.some((project: { name: string }) => project.name === "Riverside Office Building")).toBe(false);
-    expect(bootstrap.body.jobs).toEqual([]);
+    // Picking a trade during onboarding seeds a realistic starter workspace for it.
+    const seeded = await agent.post("/api/business-profile").send({ businessType: "Asphalt" }).expect(200);
+    expect(seeded.body.projects.length).toBeGreaterThan(0);
+    expect(seeded.body.jobs.length).toBeGreaterThan(0);
+    expect(seeded.body.crews.length).toBeGreaterThan(0);
+
+    // It persists across a reload — the whole point of the fix.
+    const reload = await agent.get("/api/bootstrap").expect(200);
+    expect(reload.body.projects.length).toBe(seeded.body.projects.length);
+
+    // And re-running onboarding must NEVER wipe real work: a second apply is a no-op
+    // that preserves what's there rather than clearing it.
+    const before = reload.body.projects.length;
+    const again = await agent.post("/api/business-profile").send({ businessType: "Concrete" }).expect(200);
+    expect(again.body.projects.length).toBe(before);
   });
 
   it("keeps project, job, crew, and material endpoints usable after a blank workspace is applied", async () => {
@@ -160,7 +168,7 @@ describe("BuildFlow API", () => {
       .expect(201);
 
     await agent
-      .post("/api/delays")
+      .post("/api/delayIQs")
       .send({
         projectId: project.body.id,
         category: "Traffic control",
@@ -176,7 +184,7 @@ describe("BuildFlow API", () => {
     expect(bootstrap.body.materials).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Night Shift HMA" })]));
     expect(bootstrap.body.equipment).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Paver 1" })]));
     expect(bootstrap.body.fieldUpdates).toEqual(expect.arrayContaining([expect.objectContaining({ message: "Night paving setup entered from scratch." })]));
-    expect(bootstrap.body.delays).toEqual(expect.arrayContaining([expect.objectContaining({ title: "Lane closure moved" })]));
+    expect(bootstrap.body.delayIQs).toEqual(expect.arrayContaining([expect.objectContaining({ title: "Lane closure moved" })]));
   });
 
   it("updates projects and persists them in bootstrap data", async () => {
@@ -702,14 +710,159 @@ describe("BuildFlow API", () => {
       })
       .expect(201);
 
-    expect(response.body.id).toMatch(/^fu-/);
-    expect(response.body.message).toContain("pour");
+    expect(response.body.update.id).toMatch(/^fu-/);
+    expect(response.body.update.message).toContain("pour");
+    // A note with no percent is just a log entry — it has no opinion about the plan.
+    expect(response.body.variance).toBeNull();
   });
 
-  it("creates delays", async () => {
+  it("rejects reported progress that isn't tied to a job", async () => {
+    const agent = await testApp();
+    await agent
+      .post("/api/field-updates")
+      .send({
+        projectId: "p-riverside",
+        userId: "u-carlos",
+        status: "On Site",
+        message: "Roughly half done across the site.",
+        percentComplete: 50
+      })
+      .expect(400);
+  });
+
+  it("writes reported progress onto the job without touching the planned dates", async () => {
+    const agent = await testApp();
+    const before = await agent.get("/api/bootstrap").expect(200);
+    const planned = before.body.jobs.find((job: { id: string }) => job.id === "j-riverside-concrete");
+
+    await agent
+      .post("/api/field-updates")
+      .send({
+        projectId: "p-riverside",
+        jobId: "j-riverside-concrete",
+        userId: "u-carlos",
+        status: "On Site",
+        message: "Rebar mat is tied, starting the pour.",
+        percentComplete: 45
+      })
+      .expect(201);
+
+    const after = await agent.get("/api/bootstrap").expect(200);
+    const job = after.body.jobs.find((item: { id: string }) => item.id === "j-riverside-concrete");
+
+    // The crew's number is a fact — it lands.
+    expect(job.percentComplete).toBe(45);
+    expect(job.actualStart).toBeTruthy();
+    // The plan is the PM's — it does not move on a field report.
+    expect(job.startDate).toBe(planned.startDate);
+    expect(job.endDate).toBe(planned.endDate);
+  });
+
+  it("accepting a variance moves the plan; rejecting it leaves the plan alone", async () => {
+    const agent = await testApp();
+    const bootstrap = await agent.get("/api/bootstrap").expect(200);
+    const target = bootstrap.body.jobs.find((job: { id: string }) => job.id === "j-harborview-framing");
+
+    // Report far enough behind that the forecastIQ has to move the finish.
+    const reported = await agent
+      .post("/api/field-updates")
+      .send({
+        projectId: "p-harborview",
+        jobId: "j-harborview-framing",
+        userId: "u-carlos",
+        status: "On Site",
+        message: "Podium connectors are re-work, we are well behind.",
+        percentComplete: 5
+      })
+      .expect(201);
+
+    const variance = reported.body.variance;
+    expect(variance).not.toBeNull();
+    expect(variance.status).toBe("pending");
+    expect(variance.kind).toBe("slip");
+
+    // Still pending → the master schedule is untouched.
+    const during = await agent.get("/api/bootstrap").expect(200);
+    const held = during.body.jobs.find((job: { id: string }) => job.id === "j-harborview-framing");
+    expect(held.endDate).toBe(target.endDate);
+
+    const rejected = await agent
+      .post(`/api/schedule/variances/${variance.id}/reject`)
+      .send({ userId: "u-matt", note: "Pulling a second crew in to hold the date." })
+      .expect(200);
+    expect(rejected.body.status).toBe("rejected");
+
+    const afterReject = await agent.get("/api/bootstrap").expect(200);
+    const stillPlanned = afterReject.body.jobs.find((job: { id: string }) => job.id === "j-harborview-framing");
+    expect(stillPlanned.endDate).toBe(target.endDate);
+    // Rejecting the schedule conclusion doesn't dispute what the crew saw.
+    expect(stillPlanned.percentComplete).toBe(5);
+
+    // A resolved variance can't be resolved twice.
+    await agent.post(`/api/schedule/variances/${variance.id}/reject`).send({ userId: "u-matt" }).expect(404);
+
+    // Now report again and accept it — this time the plan should move.
+    const second = await agent
+      .post("/api/field-updates")
+      .send({
+        projectId: "p-harborview",
+        jobId: "j-harborview-framing",
+        userId: "u-carlos",
+        status: "On Site",
+        message: "Second crew did not materialise, still behind.",
+        percentComplete: 5
+      })
+      .expect(201);
+
+    const accepted = await agent
+      .post(`/api/schedule/variances/${second.body.variance.id}/accept`)
+      .send({ userId: "u-matt" })
+      .expect(200);
+    expect(accepted.body.variance.status).toBe("accepted");
+
+    const afterAccept = await agent.get("/api/bootstrap").expect(200);
+    const moved = afterAccept.body.jobs.find((job: { id: string }) => job.id === "j-harborview-framing");
+    expect(moved.endDate > target.endDate).toBe(true);
+    // The baseline is what the slip stays measurable against — accepting must not eat it.
+    expect(moved.baselineEnd).toBe(target.baselineEnd);
+  });
+
+  it("supersedes an older pending variance when the field reports again", async () => {
+    const agent = await testApp();
+    const post = (percentComplete: number) =>
+      agent
+        .post("/api/field-updates")
+        .send({
+          projectId: "p-harborview",
+          jobId: "j-harborview-framing",
+          userId: "u-carlos",
+          status: "On Site",
+          message: `Progress check at ${percentComplete}%.`,
+          percentComplete
+        })
+        .expect(201);
+
+    const first = await post(5);
+    const second = await post(10);
+    expect(first.body.variance).not.toBeNull();
+    expect(second.body.variance).not.toBeNull();
+
+    const pending = await agent.get("/api/schedule/variances?status=pending").expect(200);
+    const forJob = pending.body.filter((item: { jobId: string }) => item.jobId === "j-harborview-framing");
+
+    // The PM answers "where is this job now", not every guess on the way there.
+    expect(forJob).toHaveLength(1);
+    expect(forJob[0].id).toBe(second.body.variance.id);
+
+    const all = await agent.get("/api/schedule/variances").expect(200);
+    const superseded = all.body.find((item: { id: string }) => item.id === first.body.variance.id);
+    expect(superseded.status).toBe("superseded");
+  });
+
+  it("creates delayIQs", async () => {
     const agent = await testApp();
     const response = await agent
-      .post("/api/delays")
+      .post("/api/delayIQs")
       .send({
         projectId: "p-riverside",
         category: "Equipment issue",

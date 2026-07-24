@@ -7,13 +7,14 @@ import type {
   CreateMaterialInput,
   CreateProjectInput,
   Crew,
-  Delay,
+  DelayIQ,
   Equipment,
   FieldUpdate,
   Job,
   Material,
   Project,
   ScheduleAssignment,
+  ScheduleVariance,
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
@@ -82,7 +83,8 @@ export function signup(input: { email: string; password: string; name: string; o
   return request<AuthSession>("/api/auth/signup", { method: "POST", body: JSON.stringify(input) });
 }
 
-export function login(input: { email: string; password: string }) {
+/** `remember: false` gets a browser-session cookie, so closing the browser signs out. */
+export function login(input: { email: string; password: string; remember?: boolean }) {
   return request<AuthSession>("/api/auth/login", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -138,6 +140,11 @@ export function updateScheduleAssignment(
     method: "PATCH",
     body: JSON.stringify(input)
   });
+}
+
+/** Snapshot the current plan as the baseline that variance is measured against. */
+export function setScheduleBaseline() {
+  return request<BootstrapPayload>("/api/schedule/baseline", { method: "POST" });
 }
 
 export function updateJob(id: string, input: Partial<Job>) {
@@ -215,16 +222,238 @@ export function createProject(input: CreateProjectInput) {
   });
 }
 
+/**
+ * Post a field report. The reported percent (if any) writes straight through to
+ * the job; the planned dates never move here. `variance` comes back non-null
+ * only when the report implies the plan is wrong — that's a proposal awaiting a
+ * PM, not a change that has happened.
+ */
 export function createFieldUpdate(input: Omit<FieldUpdate, "id" | "createdAt" | "photos"> & { photos?: string[] }) {
-  return request<FieldUpdate>("/api/field-updates", {
+  return request<{ update: FieldUpdate; variance: ScheduleVariance | null }>("/api/field-updates", {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
-export function createDelay(input: Omit<Delay, "id" | "reportedAt">) {
-  return request<Delay>("/api/delays", {
+export function fetchVariances(status?: ScheduleVariance["status"]) {
+  return request<ScheduleVariance[]>(`/api/schedule/variances${status ? `?status=${status}` : ""}`);
+}
+
+/** Believe the field: apply the proposal to the master schedule. */
+export function acceptVariance(id: string, userId: string, note?: string) {
+  return request<{ variance: ScheduleVariance; movedJobIds: string[] }>(`/api/schedule/variances/${id}/accept`, {
+    method: "POST",
+    body: JSON.stringify({ userId, note })
+  });
+}
+
+/** Keep the plan. The report and the disagreement both stay on the record. */
+export function rejectVariance(id: string, userId: string, note?: string) {
+  return request<ScheduleVariance>(`/api/schedule/variances/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ userId, note })
+  });
+}
+
+export function createDelayIQ(input: Omit<DelayIQ, "id" | "reportedAt">) {
+  return request<DelayIQ>("/api/delayIQs", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+/* ── Schedule import: Primavera P6 (.xer) / MS Project XML ─────────────────── */
+
+export type ScheduleImportStats = {
+  activitiesRead: number;
+  jobs: number;
+  phases: number;
+  milestones: number;
+  summariesSkipped: number;
+  undatedSkipped: number;
+  relationships: number;
+};
+
+/* The health check + forecastIQ the server computes from the imported schedule —
+ * the day-one value moment. Mirrors ScheduleHealth in server/src/import/analyze.ts. */
+export type ScheduleHealthFinding = {
+  id: string;
+  severity: "high" | "medium" | "low";
+  title: string;
+  detail: string;
+  count: number;
+  sample: string[];
+};
+
+/** Probabilistic finish band from the Monte Carlo run over remaining CPM logic.
+ *  Mirrors FinishConfidence in server/src/import/montecarlo.ts. */
+export type FinishConfidence = {
+  iterations: number;
+  planFinish: string;
+  p10: string;
+  p50: string;
+  p80: string;
+  p90: string;
+  onTimeProbability: number;
+  p50SlipDays: number;
+  p80SlipDays: number;
+  method: string;
+};
+
+export type ScheduleForecastIQ = {
+  dataDate: string;
+  plannedFinish?: string;
+  projectedFinish?: string;
+  slipDays: number;
+  percentComplete: number;
+  percentTimeElapsed: number;
+  scheduleIndex: number;
+  status: "not_started" | "on_track" | "slipping" | "at_risk" | "complete";
+  method: string;
+  confidence?: FinishConfidence;
+};
+
+export type ScheduleHealth = {
+  score: number;
+  grade: "Healthy" | "Monitor" | "At Risk" | "Critical";
+  headline: string;
+  dataDate: string;
+  stats: {
+    activities: number;
+    complete: number;
+    inProgress: number;
+    notStarted: number;
+    milestones: number;
+    relationships: number;
+  };
+  findings: ScheduleHealthFinding[];
+  forecastIQ: ScheduleForecastIQ;
+};
+
+export type ScheduleImportPreview = {
+  format: "xer" | "mspdi";
+  source: string;
+  stats: ScheduleImportStats;
+  warnings: string[];
+  health: ScheduleHealth;
+  projects: {
+    name: string;
+    targetCompletion: string;
+    phases: { name: string; startDate: string; endDate: string }[];
+    jobCount: number;
+    sampleJobs: { name: string; phase: string; startDate: string; endDate: string; status: Status }[];
+  }[];
+};
+
+export type ScheduleImportResult = {
+  format: "xer" | "mspdi";
+  source: string;
+  warnings: string[];
+  health: ScheduleHealth;
+  created: {
+    projects: { id: string; name: string; slug: string }[];
+    jobs: number;
+    phases: number;
+  };
+};
+
+export type ScheduleImportInput = { filename: string; content: string; defaultLocation?: string };
+
+/**
+ * Import failures are user-actionable ("that's a .mpp — export XML instead"), and
+ * the fix lives in `hint`. The shared request() helper flattens a response to
+ * `body.error` alone, so these routes get their own reader that keeps hint/code.
+ */
+export class ScheduleImportRequestError extends Error {
+  hint?: string;
+  code?: string;
+  constructor(message: string, hint?: string, code?: string) {
+    super(message);
+    this.name = "ScheduleImportRequestError";
+    this.hint = hint;
+    this.code = code;
+  }
+}
+
+async function scheduleImportRequest<T>(url: string, input: ScheduleImportInput): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(url), {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input)
+    });
+  } catch (error) {
+    throw new ScheduleImportRequestError(
+      error instanceof Error && error.message
+        ? `Could not reach the BuildFlow API: ${error.message}`
+        : "Could not reach the BuildFlow API."
+    );
+  }
+
+  const payload = (await response.json().catch(() => ({}))) as { error?: string; hint?: string; code?: string };
+  if (!response.ok) {
+    throw new ScheduleImportRequestError(
+      payload.error ?? `Request failed: ${response.status}`,
+      payload.hint,
+      payload.code
+    );
+  }
+  return payload as T;
+}
+
+/** Parse and report only — writes nothing. */
+export function previewScheduleImport(input: ScheduleImportInput) {
+  return scheduleImportRequest<ScheduleImportPreview>("/api/import/schedule/preview", input);
+}
+
+/** Create the projects/phases/jobs the preview described. */
+export function commitScheduleImport(input: ScheduleImportInput) {
+  return scheduleImportRequest<ScheduleImportResult>("/api/import/schedule/commit", input);
+}
+
+/* ── DelayIQ early-warning ─────────────────────────────────────────────────
+ * Mirrors server/src/delayiq.ts. Proactive, read-only: what's trending late
+ * and the downstream chain it pushes. */
+export type DownstreamPush = {
+  jobId: string;
+  jobName: string;
+  trade: string;
+  currentEnd: string;
+  pushedEnd: string;
+  shiftDays: number;
+  critical: boolean;
+};
+
+export type DelayRisk = {
+  jobId: string;
+  jobName: string;
+  trade: string;
+  projectId: string;
+  kind: "behind_pace" | "overdue_start";
+  currentEnd: string;
+  forecastEnd: string;
+  varianceDays: number;
+  percentComplete: number;
+  plannedPercent: number;
+  severity: "High" | "Medium" | "Low";
+  onCriticalPath: boolean;
+  projectSlipDays: number;
+  downstream: DownstreamPush[];
+  affectedTrades: string[];
+};
+
+export type DelayEarlyWarning = { asOf: string; risks: DelayRisk[] };
+
+export function fetchDelayEarlyWarning() {
+  return request<DelayEarlyWarning>("/api/delayiq/early-warning");
+}
+
+/** Warn the affected downstream trades about one risk (PM-triggered). */
+export function notifyDelayImpact(jobId: string) {
+  return request<{ notified: string[]; severity: string }>("/api/delayiq/early-warning/notify", {
+    method: "POST",
+    body: JSON.stringify({ jobId })
   });
 }

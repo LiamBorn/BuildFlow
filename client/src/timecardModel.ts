@@ -651,13 +651,13 @@ export const laborCostTrend = [
   { week: "Jun 15", planned: 141, actual: 149 }
 ];
 
-// Forecast of labor hours based on burn rate.
-export const laborForecast = [
-  { week: "Jun 15", actual: 1490, forecast: 1490 },
-  { week: "Jun 22", actual: null as number | null, forecast: 1560 },
-  { week: "Jun 29", actual: null as number | null, forecast: 1610 },
-  { week: "Jul 6", actual: null as number | null, forecast: 1520 },
-  { week: "Jul 13", actual: null as number | null, forecast: 1440 }
+// ForecastIQ of labor hours based on burn rate.
+export const laborForecastIQ = [
+  { week: "Jun 15", actual: 1490, forecastIQ: 1490 },
+  { week: "Jun 22", actual: null as number | null, forecastIQ: 1560 },
+  { week: "Jun 29", actual: null as number | null, forecastIQ: 1610 },
+  { week: "Jul 6", actual: null as number | null, forecastIQ: 1520 },
+  { week: "Jul 13", actual: null as number | null, forecastIQ: 1440 }
 ];
 
 // Productivity trend (output per labor hour) over recent weeks.

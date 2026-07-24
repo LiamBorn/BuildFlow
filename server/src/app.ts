@@ -4,11 +4,13 @@ import path from "node:path";
 import cors from "cors";
 import express, { type Response } from "express";
 import { z } from "zod";
-import { businessTypeOptions, type Status } from "@buildflow/shared";
+import { businessTypeOptions, type ScheduleVariance, type Status } from "@buildflow/shared";
 import { BuildFlowStore, toAccount, DEMO_ACCOUNT_EMAIL, type Account, type Org } from "./database.js";
 import { StoreManager } from "./stores.js";
-import { parseCookies, verifyPassword, SESSION_COOKIE, sessionCookieOptions } from "./auth.js";
+import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
+import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
+import { detectDelayRisks } from "./delayiq.js";
 
 // Attach the authenticated account/org to the request (set by the ops auth gate).
 declare module "express-serve-static-core" {
@@ -30,7 +32,8 @@ import {
   configuredPlans,
   planForPriceId
 } from "./billing.js";
-import { sendOpsNotice, assignmentNotice, conflictNotice, delayNotice, type OpsRecipients } from "./notify.js";
+import { sendOpsNotice, assignmentNotice, conflictNotice, delayIQNotice, delayImpactNotice, varianceNotice, type OpsRecipients } from "./notify.js";
+import { detectVariance } from "./variance.js";
 
 const statuses: [Status, ...Status[]] = [
   "Not Started",
@@ -40,7 +43,7 @@ const statuses: [Status, ...Status[]] = [
   "Confirmed",
   "In Progress",
   "On Site",
-  "Delayed",
+  "DelayIQed",
   "Complete",
   "At Risk"
 ];
@@ -102,16 +105,27 @@ const projectPatchSchema = z.object({
   scheduleHealth: z.enum(scheduleHealthValues)
 });
 
-const fieldUpdateSchema = z.object({
-  projectId: z.string().min(1),
-  jobId: z.string().optional(),
+const fieldUpdateSchema = z
+  .object({
+    projectId: z.string().min(1),
+    jobId: z.string().optional(),
+    userId: z.string().min(1),
+    message: z.string().min(3),
+    status: z.enum(statuses),
+    photos: z.array(z.string()).optional(),
+    percentComplete: z.number().int().min(0).max(100).optional()
+  })
+  .refine((value) => value.percentComplete == null || Boolean(value.jobId), {
+    message: "percentComplete requires a jobId — progress has to be reported against a job.",
+    path: ["percentComplete"]
+  });
+
+const varianceResolutionSchema = z.object({
   userId: z.string().min(1),
-  message: z.string().min(3),
-  status: z.enum(statuses),
-  photos: z.array(z.string()).optional()
+  note: z.string().trim().max(500).optional()
 });
 
-const delaySchema = z.object({
+const delayIQSchema = z.object({
   projectId: z.string().min(1),
   category: z.string().min(1),
   title: z.string().min(3),
@@ -354,7 +368,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // support/billing stay public and use mainStore (ALS unset).
   const OPS_PREFIXES = [
     "/api/bootstrap", "/api/business-profile", "/api/projects", "/api/jobs", "/api/schedule",
-    "/api/field-updates", "/api/delays", "/api/resources", "/api/crews", "/api/equipment", "/api/materials"
+    "/api/field-updates", "/api/delayIQs", "/api/resources", "/api/crews", "/api/equipment", "/api/materials",
+    // Schedule import writes projects/jobs into the caller's own workspace, so it
+    // must be gated and tenant-bound like the rest of the ops routes.
+    "/api/import",
+    // DelayIQ early-warning reads the caller's own schedule and can notify their
+    // team, so it's gated + tenant-bound too.
+    "/api/delayiq"
   ];
   const isOpsPath = (p: string) => OPS_PREFIXES.some((pre) => p === pre || p.startsWith(`${pre}/`));
   app.use(async (req, res, next) => {
@@ -392,11 +412,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
   const loginSchema = z.object({
     email: z.string().trim().email().max(320),
-    password: z.string().min(1).max(200)
+    password: z.string().min(1).max(200),
+    // "Keep me signed in" — omitted by older clients / the demo route, so it
+    // defaults to the previous behaviour (a persistent SESSION_TTL_MS cookie).
+    remember: z.boolean().optional()
   });
-  const issueSession = (res: Response, account: Account, org: Org) => {
+  // `remember: false` issues a browser-session cookie instead, so closing the
+  // browser signs the account out. The session row itself is unchanged — the
+  // cookie is the credential, so dropping it is what ends the sign-in.
+  const issueSession = (res: Response, account: Account, org: Org, remember = true) => {
     const { token } = mainStore.createSession(account.id, org.id);
-    res.cookie(SESSION_COOKIE, token, sessionCookieOptions());
+    res.cookie(SESSION_COOKIE, token, sessionCookieOptions(remember ? SESSION_TTL_MS : null));
   };
 
   app.post("/api/auth/signup", (req, res) => {
@@ -432,7 +458,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(500).json({ error: "Account workspace is missing." });
       return;
     }
-    issueSession(res, toAccount(row), org);
+    issueSession(res, toAccount(row), org, parsed.data.remember ?? true);
     res.json({ account: toAccount(row), org });
   });
 
@@ -513,6 +539,115 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     res.json(store.applyBusinessProfile(parsed.data.businessType));
+  });
+
+  // ── Schedule import: Primavera P6 (.xer) and MS Project XML (MSPDI) ──────────
+  // Two steps on purpose: nobody commits a 2,000-activity schedule sight-unseen,
+  // so /preview parses and reports without writing anything, and /commit re-parses
+  // and inserts. The file itself is never stored server-side.
+  const scheduleImportSchema = z.object({
+    filename: z.string().min(1).max(260),
+    content: z.string().min(1),
+    defaultLocation: z.string().max(200).optional()
+  });
+
+  /** Imported projects need an owner BuildFlow accepts (PM/superintendent). */
+  const importManagerId = (): string | undefined => {
+    const users = store.bootstrap().users;
+    const manager = users.find((user) => user.role === "Project Manager" || user.role === "Superintendent");
+    return manager?.id ?? users[0]?.id;
+  };
+
+  const planScheduleImport = (body: unknown) => {
+    const parsed = scheduleImportSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ScheduleImportError("bad_request", "A filename and file content are required.");
+    }
+    const managerId = importManagerId();
+    if (!managerId) {
+      throw new ScheduleImportError(
+        "no_manager",
+        "This workspace has no people yet, so imported projects would have no manager.",
+        "Finish workspace setup first, then import your schedule."
+      );
+    }
+    const schedule = parseSchedule(parsed.data.filename, parsed.data.content);
+    const plan = buildImportPlan(schedule, { managerId, defaultLocation: parsed.data.defaultLocation });
+    // The health check runs on the rich parsed schedule (relationships, resources,
+    // actuals) — the things map() has to drop — so it's computed here, before the
+    // mapping, and returned alongside the plan for both preview and commit.
+    const health = analyzeSchedule(schedule);
+    return { plan, health };
+  };
+
+  /** ScheduleImportError is user-actionable (wrong file, .mpp, no activities) —
+   *  422 with the reason and the fix, never a bare 500. */
+  const sendImportError = (res: Response, error: unknown) => {
+    if (error instanceof ScheduleImportError) {
+      res.status(422).json({ error: error.message, hint: error.hint, code: error.code });
+      return true;
+    }
+    return false;
+  };
+
+  app.post("/api/import/schedule/preview", (req, res) => {
+    try {
+      const { plan, health } = planScheduleImport(req.body);
+      res.json({
+        format: plan.format,
+        source: plan.source,
+        stats: plan.stats,
+        warnings: plan.warnings,
+        health,
+        projects: plan.projects.map((project) => ({
+          name: project.input.name,
+          targetCompletion: project.input.targetCompletion,
+          phases: project.phases.map((phase) => ({ name: phase.name, startDate: phase.startDate, endDate: phase.endDate })),
+          jobCount: project.jobs.length,
+          // Enough of a sample to recognise your own schedule, without shipping
+          // 2,000 rows back to the browser just to render a preview.
+          sampleJobs: project.jobs.slice(0, 8).map((job) => ({
+            name: job.name,
+            phase: job.phase,
+            startDate: job.startDate,
+            endDate: job.endDate,
+            status: job.status
+          }))
+        }))
+      });
+    } catch (error) {
+      if (sendImportError(res, error)) return;
+      res.status(500).json({ error: "Unable to read that schedule file." });
+    }
+  });
+
+  app.post("/api/import/schedule/commit", (req, res) => {
+    try {
+      const { plan, health } = planScheduleImport(req.body);
+      if (plan.projects.length === 0) {
+        res.status(422).json({
+          error: "That schedule has no importable activities.",
+          hint: "Every row was a summary/roll-up or had no dates.",
+          code: "nothing_to_import"
+        });
+        return;
+      }
+      const created = store.importSchedule(plan.projects);
+      res.status(201).json({
+        format: plan.format,
+        source: plan.source,
+        warnings: plan.warnings,
+        health,
+        created: {
+          projects: created.projects.map((project) => ({ id: project.id, name: project.name, slug: project.slug })),
+          jobs: created.jobs,
+          phases: created.phases
+        }
+      });
+    } catch (error) {
+      if (sendImportError(res, error)) return;
+      res.status(500).json({ error: "Unable to import that schedule file." });
+    }
   });
 
   app.get("/api/projects", (_req, res) => {
@@ -598,6 +733,16 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json(store.assignments());
   });
 
+  /** The CPM precedence network the Gantt schedules against. */
+  app.get("/api/schedule/dependencies", (_req, res) => {
+    res.json(store.dependencies());
+  });
+
+  /** Re-baseline: snapshot the current plan as the thing variance is measured from. */
+  app.post("/api/schedule/baseline", (_req, res) => {
+    res.json(store.setBaseline());
+  });
+
   app.post("/api/schedule/assign", (req, res) => {
     const parsed = assignSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -613,7 +758,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         const job = store.get<{ name: string; projectId: string }>("SELECT name, projectId FROM jobs WHERE id = ?", [assignment.jobId]);
         const crew = store.get<{ name: string; lead: string }>("SELECT name, lead FROM crews WHERE id = ?", [assignment.crewId]);
         const project = job ? store.project(job.projectId) : undefined;
-        const ctx = { crew: crew?.name ?? assignment.crewId, job: job?.name ?? assignment.jobId, project: project?.name, date: assignment.date };
+        const ctx = { crew: crew?.name ?? assignment.crewId, job: job?.name ?? assignment.jobId, project: project?.project.name, date: assignment.date };
         const notice = assignment.conflicts.length
           ? conflictNotice({ ...ctx, conflicts: assignment.conflicts })
           : assignmentNotice({ ...ctx, foreman: crew?.lead });
@@ -649,44 +794,196 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json(store.fieldUpdates());
   });
 
+  /**
+   * The field half of the progress loop.
+   *
+   * A report is evidence, so it always lands: the update is logged and the
+   * reported percent is written straight onto the job. What it never does is
+   * move a planned date. When the reported progress implies the plan is wrong,
+   * the schedule consequence is priced through CPM and parked as a *pending*
+   * variance for a PM to accept or reject — the plan is left exactly as it was.
+   *
+   * Responds with `{ update, variance }`; `variance` is null when the report
+   * agrees with the plan, which is the common case.
+   */
   app.post("/api/field-updates", (req, res) => {
     const parsed = fieldUpdateSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    res.status(201).json(store.createFieldUpdate(parsed.data));
+
+    const update = store.createFieldUpdate(parsed.data);
+    const { jobId, percentComplete, status } = parsed.data;
+
+    if (jobId == null || percentComplete == null) {
+      res.status(201).json({ update, variance: null });
+      return;
+    }
+
+    // The crew's number is theirs — write it through before anything else, so a
+    // failure to price the schedule never loses the report.
+    store.applyFieldProgress(jobId, percentComplete, update.createdAt);
+
+    const jobs = store.jobs();
+    const detection = detectVariance(jobs, store.dependencies(), jobId, percentComplete, status, update.createdAt);
+    if (!detection) {
+      res.status(201).json({ update, variance: null });
+      return;
+    }
+
+    const variance = store.recordVariance({
+      projectId: parsed.data.projectId,
+      jobId,
+      fieldUpdateId: update.id,
+      kind: detection.kind,
+      severity: detection.severity,
+      reportedPercent: percentComplete,
+      plannedPercent: detection.plannedPercent,
+      varianceDays: detection.varianceDays,
+      proposal: detection.proposal
+    });
+    res.status(201).json({ update, variance });
+
+    // Tell the PM a decision is waiting — fire-and-forget, never breaks the write.
+    try {
+      const detail = store.project(parsed.data.projectId);
+      const job = jobs.find((item) => item.id === jobId);
+      const reporter = store.get<{ name: string }>("SELECT name FROM users WHERE id = ?", [parsed.data.userId]);
+      if (req.org && detail && job && variance.severity === "High")
+        void sendOpsNotice(
+          varianceNotice({
+            project: detail.project.name,
+            job: job.name,
+            reportedPercent: percentComplete,
+            plannedPercent: detection.plannedPercent,
+            varianceDays: detection.varianceDays,
+            projectSlipDays: detection.proposal.projectSlipDays,
+            reporter: reporter?.name ?? "the field"
+          }),
+          opsRecipients(req.org.id)
+        );
+    } catch {
+      /* notification is best-effort */
+    }
   });
 
-  app.get("/api/delays", (_req, res) => {
-    res.json(store.delays());
+  app.get("/api/schedule/variances", (req, res) => {
+    const status = req.query.status;
+    if (typeof status === "string" && !["pending", "accepted", "rejected", "superseded"].includes(status)) {
+      res.status(400).json({ error: "Unknown variance status." });
+      return;
+    }
+    res.json(store.variances(status as ScheduleVariance["status"] | undefined));
   });
 
-  app.post("/api/delays", (req, res) => {
-    const parsed = delaySchema.safeParse(req.body);
+  /** Believe the field: apply the proposal to the master schedule. */
+  app.post("/api/schedule/variances/:id/accept", (req, res) => {
+    const parsed = varianceResolutionSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const delay = store.createDelay(parsed.data);
-    res.status(201).json(delay);
-    // Notify PMs that a delay was reported — fire-and-forget, never breaks the write.
+    const result = store.acceptVariance(req.params.id, parsed.data.userId, parsed.data.note);
+    if (!result) {
+      res.status(404).json({ error: "No pending variance with that id." });
+      return;
+    }
+    res.json(result);
+  });
+
+  /** Keep the plan. The report and the disagreement both stay on the record. */
+  app.post("/api/schedule/variances/:id/reject", (req, res) => {
+    const parsed = varianceResolutionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const variance = store.rejectVariance(req.params.id, parsed.data.userId, parsed.data.note);
+    if (!variance) {
+      res.status(404).json({ error: "No pending variance with that id." });
+      return;
+    }
+    res.json(variance);
+  });
+
+  app.get("/api/delayIQs", (_req, res) => {
+    res.json(store.delayIQs());
+  });
+
+  app.post("/api/delayIQs", (req, res) => {
+    const parsed = delayIQSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const delayIQ = store.createDelayIQ(parsed.data);
+    res.status(201).json(delayIQ);
+    // Notify PMs that a delayIQ was reported — fire-and-forget, never breaks the write.
     try {
-      const project = store.project(delay.projectId);
+      const project = store.project(delayIQ.projectId);
       if (req.org)
         void sendOpsNotice(
-          delayNotice({
-            project: project?.name,
-            title: delay.title,
-            category: delay.category,
-            impactDays: delay.impactDays,
-            severity: delay.severity,
-            description: delay.description
+          delayIQNotice({
+            project: project?.project.name,
+            title: delayIQ.title,
+            category: delayIQ.category,
+            impactDays: delayIQ.impactDays,
+            severity: delayIQ.severity,
+            description: delayIQ.description
           }),
           opsRecipients(req.org.id)
         );
     } catch (notifyErr) {
-      console.error("[notify] delay notice failed:", notifyErr instanceof Error ? notifyErr.message : notifyErr);
+      console.error("[notify] delayIQ notice failed:", notifyErr instanceof Error ? notifyErr.message : notifyErr);
+    }
+  });
+
+  // ── DelayIQ early-warning: what's trending late, and what it pushes ─────────
+  // Read-only, proactive — no field report needed. Never mutates the plan;
+  // accepting a slip stays the PM's call through the variance drawer.
+  app.get("/api/delayiq/early-warning", (_req, res) => {
+    const asOf = new Date().toISOString();
+    const risks = detectDelayRisks(store.jobs(), store.dependencies(), asOf);
+    res.json({ asOf: asOf.slice(0, 10), risks });
+  });
+
+  // Follow-on: notify the affected downstream trades about one warning. A PM
+  // action (not blanket auto-fire) so an early *trend* doesn't cry wolf to the
+  // whole site — flip to automatic later behind a per-org setting.
+  app.post("/api/delayiq/early-warning/notify", (req, res) => {
+    const jobId = typeof req.body?.jobId === "string" ? req.body.jobId : "";
+    if (!jobId) {
+      res.status(400).json({ error: "A jobId is required." });
+      return;
+    }
+    const risk = detectDelayRisks(store.jobs(), store.dependencies(), new Date().toISOString()).find(
+      (item) => item.jobId === jobId
+    );
+    if (!risk) {
+      res.status(404).json({ error: "That job isn't currently trending behind." });
+      return;
+    }
+    const project = store.project(risk.projectId);
+    res.status(202).json({ notified: risk.affectedTrades, severity: risk.severity });
+    if (req.org) {
+      try {
+        void sendOpsNotice(
+          delayImpactNotice({
+            project: project?.project.name,
+            jobName: risk.jobName,
+            trade: risk.trade,
+            varianceDays: risk.varianceDays,
+            projectSlipDays: risk.projectSlipDays,
+            severity: risk.severity,
+            affectedTrades: risk.affectedTrades,
+            downstreamCount: risk.downstream.length
+          }),
+          opsRecipients(req.org.id)
+        );
+      } catch (notifyErr) {
+        console.error("[notify] delay impact notice failed:", notifyErr instanceof Error ? notifyErr.message : notifyErr);
+      }
     }
   });
 

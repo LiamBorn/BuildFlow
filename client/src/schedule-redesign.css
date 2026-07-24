@@ -270,7 +270,7 @@
 .sched-rx .schedule-job.complete { border-color: #b7ddc2; background: #eef7f0; }
 .sched-rx .schedule-job.ready,
 .sched-rx .schedule-job.ready-to-start { border-color: #9ab1ec; background: #e3eafb; }
-.sched-rx .schedule-job.delayed,
+.sched-rx .schedule-job.delayIQed,
 .sched-rx .schedule-job.at-risk { border-color: #eeb4b1; background: #fbeceb; }
 .sched-rx .schedule-job.in-progress { border-color: #b3ccf5; background: #eaf1fd; }
 .sched-rx .schedule-job.planned { border-color: var(--wx-line); background: #ffffff; }
@@ -288,7 +288,7 @@
 .sched-rx .schedule-legend { color: var(--wx-faint); font-size: 13px; }
 .sched-rx .schedule-legend .confirmed { background: var(--wx-green); }
 .sched-rx .schedule-legend .ready { background: #003dd9; }
-.sched-rx .schedule-legend .delayed { background: var(--wx-red); }
+.sched-rx .schedule-legend .delayIQed { background: var(--wx-red); }
 .sched-rx .schedule-legend .in-progress { background: var(--wx-blue); }
 .sched-rx .schedule-legend .planned { background: var(--wx-faint); }
 .sched-rx .export-button,
@@ -343,7 +343,7 @@
 .sched-rx .unassigned-card:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(28, 28, 26, 0.1); }
 .sched-rx .unassigned-card.ready,
 .sched-rx .unassigned-card.ready-to-start { border-color: #9ab1ec; background: #e3eafb; }
-.sched-rx .unassigned-card.delayed,
+.sched-rx .unassigned-card.delayIQed,
 .sched-rx .unassigned-card.at-risk { border-color: #eeb4b1; background: #fbeceb; }
 .sched-rx .unassigned-card strong { color: var(--wx-ink); font-weight: 700; }
 .sched-rx .unassigned-card em,
@@ -392,7 +392,7 @@
 .sched-rx .badge.monitor,
 .sched-rx .badge.ordered,
 .sched-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
-.sched-rx .badge.delayed,
+.sched-rx .badge.delayIQed,
 .sched-rx .badge.high,
 .sched-rx .badge.maintenance,
 .sched-rx .badge.missing,

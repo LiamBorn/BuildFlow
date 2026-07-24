@@ -488,6 +488,157 @@
   box-shadow: 0 10px 22px rgba(47, 107, 255, 0.14);
 }
 
+/* read-only workspace role (profile view) — assigned by the owner, not editable */
+.settings-rx .settings-role-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  background: var(--wx-bg);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: default;
+}
+.settings-rx .settings-role-readonly svg { color: var(--wx-faint); flex: none; }
+
+/* ---- profile editor (Liam view): editable photo + about + read-only role ---- */
+.settings-rx .settings-profile-section {
+  display: grid;
+  gap: 0;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  overflow: hidden;
+}
+.settings-rx .settings-avatar-edit {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+}
+.settings-rx .settings-avatar-preview {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
+  color: #fff;
+  font-family: var(--cc-sans);
+  font-size: 27px;
+  font-weight: 750;
+  box-shadow: 0 12px 26px rgba(66, 92, 244, 0.28);
+}
+.settings-rx .settings-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.settings-rx .settings-avatar-actions { min-width: 0; display: grid; gap: 3px; }
+.settings-rx .settings-avatar-actions > strong {
+  font-family: var(--cc-sans);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.settings-rx .settings-avatar-actions > p {
+  max-width: 460px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--wx-faint);
+}
+.settings-rx .settings-avatar-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.settings-rx .settings-avatar-buttons .settings-primary-action svg { color: #fff; }
+.settings-rx .settings-avatar-file { display: none; }
+
+.settings-rx .settings-bio-field {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.settings-rx .settings-bio-label {
+  font-family: var(--cc-sans);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.settings-rx .settings-bio-field textarea {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  border: 1px solid var(--wx-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  outline: 0;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.settings-rx .settings-bio-field textarea::placeholder { color: var(--wx-faint); font-weight: 500; }
+.settings-rx .settings-bio-field textarea:focus {
+  border-color: var(--cc-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+}
+.settings-rx .settings-bio-count {
+  justify-self: end;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--wx-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-rx .settings-profile-role {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 20px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.settings-rx .settings-profile-role strong {
+  display: block;
+  font-family: var(--cc-sans);
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.settings-rx .settings-profile-role p {
+  max-width: 520px;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--wx-faint);
+}
+
+/* uploaded photo also shows in the settings rail account card */
+.settings-rx .settings-account-card .reports-avatar { overflow: hidden; }
+.settings-rx .settings-account-card .reports-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+@media (max-width: 560px) {
+  .settings-rx .settings-avatar-edit { flex-wrap: wrap; }
+  .settings-rx .settings-profile-role { grid-template-columns: 1fr; gap: 12px; }
+}
+
 /* toggle switch — blue when on (matches dashboard accent) */
 .settings-rx .settings-toggle {
   position: relative;
@@ -775,7 +926,7 @@
 }
 
 /* ============================ entrance keyframe ======================== */
-/* fill-mode: backwards → applies the hidden start during the stagger delay but
+/* fill-mode: backwards → applies the hidden start during the stagger delayIQ but
    releases after finishing, so hover transforms are never clobbered. */
 @keyframes sx-rise {
   from { opacity: 0; transform: translateY(16px); }

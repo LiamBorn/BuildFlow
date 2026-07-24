@@ -1,7 +1,7 @@
 /* ============================================================
    AI Automations (shared) — Welcome-page (wx) redesign
    Loaded LAST in main.tsx. Scoped to .automation-page — shared by the
-   Weather Integration, Schedule Suggestions, Crew Suggestions, Delay
+   Weather Integration, Schedule Suggestions, Crew Suggestions, DelayIQ
    Detection, and Route Optimization pages (all rendered by the single
    WelcomeAutomationPage component from per-category configs).
    Adapts the reference layout (particle hero, gradient mockup cards,
@@ -145,7 +145,7 @@
 }
 .automation-page .wi-explore:hover svg { transform: translateX(3px); }
 
-/* dark weather panel with drifting particles + forecast card */
+/* dark weather panel with drifting particles + forecastIQ card */
 .automation-page .wi-hero-panel {
   position: relative;
   min-height: clamp(340px, 42vw, 480px);
@@ -174,9 +174,9 @@
   border-radius: 999px;
   background: rgba(174, 203, 250, 0.85);
   box-shadow: 0 0 6px rgba(138, 180, 248, 0.6);
-  animation: wi-fall var(--dur, 5s) linear var(--delay, 0s) infinite;
+  animation: wi-fall var(--dur, 5s) linear var(--delayIQ, 0s) infinite;
 }
-.automation-page .wi-forecast-card {
+.automation-page .wi-forecastIQ-card {
   position: relative;
   z-index: 2;
   width: min(84%, 320px);
@@ -190,7 +190,7 @@
   animation: wi-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.3s;
 }
-.automation-page .wi-forecast-head {
+.automation-page .wi-forecastIQ-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -200,11 +200,11 @@
   font-size: 12.5px;
   color: var(--wx-win-mut);
 }
-.automation-page .wi-forecast-head span { display: inline-flex; align-items: center; gap: 7px; }
-.automation-page .wi-forecast-head svg { color: var(--wx-win-blue); }
-.automation-page .wi-forecast-head strong { color: var(--wx-win-ink); font-size: 13px; }
-.automation-page .wi-forecast-days { display: grid; gap: 9px; }
-.automation-page .wi-forecast-day {
+.automation-page .wi-forecastIQ-head span { display: inline-flex; align-items: center; gap: 7px; }
+.automation-page .wi-forecastIQ-head svg { color: var(--wx-win-blue); }
+.automation-page .wi-forecastIQ-head strong { color: var(--wx-win-ink); font-size: 13px; }
+.automation-page .wi-forecastIQ-days { display: grid; gap: 9px; }
+.automation-page .wi-forecastIQ-day {
   display: grid;
   grid-template-columns: 34px 12px 40px 1fr;
   align-items: center;
@@ -239,7 +239,7 @@
 @media (prefers-reduced-motion: reduce) {
   .automation-page .wi-particle,
   .automation-page .wi-sun-glow,
-  .automation-page .wi-forecast-card { animation: none; }
+  .automation-page .wi-forecastIQ-card { animation: none; }
 }
 
 /* ============================================================

@@ -179,6 +179,38 @@
 }
 .sched-rx .sched-holiday-tag { font-size: 10.5px; font-weight: 600; color: var(--sc-holiday); margin-top: -2px; }
 
+/* Click-to-add: an in-month day is a target for a new job (Week board parity).
+   The whole empty area is clickable; this "+" is the discoverable hint. */
+.sched-rx .sched-cal-cell.is-addable { cursor: pointer; }
+.sched-rx .sched-cal-add {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--wx-line, #d7dbe2);
+  border-radius: 7px;
+  background: var(--wx-card, #fff);
+  color: var(--wx-blue, #2f6bff);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.14s ease, transform 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+}
+.sched-rx .sched-cal-cell:hover .sched-cal-add,
+.sched-rx .sched-cal-add:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+.sched-rx .sched-cal-add:hover {
+  background: var(--wx-blue, #2f6bff);
+  border-color: var(--wx-blue, #2f6bff);
+  color: #fff;
+}
+
 /* activity chips */
 .sched-rx .sched-act {
   display: flex;
@@ -400,4 +432,6 @@
   .sched-rx .sched-cal-cell { min-height: 78px; padding: 6px; }
   .sched-rx .sched-act-text em { display: none; }
   .sched-rx .sched-month-title { font-size: 17px; min-width: 130px; }
+  /* No hover on touch — keep the add affordance visible. */
+  .sched-rx .sched-cal-add { opacity: 0.85; transform: none; }
 }

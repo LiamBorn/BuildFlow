@@ -136,7 +136,7 @@
   box-shadow: 0 0 0 0 var(--ring);
   animation: mfo-pulse 2.4s ease-out infinite;
 }
-.welcome-rx .mfo-dot.delay::after { animation-duration: 1.5s; }
+.welcome-rx .mfo-dot.delayIQ::after { animation-duration: 1.5s; }
 @keyframes mfo-pulse {
   0% { box-shadow: 0 0 0 0 var(--ring); }
   70%, 100% { box-shadow: 0 0 0 15px transparent; }

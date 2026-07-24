@@ -220,14 +220,14 @@
 .field-rx .crew-card-header p { color: var(--wx-faint); font-weight: 500; }
 .field-rx .field-card-message { color: var(--wx-mut); font-weight: 500; }
 
-/* status pills — field statuses (On Site / Ready to Start / Delayed / Complete) */
+/* status pills — field statuses (On Site / Ready to Start / DelayIQed / Complete) */
 .field-rx .crew-status-pill { border-radius: 999px; background: #e2f1e6; color: var(--wx-green); font-weight: 700; font-size: 12px; }
 .field-rx .crew-status-pill.ready-to-start,
 .field-rx .crew-status-pill.planned,
 .field-rx .crew-status-pill.on-job,
 .field-rx .crew-status-pill.ordered,
 .field-rx .crew-status-pill.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
-.field-rx .crew-status-pill.delayed,
+.field-rx .crew-status-pill.delayIQed,
 .field-rx .crew-status-pill.at-risk,
 .field-rx .crew-status-pill.missing,
 .field-rx .crew-status-pill.overbooked { background: #fbe4e2; color: var(--wx-red); }

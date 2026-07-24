@@ -6,7 +6,7 @@ import createGlobe from "cobe"
 interface PulseMarker {
   id: string
   location: [number, number]
-  delay: number
+  delayIQ: number
   // When true, this marker also gets the expanding pulse-ring overlay.
   // Markers without it render as a plain company dot on the globe.
   pulse?: boolean
@@ -19,10 +19,10 @@ interface GlobePulseProps {
 }
 
 const defaultMarkers: PulseMarker[] = [
-  { id: "pulse-1", location: [51.51, -0.13], delay: 0, pulse: true },
-  { id: "pulse-2", location: [40.71, -74.01], delay: 0.5, pulse: true },
-  { id: "pulse-3", location: [35.68, 139.65], delay: 1, pulse: true },
-  { id: "pulse-4", location: [-33.87, 151.21], delay: 1.5, pulse: true },
+  { id: "pulse-1", location: [51.51, -0.13], delayIQ: 0, pulse: true },
+  { id: "pulse-2", location: [40.71, -74.01], delayIQ: 0.5, pulse: true },
+  { id: "pulse-3", location: [35.68, 139.65], delayIQ: 1, pulse: true },
+  { id: "pulse-4", location: [-33.87, 151.21], delayIQ: 1.5, pulse: true },
 ]
 
 export function GlobePulse({
@@ -166,12 +166,12 @@ export function GlobePulse({
           <span style={{
             position: "absolute", inset: 0,
             border: "2px solid #33ccdd", borderRadius: "50%", opacity: 0,
-            animation: `pulse-expand 2s ease-out infinite ${m.delay}s`,
+            animation: `pulse-expand 2s ease-out infinite ${m.delayIQ}s`,
           }} />
           <span style={{
             position: "absolute", inset: 0,
             border: "2px solid #33ccdd", borderRadius: "50%", opacity: 0,
-            animation: `pulse-expand 2s ease-out infinite ${m.delay + 0.5}s`,
+            animation: `pulse-expand 2s ease-out infinite ${m.delayIQ + 0.5}s`,
           }} />
           <span style={{
             width: 10, height: 10, background: "#33ccdd", borderRadius: "50%",

@@ -942,8 +942,8 @@
   justify-content: center;
   gap: 0;
   padding: 0;
-  /* Stationary row — the vertical sine wave (rAF) is the motion, matching the reference. */
-  animation: none;
+  /* Slow right-to-left drift; the per-chip vertical wave (rAF) keeps running on top. */
+  animation: wx-company-scroll 60s linear infinite;
 }
 .welcome-rx .wx-companies .wx-company-row .wx-company {
   margin-right: clamp(18px, 3vw, 42px);

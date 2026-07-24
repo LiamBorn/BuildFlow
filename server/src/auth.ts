@@ -59,13 +59,17 @@ export function newId(prefix: string): string {
 export const SESSION_COOKIE = "bf_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-/** Options for the session cookie (used with Express res.cookie/clearCookie). */
-export function sessionCookieOptions(maxAgeMs: number = SESSION_TTL_MS) {
+/** Options for the session cookie (used with Express res.cookie/clearCookie).
+ *  Pass `null` for a browser-session cookie — one the browser drops when it
+ *  closes. That's "Keep me signed in" unchecked; the default stays SESSION_TTL_MS. */
+export function sessionCookieOptions(maxAgeMs: number | null = SESSION_TTL_MS) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     path: "/",
-    maxAge: maxAgeMs,
+    // maxAge must be OMITTED for a session cookie — passing null/0 would expire
+    // it immediately instead of tying it to the browser session.
+    ...(maxAgeMs === null ? {} : { maxAge: maxAgeMs }),
     secure: process.env.NODE_ENV === "production"
   };
 }

@@ -2,7 +2,7 @@ import type {
   BootstrapPayload,
   BusinessTypeId,
   Crew,
-  Delay,
+  DelayIQ,
   Equipment,
   FieldUpdate,
   Inspection,
@@ -26,7 +26,7 @@ type TradeTemplate = {
   equipment: Array<Pick<Equipment, "name" | "type" | "status">>;
   materials: Array<Pick<Material, "name" | "status" | "quantity">>;
   readiness: string[];
-  delay: Pick<Delay, "category" | "title" | "impactDays" | "severity" | "status" | "description">;
+  delayIQ: Pick<DelayIQ, "category" | "title" | "impactDays" | "severity" | "status" | "description">;
   inspectionTitles: [string, string, string];
   weather: Pick<WeatherAlert, "title" | "details" | "severity">;
 };
@@ -37,9 +37,9 @@ const profileUsers: User[] = [
   { id: "u-carlos", name: "Carlos Ramirez", role: "Crew Lead", title: "Crew Lead", avatar: "CR" }
 ];
 
-const phaseStatuses: Phase["status"][] = ["On Track", "On Track", "At Risk", "Not Started", "Not Started", "Delayed"];
+const phaseStatuses: Phase["status"][] = ["On Track", "On Track", "At Risk", "Not Started", "Not Started", "DelayIQed"];
 const phaseColors = ["#16a34a", "#1976d2", "#f59e0b", "#0f4c81", "#7c3aed", "#ef4444"];
-const jobStatuses: Job["status"][] = ["Confirmed", "Ready", "On Site", "Planned", "Delayed", "Ready to Start"];
+const jobStatuses: Job["status"][] = ["Confirmed", "Ready", "On Site", "Planned", "DelayIQed", "Ready to Start"];
 const materialStatuses: Job["materialsStatus"][] = ["Delivered", "Delivered", "Ordered", "Delivered", "Missing", "Waiting on Delivery"];
 const materialDates = ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20"];
 const jobDates = ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20"];
@@ -93,9 +93,9 @@ function compactTemplate(
     equipment: [string, string, string, string, string, string];
     materials: [string, string, string, string, string, string];
     readiness: [string, string, string, string, string, string];
-    delayCategory: string;
-    delayTitle: string;
-    delayDescription: string;
+    delayIQCategory: string;
+    delayIQTitle: string;
+    delayIQDescription: string;
     inspectionTitles: [string, string, string];
     weatherTitle: string;
     weatherDetails: string;
@@ -121,13 +121,13 @@ function compactTemplate(
       quantity: ["18 loads", "42 units", "7 pallets", "260 ft", "Pending", "12 kits"][index]
     })),
     readiness: input.readiness,
-    delay: {
-      category: input.delayCategory,
-      title: input.delayTitle,
+    delayIQ: {
+      category: input.delayIQCategory,
+      title: input.delayIQTitle,
       impactDays: 3,
       severity: "Medium",
       status: "Open",
-      description: input.delayDescription
+      description: input.delayIQDescription
     },
     inspectionTitles: input.inspectionTitles,
     weather: {
@@ -239,7 +239,7 @@ const asphaltTemplate: TradeTemplate = {
     { name: "Temporary Traffic Devices", status: "Missing", quantity: "48 cones / 12 barrels" }
   ],
   readiness: ["Lane closure permit", "Plant slot confirmed", "Trucking plan set", "Traffic control plan", "Weather window checked", "Density testing booked"],
-  delay: {
+  delayIQ: {
     category: "Plant / trucking",
     title: "Mix plant slot moved",
     impactDays: 2,
@@ -266,9 +266,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Concrete Pump #2", "Laser Screed #1", "Telehandler #3", "Vibrator Set #4", "Ride-On Trowel #5", "Rebar Bender #6"],
     materials: ["Ready Mix Concrete", "Rebar Package", "Anchor Bolts", "Cure Compound", "Vapor Barrier", "Expansion Joint"],
     readiness: ["Mix design approved", "Pump booked", "Rebar released", "Embeds checked", "Pour cards signed", "Cylinder testing booked"],
-    delayCategory: "Concrete supply",
-    delayTitle: "Ready mix truck spacing",
-    delayDescription: "Truck spacing is wider than plan and may extend the slab pour window.",
+    delayIQCategory: "Concrete supply",
+    delayIQTitle: "Ready mix truck spacing",
+    delayIQDescription: "Truck spacing is wider than plan and may extend the slab pour window.",
     inspectionTitles: ["Rebar Inspection", "Embed Inspection", "Cylinder Break Review"],
     weatherTitle: "Pour weather watch",
     weatherDetails: "Heat and wind may shorten finishing time during afternoon pours."
@@ -283,9 +283,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Roof Hoist #1", "Telehandler #2", "Safety Cart #3", "Welding Kit #4", "Dump Trailer #5", "Sheet Metal Brake #6"],
     materials: ["TPO Membrane", "ISO Insulation", "Fastener Buckets", "Flashing Metal", "Sealant Cases", "Walk Pads"],
     readiness: ["Fall protection staged", "Material loaded", "Tear-off dumpster set", "Deck scan complete", "Weather window checked", "Warranty detail approved"],
-    delayCategory: "Weather",
-    delayTitle: "Dry-in window at risk",
-    delayDescription: "Forecasted rain may block tear-off until temporary dry-in is ready.",
+    delayIQCategory: "Weather",
+    delayIQTitle: "Dry-in window at risk",
+    delayIQDescription: "ForecastIQ shows rain may block tear-off until temporary dry-in is ready.",
     inspectionTitles: ["Deck Inspection", "Membrane Probe Test", "Final Roof Walk"],
     weatherTitle: "Rain window watch",
     weatherDetails: "Tear-off should pause if dry-in cannot be completed before afternoon showers."
@@ -300,9 +300,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Scissor Lift #2", "Forklift #3", "Job Box Set #4", "Temp Power Cart #5", "Cleanup Trailer #6", "Layout Laser #7"],
     materials: ["Framing Package", "Door Hardware", "Ceiling Tile", "Paint Kit", "Safety Supplies", "Closeout Labels"],
     readiness: ["Submittals released", "Subcontractors confirmed", "Inspection calendar", "Access plan", "Material staging", "Owner walk scheduled"],
-    delayCategory: "Trade coordination",
-    delayTitle: "Inspection sequence conflict",
-    delayDescription: "MEP and framing inspections need resequencing before finishes can start.",
+    delayIQCategory: "Trade coordination",
+    delayIQTitle: "Inspection sequence conflict",
+    delayIQDescription: "MEP and framing inspections need resequencing before finishes can start.",
     inspectionTitles: ["Rough-In Inspection", "Above-Ceiling Inspection", "Substantial Completion Walk"],
     weatherTitle: "Delivery access watch",
     weatherDetails: "Morning storms may affect exterior deliveries and loading dock access."
@@ -317,9 +317,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Excavator 320", "Dozer D6", "Loader 938", "Haul Truck Fleet", "Plate Compactor", "Trench Box Set"],
     materials: ["Select Fill", "Bedding Stone", "Silt Fence", "Trench Plates", "Fuel Delivery", "Geotextile Fabric"],
     readiness: ["Locates complete", "Spoils route approved", "Erosion controls set", "Survey stakes checked", "Dump site confirmed", "Compaction testing booked"],
-    delayCategory: "Site conditions",
-    delayTitle: "Wet subgrade delay",
-    delayDescription: "Wet subgrade needs drying and proof-roll approval before backfill.",
+    delayIQCategory: "Site conditions",
+    delayIQTitle: "Wet subgrade delayIQ",
+    delayIQDescription: "Wet subgrade needs drying and proof-roll approval before backfill.",
     inspectionTitles: ["Erosion Control Check", "Trench Safety Review", "Compaction Test"],
     weatherTitle: "Rain and haul road watch",
     weatherDetails: "Soft haul roads may slow truck cycles after overnight rain."
@@ -334,9 +334,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Mini Excavator #1", "Vac Truck #2", "Fusion Machine #3", "Utility Truck #4", "Plate Compactor #5", "Generator #6"],
     materials: ["Ductile Pipe", "PVC Conduit", "Valve Box Set", "Bedding Stone", "Tracer Wire", "Patch Asphalt"],
     readiness: ["811 locates clear", "Shutdown notice sent", "Pipe delivered", "Testing kit staged", "Bypass plan ready", "Backfill source confirmed"],
-    delayCategory: "Locate conflict",
-    delayTitle: "Unknown crossing found",
-    delayDescription: "Crew found an unmarked crossing and needs daylighting before tie-in.",
+    delayIQCategory: "Locate conflict",
+    delayIQTitle: "Unknown crossing found",
+    delayIQDescription: "Crew found an unmarked crossing and needs daylighting before tie-in.",
     inspectionTitles: ["Open Trench Inspection", "Pressure Test", "Patch Acceptance"],
     weatherTitle: "Trench water watch",
     weatherDetails: "Rain could require pump-down before morning trench work."
@@ -351,9 +351,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Boom Lift #4", "Forklift #5", "Framing Saw Set", "Compressor Cart", "Material Rack", "Laser Layout Kit"],
     materials: ["Stud Packs", "Sheathing", "Hangars", "Anchor Hardware", "Nails and Fasteners", "Blocking Lumber"],
     readiness: ["Lumber drop complete", "Layout approved", "Hardware released", "Lift reserved", "Shear schedule set", "Inspection booked"],
-    delayCategory: "Material",
-    delayTitle: "Hardware release delay",
-    delayDescription: "Hold-down hardware is late and may block shear wall close-in.",
+    delayIQCategory: "Material",
+    delayIQTitle: "Hardware release delayIQ",
+    delayIQDescription: "Hold-down hardware is late and may block shear wall close-in.",
     inspectionTitles: ["Framing Inspection", "Shear Wall Inspection", "Hardware Walk"],
     weatherTitle: "Wind lift watch",
     weatherDetails: "High gusts may pause exterior sheathing and boom lift work."
@@ -368,9 +368,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Conduit Bender #1", "Scissor Lift #2", "Wire Tugger #3", "Gang Box #4", "Generator #5", "Megger Tester #6"],
     materials: ["EMT Conduit", "Copper Wire", "Panelboards", "Lighting Fixtures", "Device Boxes", "Switchgear"],
     readiness: ["Sleeves laid out", "Panel release confirmed", "Lift reserved", "Fixture package checked", "Power shutdown scheduled", "Inspection booked"],
-    delayCategory: "Gear lead time",
-    delayTitle: "Switchgear delivery risk",
-    delayDescription: "Switchgear delivery is at risk and may affect energization sequence.",
+    delayIQCategory: "Gear lead time",
+    delayIQTitle: "Switchgear delivery risk",
+    delayIQDescription: "Switchgear delivery is at risk and may affect energization sequence.",
     inspectionTitles: ["Underground Inspection", "Rough Electrical Inspection", "Final Electrical Inspection"],
     weatherTitle: "Exterior rough-in watch",
     weatherDetails: "Storms may pause exterior conduit and rooftop equipment feeds."
@@ -385,9 +385,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Mini Excavator #1", "Pipe Threader #2", "Scissor Lift #3", "Fusion Kit #4", "Hydro Test Pump #5", "Material Cart #6"],
     materials: ["PVC Pipe", "Copper Pipe", "Fixture Carriers", "Valves", "Fixtures", "Firestop Kits"],
     readiness: ["Sleeves approved", "Pipe delivered", "Test pump staged", "Fixture release checked", "Water shutdown scheduled", "Inspection booked"],
-    delayCategory: "Inspection",
-    delayTitle: "Pressure test retake",
-    delayDescription: "A pressure test retake may push fixture set work by one production day.",
+    delayIQCategory: "Inspection",
+    delayIQTitle: "Pressure test retake",
+    delayIQDescription: "A pressure test retake may push fixture set work by one production day.",
     inspectionTitles: ["Underground Plumbing", "Top-Out Inspection", "Final Plumbing"],
     weatherTitle: "Underground water watch",
     weatherDetails: "Wet trench conditions may slow underground waste installation."
@@ -402,9 +402,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Crane Slot #1", "Duct Lift #2", "Scissor Lift #3", "Vac Pump #4", "Welding Cart #5", "Balance Hood #6"],
     materials: ["Sheet Metal Duct", "RTUs", "Refrigerant Pipe", "VAV Boxes", "Controls Cable", "Grilles and Diffusers"],
     readiness: ["Roof curb ready", "Crane booked", "Equipment released", "Duct sections staged", "Controls drawings approved", "Startup tech scheduled"],
-    delayCategory: "Equipment",
-    delayTitle: "RTU delivery shift",
-    delayDescription: "Rooftop unit delivery moved, requiring crane and duct tie-in resequencing.",
+    delayIQCategory: "Equipment",
+    delayIQTitle: "RTU delivery shift",
+    delayIQDescription: "Rooftop unit delivery moved, requiring crane and duct tie-in resequencing.",
     inspectionTitles: ["Duct Inspection", "Equipment Set Review", "Startup Report"],
     weatherTitle: "Crane wind watch",
     weatherDetails: "High winds may affect rooftop unit crane picks."
@@ -419,9 +419,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Masonry Scaffold #1", "Telehandler #2", "Mortar Mixer #3", "Grout Pump #4", "Saw Station #5", "Material Basket #6"],
     materials: ["CMU Block", "Face Brick", "Mortar", "Grout", "Lintels", "Wall Ties"],
     readiness: ["Scaffold tagged", "Block delivered", "Mortar silo set", "Lintels released", "Grout inspection booked", "Washdown area ready"],
-    delayCategory: "Material staging",
-    delayTitle: "Brick delivery split",
-    delayDescription: "Brick delivery was split and the veneer crew needs resequencing.",
+    delayIQCategory: "Material staging",
+    delayIQTitle: "Brick delivery split",
+    delayIQDescription: "Brick delivery was split and the veneer crew needs resequencing.",
     inspectionTitles: ["Reinforcement Inspection", "Grout Lift Inspection", "Final Masonry Walk"],
     weatherTitle: "Cold weather masonry watch",
     weatherDetails: "Low overnight temperatures may require protection for fresh masonry."
@@ -436,9 +436,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Drywall Lift #1", "Scissor Lift #2", "Texture Rig #3", "Material Cart #4", "Sanding Station #5", "Panel Hoist #6"],
     materials: ["Drywall Board", "Metal Studs", "Joint Compound", "Corner Bead", "Texture Mix", "Fasteners"],
     readiness: ["Board stocked", "Framing signed off", "Lift reserved", "Humidity checked", "Texture sample approved", "Punch list issued"],
-    delayCategory: "Predecessor trade",
-    delayTitle: "Rough-in wall release late",
-    delayDescription: "MEP rough-in areas were released late and board hanging must be resequenced.",
+    delayIQCategory: "Predecessor trade",
+    delayIQTitle: "Rough-in wall release late",
+    delayIQDescription: "MEP rough-in areas were released late and board hanging must be resequenced.",
     inspectionTitles: ["Framing Inspection", "Above-Ceiling Review", "Finish Level Walk"],
     weatherTitle: "Humidity drying watch",
     weatherDetails: "High humidity may extend compound dry times between coats."
@@ -453,9 +453,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Skid Steer #1", "Mini Excavator #2", "Trencher #3", "Water Truck #4", "Plate Compactor #5", "Sod Roller #6"],
     materials: ["Plant Material", "Irrigation Pipe", "Pavers", "Topsoil", "Mulch", "Sod"],
     readiness: ["Plant delivery confirmed", "Irrigation layout marked", "Soil amendment staged", "Water source checked", "Hardscape base ready", "Owner plant walk scheduled"],
-    delayCategory: "Nursery supply",
-    delayTitle: "Tree delivery substitution",
-    delayDescription: "Nursery substitution needs owner approval before the planting crew can finish.",
+    delayIQCategory: "Nursery supply",
+    delayIQTitle: "Tree delivery substitution",
+    delayIQDescription: "Nursery substitution needs owner approval before the planting crew can finish.",
     inspectionTitles: ["Irrigation Pressure Test", "Planting Walk", "Final Landscape Punch"],
     weatherTitle: "Heat watering watch",
     weatherDetails: "High heat requires morning planting and extra watering cycles."
@@ -470,9 +470,9 @@ const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate
     equipment: ["Airless Sprayer #1", "Scissor Lift #2", "Drying Fans #3", "Masking Station #4", "Pressure Washer #5", "Paint Cart #6"],
     materials: ["Primer", "Wall Paint", "Exterior Coating", "Masking Film", "Caulk", "Touch-Up Kits"],
     readiness: ["Color schedule approved", "Areas released", "Material tinted", "Ventilation set", "Lift reserved", "Punch tags issued"],
-    delayCategory: "Area release",
-    delayTitle: "Finish areas not released",
-    delayDescription: "Several rooms are not ready for paint because drywall punch is still open.",
+    delayIQCategory: "Area release",
+    delayIQTitle: "Finish areas not released",
+    delayIQDescription: "Several rooms are not ready for paint because drywall punch is still open.",
     inspectionTitles: ["Mockup Approval", "Coverage Review", "Final Paint Walk"],
     weatherTitle: "Exterior coating weather watch",
     weatherDetails: "Wind and humidity may affect exterior coating application."
@@ -502,7 +502,7 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
       targetCompletion: ["2026-07-30", "2026-08-21", "2026-09-04"][index],
       percentComplete: [52, 24, 68][index],
       scheduleHealth: (["On Track", "Monitor", "At Risk"] as Project["scheduleHealth"][])[index],
-      status: (["In Progress", "Ready to Start", "Delayed"] as Project["status"][])[index],
+      status: (["In Progress", "Ready to Start", "DelayIQed"] as Project["status"][])[index],
       image: index === 0 ? "parking-garage" : index === 1 ? "warehouse" : "office-building",
       latitude,
       longitude
@@ -540,7 +540,10 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
       materialsStatus: materialStatuses[index % materialStatuses.length],
       status: jobStatuses[index % jobStatuses.length],
       priority: (index === 0 || index === 3 ? "High" : index === 4 ? "Medium" : "Normal") as Job["priority"],
-      notes: `${businessType} production task for ${phase.toLowerCase()} with crew, equipment, readiness, and material constraints tracked.`
+      notes: `${businessType} production task for ${phase.toLowerCase()} with crew, equipment, readiness, and material constraints tracked.`,
+      // A generated workspace has no field history yet — progress starts at zero
+      // and only the crew's own reports move it.
+      percentComplete: 0
     };
   });
 
@@ -579,20 +582,20 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
     jobId: jobs[index]?.id,
     userId: index === 2 ? "u-jessica" : "u-carlos",
     message: `${businessType} crew update: ${jobs[index]?.phase ?? "production"} is ${index === 2 ? "waiting on readiness items" : "moving on schedule"}.`,
-    status: index === 2 ? "Delayed" : "On Site",
+    status: index === 2 ? "DelayIQed" : "On Site",
     createdAt: `2026-06-1${6 + index}T09:18:00.000Z`,
     photos: []
   }));
 
-  const delays: Delay[] = [
+  const delayIQs: DelayIQ[] = [
     {
-      id: `delay-${baseSlug}-primary`,
+      id: `delayIQ-${baseSlug}-primary`,
       projectId: projectIds[2],
       reportedAt: "2026-06-16",
-      ...template.delay
+      ...template.delayIQ
     },
     {
-      id: `delay-${baseSlug}-weather`,
+      id: `delayIQ-${baseSlug}-weather`,
       projectId: projectIds[0],
       category: "Weather",
       title: template.weather.title,
@@ -642,8 +645,13 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
     equipment,
     materials,
     assignments,
+    // Profile workspaces start with no precedence network; CPM links are added
+    // as the plan is built out.
+    dependencies: [],
     fieldUpdates,
-    delays,
+    // No reports yet, so nothing has disagreed with the plan.
+    variances: [],
+    delayIQs,
     readiness,
     phases,
     inspections,
