@@ -2,10 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
-import { hashPassword, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
+import { hashPassword, hashToken, newAuthToken, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
 import { createBusinessProfile } from "./businessProfiles.js";
 import type {
+  CrewClash,
+  RebookMove,
+  RebookResult,
   BootstrapPayload,
+  UserRole,
   BusinessTypeId,
   CreateEquipmentInput,
   CreateCrewInput,
@@ -35,12 +39,48 @@ import type {
   VarianceProposal,
   WeatherAlert
 } from "@buildflow/shared";
+import { businessTypeOptions, onboardingProductOptions, planOptions, type OnboardingProductId, type PlanId } from "@buildflow/shared";
+import { defaultCrewRate, normalizeWorkCalendar, type WorkCalendarSetting } from "@buildflow/shared";
+import { calculateCpm, type CreateJobDependencyInput } from "@buildflow/shared";
+
+/** Days a paid plan runs before checkout has to happen. */
+const TRIAL_DAYS = 14;
 
 type Primitive = string | number | null;
 
 // ── Auth model (see auth.ts + stores.ts) ────────────────────────────────────
 export type Org = { id: string; name: string; plan: string; createdAt: string };
-export type Account = { id: string; orgId: string; email: string; name: string; role: string; createdAt: string };
+export type Account = {
+  id: string;
+  orgId: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+  /** When the person ticked the terms box at signup, and which terms they saw. Null for accounts that predate the box. */
+  acceptedTermsAt?: string | null;
+  acceptedTermsVersion?: string | null;
+  /** Set when the person followed the link we emailed them. Null until then. */
+  emailVerifiedAt?: string | null;
+  /** "google" / "microsoft" when the account was created through sign-in with a provider. */
+  authProvider?: string | null;
+  providerSubject?: string | null;
+};
+
+export type AuthTokenKind = "verify" | "reset";
+
+export type InviteRow = {
+  id: string;
+  orgId: string;
+  email: string;
+  role: UserRole;
+  invitedBy: string;
+  tokenHash: string;
+  expiresAt: string;
+  sentAt: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+};
 type AccountRow = Account & { passwordHash: string };
 export type SessionContext = { account: Account; org: Org };
 
@@ -57,6 +97,18 @@ export const DEMO_ACCOUNT_EMAIL = "demo@buildflow.com";
 export const DEMO_ACCOUNT_PASSWORD = "buildflow-demo";
 
 /** Strip the password hash so an account is safe to return to the client. */
+/** SQLite stores the sample flag as 0/1; the API speaks booleans. */
+function userRow(row: Omit<User, "isSample" | "accountId"> & { isSample?: number | boolean | null; accountId?: string | null }): User {
+  return { ...row, accountId: row.accountId ?? null, isSample: Boolean(row.isSample) };
+}
+
+/** "Jordan Reyes" → "JR"; single names take their first two letters. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.trim().slice(0, 2).toUpperCase() || "?";
+}
+
 export function toAccount(row: AccountRow): Account {
   const { passwordHash: _passwordHash, ...account } = row;
   return account;
@@ -70,10 +122,41 @@ type FieldUpdateRow = Omit<FieldUpdate, "photos" | "percentComplete"> & {
   percentComplete: number | null;
 };
 
-type VarianceRow = Omit<
-  ScheduleVariance,
-  "proposal" | "kind" | "severity" | "status" | "resolvedAt" | "resolvedBy" | "resolutionNote"
-> & {
+/** A week's reading of one project's schedule position (`projectId: ""` = portfolio). */
+/** A weekly plan snapshot as stored: shaped by server/src/schedule/digest.ts. */
+export type PlanSnapshotLike = { weekOf: string; capturedAt: string } & Record<string, unknown>;
+
+/** What "Load sample data" added, so "Remove sample data" can take exactly that out. */
+export type SampleDataRecord = {
+  businessType: BusinessTypeId;
+  projectIds: string[];
+  crewIds: string[];
+  equipmentIds: string[];
+  loadedAt: string;
+};
+
+export type ScheduleSnapshotRow = {
+  id: string;
+  weekOf: string;
+  projectId: string;
+  daysAhead: number;
+  percentComplete: number;
+  forecastFinish: string;
+  plannedFinish: string;
+  capturedAt: string;
+  /* The Dashboard's Performance tiles, read the way the Dashboard reads them, so
+     next week's delta compares like with like. Only the portfolio row carries
+     them; weeks captured before they existed hold null. */
+  onTrackProjects: number | null;
+  projects: number | null;
+  crewUtilization: number | null;
+};
+
+/** The measures a snapshot may carry beyond its position — optional on write, null when never read. */
+type ScheduleSnapshotMeasures = Pick<ScheduleSnapshotRow, "onTrackProjects" | "projects" | "crewUtilization">;
+const SNAPSHOT_MEASURES: Array<keyof ScheduleSnapshotMeasures> = ["onTrackProjects", "projects", "crewUtilization"];
+
+type VarianceRow = Omit<ScheduleVariance, "proposal" | "kind" | "severity" | "status" | "resolvedAt" | "resolvedBy" | "resolutionNote"> & {
   proposal: string;
   kind: string;
   severity: string;
@@ -110,11 +193,66 @@ export type SalesTaskRow = {
   done: number;
   department: Department;
   createdAt: string;
+  /** Who the task is for (a rep's own to-do), its priority and free notes — added in schema v7. */
+  assignee: string;
+  priority: string;
+  notes: string;
+};
+/** Seed rows omit the v7 task columns (assignee / priority / notes) — the table defaults fill them in. */
+export type SalesTaskSeed = Omit<SalesTaskRow, "assignee" | "priority" | "notes"> &
+  Partial<Pick<SalesTaskRow, "assignee" | "priority" | "notes">>;
+export type SalesCompanyRow = {
+  id: string;
+  name: string;
+  domain: string;
+  industry: string;
+  phone: string;
+  city: string;
+  state: string;
+  owner: string;
+  notes: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+};
+export type SalesDealStage =
+  | "Appointment scheduled"
+  | "Qualified to buy"
+  | "Presentation scheduled"
+  | "Decision maker bought-in"
+  | "Contract sent"
+  | "Closed won"
+  | "Closed lost";
+export type SalesDealRow = {
+  id: string;
+  name: string;
+  stage: SalesDealStage;
+  amount: number;
+  closeDate: string;
+  companyId: string | null;
+  leadId: string | null;
+  owner: string;
+  priority: string;
+  notes: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+};
+export type SalesMeetingRow = {
+  id: string;
+  leadId: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  location: string;
+  agenda: string;
+  organizer: string;
+  /** How the client was notified: "email", "email+sms", "sms" or "none". */
+  notifiedVia: string;
+  createdAt: string;
 };
 export type SalesActivityRow = {
   id: string;
   leadId: string;
-  type: "note" | "call" | "email" | "meeting" | "stage";
+  type: "note" | "call" | "email" | "meeting" | "stage" | "text";
   summary: string;
   createdAt: string;
 };
@@ -397,8 +535,414 @@ const SCHEMA_MIGRATIONS: Migration[] = [
       db.exec("UPDATE delayIQs SET category = REPLACE(category, 'Delay', 'DelayIQ') WHERE category LIKE '%Delay%'");
       db.exec("UPDATE delayIQs SET category = REPLACE(category, 'delay', 'delayIQ') WHERE category LIKE '%delay%'");
     }
+  },
+  {
+    version: 5,
+    name: "weekly schedule snapshots",
+    up: (db) => {
+      // One row per project per week (plus a portfolio row with projectId '') so
+      // the dashboard can say "improved by N days from last week" from a real
+      // prior reading instead of a fabricated delta. Written once per week the
+      // first time the status is asked for — see captureWeeklySnapshots().
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS schedule_snapshots (
+          id TEXT PRIMARY KEY,
+          weekOf TEXT NOT NULL,
+          projectId TEXT NOT NULL,
+          daysAhead INTEGER NOT NULL,
+          percentComplete INTEGER NOT NULL,
+          forecastFinish TEXT NOT NULL,
+          plannedFinish TEXT NOT NULL,
+          capturedAt TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_snapshots_week_project
+          ON schedule_snapshots(weekOf, projectId);
+        CREATE INDEX IF NOT EXISTS idx_snapshots_weekOf ON schedule_snapshots(weekOf);
+      `);
+    }
+  },
+  {
+    version: 6,
+    name: "project contract value",
+    up: (db) => {
+      // Nullable on purpose: existing projects were scheduled without a price,
+      // and reporting must treat "not priced" differently from "worth nothing".
+      const info = db.exec("PRAGMA table_info(projects)");
+      const hasValue = Boolean(info[0]) && info[0].values.some((col) => String(col[1]) === "value");
+      if (!hasValue) db.exec("ALTER TABLE projects ADD COLUMN value INTEGER");
+    }
+  },
+  {
+    version: 7,
+    name: "sales tasks assignee/priority/notes + sales meetings",
+    up: (db) => {
+      // Existing DBs predate these columns; fresh DBs get them from the base
+      // schema, so guard each ALTER on the column being absent.
+      const info = db.exec("PRAGMA table_info(sales_tasks)");
+      const cols = new Set(info[0] ? info[0].values.map((col) => String(col[1])) : []);
+      if (cols.size > 0) {
+        if (!cols.has("assignee")) db.exec("ALTER TABLE sales_tasks ADD COLUMN assignee TEXT NOT NULL DEFAULT ''");
+        if (!cols.has("priority")) db.exec("ALTER TABLE sales_tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'Normal'");
+        if (!cols.has("notes")) db.exec("ALTER TABLE sales_tasks ADD COLUMN notes TEXT NOT NULL DEFAULT ''");
+      }
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sales_meetings (
+          id TEXT PRIMARY KEY,
+          leadId TEXT NOT NULL,
+          title TEXT NOT NULL,
+          startsAt TEXT NOT NULL,
+          endsAt TEXT NOT NULL,
+          location TEXT NOT NULL DEFAULT '',
+          agenda TEXT NOT NULL DEFAULT '',
+          organizer TEXT NOT NULL DEFAULT '',
+          notifiedVia TEXT NOT NULL DEFAULT 'none',
+          createdAt TEXT NOT NULL
+        );
+      `);
+    }
+  },
+  {
+    version: 8,
+    name: "sales companies + deals",
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sales_companies (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          domain TEXT NOT NULL DEFAULT '',
+          industry TEXT NOT NULL DEFAULT '',
+          phone TEXT NOT NULL DEFAULT '',
+          city TEXT NOT NULL DEFAULT '',
+          state TEXT NOT NULL DEFAULT '',
+          owner TEXT NOT NULL DEFAULT '',
+          notes TEXT NOT NULL DEFAULT '',
+          createdAt TEXT NOT NULL,
+          lastActivityAt TEXT
+        );
+        CREATE TABLE IF NOT EXISTS sales_deals (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          stage TEXT NOT NULL DEFAULT 'Appointment scheduled',
+          amount INTEGER NOT NULL DEFAULT 0,
+          closeDate TEXT NOT NULL DEFAULT '',
+          companyId TEXT,
+          leadId TEXT,
+          owner TEXT NOT NULL DEFAULT '',
+          priority TEXT NOT NULL DEFAULT 'Medium',
+          notes TEXT NOT NULL DEFAULT '',
+          createdAt TEXT NOT NULL,
+          lastActivityAt TEXT
+        );
+      `);
+    }
+  },
+  {
+    version: 9,
+    name: "schedule tool: calendars, activities, relationships, wbs, baselines",
+    up: (db) => {
+      // The Schedule Creation Tool's own records (spec §3). Activities are the
+      // schedule's source of truth; the calculated columns are a cache that
+      // every schedule run overwrites. Projects/crews are the existing BuildFlow
+      // records, extended with the §3 fields they lacked.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS schedule_calendars (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          workdays TEXT NOT NULL,
+          hoursPerDay REAL NOT NULL DEFAULT 8,
+          holidays TEXT NOT NULL DEFAULT '[]',
+          exceptions TEXT NOT NULL DEFAULT '[]',
+          blackoutRanges TEXT NOT NULL DEFAULT '[]'
+        );
+        CREATE INDEX IF NOT EXISTS idx_sched_calendars_project ON schedule_calendars(projectId);
+        CREATE TABLE IF NOT EXISTS schedule_activities (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          code TEXT NOT NULL,
+          name TEXT NOT NULL,
+          wbsId TEXT,
+          durationMode TEXT NOT NULL DEFAULT 'fixed',
+          fixedDuration REAL,
+          quantity REAL,
+          unit TEXT,
+          productionRate REAL,
+          crewCount INTEGER,
+          calendarId TEXT NOT NULL,
+          crewId TEXT,
+          constraintType TEXT,
+          constraintDate TEXT,
+          percentComplete REAL NOT NULL DEFAULT 0,
+          actualStart TEXT,
+          actualFinish TEXT,
+          stationStart TEXT,
+          stationEnd TEXT,
+          earlyStart TEXT,
+          earlyFinish TEXT,
+          lateStart TEXT,
+          lateFinish TEXT,
+          totalFloat INTEGER,
+          freeFloat INTEGER,
+          isCritical INTEGER,
+          notes TEXT,
+          sortOrder INTEGER NOT NULL DEFAULT 0,
+          sourceJobId TEXT
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sched_activities_project_code ON schedule_activities(projectId, code);
+        CREATE INDEX IF NOT EXISTS idx_sched_activities_project ON schedule_activities(projectId);
+        CREATE INDEX IF NOT EXISTS idx_sched_activities_source_job ON schedule_activities(sourceJobId);
+        CREATE TABLE IF NOT EXISTS schedule_relationships (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          predecessorId TEXT NOT NULL,
+          successorId TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'FS',
+          lag INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_sched_rel_project ON schedule_relationships(projectId);
+        CREATE INDEX IF NOT EXISTS idx_sched_rel_pred ON schedule_relationships(predecessorId);
+        CREATE INDEX IF NOT EXISTS idx_sched_rel_succ ON schedule_relationships(successorId);
+        CREATE TABLE IF NOT EXISTS schedule_wbs (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          parentId TEXT,
+          code TEXT NOT NULL,
+          name TEXT NOT NULL,
+          sortOrder INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_sched_wbs_project ON schedule_wbs(projectId);
+        CREATE TABLE IF NOT EXISTS schedule_baselines (
+          id TEXT PRIMARY KEY,
+          projectId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          capturedAt TEXT NOT NULL,
+          snapshot TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_sched_baselines_project ON schedule_baselines(projectId);
+      `);
+      const addColumns = (table: string, columns: Array<[string, string]>) => {
+        const existing = new Set<string>();
+        const info = db.exec(`PRAGMA table_info(${table})`);
+        if (info[0]) for (const row of info[0].values) existing.add(String(row[1]));
+        for (const [column, type] of columns) {
+          if (!existing.has(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+        }
+      };
+      addColumns("projects", [
+        ["number", "TEXT"],
+        ["dataDate", "TEXT"],
+        ["defaultCalendarId", "TEXT"],
+        ["createdAt", "TEXT"],
+        ["updatedAt", "TEXT"]
+      ]);
+      addColumns("crews", [
+        ["color", "TEXT"],
+        ["defaultProductionRate", "REAL"],
+        ["defaultUnit", "TEXT"]
+      ]);
+    }
+  },
+  {
+    version: 10,
+    name: "workspace settings (business type)",
+    up: (db) => {
+      // Org-level key/value settings. The first key is the trade the owner
+      // picked at onboarding — it used to live only in the browser's
+      // localStorage, so signing in from another device forgot it.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS workspace_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+      `);
+    }
+  },
+  {
+    version: 11,
+    name: "accounts: terms acceptance",
+    up: (db) => {
+      // Signup now asks for explicit agreement; record when and to which
+      // version. Nullable so accounts created before the box keep working.
+      const info = db.exec("PRAGMA table_info(accounts)");
+      const cols = info[0] ? info[0].values.map((col) => String(col[1])) : [];
+      if (!cols.includes("acceptedTermsAt")) db.exec("ALTER TABLE accounts ADD COLUMN acceptedTermsAt TEXT");
+      if (!cols.includes("acceptedTermsVersion")) db.exec("ALTER TABLE accounts ADD COLUMN acceptedTermsVersion TEXT");
+    }
+  },
+  {
+    version: 12,
+    name: "users linked to accounts, sample flag, onboarding-completed setting",
+    up: (db) => {
+      // The registered owner becomes a real person in their workspace (linked by
+      // accountId); seeded teammates are flagged as samples. Workspaces that
+      // already have people in them finished onboarding before this flag
+      // existed, so backfill it — otherwise every existing sign-in would be
+      // sent back to the trade picker.
+      const info = db.exec("PRAGMA table_info(users)");
+      const cols = info[0] ? info[0].values.map((col) => String(col[1])) : [];
+      if (!cols.includes("accountId")) db.exec("ALTER TABLE users ADD COLUMN accountId TEXT");
+      if (!cols.includes("isSample")) db.exec("ALTER TABLE users ADD COLUMN isSample INTEGER NOT NULL DEFAULT 0");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_users_account ON users(accountId)");
+      // People seeded by a starter workspace before the flag existed are samples
+      // too; nobody typed them in. Anyone linked to a login account is real.
+      db.exec("UPDATE users SET isSample = 1 WHERE accountId IS NULL AND id IN ('u-matt', 'u-jessica', 'u-carlos')");
+      const users = db.exec("SELECT COUNT(*) FROM users");
+      const count = Number(users[0]?.values?.[0]?.[0] ?? 0);
+      if (count > 0) {
+        db.exec(
+          `INSERT INTO workspace_settings (key, value) VALUES ('onboardingCompletedAt', '${new Date().toISOString()}')
+           ON CONFLICT(key) DO NOTHING`
+        );
+      }
+    }
+  },
+  {
+    version: 16,
+    name: "accounts: sign-in provider",
+    up: (db) => {
+      const info = db.exec("PRAGMA table_info(accounts)");
+      const cols = info[0] ? info[0].values.map((col) => String(col[1])) : [];
+      if (!cols.includes("authProvider")) db.exec("ALTER TABLE accounts ADD COLUMN authProvider TEXT");
+      if (!cols.includes("providerSubject")) db.exec("ALTER TABLE accounts ADD COLUMN providerSubject TEXT");
+    }
+  },
+  {
+    version: 15,
+    name: "per-user settings (tutorial progress)",
+    up: (db) => {
+      // Things a person decides for themselves — which tutorials they skipped
+      // or finished — used to live in localStorage and replayed on every new
+      // device. Keyed by workspace user, so they follow the login.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_settings (
+          userId TEXT NOT NULL,
+          key TEXT NOT NULL,
+          value TEXT NOT NULL,
+          updatedAt TEXT NOT NULL,
+          PRIMARY KEY (userId, key)
+        );
+      `);
+    }
+  },
+  {
+    version: 14,
+    name: "team invites",
+    up: (db) => {
+      // Invites are org records (main store), like accounts: the invited person
+      // has no workspace user until they accept. Token stored hashed, like the
+      // other emailed links.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS invites (
+          id TEXT PRIMARY KEY,
+          orgId TEXT NOT NULL,
+          email TEXT NOT NULL,
+          role TEXT NOT NULL,
+          invitedBy TEXT NOT NULL,
+          tokenHash TEXT NOT NULL UNIQUE,
+          expiresAt TEXT NOT NULL,
+          sentAt TEXT,
+          acceptedAt TEXT,
+          createdAt TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_invites_org ON invites(orgId, acceptedAt);
+      `);
+    }
+  },
+  {
+    version: 13,
+    name: "email verification + one-time auth tokens",
+    up: (db) => {
+      // One table for every emailed link (verify address, reset password).
+      // Only the hash of a token is stored; the raw token lives in the email.
+      const info = db.exec("PRAGMA table_info(accounts)");
+      const cols = info[0] ? info[0].values.map((col) => String(col[1])) : [];
+      if (!cols.includes("emailVerifiedAt")) db.exec("ALTER TABLE accounts ADD COLUMN emailVerifiedAt TEXT");
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS auth_tokens (
+          id TEXT PRIMARY KEY,
+          accountId TEXT NOT NULL,
+          kind TEXT NOT NULL,
+          tokenHash TEXT NOT NULL UNIQUE,
+          expiresAt TEXT NOT NULL,
+          usedAt TEXT,
+          createdAt TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_auth_tokens_account ON auth_tokens(accountId, kind);
+      `);
+    }
   }
 ];
+
+SCHEMA_MIGRATIONS.push(
+  {
+    version: 15,
+    name: "crew hourly rates",
+    up: (db) => {
+      // What a crew costs per worker-hour, so the schedule's labour cost is arithmetic, not a constant.
+      const info = db.exec("PRAGMA table_info(crews)");
+      const cols = info[0] ? info[0].values.map((col) => String(col[1])) : [];
+      if (!cols.includes("rate")) db.exec("ALTER TABLE crews ADD COLUMN rate REAL");
+    }
+  },
+  {
+    version: 16,
+    name: "a booking wears its job's status",
+    up: (db) => {
+      // One status model: the job owns it; every booking of that job shows the same badge.
+      db.exec("UPDATE assignments SET status = COALESCE((SELECT status FROM jobs WHERE jobs.id = assignments.jobId), status)");
+    }
+  },
+  {
+    version: 17,
+    name: "weekly plan snapshots for the digest",
+    up: (db) => {
+      // The whole plan as it stood on a Monday — jobs, bookings, milestones — so the
+      // weekly digest can say what moved. One row per week, the first reading kept.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS schedule_plan_snapshots (
+          weekOf TEXT PRIMARY KEY,
+          capturedAt TEXT NOT NULL,
+          plan TEXT NOT NULL
+        );
+      `);
+    }
+  },
+  {
+    version: 18,
+    name: "per-user settings and sign-in columns on every store; weekly snapshot measures",
+    up: (db) => {
+      const columnsOf = (table: string) => {
+        const info = db.exec(`PRAGMA table_info(${table})`);
+        return info[0] ? info[0].values.map((col) => String(col[1])) : [];
+      };
+      // "per-user settings" and "accounts: sign-in provider" were numbered 15 and
+      // 16 after some stores had already reached 17, so those stores never ran
+      // them — the demo store's bootstrap failed on the missing user_settings
+      // table. Both are re-applied here, guarded, for any store that skipped them.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_settings (
+          userId TEXT NOT NULL,
+          key TEXT NOT NULL,
+          value TEXT NOT NULL,
+          updatedAt TEXT NOT NULL,
+          PRIMARY KEY (userId, key)
+        );
+      `);
+      const accounts = columnsOf("accounts");
+      if (accounts.length > 0 && !accounts.includes("authProvider")) db.exec("ALTER TABLE accounts ADD COLUMN authProvider TEXT");
+      if (accounts.length > 0 && !accounts.includes("providerSubject")) db.exec("ALTER TABLE accounts ADD COLUMN providerSubject TEXT");
+      // The Dashboard's Performance tiles trend on the weekly reading: how many
+      // projects were on track by schedule health, out of how many, and the
+      // crews' average utilization. Nullable — earlier weeks were never read.
+      const snapshots = columnsOf("schedule_snapshots");
+      if (snapshots.length > 0) {
+        if (!snapshots.includes("onTrackProjects")) db.exec("ALTER TABLE schedule_snapshots ADD COLUMN onTrackProjects INTEGER");
+        if (!snapshots.includes("projects")) db.exec("ALTER TABLE schedule_snapshots ADD COLUMN projects INTEGER");
+        if (!snapshots.includes("crewUtilization")) db.exec("ALTER TABLE schedule_snapshots ADD COLUMN crewUtilization INTEGER");
+      }
+    }
+  }
+);
 
 export const LATEST_SCHEMA_VERSION = SCHEMA_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);
 
@@ -415,6 +959,34 @@ export interface SubscriptionRow {
   createdAt: string;
   updatedAt: string;
   raw: string | null;
+}
+
+/** A re-book that would double-book a crew: nothing was written; the clashes say who is already there. */
+/** Why a dependency link was refused: a job pointing at itself, a link that already exists, or one that would close a loop. */
+export class DependencyError extends Error {
+  code: "self" | "duplicate" | "cycle";
+  constructor(message: string, code: "self" | "duplicate" | "cycle") {
+    super(message);
+    this.name = "DependencyError";
+    this.code = code;
+  }
+}
+
+export class RebookConflictError extends Error {
+  clashes: CrewClash[];
+  constructor(clashes: CrewClash[]) {
+    super(clashMessage(clashes));
+    this.name = "RebookConflictError";
+    this.clashes = clashes;
+  }
+}
+
+/** "Concrete Crew 1 is on Riverside that day" — the first clash, and how many more there are. */
+export function clashMessage(clashes: CrewClash[]): string {
+  const [first] = clashes;
+  if (!first) return "A crew is already booked that day";
+  const more = clashes.length > 1 ? ` (and ${clashes.length - 1} more)` : "";
+  return `${first.crewName} is on ${first.jobName} that day${more}`;
 }
 
 export class BuildFlowStore {
@@ -448,14 +1020,49 @@ export class BuildFlowStore {
       store.ensureCrewRoleCounts();
       store.seedSalesDesk();
       store.ensureSalesDeskDepartments();
+      store.seedSalesCompaniesAndDeals();
       store.seedDemoAccount();
     }
     store.save();
     return store;
   }
 
+  /** While a transaction runs, save() waits for its commit: sql.js's export() closes the database, which would end the transaction. */
+  private inTransaction = false;
+
   private save() {
+    if (this.inTransaction) return;
     fs.writeFileSync(this.dataFile, Buffer.from(this.db.export()));
+  }
+
+  /**
+   * Runs `work` as one SQLite transaction: every write in it lands, or none does, and
+   * the file is written once, after the commit. A call from inside a transaction joins it.
+   */
+  transaction<T>(work: () => T): T {
+    if (this.inTransaction) return work();
+    this.db.exec("BEGIN");
+    this.inTransaction = true;
+    let result: T | undefined;
+    let committed = false;
+    try {
+      result = work();
+      this.db.exec("COMMIT");
+      committed = true;
+    } catch (error) {
+      if (!committed) {
+        try {
+          this.db.exec("ROLLBACK");
+        } catch {
+          /* nothing left to roll back */
+        }
+      }
+      throw error;
+    } finally {
+      this.inTransaction = false;
+    }
+    this.save();
+    return result as T;
   }
 
   /** Absolute path of this store's SQLite file (used to co-locate per-org files). */
@@ -497,7 +1104,11 @@ export class BuildFlowStore {
   /** Apply any SCHEMA_MIGRATIONS newer than this DB's recorded user_version. */
   private runMigrations() {
     let version = this.getUserVersion();
-    for (const migration of SCHEMA_MIGRATIONS) {
+    // Apply in version order regardless of array order: a newer migration
+    // listed earlier would otherwise bump user_version past the ones after it
+    // and silently skip them on fresh databases.
+    const ordered = [...SCHEMA_MIGRATIONS].sort((a, b) => a.version - b.version);
+    for (const migration of ordered) {
       if (migration.version <= version) continue;
       migration.up(this.db);
       this.db.exec(`PRAGMA user_version = ${Math.floor(migration.version)}`);
@@ -573,7 +1184,8 @@ export class BuildFlowStore {
         capacity INTEGER NOT NULL,
         utilization INTEGER NOT NULL,
         icon TEXT NOT NULL,
-        status TEXT NOT NULL
+        status TEXT NOT NULL,
+        rate REAL
       );
 
       CREATE TABLE IF NOT EXISTS crew_role_counts (
@@ -694,7 +1306,57 @@ export class BuildFlowStore {
         dueAt TEXT NOT NULL,
         done INTEGER NOT NULL DEFAULT 0,
         department TEXT NOT NULL DEFAULT 'sales',
+        createdAt TEXT NOT NULL,
+        assignee TEXT NOT NULL DEFAULT '',
+        priority TEXT NOT NULL DEFAULT 'Normal',
+        notes TEXT NOT NULL DEFAULT ''
+      );
+
+      /* Meetings a rep schedules with a contact from the Contacts page; the
+         client is notified by email (with an .ics) and, when Twilio is set, SMS. */
+      CREATE TABLE IF NOT EXISTS sales_meetings (
+        id TEXT PRIMARY KEY,
+        leadId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        startsAt TEXT NOT NULL,
+        endsAt TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT '',
+        agenda TEXT NOT NULL DEFAULT '',
+        organizer TEXT NOT NULL DEFAULT '',
+        notifiedVia TEXT NOT NULL DEFAULT 'none',
         createdAt TEXT NOT NULL
+      );
+
+      /* Companies + Deals (the Sales hub's other two pages). Companies link to
+         contacts by name (sales_leads.company); deals link to a company and a
+         contact by id. Seeded from the leads by seedSalesCompaniesAndDeals(). */
+      CREATE TABLE IF NOT EXISTS sales_companies (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        domain TEXT NOT NULL DEFAULT '',
+        industry TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        city TEXT NOT NULL DEFAULT '',
+        state TEXT NOT NULL DEFAULT '',
+        owner TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        createdAt TEXT NOT NULL,
+        lastActivityAt TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS sales_deals (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        stage TEXT NOT NULL DEFAULT 'Appointment scheduled',
+        amount INTEGER NOT NULL DEFAULT 0,
+        closeDate TEXT NOT NULL DEFAULT '',
+        companyId TEXT,
+        leadId TEXT,
+        owner TEXT NOT NULL DEFAULT '',
+        priority TEXT NOT NULL DEFAULT 'Medium',
+        notes TEXT NOT NULL DEFAULT '',
+        createdAt TEXT NOT NULL,
+        lastActivityAt TEXT
       );
 
       CREATE TABLE IF NOT EXISTS sales_activities (
@@ -827,6 +1489,7 @@ export class BuildFlowStore {
         managerId: "u-matt",
         targetCompletion: "2026-09-04",
         percentComplete: 62,
+        value: 8600000,
         scheduleHealth: "On Track",
         status: "In Progress",
         image: "office-building",
@@ -844,6 +1507,7 @@ export class BuildFlowStore {
         managerId: "u-jessica",
         targetCompletion: "2026-10-15",
         percentComplete: 48,
+        value: 4200000,
         scheduleHealth: "On Track",
         status: "In Progress",
         image: "apartments",
@@ -861,6 +1525,7 @@ export class BuildFlowStore {
         managerId: "u-matt",
         targetCompletion: "2026-11-20",
         percentComplete: 35,
+        value: 12400000,
         scheduleHealth: "At Risk",
         status: "DelayIQed",
         image: "medical-center",
@@ -878,6 +1543,7 @@ export class BuildFlowStore {
         managerId: "u-jessica",
         targetCompletion: "2026-08-21",
         percentComplete: 0,
+        value: 6800000,
         scheduleHealth: "Monitor",
         status: "Ready to Start",
         image: "warehouse",
@@ -895,6 +1561,7 @@ export class BuildFlowStore {
         managerId: "u-matt",
         targetCompletion: "2026-07-30",
         percentComplete: 100,
+        value: 3100000,
         scheduleHealth: "Complete",
         status: "Complete",
         image: "parking-garage",
@@ -1173,21 +1840,70 @@ export class BuildFlowStore {
     ];
 
     const materials: Material[] = [
-      { id: "mat-rebar", projectId: "p-pinecrest", name: "Rebar Package", status: "Waiting on Delivery", deliveryDate: "2026-06-24", quantity: "14 tons" },
-      { id: "mat-concrete", projectId: "p-riverside", name: "Ready Mix Concrete", status: "Ready", deliveryDate: "2026-06-16", quantity: "120 yd3" },
-      { id: "mat-steel", projectId: "p-harborview", name: "Wall Framing Steel", status: "Ready", deliveryDate: "2026-06-14", quantity: "34 bundles" },
-      { id: "mat-conduit", projectId: "p-riverside", name: "Electrical Conduit", status: "Missing", deliveryDate: "2026-06-21", quantity: "900 ft" },
-      { id: "mat-asphalt", projectId: "p-techridge", name: "Asphalt Surface Mix", status: "Ordered", deliveryDate: "2026-06-19", quantity: "64 tons" }
+      {
+        id: "mat-rebar",
+        projectId: "p-pinecrest",
+        name: "Rebar Package",
+        status: "Waiting on Delivery",
+        deliveryDate: "2026-06-24",
+        quantity: "14 tons"
+      },
+      {
+        id: "mat-concrete",
+        projectId: "p-riverside",
+        name: "Ready Mix Concrete",
+        status: "Ready",
+        deliveryDate: "2026-06-16",
+        quantity: "120 yd3"
+      },
+      {
+        id: "mat-steel",
+        projectId: "p-harborview",
+        name: "Wall Framing Steel",
+        status: "Ready",
+        deliveryDate: "2026-06-14",
+        quantity: "34 bundles"
+      },
+      {
+        id: "mat-conduit",
+        projectId: "p-riverside",
+        name: "Electrical Conduit",
+        status: "Missing",
+        deliveryDate: "2026-06-21",
+        quantity: "900 ft"
+      },
+      {
+        id: "mat-asphalt",
+        projectId: "p-techridge",
+        name: "Asphalt Surface Mix",
+        status: "Ordered",
+        deliveryDate: "2026-06-19",
+        quantity: "64 tons"
+      }
     ];
 
     const assignments: ScheduleAssignment[] = [
       { id: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15", status: "Confirmed", conflicts: [] },
       { id: "as-2", jobId: "j-harborview-framing", crewId: "crew-framing", date: "2026-06-16", status: "Confirmed", conflicts: [] },
       { id: "as-3", jobId: "j-harborview-framing", crewId: "crew-framing", date: "2026-06-17", status: "Confirmed", conflicts: [] },
-      { id: "as-4", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: "2026-06-19", status: "DelayIQed", conflicts: ["Missing materials"] },
+      {
+        id: "as-4",
+        jobId: "j-pinecrest-foundation",
+        crewId: "crew-concrete",
+        date: "2026-06-19",
+        status: "DelayIQed",
+        conflicts: ["Missing materials"]
+      },
       { id: "as-5", jobId: "j-logistics-site", crewId: "crew-utility", date: "2026-06-18", status: "Ready", conflicts: [] },
       { id: "as-6", jobId: "j-techridge-paving", crewId: "crew-paving", date: "2026-06-19", status: "Ready", conflicts: [] },
-      { id: "as-7", jobId: "j-steelyard-conduit", crewId: "crew-utility", date: "2026-06-19", status: "DelayIQed", conflicts: ["Missing materials"] },
+      {
+        id: "as-7",
+        jobId: "j-steelyard-conduit",
+        crewId: "crew-utility",
+        date: "2026-06-19",
+        status: "DelayIQed",
+        conflicts: ["Missing materials"]
+      },
       { id: "as-8", jobId: "j-pinecrest-mep", crewId: "crew-mep", date: "2026-06-20", status: "Planned", conflicts: [] }
     ];
 
@@ -1271,9 +1987,21 @@ export class BuildFlowStore {
     ];
 
     const inspections: Inspection[] = [
-      { id: "insp-1", projectId: "p-riverside", title: "Foundation Inspection", scheduledAt: "2026-06-23T10:00:00.000Z", status: "Upcoming" },
+      {
+        id: "insp-1",
+        projectId: "p-riverside",
+        title: "Foundation Inspection",
+        scheduledAt: "2026-06-23T10:00:00.000Z",
+        status: "Upcoming"
+      },
       { id: "insp-2", projectId: "p-harborview", title: "Framing Inspection", scheduledAt: "2026-06-20T10:00:00.000Z", status: "Upcoming" },
-      { id: "insp-3", projectId: "p-pinecrest", title: "MEP Rough-In Inspection", scheduledAt: "2026-07-18T10:00:00.000Z", status: "Upcoming" },
+      {
+        id: "insp-3",
+        projectId: "p-pinecrest",
+        title: "MEP Rough-In Inspection",
+        scheduledAt: "2026-07-18T10:00:00.000Z",
+        status: "Upcoming"
+      },
       { id: "insp-4", projectId: "p-riverside", title: "Substantial Completion", scheduledAt: "2026-09-04T15:00:00.000Z", status: "Ready" }
     ];
 
@@ -1448,13 +2176,16 @@ export class BuildFlowStore {
       "crews",
       "jobs",
       "phases",
-      "projects",
-      "users"
+      "projects"
     ].forEach((table) => this.run(`DELETE FROM ${table}`));
+    // Seeded/sample people go; anyone linked to a login account stays.
+    this.run("DELETE FROM users WHERE accountId IS NULL");
   }
 
   private insertBootstrapPayload(payload: BootstrapPayload) {
-    payload.users.forEach((item) => this.insert("users", item));
+    payload.users.forEach(({ isSample, accountId, ...item }) =>
+      this.insert("users", { ...item, accountId: accountId ?? null, isSample: isSample === false ? 0 : 1 })
+    );
     payload.projects.forEach((item) => this.insert("projects", item));
     payload.phases.forEach((item) => this.insert("phases", item));
     payload.jobs.forEach((item) => this.insert("jobs", item));
@@ -1526,8 +2257,7 @@ export class BuildFlowStore {
 
     this.all<CrewRow>("SELECT * FROM crews").forEach((crew) => {
       const existingCount =
-        this.get<{ count: number }>("SELECT COUNT(*) AS count FROM crew_role_counts WHERE crewId = ?", [crew.id])
-          ?.count ?? 0;
+        this.get<{ count: number }>("SELECT COUNT(*) AS count FROM crew_role_counts WHERE crewId = ?", [crew.id])?.count ?? 0;
       if (existingCount > 0) return;
 
       const fallbackCount = Math.max(crew.size - 1, 1);
@@ -1617,6 +2347,11 @@ export class BuildFlowStore {
     stmt.free();
   }
 
+  /** Persist the in-memory database to disk. Batch writers (the schedule repository) call this once per transaction. */
+  flush() {
+    this.save();
+  }
+
   /* ── authentication: orgs, accounts, sessions ─────────────────────────────
      Global to the MAIN store (auth is not per-tenant). Passwords are scrypt-
      hashed via auth.ts; sessions are opaque tokens. Per-tenant DATA isolation
@@ -1632,11 +2367,28 @@ export class BuildFlowStore {
     return this.get<Org>("SELECT * FROM orgs WHERE id = ?", [id]);
   }
 
+  /** The plan label on the org record ("Free" / "Pro" / "Business" / "Enterprise"). */
+  updateOrgPlan(id: string, plan: string) {
+    this.run("UPDATE orgs SET plan = ? WHERE id = ?", [plan, id]);
+    this.save();
+  }
+
   emailExists(email: string): boolean {
     return Boolean(this.get<{ id: string }>("SELECT id FROM accounts WHERE email = ?", [email.trim().toLowerCase()]));
   }
 
-  createAccount(input: { orgId: string; email: string; password: string; name: string; role?: string }): Account {
+  createAccount(input: {
+    orgId: string;
+    email: string;
+    password: string;
+    name: string;
+    role?: string;
+    acceptedTermsAt?: string;
+    acceptedTermsVersion?: string;
+    authProvider?: string;
+    providerSubject?: string;
+    emailVerifiedAt?: string;
+  }): Account {
     const row: AccountRow = {
       id: newId("acct"),
       orgId: input.orgId,
@@ -1644,7 +2396,12 @@ export class BuildFlowStore {
       passwordHash: hashPassword(input.password),
       name: input.name.trim() || input.email.split("@")[0],
       role: input.role ?? "owner",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      acceptedTermsAt: input.acceptedTermsAt ?? null,
+      acceptedTermsVersion: input.acceptedTermsVersion ?? null,
+      emailVerifiedAt: input.emailVerifiedAt ?? null,
+      authProvider: input.authProvider ?? null,
+      providerSubject: input.providerSubject ?? null
     };
     this.insert("accounts", row);
     this.save();
@@ -1659,6 +2416,196 @@ export class BuildFlowStore {
   getAccountById(id: string): Account | undefined {
     const row = this.get<AccountRow>("SELECT * FROM accounts WHERE id = ?", [id]);
     return row ? toAccount(row) : undefined;
+  }
+
+  /* ── one-time emailed links (verify / reset) ─────────────────────────────── */
+
+  /**
+   * Mint a token for an emailed link. Any earlier unused token of the same
+   * kind is retired, so only the newest email works. Returns the RAW token —
+   * put it in the link; it is never stored.
+   */
+  createAuthToken(accountId: string, kind: AuthTokenKind, ttlMs: number): string {
+    const raw = newAuthToken();
+    const now = new Date();
+    this.run("UPDATE auth_tokens SET usedAt = ? WHERE accountId = ? AND kind = ? AND usedAt IS NULL", [now.toISOString(), accountId, kind]);
+    this.insert("auth_tokens", {
+      id: newId("tok"),
+      accountId,
+      kind,
+      tokenHash: hashToken(raw),
+      expiresAt: new Date(now.getTime() + ttlMs).toISOString(),
+      usedAt: null,
+      createdAt: now.toISOString()
+    });
+    this.save();
+    return raw;
+  }
+
+  /** Redeem a raw token once. Unknown, used or expired tokens all answer undefined. */
+  consumeAuthToken(raw: string, kind: AuthTokenKind): Account | undefined {
+    if (!raw) return undefined;
+    const row = this.get<{ id: string; accountId: string; expiresAt: string; usedAt: string | null }>(
+      "SELECT id, accountId, expiresAt, usedAt FROM auth_tokens WHERE tokenHash = ? AND kind = ?",
+      [hashToken(raw), kind]
+    );
+    if (!row || row.usedAt || new Date(row.expiresAt).getTime() < Date.now()) return undefined;
+    this.run("UPDATE auth_tokens SET usedAt = ? WHERE id = ?", [new Date().toISOString(), row.id]);
+    this.save();
+    return this.getAccountById(row.accountId);
+  }
+
+  /** Name and/or email edits. A new email drops verification — the caller re-sends the link. */
+  updateAccount(accountId: string, patch: { name?: string; email?: string }): Account | undefined {
+    if (patch.name !== undefined) this.run("UPDATE accounts SET name = ? WHERE id = ?", [patch.name.trim(), accountId]);
+    if (patch.email !== undefined) {
+      this.run("UPDATE accounts SET email = ?, emailVerifiedAt = NULL WHERE id = ?", [patch.email.trim().toLowerCase(), accountId]);
+    }
+    this.save();
+    return this.getAccountById(accountId);
+  }
+
+  updateOrgName(orgId: string, name: string): Org | undefined {
+    this.run("UPDATE orgs SET name = ? WHERE id = ?", [name.trim(), orgId]);
+    this.save();
+    return this.getOrg(orgId);
+  }
+
+  /* ── team invites (org records) ─────────────────────────────────────────── */
+
+  /** Mint an invite; an open invite to the same address on this org is replaced. Returns the raw token for the link. */
+  createInvite(input: { orgId: string; email: string; role: UserRole; invitedBy: string; ttlMs: number; sent: boolean }): {
+    invite: InviteRow;
+    token: string;
+  } {
+    const email = input.email.trim().toLowerCase();
+    this.run("DELETE FROM invites WHERE orgId = ? AND email = ? AND acceptedAt IS NULL", [input.orgId, email]);
+    const token = newAuthToken();
+    const now = new Date();
+    const invite: InviteRow = {
+      id: newId("inv"),
+      orgId: input.orgId,
+      email,
+      role: input.role,
+      invitedBy: input.invitedBy,
+      tokenHash: hashToken(token),
+      expiresAt: new Date(now.getTime() + input.ttlMs).toISOString(),
+      sentAt: input.sent ? now.toISOString() : null,
+      acceptedAt: null,
+      createdAt: now.toISOString()
+    };
+    this.insert("invites", invite);
+    this.save();
+    return { invite, token };
+  }
+
+  /** Open (unaccepted, unexpired) invites for an org. */
+  openInvites(orgId: string): InviteRow[] {
+    return this.all<InviteRow>("SELECT * FROM invites WHERE orgId = ? AND acceptedAt IS NULL AND expiresAt > ? ORDER BY createdAt DESC", [
+      orgId,
+      new Date().toISOString()
+    ]);
+  }
+
+  /** Invites created while the inviter's email was unconfirmed; sending them is the caller's job. */
+  unsentInvites(orgId: string): InviteRow[] {
+    return this.all<InviteRow>("SELECT * FROM invites WHERE orgId = ? AND acceptedAt IS NULL AND sentAt IS NULL AND expiresAt > ?", [
+      orgId,
+      new Date().toISOString()
+    ]);
+  }
+
+  getInvite(id: string, orgId: string): InviteRow | undefined {
+    return this.get<InviteRow>("SELECT * FROM invites WHERE id = ? AND orgId = ?", [id, orgId]);
+  }
+
+  /** Re-issue an invite's token (new link, fresh expiry). */
+  refreshInvite(id: string, orgId: string, ttlMs: number): { invite: InviteRow; token: string } | undefined {
+    const existing = this.getInvite(id, orgId);
+    if (!existing || existing.acceptedAt) return undefined;
+    const token = newAuthToken();
+    const now = new Date();
+    this.run("UPDATE invites SET tokenHash = ?, expiresAt = ?, sentAt = ? WHERE id = ?", [
+      hashToken(token),
+      new Date(now.getTime() + ttlMs).toISOString(),
+      now.toISOString(),
+      id
+    ]);
+    this.save();
+    return { invite: this.getInvite(id, orgId)!, token };
+  }
+
+  revokeInvite(id: string, orgId: string): boolean {
+    const existing = this.getInvite(id, orgId);
+    if (!existing || existing.acceptedAt) return false;
+    this.run("DELETE FROM invites WHERE id = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  /** The invite behind a raw link token, if still open. Does not consume it. */
+  inviteByToken(token: string): InviteRow | undefined {
+    if (!token) return undefined;
+    const row = this.get<InviteRow>("SELECT * FROM invites WHERE tokenHash = ?", [hashToken(token)]);
+    if (!row || row.acceptedAt || new Date(row.expiresAt).getTime() < Date.now()) return undefined;
+    return row;
+  }
+
+  markInviteAccepted(id: string) {
+    this.run("UPDATE invites SET acceptedAt = ? WHERE id = ?", [new Date().toISOString(), id]);
+    this.save();
+  }
+
+  /** Change what a teammate is in the workspace. The title follows the role unless they are the owner. */
+  updateUserRole(userId: string, role: UserRole): User | undefined {
+    const row = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE id = ?", [userId]);
+    if (!row) return undefined;
+    const title = row.title === "Owner" ? "Owner" : role;
+    this.run("UPDATE users SET role = ?, title = ? WHERE id = ?", [role, title, userId]);
+    this.save();
+    return userRow({ ...row, role, title });
+  }
+
+  /** Remove a seeded sample teammate (never a person linked to a login). */
+  removeSampleUser(userId: string): boolean {
+    const row = this.get<{ id: string; accountId: string | null; isSample: number }>(
+      "SELECT id, accountId, isSample FROM users WHERE id = ?",
+      [userId]
+    );
+    if (!row || row.accountId || !row.isSample) return false;
+    this.run("DELETE FROM users WHERE id = ?", [userId]);
+    this.save();
+    return true;
+  }
+
+  /** Keep the workspace person in step with a renamed login. */
+  renameAccountUser(accountId: string, name: string) {
+    this.run("UPDATE users SET name = ?, avatar = ? WHERE accountId = ?", [name.trim(), initials(name), accountId]);
+    this.save();
+  }
+
+  /** A workspace person for an invited teammate, with the role the inviter chose. */
+  createTeammateUser(account: { id: string; name: string; email: string }, role: UserRole): User {
+    const existing = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE accountId = ?", [account.id]);
+    if (existing) return userRow(existing);
+    const name = account.name.trim() || account.email.split("@")[0];
+    const user = { id: newId("u"), name, role, title: role, avatar: initials(name), accountId: account.id, isSample: 0 };
+    this.insert("users", user);
+    this.save();
+    return userRow(user);
+  }
+
+  markEmailVerified(accountId: string): Account | undefined {
+    this.run("UPDATE accounts SET emailVerifiedAt = COALESCE(emailVerifiedAt, ?) WHERE id = ?", [new Date().toISOString(), accountId]);
+    this.save();
+    return this.getAccountById(accountId);
+  }
+
+  /** New password + every other session signed out (a reset is how you evict whoever had the old one). */
+  setAccountPassword(accountId: string, password: string) {
+    this.run("UPDATE accounts SET passwordHash = ? WHERE id = ?", [hashPassword(password), accountId]);
+    this.run("DELETE FROM sessions WHERE accountId = ?", [accountId]);
+    this.save();
   }
 
   createSession(accountId: string, orgId: string): { token: string; expiresAt: string } {
@@ -1741,15 +2688,25 @@ export class BuildFlowStore {
       currentPeriodEnd: row.currentPeriodEnd ?? existing?.currentPeriodEnd ?? null,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
-      raw: row.raw === undefined ? existing?.raw ?? null : JSON.stringify(row.raw)
+      raw: row.raw === undefined ? (existing?.raw ?? null) : JSON.stringify(row.raw)
     };
     this.run(
       `INSERT OR REPLACE INTO subscriptions
          (id, customerId, email, planId, priceId, period, status, seats, currentPeriodEnd, createdAt, updatedAt, raw)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        merged.id, merged.customerId, merged.email, merged.planId, merged.priceId, merged.period,
-        merged.status, merged.seats, merged.currentPeriodEnd, merged.createdAt, merged.updatedAt, merged.raw
+        merged.id,
+        merged.customerId,
+        merged.email,
+        merged.planId,
+        merged.priceId,
+        merged.period,
+        merged.status,
+        merged.seats,
+        merged.currentPeriodEnd,
+        merged.createdAt,
+        merged.updatedAt,
+        merged.raw
       ]
     );
     this.save();
@@ -1768,10 +2725,165 @@ export class BuildFlowStore {
     return this.get<SubscriptionRow>("SELECT * FROM subscriptions WHERE customerId = ? ORDER BY updatedAt DESC", [customerId]);
   }
 
-  bootstrap(): BootstrapPayload {
+  /** Org-level key/value settings (trade, onboarding state). */
+  workspaceSetting(key: string): string | null {
+    return this.get<{ value: string }>("SELECT value FROM workspace_settings WHERE key = ?", [key])?.value ?? null;
+  }
+
+  setWorkspaceSetting(key: string, value: string) {
+    this.run("INSERT INTO workspace_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [
+      key,
+      value
+    ]);
+  }
+
+  /** The working week and holidays (Settings › Work calendar); the computed default until someone edits it. */
+  workCalendar(): WorkCalendarSetting {
+    const raw = this.workspaceSetting("workCalendar");
+    if (!raw) return normalizeWorkCalendar(null);
+    try {
+      return normalizeWorkCalendar(JSON.parse(raw) as Partial<WorkCalendarSetting>);
+    } catch {
+      return normalizeWorkCalendar(null);
+    }
+  }
+
+  setWorkCalendar(input: Partial<WorkCalendarSetting>): WorkCalendarSetting {
+    const calendar = normalizeWorkCalendar(input);
+    this.setWorkspaceSetting("workCalendar", JSON.stringify(calendar));
+    this.save();
+    return calendar;
+  }
+
+  /** The secret in a crew's calendar-feed link; made once per workspace, on first use. */
+  calendarFeedKey(): string {
+    const existing = this.workspaceSetting("calendarFeedKey");
+    if (existing) return existing;
+    const key = newSessionToken().slice(0, 32);
+    this.setWorkspaceSetting("calendarFeedKey", key);
+    this.save();
+    return key;
+  }
+
+  /** The trade this workspace was set up for, or "" before onboarding picked one. */
+  businessType(): BusinessTypeId | "" {
+    const value = this.workspaceSetting("businessType") ?? "";
+    return (businessTypeOptions as readonly string[]).includes(value) ? (value as BusinessTypeId) : "";
+  }
+
+  setBusinessType(businessType: BusinessTypeId) {
+    this.setWorkspaceSetting("businessType", businessType);
+  }
+
+  /** Every setting a person has saved, as a flat map. */
+  userSettings(userId: string): Record<string, string> {
+    const rows = this.all<{ key: string; value: string }>("SELECT key, value FROM user_settings WHERE userId = ?", [userId]);
+    return Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  }
+
+  setUserSetting(userId: string, key: string, value: string) {
+    this.run(
+      "INSERT INTO user_settings (userId, key, value, updatedAt) VALUES (?, ?, ?, ?) ON CONFLICT(userId, key) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt",
+      [userId, key, value, new Date().toISOString()]
+    );
+    this.save();
+  }
+
+  /** ISO time the owner finished onboarding, or null while they have not. */
+  onboardingCompletedAt(): string | null {
+    return this.workspaceSetting("onboardingCompletedAt");
+  }
+
+  /** Plan, add-ons, seats and trial recorded on the org. */
+  workspaceSetup(): {
+    selectedPlan: PlanId | null;
+    selectedProducts: OnboardingProductId[];
+    seats: number | null;
+    trialEndsAt: string | null;
+  } {
+    const plan = this.workspaceSetting("selectedPlan");
+    const productIds = onboardingProductOptions.map((option) => option.id) as string[];
+    let products: OnboardingProductId[] = [];
+    try {
+      const parsed = JSON.parse(this.workspaceSetting("selectedProducts") ?? "[]");
+      if (Array.isArray(parsed)) products = parsed.filter((id): id is OnboardingProductId => productIds.includes(String(id)));
+    } catch {
+      products = [];
+    }
+    const seatsRaw = Number(this.workspaceSetting("seats"));
     return {
-      users: this.all<User>("SELECT * FROM users ORDER BY name"),
-      activeUser: this.get<User>("SELECT * FROM users WHERE id = ?", ["u-matt"])!,
+      selectedPlan: (planOptions as readonly string[]).includes(plan ?? "") ? (plan as PlanId) : null,
+      selectedProducts: products,
+      seats: Number.isFinite(seatsRaw) && seatsRaw > 0 ? seatsRaw : null,
+      trialEndsAt: this.workspaceSetting("trialEndsAt")
+    };
+  }
+
+  /**
+   * Record what the owner chose. A paid plan that has not been through
+   * checkout runs as a trial from the moment it is chosen; picking Free again
+   * ends it. Enterprise is priced by sales, so it gets no trial clock.
+   */
+  recordWorkspaceSetup(setup: { selectedPlan?: PlanId; selectedProducts?: OnboardingProductId[]; seats?: number }) {
+    if (setup.selectedPlan) {
+      this.setWorkspaceSetting("selectedPlan", setup.selectedPlan);
+      const paid = setup.selectedPlan === "pro" || setup.selectedPlan === "business";
+      if (paid && !this.workspaceSetting("trialEndsAt")) {
+        this.setWorkspaceSetting("trialEndsAt", new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString());
+      }
+      if (!paid) this.run("DELETE FROM workspace_settings WHERE key = 'trialEndsAt'");
+    }
+    if (setup.selectedProducts) this.setWorkspaceSetting("selectedProducts", JSON.stringify(setup.selectedProducts));
+    if (setup.seats) this.setWorkspaceSetting("seats", String(Math.round(setup.seats)));
+    this.save();
+  }
+
+  /** Every person in the workspace, with the SQLite 0/1 sample flag as a boolean. */
+  users(): User[] {
+    return this.all<User & { isSample: number | boolean }>("SELECT * FROM users ORDER BY name").map(userRow);
+  }
+
+  /**
+   * The workspace person behind a login account, created on first sight. The
+   * registered owner is a Project Manager in their own workspace so every field
+   * update, assignment and approval is attributed to them, not to a seeded name.
+   */
+  ensureAccountUser(account: { id: string; name: string; email: string }): User {
+    const existing = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE accountId = ?", [account.id]);
+    if (existing) return userRow(existing);
+    const name = account.name.trim() || account.email.split("@")[0];
+    const user = {
+      id: newId("u"),
+      name,
+      role: "Project Manager" as const,
+      title: "Owner",
+      avatar: initials(name),
+      accountId: account.id,
+      isSample: 0
+    };
+    this.insert("users", user);
+    this.save();
+    return userRow(user);
+  }
+
+  bootstrap(accountId?: string): BootstrapPayload {
+    const users = this.users();
+    // The signed-in account's own person first; the demo's Matt for the shared
+    // demo store; otherwise whoever is listed first. A brand-new, un-onboarded
+    // workspace can legitimately have nobody yet.
+    const activeUser =
+      (accountId ? users.find((user) => user.accountId === accountId) : undefined) ??
+      users.find((user) => user.id === "u-matt") ??
+      users[0];
+    return {
+      businessType: this.businessType(),
+      onboardingCompletedAt: this.onboardingCompletedAt(),
+      sampleData: this.sampleData() !== null,
+      ...this.workspaceSetup(),
+      userSettings: activeUser ? this.userSettings(activeUser.id) : {},
+      workCalendar: this.workCalendar(),
+      users,
+      activeUser: activeUser!,
       projects: this.projects(),
       jobs: this.jobs(),
       crews: this.crews(),
@@ -1794,6 +2906,49 @@ export class BuildFlowStore {
     return this.all<JobDependency>("SELECT * FROM job_dependencies");
   }
 
+  /** A link the planner drew on the Gantt — refused when a job would depend on itself, repeat a link, or close a loop. */
+  createDependency(input: CreateJobDependencyInput): JobDependency {
+    if (input.predecessorId === input.successorId) throw new DependencyError("A job cannot depend on itself.", "self");
+    const jobs = this.jobs();
+    const names = new Map(jobs.map((job) => [job.id, job.name]));
+    if (!names.has(input.predecessorId) || !names.has(input.successorId)) throw new Error("Job not found");
+    const existing = this.dependencies();
+    if (existing.some((link) => link.predecessorId === input.predecessorId && link.successorId === input.successorId)) {
+      throw new DependencyError(`${names.get(input.predecessorId)} already leads to ${names.get(input.successorId)}.`, "duplicate");
+    }
+    const link: JobDependency = {
+      id: `dep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      predecessorId: input.predecessorId,
+      successorId: input.successorId,
+      type: input.type,
+      lagDays: input.lagDays
+    };
+    // the network must stay a DAG: a loop makes float and the critical path meaningless
+    const { cycle } = calculateCpm(
+      jobs.map((job) => ({ id: job.id, duration: 1 })),
+      [...existing, link].map((item) => ({
+        predecessorId: item.predecessorId,
+        successorId: item.successorId,
+        type: item.type,
+        lag: item.lagDays
+      }))
+    );
+    if (cycle) {
+      throw new DependencyError(`That link would close a loop: ${cycle.map((id) => names.get(id) ?? id).join(" → ")}.`, "cycle");
+    }
+    this.insert("job_dependencies", link);
+    this.save();
+    return link;
+  }
+
+  deleteDependency(id: string): JobDependency | null {
+    const link = this.get<JobDependency>("SELECT * FROM job_dependencies WHERE id = ?", [id]);
+    if (!link) return null;
+    this.run("DELETE FROM job_dependencies WHERE id = ?", [id]);
+    this.save();
+    return link;
+  }
+
   /** Snapshot the current plan as the baseline every job is measured against. */
   setBaseline() {
     this.run("UPDATE jobs SET baselineStart = startDate, baselineEnd = endDate");
@@ -1801,7 +2956,88 @@ export class BuildFlowStore {
     return this.bootstrap();
   }
 
-  applyBusinessProfile(businessType: BusinessTypeId) {
+  /* ── Sample data for a trial: the trade's starter workspace, loadable into an empty workspace and removable again ── */
+
+  sampleData(): SampleDataRecord | null {
+    const raw = this.workspaceSetting("sampleData");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as SampleDataRecord;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Seeds the trade's starter workspace and remembers what it added. Refuses a workspace that already has projects. */
+  loadSampleData(businessType: BusinessTypeId): SampleDataRecord & { alreadyLoaded: boolean } {
+    const existing = this.sampleData();
+    if (existing) return { ...existing, alreadyLoaded: true };
+    const hasWork = (this.get<{ n: number }>("SELECT COUNT(*) AS n FROM projects")?.n ?? 0) > 0;
+    if (hasWork) throw new Error("This workspace already has projects; sample data is for an empty workspace.");
+    // Only what the workspace does not already have: an org whose onboarding seed was
+    // cleared keeps its people (and maybe a crew or two), and their ids must not collide.
+    const fresh = createBusinessProfile(businessType);
+    const missing = <T extends { id: string }>(table: string, items: T[]) =>
+      items.filter((item) => !this.get<{ id: string }>(`SELECT id FROM ${table} WHERE id = ?`, [item.id]));
+    const payload: BootstrapPayload = {
+      ...fresh,
+      users: missing("users", fresh.users),
+      projects: missing("projects", fresh.projects),
+      phases: missing("phases", fresh.phases),
+      jobs: missing("jobs", fresh.jobs),
+      crews: missing("crews", fresh.crews),
+      equipment: missing("equipment", fresh.equipment),
+      materials: missing("materials", fresh.materials),
+      assignments: missing("assignments", fresh.assignments),
+      dependencies: missing("job_dependencies", fresh.dependencies ?? []),
+      fieldUpdates: missing("field_updates", fresh.fieldUpdates),
+      delayIQs: missing("delayIQs", fresh.delayIQs),
+      variances: missing("schedule_variances", fresh.variances ?? []),
+      readiness: missing("readiness", fresh.readiness),
+      inspections: missing("inspections", fresh.inspections),
+      weatherAlerts: missing("weather_alerts", fresh.weatherAlerts)
+    };
+    // the rows and the record of them land together, or not at all
+    const record = this.transaction((): SampleDataRecord => {
+      this.seeding = true;
+      try {
+        this.insertBootstrapPayload(payload);
+      } finally {
+        this.seeding = false;
+      }
+      const loaded: SampleDataRecord = {
+        businessType,
+        projectIds: payload.projects.map((project) => project.id),
+        crewIds: payload.crews.map((crew) => crew.id),
+        equipmentIds: payload.equipment.map((item) => item.id),
+        loadedAt: new Date().toISOString()
+      };
+      this.setWorkspaceSetting("sampleData", JSON.stringify(loaded));
+      return loaded;
+    });
+    return { ...record, alreadyLoaded: false };
+  }
+
+  /** Takes the sample projects (and everything under them), crews and equipment out again. */
+  removeSampleData(): SampleDataRecord | null {
+    const record = this.sampleData();
+    if (!record) return null;
+    this.transaction(() => {
+      for (const id of record.projectIds) this.deleteProject(id);
+      for (const id of record.crewIds) this.deleteCrew(id);
+      for (const id of record.equipmentIds) this.deleteEquipment(id);
+      this.run("DELETE FROM workspace_settings WHERE key = 'sampleData'");
+    });
+    return record;
+  }
+
+  applyBusinessProfile(
+    businessType: BusinessTypeId,
+    account?: { id: string; name: string; email: string },
+    setup?: { selectedPlan?: PlanId; selectedProducts?: OnboardingProductId[]; seats?: number }
+  ) {
+    if (account) this.ensureAccountUser(account);
+    if (setup) this.recordWorkspaceSetup(setup);
     // Onboarding runs this when an owner picks their trade. Seed a realistic
     // starter workspace for that trade (projects, jobs, crews, a week of
     // schedule) so a brand-new account is immediately usable instead of blank.
@@ -1811,20 +3047,31 @@ export class BuildFlowStore {
     // visit — so if any real work already exists we must leave everything
     // untouched and simply return it. Seeding used to be a clearWorkspace(),
     // which is why real accounts kept coming back empty.
+    // The trade itself is recorded every time, populated workspace or not:
+    // a business that changes its answer keeps its work but the whole app
+    // (seed aside) re-bases on the new trade.
+    this.setBusinessType(businessType);
     const hasWork = (this.get<{ n: number }>("SELECT COUNT(*) AS n FROM projects")?.n ?? 0) > 0;
     if (!hasWork) {
-      this.clearWorkspace();
-      // Seed in seeding-mode so the profile's anchor-week dates shift onto the
-      // current calendar (evergreen), exactly like the demo seed.
-      this.seeding = true;
-      try {
-        this.insertBootstrapPayload(createBusinessProfile(businessType));
-      } finally {
-        this.seeding = false;
-      }
+      // clearing and seeding land together: an interrupted seed never leaves a half-empty workspace
+      this.transaction(() => {
+        this.clearWorkspace();
+        // Seed in seeding-mode so the profile's anchor-week dates shift onto the
+        // current calendar (evergreen), exactly like the demo seed.
+        this.seeding = true;
+        try {
+          this.insertBootstrapPayload(createBusinessProfile(businessType));
+        } finally {
+          this.seeding = false;
+        }
+      });
+    }
+    // Finishing the trade step is what completes onboarding; sign-ins branch on this.
+    if (!this.onboardingCompletedAt()) {
+      this.setWorkspaceSetting("onboardingCompletedAt", new Date().toISOString());
       this.save();
     }
-    return this.bootstrap();
+    return this.bootstrap(account?.id);
   }
 
   projects(): Project[] {
@@ -1846,13 +3093,7 @@ export class BuildFlowStore {
   }
 
   canManageProject(managerId: string) {
-    return Boolean(
-      this.get<User>("SELECT * FROM users WHERE id = ? AND role IN (?, ?)", [
-        managerId,
-        "Project Manager",
-        "Superintendent"
-      ])
-    );
+    return Boolean(this.get<User>("SELECT * FROM users WHERE id = ? AND role IN (?, ?)", [managerId, "Project Manager", "Superintendent"]));
   }
 
   createProject(input: CreateProjectInput) {
@@ -1869,12 +3110,13 @@ export class BuildFlowStore {
       percentComplete: input.percentComplete,
       scheduleHealth: input.scheduleHealth,
       status: input.status,
+      value: input.value,
       image: projectImageForType(input.type),
       latitude: 30.2672,
       longitude: -97.7431
     };
 
-    this.insert("projects", project);
+    this.insert("projects", { ...project, value: project.value ?? null });
     this.save();
     return project;
   }
@@ -1895,7 +3137,8 @@ export class BuildFlowStore {
             targetCompletion = ?,
             percentComplete = ?,
             status = ?,
-            scheduleHealth = ?
+            scheduleHealth = ?,
+            value = ?
         WHERE id = ?
       `,
       [
@@ -1909,11 +3152,44 @@ export class BuildFlowStore {
         input.percentComplete,
         input.status,
         input.scheduleHealth,
+        input.value ?? null,
         id
       ]
     );
     this.save();
     return this.get<Project>("SELECT * FROM projects WHERE id = ?", [id]);
+  }
+
+  /* Deleting a project takes its whole subtree with it. Ten tables point at a
+     project — either directly via projectId, or transitively through its jobs
+     (assignments and job_dependencies key off jobId) — so they are cleared here
+     rather than left as orphan rows the bootstrap payload would still ship.
+     Mirrors deleteCrew()'s pattern. */
+  deleteProject(id: string) {
+    const current = this.get<Project>("SELECT * FROM projects WHERE id = ?", [id]);
+    if (!current) return false;
+
+    this.transaction(() => {
+      const jobIds = this.all<{ id: string }>("SELECT id FROM jobs WHERE projectId = ?", [id]).map((row) => row.id);
+      if (jobIds.length > 0) {
+        const placeholders = jobIds.map(() => "?").join(", ");
+        this.run(`DELETE FROM assignments WHERE jobId IN (${placeholders})`, jobIds);
+        this.run(`DELETE FROM job_dependencies WHERE predecessorId IN (${placeholders})`, jobIds);
+        this.run(`DELETE FROM job_dependencies WHERE successorId IN (${placeholders})`, jobIds);
+      }
+
+      this.run("DELETE FROM schedule_variances WHERE projectId = ?", [id]);
+      this.run("DELETE FROM field_updates WHERE projectId = ?", [id]);
+      this.run("DELETE FROM delayIQs WHERE projectId = ?", [id]);
+      this.run("DELETE FROM readiness WHERE projectId = ?", [id]);
+      this.run("DELETE FROM inspections WHERE projectId = ?", [id]);
+      this.run("DELETE FROM weather_alerts WHERE projectId = ?", [id]);
+      this.run("DELETE FROM materials WHERE projectId = ?", [id]);
+      this.run("DELETE FROM phases WHERE projectId = ?", [id]);
+      this.run("DELETE FROM jobs WHERE projectId = ?", [id]);
+      this.run("DELETE FROM projects WHERE id = ?", [id]);
+    });
+    return true;
   }
 
   jobs(projectId?: string): Job[] {
@@ -1966,38 +3242,38 @@ export class BuildFlowStore {
     let jobs = 0;
     let phases = 0;
 
-    for (const entry of entries) {
-      const project: Project = {
-        id: `p-${slugify(entry.input.name, "project")}-${stamp}-${seq++}`,
-        name: entry.input.name.trim(),
-        slug: this.uniqueProjectSlug(entry.input.name),
-        location: entry.input.location.trim(),
-        address: entry.input.address.trim(),
-        type: entry.input.type.trim(),
-        contractType: entry.input.contractType.trim(),
-        managerId: entry.input.managerId,
-        targetCompletion: entry.input.targetCompletion,
-        percentComplete: entry.input.percentComplete,
-        scheduleHealth: entry.input.scheduleHealth,
-        status: entry.input.status,
-        image: projectImageForType(entry.input.type),
-        latitude: 30.2672,
-        longitude: -97.7431
-      };
-      this.insert("projects", project);
-      projects.push(project);
+    this.transaction(() => {
+      for (const entry of entries) {
+        const project: Project = {
+          id: `p-${slugify(entry.input.name, "project")}-${stamp}-${seq++}`,
+          name: entry.input.name.trim(),
+          slug: this.uniqueProjectSlug(entry.input.name),
+          location: entry.input.location.trim(),
+          address: entry.input.address.trim(),
+          type: entry.input.type.trim(),
+          contractType: entry.input.contractType.trim(),
+          managerId: entry.input.managerId,
+          targetCompletion: entry.input.targetCompletion,
+          percentComplete: entry.input.percentComplete,
+          scheduleHealth: entry.input.scheduleHealth,
+          status: entry.input.status,
+          image: projectImageForType(entry.input.type),
+          latitude: 30.2672,
+          longitude: -97.7431
+        };
+        this.insert("projects", project);
+        projects.push(project);
 
-      for (const phase of entry.phases) {
-        this.insert("phases", { id: `ph-${stamp}-${seq++}`, projectId: project.id, ...phase });
-        phases += 1;
+        for (const phase of entry.phases) {
+          this.insert("phases", { id: `ph-${stamp}-${seq++}`, projectId: project.id, ...phase });
+          phases += 1;
+        }
+        for (const job of entry.jobs) {
+          this.insert("jobs", { id: `job-${slugify(job.name)}-${stamp}-${seq++}`, projectId: project.id, ...job });
+          jobs += 1;
+        }
       }
-      for (const job of entry.jobs) {
-        this.insert("jobs", { id: `job-${slugify(job.name)}-${stamp}-${seq++}`, projectId: project.id, ...job });
-        jobs += 1;
-      }
-    }
-
-    this.save();
+    });
     return { projects, jobs, phases };
   }
 
@@ -2006,6 +3282,12 @@ export class BuildFlowStore {
   }
 
   updateJob(id: string, updates: Partial<Job>) {
+    if (this.writeJob(id, updates)) this.save();
+    return this.job(id);
+  }
+
+  /** The job's editable columns after `updates` — written, not yet saved; true when anything changed. */
+  private writeJob(id: string, updates: Partial<Job>): boolean {
     const allowed = [
       "status",
       "startDate",
@@ -2021,7 +3303,7 @@ export class BuildFlowStore {
       "actualFinish"
     ];
     const entries = Object.entries(updates).filter(([key]) => allowed.includes(key));
-    if (entries.length === 0) return this.job(id);
+    if (entries.length === 0) return false;
     const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
     this.run(`UPDATE jobs SET ${setClause} WHERE id = ?`, [
       // `undefined` clears a column (e.g. reopened work drops actualFinish);
@@ -2029,14 +3311,15 @@ export class BuildFlowStore {
       ...entries.map(([, value]) => (value === undefined ? null : (value as Primitive))),
       id
     ]);
-    this.save();
-    return this.job(id);
+    // one status model: every booking of the job shows the job's status
+    if (updates.status !== undefined) this.run("UPDATE assignments SET status = ? WHERE jobId = ?", [updates.status, id]);
+    return true;
   }
 
   crews(): Crew[] {
-    const laborMixByCrew = this.all<CrewRoleCountRow>(
-      "SELECT * FROM crew_role_counts ORDER BY category, role"
-    ).reduce<Record<string, CrewLaborMixItem[]>>((acc, row) => {
+    const laborMixByCrew = this.all<CrewRoleCountRow>("SELECT * FROM crew_role_counts ORDER BY category, role").reduce<
+      Record<string, CrewLaborMixItem[]>
+    >((acc, row) => {
       acc[row.crewId] = acc[row.crewId] ?? [];
       acc[row.crewId].push({ category: row.category, role: row.role, count: row.count });
       return acc;
@@ -2044,6 +3327,8 @@ export class BuildFlowStore {
 
     return this.all<CrewRow>("SELECT * FROM crews ORDER BY name").map((crew) => ({
       ...crew,
+      // an unset rate reads as the specialty's default, so cost is always arithmetic
+      rate: crew.rate ?? defaultCrewRate(crew.specialty),
       laborMix: laborMixByCrew[crew.id] ?? []
     }));
   }
@@ -2065,6 +3350,7 @@ export class BuildFlowStore {
       utilization: 0,
       icon: "users",
       status: "Available",
+      rate: input.rate ?? defaultCrewRate(input.specialty),
       laborMix
     };
     const { laborMix: _laborMix, ...crewRow } = crew;
@@ -2084,10 +3370,14 @@ export class BuildFlowStore {
       count: item.count
     }));
     const size = 1 + laborMix.reduce((total, item) => total + item.count, 0);
-    this.run(
-      "UPDATE crews SET name = ?, specialty = ?, lead = ?, size = ? WHERE id = ?",
-      [input.name.trim(), input.specialty.trim(), input.foreman.trim(), size, id]
-    );
+    this.run("UPDATE crews SET name = ?, specialty = ?, lead = ?, size = ?, rate = ? WHERE id = ?", [
+      input.name.trim(),
+      input.specialty.trim(),
+      input.foreman.trim(),
+      size,
+      input.rate ?? current.rate ?? defaultCrewRate(input.specialty),
+      id
+    ]);
     this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
     this.insertCrewRoleCounts(id, laborMix);
     this.save();
@@ -2098,10 +3388,11 @@ export class BuildFlowStore {
     const current = this.get<CrewRow>("SELECT * FROM crews WHERE id = ?", [id]);
     if (!current) return false;
 
-    this.run("DELETE FROM assignments WHERE crewId = ?", [id]);
-    this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
-    this.run("DELETE FROM crews WHERE id = ?", [id]);
-    this.save();
+    this.transaction(() => {
+      this.run("DELETE FROM assignments WHERE crewId = ?", [id]);
+      this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
+      this.run("DELETE FROM crews WHERE id = ?", [id]);
+    });
     return true;
   }
 
@@ -2180,7 +3471,10 @@ export class BuildFlowStore {
   }
 
   assignments(): ScheduleAssignment[] {
-    return this.all<AssignmentRow>("SELECT * FROM assignments ORDER BY date").map(toAssignment);
+    // read-time too: whatever wrote the row, a booking shows its job's status
+    return this.all<AssignmentRow & { jobStatus: Status | null }>(
+      "SELECT a.*, j.status AS jobStatus FROM assignments a LEFT JOIN jobs j ON j.id = a.jobId ORDER BY a.date"
+    ).map(({ jobStatus, ...row }) => toAssignment({ ...row, status: jobStatus ?? row.status }));
   }
 
   assignJob(input: { jobId: string; crewId: string; date: string; status?: Status }) {
@@ -2190,13 +3484,18 @@ export class BuildFlowStore {
       throw new Error("Job or crew not found");
     }
 
+    // A job is on a crew's day once. Booking it there again is that booking, not a second row.
+    const already = this.bookingFor(input.jobId, input.crewId, input.date);
+    if (already) return already;
+
     const conflicts = this.detectConflicts(input.jobId, input.crewId, input.date);
     const assignment: ScheduleAssignment = {
       id: `as-${Date.now()}`,
       jobId: input.jobId,
       crewId: input.crewId,
       date: input.date,
-      status: input.status ?? (conflicts.length ? "At Risk" : "Planned"),
+      // a booking wears its job's status; a clash is a note on it, not a status of its own
+      status: job.status,
       conflicts
     };
 
@@ -2206,20 +3505,32 @@ export class BuildFlowStore {
   }
 
   updateAssignment(id: string, updates: Partial<ScheduleAssignment>) {
+    const next = this.writeAssignment(id, updates);
+    if (next) this.save();
+    return next;
+  }
+
+  /** The row after `updates`, with its conflict notes recomputed — written, not yet saved to disk. */
+  private writeAssignment(id: string, updates: Partial<ScheduleAssignment>) {
     const current = this.get<AssignmentRow>("SELECT * FROM assignments WHERE id = ?", [id]);
     if (!current) return undefined;
+    const jobId = updates.jobId ?? current.jobId;
     const next = {
-      jobId: updates.jobId ?? current.jobId,
+      jobId,
       crewId: updates.crewId ?? current.crewId,
       date: updates.date ?? current.date,
-      status: updates.status ?? current.status
+      // a booking wears its job's status
+      status: this.get<{ status: Status }>("SELECT status FROM jobs WHERE id = ?", [jobId])?.status ?? current.status
     };
     const conflicts = this.detectConflicts(next.jobId, next.crewId, next.date, id);
-    this.run(
-      "UPDATE assignments SET jobId = ?, crewId = ?, date = ?, status = ?, conflicts = ? WHERE id = ?",
-      [next.jobId, next.crewId, next.date, next.status, JSON.stringify(conflicts), id]
-    );
-    this.save();
+    this.run("UPDATE assignments SET jobId = ?, crewId = ?, date = ?, status = ?, conflicts = ? WHERE id = ?", [
+      next.jobId,
+      next.crewId,
+      next.date,
+      next.status,
+      JSON.stringify(conflicts),
+      id
+    ]);
     return toAssignment({ id, ...next, conflicts: JSON.stringify(conflicts) });
   }
 
@@ -2228,11 +3539,162 @@ export class BuildFlowStore {
     this.save();
   }
 
-  private detectConflicts(jobId: string, crewId: string, date: string, ignoreAssignmentId?: string) {
-    const conflicts: string[] = [];
-    const existing = this.all<ScheduleAssignment>(
+  assignment(id: string): ScheduleAssignment | undefined {
+    const row = this.get<AssignmentRow & { jobStatus: Status | null }>(
+      "SELECT a.*, j.status AS jobStatus FROM assignments a LEFT JOIN jobs j ON j.id = a.jobId WHERE a.id = ?",
+      [id]
+    );
+    if (!row) return undefined;
+    const { jobStatus, ...rest } = row;
+    return toAssignment({ ...rest, status: jobStatus ?? rest.status });
+  }
+
+  /** The booking this job already has on that crew's day, if any — one job on a crew-day is one booking. */
+  bookingFor(jobId: string, crewId: string, date: string): ScheduleAssignment | undefined {
+    const row = this.get<AssignmentRow>(
+      "SELECT * FROM assignments WHERE jobId = ? AND crewId = ? AND substr(date, 1, 10) = substr(?, 1, 10)",
+      [jobId, crewId, date]
+    );
+    return row ? this.assignment(row.id) : undefined;
+  }
+
+  /** The bookings already on `crewId` × `date` for another job — what the client asks about before double-booking. */
+  crewClashes(crewId: string, date: string, movingJobId: string, ignoreAssignmentId?: string): CrewClash[] {
+    const rows = this.all<AssignmentRow>(
       `SELECT * FROM assignments WHERE crewId = ? AND date = ?${ignoreAssignmentId ? " AND id != ?" : ""}`,
       ignoreAssignmentId ? [crewId, date, ignoreAssignmentId] : [crewId, date]
+    );
+    return this.describeClashes(
+      rows.map((row) => ({ crewId, date, jobId: row.jobId })),
+      movingJobId
+    );
+  }
+
+  private describeClashes(rows: Array<{ crewId: string; date: string; jobId: string }>, movingJobId: string): CrewClash[] {
+    const moving = this.get<{ name: string }>("SELECT name FROM jobs WHERE id = ?", [movingJobId]);
+    return rows
+      .filter((row) => row.jobId !== movingJobId)
+      .map((row) => ({
+        crewId: row.crewId,
+        crewName: this.get<{ name: string }>("SELECT name FROM crews WHERE id = ?", [row.crewId])?.name ?? row.crewId,
+        date: row.date,
+        jobId: row.jobId,
+        jobName: this.get<{ name: string }>("SELECT name FROM jobs WHERE id = ?", [row.jobId])?.name ?? row.jobId,
+        movingJobId,
+        movingJobName: moving?.name ?? movingJobId
+      }));
+  }
+
+  /**
+   * A set of schedule moves as one transaction: every step applies, or none of
+   * them does. The state after the batch is worked out first, so a crew that would
+   * end up double-booked stops the whole batch with the clashes — unless `force`
+   * says the planner has chosen to double-book, in which case the notes are kept
+   * on the bookings as they always were.
+   */
+  rebook(moves: RebookMove[], options: { force?: boolean } = {}): RebookResult {
+    type Draft = { id: string; jobId: string; crewId: string; date: string; status: Status };
+    const rows = new Map<string, Draft>(
+      this.all<AssignmentRow>("SELECT * FROM assignments").map((row) => [
+        row.id,
+        { id: row.id, jobId: row.jobId, crewId: row.crewId, date: row.date, status: row.status }
+      ])
+    );
+    const touched = new Set<string>();
+    const removed: string[] = [];
+    const jobIds: string[] = [];
+    const planned: Array<{ move: RebookMove; id: string }> = [];
+    let sequence = 0;
+    for (const move of moves) {
+      if (move.op === "move") {
+        const row = rows.get(move.id);
+        if (!row) throw new Error(`Booking ${move.id} not found`);
+        rows.set(move.id, { ...row, crewId: move.crewId ?? row.crewId, date: move.date ?? row.date });
+        touched.add(move.id);
+        planned.push({ move, id: move.id });
+      } else if (move.op === "book") {
+        const bookedJob = this.get<{ status: Status }>("SELECT status FROM jobs WHERE id = ?", [move.jobId]);
+        if (!bookedJob) throw new Error(`Job ${move.jobId} not found`);
+        if (!this.get("SELECT id FROM crews WHERE id = ?", [move.crewId])) throw new Error(`Crew ${move.crewId} not found`);
+        // the same job already on that crew's day is that booking; the step keeps it instead of adding a second row
+        const day = move.date.slice(0, 10);
+        const already = [...rows.values()].find(
+          (row) => row.jobId === move.jobId && row.crewId === move.crewId && row.date.slice(0, 10) === day
+        );
+        if (already) {
+          touched.add(already.id);
+          continue;
+        }
+        const id = `as-${Date.now()}-${sequence++}`;
+        rows.set(id, { id, jobId: move.jobId, crewId: move.crewId, date: move.date, status: bookedJob.status });
+        touched.add(id);
+        planned.push({ move, id });
+      } else if (move.op === "unbook") {
+        if (!rows.delete(move.id)) throw new Error(`Booking ${move.id} not found`);
+        touched.delete(move.id);
+        removed.push(move.id);
+        planned.push({ move, id: move.id });
+      } else {
+        if (!this.get("SELECT id FROM jobs WHERE id = ?", [move.id])) throw new Error(`Job ${move.id} not found`);
+        jobIds.push(move.id);
+        planned.push({ move, id: move.id });
+      }
+    }
+
+    const clashes: CrewClash[] = [];
+    for (const id of touched) {
+      const row = rows.get(id);
+      if (!row) continue;
+      for (const other of rows.values()) {
+        if (other.id !== id && other.crewId === row.crewId && other.date === row.date && other.jobId !== row.jobId) {
+          clashes.push(...this.describeClashes([{ crewId: other.crewId, date: other.date, jobId: other.jobId }], row.jobId));
+        }
+      }
+    }
+    if (clashes.length > 0 && !options.force) throw new RebookConflictError(clashes);
+
+    this.transaction(() => {
+      for (const { move, id } of planned) {
+        const row = rows.get(id);
+        if (move.op === "move" && row) {
+          this.writeAssignment(id, { crewId: row.crewId, date: row.date, status: row.status });
+        } else if (move.op === "book" && row) {
+          const conflicts = this.detectConflicts(row.jobId, row.crewId, row.date, id);
+          this.insert("assignments", { ...row, conflicts: JSON.stringify(conflicts) });
+        } else if (move.op === "unbook") {
+          this.run("DELETE FROM assignments WHERE id = ?", [id]);
+        } else if (move.op === "job") {
+          // the dates, and whatever else the same save changed (a status, a note): one step, one transaction
+          const fields = Object.fromEntries(Object.entries(move).filter(([key]) => key !== "op" && key !== "id")) as Partial<Job>;
+          this.writeJob(id, fields);
+        }
+      }
+      // the notes on every touched booking reflect the whole batch, not the order it was applied in
+      for (const id of touched) {
+        const row = rows.get(id);
+        if (row)
+          this.run("UPDATE assignments SET conflicts = ? WHERE id = ?", [
+            JSON.stringify(this.detectConflicts(row.jobId, row.crewId, row.date, id)),
+            id
+          ]);
+      }
+    });
+
+    return {
+      assignments: [...touched].map((id) => this.assignment(id)).filter((item): item is ScheduleAssignment => Boolean(item)),
+      removed,
+      jobs: jobIds.map((id) => this.job(id)).filter((item): item is Job => Boolean(item)),
+      clashes
+    };
+  }
+
+  private detectConflicts(jobId: string, crewId: string, date: string, ignoreAssignmentId?: string) {
+    const conflicts: string[] = [];
+    // Another job on this crew's day is a double-booking; this job's own other rows are not —
+    // the clash rule says so, and this note has to agree with the rule that allowed the booking.
+    const existing = this.all<ScheduleAssignment>(
+      `SELECT * FROM assignments WHERE crewId = ? AND date = ? AND jobId != ?${ignoreAssignmentId ? " AND id != ?" : ""}`,
+      ignoreAssignmentId ? [crewId, date, jobId, ignoreAssignmentId] : [crewId, date, jobId]
     );
     if (existing.length > 0) conflicts.push("Double-booked crew");
 
@@ -2284,6 +3746,51 @@ export class BuildFlowStore {
     return update;
   }
 
+  /**
+   * Correct an existing report. `userId` and `createdAt` are deliberately NOT
+   * editable: who filed it and when are the record, and rewriting them would
+   * detach the entry from the history the schedule was priced against. Everything
+   * the crew can get wrong in the moment — project, job, status, note, photos and
+   * the reported percent — is fair game.
+   */
+  updateFieldUpdate(
+    id: string,
+    input: {
+      projectId: string;
+      jobId?: string;
+      message: string;
+      status: Status;
+      photos?: string[];
+      percentComplete?: number;
+    }
+  ): FieldUpdate | undefined {
+    const current = this.get<FieldUpdateRow>("SELECT * FROM field_updates WHERE id = ?", [id]);
+    if (!current) return undefined;
+
+    const update: FieldUpdate = {
+      id,
+      projectId: input.projectId,
+      jobId: input.jobId,
+      userId: current.userId,
+      message: input.message,
+      status: input.status,
+      createdAt: current.createdAt,
+      photos: input.photos ?? [],
+      percentComplete: input.percentComplete
+    };
+    this.run("UPDATE field_updates SET projectId = ?, jobId = ?, message = ?, status = ?, photos = ?, percentComplete = ? WHERE id = ?", [
+      update.projectId,
+      update.jobId ?? null,
+      update.message,
+      update.status,
+      JSON.stringify(update.photos),
+      update.percentComplete ?? null,
+      id
+    ]);
+    this.save();
+    return update;
+  }
+
   /* ── Field progress → schedule variance loop ───────────────────────────────
      applyFieldProgress writes the crew's number through to the job (a fact they
      own). recordVariance parks the *schedule* consequence for review.
@@ -2309,9 +3816,7 @@ export class BuildFlowStore {
 
   variances(status?: ScheduleVariance["status"]): ScheduleVariance[] {
     if (status)
-      return this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE status = ? ORDER BY detectedAt DESC", [
-        status
-      ]).map(toVariance);
+      return this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE status = ? ORDER BY detectedAt DESC", [status]).map(toVariance);
     return this.all<VarianceRow>("SELECT * FROM schedule_variances ORDER BY detectedAt DESC").map(toVariance);
   }
 
@@ -2323,14 +3828,9 @@ export class BuildFlowStore {
     // One open question per job. A newer report supersedes the last one rather
     // than stacking — the PM should answer "where is this job now", not work
     // through every guess the crew made on the way there.
-    const open = this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE jobId = ? AND status = 'pending'", [
-      input.jobId
-    ]);
+    const open = this.all<VarianceRow>("SELECT * FROM schedule_variances WHERE jobId = ? AND status = 'pending'", [input.jobId]);
     for (const row of open) {
-      this.db.run("UPDATE schedule_variances SET status = 'superseded', resolvedAt = ? WHERE id = ?", [
-        new Date().toISOString(),
-        row.id
-      ]);
+      this.db.run("UPDATE schedule_variances SET status = 'superseded', resolvedAt = ? WHERE id = ?", [new Date().toISOString(), row.id]);
     }
 
     const variance: ScheduleVariance = {
@@ -2367,15 +3867,18 @@ export class BuildFlowStore {
       movedJobIds.push(jobId);
     };
 
-    applyDates(variance.jobId, variance.proposal.proposedStart, variance.proposal.proposedEnd);
-    for (const item of variance.proposal.ripple) applyDates(item.jobId, item.proposedStart, item.proposedEnd);
-
     const resolvedAt = new Date().toISOString();
-    this.db.run(
-      "UPDATE schedule_variances SET status = 'accepted', resolvedAt = ?, resolvedBy = ?, resolutionNote = ? WHERE id = ?",
-      [resolvedAt, userId, note ?? null, id]
-    );
-    this.save();
+    // the job, its ripple and the decision land together, or not at all
+    this.transaction(() => {
+      applyDates(variance.jobId, variance.proposal.proposedStart, variance.proposal.proposedEnd);
+      for (const item of variance.proposal.ripple) applyDates(item.jobId, item.proposedStart, item.proposedEnd);
+      this.db.run("UPDATE schedule_variances SET status = 'accepted', resolvedAt = ?, resolvedBy = ?, resolutionNote = ? WHERE id = ?", [
+        resolvedAt,
+        userId,
+        note ?? null,
+        id
+      ]);
+    });
     return {
       variance: { ...variance, status: "accepted", resolvedAt, resolvedBy: userId, resolutionNote: note },
       movedJobIds
@@ -2391,10 +3894,12 @@ export class BuildFlowStore {
     const variance = this.variance(id);
     if (!variance || variance.status !== "pending") return undefined;
     const resolvedAt = new Date().toISOString();
-    this.db.run(
-      "UPDATE schedule_variances SET status = 'rejected', resolvedAt = ?, resolvedBy = ?, resolutionNote = ? WHERE id = ?",
-      [resolvedAt, userId, note ?? null, id]
-    );
+    this.db.run("UPDATE schedule_variances SET status = 'rejected', resolvedAt = ?, resolvedBy = ?, resolutionNote = ? WHERE id = ?", [
+      resolvedAt,
+      userId,
+      note ?? null,
+      id
+    ]);
     this.save();
     return { ...variance, status: "rejected", resolvedAt, resolvedBy: userId, resolutionNote: note };
   }
@@ -2402,6 +3907,97 @@ export class BuildFlowStore {
   delayIQs(projectId?: string): DelayIQ[] {
     if (projectId) return this.all<DelayIQ>("SELECT * FROM delayIQs WHERE projectId = ? ORDER BY reportedAt DESC", [projectId]);
     return this.all<DelayIQ>("SELECT * FROM delayIQs ORDER BY reportedAt DESC");
+  }
+
+  /* ── Weekly schedule snapshots ─────────────────────────────────────────────
+     A reading of where each project stood, taken once a week. Their only job is
+     to make "improved by N days from last week" a real comparison rather than a
+     decorative delta — without a stored prior week there is nothing honest to
+     compare against. */
+
+  scheduleSnapshots(weekOf: string): ScheduleSnapshotRow[] {
+    return this.all<ScheduleSnapshotRow>("SELECT * FROM schedule_snapshots WHERE weekOf = ?", [weekOf]);
+  }
+
+  /** The portfolio's weekly readings, oldest first — the Dashboard draws its trend lines from these. */
+  scheduleSnapshotHistory(weeks = 12): ScheduleSnapshotRow[] {
+    return this.all<ScheduleSnapshotRow>("SELECT * FROM schedule_snapshots WHERE projectId = '' ORDER BY weekOf DESC LIMIT ?", [
+      weeks
+    ]).reverse();
+  }
+
+  /**
+   * Idempotent per (weekOf, projectId): the first reading of a week is the one
+   * kept. The one exception is a measure the row has never held — added after
+   * the row was written — which takes the first reading offered for it.
+   */
+  recordScheduleSnapshot(
+    input: Omit<ScheduleSnapshotRow, "id" | "capturedAt" | keyof ScheduleSnapshotMeasures> & Partial<ScheduleSnapshotMeasures>
+  ) {
+    const existing = this.get<ScheduleSnapshotRow>("SELECT * FROM schedule_snapshots WHERE weekOf = ? AND projectId = ?", [
+      input.weekOf,
+      input.projectId
+    ]);
+    if (existing) {
+      const missing = SNAPSHOT_MEASURES.filter((key) => existing[key] == null && typeof input[key] === "number");
+      if (missing.length === 0) return existing;
+      this.run(`UPDATE schedule_snapshots SET ${missing.map((key) => `${key} = ?`).join(", ")} WHERE id = ?`, [
+        ...missing.map((key) => input[key] as number),
+        existing.id
+      ]);
+      this.save();
+      return { ...existing, ...Object.fromEntries(missing.map((key) => [key, input[key]])) } as ScheduleSnapshotRow;
+    }
+
+    const row: ScheduleSnapshotRow = {
+      ...input,
+      onTrackProjects: input.onTrackProjects ?? null,
+      projects: input.projects ?? null,
+      crewUtilization: input.crewUtilization ?? null,
+      id: `snap-${input.weekOf}-${input.projectId || "portfolio"}`,
+      capturedAt: new Date().toISOString()
+    };
+    this.insert("schedule_snapshots", row);
+    this.save();
+    return row;
+  }
+
+  /* ── Weekly plan snapshots (the digest's memory) ── */
+
+  planSnapshot(weekOf: string): PlanSnapshotLike | null {
+    const row = this.get<{ plan: string }>("SELECT plan FROM schedule_plan_snapshots WHERE weekOf = ?", [weekOf]);
+    if (!row) return null;
+    try {
+      return JSON.parse(row.plan) as PlanSnapshotLike;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The newest snapshot filed before `weekOf`, or null. */
+  previousPlanSnapshot(weekOf: string): PlanSnapshotLike | null {
+    const row = this.get<{ plan: string }>("SELECT plan FROM schedule_plan_snapshots WHERE weekOf < ? ORDER BY weekOf DESC LIMIT 1", [
+      weekOf
+    ]);
+    if (!row) return null;
+    try {
+      return JSON.parse(row.plan) as PlanSnapshotLike;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Idempotent per week: the first reading of a week is the one kept. */
+  recordPlanSnapshot<T extends PlanSnapshotLike>(snapshot: T): T {
+    const existing = this.planSnapshot(snapshot.weekOf);
+    if (existing) return existing as T;
+    this.run("INSERT INTO schedule_plan_snapshots (weekOf, capturedAt, plan) VALUES (?, ?, ?)", [
+      snapshot.weekOf,
+      snapshot.capturedAt,
+      JSON.stringify(snapshot)
+    ]);
+    this.save();
+    return snapshot;
   }
 
   createDelayIQ(input: Omit<DelayIQ, "id" | "reportedAt">) {
@@ -2435,39 +4031,259 @@ export class BuildFlowStore {
 
     // Construction-industry prospects (BuildFlow sells scheduling to GCs & trades).
     const leads: Array<Omit<SalesLeadRow, "createdAt" | "lastActivityAt"> & { createdAt: string; lastActivityAt: string | null }> = [
-      { id: "lead-diego", name: "Diego Alvarez", email: "diego@summitridge.build", phone: "+1 415 555 0142", company: "Summit Ridge Builders", teamSize: "25–50", interest: "Crew Scheduling", status: "New", value: 12000, owner: "Sales Rep", source: "Website", notes: "Inbound from pricing page. Runs 4 concurrent sites.", createdAt: ago(1), lastActivityAt: null },
-      { id: "lead-yuki", name: "Yuki Tanaka", email: "yuki@paccoastconcrete.com", phone: "+1 503 555 0100", company: "Pacific Coast Concrete", teamSize: "50–100", interest: "Schedule AI", status: "New", value: 35000, owner: "Sales Rep", source: "Referral", notes: "Referred by Northwind. Wants AI conflict detection.", createdAt: ago(2), lastActivityAt: null },
-      { id: "lead-marcus", name: "Marcus Holloway", email: "marcus@bluepeaksite.com", phone: "+1 312 555 0177", company: "Bluepeak Site Services", teamSize: "10–25", interest: "Equipment Tracking", status: "Contacted", value: 22500, owner: "Sales Rep", source: "Outbound", notes: "Demo booked. Comparing against spreadsheets.", createdAt: ago(9), lastActivityAt: ago(3) },
-      { id: "lead-rachel", name: "Rachel Mendes", email: "rachel@foundrysteel.com", phone: "+1 617 555 0155", company: "Foundry Steelworks", teamSize: "100–250", interest: "Materials Readiness", status: "Contacted", value: 64000, owner: "Priya Nair", source: "Trade show", notes: "Met at ConExpo. Multi-region rollout.", createdAt: ago(12), lastActivityAt: ago(5) },
-      { id: "lead-sarah", name: "Sarah Chen", email: "sarah.chen@northwindmech.com", phone: "+1 415 555 0142", company: "Northwind Mechanical", teamSize: "50–100", interest: "Production Reports", status: "Qualified", value: 48000, owner: "Sales Rep", source: "Outbound", notes: "Budget approved for Q3. Needs ROI deck.", createdAt: ago(15), lastActivityAt: ago(2) },
-      { id: "lead-priya", name: "Priya Raman", email: "priya.raman@helixinfra.com", phone: "+1 646 555 0193", company: "Helix Infrastructure", teamSize: "250+", interest: "Enterprise", status: "Proposal", value: 96000, owner: "Priya Nair", source: "Website", notes: "Proposal sent. Legal reviewing MSA.", createdAt: ago(24), lastActivityAt: ago(1) },
-      { id: "lead-anna", name: "Anna Kowalski", email: "anna@tidewatercp.com", phone: "+1 206 555 0128", company: "Tidewater Capital Projects", teamSize: "250+", interest: "Enterprise", status: "Won", value: 150000, owner: "Sales Rep", source: "Referral", notes: "Closed — 3-year contract. Onboarding scheduled.", createdAt: ago(40), lastActivityAt: ago(6) },
-      { id: "lead-tom", name: "Tom Becker", email: "tom@cedarvalleygc.com", phone: "+1 720 555 0119", company: "Cedar Valley GC", teamSize: "10–25", interest: "Crew Scheduling", status: "Lost", value: 18000, owner: "Priya Nair", source: "Website", notes: "Chose a competitor on price. Revisit in 6 months.", createdAt: ago(34), lastActivityAt: ago(20) }
+      {
+        id: "lead-diego",
+        name: "Diego Alvarez",
+        email: "diego@summitridge.build",
+        phone: "+1 415 555 0142",
+        company: "Summit Ridge Builders",
+        teamSize: "25–50",
+        interest: "Crew Scheduling",
+        status: "New",
+        value: 12000,
+        owner: "Sales Rep",
+        source: "Website",
+        notes: "Inbound from pricing page. Runs 4 concurrent sites.",
+        createdAt: ago(1),
+        lastActivityAt: null
+      },
+      {
+        id: "lead-yuki",
+        name: "Yuki Tanaka",
+        email: "yuki@paccoastconcrete.com",
+        phone: "+1 503 555 0100",
+        company: "Pacific Coast Concrete",
+        teamSize: "50–100",
+        interest: "Schedule AI",
+        status: "New",
+        value: 35000,
+        owner: "Sales Rep",
+        source: "Referral",
+        notes: "Referred by Northwind. Wants AI conflict detection.",
+        createdAt: ago(2),
+        lastActivityAt: null
+      },
+      {
+        id: "lead-marcus",
+        name: "Marcus Holloway",
+        email: "marcus@bluepeaksite.com",
+        phone: "+1 312 555 0177",
+        company: "Bluepeak Site Services",
+        teamSize: "10–25",
+        interest: "Equipment Tracking",
+        status: "Contacted",
+        value: 22500,
+        owner: "Sales Rep",
+        source: "Outbound",
+        notes: "Demo booked. Comparing against spreadsheets.",
+        createdAt: ago(9),
+        lastActivityAt: ago(3)
+      },
+      {
+        id: "lead-rachel",
+        name: "Rachel Mendes",
+        email: "rachel@foundrysteel.com",
+        phone: "+1 617 555 0155",
+        company: "Foundry Steelworks",
+        teamSize: "100–250",
+        interest: "Materials Readiness",
+        status: "Contacted",
+        value: 64000,
+        owner: "Priya Nair",
+        source: "Trade show",
+        notes: "Met at ConExpo. Multi-region rollout.",
+        createdAt: ago(12),
+        lastActivityAt: ago(5)
+      },
+      {
+        id: "lead-sarah",
+        name: "Sarah Chen",
+        email: "sarah.chen@northwindmech.com",
+        phone: "+1 415 555 0142",
+        company: "Northwind Mechanical",
+        teamSize: "50–100",
+        interest: "Production Reports",
+        status: "Qualified",
+        value: 48000,
+        owner: "Sales Rep",
+        source: "Outbound",
+        notes: "Budget approved for Q3. Needs ROI deck.",
+        createdAt: ago(15),
+        lastActivityAt: ago(2)
+      },
+      {
+        id: "lead-priya",
+        name: "Priya Raman",
+        email: "priya.raman@helixinfra.com",
+        phone: "+1 646 555 0193",
+        company: "Helix Infrastructure",
+        teamSize: "250+",
+        interest: "Enterprise",
+        status: "Proposal",
+        value: 96000,
+        owner: "Priya Nair",
+        source: "Website",
+        notes: "Proposal sent. Legal reviewing MSA.",
+        createdAt: ago(24),
+        lastActivityAt: ago(1)
+      },
+      {
+        id: "lead-anna",
+        name: "Anna Kowalski",
+        email: "anna@tidewatercp.com",
+        phone: "+1 206 555 0128",
+        company: "Tidewater Capital Projects",
+        teamSize: "250+",
+        interest: "Enterprise",
+        status: "Won",
+        value: 150000,
+        owner: "Sales Rep",
+        source: "Referral",
+        notes: "Closed — 3-year contract. Onboarding scheduled.",
+        createdAt: ago(40),
+        lastActivityAt: ago(6)
+      },
+      {
+        id: "lead-tom",
+        name: "Tom Becker",
+        email: "tom@cedarvalleygc.com",
+        phone: "+1 720 555 0119",
+        company: "Cedar Valley GC",
+        teamSize: "10–25",
+        interest: "Crew Scheduling",
+        status: "Lost",
+        value: 18000,
+        owner: "Priya Nair",
+        source: "Website",
+        notes: "Chose a competitor on price. Revisit in 6 months.",
+        createdAt: ago(34),
+        lastActivityAt: ago(20)
+      }
     ];
     leads.forEach((lead) => this.insert("sales_leads", lead));
 
-    const tasks: SalesTaskRow[] = [
+    const tasks: SalesTaskSeed[] = [
       // Sales department follow-ups
-      { id: "stask-1", leadId: "lead-yuki", title: "Send personalised intro to Yuki", dueAt: ahead(1), done: 0, department: "sales", createdAt: ago(2) },
-      { id: "stask-2", leadId: "lead-diego", title: "Initial discovery call with Diego", dueAt: ahead(2), done: 0, department: "sales", createdAt: ago(1) },
-      { id: "stask-3", leadId: "lead-sarah", title: "Send tailored ROI deck", dueAt: ahead(3), done: 0, department: "sales", createdAt: ago(2) },
-      { id: "stask-4", leadId: "lead-marcus", title: "Confirm demo time with Marcus", dueAt: ahead(0), done: 0, department: "sales", createdAt: ago(3) },
-      { id: "stask-5", leadId: "lead-priya", title: "Follow up on legal review", dueAt: ahead(4), done: 0, department: "sales", createdAt: ago(1) },
-      { id: "stask-6", leadId: "lead-rachel", title: "Schedule pricing review", dueAt: ahead(5), done: 0, department: "sales", createdAt: ago(2) },
-      { id: "stask-7", leadId: "lead-anna", title: "Kick off onboarding with Tidewater", dueAt: ago(1), done: 1, department: "sales", createdAt: ago(6) },
+      {
+        id: "stask-1",
+        leadId: "lead-yuki",
+        title: "Send personalised intro to Yuki",
+        dueAt: ahead(1),
+        done: 0,
+        department: "sales",
+        createdAt: ago(2)
+      },
+      {
+        id: "stask-2",
+        leadId: "lead-diego",
+        title: "Initial discovery call with Diego",
+        dueAt: ahead(2),
+        done: 0,
+        department: "sales",
+        createdAt: ago(1)
+      },
+      {
+        id: "stask-3",
+        leadId: "lead-sarah",
+        title: "Send tailored ROI deck",
+        dueAt: ahead(3),
+        done: 0,
+        department: "sales",
+        createdAt: ago(2)
+      },
+      {
+        id: "stask-4",
+        leadId: "lead-marcus",
+        title: "Confirm demo time with Marcus",
+        dueAt: ahead(0),
+        done: 0,
+        department: "sales",
+        createdAt: ago(3)
+      },
+      {
+        id: "stask-5",
+        leadId: "lead-priya",
+        title: "Follow up on legal review",
+        dueAt: ahead(4),
+        done: 0,
+        department: "sales",
+        createdAt: ago(1)
+      },
+      {
+        id: "stask-6",
+        leadId: "lead-rachel",
+        title: "Schedule pricing review",
+        dueAt: ahead(5),
+        done: 0,
+        department: "sales",
+        createdAt: ago(2)
+      },
+      {
+        id: "stask-7",
+        leadId: "lead-anna",
+        title: "Kick off onboarding with Tidewater",
+        dueAt: ago(1),
+        done: 1,
+        department: "sales",
+        createdAt: ago(6)
+      },
       // Customer Support department tasks
-      { id: "stask-s1", leadId: null, title: "Reply to Sarah — mobile sync outage", dueAt: ahead(0), done: 0, department: "support", createdAt: agoH(1) },
-      { id: "stask-s2", leadId: null, title: "Send Leah the PDF export steps", dueAt: ahead(1), done: 0, department: "support", createdAt: ago(1) },
-      { id: "stask-s3", leadId: null, title: "Write help-doc: importing an existing schedule", dueAt: ahead(2), done: 0, department: "support", createdAt: agoH(6) },
-      { id: "stask-s4", leadId: null, title: "Close out resolved Gantt feature-request thread", dueAt: ago(1), done: 1, department: "support", createdAt: ago(4) }
+      {
+        id: "stask-s1",
+        leadId: null,
+        title: "Reply to Sarah — mobile sync outage",
+        dueAt: ahead(0),
+        done: 0,
+        department: "support",
+        createdAt: agoH(1)
+      },
+      {
+        id: "stask-s2",
+        leadId: null,
+        title: "Send Leah the PDF export steps",
+        dueAt: ahead(1),
+        done: 0,
+        department: "support",
+        createdAt: ago(1)
+      },
+      {
+        id: "stask-s3",
+        leadId: null,
+        title: "Write help-doc: importing an existing schedule",
+        dueAt: ahead(2),
+        done: 0,
+        department: "support",
+        createdAt: agoH(6)
+      },
+      {
+        id: "stask-s4",
+        leadId: null,
+        title: "Close out resolved Gantt feature-request thread",
+        dueAt: ago(1),
+        done: 1,
+        department: "support",
+        createdAt: ago(4)
+      }
     ];
     tasks.forEach((task) => this.insert("sales_tasks", task));
 
     const activities: SalesActivityRow[] = [
-      { id: "sact-1", leadId: "lead-priya", type: "note", summary: "Note: Stakeholder map — 3 decision makers identified", createdAt: agoH(2) },
+      {
+        id: "sact-1",
+        leadId: "lead-priya",
+        type: "note",
+        summary: "Note: Stakeholder map — 3 decision makers identified",
+        createdAt: agoH(2)
+      },
       { id: "sact-2", leadId: "lead-priya", type: "meeting", summary: "Meeting: Proposal review with procurement", createdAt: ago(1) },
       { id: "sact-3", leadId: "lead-sarah", type: "call", summary: "Call: Discovery — mapped current scheduling pains", createdAt: ago(2) },
-      { id: "sact-4", leadId: "lead-marcus", type: "email", summary: "Email: Sent demo recording + follow-up questions", createdAt: ago(3) },
+      {
+        id: "sact-4",
+        leadId: "lead-marcus",
+        type: "email",
+        summary: "Email: Sent demo recording + follow-up questions",
+        createdAt: ago(3)
+      },
       { id: "sact-5", leadId: "lead-rachel", type: "stage", summary: "Stage change: New → Contacted", createdAt: ago(5) },
       { id: "sact-6", leadId: "lead-anna", type: "note", summary: "Note: Contract signed 🎉 handoff to onboarding", createdAt: ago(6) }
     ];
@@ -2479,66 +4295,155 @@ export class BuildFlowStore {
     const conversations: Array<SupportConversationRow & { messages: Array<{ author: "customer" | "agent"; body: string; at: string }> }> = [
       // ── General Support (Customer Support department) ──────────────────────
       {
-        id: "conv-sarah", name: "Sarah Chen", email: "sarah.chen@northwindmech.com", company: "Northwind Mechanical",
-        subject: "Crew schedule won't sync to the mobile app", status: "open", priority: "High", department: "support",
-        createdAt: agoH(5), lastMessageAt: agoH(1),
+        id: "conv-sarah",
+        name: "Sarah Chen",
+        email: "sarah.chen@northwindmech.com",
+        company: "Northwind Mechanical",
+        subject: "Crew schedule won't sync to the mobile app",
+        status: "open",
+        priority: "High",
+        department: "support",
+        createdAt: agoH(5),
+        lastMessageAt: agoH(1),
         messages: [
-          { author: "customer", body: "Hi — my foremen aren't seeing today's assignments on their phones even though the web schedule looks right. Started this morning.", at: agoH(5) },
-          { author: "agent", body: "Thanks Sarah — sorry about that. Can you confirm whether they pulled to refresh, and which crew is affected? I'll check the sync logs on our side now.", at: agoH(4) },
+          {
+            author: "customer",
+            body: "Hi — my foremen aren't seeing today's assignments on their phones even though the web schedule looks right. Started this morning.",
+            at: agoH(5)
+          },
+          {
+            author: "agent",
+            body: "Thanks Sarah — sorry about that. Can you confirm whether they pulled to refresh, and which crew is affected? I'll check the sync logs on our side now.",
+            at: agoH(4)
+          },
           { author: "customer", body: "It's the Concrete crew. They pulled to refresh, still nothing.", at: agoH(1) }
         ]
       },
       {
-        id: "conv-leah", name: "Leah Moreno", email: "leah@foundrysteel.com", company: "Foundry Steelworks",
-        subject: "Export weekly production report to PDF", status: "open", priority: "Normal", department: "support",
-        createdAt: ago(1), lastMessageAt: ago(1),
+        id: "conv-leah",
+        name: "Leah Moreno",
+        email: "leah@foundrysteel.com",
+        company: "Foundry Steelworks",
+        subject: "Export weekly production report to PDF",
+        status: "open",
+        priority: "Normal",
+        department: "support",
+        createdAt: ago(1),
+        lastMessageAt: ago(1),
         messages: [
-          { author: "customer", body: "Is there a way to export the weekly Production Report as a PDF to send to our owner? I can only see the on-screen view.", at: ago(1) }
+          {
+            author: "customer",
+            body: "Is there a way to export the weekly Production Report as a PDF to send to our owner? I can only see the on-screen view.",
+            at: ago(1)
+          }
         ]
       },
       {
-        id: "conv-priya", name: "Priya Raman", email: "priya.raman@helixinfra.com", company: "Helix Infrastructure",
-        subject: "Onboarding: importing our existing schedule", status: "open", priority: "High", department: "support",
-        createdAt: agoH(30), lastMessageAt: agoH(7),
+        id: "conv-priya",
+        name: "Priya Raman",
+        email: "priya.raman@helixinfra.com",
+        company: "Helix Infrastructure",
+        subject: "Onboarding: importing our existing schedule",
+        status: "open",
+        priority: "High",
+        department: "support",
+        createdAt: agoH(30),
+        lastMessageAt: agoH(7),
         messages: [
-          { author: "customer", body: "We're moving off another scheduler. Can you import our current jobs and crews so we don't rebuild from scratch?", at: agoH(30) },
-          { author: "agent", body: "Absolutely — you can upload a photo or export and our AI import will create the projects, jobs and assignments for you. Want me to walk your team through it Thursday?", at: agoH(7) }
+          {
+            author: "customer",
+            body: "We're moving off another scheduler. Can you import our current jobs and crews so we don't rebuild from scratch?",
+            at: agoH(30)
+          },
+          {
+            author: "agent",
+            body: "Absolutely — you can upload a photo or export and our AI import will create the projects, jobs and assignments for you. Want me to walk your team through it Thursday?",
+            at: agoH(7)
+          }
         ]
       },
       {
-        id: "conv-james", name: "James Park", email: "james@paccoastconcrete.com", company: "Pacific Coast Concrete",
-        subject: "Feature request: Gantt dependencies", status: "closed", priority: "Low", department: "support",
-        createdAt: ago(6), lastMessageAt: ago(4),
+        id: "conv-james",
+        name: "James Park",
+        email: "james@paccoastconcrete.com",
+        company: "Pacific Coast Concrete",
+        subject: "Feature request: Gantt dependencies",
+        status: "closed",
+        priority: "Low",
+        department: "support",
+        createdAt: ago(6),
+        lastMessageAt: ago(4),
         messages: [
           { author: "customer", body: "Would love to link jobs so a delayIQ on one pushes the dependent ones automatically.", at: ago(6) },
-          { author: "agent", body: "Love it — I've logged this with product and tagged your account so you'll hear when it ships. Thanks for the idea!", at: ago(4) }
+          {
+            author: "agent",
+            body: "Love it — I've logged this with product and tagged your account so you'll hear when it ships. Thanks for the idea!",
+            at: ago(4)
+          }
         ]
       },
       // ── Sales inquiries (Sales department) ────────────────────────────────
       {
-        id: "conv-diego", name: "Diego Alvarez", email: "diego@summitridge.build", company: "Summit Ridge Builders",
-        subject: "Question about per-seat pricing", status: "pending", priority: "Normal", department: "sales",
-        createdAt: ago(2), lastMessageAt: agoH(20),
+        id: "conv-diego",
+        name: "Diego Alvarez",
+        email: "diego@summitridge.build",
+        company: "Summit Ridge Builders",
+        subject: "Question about per-seat pricing",
+        status: "pending",
+        priority: "Normal",
+        department: "sales",
+        createdAt: ago(2),
+        lastMessageAt: agoH(20),
         messages: [
           { author: "customer", body: "If we add field crews who only clock in/out, do they count as full seats?", at: ago(2) },
-          { author: "agent", body: "Great question — field-only users are free; you're billed for schedulers and PMs. I'll email the breakdown. Anything else before your demo?", at: agoH(20) }
+          {
+            author: "agent",
+            body: "Great question — field-only users are free; you're billed for schedulers and PMs. I'll email the breakdown. Anything else before your demo?",
+            at: agoH(20)
+          }
         ]
       },
       {
-        id: "conv-omar", name: "Omar Haddad", email: "omar@granitepeakgc.com", company: "Granite Peak GC",
-        subject: "Pricing for a 40-crew rollout", status: "open", priority: "High", department: "sales",
-        createdAt: agoH(6), lastMessageAt: agoH(6),
+        id: "conv-omar",
+        name: "Omar Haddad",
+        email: "omar@granitepeakgc.com",
+        company: "Granite Peak GC",
+        subject: "Pricing for a 40-crew rollout",
+        status: "open",
+        priority: "High",
+        department: "sales",
+        createdAt: agoH(6),
+        lastMessageAt: agoH(6),
         messages: [
-          { author: "customer", body: "We run about 40 crews across 3 regions and want to move everyone onto BuildFlow this quarter. Can you put together pricing and an onboarding plan?", at: agoH(6) }
+          {
+            author: "customer",
+            body: "We run about 40 crews across 3 regions and want to move everyone onto BuildFlow this quarter. Can you put together pricing and an onboarding plan?",
+            at: agoH(6)
+          }
         ]
       },
       {
-        id: "conv-nina", name: "Nina Alvarez", email: "nina@harborlinebuild.com", company: "Harborline Build",
-        subject: "Interested in the Enterprise plan — can we get a demo?", status: "open", priority: "Normal", department: "sales",
-        createdAt: ago(1), lastMessageAt: agoH(20),
+        id: "conv-nina",
+        name: "Nina Alvarez",
+        email: "nina@harborlinebuild.com",
+        company: "Harborline Build",
+        subject: "Interested in the Enterprise plan — can we get a demo?",
+        status: "open",
+        priority: "Normal",
+        department: "sales",
+        createdAt: ago(1),
+        lastMessageAt: agoH(20),
         messages: [
-          { author: "customer", body: "Saw BuildFlow at a trade show. We'd like a demo of the Enterprise plan for our leadership team — are you free next week?", at: ago(1) },
-          { author: "agent", body: "Thanks Nina! I'd love to set that up. Does Tuesday or Thursday afternoon work better for your team?", at: agoH(20) }
+          {
+            author: "customer",
+            body: "Saw BuildFlow at a trade show. We'd like a demo of the Enterprise plan for our leadership team — are you free next week?",
+            at: ago(1)
+          },
+          {
+            author: "agent",
+            body: "Thanks Nina! I'd love to set that up. Does Tuesday or Thursday afternoon work better for your team?",
+            at: agoH(20)
+          }
         ]
       }
     ];
@@ -2584,29 +4489,103 @@ export class BuildFlowStore {
       if (this.get("SELECT id FROM support_conversations WHERE id = ?", [conv.id])) return;
       this.insert("support_conversations", conv);
       messages.forEach((m, i) =>
-        this.insert("support_messages", { id: `${conv.id}-m${i + 1}`, conversationId: conv.id, author: m.author, body: m.body, createdAt: m.at })
+        this.insert("support_messages", {
+          id: `${conv.id}-m${i + 1}`,
+          conversationId: conv.id,
+          author: m.author,
+          body: m.body,
+          createdAt: m.at
+        })
       );
     };
     ensureConversation(
-      { id: "conv-omar", name: "Omar Haddad", email: "omar@granitepeakgc.com", company: "Granite Peak GC", subject: "Pricing for a 40-crew rollout", status: "open", priority: "High", department: "sales", createdAt: agoH(6), lastMessageAt: agoH(6) },
-      [{ author: "customer", body: "We run about 40 crews across 3 regions and want to move everyone onto BuildFlow this quarter. Can you put together pricing and an onboarding plan?", at: agoH(6) }]
+      {
+        id: "conv-omar",
+        name: "Omar Haddad",
+        email: "omar@granitepeakgc.com",
+        company: "Granite Peak GC",
+        subject: "Pricing for a 40-crew rollout",
+        status: "open",
+        priority: "High",
+        department: "sales",
+        createdAt: agoH(6),
+        lastMessageAt: agoH(6)
+      },
+      [
+        {
+          author: "customer",
+          body: "We run about 40 crews across 3 regions and want to move everyone onto BuildFlow this quarter. Can you put together pricing and an onboarding plan?",
+          at: agoH(6)
+        }
+      ]
     );
     ensureConversation(
-      { id: "conv-nina", name: "Nina Alvarez", email: "nina@harborlinebuild.com", company: "Harborline Build", subject: "Interested in the Enterprise plan — can we get a demo?", status: "open", priority: "Normal", department: "sales", createdAt: ago(1), lastMessageAt: agoH(20) },
+      {
+        id: "conv-nina",
+        name: "Nina Alvarez",
+        email: "nina@harborlinebuild.com",
+        company: "Harborline Build",
+        subject: "Interested in the Enterprise plan — can we get a demo?",
+        status: "open",
+        priority: "Normal",
+        department: "sales",
+        createdAt: ago(1),
+        lastMessageAt: agoH(20)
+      },
       [
-        { author: "customer", body: "Saw BuildFlow at a trade show. We'd like a demo of the Enterprise plan for our leadership team — are you free next week?", at: ago(1) },
-        { author: "agent", body: "Thanks Nina! I'd love to set that up. Does Tuesday or Thursday afternoon work better for your team?", at: agoH(20) }
+        {
+          author: "customer",
+          body: "Saw BuildFlow at a trade show. We'd like a demo of the Enterprise plan for our leadership team — are you free next week?",
+          at: ago(1)
+        },
+        {
+          author: "agent",
+          body: "Thanks Nina! I'd love to set that up. Does Tuesday or Thursday afternoon work better for your team?",
+          at: agoH(20)
+        }
       ]
     );
 
-    const ensureTask = (task: SalesTaskRow) => {
+    const ensureTask = (task: SalesTaskSeed) => {
       if (this.get("SELECT id FROM sales_tasks WHERE id = ?", [task.id])) return;
       this.insert("sales_tasks", task);
     };
-    ensureTask({ id: "stask-s1", leadId: null, title: "Reply to Sarah — mobile sync outage", dueAt: ahead(0), done: 0, department: "support", createdAt: agoH(1) });
-    ensureTask({ id: "stask-s2", leadId: null, title: "Send Leah the PDF export steps", dueAt: ahead(1), done: 0, department: "support", createdAt: ago(1) });
-    ensureTask({ id: "stask-s3", leadId: null, title: "Write help-doc: importing an existing schedule", dueAt: ahead(2), done: 0, department: "support", createdAt: agoH(6) });
-    ensureTask({ id: "stask-s4", leadId: null, title: "Close out resolved Gantt feature-request thread", dueAt: ago(1), done: 1, department: "support", createdAt: ago(4) });
+    ensureTask({
+      id: "stask-s1",
+      leadId: null,
+      title: "Reply to Sarah — mobile sync outage",
+      dueAt: ahead(0),
+      done: 0,
+      department: "support",
+      createdAt: agoH(1)
+    });
+    ensureTask({
+      id: "stask-s2",
+      leadId: null,
+      title: "Send Leah the PDF export steps",
+      dueAt: ahead(1),
+      done: 0,
+      department: "support",
+      createdAt: ago(1)
+    });
+    ensureTask({
+      id: "stask-s3",
+      leadId: null,
+      title: "Write help-doc: importing an existing schedule",
+      dueAt: ahead(2),
+      done: 0,
+      department: "support",
+      createdAt: agoH(6)
+    });
+    ensureTask({
+      id: "stask-s4",
+      leadId: null,
+      title: "Close out resolved Gantt feature-request thread",
+      dueAt: ago(1),
+      done: 1,
+      department: "support",
+      createdAt: ago(4)
+    });
 
     // Seed the Customer Support team roster once (the owner can add more in Settings).
     if ((this.get<{ n: number }>("SELECT COUNT(*) AS n FROM support_agents")?.n ?? 0) === 0) {
@@ -2642,13 +4621,25 @@ export class BuildFlowStore {
       leads: this.salesLeads(),
       tasks: this.salesTasks(),
       activities: this.salesActivities(),
+      meetings: this.salesMeetings(),
+      companies: this.salesCompanies(),
+      deals: this.salesDeals(),
       conversations: this.supportConversations()
     };
   }
 
   createSalesLead(input: {
-    name: string; email: string; company: string; phone?: string; teamSize?: string;
-    interest?: string; status?: SalesLeadStatus; value?: number; owner?: string; source?: string; notes?: string;
+    name: string;
+    email: string;
+    company: string;
+    phone?: string;
+    teamSize?: string;
+    interest?: string;
+    status?: SalesLeadStatus;
+    value?: number;
+    owner?: string;
+    source?: string;
+    notes?: string;
   }): SalesLeadRow {
     const nowIso = new Date().toISOString();
     const lead: SalesLeadRow = {
@@ -2678,7 +4669,21 @@ export class BuildFlowStore {
     const next: SalesLeadRow = { ...existing, ...patch, lastActivityAt: new Date().toISOString() };
     this.run(
       "UPDATE sales_leads SET name=?, email=?, phone=?, company=?, teamSize=?, interest=?, status=?, value=?, owner=?, source=?, notes=?, lastActivityAt=? WHERE id=?",
-      [next.name, next.email, next.phone, next.company, next.teamSize, next.interest, next.status, next.value, next.owner, next.source, next.notes, next.lastActivityAt, id]
+      [
+        next.name,
+        next.email,
+        next.phone,
+        next.company,
+        next.teamSize,
+        next.interest,
+        next.status,
+        next.value,
+        next.owner,
+        next.source,
+        next.notes,
+        next.lastActivityAt,
+        id
+      ]
     );
     this.save();
     return next;
@@ -2689,11 +4694,20 @@ export class BuildFlowStore {
     this.run("DELETE FROM sales_leads WHERE id = ?", [id]);
     this.run("DELETE FROM sales_tasks WHERE leadId = ?", [id]);
     this.run("DELETE FROM sales_activities WHERE leadId = ?", [id]);
+    this.run("UPDATE sales_deals SET leadId = NULL WHERE leadId = ?", [id]);
     this.save();
     return true;
   }
 
-  createSalesTask(input: { title: string; dueAt: string; leadId?: string | null; department?: Department }): SalesTaskRow {
+  createSalesTask(input: {
+    title: string;
+    dueAt: string;
+    leadId?: string | null;
+    department?: Department;
+    assignee?: string;
+    priority?: string;
+    notes?: string;
+  }): SalesTaskRow {
     const task: SalesTaskRow = {
       id: this.newId("stask"),
       leadId: input.leadId ?? null,
@@ -2701,7 +4715,10 @@ export class BuildFlowStore {
       dueAt: input.dueAt,
       done: 0,
       department: input.department ?? "sales",
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      assignee: input.assignee ?? "",
+      priority: input.priority ?? "Normal",
+      notes: input.notes ?? ""
     };
     this.insert("sales_tasks", task);
     this.save();
@@ -2743,26 +4760,288 @@ export class BuildFlowStore {
     return activity;
   }
 
+  salesMeetings(): SalesMeetingRow[] {
+    return this.all<SalesMeetingRow>("SELECT * FROM sales_meetings ORDER BY startsAt ASC");
+  }
+
+  salesLead(id: string): SalesLeadRow | undefined {
+    return this.get<SalesLeadRow>("SELECT * FROM sales_leads WHERE id = ?", [id]);
+  }
+
+  createSalesMeeting(input: {
+    leadId: string;
+    title: string;
+    startsAt: string;
+    endsAt: string;
+    location?: string;
+    agenda?: string;
+    organizer?: string;
+    notifiedVia?: string;
+  }): SalesMeetingRow {
+    const meeting: SalesMeetingRow = {
+      id: this.newId("smeet"),
+      leadId: input.leadId,
+      title: input.title,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      location: input.location ?? "",
+      agenda: input.agenda ?? "",
+      organizer: input.organizer ?? "",
+      notifiedVia: input.notifiedVia ?? "none",
+      createdAt: new Date().toISOString()
+    };
+    this.insert("sales_meetings", meeting);
+    this.save();
+    return meeting;
+  }
+
+  setSalesMeetingNotified(id: string, notifiedVia: string) {
+    this.run("UPDATE sales_meetings SET notifiedVia = ? WHERE id = ?", [notifiedVia, id]);
+    this.save();
+  }
+
+  /* ── Companies ──────────────────────────────────────────────────────────── */
+  salesCompanies(): SalesCompanyRow[] {
+    return this.all<SalesCompanyRow>("SELECT * FROM sales_companies ORDER BY name COLLATE NOCASE ASC");
+  }
+
+  salesCompany(id: string): SalesCompanyRow | undefined {
+    return this.get<SalesCompanyRow>("SELECT * FROM sales_companies WHERE id = ?", [id]);
+  }
+
+  createSalesCompany(input: {
+    name: string;
+    domain?: string;
+    industry?: string;
+    phone?: string;
+    city?: string;
+    state?: string;
+    owner?: string;
+    notes?: string;
+    createdAt?: string;
+    lastActivityAt?: string | null;
+  }): SalesCompanyRow {
+    const company: SalesCompanyRow = {
+      id: this.newId("co"),
+      name: input.name,
+      domain: input.domain ?? "",
+      industry: input.industry ?? "",
+      phone: input.phone ?? "",
+      city: input.city ?? "",
+      state: input.state ?? "",
+      owner: input.owner ?? "",
+      notes: input.notes ?? "",
+      createdAt: input.createdAt ?? new Date().toISOString(),
+      lastActivityAt: input.lastActivityAt ?? null
+    };
+    this.insert("sales_companies", company);
+    this.save();
+    return company;
+  }
+
+  updateSalesCompany(id: string, patch: Partial<Omit<SalesCompanyRow, "id" | "createdAt">>): SalesCompanyRow | undefined {
+    const existing = this.salesCompany(id);
+    if (!existing) return undefined;
+    const next: SalesCompanyRow = { ...existing, ...patch, lastActivityAt: new Date().toISOString() };
+    this.run(
+      "UPDATE sales_companies SET name=?, domain=?, industry=?, phone=?, city=?, state=?, owner=?, notes=?, lastActivityAt=? WHERE id=?",
+      [next.name, next.domain, next.industry, next.phone, next.city, next.state, next.owner, next.notes, next.lastActivityAt, id]
+    );
+    // contacts and deals link to a company by name / id — keep the name in step
+    if (patch.name && patch.name !== existing.name)
+      this.run("UPDATE sales_leads SET company = ? WHERE company = ?", [patch.name, existing.name]);
+    this.save();
+    return next;
+  }
+
+  deleteSalesCompany(id: string): boolean {
+    if (!this.salesCompany(id)) return false;
+    this.run("DELETE FROM sales_companies WHERE id = ?", [id]);
+    this.run("UPDATE sales_deals SET companyId = NULL WHERE companyId = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  /* ── Deals ──────────────────────────────────────────────────────────────── */
+  salesDeals(): SalesDealRow[] {
+    return this.all<SalesDealRow>("SELECT * FROM sales_deals ORDER BY createdAt DESC");
+  }
+
+  salesDeal(id: string): SalesDealRow | undefined {
+    return this.get<SalesDealRow>("SELECT * FROM sales_deals WHERE id = ?", [id]);
+  }
+
+  createSalesDeal(input: {
+    name: string;
+    stage?: SalesDealStage;
+    amount?: number;
+    closeDate?: string;
+    companyId?: string | null;
+    leadId?: string | null;
+    owner?: string;
+    priority?: string;
+    notes?: string;
+    createdAt?: string;
+    lastActivityAt?: string | null;
+  }): SalesDealRow {
+    const deal: SalesDealRow = {
+      id: this.newId("deal"),
+      name: input.name,
+      stage: input.stage ?? "Appointment scheduled",
+      amount: input.amount ?? 0,
+      closeDate: input.closeDate ?? "",
+      companyId: input.companyId ?? null,
+      leadId: input.leadId ?? null,
+      owner: input.owner ?? "",
+      priority: input.priority ?? "Medium",
+      notes: input.notes ?? "",
+      createdAt: input.createdAt ?? new Date().toISOString(),
+      lastActivityAt: input.lastActivityAt ?? null
+    };
+    this.insert("sales_deals", deal);
+    this.save();
+    return deal;
+  }
+
+  updateSalesDeal(id: string, patch: Partial<Omit<SalesDealRow, "id" | "createdAt">>): SalesDealRow | undefined {
+    const existing = this.salesDeal(id);
+    if (!existing) return undefined;
+    const next: SalesDealRow = { ...existing, ...patch, lastActivityAt: new Date().toISOString() };
+    this.run(
+      "UPDATE sales_deals SET name=?, stage=?, amount=?, closeDate=?, companyId=?, leadId=?, owner=?, priority=?, notes=?, lastActivityAt=? WHERE id=?",
+      [
+        next.name,
+        next.stage,
+        next.amount,
+        next.closeDate,
+        next.companyId,
+        next.leadId,
+        next.owner,
+        next.priority,
+        next.notes,
+        next.lastActivityAt,
+        id
+      ]
+    );
+    this.save();
+    return next;
+  }
+
+  deleteSalesDeal(id: string): boolean {
+    if (!this.salesDeal(id)) return false;
+    this.run("DELETE FROM sales_deals WHERE id = ?", [id]);
+    this.save();
+    return true;
+  }
+
+  /** Derive companies and deals from the contacts so the three Sales pages agree.
+   *  Runs once per DB (guards on empty tables); safe on fresh and existing DBs. */
+  seedSalesCompaniesAndDeals() {
+    const leads = this.salesLeads();
+    if (leads.length === 0) return;
+    const DAY = 86_400_000;
+    const industryFor = (company: string, interest: string) => {
+      const hay = `${company} ${interest}`.toLowerCase();
+      if (/concrete/.test(hay)) return "Concrete";
+      if (/paving|asphalt/.test(hay)) return "Asphalt & paving";
+      if (/steel|structural/.test(hay)) return "Steel & structural";
+      if (/electric/.test(hay)) return "Electrical";
+      if (/mechanical|plumb|hvac/.test(hay)) return "Plumbing & mechanical";
+      if (/site|excavat|earth/.test(hay)) return "Excavation & sitework";
+      if (/infrastructure|utilit/.test(hay)) return "Utilities";
+      if (/capital|projects|develop/.test(hay)) return "Developer / owner";
+      if (/roof/.test(hay)) return "Roofing";
+      if (/build|construct|gc\b|contractor/.test(hay)) return "General contractor";
+      return "Other";
+    };
+    const companiesEmpty = (this.get<{ n: number }>("SELECT COUNT(*) AS n FROM sales_companies")?.n ?? 0) === 0;
+    if (companiesEmpty) {
+      const byName = new Map<string, SalesLeadRow[]>();
+      for (const lead of leads) {
+        if (!lead.company) continue;
+        byName.set(lead.company, [...(byName.get(lead.company) ?? []), lead]);
+      }
+      for (const [name, group] of byName) {
+        const first = [...group].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))[0];
+        const domain = (first.email.split("@")[1] ?? "").toLowerCase();
+        const lastActivity =
+          group
+            .map((lead) => lead.lastActivityAt)
+            .filter((value): value is string => Boolean(value))
+            .sort()
+            .pop() ?? null;
+        this.createSalesCompany({
+          name,
+          domain: /gmail|yahoo|outlook|hotmail|icloud/.test(domain) ? "" : domain,
+          industry: industryFor(name, first.interest),
+          phone: first.phone,
+          owner: first.owner,
+          createdAt: first.createdAt,
+          lastActivityAt: lastActivity
+        });
+      }
+    }
+    const dealsEmpty = (this.get<{ n: number }>("SELECT COUNT(*) AS n FROM sales_deals")?.n ?? 0) === 0;
+    if (dealsEmpty) {
+      const companies = this.salesCompanies();
+      const stageFor = (status: SalesLeadStatus): SalesDealStage =>
+        status === "New"
+          ? "Appointment scheduled"
+          : status === "Contacted"
+            ? "Qualified to buy"
+            : status === "Qualified"
+              ? "Presentation scheduled"
+              : status === "Proposal"
+                ? "Contract sent"
+                : status === "Won"
+                  ? "Closed won"
+                  : "Closed lost";
+      for (const lead of leads) {
+        if (!lead.value || lead.value <= 0) continue;
+        const company = companies.find((row) => row.name === lead.company);
+        const closed = lead.status === "Won" || lead.status === "Lost";
+        const closeDate = new Date(
+          new Date(closed ? (lead.lastActivityAt ?? lead.createdAt) : lead.createdAt).getTime() + (closed ? 0 : 45 * DAY)
+        )
+          .toISOString()
+          .slice(0, 10);
+        this.createSalesDeal({
+          name: `${lead.interest || "BuildFlow"} — ${lead.company || lead.name}`,
+          stage: stageFor(lead.status),
+          amount: lead.value,
+          closeDate,
+          companyId: company?.id ?? null,
+          leadId: lead.id,
+          owner: lead.owner,
+          priority: lead.value >= 20_000 ? "High" : lead.value >= 10_000 ? "Medium" : "Low",
+          createdAt: lead.createdAt,
+          lastActivityAt: lead.lastActivityAt
+        });
+      }
+    }
+  }
+
   supportConversations(department?: Department): SupportConversationRow[] {
     if (department) {
-      return this.all<SupportConversationRow>(
-        "SELECT * FROM support_conversations WHERE department = ? ORDER BY lastMessageAt DESC",
-        [department]
-      );
+      return this.all<SupportConversationRow>("SELECT * FROM support_conversations WHERE department = ? ORDER BY lastMessageAt DESC", [
+        department
+      ]);
     }
     return this.all<SupportConversationRow>("SELECT * FROM support_conversations ORDER BY lastMessageAt DESC");
   }
 
   supportMessages(conversationId: string): SupportMessageRow[] {
-    return this.all<SupportMessageRow>(
-      "SELECT * FROM support_messages WHERE conversationId = ? ORDER BY createdAt ASC",
-      [conversationId]
-    );
+    return this.all<SupportMessageRow>("SELECT * FROM support_messages WHERE conversationId = ? ORDER BY createdAt ASC", [conversationId]);
   }
 
   createSupportConversation(input: {
-    name: string; email: string; company?: string; subject: string; body: string;
-    priority?: SupportConversationRow["priority"]; department?: Department;
+    name: string;
+    email: string;
+    company?: string;
+    subject: string;
+    body: string;
+    priority?: SupportConversationRow["priority"];
+    department?: Department;
   }): { conversation: SupportConversationRow; message: SupportMessageRow } {
     const nowIso = new Date().toISOString();
     const conversation: SupportConversationRow = {
@@ -2803,12 +5082,19 @@ export class BuildFlowStore {
     // An agent reply moves the thread to "pending" (awaiting customer); a customer
     // message re-opens it. Either way, bump the activity timestamp.
     const nextStatus = input.author === "agent" ? "pending" : "open";
-    this.run("UPDATE support_conversations SET lastMessageAt = ?, status = ? WHERE id = ?", [message.createdAt, nextStatus, conversationId]);
+    this.run("UPDATE support_conversations SET lastMessageAt = ?, status = ? WHERE id = ?", [
+      message.createdAt,
+      nextStatus,
+      conversationId
+    ]);
     this.save();
     return message;
   }
 
-  updateSupportConversation(id: string, patch: { status?: SupportConversationRow["status"]; priority?: SupportConversationRow["priority"] }): SupportConversationRow | undefined {
+  updateSupportConversation(
+    id: string,
+    patch: { status?: SupportConversationRow["status"]; priority?: SupportConversationRow["priority"] }
+  ): SupportConversationRow | undefined {
     const existing = this.get<SupportConversationRow>("SELECT * FROM support_conversations WHERE id = ?", [id]);
     if (!existing) return undefined;
     const next: SupportConversationRow = {

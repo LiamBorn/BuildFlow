@@ -3,20 +3,15 @@
    ========================================================================= */
 
 import { parseMspdi } from "./mspdi.js";
-import { ParsedSchedule, ScheduleFormat, ScheduleImportError } from "./types.js";
+import type { ParsedSchedule, ScheduleFormat } from "./types.js";
+import { ScheduleImportError } from "./types.js";
 import { parseXer } from "./xer.js";
 
 export * from "./types.js";
 export { parseXer } from "./xer.js";
 export { parseMspdi } from "./mspdi.js";
 export { buildImportPlan, type ImportPlan, type ImportPlanOptions } from "./map.js";
-export {
-  analyzeSchedule,
-  type ScheduleHealth,
-  type ScheduleForecastIQ,
-  type HealthFinding,
-  type Severity
-} from "./analyze.js";
+export { analyzeSchedule, type ScheduleHealth, type ScheduleForecastIQ, type HealthFinding, type Severity } from "./analyze.js";
 export { simulateFinish, type FinishConfidence } from "./montecarlo.js";
 
 function extensionOf(filename: string): string {
@@ -30,6 +25,7 @@ function extensionOf(filename: string): string {
  * binary Project file that was uploaded as text.
  */
 function looksLikeOle2(content: string): boolean {
+  // eslint-disable-next-line no-control-regex -- the OLE2 magic bytes, as they survive a text decode
   return /^���/.test(content) || content.startsWith("ÐÏà");
 }
 
@@ -40,11 +36,7 @@ export function detectFormat(filename: string, content: string): ScheduleFormat 
   const extension = extensionOf(filename);
 
   if (extension === "mpp" || looksLikeOle2(content)) {
-    throw new ScheduleImportError(
-      "mpp_unsupported",
-      "MS Project .mpp files can't be read directly — it's a binary format.",
-      MPP_HINT
-    );
+    throw new ScheduleImportError("mpp_unsupported", "MS Project .mpp files can't be read directly — it's a binary format.", MPP_HINT);
   }
 
   const head = content.slice(0, 4000);

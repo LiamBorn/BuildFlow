@@ -9,15 +9,8 @@
    ========================================================================= */
 
 import { XMLParser } from "fast-xml-parser";
-import {
-  ImportedActivity,
-  ImportedProject,
-  ImportedRelation,
-  ImportedWbs,
-  ParsedSchedule,
-  RelationType,
-  ScheduleImportError
-} from "./types.js";
+import type { ImportedActivity, ImportedProject, ImportedRelation, ImportedWbs, ParsedSchedule, RelationType } from "./types.js";
+import { ScheduleImportError } from "./types.js";
 
 /** MSPDI PredecessorLink <Type>. */
 const RELATION_TYPES: Record<string, RelationType> = {
@@ -64,13 +57,10 @@ function toIsoDate(value: string | undefined): string | undefined {
 /** ISO-8601 duration ("PT80H30M0S") -> hours. */
 export function parseIsoDurationHours(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const match = /^P(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/.exec(
-    value.trim()
-  );
+  const match = /^P(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/.exec(value.trim());
   if (!match) return undefined;
   const [, days, hours, minutes, seconds] = match;
-  const total =
-    (Number(days ?? 0) * 24 + Number(hours ?? 0) + Number(minutes ?? 0) / 60 + Number(seconds ?? 0) / 3600) || 0;
+  const total = Number(days ?? 0) * 24 + Number(hours ?? 0) + Number(minutes ?? 0) / 60 + Number(seconds ?? 0) / 3600 || 0;
   return total > 0 ? Number(total.toFixed(2)) : 0;
 }
 

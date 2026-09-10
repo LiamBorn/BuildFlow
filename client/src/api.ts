@@ -13,12 +13,26 @@ import type {
   Job,
   Material,
   Project,
+  ProjectScheduleStatus,
   ScheduleAssignment,
   ScheduleVariance,
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
-  UpdateProjectInput
+  UpdateProjectInput,
+  PlanId,
+  OnboardingProductId,
+  User,
+  UserRole,
+  TeamInvite,
+  InvitePreview,
+  CrewClash,
+  WorkCalendarSetting,
+  CreateJobDependencyInput,
+  JobDependency,
+  RebookMove,
+  RebookResult,
+  WeeklyDigest
 } from "@buildflow/shared";
 
 const configuredApiBaseUrl =
@@ -34,9 +48,37 @@ function localDevApiBaseUrl() {
   return "";
 }
 
-function apiUrl(url: string) {
+/** This browser tab, for the live feed: a write carries it so the tab does not flash its own change back at itself. */
+export const CLIENT_ID = (() => {
+  const random = globalThis.crypto;
+  if (random && "randomUUID" in random) return random.randomUUID();
+  return `tab-${Math.random().toString(36).slice(2)}`;
+})();
+
+export function apiUrl(url: string) {
   if (/^https?:\/\//.test(url)) return url;
   return `${configuredApiBaseUrl || localDevApiBaseUrl()}${url}`;
+}
+
+/**
+ * A failed API call. `field` names the form input a validation message belongs
+ * under (server-side rules answer per field), `code` identifies specific cases
+ * the UI reacts to — e.g. "email_taken" offers "log in instead".
+ */
+export class ApiError extends Error {
+  status: number;
+  field?: string;
+  code?: string;
+  /** The response body, for errors that carry more than a message (a 409's clashes). */
+  details?: Record<string, unknown>;
+  constructor(message: string, status: number, field?: string, code?: string, details?: Record<string, unknown>) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.field = field;
+    this.code = code;
+    this.details = details;
+  }
 }
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -46,6 +88,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
       credentials: "include", // send/receive the bf_session auth cookie
       headers: {
         "Content-Type": "application/json",
+        "X-BuildFlow-Client": CLIENT_ID,
         ...options?.headers
       },
       ...options
@@ -54,13 +97,20 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     throw new Error(
       error instanceof Error && error.message
         ? `Could not reach the BuildFlow API: ${error.message}`
-        : "Could not reach the BuildFlow API."
+        : "Could not reach the BuildFlow API.",
+      { cause: error }
     );
   }
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error ?? `Request failed: ${response.status}`);
+    throw new ApiError(
+      body.error ?? `Request failed: ${response.status}`,
+      response.status,
+      typeof body.field === "string" ? body.field : undefined,
+      typeof body.code === "string" ? body.code : undefined,
+      body
+    );
   }
 
   if (response.status === 204) {
@@ -70,16 +120,140 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/** The authenticated JSON request helper, for feature modules with their own API surface (the schedule tool). */
+export const apiRequest = request;
+
 export function loadBootstrap() {
   return request<BootstrapPayload>("/api/bootstrap");
 }
 
 // ── Authentication ──────────────────────────────────────────────────────────
-export type Account = { id: string; orgId: string; email: string; name: string; role: string; createdAt: string };
+export type Account = {
+  id: string;
+  orgId: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+  /** Set once the person followed the confirmation link we emailed. */
+  emailVerifiedAt?: string | null;
+};
 export type Org = { id: string; name: string; plan: string; createdAt: string };
-export type AuthSession = { account: Account; org: Org };
+/** `demo` marks the shared demo login — a real signup is never demo. */
+export type AuthSession = { account: Account; org: Org; demo?: boolean };
 
-export function signup(input: { email: string; password: string; name: string; orgName?: string }) {
+/* ── team + invites ─────────────────────────────────────────────────────── */
+export type TeamPayload = { users: User[]; invites: TeamInvite[]; emailVerified: boolean; canManage?: boolean };
+export type InviteDraft = { email: string; role: UserRole };
+export type InviteResult = { email: string; status: "sent" | "held" | "skipped"; reason?: string };
+
+export function fetchTeam() {
+  return request<TeamPayload>("/api/team");
+}
+export function sendInvites(invites: InviteDraft[]) {
+  return request<{ results: InviteResult[]; invites: TeamInvite[]; emailVerified: boolean }>("/api/team/invites", {
+    method: "POST",
+    body: JSON.stringify({ invites })
+  });
+}
+export function resendInvite(id: string) {
+  return request<{ ok: true; invite: TeamInvite }>(`/api/team/invites/${encodeURIComponent(id)}/resend`, { method: "POST" });
+}
+export function revokeInvite(id: string) {
+  return request<void>(`/api/team/invites/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+/** Owner only: what a teammate is in the workspace. */
+export function updateTeamMemberRole(id: string, role: UserRole) {
+  return request<{ user: User }>(`/api/team/users/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ role }) });
+}
+export function removeSampleUser(id: string) {
+  return request<void>(`/api/team/users/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+/** What an invited person sees before accepting (public; the token is the credential). */
+export function fetchInvitePreview(token: string) {
+  return request<InvitePreview>(`/api/auth/invite/${encodeURIComponent(token)}`);
+}
+export function acceptInvite(input: { token: string; name: string; password: string; acceptTerms: true; remember?: boolean }) {
+  return request<AuthSession>("/api/auth/invite/accept", { method: "POST", body: JSON.stringify(input) });
+}
+/** Name and/or email. A new email drops verification and re-sends the link. */
+export function updateAccount(patch: { name?: string; email?: string }) {
+  return request<{ account: Account; verificationSent: boolean }>("/api/auth/account", { method: "PATCH", body: JSON.stringify(patch) });
+}
+/** Save one per-person setting on the server (tutorial progress today). */
+/** What changed this week: this Monday's plan snapshot against last week's. */
+export function fetchScheduleDigest() {
+  return request<WeeklyDigest>("/api/schedule/digest");
+}
+
+/** Email this week's digest to the org's planners now. */
+export function sendScheduleDigest() {
+  return request<{ ok: true; weekOf: string; recipients: number }>("/api/schedule/digest/send", { method: "POST" });
+}
+
+/** Loads the trade's starter workspace into an empty workspace, to explore with. */
+export function loadSampleData(businessType?: string) {
+  return request<{ ok: true; alreadyLoaded: boolean; projectIds: string[]; crewIds: string[] }>("/api/schedule/sample-data", {
+    method: "POST",
+    body: JSON.stringify(businessType ? { businessType } : {})
+  });
+}
+
+/** Takes the sample data out again. */
+export function removeSampleData() {
+  return request<{ ok: true; removed: number }>("/api/schedule/sample-data", { method: "DELETE" });
+}
+
+export function setUserSetting(key: string, value: string) {
+  return request<{ ok: true; key: string; value: string }>(`/api/me/settings/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    body: JSON.stringify({ value })
+  });
+}
+
+export function renameOrg(name: string) {
+  return request<{ org: Org }>("/api/org", { method: "PATCH", body: JSON.stringify({ name }) });
+}
+
+export type CheckoutStart = { configured: boolean; url?: string; reason?: string; message?: string };
+
+/**
+ * Start Stripe Checkout for a paid plan. `configured: false` is a normal
+ * answer (billing not connected yet) — the caller falls back to the trial.
+ */
+export function startCheckout(input: {
+  plan: "pro" | "business";
+  period: "monthly" | "yearly";
+  seats: number;
+  email?: string;
+  returnTo?: "plans" | "onboarding" | "settings";
+}) {
+  const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+  return request<CheckoutStart>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ ...input, origin }) });
+}
+
+/** Open Stripe's customer portal (invoices, payment method, cancel). `configured: false` when billing isn't connected. */
+export function openBillingPortal(input: { email?: string; returnTo?: "plans" | "settings" }) {
+  const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+  return request<{ configured: boolean; url?: string; message?: string }>("/api/billing/portal", {
+    method: "POST",
+    body: JSON.stringify({ ...input, origin })
+  });
+}
+
+export type SignupInput = {
+  email: string;
+  password: string;
+  name: string;
+  /** The company — it becomes the workspace, so it is required. */
+  orgName: string;
+  /** Explicit agreement to the Terms & Conditions and Privacy Policy. */
+  acceptTerms: true;
+  /** `false` gets a browser-session cookie, same as login. */
+  remember?: boolean;
+};
+
+export function signup(input: SignupInput) {
   return request<AuthSession>("/api/auth/signup", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -102,13 +276,50 @@ export function fetchSession() {
   return request<AuthSession>("/api/auth/me");
 }
 
+/* ── Sign in with Google / Microsoft ─────────────────────────────────────── */
+export type OAuthProvider = "google" | "microsoft";
+export function fetchOauthStatus() {
+  return request<{ providers: Record<OAuthProvider, boolean> }>("/api/auth/oauth/status");
+}
+/** Where the provider button sends the browser. A top-level navigation, so it is a URL, not a fetch. */
+export function oauthStartUrl(provider: OAuthProvider, opts: { mode: "signup" | "login"; acceptTerms?: boolean; remember?: boolean }) {
+  const params = new URLSearchParams({ mode: opts.mode, remember: opts.remember === false ? "0" : "1" });
+  if (opts.acceptTerms) params.set("terms", "1");
+  if (typeof window !== "undefined") params.set("returnTo", window.location.origin);
+  return apiUrl(`/api/auth/oauth/${provider}/start?${params.toString()}`);
+}
+
+/** Emails a reset link. Always resolves ok — the server never reveals whether the address has an account. */
+export function requestPasswordReset(email: string) {
+  return request<{ ok: true }>("/api/auth/reset/request", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+/** Sets a new password from an emailed link and signs the person in. */
+export function resetPassword(token: string, password: string) {
+  return request<AuthSession>("/api/auth/reset", { method: "POST", body: JSON.stringify({ token, password }) });
+}
+
+/** Re-sends the email confirmation link to the signed-in account. */
+export function requestEmailVerification() {
+  return request<{ ok: true; alreadyVerified?: boolean }>("/api/auth/verify/request", { method: "POST" });
+}
+
+/** Confirms the address from an emailed link. */
+export function verifyEmail(token: string) {
+  return request<{ ok: true; account: Account }>("/api/auth/verify", { method: "POST", body: JSON.stringify({ token }) });
+}
+
 // ── BuildFlow AI ────────────────────────────────────────────────────────────
 export type AiAskResult = { mode: "live" | "demo"; answer?: string };
 
 /** Ask BuildFlow AI. Returns {mode:"demo"} (no answer) when Claude isn't
     configured or on error, so the caller falls back to the built-in simulation. */
-export function askAi(question: string) {
-  return request<AiAskResult>("/api/ai/ask", { method: "POST", body: JSON.stringify({ question }) });
+export function askAi(question: string, businessType?: BusinessTypeId | "") {
+  return request<AiAskResult>("/api/ai/ask", {
+    method: "POST",
+    // the trade rides along so the answer uses the business's own vocabulary
+    body: JSON.stringify({ question, businessType: businessType || undefined })
+  });
 }
 
 /** Read uploaded schedule image(s) with Claude vision → a project/job plan.
@@ -118,33 +329,90 @@ export function importSchedule(images: string[]) {
   return request<ImportScheduleResult>("/api/ai/import-schedule", { method: "POST", body: JSON.stringify({ images }) });
 }
 
-export function applyBusinessProfile(businessType: BusinessTypeId) {
+export type WorkspaceSetupInput = {
+  businessType: BusinessTypeId;
+  selectedPlan?: PlanId;
+  selectedProducts?: OnboardingProductId[];
+  seats?: number;
+};
+
+/** Records the trade (and, at onboarding, the plan, add-ons and seats) on the org and returns the workspace. */
+export function applyBusinessProfile(input: BusinessTypeId | WorkspaceSetupInput) {
+  const body = typeof input === "string" ? { businessType: input } : input;
   return request<BootstrapPayload>("/api/business-profile", {
     method: "POST",
-    body: JSON.stringify({ businessType })
+    body: JSON.stringify(body)
   });
 }
 
-export function assignJob(input: { jobId: string; crewId: string; date: string; status?: Status }) {
+/** Books a crew-day. Without `force` the server answers 409 (code "conflict", `clashes`) when the crew is already booked that day. */
+export function assignJob(input: { jobId: string; crewId: string; date: string }, options: { force?: boolean } = {}) {
   return request<ScheduleAssignment>("/api/schedule/assign", {
     method: "POST",
-    body: JSON.stringify(input)
+    body: JSON.stringify({ ...input, force: options.force })
   });
 }
 
 export function updateScheduleAssignment(
   id: string,
-  input: Partial<Pick<ScheduleAssignment, "jobId" | "crewId" | "date" | "status">>
+  input: Partial<Pick<ScheduleAssignment, "jobId" | "crewId" | "date">>,
+  options: { force?: boolean } = {}
 ) {
   return request<ScheduleAssignment>(`/api/schedule/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify({ ...input, force: options.force })
   });
 }
 
+export type { CrewClash, RebookMove, RebookResult };
+
+/** Everything one drop touches, in one request and one transaction; the same 409 as assignJob when a crew would be double-booked. */
+export function rebookSchedule(moves: RebookMove[], options: { force?: boolean } = {}) {
+  return request<RebookResult>("/api/schedule/rebook", {
+    method: "POST",
+    body: JSON.stringify({ moves, force: options.force })
+  });
+}
+
+/* Drops one crew-day booking. The route answers 204 with no body, so this skips request()'s JSON parse. */
+export async function removeScheduleAssignment(id: string): Promise<void> {
+  const response = await fetch(apiUrl(`/api/schedule/${id}`), { method: "DELETE", credentials: "include" });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new ApiError(
+      body.error ?? `Request failed: ${response.status}`,
+      response.status,
+      typeof body.field === "string" ? body.field : undefined,
+      typeof body.code === "string" ? body.code : undefined,
+      body
+    );
+  }
+}
+
 /** Snapshot the current plan as the baseline that variance is measured against. */
+/** A dependency drawn on the Gantt; the server answers 409 (code self | duplicate | cycle) when the network refuses it. */
+export function createDependency(input: CreateJobDependencyInput) {
+  return request<JobDependency>("/api/schedule/dependencies", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function deleteDependency(id: string) {
+  return request<void>(`/api/schedule/dependencies/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function setScheduleBaseline() {
   return request<BootstrapPayload>("/api/schedule/baseline", { method: "POST" });
+}
+
+/** The working week and holidays (Settings › Work calendar). */
+export function fetchWorkCalendar() {
+  return request<WorkCalendarSetting>("/api/schedule/work-calendar");
+}
+export function saveWorkCalendar(input: WorkCalendarSetting) {
+  return request<WorkCalendarSetting>("/api/schedule/work-calendar", { method: "PUT", body: JSON.stringify(input) });
+}
+/** One calendar-feed link per crew, for a phone to subscribe to. */
+export function fetchCalendarFeeds() {
+  return request<{ crews: Array<{ id: string; name: string; url: string }> }>("/api/schedule/feeds");
 }
 
 export function updateJob(id: string, input: Partial<Job>) {
@@ -175,6 +443,7 @@ export function updateCrew(id: string, input: UpdateCrewInput) {
   });
 }
 
+/* Cascades to the crew's assignments — see store.deleteCrew(). */
 export function deleteCrew(id: string) {
   return request<void>(`/api/crews/${id}`, {
     method: "DELETE"
@@ -215,6 +484,12 @@ export function updateProject(id: string, input: UpdateProjectInput) {
   });
 }
 
+export function deleteProject(id: string) {
+  return request<void>(`/api/projects/${id}`, {
+    method: "DELETE"
+  });
+}
+
 export function createProject(input: CreateProjectInput) {
   return request<Project>("/api/projects", {
     method: "POST",
@@ -233,6 +508,59 @@ export function createFieldUpdate(input: Omit<FieldUpdate, "id" | "createdAt" | 
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+/**
+ * Correct a report. Same response shape as createFieldUpdate: an edited percent
+ * is re-priced into a fresh pending variance, which supersedes the open one on
+ * that job rather than queueing a second question for the PM.
+ */
+export function updateFieldUpdate(id: string, input: Omit<FieldUpdate, "id" | "createdAt" | "photos"> & { photos?: string[] }) {
+  return request<{ update: FieldUpdate; variance: ScheduleVariance | null }>(`/api/field-updates/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+/** Portfolio + per-project schedule position, with the week-over-week move. */
+export type ScheduleStatusProject = ProjectScheduleStatus & {
+  name: string;
+  /** null when there is no prior week stored yet — show nothing rather than a fake flat delta. */
+  daysAheadDelta: number | null;
+  percentDelta: number | null;
+};
+/**
+ * One week's portfolio reading, as the Dashboard trends it. The tile measures
+ * were added after the first weeks were captured, so they are null on those.
+ */
+export type ScheduleWeekReading = {
+  weekOf: string;
+  daysAhead: number;
+  percentComplete: number;
+  onTrackProjects: number | null;
+  projects: number | null;
+  crewUtilization: number | null;
+};
+export type ScheduleStatusResponse = {
+  asOf: string;
+  weekOf: string;
+  portfolio: {
+    daysAhead: number;
+    percentComplete: number;
+    projects: number;
+    behindProjects: number;
+    reportingJobs: number;
+    totalJobs: number;
+    daysAheadDelta: number | null;
+    percentDelta: number | null;
+  };
+  projects: ScheduleStatusProject[];
+  /** Weekly readings, oldest first and this week's included; absent from an older server. */
+  history?: ScheduleWeekReading[];
+};
+
+export function fetchScheduleStatus() {
+  return request<ScheduleStatusResponse>("/api/schedule/status");
 }
 
 export function fetchVariances(status?: ScheduleVariance["status"]) {
@@ -386,19 +714,13 @@ async function scheduleImportRequest<T>(url: string, input: ScheduleImportInput)
     });
   } catch (error) {
     throw new ScheduleImportRequestError(
-      error instanceof Error && error.message
-        ? `Could not reach the BuildFlow API: ${error.message}`
-        : "Could not reach the BuildFlow API."
+      error instanceof Error && error.message ? `Could not reach the BuildFlow API: ${error.message}` : "Could not reach the BuildFlow API."
     );
   }
 
   const payload = (await response.json().catch(() => ({}))) as { error?: string; hint?: string; code?: string };
   if (!response.ok) {
-    throw new ScheduleImportRequestError(
-      payload.error ?? `Request failed: ${response.status}`,
-      payload.hint,
-      payload.code
-    );
+    throw new ScheduleImportRequestError(payload.error ?? `Request failed: ${response.status}`, payload.hint, payload.code);
   }
   return payload as T;
 }
@@ -456,4 +778,202 @@ export function notifyDelayImpact(jobId: string) {
     method: "POST",
     body: JSON.stringify({ jobId })
   });
+}
+
+/* ── Sales contacts (the Sales hub's Contacts page) ───────────────────────────
+   Contacts are the shared backend's sales leads — the same rows the Sales &
+   Support Desk works from — so everyone in sales sees one list. */
+export type SalesLeadStatus = "New" | "Contacted" | "Qualified" | "Proposal" | "Won" | "Lost";
+export type SalesLead = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  teamSize: string;
+  interest: string;
+  status: SalesLeadStatus;
+  value: number;
+  owner: string;
+  source: string;
+  notes: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+};
+export type SalesActivity = {
+  id: string;
+  leadId: string;
+  type: "note" | "call" | "email" | "meeting" | "stage" | "text";
+  summary: string;
+  createdAt: string;
+};
+export type SalesTask = {
+  id: string;
+  leadId: string | null;
+  title: string;
+  dueAt: string;
+  done: number;
+  department: "sales" | "support";
+  createdAt: string;
+  assignee?: string;
+  priority?: string;
+  notes?: string;
+};
+export type SalesMeeting = {
+  id: string;
+  leadId: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  location: string;
+  agenda: string;
+  organizer: string;
+  /** "email", "email+sms", "sms" or "none" — how the client was notified. */
+  notifiedVia: string;
+  createdAt: string;
+};
+export type SalesCompany = {
+  id: string;
+  name: string;
+  domain: string;
+  industry: string;
+  phone: string;
+  city: string;
+  state: string;
+  owner: string;
+  notes: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+};
+export type SalesDealStage =
+  | "Appointment scheduled"
+  | "Qualified to buy"
+  | "Presentation scheduled"
+  | "Decision maker bought-in"
+  | "Contract sent"
+  | "Closed won"
+  | "Closed lost";
+export type SalesDeal = {
+  id: string;
+  name: string;
+  stage: SalesDealStage;
+  amount: number;
+  closeDate: string;
+  companyId: string | null;
+  leadId: string | null;
+  owner: string;
+  priority: string;
+  notes: string;
+  createdAt: string;
+  lastActivityAt: string | null;
+};
+export type SalesCompanyInput = Partial<Omit<SalesCompany, "id" | "createdAt" | "lastActivityAt">> & { name: string };
+export type SalesDealInput = Partial<Omit<SalesDeal, "id" | "createdAt" | "lastActivityAt">> & { name: string };
+export type SalesBootstrap = {
+  leads: SalesLead[];
+  tasks: SalesTask[];
+  activities: SalesActivity[];
+  meetings?: SalesMeeting[];
+  companies?: SalesCompany[];
+  deals?: SalesDeal[];
+};
+export type MailDelivery = { ok: boolean; mode: "log" | "ethereal" | "smtp"; previewUrl?: string };
+export type SmsDelivery = { ok: boolean; mode: "twilio" | "log" };
+export type SalesLeadInput = {
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  teamSize?: string;
+  interest?: string;
+  status?: SalesLeadStatus;
+  value?: number;
+  owner?: string;
+  source?: string;
+  notes?: string;
+};
+
+export function fetchSalesBootstrap() {
+  return request<SalesBootstrap>("/api/sales/bootstrap");
+}
+export function createSalesLead(input: SalesLeadInput) {
+  return request<SalesLead>("/api/sales/leads", { method: "POST", body: JSON.stringify(input) });
+}
+export function updateSalesLead(id: string, input: Partial<SalesLeadInput>) {
+  return request<SalesLead>(`/api/sales/leads/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+export function deleteSalesLead(id: string) {
+  return request<void>(`/api/sales/leads/${id}`, { method: "DELETE" });
+}
+export function createSalesActivity(input: { leadId: string; type: SalesActivity["type"]; summary: string }) {
+  return request<SalesActivity>("/api/sales/activities", { method: "POST", body: JSON.stringify(input) });
+}
+export function createSalesTask(input: {
+  leadId: string | null;
+  title: string;
+  dueAt: string;
+  assignee?: string;
+  priority?: "Low" | "Normal" | "High";
+  notes?: string;
+}) {
+  return request<SalesTask>("/api/sales/tasks", { method: "POST", body: JSON.stringify(input) });
+}
+export function updateSalesTask(id: string, input: { done?: boolean; title?: string; dueAt?: string }) {
+  return request<SalesTask>(`/api/sales/tasks/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+/* Contact record actions — each does the real thing on the server (mail /
+   SMS services, activity log) and returns what happened so the panel can say so. */
+export function sendContactEmail(id: string, input: { subject: string; body: string; from?: string }) {
+  return request<MailDelivery & { activity: SalesActivity }>(`/api/sales/leads/${id}/email`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+export function sendContactText(id: string, input: { body: string }) {
+  return request<SmsDelivery & { delivered: boolean; configured: boolean; activity: SalesActivity }>(`/api/sales/leads/${id}/text`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+export function logContactCall(id: string, input: { outcome: string; durationMinutes?: number; notes?: string }) {
+  return request<SalesActivity>(`/api/sales/leads/${id}/calls`, { method: "POST", body: JSON.stringify(input) });
+}
+export function scheduleContactMeeting(
+  id: string,
+  input: {
+    title: string;
+    startsAt: string;
+    endsAt: string;
+    location?: string;
+    agenda?: string;
+    organizer?: string;
+    notify?: boolean;
+    timeZone?: string;
+  }
+) {
+  return request<{ meeting: SalesMeeting; activity: SalesActivity; notification: { email: MailDelivery | null; sms: SmsDelivery | null } }>(
+    `/api/sales/leads/${id}/meetings`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+/* Companies + Deals — the Sales hub's other two pages. */
+export function createSalesCompany(input: SalesCompanyInput) {
+  return request<SalesCompany>("/api/sales/companies", { method: "POST", body: JSON.stringify(input) });
+}
+export function updateSalesCompany(id: string, input: Partial<SalesCompanyInput>) {
+  return request<SalesCompany>(`/api/sales/companies/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+export function deleteSalesCompany(id: string) {
+  return request<void>(`/api/sales/companies/${id}`, { method: "DELETE" });
+}
+export function createSalesDeal(input: SalesDealInput) {
+  return request<SalesDeal>("/api/sales/deals", { method: "POST", body: JSON.stringify(input) });
+}
+export function updateSalesDeal(id: string, input: Partial<SalesDealInput>) {
+  return request<SalesDeal>(`/api/sales/deals/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+export function deleteSalesDeal(id: string) {
+  return request<void>(`/api/sales/deals/${id}`, { method: "DELETE" });
 }

@@ -1,0 +1,5506 @@
+/*
+ * The Schedule category's one stylesheet: the landing and its six views (Week, List, Gantt Chart,
+ * Kanban, Month, Matrix), the status band, the job dialogs, the import dialog and the ported Gantt.
+ * Folded on 9 September 2026 from eleven sheets, kept in their old load order; the rules for phones
+ * live in schedule-phone.css, which loads right after this file.
+ */
+
+/* ============================== schedule-job-overrides.css ============================== */
+
+.schedule-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.32fr);
+  align-items: start;
+  overflow-x: visible;
+  padding-bottom: 0;
+}
+
+.schedule-board {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.schedule-side-rail {
+  grid-template-columns: 1fr;
+  min-width: 0;
+}
+
+.schedule-header,
+.crew-row {
+  grid-template-columns: clamp(112px, 11%, 150px) repeat(7, minmax(0, 1fr));
+}
+
+.schedule-cell {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 5px;
+}
+
+.schedule-cell.empty {
+  align-content: stretch;
+}
+
+.schedule-add-job-button {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 96px;
+  border: 1px dashed #cbd8e8;
+  border-radius: 8px;
+  background: #f5f6fe;
+  color: #6d7e95;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.schedule-add-job-button.compact {
+  grid-template-columns: auto auto;
+  min-height: 34px;
+  justify-content: center;
+  padding: 6px 8px;
+  background: #fff;
+}
+
+.schedule-add-job-button svg {
+  color: #2f6bff;
+}
+
+.schedule-add-job-button:hover,
+.schedule-add-job-button:focus-visible {
+  border-color: #2f6bff;
+  background: #eef0fd;
+  color: #1d4ed8;
+  outline: 0;
+}
+
+.schedule-job {
+  align-content: start;
+  height: auto;
+  overflow: visible;
+  gap: 5px;
+  padding: 8px 5px;
+}
+
+.schedule-job > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.schedule-job strong,
+.schedule-job span,
+.schedule-job em,
+.schedule-job p,
+.schedule-job footer span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.schedule-job footer {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 5px;
+  justify-content: flex-start;
+}
+
+.schedule-job .badge {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 23px;
+  padding-inline: 5px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.schedule-job strong {
+  font-size: 13px;
+  line-height: 1.17;
+}
+
+.schedule-job span,
+.schedule-job em,
+.schedule-job footer span {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.unassigned-card {
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  overflow: visible;
+}
+
+.unassigned-card .drag-grip {
+  grid-row: 1 / span 2;
+}
+
+.unassigned-card > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.unassigned-card strong,
+.unassigned-card em,
+.unassigned-card b {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.unassigned-card > .badge {
+  grid-column: 2;
+  justify-self: start;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.schedule-job-picker {
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100vh - 136px);
+  overflow-y: auto;
+}
+
+.schedule-job-picker h3 {
+  margin: 0;
+  color: #1f2d45;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.schedule-job-picker-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.schedule-job-create-form {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.schedule-job-create-form .form-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.schedule-job-create-form .form-field span {
+  color: #607089;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.schedule-job-create-form input,
+.schedule-job-create-form select,
+.schedule-job-create-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid #dbe4ee;
+  border-radius: 7px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #1f2d45;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.schedule-job-create-form textarea {
+  resize: vertical;
+}
+
+.schedule-job-create-form input:focus,
+.schedule-job-create-form select:focus,
+.schedule-job-create-form textarea:focus {
+  border-color: #2f6bff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: 0;
+}
+
+.schedule-job-create-form .form-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.schedule-job-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.schedule-job-create-actions .primary-button,
+.schedule-job-create-actions .outline-button {
+  min-width: 132px;
+}
+
+@media (max-width: 1500px) {
+  .schedule-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.3fr);
+  }
+
+  .schedule-side-rail {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1180px) {
+  .schedule-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-board {
+    min-width: 0;
+  }
+
+  .schedule-side-rail {
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .schedule-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-board {
+    min-width: 0;
+  }
+
+  .schedule-side-rail {
+    min-width: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-job-picker-content,
+  .schedule-job-create-form .form-grid-two {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-job-create-actions {
+    display: grid;
+  }
+}
+
+/* ============================== schedule-status.css ============================== */
+
+/* ============================================================================
+   schedule-status.css — the Schedule Status readout, used on three pages
+   ----------------------------------------------------------------------------
+   Dashboard renders the full `.ss-band`; Schedule and Reports render the
+   compact `.ss-strip`. Deliberately NOT scoped to a page's `-rx` class: Reports
+   is not one of the reskinned scopes and has no `--wx-*` tokens, so every token
+   here carries a fallback. Where a scope does define them (dash-rx, sched-rx)
+   the inherited value still wins.
+   ========================================================================== */
+
+/* ==========================================================================
+   Schedule Status band — the portfolio headline (Buildots-shaped)
+   One big "N days ahead/behind" with the week-over-week move, the three
+   supporting facts, and a per-project list carrying percent + forecast finish.
+   Uses the page's existing cc-* tokens so it reads as part of the command
+   center rather than a bolted-on widget.
+   ========================================================================== */
+.ss-band {
+  display: grid;
+  gap: 18px;
+  padding: 22px 24px 20px;
+  border: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+  border-radius: 18px;
+  background: var(--wx-card, #ffffff);
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+.ss-band:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 26px 52px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line, rgba(28, 28, 26, 0.13));
+}
+
+.ss-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ss-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wx-mut, #575550);
+}
+.ss-asof {
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--wx-faint, #8a877e);
+}
+
+/* the headline: the number is the hero, the trend sits beside it */
+.ss-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ss-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.ss-figure strong {
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(44px, 6vw, 64px);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--wx-ink, #1c1c1a);
+  font-variant-numeric: tabular-nums;
+}
+.ss-figure span {
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink, #1c1c1a);
+}
+.ss-band.is-behind .ss-figure strong,
+.ss-band.is-behind .ss-figure span {
+  color: var(--cc-red, #c5221f);
+}
+
+.ss-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+}
+.ss-delta.up {
+  background: var(--cc-green-soft, #e2f1e6);
+  color: var(--cc-green, #188038);
+}
+.ss-delta.down {
+  background: var(--cc-red-soft, #fbe4e2);
+  color: var(--cc-red, #c5221f);
+}
+.ss-delta.is-muted {
+  background: var(--wx-bg-2, #eaedf3);
+  color: var(--wx-faint, #8a877e);
+  font-weight: 500;
+}
+
+/* three supporting facts */
+.ss-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+}
+.ss-facts > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.ss-facts dt {
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wx-mut, #575550);
+}
+.ss-facts dd {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink, #1c1c1a);
+  font-variant-numeric: tabular-nums;
+}
+.ss-facts dd em {
+  font-style: normal;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wx-faint, #8a877e);
+}
+
+/* per-project rows: name, bar, percent, ±days, forecast finish */
+.ss-projects {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 14px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+}
+.ss-project {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(96px, 1.4fr) minmax(70px, 2fr) 44px 46px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.ss-project:hover {
+  background: var(--wx-bg-2, #eaedf3);
+}
+.ss-project-name {
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--wx-ink, #1c1c1a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss-project-track {
+  position: relative;
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--wx-bg-2, #eaedf3);
+  overflow: hidden;
+}
+.ss-project-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--ss-progress, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--wx-g-blue, #4285f4), var(--wx-g-purple, #9b72cb));
+}
+.ss-project-pct,
+.ss-project-days {
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.ss-project-pct {
+  color: var(--wx-ink, #1c1c1a);
+}
+.ss-project-days.ahead {
+  color: var(--cc-green, #188038);
+}
+.ss-project-days.behind {
+  color: var(--cc-red, #c5221f);
+}
+.ss-project-finish {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--cc-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--wx-faint, #8a877e);
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .ss-project {
+    grid-template-columns: 1fr 46px 46px;
+    row-gap: 6px;
+  }
+  .ss-project-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .ss-project-finish {
+    grid-column: 1 / -1;
+    order: 4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss-band {
+    transition-duration: 0.2s;
+  }
+}
+
+/* ---- Schedule Status strip (compact form of the dashboard band) ----
+   Same three numbers as the Dashboard's Schedule Status band, on one line, so
+   the board keeps its vertical space. Sits between the hero and the controls. */
+.ss-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px 22px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+  border-radius: 14px;
+  background: var(--wx-card, #ffffff);
+  box-shadow: 0 10px 26px rgba(28, 28, 26, 0.05);
+}
+.ss-strip-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--cc-sans, Inter, system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wx-mut, #575550);
+}
+.ss-strip-figure strong {
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--wx-ink, #1c1c1a);
+}
+.ss-strip.is-behind .ss-strip-figure strong {
+  color: #c5221f;
+}
+.ss-strip.is-ahead .ss-strip-figure strong {
+  color: #188038;
+}
+
+.ss-strip .ss-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-family: var(--cc-sans, Inter, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ss-strip .ss-delta.up {
+  background: #e2f1e6;
+  color: #188038;
+}
+.ss-strip .ss-delta.down {
+  background: #fbe4e2;
+  color: #c5221f;
+}
+
+.ss-strip-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--cc-sans, Inter, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--wx-ink, #1c1c1a);
+  font-variant-numeric: tabular-nums;
+}
+.ss-strip-fact em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wx-faint, #8a877e);
+}
+.ss-strip-finish {
+  margin-left: auto;
+}
+.ss-strip-finish svg {
+  color: var(--wx-faint, #8a877e);
+}
+
+@media (max-width: 900px) {
+  .ss-strip-finish {
+    margin-left: 0;
+  }
+}
+
+/* ============================== schedule-redesign.css ============================== */
+
+/* ============================================================================
+   schedule-redesign.css — "Antigravity" HUD (Schedule)
+   Re-skins the BuildFlow Crew Scheduling page to match the welcome page and the
+   redesigned dashboard: warm paper, serif display type, monochrome ink, soft
+   floating cards, scroll reveals, cursor parallax + KPI tilt.
+   Scoped entirely to `.sched-rx` so every other app page is untouched.
+   ========================================================================== */
+
+.sched-rx {
+  --wx-bg: #f5f6fa;
+  --wx-bg-2: #eaedf3;
+  --wx-ink: #1c1c1a;
+  --wx-mut: #575550;
+  --wx-faint: #6b6862; /* 5.5:1 on white — the lighter #8a877e was 3.6:1 and failed AA for text */
+  --wx-line: rgba(28, 28, 26, 0.13);
+  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-card: #ffffff;
+  --wx-blue: #2f6bff;
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+  --wx-green: #188038;
+  --wx-amber: #0032b0;
+  --wx-red: #c5221f;
+  --wx-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --cc-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --wx-radius: 20px;
+
+  position: relative;
+  margin: -22px -28px -34px;
+  padding: clamp(26px, 4.5vh, 52px) clamp(20px, 4vw, 56px) clamp(56px, 9vh, 100px);
+  min-height: calc(100vh - 87px);
+  background: var(--wx-bg);
+  color: var(--wx-ink);
+  overflow: clip;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================ background field ============================ */
+/* z-index -1 keeps the aurora behind the (non-positioned) content but above the
+   paper bg, so no wrapper/inner element is needed around the schedule content. */
+.sched-rx .dx-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.sched-rx .dx-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.55;
+  will-change: transform;
+}
+.sched-rx .dx-aurora-1 {
+  width: 42vw;
+  height: 42vw;
+  top: -18vw;
+  left: -12vw;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.12), transparent 62%);
+  transform: translate(calc(var(--px, 0) * 16px), calc(var(--py, 0) * 12px));
+}
+.sched-rx .dx-aurora-2 {
+  width: 38vw;
+  height: 38vw;
+  top: -12vw;
+  right: -12vw;
+  background: radial-gradient(circle, rgba(155, 114, 203, 0.1), transparent 62%);
+  transform: translate(calc(var(--px, 0) * -20px), calc(var(--py, 0) * 14px));
+}
+.sched-rx .dx-aurora-3 {
+  width: 50vw;
+  height: 50vw;
+  top: 44vw;
+  left: 32vw;
+  background: radial-gradient(circle, rgba(217, 101, 112, 0.07), transparent 60%);
+  transform: translate(calc(var(--px, 0) * 12px), calc(var(--py, 0) * -10px));
+}
+.sched-rx .dx-cursor {
+  position: fixed;
+  left: var(--mx, -400px);
+  top: var(--my, -400px);
+  width: 480px;
+  height: 480px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.05), transparent 62%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ---- scroll reveal (progressive enhancement) ---- */
+.sched-rx.dx-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.sched-rx.dx-ready [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
+.sched-rx.dx-ready [data-reveal-stagger] > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sched-rx.dx-ready [data-reveal-stagger].in > * {
+  opacity: 1;
+  transform: none;
+}
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1) {
+  transition-delay: 0.04s;
+}
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2) {
+  transition-delay: 0.12s;
+}
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3) {
+  transition-delay: 0.2s;
+}
+.sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4) {
+  transition-delay: 0.28s;
+}
+
+/* ============================ hero header =============================== */
+.sched-rx .schedule-title-row {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+.sched-rx .dx-hero {
+  max-width: 44ch;
+}
+.sched-rx .dx-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 15px 7px 12px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--wx-mut);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.sched-rx .dx-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--wx-blue);
+  box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.12);
+  animation: dx-pulse 2.6s ease-in-out infinite;
+}
+@keyframes dx-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.sched-rx .schedule-title-row h1,
+.sched-rx .dx-title {
+  margin: 18px 0 0;
+  font-family: var(--cc-sans);
+  font-size: clamp(27px, 3vw, 38px);
+  line-height: 1.05;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+  text-transform: none;
+}
+.sched-rx .dx-title em {
+  font-style: normal;
+  font-weight: 750;
+  background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.sched-rx .schedule-title-row p,
+.sched-rx .dx-sub {
+  margin: 18px 0 0;
+  max-width: 54ch;
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+
+/* ============================ control row =============================== */
+.sched-rx .schedule-control-row {
+  align-items: center;
+}
+.sched-rx .filter-strip {
+  gap: 12px;
+}
+
+/* selects */
+.sched-rx .schedule-select {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: none;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.sched-rx .schedule-select:hover {
+  border-color: rgba(28, 28, 26, 0.25);
+}
+.sched-rx .schedule-select label,
+.sched-rx .schedule-select span {
+  color: var(--wx-faint);
+}
+.sched-rx .schedule-select strong,
+.sched-rx .schedule-select select {
+  color: var(--wx-ink);
+}
+
+/* week stepper */
+.sched-rx .week-stepper {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: none;
+}
+.sched-rx .week-stepper strong {
+  color: var(--wx-ink);
+  font-weight: 600;
+}
+.sched-rx .week-stepper button {
+  color: var(--wx-mut);
+  background: transparent;
+}
+.sched-rx .week-stepper button:hover,
+.sched-rx .week-stepper button:focus-visible {
+  background: var(--wx-bg-2);
+  color: var(--wx-ink);
+}
+
+/* filters / outline button */
+.sched-rx .outline-button,
+.sched-rx .schedule-page .outline-button {
+  min-height: 44px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--wx-mut);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+.sched-rx .outline-button:hover,
+.sched-rx .outline-button.active {
+  background: var(--wx-ink);
+  color: #f9fafd;
+  border-color: var(--wx-ink);
+}
+
+/* ============================ filter panel ============================= */
+.sched-rx .schedule-filter-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+  animation: dx-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes dx-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sched-rx .schedule-filter-panel h2 {
+  font-family: var(--cc-sans);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.sched-rx .schedule-filter-panel p {
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.sched-rx .schedule-filter-panel header button {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--wx-mut);
+}
+.sched-rx .schedule-filter-panel header button:hover {
+  background: var(--wx-ink);
+  color: #f9fafd;
+  border-color: var(--wx-ink);
+}
+.sched-rx .schedule-filter-chips button {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 999px;
+  background: #ffffff;
+}
+.sched-rx .schedule-filter-chips button.active {
+  border-color: rgba(26, 115, 232, 0.4);
+  background: #e8f0fe;
+}
+
+/* ============================ shared card look ========================== */
+.sched-rx .kpi-card,
+.sched-rx .schedule-board,
+.sched-rx .schedule-side-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+}
+
+/* ============================ KPI cards ================================= */
+.sched-rx .schedule-kpis {
+  gap: 18px;
+}
+.sched-rx .dx-tilt {
+  perspective: 1000px;
+  display: flex;
+}
+.sched-rx .dx-tilt > * {
+  width: 100%;
+}
+.sched-rx .schedule-kpis .kpi-card {
+  min-height: 132px;
+  padding: 22px;
+  gap: 16px;
+  transform-style: preserve-3d;
+  transform: translateY(var(--lift, 0px)) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
+  transition:
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.34s ease,
+    border-color 0.34s ease;
+}
+.sched-rx .dx-tilt:hover .kpi-card {
+  --lift: -6px;
+  box-shadow: 0 30px 62px rgba(28, 28, 26, 0.14);
+  border-color: var(--wx-line);
+}
+.sched-rx .schedule-kpis .kpi-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--wx-bg-2);
+  color: var(--wx-ink);
+  box-shadow: inset 0 0 0 1px var(--wx-line-soft);
+  transform: translateZ(30px);
+}
+.sched-rx .schedule-kpis .kpi-icon svg {
+  width: 26px;
+  height: 26px;
+}
+.sched-rx .kpi-icon.orange {
+  background: #e9ecfd;
+  color: #0c40c2;
+}
+.sched-rx .kpi-icon.blue {
+  background: #e8f0fe;
+  color: var(--wx-blue);
+}
+.sched-rx .kpi-icon.yellow {
+  background: #d2defb;
+  color: #0733a1;
+}
+.sched-rx .kpi-icon.red {
+  background: #fbe4e2;
+  color: var(--wx-red);
+}
+.sched-rx .kpi-icon.green {
+  background: #e2f1e6;
+  color: var(--wx-green);
+}
+.sched-rx .kpi-icon.violet {
+  background: #efe8f8;
+  color: #6d28d9;
+}
+.sched-rx .schedule-kpis .kpi-card p {
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  text-transform: none;
+}
+.sched-rx .schedule-kpis .kpi-card strong {
+  margin: 8px 0 6px;
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 34px;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .schedule-kpis .kpi-card span:not(.kpi-icon) {
+  color: var(--wx-faint);
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-transform: none;
+}
+
+/* ============================ board ==================================== */
+.sched-rx .schedule-layout {
+  gap: 22px;
+}
+.sched-rx .schedule-board {
+  overflow: hidden;
+}
+.sched-rx .schedule-header {
+  background: #ffffff;
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .schedule-header > span,
+.sched-rx .schedule-header strong {
+  border-left: 1px solid var(--wx-line-soft);
+}
+.sched-rx .schedule-header > span {
+  border-left: 0;
+  color: var(--wx-mut);
+  font-weight: 700;
+}
+.sched-rx .schedule-header strong {
+  color: var(--wx-ink);
+  font-weight: 700;
+}
+.sched-rx .schedule-header em {
+  color: var(--wx-faint);
+}
+.sched-rx .crew-row {
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .crew-label {
+  border-right: 1px solid var(--wx-line-soft);
+}
+.sched-rx .crew-label strong {
+  color: var(--wx-ink);
+  font-weight: 600;
+}
+.sched-rx .crew-label span {
+  color: var(--wx-faint);
+}
+.sched-rx .crew-label em {
+  color: var(--wx-blue);
+  font-weight: 700;
+}
+.sched-rx .schedule-cell {
+  border-right: 1px solid var(--wx-line-soft);
+  background: transparent;
+}
+.sched-rx .schedule-cell.over {
+  box-shadow: inset 0 0 0 2px var(--wx-blue);
+  background: #e8f0fe;
+}
+.sched-rx .schedule-add-job-button {
+  color: var(--wx-faint);
+  border-radius: 12px;
+}
+.sched-rx .schedule-add-job-button:hover,
+.sched-rx .schedule-add-job-button:focus-visible {
+  color: var(--wx-blue);
+  background: var(--wx-bg-2);
+}
+
+/* job cards — soft paper status tints */
+.sched-rx .schedule-job {
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.05);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.sched-rx .schedule-job:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(28, 28, 26, 0.12);
+}
+.sched-rx .schedule-job.confirmed,
+.sched-rx .schedule-job.on-site,
+.sched-rx .schedule-job.complete {
+  border-color: #b7ddc2;
+  background: #eef7f0;
+}
+.sched-rx .schedule-job.ready,
+.sched-rx .schedule-job.ready-to-start {
+  border-color: #9ab1ec;
+  background: #e3eafb;
+}
+.sched-rx .schedule-job.delayIQed,
+.sched-rx .schedule-job.at-risk {
+  border-color: #eeb4b1;
+  background: #fbeceb;
+}
+.sched-rx .schedule-job.in-progress {
+  border-color: #b3ccf5;
+  background: #eaf1fd;
+}
+.sched-rx .schedule-job.planned {
+  border-color: var(--wx-line);
+  background: #ffffff;
+}
+.sched-rx .schedule-job strong {
+  color: var(--wx-ink);
+  font-weight: 700;
+}
+.sched-rx .schedule-job span,
+.sched-rx .schedule-job em,
+.sched-rx .schedule-job footer span {
+  color: var(--wx-mut);
+}
+.sched-rx .schedule-job p {
+  color: var(--wx-red);
+}
+.sched-rx .schedule-job.focused,
+.sched-rx .unassigned-card.focused,
+.sched-rx .schedule-list-view button.focused {
+  box-shadow: inset 0 0 0 2px var(--wx-blue);
+}
+
+/* board footer */
+.sched-rx .schedule-board-footer {
+  background: #ffffff;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.sched-rx .schedule-legend {
+  color: var(--wx-faint);
+  font-size: 13px;
+}
+.sched-rx .schedule-legend .confirmed {
+  background: var(--wx-green);
+}
+.sched-rx .schedule-legend .ready {
+  background: #003dd9;
+}
+.sched-rx .schedule-legend .delayIQed {
+  background: var(--wx-red);
+}
+.sched-rx .schedule-legend .in-progress {
+  background: var(--wx-blue);
+}
+.sched-rx .schedule-legend .planned {
+  background: var(--wx-faint);
+}
+.sched-rx .export-button,
+.sched-rx .schedule-board-footer .export-button {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--wx-mut);
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+.sched-rx .export-button:hover:not(:disabled),
+.sched-rx .schedule-board-footer .export-button:hover:not(:disabled) {
+  background: var(--wx-ink);
+  color: #f9fafd;
+  border-color: var(--wx-ink);
+}
+
+/* list view */
+.sched-rx .schedule-list-view header {
+  background: #ffffff;
+  border-bottom: 1px solid var(--wx-line-soft);
+  color: var(--wx-faint);
+}
+.sched-rx .schedule-list-view button {
+  border-bottom: 1px solid var(--wx-line-soft);
+  background: transparent;
+}
+.sched-rx .schedule-list-view button:hover {
+  background: var(--wx-bg-2);
+  box-shadow: inset 0 0 0 2px var(--wx-blue);
+}
+.sched-rx .schedule-list-view strong {
+  color: var(--wx-ink);
+}
+.sched-rx .schedule-list-view em {
+  color: var(--wx-faint);
+}
+
+/* empty states */
+.sched-rx .schedule-empty-state,
+.sched-rx .schedule-list-empty {
+  color: var(--wx-mut);
+}
+.sched-rx .schedule-empty-state strong,
+.sched-rx .schedule-list-empty strong {
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ============================ side rail =============================== */
+.sched-rx .side-stack {
+  gap: 22px;
+}
+.sched-rx .schedule-side-panel {
+  overflow: hidden;
+}
+.sched-rx .schedule-panel-header {
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .schedule-panel-header h2 {
+  font-family: var(--cc-sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--wx-ink);
+}
+.sched-rx .schedule-panel-header > span {
+  background: #e8f0fe;
+  color: var(--wx-blue);
+  font-weight: 700;
+}
+
+/* unassigned job cards */
+.sched-rx .unassigned-card {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.04);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.sched-rx .unassigned-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(28, 28, 26, 0.1);
+}
+.sched-rx .unassigned-card.ready,
+.sched-rx .unassigned-card.ready-to-start {
+  border-color: #9ab1ec;
+  background: #e3eafb;
+}
+.sched-rx .unassigned-card.delayIQed,
+.sched-rx .unassigned-card.at-risk {
+  border-color: #eeb4b1;
+  background: #fbeceb;
+}
+.sched-rx .unassigned-card strong {
+  color: var(--wx-ink);
+  font-weight: 700;
+}
+.sched-rx .unassigned-card em,
+.sched-rx .unassigned-card b {
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.sched-rx .drag-grip {
+  color: var(--wx-faint);
+}
+.sched-rx .helper-text {
+  color: var(--wx-faint);
+}
+
+/* alerts */
+
+/* ============================ badges =================================== */
+.sched-rx .badge {
+  border-radius: 999px;
+  background: #ebedfb;
+  color: var(--wx-mut);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+}
+.sched-rx .badge.confirmed,
+.sched-rx .badge.on-site,
+.sched-rx .badge.ready,
+.sched-rx .badge.complete,
+.sched-rx .badge.available,
+.sched-rx .badge.scheduled,
+.sched-rx .badge.upcoming {
+  background: #e2f1e6;
+  color: var(--wx-green);
+}
+.sched-rx .badge.ready-to-start,
+.sched-rx .badge.planned,
+.sched-rx .badge.medium,
+.sched-rx .badge.monitor,
+.sched-rx .badge.ordered,
+.sched-rx .badge.waiting-on-delivery {
+  background: #d2defb;
+  color: var(--wx-amber);
+}
+.sched-rx .badge.delayIQed,
+.sched-rx .badge.high,
+.sched-rx .badge.maintenance,
+.sched-rx .badge.missing,
+.sched-rx .badge.at-risk,
+.sched-rx .badge.open,
+.sched-rx .badge.overbooked {
+  background: #fbe4e2;
+  color: var(--wx-red);
+}
+
+/* ============================ page footer ============================= */
+.sched-rx .schedule-page-footer {
+  color: var(--wx-faint);
+  border-top: 1px solid var(--wx-line-soft);
+}
+.sched-rx .schedule-page-footer button {
+  color: var(--wx-mut);
+}
+.sched-rx .schedule-page-footer button:hover {
+  color: var(--wx-ink);
+}
+
+/* ============================ dialogs ================================= */
+.sched-rx .schedule-dialog {
+  border-radius: var(--wx-radius);
+  background: var(--wx-card);
+  border: 1px solid var(--wx-line-soft);
+  box-shadow: 0 40px 90px rgba(28, 28, 26, 0.28);
+}
+.sched-rx .schedule-dialog h2 {
+  font-family: var(--cc-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+
+/* ============================ responsive ============================= */
+@media (max-width: 1080px) {
+  .sched-rx .schedule-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .sched-rx {
+    padding: 24px clamp(14px, 4vw, 24px) 56px;
+  }
+  .sched-rx .schedule-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================ reduced motion ========================= */
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .dx-dot {
+    animation: none;
+  }
+  .sched-rx.dx-ready [data-reveal],
+  .sched-rx.dx-ready [data-reveal-stagger] > * {
+    transition-duration: 0.3s;
+  }
+  .sched-rx .schedule-kpis .kpi-card,
+  .sched-rx .schedule-job,
+  .sched-rx .unassigned-card {
+    transition-duration: 0.2s;
+  }
+  .sched-rx .dx-aurora {
+    transform: none !important;
+  }
+}
+
+/* ============================ drop notices + undo ===================== */
+/* The notice a drop leaves behind (shared with the Schedule sub-pages) and its
+   Undo; a card whose move is still being saved pulses until the server answers. */
+.sched-rx .gantt-status {
+  margin: 12px 18px 0;
+  color: var(--wx-mut);
+  font: 600 12.5px var(--cc-sans);
+}
+.sched-rx .gantt-status.is-error {
+  color: var(--wx-red);
+}
+.gantt-status .sched-undo {
+  margin-left: 10px;
+  padding: 3px 11px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.gantt-status .sched-undo:hover,
+.gantt-status .sched-undo:focus-visible {
+  background: rgba(47, 107, 255, 0.08);
+}
+.gantt-status .sched-undo:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.sched-rx .schedule-job.is-pending,
+.sched-rx .sched-act.is-pending,
+.sched-rx .sched-kan-card.is-pending,
+.sched-rx .schedule-list-view button.is-pending {
+  opacity: 0.5;
+  pointer-events: none;
+  animation: sched-pending 0.9s ease-in-out infinite alternate;
+}
+@keyframes sched-pending {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 0.8;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .is-pending {
+    animation: none;
+  }
+}
+
+/* ============================ filters on every page ================== */
+/* The same row on all seven pages: project, crew type, crew, region, the status set,
+   and a chip per active filter. */
+.sched-filters {
+  display: grid;
+  gap: 10px;
+  margin: -6px 0 18px;
+}
+.sched-filters .filter-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.sched-filters .outline-button em {
+  margin-left: 6px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--wx-mut);
+}
+.sched-filters-clear {
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  color: #2f6bff;
+  font: 600 13px var(--cc-sans);
+  cursor: pointer;
+}
+.sched-filters-clear:hover {
+  text-decoration: underline;
+}
+.sched-filters .schedule-filter-panel {
+  margin: 0;
+}
+.sched-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sched-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 12px;
+  border: 1px solid rgba(47, 107, 255, 0.35);
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: #1a3f9e;
+  font: 600 12.5px var(--cc-sans);
+  cursor: pointer;
+}
+.sched-chip:hover {
+  background: #d9e6ff;
+}
+.sched-filters-note {
+  margin: 0;
+  color: var(--wx-faint);
+  font: 500 12.5px var(--cc-sans);
+}
+
+/* ============================ the Schedule landing =================== */
+/* Status, alerts, variances and the queue in one place; a card per view opens its page. */
+.sched-rx .sched-home-main {
+  display: grid;
+  gap: 22px;
+  align-content: start;
+  min-width: 0;
+}
+.sched-rx .sched-views {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.sched-rx .sched-view-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 3px 12px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 16px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+.sched-rx .sched-view-card:hover,
+.sched-rx .sched-view-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(28, 28, 26, 0.1);
+  border-color: rgba(47, 107, 255, 0.4);
+}
+.sched-rx .sched-view-ico {
+  grid-row: span 3;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.sched-rx .sched-view-ico svg {
+  width: 20px;
+  height: 20px;
+}
+.sched-rx .sched-view-card strong {
+  font: 700 15px var(--cc-sans);
+  color: var(--wx-ink);
+}
+.sched-rx .sched-view-card span {
+  font: 500 12.5px var(--cc-sans);
+  color: var(--wx-faint);
+}
+.sched-rx .sched-view-card b {
+  font: 600 13px var(--cc-sans);
+  color: var(--wx-mut);
+}
+.sched-rx .sched-home-section {
+  padding: 18px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: #fff;
+}
+.sched-rx .sched-home-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.sched-rx .sched-home-section h2 {
+  margin: 0;
+  font: 700 15px var(--cc-sans);
+  color: var(--wx-ink);
+}
+.sched-rx .sched-home-section > header span {
+  font: 600 12.5px var(--cc-sans);
+  color: var(--wx-faint);
+}
+.sched-rx .sched-queue {
+  display: grid;
+  gap: 8px;
+}
+.sched-rx .sched-queue-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 12px;
+  background: #f7f8fb;
+}
+.sched-rx .sched-queue-row strong {
+  display: block;
+  font: 700 13.5px var(--cc-sans);
+  color: var(--wx-ink);
+}
+.sched-rx .sched-queue-row > span {
+  font: 500 12px var(--cc-sans);
+  color: var(--wx-faint);
+}
+.sched-rx .sched-book {
+  padding: 5px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: #2f6bff;
+  font: 600 12.5px var(--cc-sans);
+  cursor: pointer;
+}
+.sched-rx .sched-book:hover {
+  background: #e8f0fe;
+}
+@media (max-width: 1100px) {
+  .sched-rx .sched-views {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .sched-rx .sched-views {
+    grid-template-columns: 1fr;
+  }
+  .sched-rx .sched-queue-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .sched-rx .sched-queue-row .badge {
+    display: none;
+  }
+}
+
+/* "Book anyway?" — the question a double-booking turns into */
+.sched-rx .sched-ask ul {
+  margin: 0 0 4px;
+  padding-left: 18px;
+  color: var(--wx-mut);
+  font: 500 13px var(--cc-sans);
+}
+.sched-rx .sched-ask-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* ============================ the export menu ========================= */
+.sched-export {
+  position: relative;
+  display: inline-block;
+}
+.sched-export > button svg:last-child {
+  margin-left: 2px;
+  opacity: 0.7;
+}
+.sched-export-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  display: grid;
+  gap: 2px;
+  min-width: 250px;
+  padding: 6px;
+  border: 1px solid #e6e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(20, 32, 58, 0.14);
+}
+.sched-export-menu button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #14203a;
+  font: 600 13px var(--cc-sans, Inter, system-ui, sans-serif);
+  text-align: left;
+  cursor: pointer;
+}
+.sched-export-menu button em {
+  grid-column: 2;
+  font: 500 11.5px var(--cc-sans, Inter, system-ui, sans-serif);
+  font-style: normal;
+  color: #8a92a6;
+}
+.sched-export-menu button:hover,
+.sched-export-menu button:focus-visible {
+  background: #f2f5fb;
+}
+.sched-export-menu button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sched-feed-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.sched-feed-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #e6e8f0;
+  border-radius: 10px;
+}
+.sched-feed-row strong {
+  display: block;
+  font: 700 13.5px var(--cc-sans, Inter, system-ui, sans-serif);
+}
+.sched-feed-url {
+  display: block;
+  font:
+    11.5px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: #575550;
+  overflow-wrap: anywhere;
+}
+.sched-feeds {
+  max-width: 640px;
+}
+
+/* ── live updates: a card another planner just changed (schedule/live.ts) ── */
+.sched-rx .is-live {
+  position: relative;
+  outline: 2px solid var(--wx-blue);
+  outline-offset: 1px;
+  animation: sched-live-flash 6s ease-out both;
+}
+.sched-rx .sched-live-by {
+  position: absolute;
+  top: -9px;
+  right: 8px;
+  z-index: 2;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--wx-blue);
+  color: #fff;
+  font: 600 10.5px/1.5 var(--cc-sans);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes sched-live-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.45);
+    background-color: rgba(47, 107, 255, 0.14);
+  }
+  60% {
+    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .is-live {
+    animation: none;
+  }
+}
+
+/* ── the view cards' keys: 1–6 open a view from anywhere in Schedule (schedule/viewKeys.ts) ── */
+.sched-rx .sched-view-card {
+  position: relative;
+}
+.sched-rx .sched-view-key {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-width: 18px;
+  padding: 2px 6px;
+  border: 1px solid var(--wx-line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--wx-bg);
+  color: var(--wx-mut);
+  font:
+    600 11px/1.2 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  text-align: center;
+}
+
+/* ── the status band with nothing to compare yet (the Schedule landing keeps its place) ── */
+.sched-rx .ss-strip.ss-empty {
+  color: var(--wx-mut);
+  font-size: 13px;
+}
+
+/* ── saved views: pinned filter sets under the filter row (schedule/SavedViewsBar.tsx) ── */
+.sched-rx .sched-views-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 2px;
+  font: 500 12.5px/1.3 var(--cc-sans);
+  color: var(--wx-mut);
+}
+.sched-rx .sched-views-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.sched-rx .sched-views-empty {
+  color: var(--wx-faint);
+}
+.sched-rx .sched-view-chip {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: var(--wx-card);
+  overflow: hidden;
+}
+.sched-rx .sched-view-chip.is-active {
+  border-color: var(--wx-blue);
+  background: rgba(47, 107, 255, 0.1);
+  color: var(--wx-blue);
+}
+.sched-rx .sched-view-chip button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.sched-rx .sched-view-chip button + button {
+  padding: 4px 8px 4px 2px;
+  color: var(--wx-faint);
+}
+.sched-rx .sched-view-chip button + button:hover {
+  color: var(--wx-red);
+}
+.sched-rx .sched-views-add {
+  border: 1px dashed var(--wx-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wx-mut);
+  font: inherit;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.sched-rx .sched-views-add:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.sched-rx .sched-views-form {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.sched-rx .sched-views-form input {
+  border: 1px solid var(--wx-line);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--wx-ink);
+  background: var(--wx-card);
+  min-width: 180px;
+}
+.sched-rx .sched-views-form button {
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: var(--wx-card);
+  font: inherit;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.sched-rx .sched-views-form button[type="submit"] {
+  background: var(--wx-blue);
+  border-color: var(--wx-blue);
+  color: #fff;
+}
+.sched-rx .sched-views-form button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* the same views in the Schedule flyout */
+.hs-flyout .hs-flyout-views {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.hs-flyout .hs-flyout-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+.hs-flyout .hs-flyout-view em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* ── what changed this week (schedule/WeeklyDigest.tsx) ── */
+.sched-rx .sched-digest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.sched-rx .sched-digest-list li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--wx-blue);
+  border-radius: 6px;
+  background: var(--wx-bg);
+  font: 500 13px/1.4 var(--cc-sans);
+  color: var(--wx-ink);
+}
+.sched-rx .sched-digest-list li em {
+  font-style: normal;
+  color: var(--wx-mut);
+  font-size: 12px;
+}
+.sched-rx .sched-digest-list li.tone-red {
+  border-left-color: var(--wx-red);
+}
+.sched-rx .sched-digest-list li.tone-amber {
+  border-left-color: #b45309;
+}
+.sched-rx .sched-digest-list li.tone-green {
+  border-left-color: var(--wx-green);
+}
+.sched-rx .sched-digest-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font: 500 12px/1.4 var(--cc-sans);
+  color: var(--wx-faint);
+}
+.sched-rx .sched-digest-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── at scale: a lane's "show more", a placeholder crew row, the Gantt's cap note (P3.5) ── */
+.sched-rx .sched-kan-more {
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 10px;
+  border: 1px dashed var(--wx-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--wx-mut);
+  font: 600 12px/1.2 var(--cc-sans);
+  cursor: pointer;
+}
+.sched-rx .sched-kan-more:hover {
+  border-color: var(--wx-blue);
+  color: var(--wx-blue);
+}
+.sched-rx .crew-row.is-lazy {
+  min-height: 84px;
+}
+/* a lazy row's single placeholder stands in for all seven days */
+.sched-rx .crew-row .schedule-cell.is-week {
+  grid-column: 2 / -1;
+}
+.sched-rx .crew-row.is-lazy .schedule-cell {
+  background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(28, 28, 26, 0.03) 10px 20px);
+}
+.gantt-page .gantt-cap-note {
+  margin-bottom: 8px;
+}
+
+/* ── first run: from an empty workspace to a booked week (schedule/FirstRun.tsx) ── */
+.sched-rx .sched-firstrun-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.sched-rx .sched-firstrun-steps li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--wx-bg);
+  font: 500 13px/1.45 var(--cc-sans);
+  color: var(--wx-ink);
+}
+.sched-rx .sched-firstrun-steps li.is-done {
+  opacity: 0.75;
+}
+.sched-rx .sched-firstrun-steps li > div {
+  display: grid;
+  gap: 6px;
+}
+.sched-rx .sched-firstrun-steps em {
+  font-style: normal;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-firstrun-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--wx-card);
+  border: 1px solid var(--wx-line);
+  font: 700 12px/1 var(--cc-sans);
+  color: var(--wx-mut);
+}
+.sched-rx .sched-firstrun-mark.is-done {
+  background: var(--wx-green);
+  border-color: var(--wx-green);
+  color: #fff;
+}
+.sched-rx .sched-firstrun-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.sched-rx .sched-firstrun-form input,
+.sched-rx .sched-firstrun-form select {
+  border: 1px solid var(--wx-line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font: inherit;
+  color: var(--wx-ink);
+  background: var(--wx-card);
+  min-width: 150px;
+}
+.sched-rx .sched-firstrun-form button,
+.sched-rx .sched-firstrun-actions .sched-book {
+  border: 1px solid var(--wx-blue);
+  border-radius: 999px;
+  background: var(--wx-blue);
+  color: #fff;
+  font: 600 12.5px/1.2 var(--cc-sans);
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.sched-rx .sched-firstrun-form button:disabled,
+.sched-rx .sched-firstrun-actions .sched-book:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.sched-rx .sched-firstrun-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.sched-rx .sched-firstrun-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font: 500 12px/1.4 var(--cc-sans);
+  color: var(--wx-faint);
+}
+.sched-rx .sched-firstrun.is-sample header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── the Matrix's detail, readable without a mouse: the cell's name for assistive tech, a tooltip on hover and keyboard focus ── */
+.sched-rx .sched-matrix-cell {
+  position: relative;
+}
+.sched-rx .sched-matrix-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  z-index: 5;
+  max-width: 240px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--wx-ink);
+  color: #fff;
+  font: 500 12px/1.35 var(--cc-sans);
+  text-align: left;
+  white-space: normal;
+  width: max-content;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    visibility 0.12s ease;
+}
+.sched-rx .sched-matrix-cell:hover .sched-matrix-tip,
+.sched-rx .sched-matrix-cell:focus-visible .sched-matrix-tip {
+  opacity: 1;
+  visibility: visible;
+}
+.sched-rx .sched-matrix-cell:focus-visible {
+  outline: 2px solid var(--wx-blue);
+  outline-offset: 1px;
+  z-index: 4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .sched-matrix-tip {
+    transition: none;
+  }
+}
+/* the grid clipped its own tooltips: rounded corners without overflow: hidden (phones keep their own scrolling rule) */
+.sched-rx .sched-matrix.sched-matrix {
+  overflow: visible;
+}
+.sched-rx .sched-matrix.sched-matrix .sched-matrix-head {
+  border-radius: 16px 16px 0 0;
+}
+
+/* ============================== schedule-calendar.css ============================== */
+
+/* ============================================================================
+   schedule-calendar.css — BuildFlow Schedule redesign
+   Adds a month calendar layout, a Month/Week/List segmented switch, a
+   crew-availability + upcoming-milestones rail, and a trade legend — all in the
+   AI Command Center design language (white cards, --wx-* tokens, soft shadows).
+   Scoped to `.sched-rx`; reuses the existing data-reveal / dx-tilt motion so
+   every current animation keeps running. New calendar cells get their own
+   pure-CSS entrance so switching views still animates (the IntersectionObserver
+   in useHudMotion only scans once on mount).
+   ========================================================================== */
+
+.sched-rx {
+  /* trade palette — mirrors the dashboard cc-* tones, keyed to the legend */
+  --sc-concrete: #2f6bff;
+  --sc-framing: #c2410c;
+  --sc-mep: #6d28d9;
+  --sc-finishes: #188038;
+  --sc-sitework: #0e7490;
+  --sc-inspections: #b0338c;
+  --sc-milestone: #c5221f;
+  --sc-holiday: #8a877e;
+}
+
+/* ============================ view segmented switch ==================== */
+
+/* + New Activity */
+.sched-rx .sched-new-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--sc-concrete);
+  border-radius: 11px;
+  padding: 9px 16px;
+  background: var(--sc-concrete);
+  color: #fff;
+  font-family: var(--cc-sans, Inter, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(47, 107, 255, 0.28);
+  transition:
+    transform 0.16s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.sched-rx .sched-new-activity:hover {
+  background: #245ae0;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(47, 107, 255, 0.34);
+}
+.sched-rx .sched-new-activity:active {
+  transform: scale(0.98);
+}
+.sched-rx .sched-new-activity svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* month stepper (‹ May 2026 ›) + Today */
+.sched-rx .sched-monthbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.sched-rx .sched-monthnav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.sched-rx .sched-monthnav .sched-icon-btn,
+.sched-rx .sched-today-btn {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--wx-line);
+  border-radius: 10px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.16s ease;
+}
+.sched-rx .sched-monthnav .sched-icon-btn {
+  width: 36px;
+  height: 36px;
+}
+.sched-rx .sched-today-btn {
+  padding: 0 16px;
+  height: 36px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sched-rx .sched-monthnav .sched-icon-btn:hover,
+.sched-rx .sched-today-btn:hover {
+  background: var(--wx-bg-2);
+  border-color: var(--wx-line);
+}
+.sched-rx .sched-today-btn:active {
+  transform: scale(0.97);
+}
+.sched-rx .sched-month-title {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+  min-width: 168px;
+  text-align: center;
+}
+
+/* ============================ month calendar ========================== */
+.sched-rx .sched-cal {
+  width: 100%;
+}
+.sched-rx .sched-cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--wx-line-soft);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  background: var(--wx-bg-2);
+}
+.sched-rx .sched-cal-dow span {
+  padding: 11px 12px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  background: var(--wx-line-soft);
+  gap: 1px;
+}
+.sched-rx .sched-cal-cell {
+  position: relative;
+  min-height: 116px;
+  padding: 8px 8px 10px;
+  background: var(--wx-card);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: schedCellIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--d, 0) * 55ms);
+}
+@keyframes schedCellIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sched-rx .sched-cal-cell.out-month {
+  background: color-mix(in srgb, var(--wx-bg-2) 55%, var(--wx-card));
+}
+.sched-rx .sched-cal-cell.out-month .sched-cal-daynum {
+  color: var(--wx-faint);
+}
+.sched-rx .sched-cal-cell.is-weekend {
+  background: color-mix(in srgb, var(--wx-bg-2) 30%, var(--wx-card));
+}
+.sched-rx .sched-cal-cell.is-holiday {
+  background: color-mix(in srgb, var(--sc-holiday) 9%, var(--wx-card));
+}
+.sched-rx .sched-cal-daynum {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  align-self: flex-start;
+  min-width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-cal-cell.is-today .sched-cal-daynum {
+  background: var(--sc-concrete);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
+}
+.sched-rx .sched-holiday-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--sc-holiday);
+  margin-top: -2px;
+}
+
+/* Click-to-add: an in-month day is a target for a new job (Week board parity).
+   The whole empty area is clickable; this "+" is the discoverable hint. */
+.sched-rx .sched-cal-cell.is-addable {
+  cursor: pointer;
+}
+.sched-rx .sched-cal-add {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--wx-line, #d7dbe2);
+  border-radius: 7px;
+  background: var(--wx-card, #fff);
+  color: var(--wx-blue, #2f6bff);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease;
+}
+.sched-rx .sched-cal-cell:hover .sched-cal-add,
+.sched-rx .sched-cal-add:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+.sched-rx .sched-cal-add:hover {
+  background: var(--wx-blue, #2f6bff);
+  border-color: var(--wx-blue, #2f6bff);
+  color: #fff;
+}
+
+/* activity chips */
+.sched-rx .sched-act {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 11%, var(--wx-card));
+  cursor: pointer;
+  transition:
+    transform 0.14s ease,
+    background 0.18s ease;
+}
+.sched-rx .sched-act:hover {
+  transform: translateX(2px);
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 20%, var(--wx-card));
+}
+.sched-rx .sched-act-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--sc-tone, var(--sc-concrete));
+}
+.sched-rx .sched-act-text {
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+.sched-rx .sched-act-text strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-act-text em {
+  font-size: 10.5px;
+  font-style: normal;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.sched-rx .sched-act.is-milestone {
+  background: color-mix(in srgb, var(--sc-milestone) 12%, var(--wx-card));
+}
+.sched-rx .sched-act.is-milestone .sched-act-dot {
+  border-radius: 2px;
+}
+.sched-rx .sched-act-more {
+  border: 0;
+  background: none;
+  color: var(--wx-mut);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 2px 8px;
+  align-self: flex-start;
+}
+.sched-rx .sched-act-more:hover {
+  color: var(--sc-concrete);
+}
+
+/* ============================ trade legend ============================ */
+.sched-rx .sched-trade-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 14px 4px 2px;
+}
+.sched-rx .sched-trade-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-trade-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.sched-rx .sched-trade-legend i.milestone {
+  border-radius: 2px;
+}
+
+/* ============================ rail panels ============================= */
+.sched-rx .sched-rail-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 18px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+}
+.sched-rx .sched-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.sched-rx .sched-rail-head h2 {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wx-ink);
+}
+.sched-rx .sched-rail-link {
+  border: 0;
+  background: none;
+  color: var(--sc-concrete);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.sched-rx .sched-rail-link:hover {
+  opacity: 0.7;
+}
+.sched-rx .sched-rail-foot-btn {
+  width: 100%;
+  margin-top: 14px;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+.sched-rx .sched-rail-foot-btn:hover {
+  background: var(--wx-bg-2);
+}
+
+/* crew availability rows */
+.sched-rx .sched-avail-list {
+  display: grid;
+  gap: 13px;
+}
+.sched-rx .sched-avail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sched-rx .sched-avail-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-avail-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sched-rx .sched-avail-badge.available {
+  background: var(--cc-green-soft, #e2f1e6);
+  color: var(--sc-finishes);
+}
+.sched-rx .sched-avail-badge.limited {
+  background: #fdf0dc;
+  color: var(--sc-framing);
+}
+.sched-rx .sched-avail-badge.busy {
+  background: #efe8f8;
+  color: var(--sc-mep);
+}
+.sched-rx .sched-avail-ratio {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--wx-mut);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* upcoming milestones rows */
+.sched-rx .sched-miles-list {
+  display: grid;
+  gap: 14px;
+}
+.sched-rx .sched-mile-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.sched-rx .sched-mile-ico {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 13%, transparent);
+  color: var(--sc-tone, var(--sc-concrete));
+}
+.sched-rx .sched-mile-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.sched-rx .sched-mile-body {
+  flex: 1;
+  min-width: 0;
+}
+.sched-rx .sched-mile-body strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-mile-body span {
+  font-size: 12px;
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.sched-rx .sched-mile-date {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wx-mut);
+  white-space: nowrap;
+  flex: none;
+}
+
+/* schedule alert rows restyled to the dashboard cc-alert language */
+.sched-rx .sched-alert2 {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--wx-line-soft);
+  background: none;
+  padding: 0 0 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+.sched-rx .sched-alert2:hover {
+  opacity: 0.72;
+}
+.sched-rx .sched-alert2:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.sched-rx .sched-alert2-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.sched-rx .sched-alert2-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.sched-rx .sched-alert2.danger {
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-alert2.warning {
+  color: var(--sc-framing);
+}
+.sched-rx .sched-alert2.info {
+  color: var(--sc-concrete);
+}
+.sched-rx .sched-alert2-body {
+  flex: 1;
+  min-width: 0;
+}
+.sched-rx .sched-alert2-body strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.sched-rx .sched-alert2-body span {
+  font-size: 12px;
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.sched-rx .sched-alert2-time {
+  font-size: 11px;
+  color: var(--wx-faint);
+  font-weight: 500;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* ============================ drag & drop ============================= */
+/* draggable job chips / rows advertise themselves with a grab cursor */
+.sched-rx .sched-act[draggable],
+.sched-rx .sched-act,
+.sched-rx .schedule-list-view button {
+  cursor: grab;
+}
+.sched-rx .sched-act.dragging,
+.sched-rx .schedule-list-view button.dragging {
+  cursor: grabbing;
+}
+.sched-rx .sched-act.dragging {
+  box-shadow: 0 14px 30px rgba(28, 28, 26, 0.18);
+}
+
+/* month calendar cell: highlight as a drop target while a job hovers over it */
+.sched-rx .sched-cal-cell.drop-over {
+  background: color-mix(in srgb, var(--sc-concrete) 12%, var(--wx-card));
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+
+/* list view grouped by day — each day block is a reschedule drop target */
+.sched-rx .sched-list-day {
+  display: block;
+}
+.sched-rx .sched-list-dayhead {
+  padding: 8px 20px;
+  background: var(--wx-bg-2);
+  border-bottom: 1px solid var(--wx-line-soft);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-list-day.drop-over {
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+.sched-rx .sched-list-day.drop-over .sched-list-dayhead {
+  background: color-mix(in srgb, var(--sc-concrete) 16%, var(--wx-card));
+  color: var(--sc-concrete);
+}
+
+/* ============================ responsive ============================== */
+@media (max-width: 1180px) {
+  .sched-rx .sched-cal-cell {
+    min-height: 96px;
+  }
+}
+@media (max-width: 900px) {
+  .sched-rx .sched-cal-cell {
+    min-height: 78px;
+    padding: 6px;
+  }
+  .sched-rx .sched-act-text em {
+    display: none;
+  }
+  .sched-rx .sched-month-title {
+    font-size: 17px;
+    min-width: 130px;
+  }
+  /* No hover on touch — keep the add affordance visible. */
+  .sched-rx .sched-cal-add {
+    opacity: 0.85;
+    transform: none;
+  }
+}
+
+/* every day of the week is a List section: a free day stays quiet but still takes a drop */
+.sched-rx .sched-list-day.is-empty .sched-list-dayhead {
+  color: var(--wx-faint);
+}
+.sched-rx .sched-list-day.is-today .sched-list-dayhead {
+  color: var(--sc-concrete);
+}
+.sched-rx .sched-list-quiet {
+  margin: 0;
+  padding: 7px 20px;
+  border-bottom: 1px solid var(--wx-line-soft);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+.sched-rx .sched-list-day.drop-over .sched-list-quiet {
+  color: var(--sc-concrete);
+}
+
+/* Schedule Alerts under a board: the rail panel as a full-width strip, alerts side by side */
+.sched-rx .sched-alerts-under {
+  margin-top: 18px;
+}
+.sched-rx .sched-alerts-under .cc-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px 18px;
+}
+.sched-rx .sched-alerts-under .sched-alert2 {
+  border-bottom: 0;
+  padding-bottom: 6px;
+}
+
+/* Holidays and days off come from Settings › Work calendar — on every board, not only the Month. */
+.sched-rx .schedule-header strong.is-holiday,
+.sched-rx .sched-matrix-col.is-holiday,
+.sched-rx .sched-list-day.is-holiday .sched-list-dayhead {
+  color: var(--sc-holiday);
+}
+.sched-rx .schedule-header strong .sched-holiday-tag,
+.sched-rx .sched-matrix-col .sched-holiday-tag {
+  display: block;
+  margin-top: 0;
+  white-space: normal;
+  line-height: 1.15;
+}
+.sched-rx .schedule-cell.is-holiday,
+.sched-rx .sched-matrix-cell.is-holiday {
+  background: color-mix(in srgb, var(--sc-holiday) 9%, var(--wx-card));
+}
+.sched-rx .schedule-header strong.is-off,
+.sched-rx .sched-matrix-col.is-off {
+  opacity: 0.72;
+}
+
+/* ============================== schedule-views.css ============================== */
+
+/* ============================================================================
+   schedule-views.css — Gantt / Kanban / Scheduling Matrix
+   Three additional Schedule layouts in the Command Center language: white
+   cards, --wx-* + --sc-* tokens, Inter, soft shadows, blue accents. Scoped to
+   `.sched-rx` and reusing the same trade palette + motion as the calendar.
+   ========================================================================== */
+
+/* ============================ Gantt ==================================== */
+
+/* ---- CPM readout above the chart ---- */
+.sched-rx .sched-cpm {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: var(--wx-card);
+  box-shadow: 0 6px 18px rgba(28, 28, 26, 0.05);
+}
+.sched-rx .sched-cpm-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, var(--sc-concrete) 13%, transparent);
+  color: var(--sc-concrete);
+}
+.sched-rx .sched-cpm-stat {
+  display: grid;
+  gap: 1px;
+}
+.sched-rx .sched-cpm-stat em {
+  font-style: normal;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+}
+.sched-rx .sched-cpm-stat strong {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-cpm-stat strong small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--wx-faint);
+}
+.sched-rx .sched-cpm-stat strong.is-late {
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-cpm-stat strong.is-early {
+  color: var(--sc-finishes);
+}
+.sched-rx .sched-cpm-stat strong.is-on {
+  color: var(--wx-mut);
+}
+.sched-rx .sched-cpm-baseline {
+  margin-left: auto;
+  border: 1px solid var(--wx-line);
+  border-radius: 10px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 13px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+.sched-rx .sched-cpm-baseline:hover:not(:disabled) {
+  background: var(--wx-bg-2);
+}
+.sched-rx .sched-cpm-baseline:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sched-rx .sched-cpm-error {
+  border-color: color-mix(in srgb, var(--sc-milestone) 45%, transparent);
+  background: color-mix(in srgb, var(--sc-milestone) 7%, var(--wx-card));
+}
+.sched-rx .sched-cpm-error .sched-cpm-ico {
+  background: color-mix(in srgb, var(--sc-milestone) 14%, transparent);
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-cpm-error strong {
+  display: block;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-cpm-error em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--wx-mut);
+}
+
+/* ---- critical path, float tail, baseline ghost ---- */
+
+/* a critical bar is driven by the network — it cannot move without moving the finish */
+
+/* how far this activity can slide before it starts driving the finish */
+
+/* where the activity sat when the plan was baselined */
+
+/* ============================ Kanban =================================== */
+/* all five lanes share the board width; only very narrow screens scroll */
+.sched-rx .sched-kanban {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.sched-rx .sched-kan-lane {
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--wx-bg-2) 55%, var(--wx-card));
+  padding: 10px;
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.sched-rx .sched-kan-lane.drop-over {
+  background: color-mix(in srgb, var(--sc-concrete) 8%, var(--wx-card));
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+
+/* lane accent — keyed to the stage */
+.sched-rx .sched-kan-lane.tone-slate {
+  --kan-tone: var(--wx-faint);
+}
+.sched-rx .sched-kan-lane.tone-blue {
+  --kan-tone: var(--sc-concrete);
+}
+.sched-rx .sched-kan-lane.tone-violet {
+  --kan-tone: var(--sc-mep);
+}
+.sched-rx .sched-kan-lane.tone-red {
+  --kan-tone: var(--sc-milestone);
+}
+.sched-rx .sched-kan-lane.tone-green {
+  --kan-tone: var(--sc-finishes);
+}
+
+.sched-rx .sched-kan-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 10px;
+}
+.sched-rx .sched-kan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--kan-tone, var(--sc-concrete));
+}
+.sched-rx .sched-kan-head h3 {
+  flex: 1;
+  margin: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--wx-ink);
+}
+.sched-rx .sched-kan-head b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--kan-tone, var(--sc-concrete)) 15%, transparent);
+  color: var(--kan-tone, var(--sc-concrete));
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sched-rx .sched-kan-cards {
+  display: grid;
+  gap: 9px;
+  align-content: start;
+  min-width: 0;
+}
+.sched-rx .sched-kan-empty {
+  padding: 16px 8px;
+  border: 1px dashed var(--wx-line);
+  border-radius: 10px;
+  text-align: center;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+
+.sched-rx .sched-kan-card {
+  display: block;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 12px;
+  background: var(--wx-card);
+  padding: 11px;
+  cursor: grab;
+  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.05);
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+.sched-rx .sched-kan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line);
+}
+.sched-rx .sched-kan-card.dragging {
+  cursor: grabbing;
+  box-shadow: 0 18px 34px rgba(28, 28, 26, 0.2);
+}
+.sched-rx .sched-kan-card.focused {
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+
+.sched-rx .sched-kan-card-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.sched-rx .sched-kan-card-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--sc-tone, var(--sc-concrete));
+}
+.sched-rx .sched-kan-card-top strong {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-kan-card > em {
+  display: block;
+  margin: 3px 0 0 14px;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-kan-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 9px;
+  min-width: 0;
+}
+.sched-rx .sched-kan-card footer .badge {
+  flex: none;
+}
+.sched-rx .sched-kan-phase {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wx-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-kan-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-kan-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+}
+.sched-rx .sched-kan-meta svg {
+  color: var(--wx-faint);
+}
+
+/* ============================ Matrix =================================== */
+.sched-rx .sched-matrix {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--wx-card);
+}
+.sched-rx .sched-matrix-head,
+.sched-rx .sched-matrix-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.1fr) repeat(var(--matrix-cols, 7), minmax(0, 1fr)) 84px;
+  align-items: stretch;
+}
+.sched-rx .sched-matrix-head {
+  background: var(--wx-bg-2);
+  border-bottom: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-matrix-corner,
+.sched-rx .sched-matrix-col {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  padding: 8px 6px;
+  border-left: 1px solid var(--wx-line-soft);
+  font-family: var(--cc-sans, Inter, sans-serif);
+}
+.sched-rx .sched-matrix-corner {
+  border-left: 0;
+  justify-items: start;
+  padding-left: 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-matrix-col b {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  letter-spacing: 0.03em;
+}
+.sched-rx .sched-matrix-col em {
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+.sched-rx .sched-matrix-col.is-total {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+
+.sched-rx .sched-matrix-row {
+  border-top: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-matrix-row:first-of-type {
+  border-top: 0;
+}
+.sched-rx .sched-matrix-crew {
+  display: grid;
+  align-content: center;
+  padding: 10px 14px;
+  min-width: 0;
+}
+.sched-rx .sched-matrix-crew strong {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-rx .sched-matrix-crew em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* load heat — how many activities that crew has that day */
+.sched-rx .sched-matrix-cell {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  border: 0;
+  border-left: 1px solid var(--wx-line-soft);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.sched-rx .sched-matrix-cell b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-matrix-cell.load-0 {
+  background: transparent;
+}
+.sched-rx .sched-matrix-cell.load-1 {
+  background: color-mix(in srgb, var(--sc-concrete) 8%, transparent);
+}
+.sched-rx .sched-matrix-cell.load-2 {
+  background: color-mix(in srgb, var(--sc-concrete) 17%, transparent);
+}
+.sched-rx .sched-matrix-cell.load-3 {
+  background: color-mix(in srgb, var(--sc-concrete) 28%, transparent);
+}
+.sched-rx .sched-matrix-cell.load-1 b,
+.sched-rx .sched-matrix-cell.load-2 b,
+.sched-rx .sched-matrix-cell.load-3 b {
+  background: color-mix(in srgb, var(--sc-concrete) 18%, var(--wx-card));
+  color: var(--sc-concrete);
+}
+.sched-rx .sched-matrix-cell.is-conflict {
+  background: color-mix(in srgb, var(--sc-milestone) 15%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--sc-milestone) 55%, transparent);
+}
+.sched-rx .sched-matrix-cell.is-conflict b {
+  background: color-mix(in srgb, var(--sc-milestone) 18%, var(--wx-card));
+  color: var(--sc-milestone);
+}
+.sched-rx .sched-matrix-cell:hover {
+  box-shadow: inset 0 0 0 2px var(--sc-concrete);
+}
+
+.sched-rx .sched-matrix-total {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 8px;
+  border-left: 1px solid var(--wx-line-soft);
+  background: color-mix(in srgb, var(--wx-bg-2) 40%, transparent);
+}
+.sched-rx .sched-matrix-total b {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-matrix-util {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.sched-rx .sched-matrix-util.available {
+  background: var(--cc-green-soft, #e2f1e6);
+  color: var(--sc-finishes);
+}
+.sched-rx .sched-matrix-util.limited {
+  background: #fdf0dc;
+  color: var(--sc-framing);
+}
+.sched-rx .sched-matrix-util.busy {
+  background: #efe8f8;
+  color: var(--sc-mep);
+}
+
+/* ============================ responsive =============================== */
+@media (max-width: 1100px) {
+  .sched-rx .sched-kanban {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(184px, 1fr);
+    overflow-x: auto;
+  }
+}
+@media (max-width: 900px) {
+  .sched-rx .sched-matrix-head,
+  .sched-rx .sched-matrix-row {
+    grid-template-columns: 110px repeat(var(--matrix-cols, 7), minmax(0, 1fr)) 64px;
+  }
+  .sched-rx .sched-matrix-col em {
+    display: none;
+  }
+}
+
+/* ============================ reduced motion =========================== */
+@media (prefers-reduced-motion: reduce) {
+  .sched-rx .sched-kan-card {
+    transition-duration: 0.01s;
+  }
+}
+
+/* ============================== schedule-import.css ============================== */
+
+/* =========================================================================
+   Schedule import dialog (P6 .xer / MS Project .xml).
+
+   Sits on the program's existing dialog shell (.project-dialog-backdrop /
+   .project-dialog in styles.css) and reuses .primary-button /
+   .icon-button, so only the import-specific pieces live here. Tokens (--line,
+   --muted, --ink, --brand) come from styles.css.
+   ========================================================================= */
+
+.sim-dialog {
+  width: min(860px, 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-body {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  /* The preview can list several projects; keep the header and actions pinned. */
+  overflow-y: auto;
+}
+
+/* ── file drop ───────────────────────────────────────────────────────────── */
+.sim-drop {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 34px 20px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  background: #fafbfc;
+  text-align: center;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+.sim-drop.dragging {
+  border-color: var(--brand, #2f6bff);
+  background: #f2f7ff;
+}
+.sim-drop svg {
+  color: var(--brand, #2f6bff);
+}
+.sim-drop strong {
+  font-size: 15px;
+}
+.sim-drop span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.sim-drop .primary-button {
+  margin-top: 6px;
+}
+.sim-file-input {
+  display: none;
+}
+/* while the file is read, and while the import commits: the BuildFlow AI particle cloud (quantum-cloud-loader.css) */
+.sim-drop .sim-cloud,
+.sim-working .sim-cloud {
+  margin: -8px 0 -6px;
+}
+.sim-working {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 34px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fafbfc;
+  text-align: center;
+}
+.sim-working strong {
+  font-size: 15px;
+}
+.sim-working span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sim-formats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.sim-formats div {
+  display: grid;
+  gap: 3px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+.sim-formats strong {
+  font-size: 12.5px;
+}
+.sim-formats span {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* ── errors (message + what to do about it) ──────────────────────────────── */
+.sim-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #fecdc9;
+  border-radius: 10px;
+  background: #fef3f2;
+  color: #912018;
+}
+.sim-error svg {
+  flex: none;
+  margin-top: 1px;
+}
+.sim-error strong {
+  font-size: 13.5px;
+}
+.sim-error p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #b42318;
+}
+
+/* ── preview ─────────────────────────────────────────────────────────────── */
+.sim-source {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #cfe3d4;
+  border-radius: 9px;
+  background: #f2f9f4;
+  font-size: 13px;
+}
+.sim-source svg {
+  color: #188038;
+}
+.sim-source span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.sim-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.sim-stats div {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  text-align: center;
+}
+.sim-stats b {
+  font-size: 20px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.sim-stats span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.sim-project {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.sim-project-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sim-project-head strong {
+  font-size: 15px;
+}
+.sim-project-head span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.sim-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sim-phases span {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f6f8fa;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.sim-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.sim-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #f0f2f5;
+}
+.sim-table tr:last-child td {
+  border-bottom: 0;
+}
+.sim-table td:first-child {
+  font-weight: 600;
+}
+.sim-more {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sim-warnings {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #f5d9a8;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+.sim-warnings strong {
+  font-size: 13px;
+  color: #92400e;
+}
+.sim-warnings ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 5px;
+}
+.sim-warnings li {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #92400e;
+}
+
+/* ── done ────────────────────────────────────────────────────────────────── */
+
+/* ── actions ─────────────────────────────────────────────────────────────── */
+.sim-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 14px 20px;
+}
+.sim-actions-right {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+.sim-actions .primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The program only ships .primary-button / .icon-button — no secondary. */
+.sim-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink, #141922);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+.sim-ghost:hover:not(:disabled) {
+  background: #f5f7fa;
+  border-color: #c3c9d4;
+}
+.sim-ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Sits beside "New Project" in the Projects hero. */
+
+/* ═══════════════════════ schedule health check + forecastIQ ═══════════════════════
+   The day-one value: an instant read on the imported schedule. Tone classes
+   (good / warn / risk / bad) drive every accent so the whole report reads at a
+   glance. */
+.sim-tone-good {
+  --sim-accent: #188038;
+  --sim-soft: #f2f9f4;
+  --sim-line: #cfe3d4;
+}
+.sim-tone-warn {
+  --sim-accent: #b45309;
+  --sim-soft: #fffaf0;
+  --sim-line: #f5d9a8;
+}
+.sim-tone-risk {
+  --sim-accent: #c2410c;
+  --sim-soft: #fff3ec;
+  --sim-line: #f6c9ab;
+}
+.sim-tone-bad {
+  --sim-accent: #b42318;
+  --sim-soft: #fef3f2;
+  --sim-line: #fecdc9;
+}
+
+/* score ring */
+.sim-ring {
+  position: relative;
+  flex: none;
+  width: 78px;
+  height: 78px;
+}
+.sim-ring svg {
+  width: 78px;
+  height: 78px;
+  transform: rotate(-90deg);
+}
+.sim-ring-track {
+  fill: none;
+  stroke: #eceef1;
+  stroke-width: 7;
+}
+.sim-ring-value {
+  fill: none;
+  stroke: var(--sim-accent, #2f6bff);
+  stroke-width: 7;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sim-ring-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1;
+}
+.sim-ring-label b {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #141922;
+}
+.sim-ring-label span {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.sim-grade {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--sim-soft, #eef2ff);
+  color: var(--sim-accent, #2f6bff);
+  border: 1px solid var(--sim-line, #dbe3ff);
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* preview teaser */
+.sim-teaser {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--sim-line, var(--line));
+  border-radius: 12px;
+  background: var(--sim-soft, #fff);
+}
+.sim-teaser-copy {
+  display: grid;
+  gap: 5px;
+}
+.sim-teaser-copy p {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #23272f;
+}
+
+/* full report */
+.sim-report {
+  display: grid;
+  gap: 16px;
+}
+.sim-report-imported {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid #cfe3d4;
+  border-radius: 9px;
+  background: #f2f9f4;
+  font-size: 13px;
+}
+.sim-report-imported svg {
+  color: #188038;
+  flex: none;
+}
+.sim-report-imported b {
+  font-weight: 800;
+}
+
+.sim-health {
+  display: grid;
+  gap: 16px;
+}
+.sim-health-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.sim-health-hero-copy {
+  display: grid;
+  gap: 4px;
+}
+.sim-health-hero-copy h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 750;
+}
+.sim-health-hero-copy p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #3a3f4a;
+}
+
+/* forecastIQ */
+.sim-forecastIQ {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--sim-line, var(--line));
+  border-radius: 12px;
+  background: var(--sim-soft, #fff);
+}
+.sim-forecastIQ-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sim-forecastIQ-head svg {
+  color: var(--sim-accent);
+}
+.sim-forecastIQ-head strong {
+  font-size: 14px;
+}
+.sim-forecastIQ-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--sim-line);
+  color: var(--sim-accent);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.sim-forecastIQ-dates {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sim-forecastIQ-dates > div {
+  display: grid;
+  gap: 2px;
+}
+.sim-forecastIQ-dates span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.sim-forecastIQ-dates b {
+  font-size: 16px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.sim-forecastIQ-proj {
+  color: var(--sim-accent);
+}
+.sim-forecastIQ-arrow {
+  font-size: 18px;
+  color: var(--muted);
+  padding-bottom: 2px;
+}
+.sim-forecastIQ-slip {
+  margin-left: auto;
+  text-align: right;
+}
+.sim-forecastIQ-slip b {
+  color: var(--sim-accent);
+}
+
+/* progress vs elapsed-time meter */
+.sim-forecastIQ-meter {
+  display: grid;
+  gap: 6px;
+}
+.sim-forecastIQ-meter-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: #edeff2;
+  overflow: visible;
+}
+.sim-forecastIQ-meter-done {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--sim-accent);
+}
+/* where the schedule "should" be by now — a marker to compare progress against */
+.sim-forecastIQ-meter-time {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: #33383f;
+  border-radius: 2px;
+  transform: translateX(-1px);
+}
+.sim-forecastIQ-meter-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+.sim-forecastIQ-method {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── probabilistic finish band (P50/P80) — "your schedule is lying to you" ── */
+.sim-band {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--sim-line, var(--line));
+}
+.sim-band-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.sim-band-verdict b {
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--sim-accent, #2f6bff);
+  line-height: 1;
+}
+.sim-band-verdict span {
+  font-size: 13px;
+  color: #3a3f4a;
+}
+.sim-band-verdict strong {
+  font-weight: 700;
+  color: #141922;
+}
+
+/* the band track: a P10–P90 range bar with P50/P80 ticks and the plan marker */
+.sim-band-track {
+  position: relative;
+  height: 30px;
+  margin: 2px 4px 0;
+  border-radius: 999px;
+  background: #eef0f3;
+}
+.sim-band-range {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7fb2ff, #2f6bff 55%, #c2410c);
+  box-shadow: 0 1px 4px rgba(47, 107, 255, 0.35);
+}
+.sim-band-tick {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  transform: translateX(-1px);
+  border-radius: 2px;
+}
+.sim-band-p50 {
+  background: #0b2a6b;
+}
+.sim-band-p80 {
+  background: #7c2d12;
+}
+/* the plan date: a distinct dashed marker that visibly sits left of the band */
+.sim-band-plan {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 0;
+  border-left: 2px dashed #64748b;
+  transform: translateX(-1px);
+}
+
+.sim-band-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sim-band-key {
+  display: grid;
+  gap: 1px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  flex: 1;
+  min-width: 88px;
+  border-left-width: 3px;
+}
+.sim-band-key span {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.sim-band-key b {
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.sim-band-key-plan {
+  border-left-color: #64748b;
+}
+.sim-band-key-p50 {
+  border-left-color: #0b2a6b;
+}
+.sim-band-key-p80 {
+  border-left-color: #7c2d12;
+}
+
+/* stats */
+.sim-health-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.sim-health-stats div {
+  display: grid;
+  gap: 1px;
+  padding: 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  text-align: center;
+}
+.sim-health-stats b {
+  font-size: 17px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.sim-health-stats span {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* findings */
+.sim-findings {
+  display: grid;
+  gap: 10px;
+}
+.sim-findings-clean {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 14px;
+  border: 1px solid #cfe3d4;
+  border-radius: 10px;
+  background: #f2f9f4;
+  font-size: 13px;
+  color: #1a662f;
+}
+.sim-findings-clean svg {
+  color: #188038;
+  flex: none;
+}
+
+.sim-finding {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 9px;
+  background: #fff;
+}
+.sim-finding.sim-sev-high {
+  border-left-color: #d33;
+}
+.sim-finding.sim-sev-medium {
+  border-left-color: #d98a1f;
+}
+.sim-finding.sim-sev-low {
+  border-left-color: #94a0b3;
+}
+.sim-finding-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sim-finding-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.sim-sev-high .sim-finding-dot {
+  background: #d33;
+}
+.sim-sev-medium .sim-finding-dot {
+  background: #d98a1f;
+}
+.sim-sev-low .sim-finding-dot {
+  background: #94a0b3;
+}
+.sim-finding-head strong {
+  font-size: 13.5px;
+}
+.sim-finding-sev {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.sim-finding p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #4a505b;
+}
+.sim-finding-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+.sim-finding-codes code {
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: #f2f4f7;
+  border: 1px solid #e6e9ee;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #3a3f4a;
+}
+.sim-finding-codes span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .sim-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sim-formats {
+    grid-template-columns: 1fr;
+  }
+  .sim-health-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .sim-forecastIQ-slip {
+    margin-left: 0;
+    text-align: left;
+  }
+}
+
+/* ============================== hs-gantt.css ============================== */
+
+/* ===========================================================================
+   Gantt Chart page (GanttPage.tsx) + the ported Gantt component
+   (components/ui/gantt.tsx). Same tokens as every index page (--hsx-*), the
+   shell's easing, the Deals board's lift/land tweens for a bar in flight, and
+   the record panel's slide-in for the job drawer. No new colours.
+   ======================================================================== */
+
+/* ------------------------------- page ---------------------------------- */
+.gantt-page .hs-index-card.gantt-card {
+  padding: 16px 18px 14px;
+}
+.gantt-page .gantt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 12px;
+}
+.gantt-page .gantt-seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--hsx-line);
+  border-radius: 10px;
+  background: var(--hsx-card);
+}
+.gantt-page .gantt-seg button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--hsx-mut);
+  font: 600 13px var(--hsx-sans);
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+.gantt-page .gantt-seg button + button {
+  border-left: 1px solid var(--hsx-line);
+}
+.gantt-page .gantt-seg button:hover {
+  background: var(--hsx-hover);
+}
+.gantt-page .gantt-seg button.active {
+  background: var(--hsx-blue-soft);
+  color: var(--hsx-blue);
+}
+.gantt-page .gantt-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gantt-page .gantt-zoom-value {
+  min-width: 46px;
+  text-align: center;
+  color: var(--hsx-mut);
+  font: 600 12.5px var(--hsx-sans);
+  font-variant-numeric: tabular-nums;
+}
+.gantt-page .gantt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-left: auto;
+  color: var(--hsx-mut);
+  font: 600 12px var(--hsx-sans);
+}
+.gantt-page .gantt-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.gantt-page .gantt-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+.gantt-page .gantt-status {
+  margin: -4px 0 10px;
+  color: var(--hsx-mut);
+  font: 600 12.5px var(--hsx-sans);
+  animation: hsg-rise 0.36s var(--hsx-ease) both;
+}
+.gantt-page .gantt-status.is-error {
+  color: var(--hsx-red);
+}
+.gantt-page .gantt-frame {
+  height: clamp(420px, calc(100vh - 336px), 900px);
+  overflow: hidden;
+  border: 1px solid var(--hsx-line);
+  border-radius: 12px;
+  background: var(--hsx-paper);
+  animation: hsg-rise 0.5s var(--hsx-ease) both;
+}
+.gantt-page .gantt-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: var(--hsx-mut);
+  font: 500 13.5px/1.5 var(--hsx-sans);
+}
+.gantt-page .gantt-empty strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--hsx-ink);
+  font-weight: 700;
+}
+.gantt-page .gantt-note {
+  margin: 10px 0 0;
+  color: var(--hsx-faint);
+  font: 500 12.5px var(--hsx-sans);
+}
+.gantt-page .hs-kpi {
+  animation: hsg-rise 0.5s var(--hsx-ease) both;
+  animation-delay: calc(0.05s * var(--i, 0));
+}
+.gantt-page .hs-kpi:nth-child(2) {
+  --i: 1;
+}
+.gantt-page .hs-kpi:nth-child(3) {
+  --i: 2;
+}
+.gantt-page .hs-kpi:nth-child(4) {
+  --i: 3;
+}
+@keyframes hsg-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------ component ------------------------------- */
+.gantt {
+  position: relative;
+  display: grid;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--hsx-paper, #f5f6fa);
+  color: var(--hsx-ink, #14203a);
+  font-family: var(--hsx-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gantt.is-dragging,
+.gantt.is-dragging * {
+  cursor: grabbing !important;
+}
+.gantt p {
+  margin: 0;
+}
+
+/* sidebar */
+.gantt-sidebar {
+  position: sticky;
+  left: 0;
+  z-index: 30;
+  height: max-content;
+  min-height: 100%;
+  overflow: clip;
+  border-right: 1px solid var(--hsx-line);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+}
+.gantt-sidebar-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+  height: var(--gantt-header-height);
+  padding: 10px;
+  border-bottom: 1px solid var(--hsx-line);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  color: var(--hsx-mut);
+  font-size: 12px;
+  font-weight: 700;
+}
+.gantt-sidebar-header-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gantt-sidebar-groups > * + * {
+  margin-top: 16px;
+}
+.gantt-sidebar-group-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  height: var(--gantt-row-height);
+  padding: 0 10px;
+  color: var(--hsx-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.gantt-sidebar-group-name > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gantt-sidebar-group-trailing {
+  flex: none;
+  color: var(--hsx-faint);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gantt-sidebar-items > * + * {
+  border-top: 1px solid var(--hsx-line-soft);
+}
+.gantt-sidebar-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  height: var(--gantt-row-height);
+  padding: 0 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  outline: 0;
+  transition: background 0.12s ease;
+}
+.gantt-sidebar-item:hover {
+  background: var(--hsx-hover);
+}
+.gantt-sidebar-item:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(47, 107, 255, 0.35);
+}
+.gantt-sidebar-item.is-selected {
+  background: var(--hsx-blue-soft);
+}
+.gantt-status-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.gantt-sidebar-item-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+.gantt-sidebar-item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.gantt-sidebar-item-meta {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hsx-faint);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.gantt-sidebar-item-trailing {
+  flex: none;
+  color: var(--hsx-mut);
+  font-variant-numeric: tabular-nums;
+}
+
+/* timeline + header */
+.gantt-timeline {
+  position: relative;
+  display: flex;
+  flex: none;
+  height: 100%;
+  width: max-content;
+  overflow: clip;
+}
+.gantt-header {
+  display: flex;
+  height: 100%;
+  width: max-content;
+}
+.gantt-header-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.gantt-header-block + .gantt-header-block {
+  border-left: 1px solid var(--hsx-line);
+}
+.gantt-content-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--gantt-header-height);
+  background: rgba(245, 246, 250, 0.92);
+  backdrop-filter: blur(6px);
+}
+.gantt-content-header-title {
+  position: sticky;
+  left: var(--gantt-sidebar-width);
+  display: inline-flex;
+  padding: 8px 12px 4px;
+  color: var(--hsx-mut);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.gantt-content-header-cells {
+  display: grid;
+  width: 100%;
+}
+.gantt-content-header-cell {
+  flex: none;
+  padding: 2px 0 4px;
+  border-bottom: 1px solid var(--hsx-line);
+  color: var(--hsx-mut);
+  font-size: 11.5px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.gantt-day-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.gantt-day-cell-weekday {
+  color: var(--hsx-faint);
+}
+.gantt-columns {
+  display: grid;
+  height: 100%;
+  width: 100%;
+}
+.gantt-column {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.gantt-column + .gantt-column {
+  border-left: 1px solid var(--hsx-line-soft);
+}
+.gantt-column.is-secondary {
+  background: rgba(230, 232, 240, 0.45);
+}
+.gantt-add-helper {
+  position: absolute;
+  top: 0;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 2px;
+}
+.gantt-add-helper button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: var(--gantt-row-height);
+  border: 1px dashed var(--hsx-blue);
+  border-radius: 6px;
+  background: var(--hsx-blue-soft);
+  color: var(--hsx-blue);
+  cursor: pointer;
+  animation: hs-pop 0.16s var(--hsx-ease) both;
+}
+
+/* bars */
+.gantt-feature-list {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: max-content;
+  margin-top: var(--gantt-header-height);
+}
+.gantt-feature-list > * + * {
+  margin-top: 16px;
+}
+.gantt-feature-group {
+  padding-top: var(--gantt-row-height);
+}
+.gantt-feature-row {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 100%;
+  height: var(--gantt-row-height);
+}
+.gantt-feature {
+  position: absolute;
+  top: 3px;
+  height: calc(var(--gantt-row-height) - 6px);
+  pointer-events: auto;
+  transition:
+    left 0.18s var(--hsx-ease),
+    width 0.18s var(--hsx-ease);
+}
+.gantt-feature.is-dragging {
+  z-index: 5;
+  transition: none;
+}
+.gantt-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid var(--gantt-bar-edge);
+  border-radius: 6px;
+  background: var(--gantt-bar-fill);
+  color: var(--gantt-bar-ink);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(20, 32, 58, 0.06);
+  cursor: grab;
+  outline: 0;
+  transition:
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s var(--hsx-ease);
+}
+.gantt-bar:hover {
+  border-color: var(--gantt-bar-dot);
+  box-shadow: 0 6px 16px rgba(20, 32, 58, 0.12);
+}
+.gantt-bar:focus-visible {
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.3);
+}
+.gantt-feature.is-selected .gantt-bar {
+  border-color: var(--hsx-blue);
+  box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.25);
+}
+.gantt-bar-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--gantt-bar-edge);
+  opacity: 0.35;
+  pointer-events: none;
+}
+.gantt-bar-label {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* pick-up: the same spring and deep shadow a deal card gets in flight */
+.gantt-feature.is-dragging .gantt-bar {
+  border-color: var(--hsx-blue);
+  box-shadow:
+    0 18px 36px rgba(20, 32, 58, 0.24),
+    0 4px 10px rgba(20, 32, 58, 0.12);
+  animation: hsg-lift 0.3s var(--hsx-ease) both;
+}
+@keyframes hsg-lift {
+  0% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scaleY(1.12) scaleX(1.01);
+  }
+  100% {
+    transform: scaleY(1.06);
+  }
+}
+/* landing: the same pulse once the bar has dropped */
+.gantt-feature.is-landing .gantt-bar {
+  animation: hsg-land 0.75s var(--hsx-ease) both;
+}
+@keyframes hsg-land {
+  0% {
+    transform: scale(0.97);
+    border-color: #2f6bff;
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.55);
+  }
+  45% {
+    transform: scale(1.02);
+    border-color: #2f6bff;
+    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 1px 2px rgba(20, 32, 58, 0.06);
+  }
+}
+.gantt-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 12px;
+  cursor: col-resize;
+}
+.gantt-handle.is-left {
+  left: -6px;
+}
+.gantt-handle.is-right {
+  right: -6px;
+}
+.gantt-handle span {
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--hsx-mut);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.gantt-handle.is-left span {
+  left: 6px;
+}
+.gantt-handle.is-right span {
+  right: 6px;
+}
+.gantt-feature:hover .gantt-handle span,
+.gantt-feature.is-left .gantt-handle.is-left span,
+.gantt-feature.is-right .gantt-handle.is-right span {
+  opacity: 1;
+}
+.gantt-drag-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 6;
+  padding: 4px 9px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--hsx-ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(20, 32, 58, 0.12);
+  transform: translateX(-50%);
+  font-variant-numeric: tabular-nums;
+  animation: hs-pop 0.16s var(--hsx-ease) both;
+}
+
+/* markers */
+.gantt-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  width: 0;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+.gantt-marker-pill {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 0 0 8px 8px;
+  background: var(--hsx-ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+.gantt-marker-date {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0.8;
+  font-weight: 500;
+  transition: max-height 0.2s var(--hsx-ease);
+}
+.gantt-marker-pill:hover .gantt-marker-date {
+  max-height: 2rem;
+}
+.gantt-marker-line {
+  flex: 1;
+  width: 1px;
+  background: var(--hsx-ink);
+  opacity: 0.35;
+}
+.gantt-marker.is-today .gantt-marker-pill {
+  background: var(--hsx-blue);
+}
+.gantt-marker.is-today .gantt-marker-line {
+  background: var(--hsx-blue);
+  opacity: 0.55;
+}
+.gantt-marker.tone-amber .gantt-marker-pill {
+  background: var(--hsx-amber);
+}
+.gantt-marker.tone-amber .gantt-marker-line {
+  background: var(--hsx-amber);
+}
+.gantt-marker.tone-red .gantt-marker-pill {
+  background: var(--hsx-red);
+}
+.gantt-marker.tone-red .gantt-marker-line {
+  background: var(--hsx-red);
+}
+.gantt-marker.tone-green .gantt-marker-pill {
+  background: var(--hsx-green);
+}
+.gantt-marker.tone-green .gantt-marker-line {
+  background: var(--hsx-green);
+}
+.gantt-ctx {
+  display: contents;
+}
+.gantt-create-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  margin-left: -8px;
+  pointer-events: none;
+}
+.gantt-create-marker button {
+  position: sticky;
+  top: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--hsx-card);
+  color: var(--hsx-mut);
+  box-shadow: 0 1px 3px rgba(20, 32, 58, 0.2);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.gantt-create-marker-date {
+  position: sticky;
+  top: 44px;
+  padding: 3px 8px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* context menu — portaled to <body>, so it restates the shell's .hs-menu look */
+.gantt-menu {
+  position: fixed;
+  z-index: 120;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--hs-line, #e6e8f0);
+  border-radius: 10px;
+  background: var(--hs-card, #fff);
+  box-shadow: 0 20px 48px rgba(15, 35, 64, 0.2);
+  transform-origin: top left;
+  animation: hs-pop 0.16s var(--hs-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+.gantt-menu .hs-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--hs-ink, #14203a);
+  font-family: var(--hs-sans, Inter, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.gantt-menu .hs-menu-item svg {
+  flex: none;
+  color: var(--hs-blue, #2f6bff);
+}
+.gantt-menu .hs-menu-item:hover {
+  background: var(--hs-hover, #f0f2f6);
+}
+.gantt-menu .hs-menu-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.gantt-menu .hs-menu-item.is-danger,
+.gantt-menu .hs-menu-item.is-danger svg {
+  color: #c5221f;
+}
+
+/* job drawer — the record panel's layer, backdrop and slide-in */
+.gantt-page .gantt-drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+}
+.gantt-page .gantt-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 32, 58, 0.42);
+  backdrop-filter: blur(2px);
+  animation: hsg-fade 0.2s ease-out both;
+}
+.gantt-page .gantt-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  overflow-y: auto;
+  padding: 18px 22px 28px;
+  background: #fff;
+  color: var(--hsx-ink);
+  box-shadow: -24px 0 60px rgba(20, 32, 58, 0.22);
+  animation: hsg-slide-in 0.32s var(--hsx-ease) both;
+}
+@keyframes hsg-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes hsg-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.gantt-page .gantt-drawer-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.gantt-page .gantt-drawer h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.gantt-page .gantt-drawer-sub {
+  margin: 4px 0 0;
+  color: var(--hsx-mut);
+  font-size: 13px;
+}
+.gantt-page .gantt-drawer-close {
+  flex: none;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--hsx-mut);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.gantt-page .gantt-drawer-close:hover {
+  background: var(--hsx-hover);
+}
+.gantt-page .gantt-drawer-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 10px;
+  background: var(--hsx-paper);
+  font-size: 12.5px;
+}
+.gantt-page .gantt-drawer-facts div {
+  min-width: 0;
+}
+.gantt-page .gantt-drawer-facts dt {
+  color: var(--hsx-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.gantt-page .gantt-drawer-facts dd {
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+/* the job's links, and the way to draw or remove one without a mouse (P4.6) */
+.gantt-page .gantt-drawer-links {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 10px;
+  background: var(--hsx-paper);
+  font-size: 12.5px;
+}
+.gantt-page .gantt-drawer-links-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.gantt-page .gantt-drawer-links h3 {
+  margin: 0;
+  color: var(--hsx-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.gantt-page .gantt-drawer-links ul {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.gantt-page .gantt-drawer-links li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.gantt-page .gantt-drawer-links li > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gantt-page .gantt-drawer-links em {
+  color: var(--hsx-mut);
+  font-style: normal;
+}
+.gantt-page .gantt-drawer-links-empty {
+  margin: 8px 0 0;
+  color: var(--hsx-mut);
+}
+.gantt-page .gantt-drawer-links .hs-btn {
+  flex: none;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.gantt-page .gantt-drawer-form {
+  display: grid;
+  gap: 12px;
+}
+.gantt-page .gantt-drawer-form label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+.gantt-page .gantt-drawer-form label > span {
+  color: var(--hsx-mut);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.gantt-page .gantt-drawer-form input,
+.gantt-page .gantt-drawer-form select,
+.gantt-page .gantt-drawer-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--hsx-ink);
+  font: 600 14px var(--hsx-sans);
+  outline: 0;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.gantt-page .gantt-drawer-form input:focus,
+.gantt-page .gantt-drawer-form select:focus,
+.gantt-page .gantt-drawer-form textarea:focus {
+  border-color: var(--hsx-blue);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.18);
+}
+.gantt-page .gantt-drawer-form textarea {
+  min-height: 88px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  font-weight: 500;
+  resize: vertical;
+}
+.gantt-page .gantt-drawer-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.gantt-page .gantt-drawer-error {
+  margin: 0;
+  color: var(--hsx-red);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.gantt-page .gantt-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.gantt-page .gantt-drawer-actions .hs-btn-link {
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gantt-page .gantt-frame,
+  .gantt-page .hs-kpi,
+  .gantt-page .gantt-status,
+  .gantt-page .gantt-drawer,
+  .gantt-page .gantt-drawer-backdrop,
+  .gantt-feature.is-dragging .gantt-bar,
+  .gantt-feature.is-landing .gantt-bar,
+  .gantt-drag-tip,
+  .gantt-menu,
+  .gantt-add-helper button {
+    animation: none;
+  }
+  .gantt-feature {
+    transition: none;
+  }
+}
+@media (max-width: 720px) {
+  .gantt-page .gantt-drawer-row,
+  .gantt-page .gantt-drawer-facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================================================================
+   Tokens on the component itself, so it reads the same outside the index
+   pages (the Schedule board is not an .hs-index page). Same values as hs-index.
+   ======================================================================== */
+.gantt,
+.gantt-menu {
+  --hsx-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --hsx-ink: #14203a;
+  --hsx-text: #1c1c1a;
+  --hsx-mut: #575550;
+  --hsx-faint: #8a877e;
+  --hsx-line: #e6e8f0;
+  --hsx-line-soft: #eef0f4;
+  --hsx-card: #ffffff;
+  --hsx-paper: #f5f6fa;
+  --hsx-hover: #f6f8fc;
+  --hsx-blue: #2f6bff;
+  --hsx-blue-soft: #e8f0fe;
+  --hsx-green: #188038;
+  --hsx-amber: #b45309;
+  --hsx-red: #c5221f;
+  --hsx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gantt.is-auto-height {
+  height: auto;
+  min-height: 180px;
+  max-height: 72vh;
+}
+/* a fitted week fills the viewport exactly; the stepper moves the window, so sideways scrolling is off */
+.gantt.is-fitted {
+  overflow-x: hidden;
+}
+.gantt-sidebar-group-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.gantt-sidebar-group-title > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gantt-sidebar-group-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--hsx-faint);
+  font-size: 11px;
+  font-weight: 600;
+}
+.gantt-sidebar-group-meta svg {
+  flex: none;
+}
+.gantt-sidebar-item.is-empty {
+  cursor: default;
+}
+.gantt-sidebar-item.is-empty:hover {
+  background: transparent;
+}
+.gantt-sidebar-item.is-empty .gantt-sidebar-item-meta {
+  max-width: none;
+}
+
+/* the shared schedule filter row takes its own line inside the Gantt toolbar */
+.gantt-toolbar .sched-filters {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+/* ---------------- critical path, baseline ghosts, dependency arrows ---------------- */
+.gantt-ghost {
+  position: absolute;
+  top: 9px;
+  height: calc(var(--gantt-row-height) - 18px);
+  border: 1px dashed rgba(20, 32, 58, 0.3);
+  border-radius: 5px;
+  background: repeating-linear-gradient(135deg, rgba(20, 32, 58, 0.12) 0 4px, rgba(20, 32, 58, 0.04) 4px 8px);
+  pointer-events: none;
+}
+.gantt-bar.is-critical {
+  border-color: var(--hsx-red);
+  box-shadow:
+    inset 0 0 0 1px var(--hsx-red),
+    0 1px 2px rgba(20, 32, 58, 0.06);
+}
+.gantt-bar.is-critical::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--hsx-red);
+}
+.gantt-links {
+  position: absolute;
+  top: var(--gantt-header-height);
+  left: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+.gantt-links path {
+  fill: none;
+  stroke: rgba(87, 85, 80, 0.55);
+  stroke-width: 1.5;
+}
+.gantt-links path.is-critical {
+  stroke: var(--hsx-red);
+  stroke-width: 2;
+}
+.gantt-links marker path {
+  fill: rgba(87, 85, 80, 0.7);
+  stroke: none;
+}
+.gantt-links marker.is-critical path {
+  fill: var(--hsx-red);
+}
+
+/* the CPM readout above the chart (the landing's, in this page's tokens) */
+.gantt-page .sched-cpm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+  margin: 0 0 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 12px;
+  background: var(--hsx-card);
+}
+.gantt-page .sched-cpm-error {
+  border-color: var(--hsx-red);
+}
+.gantt-page .sched-cpm-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--hsx-blue-soft);
+  color: var(--hsx-blue);
+}
+.gantt-page .sched-cpm-error .sched-cpm-ico {
+  background: rgba(197, 34, 31, 0.1);
+  color: var(--hsx-red);
+}
+.gantt-page .sched-cpm-stat {
+  display: grid;
+  gap: 1px;
+}
+.gantt-page .sched-cpm-stat em {
+  font: 700 10.5px var(--hsx-sans);
+  font-style: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--hsx-mut);
+}
+.gantt-page .sched-cpm-stat strong {
+  font: 700 14px var(--hsx-sans);
+  color: var(--hsx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.gantt-page .sched-cpm-stat strong small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--hsx-mut);
+}
+.gantt-page .sched-cpm-stat strong.is-late {
+  color: var(--hsx-red);
+}
+.gantt-page .sched-cpm-stat strong.is-early {
+  color: #188038;
+}
+.gantt-page .sched-cpm-stat strong.is-on {
+  color: var(--hsx-mut);
+}
+.gantt-page .sched-cpm-error strong {
+  font: 600 13px var(--hsx-sans);
+  color: var(--hsx-ink);
+}
+.gantt-page .sched-cpm-error em {
+  display: block;
+  font: 500 12px var(--hsx-sans);
+  color: var(--hsx-mut);
+}
+.gantt-page .sched-cpm-baseline {
+  min-height: 32px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid var(--hsx-line);
+  border-radius: 10px;
+  background: var(--hsx-card);
+  color: var(--hsx-ink);
+  font: 600 12.5px var(--hsx-sans);
+  cursor: pointer;
+}
+.gantt-page .sched-cpm-baseline:hover {
+  background: var(--hsx-hover);
+}
+.gantt-page .sched-cpm-baseline:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* the shared week stepper, in this page's toolbar */
+.gantt-page .gantt-week {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gantt-page .gantt-week strong {
+  min-width: 160px;
+  text-align: center;
+  font: 600 12.5px var(--hsx-sans);
+  color: var(--hsx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.gantt-page .gantt-week .previous-week {
+  transform: rotate(90deg);
+}
+.gantt-page .gantt-week .next-week {
+  transform: rotate(-90deg);
+}
+
+/* Holidays from Settings › Work calendar: a quieter flag than a project target, with a dashed line. */
+.gantt-marker.is-holiday .gantt-marker-pill {
+  background: color-mix(in srgb, #8a877e 14%, #fff);
+  color: #6b6862;
+}
+.gantt-marker.is-holiday .gantt-marker-line {
+  border-left-style: dashed;
+  opacity: 0.6;
+}
+
+/* ============================== hs-week.css ============================== */
+
+/* ============================================================================
+   hs-week.css — the Week page: the Schedule hub's crew-by-day board on a page
+   of its own (WeekPage.tsx). It wears the Schedule page's reskin (.sched-rx),
+   so only the page specifics live here.
+   ========================================================================== */
+.week-page .week-actions {
+  justify-content: flex-end;
+}
+.week-page .schedule-board .gantt-status {
+  margin: 12px 18px 0;
+}
+
+/* ============================== hs-kanban.css ============================== */
+
+/* ============================================================================
+   hs-kanban.css — the Kanban page: the Schedule hub's jobs-by-status board on a
+   page of its own (KanbanPage.tsx). It wears the Schedule page's reskin
+   (.sched-rx), so only the page specifics live here.
+   ========================================================================== */
+.kanban-page .kanban-actions {
+  justify-content: flex-end;
+}
+.kanban-page .schedule-board .gantt-status {
+  margin: 12px 18px 0;
+}
+
+/* ============================== hs-matrix.css ============================== */
+
+/* ============================================================================
+   hs-matrix.css — the Matrix page: the Schedule hub's crew × day load grid on a
+   page of its own (MatrixPage.tsx). It wears the Schedule page's reskin
+   (.sched-rx), so only the page specifics live here.
+   ========================================================================== */
+.matrix-page .matrix-actions {
+  justify-content: flex-end;
+}
+.matrix-page .schedule-board .gantt-status {
+  margin: 12px 18px 0;
+}
+
+/* ============================== hs-month.css ============================== */
+
+/* ============================================================================
+   hs-month.css — the Month page: the Schedule hub's calendar on a page of its
+   own (MonthPage.tsx). It wears the Schedule page's reskin (.sched-rx), so only
+   the page specifics live here.
+   ========================================================================== */
+.month-page .month-actions {
+  justify-content: flex-end;
+}
+.month-page .schedule-board .gantt-status {
+  margin: 12px 18px 0;
+}
+.month-page .sched-today-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

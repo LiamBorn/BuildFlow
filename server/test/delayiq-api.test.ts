@@ -69,9 +69,7 @@ describe("DelayIQ early-warning API", () => {
     // Ranked worst-first.
     const rank = { High: 3, Medium: 2, Low: 1 } as const;
     for (let i = 1; i < response.body.risks.length; i += 1) {
-      expect(rank[response.body.risks[i - 1].severity as "High"]).toBeGreaterThanOrEqual(
-        rank[response.body.risks[i].severity as "High"]
-      );
+      expect(rank[response.body.risks[i - 1].severity as "High"]).toBeGreaterThanOrEqual(rank[response.body.risks[i].severity as "High"]);
     }
 
     // Scanning is strictly read-only.

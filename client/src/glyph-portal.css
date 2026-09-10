@@ -1,0 +1,46 @@
+/* Glyph Portal © 2026 Christian Katzmann. MIT. Styles lifted out of the component's
+   inline <style> so jsdom never parses them: the block's :has()/attribute selectors
+   made every getComputedStyle in the test suite ~2× slower and tripped 20s timeouts.
+   Scoped to [data-gp-root], which the component always sets. Behaviour is unchanged. */
+[data-gp-root]{--gp-paper:#fff;--gp-ink:#0c1212;--gp-field:#0b3b2a;--gp-foreground:#fbfbfa;position:relative;isolation:isolate;background:var(--gp-paper);color:var(--gp-ink);font-family:Arial,sans-serif;}
+[data-gp-root]>[data-gp-viewport]{position:absolute;inset:0 auto auto 0;height:100vh;height:100svh;width:0;pointer-events:none;visibility:hidden;}
+[data-gp-root] [data-gp-pin]{position:relative;height:var(--gp-height,100svh);overflow:clip;isolation:isolate;container-type:size;}
+[data-gp-root] [data-gp-field]{position:absolute;inset:0;background:var(--gp-field);opacity:0;pointer-events:none;}
+[data-gp-root][data-gp-ready] [data-gp-field]{opacity:1;}
+[data-gp-root] [data-gp-art]{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
+[data-gp-root] [data-gp-marks]{fill:none;stroke:var(--gp-ink);opacity:.6;}
+[data-gp-root] [data-gp-choices]{position:absolute;inset:0;visibility:hidden;pointer-events:none;}
+[data-gp-root][data-gp-choosing=true] [data-gp-choices]{visibility:visible;}
+[data-gp-root] [data-gp-letter]{box-sizing:border-box;position:absolute;border:0;padding:0;margin:0;background:transparent;cursor:pointer;pointer-events:auto;touch-action:pan-y;}
+[data-gp-root] [data-gp-letter]:disabled{pointer-events:none;}
+[data-gp-root] [data-gp-letter]:focus-visible{outline:2px solid var(--gp-field);outline-offset:5px;}
+[data-gp-root] [data-gp-touch-picker]{display:none;position:absolute;top:calc(var(--gp-word-bottom,50%) + 42px);left:50%;transform:translateX(-50%);font:12px/1.4 Arial,sans-serif;align-items:center;gap:12px;visibility:hidden;}
+[data-gp-root][data-gp-choosing=true] [data-gp-touch-picker]{visibility:visible;}
+[data-gp-root] [data-gp-select]{min-height:44px;min-width:90px;border:1px solid #d8deda;border-radius:4px;background:var(--gp-paper);color:var(--gp-ink);padding:0 10px;font:inherit;}
+[data-gp-root] [data-gp-select]:focus-visible{outline:2px solid var(--gp-field);outline-offset:4px;}
+@media(any-pointer:coarse){[data-gp-root] [data-gp-touch-picker]{display:flex;}}
+[data-gp-root] [data-gp-fallback]{position:absolute;inset:0;display:none;place-items:center;font-size:min(calc(100cqw / var(--gp-characters)),38cqh);line-height:1;color:var(--gp-field);}
+[data-gp-root][data-gp-ready] [data-gp-fallback]{visibility:hidden;}
+[data-gp-root] [data-gp-caption]{position:absolute;inset:auto 8% 9%;display:flex;align-items:center;justify-content:space-between;gap:1rem;font:12px/1.4 Arial,sans-serif;opacity:var(--gp-caption,1);pointer-events:var(--gp-caption-hit,auto);}
+[data-gp-root] [data-gp-caption]{font-family:inherit;}
+[data-gp-root] [data-gp-front]{position:absolute;inset:0;opacity:var(--gp-caption,1);pointer-events:none;}
+[data-gp-root] [data-gp-front] a,[data-gp-root] [data-gp-front] button{pointer-events:var(--gp-caption-hit,auto);}
+[data-gp-root] [data-gp-front]:focus-within{opacity:1;}
+[data-gp-root] [data-gp-hint]{max-width:30ch;color:var(--gp-ink);}
+[data-gp-root] [data-gp-enter]{display:inline-flex;align-items:center;gap:16px;min-height:44px;color:inherit;font:inherit;text-decoration:none;letter-spacing:inherit;}
+[data-gp-root] [data-gp-enter]:focus-visible{outline:2px solid currentColor;outline-offset:5px;}
+[data-gp-root] [data-gp-caption]:focus-within{opacity:1;pointer-events:auto;}
+[data-gp-root] [data-gp-enter]:focus-visible{background:var(--gp-paper);color:var(--gp-ink);padding:0 12px;margin:0 -12px;}
+[data-gp-root] [data-gp-content]{box-sizing:border-box;position:relative;min-height:var(--gp-height,100svh);padding:clamp(32px,7%,100px);display:grid;align-content:center;color:var(--gp-foreground);background:var(--gp-field);overflow-wrap:anywhere;}
+[data-gp-root][data-gp-motion=on] [data-gp-pin]{position:sticky;top:0;}
+[data-gp-root][data-gp-motion=off] [data-gp-hint]{display:none;}
+[data-gp-root][data-gp-motion=on] [data-gp-content]{margin-top:calc((var(--gp-length) - 1) * var(--gp-height));background:transparent;opacity:var(--gp-reveal,0);pointer-events:none;}
+[data-gp-root][data-gp-motion=on][data-gp-entered=true] [data-gp-content]{pointer-events:auto;}
+[data-gp-root][data-gp-motion=on]:has([data-gp-content]:focus-within) [data-gp-field]{clip-path:none!important;}
+[data-gp-root][data-gp-motion=on] [data-gp-content]:focus-within{opacity:1;pointer-events:auto;}
+[data-gp-root]:has([data-gp-content]:focus-within) [data-gp-caption],[data-gp-root]:has([data-gp-content]:focus-within) [data-gp-marks]{opacity:0;}
+[data-gp-root] [data-gp-default-title]{color:inherit;font:400 clamp(32px,5vw,72px)/1.05 Georgia,serif;letter-spacing:-.035em;max-width:13ch;margin:0 0 24px;text-wrap:balance;}
+[data-gp-root] [data-gp-default-copy]{color:inherit;font:16px/1.6 Arial,sans-serif;max-width:36ch;margin:0;}
+@media(prefers-reduced-motion:reduce){[data-gp-root] [data-gp-pin]{position:relative!important;} [data-gp-root] [data-gp-content]{margin-top:0!important;opacity:1!important;background:var(--gp-field)!important;min-height:0;padding-block:64px;} [data-gp-root] [data-gp-caption]{opacity:1!important;}}
+@media(prefers-reduced-motion:reduce){[data-gp-root] [data-gp-hint]{display:none;}}
+      

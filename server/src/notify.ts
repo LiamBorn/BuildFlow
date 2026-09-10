@@ -23,7 +23,7 @@ import { sendMail } from "./email.js";
 export type NotifyChannel = "email" | "sms" | "push";
 export type OpsRecipients = { emails: string[]; phones: string[] };
 export type OpsNotice = {
-  kind: "delayIQ" | "assignment" | "conflict" | "variance";
+  kind: "delayIQ" | "assignment" | "conflict" | "variance" | "digest";
   subject: string; // email subject / push title
   heading: string; // short headline
   lines: string[]; // body detail lines
@@ -40,9 +40,7 @@ function enabledChannels(): Set<NotifyChannel> {
 
 export function smsConfigured(): boolean {
   return Boolean(
-    process.env.TWILIO_ACCOUNT_SID &&
-      process.env.TWILIO_AUTH_TOKEN &&
-      (process.env.TWILIO_FROM || process.env.TWILIO_MESSAGING_SERVICE_SID)
+    process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && (process.env.TWILIO_FROM || process.env.TWILIO_MESSAGING_SERVICE_SID)
   );
 }
 export function pushConfigured(): boolean {
@@ -50,7 +48,7 @@ export function pushConfigured(): boolean {
 }
 
 /* ── SMS via Twilio REST (no SDK; logs until configured) ──────────────────── */
-async function sendSms(to: string, body: string): Promise<{ ok: boolean; mode: "twilio" | "log" }> {
+export async function sendSms(to: string, body: string): Promise<{ ok: boolean; mode: "twilio" | "log" }> {
   if (!smsConfigured()) {
     console.log(`📱 [sms · LOG MODE — set TWILIO_* to send] → ${to}: ${body}`);
     return { ok: true, mode: "log" };

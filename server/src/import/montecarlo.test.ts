@@ -4,12 +4,7 @@ import type { ImportedActivity, RelationType } from "./types.js";
 
 const DATA_DATE = "2026-07-20";
 
-function act(
-  id: string,
-  start: string,
-  finish: string,
-  extra: Partial<ImportedActivity> = {}
-): ImportedActivity {
+function act(id: string, start: string, finish: string, extra: Partial<ImportedActivity> = {}): ImportedActivity {
   return {
     externalId: id,
     code: id,
@@ -44,10 +39,7 @@ describe("Monte Carlo finish band", () => {
   });
 
   it("pushes the band past the plan and lowers on-time odds when behind pace", () => {
-    const activities = [
-      act("A", "2026-08-01", "2026-10-30"),
-      act("B", "2026-11-01", "2027-01-30", { predecessors: [fs("A")] })
-    ];
+    const activities = [act("A", "2026-08-01", "2026-10-30"), act("B", "2026-11-01", "2027-01-30", { predecessors: [fs("A")] })];
     const band = simulateFinish(activities, { ...runOpts, scheduleIndex: 0.7, lowProgress: false })!;
     expect(band.p50SlipDays).toBeGreaterThan(0);
     expect(band.p80SlipDays).toBeGreaterThan(band.p50SlipDays);
@@ -56,10 +48,11 @@ describe("Monte Carlo finish band", () => {
   });
 
   it("keeps a right-skewed tail: P80 lands on or after the plan even on pace", () => {
-    const band = simulateFinish(
-      [act("A", "2026-08-01", "2026-10-30"), act("B", "2026-11-01", "2027-01-30", { predecessors: [fs("A")] })],
-      { ...runOpts, scheduleIndex: 1, lowProgress: false }
-    )!;
+    const band = simulateFinish([act("A", "2026-08-01", "2026-10-30"), act("B", "2026-11-01", "2027-01-30", { predecessors: [fs("A")] })], {
+      ...runOpts,
+      scheduleIndex: 1,
+      lowProgress: false
+    })!;
     expect(band.p80SlipDays).toBeGreaterThanOrEqual(0);
   });
 
@@ -101,10 +94,7 @@ describe("Monte Carlo finish band", () => {
 
   it("respects finished work — completed activities don't move", () => {
     const band = simulateFinish(
-      [
-        act("A", "2026-05-01", "2026-06-15", { percentComplete: 100 }),
-        act("B", "2026-08-01", "2026-10-30", { predecessors: [fs("A")] })
-      ],
+      [act("A", "2026-05-01", "2026-06-15", { percentComplete: 100 }), act("B", "2026-08-01", "2026-10-30", { predecessors: [fs("A")] })],
       { ...runOpts, scheduleIndex: 1, lowProgress: false }
     )!;
     expect(band).toBeDefined();

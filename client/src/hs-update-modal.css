@@ -1,0 +1,286 @@
+/* ============================================================================
+   hs-update-modal.css — "What's new" product-update modal
+   HubSpot-style release announcement shown once per update, per user, when
+   they land in the app: a starburst illustration, an eyebrow with the version
+   and date, the update's title and description, and two actions — "Show me
+   where it is" (navigates + pulses the feature) and "Learn more ↗" (opens the
+   changelog entry). BuildFlow's own palette (navy / blue / purple / coral).
+   ========================================================================== */
+
+.hs-upd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 32, 58, 0.5);
+  backdrop-filter: blur(4px);
+  animation: hs-upd-fade 0.18s ease-out both;
+}
+.hs-upd-dialog {
+  position: relative;
+  width: min(600px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 40px 44px 36px;
+  border: 1px solid #e6e8f0;
+  border-radius: 14px;
+  background: #fff;
+  color: #14203a;
+  box-shadow: 0 30px 80px rgba(20, 32, 58, 0.35);
+  text-align: center;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  animation: hs-upd-pop 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hs-upd-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #575550;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.hs-upd-close:hover {
+  background: #f0f2f6;
+  color: #14203a;
+}
+
+.hs-upd-art {
+  display: grid;
+  place-items: center;
+  margin: 0 auto 8px;
+}
+.hs-upd-art svg {
+  width: 170px;
+  height: 170px;
+}
+
+.hs-upd-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: #2f6bff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.hs-upd-title {
+  margin: 0 0 12px;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: #14203a;
+}
+.hs-upd-desc {
+  max-width: 46ch;
+  margin: 0 auto 26px;
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #575550;
+}
+
+.hs-upd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.hs-upd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 22px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+.hs-upd-btn-primary {
+  border: 1px solid #2f6bff;
+  background: #2f6bff;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(47, 107, 255, 0.28);
+}
+.hs-upd-btn-primary:hover {
+  background: #245ae0;
+  border-color: #245ae0;
+  transform: translateY(-1px);
+}
+.hs-upd-btn-secondary {
+  border: 1px solid #c9d0dc;
+  background: #fff;
+  color: #14203a;
+}
+.hs-upd-btn-secondary:hover {
+  background: #f0f2f6;
+  border-color: #b6bfcc;
+}
+
+/* "Show me where it is" — pulse the feature on the destination page */
+.hs-upd-spotlight {
+  outline: 3px solid #2f6bff;
+  outline-offset: 6px;
+  border-radius: 12px;
+  animation: hs-upd-pulse 1.1s ease-in-out 3;
+}
+
+@keyframes hs-upd-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes hs-upd-pop {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hs-upd-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(47, 107, 255, 0);
+  }
+}
+
+@media (max-width: 560px) {
+  .hs-upd-dialog {
+    padding: 32px 22px 26px;
+  }
+  .hs-upd-art svg {
+    width: 130px;
+    height: 130px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-upd-backdrop,
+  .hs-upd-dialog,
+  .hs-upd-spotlight {
+    animation: none;
+  }
+}
+
+/* ============================================================================
+   Add-on program prompt — same dialog language, opened from the nav when a
+   program that isn't part of the workspace is chosen.
+   ========================================================================== */
+.hs-addon-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin: 4px auto 18px;
+  border-radius: 22px;
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-addon-art.tone-green {
+  background: #e2f1e6;
+  color: #188038;
+}
+.hs-addon-art.tone-teal {
+  background: #dff3f0;
+  color: #0d9488;
+}
+.hs-addon-art.tone-blue {
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-addon-art.tone-violet,
+.hs-addon-art.tone-purple {
+  background: #efe8f8;
+  color: #7c3aed;
+}
+.hs-addon-art.tone-orange {
+  background: #fdf0dc;
+  color: #c2410c;
+}
+.hs-addon-art-badge {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #14203a;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(20, 32, 58, 0.25);
+}
+.hs-addon-where {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 480px;
+  margin: -8px auto 24px;
+  padding: 12px 14px;
+  border: 1px solid #e6e8f0;
+  border-radius: 10px;
+  background: #f5f6fa;
+  text-align: left;
+}
+.hs-addon-where-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e6e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #2f6bff;
+}
+.hs-addon-where > div > strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+  color: #14203a;
+}
+.hs-addon-where > div > span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #575550;
+}

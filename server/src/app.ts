@@ -4,9 +4,54 @@ import path from "node:path";
 import cors from "cors";
 import express, { type Response } from "express";
 import { z } from "zod";
-import { businessTypeOptions, type ScheduleVariance, type Status } from "@buildflow/shared";
-import { BuildFlowStore, toAccount, DEMO_ACCOUNT_EMAIL, type Account, type Org } from "./database.js";
+import {
+  businessTypeOptions,
+  PASSWORD_MIN_LENGTH,
+  onboardingProductOptions,
+  planOptions,
+  type BillingStatus,
+  type BootstrapPayload,
+  type InvitePreview,
+  type TeamInvite,
+  type OnboardingProductId,
+  type PlanId,
+  passwordProblem,
+  portfolioScheduleStatus,
+  JOB_STATUSES,
+  projectScheduleStatus,
+  scheduleCalendarFor,
+  type ScheduleVariance
+} from "@buildflow/shared";
+import {
+  BuildFlowStore,
+  DependencyError,
+  RebookConflictError,
+  clashMessage,
+  toAccount,
+  DEMO_ACCOUNT_EMAIL,
+  type Account,
+  type Org
+} from "./database.js";
+import type { ScheduleAssignment, ScheduleLiveEvent } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
+import { ScheduleLiveHub } from "./schedule/live.js";
+import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
+import { createRateLimiter, createLoginGuard, humanSeconds } from "./rateLimit.js";
+import {
+  OAUTH_COOKIE,
+  OAUTH_STATE_TTL_MS,
+  OAUTH_PROVIDERS,
+  authorizeUrl,
+  configuredProviders,
+  exchangeCode,
+  pkcePair,
+  providerConfig,
+  readState,
+  safeReturnTo,
+  signState,
+  type OAuthProvider
+} from "./oauth.js";
+import crypto from "node:crypto";
 import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
@@ -19,7 +64,15 @@ declare module "express-serve-static-core" {
     org?: Org;
   }
 }
-import { sendMail, contactSalesThankYouEmail, contactSalesLeadEmail, type SalesLead } from "./email.js";
+import {
+  sendMail,
+  contactSalesThankYouEmail,
+  contactSalesLeadEmail,
+  type SalesLead,
+  verifyEmailMessage,
+  resetPasswordMessage,
+  inviteMessage
+} from "./email.js";
 import { waitlistConfirmationEmail, waitlistLaunchEmail } from "./email.js"; // waitlist (removable feature)
 import type Stripe from "stripe";
 import {
@@ -32,48 +85,66 @@ import {
   configuredPlans,
   planForPriceId
 } from "./billing.js";
-import { sendOpsNotice, assignmentNotice, conflictNotice, delayIQNotice, delayImpactNotice, varianceNotice, type OpsRecipients } from "./notify.js";
+import {
+  sendOpsNotice,
+  assignmentNotice,
+  conflictNotice,
+  delayIQNotice,
+  delayImpactNotice,
+  varianceNotice,
+  sendSms,
+  smsConfigured,
+  type OpsRecipients
+} from "./notify.js";
 import { detectVariance } from "./variance.js";
+import { buildCrewCalendar } from "./ics.js";
+import { registerScheduleToolRoutes } from "./schedule/routes.js";
+import { seedPavingSchedule } from "./schedule/seed.js";
 
-const statuses: [Status, ...Status[]] = [
-  "Not Started",
-  "Ready",
-  "Ready to Start",
-  "Planned",
-  "Confirmed",
-  "In Progress",
-  "On Site",
-  "DelayIQed",
-  "Complete",
-  "At Risk"
-];
+const statuses = JOB_STATUSES; // the one status list, shared with the client
 
 const scheduleHealthValues = ["On Track", "Monitor", "At Risk", "Complete"] as const;
 
+/* A booking has no status of its own — it wears its job's — so none of these accept one. */
 const assignSchema = z.object({
   jobId: z.string().min(1),
   crewId: z.string().min(1),
   date: z.string().min(10),
-  status: z.enum(statuses).optional()
+  /** The planner has seen the clash and chooses to double-book. */
+  force: z.boolean().optional()
 });
 
 const assignmentPatchSchema = z.object({
   jobId: z.string().min(1).optional(),
   crewId: z.string().min(1).optional(),
   date: z.string().min(10).optional(),
-  status: z.enum(statuses).optional()
+  force: z.boolean().optional()
 });
 
-const jobPatchSchema = z.object({
+/* A re-book: everything one drop touches, applied together (see store.rebook). */
+/** The job fields a save may change besides its dates: the drawer's, on a PATCH or on a re-book's job step. */
+const jobEditsSchema = z.object({
   status: z.enum(statuses).optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   materialsStatus: z.enum(["Delivered", "Ordered", "Missing", "Waiting on Delivery"]).optional(),
   notes: z.string().optional(),
   priority: z.enum(["High", "Medium", "Normal"]).optional()
 });
+const rebookMoveSchema = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("move"), id: z.string().min(1), crewId: z.string().min(1).optional(), date: z.string().min(10).optional() }),
+  z.object({ op: z.literal("book"), jobId: z.string().min(1), crewId: z.string().min(1), date: z.string().min(10) }),
+  z.object({ op: z.literal("unbook"), id: z.string().min(1) }),
+  jobEditsSchema.extend({ op: z.literal("job"), id: z.string().min(1), startDate: z.string().min(10), endDate: z.string().min(10) })
+]);
+const rebookSchema = z.object({ moves: z.array(rebookMoveSchema).min(1).max(200), force: z.boolean().optional() });
+
+const workCalendarSchema = z.object({
+  workingDays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+  holidays: z.array(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), name: z.string().trim().min(1).max(80) })).max(400)
+});
+
+const jobPatchSchema = jobEditsSchema.extend({ startDate: z.string().optional(), endDate: z.string().optional() });
 
 const jobSchema = z.object({
   projectId: z.string().trim().min(1),
@@ -102,7 +173,16 @@ const projectPatchSchema = z.object({
   targetCompletion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   percentComplete: z.number().int().min(0).max(100),
   status: z.enum(statuses),
-  scheduleHealth: z.enum(scheduleHealthValues)
+  scheduleHealth: z.enum(scheduleHealthValues),
+  // whole dollars; omitted or null means "not priced", which reporting treats
+  // differently from a contract genuinely worth nothing
+  value: z
+    .number()
+    .int()
+    .min(0)
+    .max(100_000_000_000)
+    .nullish()
+    .transform((v) => v ?? undefined)
 });
 
 const fieldUpdateSchema = z
@@ -145,7 +225,9 @@ const crewSchema = z.object({
   name: z.string().trim().min(1),
   specialty: z.string().trim().min(1),
   foreman: z.string().trim().min(1),
-  laborMix: z.array(crewRoleCountSchema).min(1)
+  laborMix: z.array(crewRoleCountSchema).min(1),
+  /** Hourly rate per worker, in dollars; omitted = the specialty's default. */
+  rate: z.number().min(0).max(10000).optional()
 });
 
 const equipmentSchema = z.object({
@@ -164,18 +246,37 @@ const materialSchema = z.object({
 });
 
 const businessProfileSchema = z.object({
-  businessType: z.enum(businessTypeOptions)
+  businessType: z.enum(businessTypeOptions),
+  // What the owner picked on the plan step. Optional so older clients (and the
+  // Settings trade picker) can send the trade alone.
+  selectedPlan: z.enum(planOptions).optional(),
+  selectedProducts: z
+    .array(z.enum(onboardingProductOptions.map((option) => option.id) as [OnboardingProductId, ...OnboardingProductId[]]))
+    .max(onboardingProductOptions.length)
+    .optional(),
+  seats: z.number().int().min(1).max(1000).optional()
 });
+const PLAN_LABELS: Record<PlanId, string> = { free: "Free", pro: "Pro", business: "Business", enterprise: "Enterprise" };
 
 // waitlist (removable feature): email signup validation
 const waitlistEmailSchema = z.object({
-  email: z.string().trim().min(3).max(320).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address")
+  email: z
+    .string()
+    .trim()
+    .min(3)
+    .max(320)
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address")
 });
 
 // contact sales: potential-customer lead validation
 const contactSalesSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  email: z.string().trim().min(3).max(320).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"),
+  email: z
+    .string()
+    .trim()
+    .min(3)
+    .max(320)
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"),
   phone: z.string().trim().max(60).optional().default(""),
   company: z.string().trim().min(1).max(160),
   teamSize: z.string().trim().min(1).max(40),
@@ -189,7 +290,7 @@ const leadStatusEnum = z.enum(["New", "Contacted", "Qualified", "Proposal", "Won
 const salesLeadCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().min(3).max(320),
-  company: z.string().trim().min(1).max(160),
+  company: z.string().trim().max(160).default(""), // "company, if any"
   phone: z.string().trim().max(60).optional(),
   teamSize: z.string().trim().max(40).optional(),
   interest: z.string().trim().max(80).optional(),
@@ -202,7 +303,7 @@ const salesLeadCreateSchema = z.object({
 const salesLeadPatchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   email: z.string().trim().min(3).max(320).optional(),
-  company: z.string().trim().min(1).max(160).optional(),
+  company: z.string().trim().max(160).optional(),
   phone: z.string().trim().max(60).optional(),
   teamSize: z.string().trim().max(40).optional(),
   interest: z.string().trim().max(80).optional(),
@@ -216,16 +317,74 @@ const salesTaskCreateSchema = z.object({
   title: z.string().trim().min(1).max(200),
   dueAt: z.string().trim().min(1),
   leadId: z.string().trim().min(1).nullable().optional(),
-  department: departmentEnum.optional()
+  department: departmentEnum.optional(),
+  assignee: z.string().trim().max(120).optional(),
+  priority: z.enum(["Low", "Normal", "High"]).optional(),
+  notes: z.string().trim().max(2000).optional()
 });
 const salesTaskPatchSchema = z.object({
   done: z.boolean().optional(),
   title: z.string().trim().min(1).max(200).optional(),
   dueAt: z.string().trim().min(1).optional()
 });
+/* Contact record actions (Contacts page → record panel). */
+const salesEmailSchema = z.object({
+  subject: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(5000),
+  from: z.string().trim().max(120).optional()
+});
+const salesTextSchema = z.object({ body: z.string().trim().min(1).max(600) });
+/* Companies + Deals (the Sales hub's other pages). */
+const salesCompanyCreateSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  domain: z.string().trim().max(160).optional(),
+  industry: z.string().trim().max(80).optional(),
+  phone: z.string().trim().max(60).optional(),
+  city: z.string().trim().max(120).optional(),
+  state: z.string().trim().max(60).optional(),
+  owner: z.string().trim().max(120).optional(),
+  notes: z.string().trim().max(4000).optional()
+});
+const salesCompanyPatchSchema = salesCompanyCreateSchema.partial();
+const dealStageEnum = z.enum([
+  "Appointment scheduled",
+  "Qualified to buy",
+  "Presentation scheduled",
+  "Decision maker bought-in",
+  "Contract sent",
+  "Closed won",
+  "Closed lost"
+]);
+const salesDealCreateSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  stage: dealStageEnum.optional(),
+  amount: z.number().int().nonnegative().max(1_000_000_000).optional(),
+  closeDate: z.string().trim().max(40).optional(),
+  companyId: z.string().trim().min(1).nullable().optional(),
+  leadId: z.string().trim().min(1).nullable().optional(),
+  owner: z.string().trim().max(120).optional(),
+  priority: z.enum(["Low", "Medium", "High"]).optional(),
+  notes: z.string().trim().max(4000).optional()
+});
+const salesDealPatchSchema = salesDealCreateSchema.partial();
+const salesCallLogSchema = z.object({
+  outcome: z.enum(["Connected", "Left voicemail", "No answer", "Busy", "Wrong number"]),
+  durationMinutes: z.number().int().min(0).max(600).optional(),
+  notes: z.string().trim().max(2000).optional()
+});
+const salesMeetingSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }),
+  location: z.string().trim().max(240).optional(),
+  agenda: z.string().trim().max(2000).optional(),
+  organizer: z.string().trim().max(120).optional(),
+  notify: z.boolean().optional(),
+  timeZone: z.string().trim().max(64).optional()
+});
 const salesActivitySchema = z.object({
   leadId: z.string().trim().min(1),
-  type: z.enum(["note", "call", "email", "meeting", "stage"]),
+  type: z.enum(["note", "call", "email", "meeting", "stage", "text"]),
   summary: z.string().trim().min(1).max(600)
 });
 const supportPriorityEnum = z.enum(["Low", "Normal", "High", "Urgent"]);
@@ -248,7 +407,12 @@ const supportConversationPatchSchema = z.object({
 });
 const supportAgentSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  email: z.string().trim().min(3).max(320).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Please enter a valid email address."),
+  email: z
+    .string()
+    .trim()
+    .min(3)
+    .max(320)
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Please enter a valid email address."),
   role: z.enum(["Admin", "Agent"]).optional()
 });
 
@@ -257,24 +421,41 @@ const billingCheckoutSchema = z.object({
   period: z.enum(["monthly", "yearly"]),
   seats: z.number().int().min(1).max(1000).optional(),
   email: z.string().email().optional(),
-  origin: z.string().url().optional()
+  origin: z.string().url().optional(),
+  /** Where Stripe sends the person back: the pricing page (default), straight into the app after onboarding, or Settings › Billing. */
+  returnTo: z.enum(["plans", "onboarding", "settings"]).optional()
 });
 const billingPortalSchema = z.object({
   email: z.string().email().optional(),
   customerId: z.string().optional(),
-  origin: z.string().url().optional()
+  origin: z.string().url().optional(),
+  returnTo: z.enum(["plans", "settings"]).optional()
 });
 
 /* Map a verified Stripe webhook event onto our subscriptions table. Only the
    events we care about are handled; anything else is acknowledged and ignored.
    Fields that shift between Stripe API versions are read through a permissive view. */
+/** Shift an ISO date by whole days, staying on the date axis (no timezone drift). */
+function shiftDays(iso: string, days: number) {
+  const date = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** The Monday on or before `iso` — the key a week's snapshot is filed under. */
+function mondayOf(iso: string) {
+  const date = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
+  const weekday = date.getUTCDay(); // 0 = Sunday
+  return shiftDays(iso, weekday === 0 ? -6 : 1 - weekday);
+}
+
 function handleBillingEvent(store: BuildFlowStore, event: Stripe.Event) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const subId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
     store.upsertSubscription({
       id: subId ?? session.id,
-      customerId: typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
+      customerId: typeof session.customer === "string" ? session.customer : (session.customer?.id ?? null),
       email: session.customer_details?.email ?? session.customer_email ?? null,
       planId: session.metadata?.planId ?? null,
       period: session.metadata?.period ?? null,
@@ -301,7 +482,7 @@ function handleBillingEvent(store: BuildFlowStore, event: Stripe.Event) {
     const periodEndUnix = view.current_period_end ?? item?.current_period_end;
     store.upsertSubscription({
       id: sub.id,
-      customerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
+      customerId: typeof sub.customer === "string" ? sub.customer : (sub.customer?.id ?? null),
       priceId,
       planId: mapped?.plan ?? view.metadata?.planId ?? null,
       period: mapped?.period ?? view.metadata?.period ?? null,
@@ -313,9 +494,23 @@ function handleBillingEvent(store: BuildFlowStore, event: Stripe.Event) {
   }
 }
 
+/** Bump when the Terms or Privacy Policy change materially; stored on each account at signup. */
+const TERMS_VERSION = "2026-09";
+
 export async function createApp(options: { dataFile?: string; reset?: boolean } = {}) {
   const mainStore = await BuildFlowStore.create(options.dataFile, options.reset);
   const manager = new StoreManager(mainStore);
+  // Demo workspace: the Route 9 Resurfacing paving job for the Schedule Creation
+  // Tool (40 activities, three crews). Guarded on its job number; skipped under
+  // vitest so API tests keep their expected project counts.
+  if (!process.env.VITEST) {
+    try {
+      const seeded = seedPavingSchedule(mainStore);
+      if (seeded) console.log("🗓️  Seeded Route 9 Resurfacing (schedule demo project)");
+    } catch (error) {
+      console.error("🗓️  Schedule demo seed failed:", error instanceof Error ? error.message : error);
+    }
+  }
   // Per-request operational store. Auth-gated routes run inside an ALS context
   // holding the requester's org store; everything else falls back to mainStore
   // (which owns the global auth/waitlist/sales/billing tables). This routes the
@@ -335,9 +530,45 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const emails = mainStore.all<{ email: string }>("SELECT email FROM accounts WHERE orgId = ?", [orgId]).map((r) => r.email);
     const extraEmail = process.env.OPS_NOTIFY_EMAIL?.trim();
     if (extraEmail) emails.push(extraEmail);
-    const phones = (process.env.OPS_NOTIFY_SMS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const phones = (process.env.OPS_NOTIFY_SMS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     return { emails: [...new Set(emails)], phones };
   };
+
+  // Auth abuse controls — per process, per app instance (see rateLimit.ts).
+  const limiter = createRateLimiter();
+  const loginGuard = createLoginGuard();
+  const HOUR = 60 * 60 * 1000;
+  const QUARTER = 15 * 60 * 1000;
+  const VERIFY_TTL_MS = 24 * HOUR;
+  const RESET_TTL_MS = HOUR;
+  /** The web app's origin for emailed links: the caller's origin in dev, the configured client URL otherwise. */
+  const appOriginFor = (req: express.Request) => {
+    const origin = typeof req.headers.origin === "string" && /^https?:\/\//.test(req.headers.origin) ? req.headers.origin : clientUrl;
+    return origin.replace(/\/+$/, "");
+  };
+  const sendVerificationEmail = async (req: express.Request, account: { id: string; name: string; email: string }) => {
+    const token = mainStore.createAuthToken(account.id, "verify", VERIFY_TTL_MS);
+    const link = `${appOriginFor(req)}/#verify-email?token=${encodeURIComponent(token)}`;
+    const message = verifyEmailMessage(account.name, link);
+    await sendMail({ to: account.email, ...message });
+    return token;
+  };
+  const INVITE_TTL_MS = 7 * 24 * HOUR;
+  const sendInviteEmail = async (
+    req: express.Request,
+    invite: { email: string; role: string },
+    token: string,
+    inviterName: string,
+    orgName: string
+  ) => {
+    const link = `${appOriginFor(req)}/#accept-invite?token=${encodeURIComponent(token)}`;
+    await sendMail({ to: invite.email, ...inviteMessage(inviterName, orgName, invite.role, link) });
+  };
+  // Tests read tokens back from the response instead of parsing log-mode email.
+  const exposeTokens = process.env.NODE_ENV === "test" || process.env.BUILDFLOW_EXPOSE_AUTH_TOKENS === "1";
 
   const app = express();
   // Expose the store manager to the server entrypoint (backup scheduler/boot snapshot) + ops routes.
@@ -346,7 +577,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   // Cross-origin cookies require an explicit origin + credentials (NOT "*").
   // Allow any localhost dev port, plus any origin listed in CORS_ORIGIN (prod).
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   app.use(
     cors({
       origin(origin, cb) {
@@ -367,16 +601,45 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // Only these prefixes are gated; auth/health/waitlist/contact-sales/sales/
   // support/billing stay public and use mainStore (ALS unset).
   const OPS_PREFIXES = [
-    "/api/bootstrap", "/api/business-profile", "/api/projects", "/api/jobs", "/api/schedule",
-    "/api/field-updates", "/api/delayIQs", "/api/resources", "/api/crews", "/api/equipment", "/api/materials",
+    "/api/bootstrap",
+    "/api/business-profile",
+    "/api/projects",
+    "/api/jobs",
+    "/api/schedule",
+    "/api/field-updates",
+    "/api/delayIQs",
+    "/api/resources",
+    "/api/crews",
+    "/api/equipment",
+    "/api/materials",
     // Schedule import writes projects/jobs into the caller's own workspace, so it
     // must be gated and tenant-bound like the rest of the ops routes.
     "/api/import",
+    // The Schedule Creation Tool reads and writes the caller's own activities.
+    "/api/schedule-tool",
     // DelayIQ early-warning reads the caller's own schedule and can notify their
     // team, so it's gated + tenant-bound too.
-    "/api/delayiq"
+    "/api/delayiq",
+    // Team (invites, sample teammates) and org (name) live behind the session too.
+    "/api/team",
+    "/api/org",
+    "/api/me"
   ];
   const isOpsPath = (p: string) => OPS_PREFIXES.some((pre) => p === pre || p.startsWith(`${pre}/`));
+  // The schedule's live feed: every schedule write announces itself to the org's other open tabs.
+  const live = new ScheduleLiveHub();
+  app.locals.live = live;
+  const announce = (req: express.Request, event: Pick<ScheduleLiveEvent, "kind" | "op" | "ids">) => {
+    if (!req.org) return;
+    const client = req.headers["x-buildflow-client"];
+    live.publish(req.org.id, {
+      ...event,
+      by: { id: req.account?.id ?? "", name: req.account?.name ?? "Someone" },
+      client: typeof client === "string" ? client : null,
+      at: new Date().toISOString()
+    });
+  };
+
   app.use(async (req, res, next) => {
     if (!isOpsPath(req.path)) return next();
     const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
@@ -399,17 +662,69 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.redirect(clientUrl);
   });
 
+  /* The crew calendar feed: outside the session gate on purpose (a phone's calendar app cannot sign in);
+     the key in the link is the workspace's feed secret. */
+  app.get("/api/feeds/:orgId/:crewId.ics", async (req, res) => {
+    const orgId = String(req.params.orgId);
+    const org = mainStore.getOrg(orgId);
+    if (!org) {
+      res.status(404).type("text/plain").send("Unknown workspace");
+      return;
+    }
+    let orgStore: BuildFlowStore;
+    try {
+      orgStore = await manager.getOrgStore(orgId);
+    } catch {
+      res.status(500).type("text/plain").send("Workspace unavailable");
+      return;
+    }
+    if (String(req.query.key ?? "") !== orgStore.calendarFeedKey()) {
+      res.status(403).type("text/plain").send("This calendar link is not valid");
+      return;
+    }
+    const crew = orgStore.crews().find((item) => item.id === String(req.params.crewId));
+    if (!crew) {
+      res.status(404).type("text/plain").send("Unknown crew");
+      return;
+    }
+    const ics = buildCrewCalendar({
+      crew,
+      assignments: orgStore.assignments(),
+      jobs: orgStore.jobs(),
+      projects: orgStore.projects(),
+      name: `BuildFlow · ${crew.name}`
+    });
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", `inline; filename="${crew.name.replace(/[^\w.-]+/g, "-")}.ics"`);
+    res.setHeader("Cache-Control", "no-cache");
+    res.send(ics);
+  });
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true });
   });
 
   // ── Authentication (public) ───────────────────────────────────────────────
+  /* Signup validation answers per field so the form can put the message under
+     the input it belongs to. `field` is the input name; `code` lets the client
+     react to a specific case (an existing email offers "log in instead"). */
   const signupSchema = z.object({
-    email: z.string().trim().email().max(320),
-    password: z.string().min(8).max(200),
-    name: z.string().trim().min(1).max(120),
-    orgName: z.string().trim().max(160).optional()
+    email: z.string().trim().email("Enter a valid email address.").max(320, "That email is too long."),
+    password: z
+      .string()
+      .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
+      .max(200, "Password is too long (200 characters max)."),
+    name: z.string().trim().min(1, "Enter your name.").max(120, "Name is too long (120 characters max)."),
+    // The company becomes the workspace everyone else is invited into, so it
+    // is no longer optional and no longer invented from the person's name.
+    orgName: z.string().trim().min(2, "Enter your company name.").max(160, "Company name is too long (160 characters max)."),
+    acceptTerms: z.literal(true, { message: "Please agree to the Terms & Conditions and Privacy Policy." }),
+    remember: z.boolean().optional()
   });
+  const signupFieldFor = (path: readonly PropertyKey[]) => {
+    const key = String(path[0] ?? "");
+    return key === "orgName" ? "company" : key === "acceptTerms" ? "terms" : key;
+  };
   const loginSchema = z.object({
     email: z.string().trim().email().max(320),
     password: z.string().min(1).max(200),
@@ -420,46 +735,92 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // `remember: false` issues a browser-session cookie instead, so closing the
   // browser signs the account out. The session row itself is unchanged — the
   // cookie is the credential, so dropping it is what ends the sign-in.
+  /** The session payload the client keeps: `demo` marks the shared demo login, which is not a real signup. */
+  const sessionPayload = (account: Account, org: Org) => ({ account, org, demo: account.email === DEMO_ACCOUNT_EMAIL });
   const issueSession = (res: Response, account: Account, org: Org, remember = true) => {
     const { token } = mainStore.createSession(account.id, org.id);
     res.cookie(SESSION_COOKIE, token, sessionCookieOptions(remember ? SESSION_TTL_MS : null));
   };
 
-  app.post("/api/auth/signup", (req, res) => {
+  app.post("/api/auth/signup", limiter.byIp("signup", 10, HOUR), async (req, res) => {
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Enter a valid email and a password of at least 8 characters." });
+      const issue = parsed.error.issues[0];
+      res
+        .status(400)
+        .json({ error: issue?.message ?? "Check the form and try again.", field: issue ? signupFieldFor(issue.path) : undefined });
       return;
     }
-    const { email, password, name, orgName } = parsed.data;
+    const { email, password, name, orgName, remember } = parsed.data;
+    // Same policy as the form's live meter (shared package), enforced here so
+    // a hand-made request can't skip it.
+    const weak = passwordProblem(password, email);
+    if (weak) {
+      res.status(400).json({ error: weak, field: "password", code: "weak_password" });
+      return;
+    }
     if (mainStore.emailExists(email)) {
-      res.status(409).json({ error: "An account with this email already exists." });
+      res.status(409).json({ error: "An account with this email already exists.", field: "email", code: "email_taken" });
       return;
     }
-    const org = mainStore.createOrg(orgName || `${name}'s Company`);
-    const account = mainStore.createAccount({ orgId: org.id, email, password, name, role: "owner" });
-    issueSession(res, account, org);
-    res.status(201).json({ account, org });
+    const org = mainStore.createOrg(orgName);
+    const account = mainStore.createAccount({
+      orgId: org.id,
+      email,
+      password,
+      name,
+      role: "owner",
+      acceptedTermsAt: new Date().toISOString(),
+      acceptedTermsVersion: TERMS_VERSION
+    });
+    // The owner is a person in their own workspace from the first second, so
+    // nothing they do is attributed to a seeded name.
+    try {
+      const orgStore = await manager.getOrgStore(org.id);
+      orgStore.ensureAccountUser(account);
+    } catch (error) {
+      console.error("[signup] could not create the owner's workspace user:", error instanceof Error ? error.message : error);
+    }
+    // "Keep me signed in" now applies to signup too — unticked on a shared
+    // site computer means closing the browser signs the new account out.
+    issueSession(res, account, org, remember ?? true);
+    // The confirmation email goes out in the background; signup never waits on SMTP.
+    sendVerificationEmail(req, account).catch((error) =>
+      console.error("[auth] verification email failed:", error instanceof Error ? error.message : error)
+    );
+    res.status(201).json(sessionPayload(account, org));
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post("/api/auth/login", limiter.byIp("login", 30, QUARTER), (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Enter your email and password." });
       return;
     }
+    // Five wrong passwords lock the email for fifteen minutes — the answer is
+    // the same whether or not the account exists, so this reveals nothing.
+    const locked = loginGuard.lockedFor(parsed.data.email);
+    if (locked > 0) {
+      res.setHeader("Retry-After", String(locked));
+      res
+        .status(429)
+        .json({ error: `Too many sign-in attempts. Try again in ${humanSeconds(locked)}, or reset your password.`, retryAfterSec: locked });
+      return;
+    }
     const row = mainStore.getAccountRowByEmail(parsed.data.email);
     if (!row || !verifyPassword(parsed.data.password, row.passwordHash)) {
+      loginGuard.noteFailure(parsed.data.email);
       res.status(401).json({ error: "Incorrect email or password." });
       return;
     }
+    loginGuard.clear(parsed.data.email);
     const org = mainStore.getOrg(row.orgId);
     if (!org) {
       res.status(500).json({ error: "Account workspace is missing." });
       return;
     }
     issueSession(res, toAccount(row), org, parsed.data.remember ?? true);
-    res.json({ account: toAccount(row), org });
+    res.json(sessionPayload(toAccount(row), org));
   });
 
   // Credential-free demo sign-in — powers "Preview the live demo".
@@ -474,13 +835,395 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json({ account: toAccount(row), org });
   });
 
+  /* ── Sign in with Google / Microsoft (OpenID Connect) ───────────────────── */
+  const isProvider = (value: string): value is OAuthProvider => (OAUTH_PROVIDERS as string[]).includes(value);
+  const apiOriginFor = (req: express.Request) => {
+    const configured = process.env.BUILDFLOW_API_URL?.trim();
+    if (configured) return configured.replace(/\/+$/, "");
+    const proto = (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0] ?? req.protocol;
+    return `${proto}://${req.get("host")}`;
+  };
+  const oauthCallbackUri = (req: express.Request, provider: OAuthProvider) => `${apiOriginFor(req)}/api/auth/oauth/${provider}/callback`;
+  const oauthFail = (res: Response, returnTo: string, reason: string) => {
+    res.clearCookie(OAUTH_COOKIE, { path: "/api/auth/oauth" });
+    res.redirect(`${returnTo}/?oauth=error&reason=${encodeURIComponent(reason)}#create-account`);
+  };
+
+  app.get("/api/auth/oauth/status", (_req, res) => {
+    res.json({ providers: configuredProviders() });
+  });
+
+  // The button lands here; we build the provider URL and send the browser on.
+  app.get("/api/auth/oauth/:provider/start", limiter.byIp("oauth-start", 30, QUARTER), (req, res) => {
+    const provider = String(req.params.provider);
+    const allowedReturn = [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
+    const returnTo = safeReturnTo(typeof req.query.returnTo === "string" ? req.query.returnTo : undefined, allowedReturn);
+    if (!isProvider(provider)) {
+      oauthFail(res, returnTo, "unknown_provider");
+      return;
+    }
+    const config = providerConfig(provider);
+    if (!config) {
+      oauthFail(res, returnTo, "not_configured");
+      return;
+    }
+    const mode = req.query.mode === "login" ? "login" : "signup";
+    const acceptTerms = req.query.terms === "1";
+    if (mode === "signup" && !acceptTerms) {
+      oauthFail(res, returnTo, "terms_required");
+      return;
+    }
+    const { verifier, challenge } = pkcePair();
+    const state = crypto.randomBytes(24).toString("base64url");
+    const nonce = crypto.randomBytes(24).toString("base64url");
+    res.cookie(
+      OAUTH_COOKIE,
+      signState({
+        provider,
+        state,
+        verifier,
+        nonce,
+        mode,
+        acceptTerms,
+        remember: req.query.remember !== "0",
+        returnTo,
+        issuedAt: Date.now()
+      }),
+      {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/api/auth/oauth",
+        maxAge: OAUTH_STATE_TTL_MS,
+        secure: process.env.NODE_ENV === "production"
+      }
+    );
+    res.redirect(authorizeUrl(provider, config, { redirectUri: oauthCallbackUri(req, provider), state, challenge, nonce }));
+  });
+
+  // The provider sends the browser back here with a code (or an error).
+  app.get("/api/auth/oauth/:provider/callback", limiter.byIp("oauth-callback", 30, QUARTER), async (req, res) => {
+    const provider = String(req.params.provider);
+    const saved = readState(parseCookies(req.headers.cookie)[OAUTH_COOKIE]);
+    const returnTo = saved?.returnTo ?? clientUrl.replace(/\/+$/, "");
+    if (!isProvider(provider) || !saved || saved.provider !== provider) {
+      oauthFail(res, returnTo, "state_missing");
+      return;
+    }
+    if (typeof req.query.error === "string") {
+      oauthFail(res, returnTo, req.query.error === "access_denied" ? "cancelled" : "provider_error");
+      return;
+    }
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+    if (!code || !state || state !== saved.state) {
+      oauthFail(res, returnTo, "state_mismatch");
+      return;
+    }
+    const config = providerConfig(provider);
+    if (!config) {
+      oauthFail(res, returnTo, "not_configured");
+      return;
+    }
+    let identity;
+    try {
+      identity = await exchangeCode(config, {
+        code,
+        redirectUri: oauthCallbackUri(req, provider),
+        verifier: saved.verifier,
+        nonce: saved.nonce
+      });
+    } catch (error) {
+      console.error(`[oauth] ${provider} exchange failed:`, error instanceof Error ? error.message : error);
+      oauthFail(res, returnTo, "exchange_failed");
+      return;
+    }
+    if (!identity.emailVerified) {
+      oauthFail(res, returnTo, "email_unverified");
+      return;
+    }
+    res.clearCookie(OAUTH_COOKIE, { path: "/api/auth/oauth" });
+
+    const existing = mainStore.getAccountRowByEmail(identity.email);
+    if (existing) {
+      // Sign in. The provider vouches for the address, so an unconfirmed
+      // password account becomes confirmed by signing in this way.
+      const org = mainStore.getOrg(existing.orgId);
+      if (!org) {
+        oauthFail(res, returnTo, "workspace_missing");
+        return;
+      }
+      const account = mainStore.markEmailVerified(existing.id) ?? toAccount(existing);
+      loginGuard.clear(account.email);
+      issueSession(res, account, org, saved.remember);
+      res.redirect(`${returnTo}/?oauth=login`);
+      return;
+    }
+    if (saved.mode === "login") {
+      // No account for that address; do not create one behind their back.
+      oauthFail(res, returnTo, "no_account");
+      return;
+    }
+    // Sign up: a new org named after the company domain (or the person), the
+    // owner account without a password, and the owner as a workspace user.
+    const domain = identity.email.split("@")[1] ?? "";
+    const personal = /^(gmail|googlemail|yahoo|ymail|outlook|hotmail|live|msn|icloud|me|mac|aol|proton|protonmail|mail)\./i.test(domain);
+    const orgName =
+      personal || !domain
+        ? `${(identity.name || identity.email.split("@")[0]).split(" ")[0]}'s Company`
+        : domain
+            .split(".")[0]
+            .replace(/[-_]+/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+    const org = mainStore.createOrg(orgName);
+    const account = mainStore.createAccount({
+      orgId: org.id,
+      email: identity.email,
+      password: crypto.randomBytes(32).toString("base64url"), // unusable; "Forgot password?" sets a real one
+      name: identity.name || identity.email.split("@")[0],
+      role: "owner",
+      acceptedTermsAt: new Date().toISOString(),
+      acceptedTermsVersion: TERMS_VERSION,
+      authProvider: provider,
+      providerSubject: identity.subject,
+      emailVerifiedAt: new Date().toISOString()
+    });
+    try {
+      const orgStore = await manager.getOrgStore(org.id);
+      orgStore.ensureAccountUser(account);
+    } catch (error) {
+      console.error("[oauth] could not create the owner's workspace user:", error instanceof Error ? error.message : error);
+    }
+    issueSession(res, account, org, saved.remember);
+    res.redirect(`${returnTo}/?oauth=signup#business-type`);
+  });
+
+  /* ── Email verification ─────────────────────────────────────────────────── */
+  // Re-send the confirmation link to the signed-in account.
+  app.post("/api/auth/verify/request", limiter.byIp("verify-request", 5, QUARTER), async (req, res) => {
+    const session = mainStore.getSession(parseCookies(req.headers.cookie)[SESSION_COOKIE]);
+    if (!session) {
+      res.status(401).json({ error: "Please sign in to continue." });
+      return;
+    }
+    if (session.account.emailVerifiedAt) {
+      res.json({ ok: true, alreadyVerified: true });
+      return;
+    }
+    try {
+      const token = await sendVerificationEmail(req, session.account);
+      res.json({ ok: true, ...(exposeTokens ? { debugToken: token } : {}) });
+    } catch (error) {
+      console.error("[auth] verification email failed:", error instanceof Error ? error.message : error);
+      res.status(502).json({ error: "We couldn't send the email just now. Please try again." });
+    }
+  });
+
+  // The link in the email lands here.
+  app.post("/api/auth/verify", limiter.byIp("verify", 20, QUARTER), (req, res) => {
+    const token = typeof req.body?.token === "string" ? req.body.token : "";
+    const account = mainStore.consumeAuthToken(token, "verify");
+    if (!account) {
+      res
+        .status(400)
+        .json({ error: "This confirmation link is invalid or has expired. Request a new one from your workspace.", code: "token_invalid" });
+      return;
+    }
+    const verified = mainStore.markEmailVerified(account.id);
+    // Invites written while the address was unconfirmed go out now.
+    const org = mainStore.getOrg(account.orgId);
+    for (const held of mainStore.unsentInvites(account.orgId)) {
+      const refreshed = mainStore.refreshInvite(held.id, account.orgId, INVITE_TTL_MS);
+      if (refreshed && org) {
+        sendInviteEmail(req, refreshed.invite, refreshed.token, account.name, org.name).catch((error) =>
+          console.error("[team] held invite failed to send:", error instanceof Error ? error.message : error)
+        );
+      }
+    }
+    res.json({ ok: true, account: verified });
+  });
+
+  /* ── Forgot password ────────────────────────────────────────────────────── */
+  // Always answers 200 so nobody can learn which emails have accounts.
+  app.post("/api/auth/reset/request", limiter.byIp("reset-request", 5, QUARTER), async (req, res) => {
+    const parsed = z.object({ email: z.string().trim().email().max(320) }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Enter the email you signed up with.", field: "email" });
+      return;
+    }
+    const email = parsed.data.email.toLowerCase();
+    const perEmail = limiter.hit("reset-email", email, 3, HOUR);
+    const row = perEmail.ok ? mainStore.getAccountRowByEmail(email) : undefined;
+    let debugToken: string | undefined;
+    if (row) {
+      try {
+        const token = mainStore.createAuthToken(row.id, "reset", RESET_TTL_MS);
+        const link = `${appOriginFor(req)}/#reset-password?token=${encodeURIComponent(token)}`;
+        await sendMail({ to: row.email, ...resetPasswordMessage(row.name, link) });
+        if (exposeTokens) debugToken = token;
+      } catch (error) {
+        console.error("[auth] reset email failed:", error instanceof Error ? error.message : error);
+      }
+    }
+    res.json({ ok: true, ...(debugToken ? { debugToken } : {}) });
+  });
+
+  // The link in the email lands here with the new password.
+  app.post("/api/auth/reset", limiter.byIp("reset", 20, QUARTER), (req, res) => {
+    const parsed = z.object({ token: z.string().min(1), password: z.string().min(PASSWORD_MIN_LENGTH).max(200) }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`, field: "password" });
+      return;
+    }
+    // Peek at the account first so the password policy can check "not your email".
+    const account = mainStore.consumeAuthToken(parsed.data.token, "reset");
+    if (!account) {
+      res.status(400).json({ error: "This reset link is invalid or has already been used. Request a new one.", code: "token_invalid" });
+      return;
+    }
+    const weak = passwordProblem(parsed.data.password, account.email);
+    if (weak) {
+      // Give the token back: the person is real, the password just needs work.
+      const fresh = mainStore.createAuthToken(account.id, "reset", RESET_TTL_MS);
+      res.status(400).json({ error: weak, field: "password", code: "weak_password", token: fresh });
+      return;
+    }
+    mainStore.setAccountPassword(account.id, parsed.data.password);
+    loginGuard.clear(account.email);
+    // Following the emailed link proves the address, so count it as verified.
+    const verified = mainStore.markEmailVerified(account.id) ?? account;
+    const org = mainStore.getOrg(verified.orgId);
+    if (!org) {
+      res.status(500).json({ error: "Account workspace is missing." });
+      return;
+    }
+    issueSession(res, verified, org, true);
+    res.json({ account: verified, org });
+  });
+
+  /* ── Account edits: name, email (a new email starts verification over) ──── */
+  app.patch("/api/auth/account", limiter.byIp("account", 30, QUARTER), async (req, res) => {
+    const session = mainStore.getSession(parseCookies(req.headers.cookie)[SESSION_COOKIE]);
+    if (!session) {
+      res.status(401).json({ error: "Please sign in to continue." });
+      return;
+    }
+    const parsed = z
+      .object({
+        name: z.string().trim().min(1, "Enter your name.").max(120, "Name is too long (120 characters max).").optional(),
+        email: z.string().trim().email("Enter a valid email address.").max(320).optional()
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      res.status(400).json({ error: issue?.message ?? "Check the form and try again.", field: String(issue?.path[0] ?? "") });
+      return;
+    }
+    const nextEmail = parsed.data.email?.toLowerCase();
+    const emailChanged = Boolean(nextEmail && nextEmail !== session.account.email);
+    if (emailChanged && mainStore.emailExists(nextEmail!)) {
+      res.status(409).json({ error: "An account with this email already exists.", field: "email", code: "email_taken" });
+      return;
+    }
+    const account = mainStore.updateAccount(session.account.id, { name: parsed.data.name, email: emailChanged ? nextEmail : undefined });
+    if (!account) {
+      res.status(404).json({ error: "Account not found." });
+      return;
+    }
+    if (parsed.data.name !== undefined) {
+      // keep the workspace person in step with the login
+      try {
+        const orgStore = await manager.getOrgStore(session.org.id);
+        orgStore.renameAccountUser(account.id, account.name);
+      } catch (error) {
+        console.error("[account] workspace user rename failed:", error instanceof Error ? error.message : error);
+      }
+    }
+    if (emailChanged) {
+      sendVerificationEmail(req, account).catch((error) =>
+        console.error("[auth] verification email failed:", error instanceof Error ? error.message : error)
+      );
+    }
+    res.json({ account, verificationSent: emailChanged });
+  });
+
+  /* ── Invites: the public half (the invited person has no session yet) ────── */
+  app.get("/api/auth/invite/:token", limiter.byIp("invite-peek", 30, QUARTER), (req, res) => {
+    const invite = mainStore.inviteByToken(String(req.params.token));
+    const org = invite ? mainStore.getOrg(invite.orgId) : undefined;
+    const inviter = invite ? mainStore.getAccountById(invite.invitedBy) : undefined;
+    if (!invite || !org) {
+      res.status(404).json({ error: "This invite is invalid, was withdrawn, or has expired. Ask for a new one.", code: "invite_invalid" });
+      return;
+    }
+    const preview: InvitePreview = {
+      email: invite.email,
+      role: invite.role,
+      orgName: org.name,
+      inviterName: inviter?.name ?? "A teammate",
+      expiresAt: invite.expiresAt
+    };
+    res.json(preview);
+  });
+
+  app.post("/api/auth/invite/accept", limiter.byIp("invite-accept", 10, HOUR), async (req, res) => {
+    const parsed = z
+      .object({
+        token: z.string().min(1),
+        name: z.string().trim().min(1, "Enter your name.").max(120),
+        password: z.string().min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`).max(200),
+        acceptTerms: z.literal(true, { message: "Please agree to the Terms & Conditions and Privacy Policy." }),
+        remember: z.boolean().optional()
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      res.status(400).json({ error: issue?.message ?? "Check the form and try again.", field: signupFieldFor(issue?.path ?? []) });
+      return;
+    }
+    const invite = mainStore.inviteByToken(parsed.data.token);
+    const org = invite ? mainStore.getOrg(invite.orgId) : undefined;
+    if (!invite || !org) {
+      res.status(400).json({ error: "This invite is invalid, was withdrawn, or has expired. Ask for a new one.", code: "invite_invalid" });
+      return;
+    }
+    const weak = passwordProblem(parsed.data.password, invite.email);
+    if (weak) {
+      res.status(400).json({ error: weak, field: "password", code: "weak_password" });
+      return;
+    }
+    if (mainStore.emailExists(invite.email)) {
+      res.status(409).json({ error: "An account with this email already exists. Sign in instead.", field: "email", code: "email_taken" });
+      return;
+    }
+    const account = mainStore.createAccount({
+      orgId: org.id,
+      email: invite.email,
+      password: parsed.data.password,
+      name: parsed.data.name,
+      role: "member",
+      acceptedTermsAt: new Date().toISOString(),
+      acceptedTermsVersion: TERMS_VERSION
+    });
+    // Following the emailed invite proves the address.
+    const verified = mainStore.markEmailVerified(account.id) ?? account;
+    mainStore.markInviteAccepted(invite.id);
+    try {
+      const orgStore = await manager.getOrgStore(org.id);
+      orgStore.createTeammateUser(verified, invite.role);
+    } catch (error) {
+      console.error("[team] could not create the teammate's workspace user:", error instanceof Error ? error.message : error);
+    }
+    issueSession(res, verified, org, parsed.data.remember ?? true);
+    res.status(201).json(sessionPayload(verified, org));
+  });
+
   app.get("/api/auth/me", (req, res) => {
     const session = mainStore.getSession(parseCookies(req.headers.cookie)[SESSION_COOKIE]);
     if (!session) {
       res.status(401).json({ error: "Not authenticated" });
       return;
     }
-    res.json({ account: session.account, org: session.org });
+    res.json(sessionPayload(session.account, session.org));
   });
 
   app.post("/api/auth/logout", (req, res) => {
@@ -494,7 +1237,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // Public for now (uses the demo workspace); once auth is fully wired, move to
   // OPS_PREFIXES so it answers over req.orgStore. Returns {mode:"demo"} when no
   // ANTHROPIC_API_KEY is set, and the client falls back to its simulated answers.
-  const aiAskSchema = z.object({ question: z.string().trim().min(1).max(2000) });
+  const aiAskSchema = z.object({
+    question: z.string().trim().min(1).max(2000),
+    // the trade the workspace was set up for — shapes the answer's vocabulary
+    businessType: z.enum(businessTypeOptions).optional()
+  });
   app.post("/api/ai/ask", async (req, res) => {
     const parsed = aiAskSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -502,7 +1249,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     try {
-      const result = await askBuildFlowAI(parsed.data.question, buildAiContext(store.bootstrap()));
+      const result = await askBuildFlowAI(parsed.data.question, buildAiContext(store.bootstrap(req.account?.id)), parsed.data.businessType);
       res.json(result);
     } catch (error) {
       console.error("[ai] /api/ai/ask failed:", error instanceof Error ? error.message : error);
@@ -520,7 +1267,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     try {
-      const result = await importScheduleFromImages(parsed.data.images, store.bootstrap());
+      const result = await importScheduleFromImages(parsed.data.images, store.bootstrap(req.account?.id));
       res.json(result);
     } catch (error) {
       console.error("[ai] /api/ai/import-schedule failed:", error instanceof Error ? error.message : error);
@@ -528,8 +1275,197 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   });
 
-  app.get("/api/bootstrap", (_req, res) => {
-    res.json(store.bootstrap());
+  /* Where the org stands with money, from the trial it started at onboarding
+     and any Stripe subscription on the owner's email (main store). */
+  const billingStatusFor = (payload: BootstrapPayload, account?: { email: string }): BillingStatus => {
+    const sub = account ? mainStore.getSubscriptionByEmail(account.email) : undefined;
+    if (sub && (sub.status === "active" || sub.status === "trialing" || sub.status === "past_due")) return "active";
+    if (payload.selectedPlan === "enterprise") return "enterprise";
+    if (payload.selectedPlan === "pro" || payload.selectedPlan === "business") {
+      if (!payload.trialEndsAt) return "trial";
+      return new Date(payload.trialEndsAt).getTime() > Date.now() ? "trial" : "trial_expired";
+    }
+    return "free";
+  };
+  const withBilling = (payload: BootstrapPayload, account?: { email: string; emailVerifiedAt?: string | null }): BootstrapPayload => ({
+    ...payload,
+    billingStatus: billingStatusFor(payload, account),
+    account: account ? { email: account.email, emailVerifiedAt: account.emailVerifiedAt ?? null } : null
+  });
+
+  app.get("/api/bootstrap", (req, res) => {
+    // Gated route: req.account is the signed-in person, who is the active user.
+    res.json(withBilling(store.bootstrap(req.account?.id), req.account));
+  });
+
+  /* ── Team: people in the workspace + open invites ────────────────────────── */
+  const inviteView = (row: {
+    id: string;
+    email: string;
+    role: string;
+    invitedBy: string;
+    createdAt: string;
+    expiresAt: string;
+    sentAt: string | null;
+  }): TeamInvite => ({
+    id: row.id,
+    email: row.email,
+    role: row.role as TeamInvite["role"],
+    invitedBy: mainStore.getAccountById(row.invitedBy)?.name ?? "A teammate",
+    createdAt: row.createdAt,
+    expiresAt: row.expiresAt,
+    sentAt: row.sentAt
+  });
+
+  app.get("/api/team", (req, res) => {
+    res.json({
+      users: store.users(),
+      invites: mainStore.openInvites(req.org!.id).map(inviteView),
+      // Only the login that created the org changes what people are.
+      canManage: req.account?.role === "owner",
+      emailVerified: Boolean(req.account?.emailVerifiedAt)
+    });
+  });
+
+  const inviteSchema = z.object({
+    invites: z
+      .array(
+        z.object({
+          email: z.string().trim().email("Enter a valid email address.").max(320),
+          role: z.enum(["Project Manager", "Superintendent", "Crew Lead"])
+        })
+      )
+      .min(1, "Add at least one email.")
+      .max(20, "Invite up to 20 people at a time.")
+  });
+  app.post("/api/team/invites", limiter.byIp("invite", 60, HOUR), async (req, res) => {
+    const parsed = inviteSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Check the emails and try again." });
+      return;
+    }
+    const account = req.account!;
+    const org = req.org!;
+    // Invites are written either way; they only go OUT once the inviter's own
+    // address is confirmed (see /api/auth/verify), which is what keeps an
+    // unverified signup from being a spam cannon.
+    const canSend = Boolean(account.emailVerifiedAt);
+    const results: Array<{ email: string; status: "sent" | "held" | "skipped"; reason?: string }> = [];
+    for (const item of parsed.data.invites) {
+      const email = item.email.toLowerCase();
+      if (email === account.email || mainStore.emailExists(email)) {
+        results.push({ email, status: "skipped", reason: "Already has a BuildFlow account." });
+        continue;
+      }
+      const { invite, token } = mainStore.createInvite({
+        orgId: org.id,
+        email,
+        role: item.role,
+        invitedBy: account.id,
+        ttlMs: INVITE_TTL_MS,
+        sent: canSend
+      });
+      if (canSend) {
+        try {
+          await sendInviteEmail(req, invite, token, account.name, org.name);
+          results.push({ email, status: "sent" });
+        } catch (error) {
+          console.error("[team] invite email failed:", error instanceof Error ? error.message : error);
+          results.push({ email, status: "held", reason: "Email could not be sent; resend from Settings." });
+        }
+      } else {
+        results.push({ email, status: "held", reason: "Goes out when you confirm your email." });
+      }
+    }
+    res.status(201).json({ results, invites: mainStore.openInvites(org.id).map(inviteView), emailVerified: canSend });
+  });
+
+  app.post("/api/team/invites/:id/resend", limiter.byIp("invite", 60, HOUR), async (req, res) => {
+    const account = req.account!;
+    const org = req.org!;
+    if (!account.emailVerifiedAt) {
+      res.status(403).json({ error: "Confirm your own email first — then invites can go out.", code: "email_unverified" });
+      return;
+    }
+    const refreshed = mainStore.refreshInvite(String(req.params.id), org.id, INVITE_TTL_MS);
+    if (!refreshed) {
+      res.status(404).json({ error: "That invite is no longer open." });
+      return;
+    }
+    try {
+      await sendInviteEmail(req, refreshed.invite, refreshed.token, account.name, org.name);
+      res.json({ ok: true, invite: inviteView(refreshed.invite) });
+    } catch (error) {
+      console.error("[team] invite email failed:", error instanceof Error ? error.message : error);
+      res.status(502).json({ error: "We couldn't send the email just now. Please try again." });
+    }
+  });
+
+  app.delete("/api/team/invites/:id", (req, res) => {
+    if (!mainStore.revokeInvite(String(req.params.id), req.org!.id)) {
+      res.status(404).json({ error: "That invite is no longer open." });
+      return;
+    }
+    res.status(204).end();
+  });
+
+  // Owners set what a teammate is in the workspace: Project Manager, Superintendent or Crew Lead.
+  app.patch("/api/team/users/:id", (req, res) => {
+    if (req.account?.role !== "owner") {
+      res.status(403).json({ error: "Only the workspace owner can change roles." });
+      return;
+    }
+    const parsed = z.object({ role: z.enum(["Project Manager", "Superintendent", "Crew Lead"]) }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Choose Project Manager, Superintendent or Crew Lead." });
+      return;
+    }
+    const user = store.updateUserRole(String(req.params.id), parsed.data.role);
+    if (!user) {
+      res.status(404).json({ error: "That person is not in this workspace." });
+      return;
+    }
+    res.json({ user });
+  });
+
+  // Seeded sample teammates can go; real people (linked to a login) cannot be removed here.
+  app.delete("/api/team/users/:id", (req, res) => {
+    if (!store.removeSampleUser(String(req.params.id))) {
+      res.status(400).json({ error: "Only sample teammates can be removed here." });
+      return;
+    }
+    res.status(204).end();
+  });
+
+  /* ── Per-person settings: tutorial progress and the like ─────────────────── */
+  app.put("/api/me/settings/:key", (req, res) => {
+    // room for a saved Dashboard board (a dozen panels is ~700 characters), not just a word
+    const parsed = z.object({ value: z.string().max(8000) }).safeParse(req.body);
+    const key = String(req.params.key);
+    if (!parsed.success || !/^[a-z0-9:_.-]{1,120}$/i.test(key)) {
+      res.status(400).json({ error: "Provide a setting key and a string value." });
+      return;
+    }
+    // The person behind the request: their linked workspace user, or the demo's
+    // active user when signed in to the shared demo store.
+    const me = store.bootstrap(req.account?.id).activeUser;
+    if (!me) {
+      res.status(404).json({ error: "No workspace user for this login yet." });
+      return;
+    }
+    store.setUserSetting(me.id, key, parsed.data.value);
+    res.json({ ok: true, key, value: parsed.data.value });
+  });
+
+  /* ── Org: the company name ───────────────────────────────────────────────── */
+  app.patch("/api/org", (req, res) => {
+    const parsed = z.object({ name: z.string().trim().min(2, "Enter your company name.").max(160) }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Enter your company name.", field: "name" });
+      return;
+    }
+    const org = mainStore.updateOrgName(req.org!.id, parsed.data.name);
+    res.json({ org });
   });
 
   app.post("/api/business-profile", (req, res) => {
@@ -538,7 +1474,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    res.json(store.applyBusinessProfile(parsed.data.businessType));
+    const { businessType, selectedPlan, selectedProducts, seats } = parsed.data;
+    const payload = store.applyBusinessProfile(businessType, req.account, { selectedPlan, selectedProducts, seats });
+    // The org record (main store) carries the plan label the admin tools read.
+    if (selectedPlan && req.org) mainStore.updateOrgPlan(req.org.id, PLAN_LABELS[selectedPlan]);
+    res.json(withBilling(payload, req.account));
   });
 
   // ── Schedule import: Primavera P6 (.xer) and MS Project XML (MSPDI) ──────────
@@ -553,7 +1493,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   /** Imported projects need an owner BuildFlow accepts (PM/superintendent). */
   const importManagerId = (): string | undefined => {
-    const users = store.bootstrap().users;
+    const users = store.users();
     const manager = users.find((user) => user.role === "Project Manager" || user.role === "Superintendent");
     return manager?.id ?? users[0]?.id;
   };
@@ -668,7 +1608,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.get("/api/projects/:id", (req, res) => {
-    const project = store.project(req.params.id);
+    const project = store.project(String(req.params.id));
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
@@ -682,7 +1622,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    if (!store.project(req.params.id)) {
+    if (!store.project(String(req.params.id))) {
       res.status(404).json({ error: "Project not found" });
       return;
     }
@@ -690,12 +1630,22 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: "Project manager must be a project manager or superintendent" });
       return;
     }
-    const project = store.updateProject(req.params.id, parsed.data);
+    const project = store.updateProject(String(req.params.id), parsed.data);
     if (!project) {
       res.status(404).json({ error: "Project not found" });
       return;
     }
     res.json(project);
+  });
+
+  /* Cascades to the project's jobs, phases, materials, assignments and field
+     records — see store.deleteProject(). */
+  app.delete("/api/projects/:id", (req, res) => {
+    if (!store.deleteProject(String(req.params.id))) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    res.status(204).send();
   });
 
   app.get("/api/jobs", (_req, res) => {
@@ -712,7 +1662,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(404).json({ error: "Project not found" });
       return;
     }
-    res.status(201).json(store.createJob(parsed.data));
+    const job = store.createJob(parsed.data);
+    res.status(201).json(job);
+    announce(req, { kind: "jobs", op: "job", ids: [job.id] });
   });
 
   app.patch("/api/jobs/:id", (req, res) => {
@@ -721,12 +1673,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const job = store.updateJob(req.params.id, parsed.data);
+    const job = store.updateJob(String(req.params.id), parsed.data);
     if (!job) {
       res.status(404).json({ error: "Job not found" });
       return;
     }
     res.json(job);
+    announce(req, { kind: "jobs", op: "job", ids: [job.id] });
   });
 
   app.get("/api/schedule", (_req, res) => {
@@ -734,13 +1687,142 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   /** The CPM precedence network the Gantt schedules against. */
+  /* The working week and holidays: org data the CPM engine, the calendar and the KPIs read. */
+  app.get("/api/schedule/work-calendar", (_req, res) => {
+    res.json(store.workCalendar());
+  });
+  app.put("/api/schedule/work-calendar", (req, res) => {
+    const parsed = workCalendarSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    res.json(store.setWorkCalendar(parsed.data));
+    announce(req, { kind: "calendar", op: "calendar", ids: [] });
+  });
+
+  /* One calendar-feed link per crew; a phone subscribes to it with no sign-in, the key in the link is the pass. */
+  app.get("/api/schedule/feeds", (req, res) => {
+    const key = store.calendarFeedKey();
+    const base = `${req.protocol}://${req.get("host")}`;
+    res.json({
+      crews: store
+        .crews()
+        .map((crew) => ({ id: crew.id, name: crew.name, url: `${base}/api/feeds/${req.org?.id ?? "demo"}/${crew.id}.ics?key=${key}` }))
+    });
+  });
+
   app.get("/api/schedule/dependencies", (_req, res) => {
     res.json(store.dependencies());
+  });
+
+  /* A dependency drawn on the Gantt. 409 with a code (self | duplicate | cycle) when the network refuses it. */
+  const dependencySchema = z.object({
+    predecessorId: z.string().min(1),
+    successorId: z.string().min(1),
+    type: z.enum(["FS", "SS", "FF", "SF"]).default("FS"),
+    lagDays: z.number().int().min(-365).max(365).default(0)
+  });
+  app.post("/api/schedule/dependencies", (req, res) => {
+    const parsed = dependencySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    try {
+      const link = store.createDependency(parsed.data);
+      res.status(201).json(link);
+      announce(req, { kind: "jobs", op: "job", ids: [link.predecessorId, link.successorId] });
+    } catch (error) {
+      if (error instanceof DependencyError) {
+        res.status(409).json({ error: error.message, code: error.code });
+        return;
+      }
+      res.status(404).json({ error: error instanceof Error ? error.message : "Could not link the jobs" });
+    }
+  });
+  app.delete("/api/schedule/dependencies/:id", (req, res) => {
+    const link = store.deleteDependency(String(req.params.id));
+    if (!link) {
+      res.status(404).json({ error: "Dependency not found" });
+      return;
+    }
+    res.status(204).send();
+    announce(req, { kind: "jobs", op: "job", ids: [link.predecessorId, link.successorId] });
   });
 
   /** Re-baseline: snapshot the current plan as the thing variance is measured from. */
   app.post("/api/schedule/baseline", (_req, res) => {
     res.json(store.setBaseline());
+  });
+
+  /* The email / text a booking earns: the crew's new day — or the clash, when it double-books. */
+  const notifyAssignment = (req: express.Request, assignment: ScheduleAssignment) => {
+    try {
+      const job = store.get<{ name: string; projectId: string }>("SELECT name, projectId FROM jobs WHERE id = ?", [assignment.jobId]);
+      const crew = store.get<{ name: string; lead: string }>("SELECT name, lead FROM crews WHERE id = ?", [assignment.crewId]);
+      const project = job ? store.project(job.projectId) : undefined;
+      const ctx = {
+        crew: crew?.name ?? assignment.crewId,
+        job: job?.name ?? assignment.jobId,
+        project: project?.project.name,
+        date: assignment.date
+      };
+      const notice = assignment.conflicts.length
+        ? conflictNotice({ ...ctx, conflicts: assignment.conflicts })
+        : assignmentNotice({ ...ctx, foreman: crew?.lead });
+      // every week has a URL: the email opens the Week board on that week, that crew
+      notice.lines.push(
+        `Open the Week board: ${clientUrl.replace(/\/?$/, "/")}#schedule/week?w=${mondayOf(assignment.date)}&crew=${assignment.crewId}`
+      );
+      if (req.org) void sendOpsNotice(notice, opsRecipients(req.org.id));
+    } catch (notifyErr) {
+      console.error("[notify] assignment notice failed:", notifyErr instanceof Error ? notifyErr.message : notifyErr);
+    }
+  };
+  /* 409: the crew is already booked that day. Nothing was written; the client asks "book anyway?" and retries with force. */
+  const answerClash = (res: Response, clashes: Parameters<typeof clashMessage>[0]) => {
+    res.status(409).json({ error: clashMessage(clashes), code: "conflict", clashes });
+  };
+
+  /* What changed this week: this Monday's plan snapshot against the previous one. */
+  app.get("/api/schedule/digest", (_req, res) => {
+    res.json(weeklyDigestFor(store));
+  });
+
+  /** Email this week's digest to the org's planners now (the scheduler does it on Monday mornings). */
+  app.post("/api/schedule/digest/send", async (req, res) => {
+    const org = req.org!;
+    const { digest, recipients } = await sendWeeklyDigest(store, mainStore, { id: org.id, name: org.name }, undefined, clientUrl);
+    res.json({ ok: true, weekOf: digest.weekOf, recipients });
+  });
+
+  /* Sample data for a trial: the trade's starter workspace into an empty workspace, and out again. */
+  app.post("/api/schedule/sample-data", (req, res) => {
+    const parsed = z.object({ businessType: z.enum(businessTypeOptions).optional() }).safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const businessType = parsed.data.businessType ?? (store.businessType() || businessTypeOptions[0]);
+    try {
+      const result = store.loadSampleData(businessType);
+      res.status(result.alreadyLoaded ? 200 : 201).json({ ok: true, ...result });
+      if (!result.alreadyLoaded) announce(req, { kind: "jobs", op: "job", ids: [] });
+    } catch (error) {
+      res.status(409).json({ error: error instanceof Error ? error.message : "Could not load sample data" });
+    }
+  });
+
+  app.delete("/api/schedule/sample-data", (req, res) => {
+    const removed = store.removeSampleData();
+    res.json({ ok: true, removed: removed ? removed.projectIds.length : 0 });
+    if (removed) announce(req, { kind: "jobs", op: "job", ids: [] });
+  });
+
+  /* One Server-Sent Events stream per open tab: schedule changes the org's other tabs made. */
+  app.get("/api/schedule/events", (req, res) => {
+    live.subscribe(req.org!.id, res);
   });
 
   app.post("/api/schedule/assign", (req, res) => {
@@ -749,23 +1831,25 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
+    const { force, ...input } = parsed.data;
     try {
-      const assignment = store.assignJob(parsed.data);
-      res.status(201).json(assignment);
-      // Notify PMs of the new assignment — or the crew conflict if it double-books.
-      // Gather context synchronously (the tenant store is bound now), then send async.
-      try {
-        const job = store.get<{ name: string; projectId: string }>("SELECT name, projectId FROM jobs WHERE id = ?", [assignment.jobId]);
-        const crew = store.get<{ name: string; lead: string }>("SELECT name, lead FROM crews WHERE id = ?", [assignment.crewId]);
-        const project = job ? store.project(job.projectId) : undefined;
-        const ctx = { crew: crew?.name ?? assignment.crewId, job: job?.name ?? assignment.jobId, project: project?.project.name, date: assignment.date };
-        const notice = assignment.conflicts.length
-          ? conflictNotice({ ...ctx, conflicts: assignment.conflicts })
-          : assignmentNotice({ ...ctx, foreman: crew?.lead });
-        if (req.org) void sendOpsNotice(notice, opsRecipients(req.org.id));
-      } catch (notifyErr) {
-        console.error("[notify] assignment notice failed:", notifyErr instanceof Error ? notifyErr.message : notifyErr);
+      // A job sits on a crew's day once: booking it there again answers with the booking it already has,
+      // writes nothing, and asks nothing — there is no new clash to weigh.
+      const already = store.bookingFor(input.jobId, input.crewId, input.date);
+      if (already) {
+        res.status(200).json(already);
+        return;
       }
+      const clashes = store.crewClashes(input.crewId, input.date, input.jobId);
+      if (clashes.length > 0 && !force) {
+        answerClash(res, clashes);
+        return;
+      }
+      const assignment = store.assignJob(input);
+      res.status(201).json(assignment);
+      announce(req, { kind: "assignments", op: "book", ids: [assignment.id, assignment.jobId] });
+      // Notify PMs of the new assignment — or the crew conflict if it double-books.
+      notifyAssignment(req, assignment);
     } catch (error) {
       res.status(404).json({ error: error instanceof Error ? error.message : "Assignment failed" });
     }
@@ -777,17 +1861,60 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const assignment = store.updateAssignment(req.params.id, parsed.data);
+    const id = String(req.params.id);
+    const { force, ...updates } = parsed.data;
+    const current = store.assignment(id);
+    if (!current) {
+      res.status(404).json({ error: "Assignment not found" });
+      return;
+    }
+    const clashes = store.crewClashes(updates.crewId ?? current.crewId, updates.date ?? current.date, updates.jobId ?? current.jobId, id);
+    if (clashes.length > 0 && !force) {
+      answerClash(res, clashes);
+      return;
+    }
+    const assignment = store.updateAssignment(id, updates);
     if (!assignment) {
       res.status(404).json({ error: "Assignment not found" });
       return;
     }
     res.json(assignment);
+    announce(req, { kind: "assignments", op: "move", ids: [assignment.id, assignment.jobId] });
+    if (clashes.length > 0) notifyAssignment(req, assignment);
   });
 
   app.delete("/api/schedule/:id", (req, res) => {
-    store.deleteAssignment(req.params.id);
+    store.deleteAssignment(String(req.params.id));
     res.status(204).send();
+    announce(req, { kind: "assignments", op: "unbook", ids: [String(req.params.id)] });
+  });
+
+  /* Everything one drop touches, in one transaction: a failed re-book changes nothing. */
+  app.post("/api/schedule/rebook", (req, res) => {
+    const parsed = rebookSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    try {
+      const result = store.rebook(parsed.data.moves, { force: parsed.data.force });
+      res.json(result);
+      const booksSomething = parsed.data.moves.some((move) => move.op === "book");
+      announce(req, {
+        kind: "assignments",
+        op: booksSomething ? "book" : "move",
+        ids: [...result.assignments.flatMap((a) => [a.id, a.jobId]), ...result.removed, ...result.jobs.map((job) => job.id)]
+      });
+      for (const assignment of result.assignments) {
+        if (assignment.conflicts.length > 0 || booksSomething) notifyAssignment(req, assignment);
+      }
+    } catch (error) {
+      if (error instanceof RebookConflictError) {
+        answerClash(res, error.clashes);
+        return;
+      }
+      res.status(404).json({ error: error instanceof Error ? error.message : "Re-book failed" });
+    }
   });
 
   app.get("/api/field-updates", (_req, res) => {
@@ -826,7 +1953,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     store.applyFieldProgress(jobId, percentComplete, update.createdAt);
 
     const jobs = store.jobs();
-    const detection = detectVariance(jobs, store.dependencies(), jobId, percentComplete, status, update.createdAt);
+    const detection = detectVariance(jobs, store.dependencies(), jobId, percentComplete, status, update.createdAt, store.workCalendar());
     if (!detection) {
       res.status(201).json({ update, variance: null });
       return;
@@ -868,6 +1995,164 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   });
 
+  /**
+   * Correct a report that was filed wrong.
+   *
+   * Runs the same half of the progress loop the POST does, because an edited
+   * percent is still a claim about where the work is: the number lands on the
+   * job, and any schedule consequence is re-priced as a *pending* variance for a
+   * PM. It never moves a date on its own. Re-pricing is safe to repeat because
+   * `recordVariance` supersedes the open variance on that job — a correction
+   * replaces the question in the PM's queue instead of stacking a second one.
+   */
+  app.patch("/api/field-updates/:id", (req, res) => {
+    const parsed = fieldUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
+    const update = store.updateFieldUpdate(String(req.params.id), parsed.data);
+    if (!update) {
+      res.status(404).json({ error: "Field update not found" });
+      return;
+    }
+
+    const { jobId, percentComplete, status } = parsed.data;
+    if (jobId == null || percentComplete == null) {
+      res.json({ update, variance: null });
+      return;
+    }
+
+    store.applyFieldProgress(jobId, percentComplete, update.createdAt);
+
+    const jobs = store.jobs();
+    const detection = detectVariance(jobs, store.dependencies(), jobId, percentComplete, status, update.createdAt, store.workCalendar());
+    if (!detection) {
+      res.json({ update, variance: null });
+      return;
+    }
+
+    const variance = store.recordVariance({
+      projectId: parsed.data.projectId,
+      jobId,
+      fieldUpdateId: update.id,
+      kind: detection.kind,
+      severity: detection.severity,
+      reportedPercent: percentComplete,
+      plannedPercent: detection.plannedPercent,
+      varianceDays: detection.varianceDays,
+      proposal: detection.proposal
+    });
+    res.json({ update, variance });
+  });
+
+  /**
+   * Where every project stands against its own plan, plus the week-over-week move.
+   *
+   * Three numbers per project, all derived — none stored on the project record:
+   * a forecast finish (from the pace crews are actually reporting), the working
+   * days that lands ahead of or behind plan, and duration-weighted percent
+   * complete. The portfolio row averages them for the headline.
+   *
+   * The first request in any calendar week also writes that week's snapshot, so
+   * next week has a real prior reading to compare against. Capture is
+   * idempotent per (week, project) — the first reading of a week is the one
+   * kept, so the delta measures Monday-to-Monday rather than drifting with
+   * whenever someone happened to load the page.
+   */
+  app.get("/api/schedule/status", (_req, res) => {
+    const asOf = new Date().toISOString().slice(0, 10);
+    const jobs = store.jobs();
+    const projects = store.projects();
+    // the forecast runs on the workspace's own working days and holidays (Settings › Work calendar)
+    const calendar = scheduleCalendarFor(
+      jobs.reduce((min, job) => (job.startDate < min ? job.startDate : min), asOf),
+      store.workCalendar()
+    );
+
+    const statuses = projects
+      .map((project) =>
+        projectScheduleStatus(
+          project.id,
+          jobs.filter((job) => job.projectId === project.id),
+          asOf,
+          calendar,
+          project.percentComplete
+        )
+      )
+      .filter((status): status is NonNullable<typeof status> => status !== null);
+    const portfolio = portfolioScheduleStatus(statuses);
+
+    // Monday of the current week, as the snapshot key.
+    const weekOf = mondayOf(asOf);
+    const priorWeek = mondayOf(shiftDays(weekOf, -7));
+    const prior = store.scheduleSnapshots(priorWeek);
+    const priorFor = (projectId: string) => prior.find((row) => row.projectId === projectId);
+
+    // The Dashboard's Performance tiles, read here exactly as the Dashboard
+    // reads them, so a week's delta compares like with like.
+    const crews = store.crews();
+    const onTrackProjects = projects.filter(
+      (project) => project.scheduleHealth === "On Track" || project.scheduleHealth === "Complete"
+    ).length;
+    const crewUtilization = crews.length > 0 ? Math.round(crews.reduce((sum, crew) => sum + crew.utilization, 0) / crews.length) : null;
+    store.recordScheduleSnapshot({
+      weekOf,
+      projectId: "",
+      daysAhead: portfolio.daysAhead,
+      percentComplete: portfolio.percentComplete,
+      forecastFinish: "",
+      plannedFinish: "",
+      onTrackProjects,
+      projects: projects.length,
+      crewUtilization
+    });
+    for (const status of statuses) {
+      store.recordScheduleSnapshot({
+        weekOf,
+        projectId: status.projectId,
+        daysAhead: status.daysAhead,
+        percentComplete: status.percentComplete,
+        forecastFinish: status.forecastFinish,
+        plannedFinish: status.plannedFinish
+      });
+    }
+
+    const priorPortfolio = priorFor("");
+    res.json({
+      asOf,
+      weekOf,
+      portfolio: {
+        ...portfolio,
+        // null, not 0, when there is no prior week — the client shows nothing
+        // rather than implying a flat week that was never measured.
+        daysAheadDelta: priorPortfolio ? portfolio.daysAhead - priorPortfolio.daysAhead : null,
+        percentDelta: priorPortfolio ? portfolio.percentComplete - priorPortfolio.percentComplete : null
+      },
+      projects: statuses.map((status) => {
+        const was = priorFor(status.projectId);
+        const project = projects.find((item) => item.id === status.projectId);
+        return {
+          ...status,
+          name: project?.name ?? "Project",
+          daysAheadDelta: was ? status.daysAhead - was.daysAhead : null,
+          percentDelta: was ? status.percentComplete - was.percentComplete : null
+        };
+      }),
+      // the portfolio's weekly readings, oldest first and this week's included —
+      // the Dashboard trends its tiles on them; a measure a week never held is null
+      history: store.scheduleSnapshotHistory(12).map((row) => ({
+        weekOf: row.weekOf,
+        daysAhead: row.daysAhead,
+        percentComplete: row.percentComplete,
+        onTrackProjects: row.onTrackProjects ?? null,
+        projects: row.projects ?? null,
+        crewUtilization: row.crewUtilization ?? null
+      }))
+    });
+  });
+
   app.get("/api/schedule/variances", (req, res) => {
     const status = req.query.status;
     if (typeof status === "string" && !["pending", "accepted", "rejected", "superseded"].includes(status)) {
@@ -884,12 +2169,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const result = store.acceptVariance(req.params.id, parsed.data.userId, parsed.data.note);
+    const result = store.acceptVariance(String(req.params.id), parsed.data.userId, parsed.data.note);
     if (!result) {
       res.status(404).json({ error: "No pending variance with that id." });
       return;
     }
     res.json(result);
+    announce(req, { kind: "jobs", op: "dates", ids: result.movedJobIds });
   });
 
   /** Keep the plan. The report and the disagreement both stay on the record. */
@@ -899,7 +2185,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const variance = store.rejectVariance(req.params.id, parsed.data.userId, parsed.data.note);
+    const variance = store.rejectVariance(String(req.params.id), parsed.data.userId, parsed.data.note);
     if (!variance) {
       res.status(404).json({ error: "No pending variance with that id." });
       return;
@@ -944,7 +2230,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // accepting a slip stays the PM's call through the variance drawer.
   app.get("/api/delayiq/early-warning", (_req, res) => {
     const asOf = new Date().toISOString();
-    const risks = detectDelayRisks(store.jobs(), store.dependencies(), asOf);
+    const risks = detectDelayRisks(store.jobs(), store.dependencies(), asOf, store.workCalendar());
     res.json({ asOf: asOf.slice(0, 10), risks });
   });
 
@@ -957,7 +2243,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: "A jobId is required." });
       return;
     }
-    const risk = detectDelayRisks(store.jobs(), store.dependencies(), new Date().toISOString()).find(
+    const risk = detectDelayRisks(store.jobs(), store.dependencies(), new Date().toISOString(), store.workCalendar()).find(
       (item) => item.jobId === jobId
     );
     if (!risk) {
@@ -1006,7 +2292,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const crew = store.updateCrew(req.params.id, parsed.data);
+    const crew = store.updateCrew(String(req.params.id), parsed.data);
     if (!crew) {
       res.status(404).json({ error: "Crew not found" });
       return;
@@ -1015,7 +2301,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.delete("/api/crews/:id", (req, res) => {
-    if (!store.deleteCrew(req.params.id)) {
+    if (!store.deleteCrew(String(req.params.id))) {
       res.status(404).json({ error: "Crew not found" });
       return;
     }
@@ -1037,7 +2323,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const equipment = store.updateEquipment(req.params.id, parsed.data);
+    const equipment = store.updateEquipment(String(req.params.id), parsed.data);
     if (!equipment) {
       res.status(404).json({ error: "Equipment not found" });
       return;
@@ -1046,7 +2332,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.delete("/api/equipment/:id", (req, res) => {
-    if (!store.deleteEquipment(req.params.id)) {
+    if (!store.deleteEquipment(String(req.params.id))) {
       res.status(404).json({ error: "Equipment not found" });
       return;
     }
@@ -1180,17 +2466,19 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: "Choose a plan (pro or business), a billing period, and an optional seat count." });
       return;
     }
-    const { plan, period, seats, email } = parsed.data;
+    const { plan, period, seats, email, returnTo } = parsed.data;
     const origin = parsed.data.origin ?? req.headers.origin ?? process.env.BUILDFLOW_PUBLIC_URL ?? "http://localhost:5315";
     const base = origin.replace(/\/+$/, "");
+    // After onboarding or from Settings the person is signed in, so land them in the app, not on the pricing page.
+    const suffix = returnTo === "onboarding" ? "&from=onboarding" : returnTo === "settings" ? "&from=settings" : "#compare-plans";
     try {
       const result = await createCheckoutSession({
         plan,
         period,
         seats: seats ?? 1,
         email,
-        successUrl: `${base}/?checkout=success&plan=${plan}#compare-plans`,
-        cancelUrl: `${base}/?checkout=cancelled#compare-plans`
+        successUrl: `${base}/?checkout=success&plan=${plan}${suffix}`,
+        cancelUrl: `${base}/?checkout=cancelled${suffix}`
       });
       // 200 with configured:false is intentional — it's a normal "billing not connected
       // yet" state the pricing UI shows as a notice, not a server error.
@@ -1216,11 +2504,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     const { email, customerId, origin } = parsed.data;
-    const sub = customerId
-      ? store.getSubscriptionByCustomer(customerId)
-      : email
-        ? store.getSubscriptionByEmail(email)
-        : undefined;
+    const sub = customerId ? store.getSubscriptionByCustomer(customerId) : email ? store.getSubscriptionByEmail(email) : undefined;
     const resolvedCustomer = customerId ?? sub?.customerId ?? undefined;
     if (!resolvedCustomer) {
       res.status(404).json({ error: "No subscription found for that account yet." });
@@ -1228,7 +2512,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     const base = (origin ?? req.headers.origin ?? process.env.BUILDFLOW_PUBLIC_URL ?? "http://localhost:5315").replace(/\/+$/, "");
     try {
-      const result = await createPortalSession({ customerId: resolvedCustomer, returnUrl: `${base}/#compare-plans` });
+      const result = await createPortalSession({
+        customerId: resolvedCustomer,
+        returnUrl: parsed.data.returnTo === "settings" ? `${base}/?from=settings` : `${base}/#compare-plans`
+      });
       if (!result.ok) {
         res.status(200).json({ configured: false, message: result.message });
         return;
@@ -1337,7 +2624,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const lead = store.updateSalesLead(req.params.id, parsed.data);
+    const lead = store.updateSalesLead(String(req.params.id), parsed.data);
     if (!lead) {
       res.status(404).json({ error: "Lead not found" });
       return;
@@ -1346,7 +2633,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.delete("/api/sales/leads/:id", (req, res) => {
-    if (!store.deleteSalesLead(req.params.id)) {
+    if (!store.deleteSalesLead(String(req.params.id))) {
       res.status(404).json({ error: "Lead not found" });
       return;
     }
@@ -1368,7 +2655,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const task = store.updateSalesTask(req.params.id, parsed.data);
+    const task = store.updateSalesTask(String(req.params.id), parsed.data);
     if (!task) {
       res.status(404).json({ error: "Task not found" });
       return;
@@ -1377,7 +2664,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.delete("/api/sales/tasks/:id", (req, res) => {
-    if (!store.deleteSalesTask(req.params.id)) {
+    if (!store.deleteSalesTask(String(req.params.id))) {
       res.status(404).json({ error: "Task not found" });
       return;
     }
@@ -1393,13 +2680,286 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.status(201).json(store.createSalesActivity(parsed.data));
   });
 
+  /* ── Companies + Deals ──────────────────────────────────────────────────── */
+  app.post("/api/sales/companies", (req, res) => {
+    const parsed = salesCompanyCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    res.status(201).json(store.createSalesCompany(parsed.data));
+  });
+  app.patch("/api/sales/companies/:id", (req, res) => {
+    const parsed = salesCompanyPatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const company = store.updateSalesCompany(String(req.params.id), parsed.data);
+    if (!company) {
+      res.status(404).json({ error: "Company not found" });
+      return;
+    }
+    res.json(company);
+  });
+  app.delete("/api/sales/companies/:id", (req, res) => {
+    if (!store.deleteSalesCompany(String(req.params.id))) {
+      res.status(404).json({ error: "Company not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+  app.post("/api/sales/deals", (req, res) => {
+    const parsed = salesDealCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const deal = store.createSalesDeal(parsed.data);
+    if (deal.leadId)
+      store.createSalesActivity({ leadId: deal.leadId, type: "stage", summary: `Deal created: ${deal.name} · ${deal.stage}` });
+    res.status(201).json(deal);
+  });
+  app.patch("/api/sales/deals/:id", (req, res) => {
+    const parsed = salesDealPatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const before = store.salesDeal(String(req.params.id));
+    const deal = store.updateSalesDeal(String(req.params.id), parsed.data);
+    if (!deal) {
+      res.status(404).json({ error: "Deal not found" });
+      return;
+    }
+    // a stage move shows up on the associated contact's timeline, HubSpot-style
+    if (before && before.stage !== deal.stage && deal.leadId) {
+      store.createSalesActivity({
+        leadId: deal.leadId,
+        type: "stage",
+        summary: `Deal "${deal.name}" moved from ${before.stage} to ${deal.stage}`
+      });
+    }
+    res.json(deal);
+  });
+  app.delete("/api/sales/deals/:id", (req, res) => {
+    if (!store.deleteSalesDeal(String(req.params.id))) {
+      res.status(404).json({ error: "Deal not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  /* ── Contact record actions: Email · Text · Call log · Meeting ──────────────
+     Each one does the real thing through the services already wired into the
+     backend (sendMail: SMTP / test inbox / log mode; sendSms: Twilio or log
+     mode) and writes the touch to the contact's timeline. ─────────────────── */
+  const escapeHtml = (value: string) =>
+    value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  const formatWhen = (iso: string, timeZone?: string) => {
+    for (const tz of [timeZone, "UTC"]) {
+      try {
+        return new Intl.DateTimeFormat("en-US", { dateStyle: "full", timeStyle: "short", timeZone: tz ?? undefined }).format(new Date(iso));
+      } catch {
+        /* try the next zone */
+      }
+    }
+    return new Date(iso).toUTCString();
+  };
+  const icsStamp = (iso: string) =>
+    new Date(iso)
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}Z$/, "Z");
+  const icsEscape = (value: string) => value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+
+  app.post("/api/sales/leads/:id/email", async (req, res) => {
+    const lead = store.salesLead(String(req.params.id));
+    if (!lead) {
+      res.status(404).json({ error: "Contact not found" });
+      return;
+    }
+    const parsed = salesEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const { subject, body, from } = parsed.data;
+    const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1c1c1a">${body
+      .split(/\n{2,}/)
+      .map((p) => `<p style="font-size:15px;line-height:1.6;margin:0 0 14px">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+      .join("")}${from ? `<p style="font-size:13px;color:#8a877e;margin-top:22px">${escapeHtml(from)} · BuildFlow</p>` : ""}</div>`;
+    const result = await sendMail({ to: lead.email, subject, text: body, html });
+    const activity = store.createSalesActivity({
+      leadId: lead.id,
+      type: "email",
+      summary: result.ok
+        ? `${result.mode === "log" ? "Email logged (delivery not configured)" : "Email sent"}: ${subject}`
+        : `Email failed to send: ${subject}`
+    });
+    res.status(result.ok ? 201 : 502).json({ ok: result.ok, mode: result.mode, previewUrl: result.previewUrl, activity });
+  });
+
+  app.post("/api/sales/leads/:id/text", async (req, res) => {
+    const lead = store.salesLead(String(req.params.id));
+    if (!lead) {
+      res.status(404).json({ error: "Contact not found" });
+      return;
+    }
+    if (!lead.phone) {
+      res.status(400).json({ error: "This contact has no phone number." });
+      return;
+    }
+    const parsed = salesTextSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const result = await sendSms(lead.phone, parsed.data.body);
+    const delivered = result.ok && result.mode === "twilio";
+    const activity = store.createSalesActivity({
+      leadId: lead.id,
+      type: "text",
+      summary: `${delivered ? "Text sent" : result.ok ? "Text (sent from your phone)" : "Text failed"}: ${parsed.data.body}`
+    });
+    res.status(result.ok ? 201 : 502).json({ ok: result.ok, delivered, mode: result.mode, configured: smsConfigured(), activity });
+  });
+
+  app.post("/api/sales/leads/:id/calls", (req, res) => {
+    const lead = store.salesLead(String(req.params.id));
+    if (!lead) {
+      res.status(404).json({ error: "Contact not found" });
+      return;
+    }
+    const parsed = salesCallLogSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const { outcome, durationMinutes, notes } = parsed.data;
+    const summary = `Call · ${outcome}${durationMinutes ? ` · ${durationMinutes} min` : ""}${notes ? ` — ${notes}` : ""}`;
+    res.status(201).json(store.createSalesActivity({ leadId: lead.id, type: "call", summary }));
+  });
+
+  app.post("/api/sales/leads/:id/meetings", async (req, res) => {
+    const lead = store.salesLead(String(req.params.id));
+    if (!lead) {
+      res.status(404).json({ error: "Contact not found" });
+      return;
+    }
+    const parsed = salesMeetingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const input = parsed.data;
+    if (new Date(input.endsAt).getTime() <= new Date(input.startsAt).getTime()) {
+      res.status(400).json({ error: "The meeting has to end after it starts." });
+      return;
+    }
+    const meeting = store.createSalesMeeting({
+      leadId: lead.id,
+      title: input.title,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      location: input.location,
+      agenda: input.agenda,
+      organizer: input.organizer
+    });
+    const when = formatWhen(meeting.startsAt, input.timeZone);
+    const organizer = meeting.organizer || "Your BuildFlow contact";
+    const salesEmail = process.env.SALES_EMAIL ?? "sales@buildflow.com";
+    let email: Awaited<ReturnType<typeof sendMail>> | null = null;
+    let sms: Awaited<ReturnType<typeof sendSms>> | null = null;
+    if (input.notify !== false) {
+      const ics = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//BuildFlow//Sales Meetings//EN",
+        "METHOD:REQUEST",
+        "BEGIN:VEVENT",
+        `UID:${meeting.id}@buildflow`,
+        `DTSTAMP:${icsStamp(meeting.createdAt)}`,
+        `DTSTART:${icsStamp(meeting.startsAt)}`,
+        `DTEND:${icsStamp(meeting.endsAt)}`,
+        `SUMMARY:${icsEscape(meeting.title)}`,
+        meeting.location ? `LOCATION:${icsEscape(meeting.location)}` : "",
+        meeting.agenda ? `DESCRIPTION:${icsEscape(meeting.agenda)}` : "",
+        `ORGANIZER;CN=${icsEscape(organizer)}:mailto:${salesEmail}`,
+        `ATTENDEE;CN=${icsEscape(lead.name)};RSVP=TRUE:mailto:${lead.email}`,
+        "END:VEVENT",
+        "END:VCALENDAR"
+      ]
+        .filter(Boolean)
+        .join("\r\n");
+      const text = [
+        `Hi ${lead.name.split(" ")[0]},`,
+        "",
+        `${organizer} has scheduled a meeting with you.`,
+        "",
+        `${meeting.title}`,
+        `When: ${when}`,
+        meeting.location ? `Where: ${meeting.location}` : "",
+        meeting.agenda ? `Agenda: ${meeting.agenda}` : "",
+        "",
+        "The invitation is attached — add it to your calendar. Reply to this email if the time doesn't work.",
+        "",
+        "— BuildFlow"
+      ]
+        .filter((line) => line !== "")
+        .join("\n");
+      const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#ffffff">
+        <p style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#2f6bff;margin:0 0 8px">Meeting invitation</p>
+        <h1 style="font-size:22px;font-weight:700;margin:0 0 14px;color:#14203a">${escapeHtml(meeting.title)}</h1>
+        <p style="font-size:15px;line-height:1.6;color:#575550;margin:0 0 16px">Hi ${escapeHtml(lead.name.split(" ")[0])}, ${escapeHtml(organizer)} has scheduled a meeting with you.</p>
+        <table style="border-collapse:collapse;font-size:14px;color:#14203a"><tr><td style="padding:4px 12px 4px 0;color:#8a877e">When</td><td style="padding:4px 0">${escapeHtml(when)}</td></tr>${
+          meeting.location
+            ? `<tr><td style="padding:4px 12px 4px 0;color:#8a877e">Where</td><td style="padding:4px 0">${escapeHtml(meeting.location)}</td></tr>`
+            : ""
+        }${meeting.agenda ? `<tr><td style="padding:4px 12px 4px 0;color:#8a877e;vertical-align:top">Agenda</td><td style="padding:4px 0">${escapeHtml(meeting.agenda).replace(/\n/g, "<br>")}</td></tr>` : ""}</table>
+        <p style="font-size:13px;line-height:1.6;color:#575550;margin:18px 0 0">The invitation is attached — add it to your calendar. Reply to this email if the time doesn't work.</p>
+        <p style="font-size:12px;color:#8a877e;margin:18px 0 0">Sent from BuildFlow</p>
+      </div>`;
+      email = await sendMail({
+        to: lead.email,
+        subject: `Meeting invitation: ${meeting.title} · ${when}`,
+        text,
+        html,
+        attachments: [{ filename: "invite.ics", content: ics, contentType: "text/calendar; method=REQUEST" }]
+      });
+      if (lead.phone && smsConfigured()) {
+        sms = await sendSms(
+          lead.phone,
+          `${organizer} scheduled "${meeting.title}" with you on ${when}. Details were emailed to ${lead.email}.`
+        );
+      }
+      const via =
+        [email.ok && email.mode !== "log" ? "email" : "", sms?.ok && sms.mode === "twilio" ? "sms" : ""].filter(Boolean).join("+") ||
+        "none";
+      store.setSalesMeetingNotified(meeting.id, via);
+      meeting.notifiedVia = via;
+    }
+    const activity = store.createSalesActivity({
+      leadId: lead.id,
+      type: "meeting",
+      summary: `Meeting scheduled: ${meeting.title} · ${when}${meeting.location ? ` · ${meeting.location}` : ""}${
+        input.notify === false
+          ? ""
+          : meeting.notifiedVia === "none"
+            ? " · invitation logged (delivery not configured)"
+            : ` · invitation sent by ${meeting.notifiedVia.replace("+", " and ")}`
+      }`
+    });
+    res.status(201).json({ meeting, activity, notification: { email, sms } });
+  });
+
   app.get("/api/support/conversations", (req, res) => {
     const dept = departmentEnum.safeParse(req.query.department);
     res.json(store.supportConversations(dept.success ? dept.data : undefined));
   });
 
   app.get("/api/support/conversations/:id/messages", (req, res) => {
-    res.json(store.supportMessages(req.params.id));
+    res.json(store.supportMessages(String(req.params.id)));
   });
 
   app.post("/api/support/conversations", (req, res) => {
@@ -1417,7 +2977,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const message = store.addSupportMessage(req.params.id, parsed.data);
+    const message = store.addSupportMessage(String(req.params.id), parsed.data);
     if (!message) {
       res.status(404).json({ error: "Conversation not found" });
       return;
@@ -1431,7 +2991,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const conversation = store.updateSupportConversation(req.params.id, parsed.data);
+    const conversation = store.updateSupportConversation(String(req.params.id), parsed.data);
     if (!conversation) {
       res.status(404).json({ error: "Conversation not found" });
       return;
@@ -1459,7 +3019,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.delete("/api/support/agents/:id", (req, res) => {
-    const result = store.deleteSupportAgent(req.params.id);
+    const result = store.deleteSupportAgent(String(req.params.id));
     if ("error" in result) {
       res.status(result.error.includes("owner") ? 403 : 404).json({ error: result.error });
       return;
@@ -1467,6 +3027,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.status(204).send();
   });
   /* ─────────────────── end Sales & Customer-Service Desk ───────────────────── */
+
+  registerScheduleToolRoutes(app, store);
 
   return app;
 }

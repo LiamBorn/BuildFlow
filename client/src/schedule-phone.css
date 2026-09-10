@@ -1,0 +1,303 @@
+/* ============================================================================
+   schedule-phone.css — the Schedule category on phones and narrow tablets.
+   Loaded after schedule-redesign / -calendar / -views so it wins ties.
+   Boards stop clipping: wide grids scroll sideways inside the card with the
+   crew column pinned, the List reflows into stacked rows, the Month calendar
+   shows dots instead of chips, control rows pack two-up and the footer wraps.
+   Touch: cards still scroll the page; a long press lifts them (TouchSensor).
+   ========================================================================== */
+
+/* cards allow normal scrolling; dnd-kit's TouchSensor lifts them after a 250ms press */
+.sched-rx .schedule-job,
+.sched-rx .sched-act,
+.sched-rx .sched-kan-card,
+.sched-rx .schedule-list-view button,
+.sched-rx .sched-matrix-cell {
+  touch-action: manipulation;
+}
+
+/* the Week board's header and rows share one sideways scroller inside the card */
+.sched-rx .schedule-week-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 900px) {
+  /* Week: day cells keep a usable width; the crew column stays pinned while you swipe */
+  .sched-rx .schedule-week-scroll .schedule-header,
+  .sched-rx .schedule-week-scroll .crew-row {
+    grid-template-columns: 124px repeat(7, 116px);
+    min-width: max-content;
+  }
+  .sched-rx .schedule-week-scroll .schedule-header > span:first-child,
+  .sched-rx .schedule-week-scroll .crew-label {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--wx-card);
+    box-shadow: 1px 0 0 var(--wx-line-soft);
+  }
+  .sched-rx .schedule-week-scroll .schedule-header > span:first-child {
+    background: #ffffff;
+  }
+  .sched-rx .schedule-week-scroll .crew-label,
+  .sched-rx .schedule-week-scroll .schedule-cell {
+    min-height: 124px;
+  }
+  .sched-rx .schedule-week-scroll .crew-label {
+    padding: 14px 10px;
+  }
+
+  /* Matrix: the same treatment */
+  .sched-rx .sched-matrix {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sched-rx .sched-matrix-head,
+  .sched-rx .sched-matrix-row {
+    grid-template-columns: 124px repeat(var(--matrix-cols, 7), 64px) 72px;
+    min-width: max-content;
+  }
+  .sched-rx .sched-matrix-corner,
+  .sched-rx .sched-matrix-crew {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--wx-card);
+    box-shadow: 1px 0 0 var(--wx-line-soft);
+  }
+  .sched-rx .sched-matrix-corner {
+    background: var(--wx-bg-2);
+  }
+
+  /* Kanban lanes already scroll sideways; keep them readable */
+  .sched-rx .sched-kanban {
+    grid-auto-columns: minmax(232px, 1fr);
+    overscroll-behavior-x: contain;
+  }
+
+  /* the board footer wraps instead of pushing the card wider than the screen */
+  .sched-rx .schedule-board-footer {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
+  .sched-rx .schedule-board-footer .export-button {
+    width: 100%;
+    justify-content: center;
+  }
+  .sched-rx .schedule-legend,
+  .sched-rx .sched-trade-legend {
+    gap: 8px 14px;
+  }
+}
+
+@media (max-width: 720px) {
+  /* control rows pack two-up: the reskin already makes the strip a grid here, so give it two
+     columns — selects side by side, the week stepper across both, action buttons paired */
+  .sched-rx .schedule-control-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .sched-rx .schedule-control-row .filter-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .sched-rx .schedule-control-row .select-box {
+    min-width: 0;
+  }
+  .sched-rx .schedule-control-row .week-stepper {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .sched-rx .schedule-control-row .filter-strip > button {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  /* List: one stacked card per booking — time and status on the first line, job and crew beneath */
+  .sched-rx .schedule-list-view header {
+    display: none;
+  }
+  .sched-rx .schedule-list-view button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "time status" "job job" "crew crew";
+    gap: 4px 12px;
+    padding: 12px 16px;
+  }
+  .sched-rx .schedule-list-view button > span:nth-child(1) {
+    grid-area: time;
+  }
+  .sched-rx .schedule-list-view button > span:nth-child(2) {
+    grid-area: job;
+  }
+  .sched-rx .schedule-list-view button > span:nth-child(3) {
+    grid-area: crew;
+  }
+  .sched-rx .schedule-list-view button > .badge {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  /* Month: dots instead of chips; the day itself stays tappable */
+  .sched-rx .sched-cal-cell {
+    min-height: 64px;
+    padding: 4px;
+  }
+  .sched-rx .sched-cal-cell .sched-act {
+    min-height: 0;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .sched-rx .sched-cal-cell .sched-act-text {
+    display: none;
+  }
+  .sched-rx .sched-cal-cell .sched-act-dot {
+    width: 8px;
+    height: 8px;
+  }
+  .sched-rx .sched-cal-cell .sched-act-more {
+    font-size: 10px;
+    padding: 0;
+  }
+  .sched-rx .sched-cal-add {
+    display: none;
+  }
+  .sched-rx .sched-cal-dow span {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+  .sched-rx .sched-holiday-tag {
+    font-size: 9px;
+  }
+}
+
+/* the shared filter row: two controls per line, the status panel full width */
+@media (max-width: 720px) {
+  .sched-filters .filter-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  /* the box's grid asked for 120px + a chevron column + 38px of padding — ~186px — and could not shrink to its half-row cell;
+     the reskin root clipped the excess on six pages, the Gantt's index layout showed it */
+  .sched-filters .filter-strip > .select-box {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) 18px;
+    padding: 0 12px 0 14px;
+  }
+  /* the select inside keeps its longest option's width unless told otherwise; on the Gantt's narrower column it pushed the row past the edge */
+  .sched-filters .filter-strip > .select-box select {
+    width: 100%;
+    min-width: 0;
+  }
+  .sched-filters .filter-strip > button {
+    justify-content: center;
+  }
+  .sched-filters-clear {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The Gantt Chart's index-style header: the title above its actions and the actions wrapping, so the
+   page never scrolls sideways on a phone (P4.1). Wrapping only happens when the row does not fit. */
+.gantt-page .hs-index-head {
+  flex-wrap: wrap;
+}
+.gantt-page .hs-index-actions {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  max-width: 100%;
+}
+/* the shared KPI grid above the chart and the alerts panel under it, spaced like the strip they replace */
+.gantt-page > .gantt-shared {
+  margin-bottom: 12px;
+}
+.gantt-page .hs-index-main > .gantt-shared {
+  margin-top: 12px;
+}
+
+/* ============================================================================
+   Tap targets (P4.4). At ≤ 640 px every schedule control is at least 40 px tall,
+   and the square ones 40 px wide: the week steppers, the filter selects (the
+   select fills its 50 px box, so the tap lands on the control itself), Save view
+   and the filter chips, the cell Add-job buttons, the rail's links and buttons,
+   the Month's nav and "+N more", the Gantt's toolbar, the landing's footer links,
+   and the drawer, picker and export menu when they are open. The Gantt's rows
+   grow through the chart's rowHeight prop (46 px rows, 40 px bars) — a bar
+   narrower than 40 px is as wide as the job is long, and its sidebar row is the
+   40 px target for the same job. The top bar and the rail belong to the app shell.
+   ========================================================================== */
+@media (max-width: 640px) {
+  .sched-rx .week-stepper button {
+    width: 40px;
+    height: 40px;
+  }
+  .sched-filters .filter-strip > .select-box select {
+    min-height: 40px;
+  }
+  .sched-views-bar button,
+  .sched-views-form input,
+  .sched-chips .sched-chip,
+  .sched-filters-clear,
+  .sched-rx .schedule-add-job-button.compact,
+  .sched-rx .sched-book,
+  .sched-rx .sched-rail-foot-btn,
+  .sched-rx .sched-cpm-baseline,
+  .gantt-page .sched-cpm-baseline,
+  .sched-rx .sched-today-btn,
+  .sched-rx .sched-kan-more,
+  .sched-export-menu button,
+  .gantt-drawer-actions button,
+  .gantt-page .gantt-drawer-links .hs-btn,
+  .schedule-job-create-actions button {
+    min-height: 40px;
+  }
+  .sched-rx .sched-rail-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 8px;
+    margin-right: -8px;
+  }
+  .sched-rx .schedule-page-footer button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 10px;
+  }
+  .sched-rx .sched-monthnav .sched-icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .sched-rx .sched-cal-cell .sched-act-more {
+    display: block;
+    width: calc(100% + 10px);
+    min-width: 40px;
+    margin: 2px -5px 0;
+    min-height: 40px;
+    padding: 0;
+    text-align: center;
+  }
+  .gantt-page .hs-btn {
+    min-height: 40px;
+  }
+  .gantt-page .hs-btn-icon {
+    width: 40px;
+  }
+  .gantt-page .gantt-seg button {
+    min-height: 40px;
+  }
+  .sched-rx .gantt-drawer-close,
+  .gantt-page .gantt-drawer-close,
+  .schedule-dialog .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+}

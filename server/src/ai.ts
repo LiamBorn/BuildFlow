@@ -7,7 +7,13 @@
    before any credential is added. The SDK is imported lazily so the server runs
    fine even if the package isn't installed until you go live.
    ========================================================================= */
-import type { BootstrapPayload, CreateProjectInput, CreateJobInput } from "@buildflow/shared";
+import {
+  tradeProfileFor,
+  type BusinessTypeId,
+  type BootstrapPayload,
+  type CreateProjectInput,
+  type CreateJobInput
+} from "@buildflow/shared";
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8";
 
@@ -39,7 +45,9 @@ export function buildAiContext(data: BootstrapPayload): string {
   const projects = data.projects ?? [];
   lines.push(`\nProjects (${projects.length}):`);
   for (const p of cap(projects, 12)) {
-    lines.push(`- ${p.name} — ${p.type}, ${p.percentComplete}% complete, ${p.scheduleHealth}, status ${p.status}, target ${p.targetCompletion}`);
+    lines.push(
+      `- ${p.name} — ${p.type}, ${p.percentComplete}% complete, ${p.scheduleHealth}, status ${p.status}, target ${p.targetCompletion}`
+    );
   }
 
   const crews = data.crews ?? [];
@@ -52,14 +60,18 @@ export function buildAiContext(data: BootstrapPayload): string {
   const atRisk = jobs.filter((j) => ["At Risk", "DelayIQed", "On Site"].includes(j.status) || j.materialsStatus === "Missing");
   lines.push(`\nJobs: ${jobs.length} total; ${atRisk.length} at-risk/delayIQed/waiting-on-materials.`);
   for (const j of cap(atRisk, 10)) {
-    lines.push(`- ${j.name} (${j.phase}) — status ${j.status}, priority ${j.priority}, materials ${j.materialsStatus}, ${j.startDate}→${j.endDate}`);
+    lines.push(
+      `- ${j.name} (${j.phase}) — status ${j.status}, priority ${j.priority}, materials ${j.materialsStatus}, ${j.startDate}→${j.endDate}`
+    );
   }
 
   const delayIQs = data.delayIQs ?? [];
   if (delayIQs.length) {
     lines.push(`\nOpen delayIQs (${delayIQs.length}):`);
     for (const d of cap(delayIQs, 8)) {
-      lines.push(`- ${(d as { title?: string; reason?: string }).title ?? (d as { reason?: string }).reason ?? "DelayIQ"} — ${(d as { days?: number }).days ?? "?"} day(s), ${(d as { severity?: string }).severity ?? ""} ${(d as { description?: string }).description ?? ""}`.trim());
+      lines.push(
+        `- ${(d as { title?: string; reason?: string }).title ?? (d as { reason?: string }).reason ?? "DelayIQ"} — ${(d as { days?: number }).days ?? "?"} day(s), ${(d as { severity?: string }).severity ?? ""} ${(d as { description?: string }).description ?? ""}`.trim()
+      );
     }
   }
 
@@ -88,7 +100,21 @@ export function buildAiContext(data: BootstrapPayload): string {
 
 /** Ask Claude a question about the workspace. Returns {mode:"demo"} (no answer)
     when unconfigured or on error, so the caller can fall back to the simulation. */
-export async function askBuildFlowAI(question: string, context: string): Promise<AiResult> {
+/**
+ * The trade the customer runs, folded into the system prompt so answers use the
+ * trade's own vocabulary and constraints (plant slots for asphalt, pour cards
+ * for concrete, dry-in windows for roofing) instead of generic construction talk.
+ */
+export function tradeSystemPrompt(businessType: BusinessTypeId | "" | undefined): string {
+  const profile = tradeProfileFor(businessType ?? "");
+  if (!profile) return SYSTEM;
+  return `${SYSTEM}
+
+TRADE: ${profile.aiContext}
+The crews this business fields: ${profile.crewTypes.join(", ")}. Its production phases run: ${profile.phases.join(" → ")}. The ways it typically loses days: ${profile.delayIQCategories.join("; ")}. Weather rule it plans around: ${profile.weather.rule} Use this trade's units (${profile.materialUnits.join(", ")}) and terms when they fit the question.`;
+}
+
+export async function askBuildFlowAI(question: string, context: string, businessType?: BusinessTypeId | ""): Promise<AiResult> {
   if (!isAiConfigured()) return { mode: "demo" };
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -98,7 +124,7 @@ export async function askBuildFlowAI(question: string, context: string): Promise
       max_tokens: 4096,
       thinking: { type: "adaptive" },
       output_config: { effort: "medium" }, // snappy, cost-aware for an interactive Q&A
-      system: SYSTEM,
+      system: tradeSystemPrompt(businessType),
       messages: [{ role: "user", content: `${context}\n\nQuestion: ${question}` }]
     });
     const message = await stream.finalMessage();
@@ -130,7 +156,9 @@ function parseDataUrl(url: string): DataUrlImage | null {
 const MATERIALS = ["Delivered", "Ordered", "Missing", "Waiting on Delivery"] as const;
 const PRIORITIES = ["High", "Medium", "Normal"] as const;
 function pick<T extends readonly string[]>(list: T, value: unknown, fallback: T[number]): T[number] {
-  const v = String(value ?? "").trim().toLowerCase();
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase();
   const hit = list.find((o) => o.toLowerCase() === v) as T[number] | undefined;
   if (hit) return hit;
   if (v.includes("ready")) return "Delivered" as T[number];
@@ -148,7 +176,10 @@ Rules: extract the REAL names, phases, and dates visible in the image. If a fiel
 
 export async function importScheduleFromImages(imageUrls: string[], data: BootstrapPayload): Promise<ImportResult> {
   if (!isAiConfigured()) return { mode: "demo" };
-  const images = imageUrls.map(parseDataUrl).filter((x): x is DataUrlImage => x !== null).slice(0, 6);
+  const images = imageUrls
+    .map(parseDataUrl)
+    .filter((x): x is DataUrlImage => x !== null)
+    .slice(0, 6);
   if (images.length === 0) return { mode: "demo" }; // nothing Claude can read (e.g. only a video)
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -168,7 +199,10 @@ export async function importScheduleFromImages(imageUrls: string[], data: Bootst
                 type: "image" as const,
                 source: { type: "base64" as const, media_type: img.media_type as "image/png", data: img.data }
               })),
-              { type: "text" as const, text: "Extract every project and job from these image(s) into the JSON shape. Return only the JSON." }
+              {
+                type: "text" as const,
+                text: "Extract every project and job from these image(s) into the JSON shape. Return only the JSON."
+              }
             ]
           }
         ]
@@ -180,7 +214,10 @@ export async function importScheduleFromImages(imageUrls: string[], data: Bootst
       .map((b) => b.text)
       .join("")
       .trim();
-    const json = text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    const json = text
+      .replace(/^```(?:json)?/i, "")
+      .replace(/```$/, "")
+      .trim();
     const parsed = JSON.parse(json) as { projects?: unknown[] };
     const plan = normalizePlan(parsed.projects ?? [], data);
     return plan.length ? { mode: "live", plan } : { mode: "demo" };
@@ -193,8 +230,7 @@ export async function importScheduleFromImages(imageUrls: string[], data: Bootst
 // Map Claude's lightweight extraction onto valid, backend-ready specs: fill the
 // operational fields BuildFlow needs, coerce enums/dates, assign crews round-robin.
 function normalizePlan(rawProjects: unknown[], data: BootstrapPayload): ImportProjectSpec[] {
-  const managerId =
-    data.users.find((u) => u.role === "Project Manager" || u.role === "Superintendent")?.id ?? data.activeUser.id;
+  const managerId = data.users.find((u) => u.role === "Project Manager" || u.role === "Superintendent")?.id ?? data.activeUser.id;
   const crews = data.crews ?? [];
   let cursor = 0;
   const nextCrew = () => (crews.length ? crews[cursor++ % crews.length]?.id : undefined);
@@ -204,7 +240,7 @@ function normalizePlan(rawProjects: unknown[], data: BootstrapPayload): ImportPr
     if (!rp || typeof rp !== "object") continue;
     const name = String(rp.name ?? "").trim();
     if (!name) continue;
-    const address = (String(rp.address ?? "").trim() || String(rp.location ?? "").trim()) || "Imported site";
+    const address = String(rp.address ?? "").trim() || String(rp.location ?? "").trim() || "Imported site";
     const input: CreateProjectInput = {
       name,
       location: String(rp.location ?? "").trim() || "Imported",
@@ -250,7 +286,7 @@ export function reportAiStatus(): void {
     console.log(`🤖 BuildFlow AI: LIVE — "Ask BuildFlow AI" calls go to Claude (${MODEL}).`);
   } else {
     console.warn(
-      "🤖 BuildFlow AI: DEMO MODE — no ANTHROPIC_API_KEY set, so \"Ask BuildFlow AI\" uses the built-in simulated answers. Set ANTHROPIC_API_KEY in server/.env to answer with real Claude."
+      '🤖 BuildFlow AI: DEMO MODE — no ANTHROPIC_API_KEY set, so "Ask BuildFlow AI" uses the built-in simulated answers. Set ANTHROPIC_API_KEY in server/.env to answer with real Claude.'
     );
   }
 }

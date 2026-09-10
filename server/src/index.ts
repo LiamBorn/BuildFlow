@@ -6,6 +6,7 @@ import { reportAiStatus } from "./ai.js";
 import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
 import { LATEST_SCHEMA_VERSION } from "./database.js";
+import { startWeeklyDigestScheduler } from "./schedule/digest.js";
 
 const port = Number(process.env.PORT ?? 4300);
 const app = await createApp();
@@ -24,7 +25,9 @@ app.listen(port, () => {
   const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
   try {
     const files = manager.backupAll(retain);
-    console.log(`🗄️  Data: schema v${LATEST_SCHEMA_VERSION}; boot backup → data/backups/ (${files.length} file${files.length === 1 ? "" : "s"}).`);
+    console.log(
+      `🗄️  Data: schema v${LATEST_SCHEMA_VERSION}; boot backup → data/backups/ (${files.length} file${files.length === 1 ? "" : "s"}).`
+    );
   } catch (error) {
     console.error("🗄️  Data: boot backup failed:", error instanceof Error ? error.message : error);
   }
@@ -41,5 +44,15 @@ app.listen(port, () => {
     console.log(`🗄️  Backup: periodic snapshots every ${intervalMin} min (BACKUP_INTERVAL_MIN).`);
   } else {
     console.log("🗄️  Backup: periodic OFF (set BACKUP_INTERVAL_MIN>0); on-demand: POST /api/ops/backup.");
+  }
+
+  // Monday's "what changed this week" email, once per org (WEEKLY_DIGEST=off, DIGEST_WEEKDAY, DIGEST_HOUR).
+  if ((process.env.WEEKLY_DIGEST ?? "on").toLowerCase() !== "off") {
+    startWeeklyDigestScheduler(manager);
+    console.log(
+      `📬 Weekly digest: on (weekday ${process.env.DIGEST_WEEKDAY ?? 1}, from ${process.env.DIGEST_HOUR ?? 7}:00); preview at GET /api/schedule/digest.`
+    );
+  } else {
+    console.log("📬 Weekly digest: OFF (WEEKLY_DIGEST=off).");
   }
 });

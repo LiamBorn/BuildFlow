@@ -25,8 +25,14 @@
   gap: clamp(28px, 5vw, 64px);
   padding: clamp(48px, 9vh, 108px) 0 clamp(24px, 4vh, 48px);
 }
-.welcome-rx .rvx-hero .cmp-title { margin: 18px 0 0; max-width: 18ch; }
-.welcome-rx .rvx-hero .cmp-sub { margin: 18px 0 0; max-width: 52ch; }
+.welcome-rx .rvx-hero .cmp-title {
+  margin: 18px 0 0;
+  max-width: 18ch;
+}
+.welcome-rx .rvx-hero .cmp-sub {
+  margin: 18px 0 0;
+  max-width: 52ch;
+}
 
 .welcome-rx .rvx-brands {
   display: inline-flex;
@@ -36,13 +42,24 @@
   font-size: 15px;
   color: var(--wx-ink);
 }
-.welcome-rx .rvx-brands svg { color: var(--wx-blue); }
-.welcome-rx .rvx-brands .buildflow-logo-mark { width: 26px; height: 26px; }
-.welcome-rx .rvx-brands strong { font-weight: 600; }
-.welcome-rx .rvx-read { margin-top: 26px; }
+.welcome-rx .rvx-brands svg {
+  color: var(--wx-blue);
+}
+.welcome-rx .rvx-brands .buildflow-logo-mark {
+  width: 26px;
+  height: 26px;
+}
+.welcome-rx .rvx-brands strong {
+  font-weight: 600;
+}
+.welcome-rx .rvx-read {
+  margin-top: 26px;
+}
 
 /* featured media card */
-.welcome-rx .rvx-hero-media-tilt { height: 100%; }
+.welcome-rx .rvx-hero-media-tilt {
+  height: 100%;
+}
 .welcome-rx .rvx-hero-media {
   position: relative;
   display: grid;
@@ -71,7 +88,7 @@
   border-radius: 50%;
   background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
   -webkit-mask: radial-gradient(circle at 50% 120%, transparent 58%, #000 59%, #000 66%, transparent 67%);
-          mask: radial-gradient(circle at 50% 120%, transparent 58%, #000 59%, #000 66%, transparent 67%);
+  mask: radial-gradient(circle at 50% 120%, transparent 58%, #000 59%, #000 66%, transparent 67%);
   opacity: 0.9;
 }
 .welcome-rx .rvx-media-logo {
@@ -85,7 +102,10 @@
   letter-spacing: -0.01em;
   color: var(--wx-ink);
 }
-.welcome-rx .rvx-media-logo .buildflow-logo-mark { width: 34px; height: 34px; }
+.welcome-rx .rvx-media-logo .buildflow-logo-mark {
+  width: 34px;
+  height: 34px;
+}
 .welcome-rx .rvx-media-metric {
   position: absolute;
   bottom: 20px;
@@ -101,10 +121,14 @@
   color: var(--wx-mut);
   box-shadow: 0 12px 30px -18px rgba(28, 28, 26, 0.5);
 }
-.welcome-rx .rvx-media-metric svg { color: var(--wx-blue); }
+.welcome-rx .rvx-media-metric svg {
+  color: var(--wx-blue);
+}
 
 /* ============================== directory ============================== */
-.welcome-rx .rvx-directory { padding: clamp(32px, 6vh, 72px) 0 0; }
+.welcome-rx .rvx-directory {
+  padding: clamp(32px, 6vh, 72px) 0 0;
+}
 .welcome-rx .rvx-head {
   display: flex;
   align-items: flex-end;
@@ -142,10 +166,17 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
 }
-.welcome-rx .rvx-tab:hover { color: var(--wx-ink); }
-.welcome-rx .rvx-tab.is-active { background: var(--wx-ink); color: var(--wx-bg); }
+.welcome-rx .rvx-tab:hover {
+  color: var(--wx-ink);
+}
+.welcome-rx .rvx-tab.is-active {
+  background: var(--wx-ink);
+  color: var(--wx-bg);
+}
 
 /* card grid */
 .welcome-rx .rvx-grid {
@@ -153,8 +184,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
-.welcome-rx .rvx-card-reveal { min-width: 0; }
-.welcome-rx .rvx-card-tilt { height: 100%; }
+.welcome-rx .rvx-card-reveal {
+  min-width: 0;
+}
+.welcome-rx .rvx-card-tilt {
+  height: 100%;
+}
 .welcome-rx .rvx-card {
   position: relative;
   height: 100%;
@@ -165,9 +200,14 @@
   background: linear-gradient(180deg, #ffffff, #fbfaf7);
   border: 1px solid var(--wx-line-soft);
   box-shadow: 0 30px 60px -46px rgba(28, 28, 26, 0.5);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    transform 0.3s ease;
 }
-.welcome-rx .rvx-card:hover { box-shadow: 0 40px 80px -44px rgba(28, 28, 26, 0.55); }
+.welcome-rx .rvx-card:hover {
+  box-shadow: 0 40px 80px -44px rgba(28, 28, 26, 0.55);
+}
 
 /* story cards */
 .welcome-rx .rvx-story-media {
@@ -178,11 +218,23 @@
   margin-bottom: 18px;
   color: #fff;
 }
-.welcome-rx .rvx-story-media .buildflow-logo-mark { width: 42px; height: 42px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25)); }
-.welcome-rx .rvx-story-media.tone-blue { background: linear-gradient(135deg, #4285f4, #1a73e8); }
-.welcome-rx .rvx-story-media.tone-purple { background: linear-gradient(135deg, #9b72cb, #7c3aed); }
-.welcome-rx .rvx-story-media.tone-coral { background: linear-gradient(135deg, #f1608e, #d96570); }
-.welcome-rx .rvx-story-media.tone-green { background: linear-gradient(135deg, #34a853, #2f9760); }
+.welcome-rx .rvx-story-media .buildflow-logo-mark {
+  width: 42px;
+  height: 42px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+.welcome-rx .rvx-story-media.tone-blue {
+  background: linear-gradient(135deg, #4285f4, #1a73e8);
+}
+.welcome-rx .rvx-story-media.tone-purple {
+  background: linear-gradient(135deg, #9b72cb, #7c3aed);
+}
+.welcome-rx .rvx-story-media.tone-coral {
+  background: linear-gradient(135deg, #f1608e, #d96570);
+}
+.welcome-rx .rvx-story-media.tone-green {
+  background: linear-gradient(135deg, #34a853, #2f9760);
+}
 .welcome-rx .rvx-company {
   font-size: 12px;
   font-weight: 700;
@@ -209,7 +261,9 @@
   font-weight: 600;
   color: var(--wx-mut);
 }
-.welcome-rx .rvx-metric svg { color: var(--wx-blue); }
+.welcome-rx .rvx-metric svg {
+  color: var(--wx-blue);
+}
 .welcome-rx .rvx-readlink {
   display: inline-flex;
   align-items: center;
@@ -219,11 +273,17 @@
   font-weight: 600;
   color: var(--wx-blue);
 }
-.welcome-rx .rvx-readlink svg { transition: transform 0.22s ease; }
-.welcome-rx .rvx-card:hover .rvx-readlink svg { transform: translateX(3px); }
+.welcome-rx .rvx-readlink svg {
+  transition: transform 0.22s ease;
+}
+.welcome-rx .rvx-card:hover .rvx-readlink svg {
+  transform: translateX(3px);
+}
 
 /* quote cards */
-.welcome-rx .rvx-quote { justify-content: flex-start; }
+.welcome-rx .rvx-quote {
+  justify-content: flex-start;
+}
 .welcome-rx .rvx-quote-mark {
   font-family: var(--wx-serif);
   font-size: 56px;
@@ -232,8 +292,12 @@
   color: var(--wx-blue);
   opacity: 0.5;
 }
-.welcome-rx .rvx-quote.tone-green .rvx-quote-mark { color: var(--tone-green); }
-.welcome-rx .rvx-quote.tone-amber .rvx-quote-mark { color: var(--tone-orange); }
+.welcome-rx .rvx-quote.tone-green .rvx-quote-mark {
+  color: var(--tone-green);
+}
+.welcome-rx .rvx-quote.tone-amber .rvx-quote-mark {
+  color: var(--tone-orange);
+}
 .welcome-rx .rvx-quote blockquote {
   margin: 12px 0 0;
   font-family: var(--wx-serif);
@@ -248,7 +312,13 @@
   font-size: 13px;
   color: var(--wx-mut);
 }
-.welcome-rx .rvx-quote cite strong { display: block; font-weight: 600; color: var(--wx-ink); font-size: 13.5px; margin-bottom: 2px; }
+.welcome-rx .rvx-quote cite strong {
+  display: block;
+  font-weight: 600;
+  color: var(--wx-ink);
+  font-size: 13.5px;
+  margin-bottom: 2px;
+}
 
 /* ============================== trust strip ============================== */
 .welcome-rx .rvx-trust {
@@ -281,23 +351,30 @@
   color: var(--wx-blue);
 }
 
-/* ============================== dark mode ============================== */
-.welcome-rx.wx-dark .rvx-hero-media,
-.welcome-rx.wx-dark .rvx-card {
-  background: linear-gradient(180deg, #1c1e25, #16181e);
-  border-color: var(--wx-line);
-}
-.welcome-rx.wx-dark .rvx-tab.is-active { background: var(--wx-ink); color: #14161c; }
-
 /* ============================== responsive ============================== */
 @media (max-width: 940px) {
-  .welcome-rx .rvx-hero { grid-template-columns: 1fr; }
-  .welcome-rx .rvx-hero-media-wrap { order: -1; }
-  .welcome-rx .rvx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .welcome-rx .rvx-trust { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .welcome-rx .rvx-hero {
+    grid-template-columns: 1fr;
+  }
+  .welcome-rx .rvx-hero-media-wrap {
+    order: -1;
+  }
+  .welcome-rx .rvx-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .welcome-rx .rvx-trust {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 560px) {
-  .welcome-rx .rvx-grid { grid-template-columns: 1fr; }
-  .welcome-rx .rvx-trust { grid-template-columns: 1fr; }
-  .welcome-rx .rvx-head { flex-direction: column; align-items: flex-start; }
+  .welcome-rx .rvx-grid {
+    grid-template-columns: 1fr;
+  }
+  .welcome-rx .rvx-trust {
+    grid-template-columns: 1fr;
+  }
+  .welcome-rx .rvx-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

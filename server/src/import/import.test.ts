@@ -178,9 +178,7 @@ describe("MSPDI parser", () => {
 
   it("converts LinkLag (tenths of a minute) into hours", () => {
     // 4800 tenths of a minute = 480 minutes = 8h.
-    expect(parsed.activities.find((a) => a.externalId === "3")?.predecessors).toEqual([
-      { predecessorId: "2", type: "FS", lagHours: 8 }
-    ]);
+    expect(parsed.activities.find((a) => a.externalId === "3")?.predecessors).toEqual([{ predecessorId: "2", type: "FS", lagHours: 8 }]);
   });
 
   it("reads milestones, durations and assignments", () => {

@@ -27,7 +27,17 @@ export const EVENTS = {
   contactSales: "contact_sales_submit",
   demoVideoOpen: "demo_video_open",
   enterApp: "enter_app",
-  ctaClick: "cta_click"
+  ctaClick: "cta_click",
+  /* Registration funnel, in order. Props never carry PII — counts, ids of
+     plans/trades and seat numbers only, so drop-off between steps is measurable. */
+  signupStarted: "signup_started",
+  accountCreated: "account_created",
+  login: "login",
+  tradeChosen: "trade_chosen",
+  planChosen: "plan_chosen",
+  checkoutStarted: "checkout_started",
+  onboardingCompleted: "onboarding_completed",
+  invitesSent: "invites_sent"
 } as const;
 
 declare global {
@@ -68,6 +78,7 @@ function markReady() {
     try {
       run();
     } catch (err) {
+      // eslint-disable-next-line no-console -- a dev-only diagnostic
       if (isDev) console.warn("[analytics] dispatch failed", err);
     }
   });
@@ -144,10 +155,12 @@ function setupPosthog() {
       });
       markReady();
     } catch (err) {
+      // eslint-disable-next-line no-console -- a dev-only diagnostic
       if (isDev) console.warn("[analytics] posthog init failed", err);
     }
   };
   script.onerror = () => {
+    // eslint-disable-next-line no-console -- a dev-only diagnostic
     if (isDev) console.warn("[analytics] posthog script failed to load");
   };
   return true;

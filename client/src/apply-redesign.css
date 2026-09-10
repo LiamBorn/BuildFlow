@@ -78,18 +78,28 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
 }
-.careers-apply-page .apply-back svg { transition: transform 0.2s ease; }
+.careers-apply-page .apply-back svg {
+  transition: transform 0.2s ease;
+}
 .careers-apply-page .apply-back:hover {
   color: var(--wx-ink);
   border-color: var(--wx-line);
   background: #fff;
 }
-.careers-apply-page .apply-back:hover svg { transform: translateX(-3px); }
+.careers-apply-page .apply-back:hover svg {
+  transform: translateX(-3px);
+}
 
 /* ---- header ---- */
-.careers-apply-page .apply-head { margin-bottom: clamp(28px, 4vw, 48px); }
+.careers-apply-page .apply-head {
+  margin-bottom: clamp(28px, 4vw, 48px);
+}
 .careers-apply-page .apply-head h1 {
   margin: 0 0 12px;
   max-width: 20ch;
@@ -160,7 +170,9 @@
   font-weight: 600;
   color: var(--wx-mut);
 }
-.careers-apply-page .apply-summary-meta svg { color: var(--wx-blue); }
+.careers-apply-page .apply-summary-meta svg {
+  color: var(--wx-blue);
+}
 .careers-apply-page .apply-summary-note {
   margin: 0;
   font-size: 14px;
@@ -182,7 +194,9 @@
   font-size: 13px;
   color: var(--wx-mut);
 }
-.careers-apply-page .apply-summary-perks svg { color: #34a853; }
+.careers-apply-page .apply-summary-perks svg {
+  color: #34a853;
+}
 
 /* ============================================================
    Form
@@ -227,9 +241,15 @@
   color: var(--wx-ink);
   font: inherit;
   font-size: 14.5px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
-.careers-apply-page .apply-field textarea { resize: vertical; min-height: 96px; }
+.careers-apply-page .apply-field textarea {
+  resize: vertical;
+  min-height: 96px;
+}
 .careers-apply-page .apply-field select {
   appearance: none;
   -webkit-appearance: none;
@@ -240,7 +260,9 @@
   cursor: pointer;
 }
 .careers-apply-page .apply-field input::placeholder,
-.careers-apply-page .apply-field textarea::placeholder { color: var(--wx-faint); }
+.careers-apply-page .apply-field textarea::placeholder {
+  color: var(--wx-faint);
+}
 .careers-apply-page .apply-field input:focus,
 .careers-apply-page .apply-field select:focus,
 .careers-apply-page .apply-field textarea:focus {
@@ -269,9 +291,14 @@
   border: 1px dashed var(--wx-line);
   background: #fffdf9;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
 }
-.careers-apply-page .apply-file:hover { border-color: var(--wx-blue); background: #fff; }
+.careers-apply-page .apply-file:hover {
+  border-color: var(--wx-blue);
+  background: #fff;
+}
 .careers-apply-page .apply-file input[type="file"] {
   position: absolute;
   width: 1px;
@@ -354,7 +381,9 @@
   line-height: 1.62;
   color: var(--wx-mut);
 }
-.careers-apply-page .apply-success strong { color: var(--wx-ink); }
+.careers-apply-page .apply-success strong {
+  color: var(--wx-ink);
+}
 .careers-apply-page .apply-success-actions {
   display: inline-flex;
   flex-wrap: wrap;
@@ -367,9 +396,15 @@
    Responsive
    ============================================================ */
 @media (max-width: 860px) {
-  .careers-apply-page .apply-layout { grid-template-columns: 1fr; }
-  .careers-apply-page .apply-summary { position: static; }
+  .careers-apply-page .apply-layout {
+    grid-template-columns: 1fr;
+  }
+  .careers-apply-page .apply-summary {
+    position: static;
+  }
 }
 @media (max-width: 560px) {
-  .careers-apply-page .apply-row { grid-template-columns: 1fr; }
+  .careers-apply-page .apply-row {
+    grid-template-columns: 1fr;
+  }
 }

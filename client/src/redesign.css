@@ -36,8 +36,7 @@ html {
 
 .app-shell {
   background:
-    radial-gradient(1200px 460px at 80% -10%, rgba(21, 104, 201, 0.05), transparent 62%),
-    linear-gradient(180deg, #eef3f9, #f5f6fe 44%);
+    radial-gradient(1200px 460px at 80% -10%, rgba(21, 104, 201, 0.05), transparent 62%), linear-gradient(180deg, #eef3f9, #f5f6fe 44%);
 }
 
 ::selection {
@@ -296,9 +295,7 @@ html {
 .crew-stat-card,
 .crew-directory-card,
 .crew-review-panel,
-.equipment-stat-card,
 .equipment-directory-card,
-.material-stat-card,
 .material-directory-card,
 .field-stat-card,
 .field-entry-card,
@@ -345,8 +342,6 @@ html {
 
 /* Stat number crispness across modules */
 .crew-stat-card strong,
-.equipment-stat-card strong,
-.material-stat-card strong,
 .field-stat-card strong,
 .reports-kpi-card strong {
   font-weight: 800;
@@ -394,7 +389,9 @@ html {
 .dashboard-feed-panel header a,
 .view-all-alerts {
   border-radius: var(--r-sm);
-  transition: color 150ms ease, background 150ms ease;
+  transition:
+    color 150ms ease,
+    background 150ms ease;
 }
 
 .panel-header button:hover {

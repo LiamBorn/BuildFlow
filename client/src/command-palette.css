@@ -1,0 +1,93 @@
+/* The ⌘K palette (components/CommandPalette.tsx): jump to a page, or to a schedule view by its key. */
+.cmdk-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: min(18vh, 160px);
+  background: rgba(15, 22, 38, 0.42);
+}
+.cmdk {
+  width: min(560px, calc(100vw - 32px));
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  color: #14203a;
+  box-shadow: 0 24px 64px rgba(15, 22, 38, 0.32);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.cmdk-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-bottom: 1px solid #e3e7ef;
+  padding: 16px 18px;
+  font: 500 16px/1.3 inherit;
+  color: inherit;
+  outline: none;
+}
+.cmdk-list {
+  max-height: min(52vh, 420px);
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  list-style: none;
+}
+.cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cmdk-item.is-active {
+  background: #e8f0fe;
+  color: #1f4fd0;
+}
+.cmdk-group {
+  margin-left: auto;
+  font-size: 12px;
+  color: #7b859b;
+}
+.cmdk-hint,
+.cmdk-foot kbd {
+  padding: 3px 6px;
+  border: 1px solid #dfe3ec;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #f6f7fb;
+  color: #4b5568;
+  font:
+    600 11px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.cmdk-empty {
+  padding: 14px 12px;
+  color: #7b859b;
+  font-size: 14px;
+}
+.cmdk-foot {
+  display: flex;
+  gap: 16px;
+  padding: 8px 14px;
+  border-top: 1px solid #e3e7ef;
+  color: #7b859b;
+  font-size: 12px;
+}
+.cmdk-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

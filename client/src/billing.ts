@@ -15,9 +15,7 @@ export type CheckoutPlanId = "pro" | "business";
 export type CheckoutPeriod = "monthly" | "yearly";
 
 export type CheckoutOutcome =
-  | { status: "redirecting" }
-  | { status: "not_configured"; message: string }
-  | { status: "error"; message: string };
+  { status: "redirecting" } | { status: "not_configured"; message: string } | { status: "error"; message: string };
 
 export async function startPlanCheckout(plan: CheckoutPlanId, period: CheckoutPeriod, seats: number): Promise<CheckoutOutcome> {
   try {

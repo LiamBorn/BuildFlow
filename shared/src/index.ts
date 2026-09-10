@@ -19,6 +19,15 @@ export const businessTypeOptions = [
 
 export type BusinessTypeId = (typeof businessTypeOptions)[number];
 
+/**
+ * The paid add-ons offered at onboarding — everything else (crew scheduling,
+ * projects, materials readiness, field updates & delayIQs, production reports)
+ * ships in the base product and is therefore not a choice here.
+ *
+ * Adding or removing an entry changes the `OnboardingProductId` union, which
+ * three maps are keyed by: `programRegistry` and the tutorial's `productSteps`
+ * (both in client/src/App.tsx) and this list. TypeScript enforces all three.
+ */
 export const onboardingProductOptions = [
   {
     id: "map-field-ops",
@@ -26,38 +35,51 @@ export const onboardingProductOptions = [
     description: "Track vehicles, equipment, and design traffic routes."
   },
   {
-    id: "field-updates-delayIQs",
-    label: "Field Updates & DelayIQs",
-    description: "Capture crew updates, delayIQ causes, photos, and recovery notes."
-  },
-  {
-    id: "production-reports",
-    label: "Production Reports",
-    description: "Review backlog, schedule health, utilization, and weekly progress."
-  },
-  {
-    id: "materials-readiness",
-    label: "Materials Readiness",
-    description: "Track delivery status and flag missing materials before dispatch."
-  },
-  {
     id: "equipment-tracking",
     label: "Equipment Tracking",
     description: "See equipment assignment, usage, and maintenance status."
   },
   {
-    id: "crew-scheduling",
-    label: "Crew Scheduling",
-    description: "Plan crews by capacity, trade, day, and ready work."
+    id: "time-cards",
+    label: "Time Cards",
+    description: "Log crew hours against jobs, then approve them for payroll and job costing."
   },
   {
+    // id kept as `schedule-ai` so selections already stored under it survive;
+    // the product is presented as the whole AI capability, not just the
+    // scheduling half.
     id: "schedule-ai",
-    label: "Schedule AI",
-    description: "Spot conflicts and turn blockers into recovery suggestions."
+    label: "AI",
+    description: "Spot conflicts, answer questions, and turn blockers into recovery suggestions."
   }
 ] as const;
 
 export type OnboardingProductId = (typeof onboardingProductOptions)[number]["id"];
+
+/** The plans a workspace can be on. Enterprise is priced by sales, never by checkout. */
+export const planOptions = ["free", "pro", "business", "enterprise"] as const;
+export type PlanId = (typeof planOptions)[number];
+
+/** A teammate invited by email who has not accepted yet. Lives on the org, not the workspace. */
+export type TeamInvite = {
+  id: string;
+  email: string;
+  role: UserRole;
+  invitedBy: string;
+  createdAt: string;
+  expiresAt: string;
+  /** Null while the owner's own email is unconfirmed — the invite goes out the moment it is. */
+  sentAt: string | null;
+};
+
+/** What the invited person sees before accepting. */
+export type InvitePreview = { email: string; role: UserRole; orgName: string; inviterName: string; expiresAt: string };
+
+/**
+ * Where the org stands with money. Derived on the server from the trial the
+ * org started at onboarding and any Stripe subscription on the owner's email.
+ */
+export type BillingStatus = "free" | "trial" | "active" | "trial_expired" | "enterprise";
 
 export type User = {
   id: string;
@@ -65,19 +87,26 @@ export type User = {
   role: UserRole;
   title: string;
   avatar: string;
+  /** The login account this person is, when they have one. The registered owner always does. */
+  accountId?: string | null;
+  /** Seeded teammate from the starter workspace — shown as an example, safe to remove. */
+  isSample?: boolean;
 };
 
-export type Status =
-  | "Not Started"
-  | "Ready"
-  | "Ready to Start"
-  | "Planned"
-  | "Confirmed"
-  | "In Progress"
-  | "On Site"
-  | "DelayIQed"
-  | "Complete"
-  | "At Risk";
+/** The one status list every job, booking, filter, lane, badge and drawer shares — in workflow order. */
+export const JOB_STATUSES = [
+  "Not Started",
+  "Ready",
+  "Ready to Start",
+  "Planned",
+  "Confirmed",
+  "In Progress",
+  "On Site",
+  "DelayIQed",
+  "At Risk",
+  "Complete"
+] as const;
+export type Status = (typeof JOB_STATUSES)[number];
 
 export type Project = {
   id: string;
@@ -92,6 +121,12 @@ export type Project = {
   percentComplete: number;
   scheduleHealth: "On Track" | "Monitor" | "At Risk" | "Complete";
   status: Status;
+  /**
+   * Contract value in whole dollars. Optional on purpose — a project can be
+   * scheduled long before anyone puts a number on it, and reporting treats a
+   * missing value as "not priced" rather than as zero.
+   */
+  value?: number;
   image: string;
   latitude: number;
   longitude: number;
@@ -109,6 +144,7 @@ export type UpdateProjectInput = Pick<
   | "percentComplete"
   | "status"
   | "scheduleHealth"
+  | "value"
 >;
 
 export type CreateProjectInput = UpdateProjectInput;
@@ -146,9 +182,26 @@ export {
   type BaselineVariance
 } from "./cpm";
 
+/* One profile per trade — what BuildFlow becomes for an asphalt vs. a concrete
+   vs. a roofing business. Shared so the picker, the seed, the runtime copy and
+   the AI all describe the same trade the same way. */
+export { tradeProfiles, tradeProfileFor, type TradeProfile, type TradeIcon, type TradeTone } from "./tradeProfiles";
+
+/* Password rules shared by the signup form (live meter) and the signup route. */
+export { PASSWORD_MIN_LENGTH, passwordProblem, passwordStrength, type PasswordStrength } from "./passwordPolicy";
+
 /* Planned-vs-actual maths, shared so the field's phone and the server's
    variance check agree on what "behind" means. */
-export { scheduleCalendar, plannedPercentAt, forecastIQFinish, type PlannedWindow } from "./progress";
+export {
+  scheduleCalendar,
+  scheduleCalendarFor,
+  plannedPercentAt,
+  forecastIQFinish,
+  projectScheduleStatus,
+  portfolioScheduleStatus,
+  type PlannedWindow,
+  type ProjectScheduleStatus
+} from "./progress";
 
 import type { DependencyType, ConstraintType } from "./cpm";
 
@@ -218,7 +271,25 @@ export type CreateCrewInput = {
   specialty: string;
   foreman: string;
   laborMix: CrewLaborMixItem[];
+  /** Hourly rate per worker; omitted = the specialty's default. */
+  rate?: number;
 };
+
+/** The hourly rate a crew costs per worker when nobody has set one — by specialty, so the demo's costs are believable. */
+export const DEFAULT_CREW_RATE = 95;
+const SPECIALTY_RATES: Array<[RegExp, number]> = [
+  [/electric|mep|mechanical|plumb/i, 96],
+  [/concrete|masonry|foundation/i, 88],
+  [/utilit|drain|pipe/i, 84],
+  [/pav|asphalt|surfac/i, 82],
+  [/earth|excav|grade|trench|backfill|haul/i, 78],
+  [/fram|carpent|roof/i, 76],
+  [/finish|paint|drywall|landscap/i, 70]
+];
+export function defaultCrewRate(specialty: string): number {
+  const match = SPECIALTY_RATES.find(([pattern]) => pattern.test(specialty));
+  return match ? match[1] : DEFAULT_CREW_RATE;
+}
 
 export type UpdateCrewInput = CreateCrewInput;
 
@@ -232,6 +303,8 @@ export type Crew = {
   utilization: number;
   icon: string;
   status: "Available" | "Scheduled" | "Overbooked";
+  /** Blended hourly rate per worker, in dollars. Unset crews read as defaultCrewRate(specialty). */
+  rate?: number;
   laborMix: CrewLaborMixItem[];
 };
 
@@ -263,6 +336,7 @@ export type ScheduleAssignment = {
   jobId: string;
   crewId: string;
   date: string;
+  /** Always the job's status: a booking wears its job's status and never carries one of its own. */
   status: Status;
   conflicts: string[];
 };
@@ -417,4 +491,213 @@ export type BootstrapPayload = {
   phases: Phase[];
   inspections: Inspection[];
   weatherAlerts: WeatherAlert[];
+  /**
+   * The trade this workspace is built around, recorded on the org when the
+   * owner picks it at onboarding. Optional because older tenant DBs (and test
+   * fixtures) predate it; the client falls back to what the browser last
+   * stored, then to the generic experience.
+   */
+  businessType?: BusinessTypeId | "";
+  /**
+   * Set when the owner finished onboarding (picked a trade). The client sends
+   * a signed-in account to onboarding while this is missing, instead of
+   * guessing from how many users the workspace has.
+   */
+  onboardingCompletedAt?: string | null;
+  /** Plan, add-ons and seats chosen at onboarding, recorded on the org (not the browser). */
+  selectedPlan?: PlanId | null;
+  selectedProducts?: OnboardingProductId[];
+  seats?: number | null;
+  /** A paid plan without a completed checkout runs as a dated trial; this is when it ends. */
+  trialEndsAt?: string | null;
+  billingStatus?: BillingStatus;
+  /** The signed-in login behind this bootstrap, for the "verify your email" notice. */
+  account?: { email: string; emailVerifiedAt: string | null } | null;
+  /** The workspace's working week and holidays (Settings › Work calendar). Older tenants read the computed default. */
+  workCalendar?: WorkCalendarSetting;
+  /** Per-person preferences kept on the server (tutorial progress today), keyed by setting name. */
+  userSettings?: Record<string, string>;
+  /** True while the trade's starter workspace is loaded as sample data (P3.6); it can be removed again. */
+  sampleData?: boolean;
+};
+
+/* Schedule Creation Tool — the §3 contract and (soon) the CPM engine, kept in
+   their own namespace so `Project` / `Crew` don't collide with the existing
+   BuildFlow domain types above. Usage: `import type { Schedule } from "@buildflow/shared"`. */
+export type * as Schedule from "./schedule/types";
+export type * as ScheduleApi from "./schedule/api";
+export * as scheduleEngine from "./schedule/cpm";
+
+/* ── batch re-booking: POST /api/schedule/rebook ─────────────────────────────
+   One request for everything a drop touches; all of it applies or none of it. */
+
+/** One step of a re-book: a booking moved, made or dropped, or a job's dates. */
+export type RebookMove =
+  | { op: "move"; id: string; crewId?: string; date?: string }
+  | { op: "book"; jobId: string; crewId: string; date: string }
+  | { op: "unbook"; id: string }
+  | ({ op: "job"; id: string; startDate: string; endDate: string } & JobEdits);
+
+/** What a save may change on a job besides its dates — the drawer's other fields — so a move and its edits are one request. */
+export type JobEdits = Partial<Pick<Job, "status" | "priority" | "notes" | "startTime" | "endTime" | "materialsStatus">>;
+
+/** A crew already booked on the day a step wants. The server answers 409 with these unless the caller forces the booking. */
+export type CrewClash = {
+  crewId: string;
+  crewName: string;
+  date: string;
+  /** The booking already on that crew-day. */
+  jobId: string;
+  jobName: string;
+  /** The job that wants the same crew-day. */
+  movingJobId: string;
+  movingJobName: string;
+};
+
+export type RebookResult = {
+  /** Every booking the batch made or moved, as it is now. */
+  assignments: ScheduleAssignment[];
+  /** The ids the batch dropped. */
+  removed: string[];
+  /** Every job whose dates the batch changed, as it is now. */
+  jobs: Job[];
+  /** The double-bookings the caller chose to make (empty unless forced). */
+  clashes: CrewClash[];
+};
+
+/* ── the work calendar: which weekdays crews work and which dates they do not ──
+   Org data (workspace_settings "workCalendar"), read by the CPM engine, the
+   month calendar and the KPI maths. Nothing about a year is in code: the
+   defaults are computed for whatever year it is. */
+
+export type WorkHoliday = { date: string; name: string };
+export type WorkCalendarSetting = {
+  /** Weekdays crews work, 0 = Sunday … 6 = Saturday. */
+  workingDays: number[];
+  holidays: WorkHoliday[];
+};
+
+/** A six-day construction week. */
+export const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5, 6];
+
+const isoDay = (year: number, month: number, day: number) => {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.toISOString().slice(0, 10);
+};
+/** The nth (1-based) weekday of a month, or the last one when `n` is -1. */
+const nthWeekday = (year: number, month: number, weekday: number, n: number) => {
+  if (n > 0) {
+    const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+    return isoDay(year, month, 1 + ((weekday - first + 7) % 7) + (n - 1) * 7);
+  }
+  const lastDay = new Date(Date.UTC(year, month, 0));
+  const back = (lastDay.getUTCDay() - weekday + 7) % 7;
+  return isoDay(year, month, lastDay.getUTCDate() - back);
+};
+/** A fixed-date holiday as it is observed: Saturday → the Friday before, Sunday → the Monday after. */
+const observed = (year: number, month: number, day: number) => {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const weekday = date.getUTCDay();
+  if (weekday === 6) date.setUTCDate(date.getUTCDate() - 1);
+  if (weekday === 0) date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+};
+
+/** The US federal holidays of a year, on their observed dates. */
+export function usFederalHolidays(year: number): WorkHoliday[] {
+  return [
+    { date: observed(year, 1, 1), name: "New Year's Day" },
+    { date: nthWeekday(year, 1, 1, 3), name: "Martin Luther King Jr. Day" },
+    { date: nthWeekday(year, 2, 1, 3), name: "Presidents' Day" },
+    { date: nthWeekday(year, 5, 1, -1), name: "Memorial Day" },
+    { date: observed(year, 6, 19), name: "Juneteenth" },
+    { date: observed(year, 7, 4), name: "Independence Day" },
+    { date: nthWeekday(year, 9, 1, 1), name: "Labor Day" },
+    { date: nthWeekday(year, 10, 1, 2), name: "Columbus Day" },
+    { date: observed(year, 11, 11), name: "Veterans Day" },
+    { date: nthWeekday(year, 11, 4, 4), name: "Thanksgiving" },
+    { date: observed(year, 12, 25), name: "Christmas Day" }
+  ];
+}
+
+/** The days construction crews usually take: the federal list minus the ones most sites work through. */
+export function constructionHolidays(year: number): WorkHoliday[] {
+  const skipped = new Set(["Martin Luther King Jr. Day", "Presidents' Day", "Columbus Day", "Veterans Day"]);
+  return usFederalHolidays(year).filter((holiday) => !skipped.has(holiday.name));
+}
+
+/** What a workspace works until someone edits it: a six-day week, this year's and next year's construction holidays. */
+export function defaultWorkCalendar(year = new Date().getFullYear()): WorkCalendarSetting {
+  return { workingDays: [...DEFAULT_WORKING_DAYS], holidays: [...constructionHolidays(year), ...constructionHolidays(year + 1)] };
+}
+
+/** A well-formed calendar from whatever was stored: known weekdays only (at least one), dated holidays, no duplicates, sorted. */
+export function normalizeWorkCalendar(input: Partial<WorkCalendarSetting> | null | undefined): WorkCalendarSetting {
+  const fallback = defaultWorkCalendar();
+  const workingDays = [
+    ...new Set((input?.workingDays ?? fallback.workingDays).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))
+  ].sort();
+  const seen = new Set<string>();
+  const holidays = (input?.holidays ?? fallback.holidays)
+    .filter((holiday) => /^\d{4}-\d{2}-\d{2}$/.test(holiday?.date ?? "") && !seen.has(holiday.date) && seen.add(holiday.date))
+    .map((holiday) => ({
+      date: holiday.date,
+      name:
+        String(holiday.name ?? "Holiday")
+          .trim()
+          .slice(0, 80) || "Holiday"
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { workingDays: workingDays.length > 0 ? workingDays : [...DEFAULT_WORKING_DAYS], holidays };
+}
+
+/** date → name, the shape the calendar cells and the KPI maths read. */
+export function holidayMap(calendar: WorkCalendarSetting): Record<string, string> {
+  return Object.fromEntries(calendar.holidays.map((holiday) => [holiday.date, holiday.name]));
+}
+
+export function isWorkingDay(iso: string, calendar: WorkCalendarSetting): boolean {
+  if (calendar.holidays.some((holiday) => holiday.date === iso)) return false;
+  return calendar.workingDays.includes(new Date(`${iso}T00:00:00`).getDay());
+}
+
+/** One change to the schedule, as the live feed tells every open schedule page of the org. */
+export type ScheduleLiveEvent = {
+  /** What changed: bookings, jobs, or the work calendar. */
+  kind: "assignments" | "jobs" | "calendar";
+  /** How: a drop's move / book / unbook, a job's fields, dates an accepted variance moved, the calendar. */
+  op: "move" | "book" | "unbook" | "job" | "dates" | "calendar";
+  /** The bookings and jobs it touched. */
+  ids: string[];
+  /** Who did it. */
+  by: { id: string; name: string };
+  /** The browser tab that did it, so that tab does not flash its own move. */
+  client: string | null;
+  at: string;
+};
+
+/* ── the weekly digest: what changed in the plan between two Monday snapshots ── */
+export type WeeklyDigestJobMove = {
+  id: string;
+  name: string;
+  project: string;
+  from: { startDate: string; endDate: string };
+  to: { startDate: string; endDate: string };
+  /** Days the start moved; positive is later. */
+  days: number;
+};
+export type WeeklyDigestConflict = { crewId: string; crewName: string; date: string; jobs: string[] };
+export type WeeklyDigestMilestone = { id: string; title: string; project: string; from: string; to: string; days: number };
+export type WeeklyDigest = {
+  /** Monday of the week the digest is for. */
+  weekOf: string;
+  /** Monday of the snapshot it was compared with, or null when this is the first snapshot. */
+  previousWeekOf: string | null;
+  capturedAt: string;
+  movedJobs: WeeklyDigestJobMove[];
+  newJobs: Array<{ id: string; name: string; project: string; startDate: string }>;
+  newConflicts: WeeklyDigestConflict[];
+  clearedConflicts: number;
+  slippedMilestones: WeeklyDigestMilestone[];
+  totals: { jobs: number; bookings: number; conflicts: number };
 };

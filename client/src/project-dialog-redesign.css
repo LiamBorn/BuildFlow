@@ -1,0 +1,719 @@
+/* ============================================================================
+   project-dialog-redesign.css — "Antigravity" HUD (New / Edit Project dialog)
+   Re-skins the project editor modal to match the welcome page + the redesigned
+   dashboard/projects pages: warm paper, serif display type with a gradient
+   italic, monochrome ink, soft floating card, pill controls, and the same
+   cubic-bezier(0.22, 1, 0.36, 1) motion curve.
+
+   Self-contained and scoped to `.pdx`: the dialog is rendered from BOTH the
+   Projects page (inside .proj-rx) and the Schedule page (a different scope),
+   so it defines its own tokens rather than inheriting a page reskin.
+   ========================================================================== */
+
+.pdx {
+  --wx-ink: #1c1c1a;
+  --wx-mut: #575550;
+  --wx-faint: #8a877e;
+  --wx-line: rgba(28, 28, 26, 0.13);
+  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-card: #ffffff;
+  --wx-blue: #2f6bff;
+  --wx-g-blue: #4285f4;
+  --wx-g-purple: #9b72cb;
+  --wx-g-coral: #d96570;
+  --wx-red: #c5221f;
+  --wx-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --cc-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pdx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================ backdrop ==================================
+   Keyed on `.pdx` alone, not `.pdx.project-dialog-backdrop`: every dialog that
+   opts into this system brings its own legacy backdrop class (crew, project, …),
+   so scoping to one of them silently left the others at their old z-index. */
+.pdx {
+  /* Above the floating "Ask AI" launcher (z-index 60), which otherwise paints
+     over the open modal and stays clickable through the scrim. */
+  z-index: 80;
+  padding: clamp(16px, 4vh, 40px) clamp(16px, 4vw, 40px);
+  background: rgba(28, 28, 26, 0.42);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  animation: pdx-backdrop-in 0.32s ease both;
+}
+
+@keyframes pdx-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ============================ dialog shell ============================== */
+.pdx .pdx-dialog {
+  position: relative;
+  width: min(880px, 100%);
+  max-height: min(880px, calc(100vh - 56px));
+  overflow: hidden auto;
+  border: 1px solid var(--wx-line);
+  border-radius: 26px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  box-shadow:
+    0 40px 90px rgba(28, 28, 26, 0.24),
+    0 6px 18px rgba(28, 28, 26, 0.1);
+  -webkit-font-smoothing: antialiased;
+  animation: pdx-dialog-in 0.52s var(--pdx-ease) both;
+  /* Keep native select popups on the light scheme instead of an OS dark mode. */
+  color-scheme: light;
+}
+
+@keyframes pdx-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* soft aurora wash behind the header, same palette as the page heroes */
+.pdx .pdx-glow {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 0;
+  height: 320px;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 26px 26px 0 0;
+}
+.pdx .pdx-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(44px);
+  opacity: 0.5;
+}
+.pdx .pdx-aurora-1 {
+  width: 320px;
+  height: 320px;
+  top: -170px;
+  left: -70px;
+  background: radial-gradient(circle, rgba(66, 133, 244, 0.3), transparent 64%);
+}
+.pdx .pdx-aurora-2 {
+  width: 300px;
+  height: 300px;
+  top: -190px;
+  right: -60px;
+  background: radial-gradient(circle, rgba(155, 114, 203, 0.26), transparent 64%);
+}
+
+/* ============================ header ==================================== */
+.pdx .pdx-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  border-bottom: 1px solid var(--wx-line-soft);
+  padding: clamp(22px, 3.4vw, 34px) clamp(22px, 3.4vw, 34px) clamp(20px, 2.6vw, 26px);
+}
+
+.pdx .pdx-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 15px 7px 12px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--wx-mut);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.pdx .pdx-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--wx-blue);
+  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
+  animation: pdx-pulse 2.6s ease-in-out infinite;
+}
+@keyframes pdx-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.pdx .pdx-title {
+  margin: 16px 0 0;
+  font-family: var(--wx-serif);
+  font-size: clamp(28px, 3.4vw, 42px);
+  line-height: 1.06;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--wx-ink);
+}
+.pdx .pdx-title em {
+  font-style: italic;
+  font-weight: 500;
+  background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.pdx .pdx-sub {
+  margin: 12px 0 0;
+  max-width: 56ch;
+  font-size: clamp(14px, 1.1vw, 15.5px);
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+
+/* close control — quiet disc that fills to ink on hover */
+.pdx .pdx-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--wx-mut);
+  cursor: pointer;
+  transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.22s var(--pdx-ease);
+}
+.pdx .pdx-close:hover,
+.pdx .pdx-close:focus-visible {
+  border-color: var(--wx-ink);
+  background: var(--wx-ink);
+  color: #f9fafd;
+  outline: 0;
+  transform: rotate(90deg);
+}
+
+/* ============================ form grid ================================= */
+.pdx .pdx-form {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  padding: clamp(22px, 3.4vw, 32px) clamp(22px, 3.4vw, 34px) clamp(24px, 3vw, 30px);
+}
+
+.pdx .pdx-form > label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: var(--wx-ink);
+  font-weight: 600;
+  /* staggered entrance, mirroring the page reveal cadence */
+  animation: pdx-field-in 0.6s var(--pdx-ease) both;
+}
+/* --wx-mut, not --wx-faint: at 11px/700 these labels do not qualify for the
+   WCAG large-text exemption, and --wx-faint on white measures 3.59:1 (below the
+   4.5:1 AA minimum for a functional form label). --wx-mut clears it. */
+.pdx .pdx-form > label > span {
+  color: var(--wx-mut);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@keyframes pdx-field-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pdx .pdx-form > label:nth-child(1) {
+  animation-delay: 0.06s;
+}
+.pdx .pdx-form > label:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.pdx .pdx-form > label:nth-child(3) {
+  animation-delay: 0.14s;
+}
+.pdx .pdx-form > label:nth-child(4) {
+  animation-delay: 0.18s;
+}
+.pdx .pdx-form > label:nth-child(5) {
+  animation-delay: 0.22s;
+}
+.pdx .pdx-form > label:nth-child(6) {
+  animation-delay: 0.26s;
+}
+.pdx .pdx-form > label:nth-child(7) {
+  animation-delay: 0.3s;
+}
+.pdx .pdx-form > label:nth-child(8) {
+  animation-delay: 0.34s;
+}
+.pdx .pdx-form > label:nth-child(9) {
+  animation-delay: 0.38s;
+}
+.pdx .pdx-form > label:nth-child(n + 10) {
+  animation-delay: 0.42s;
+}
+
+.pdx .pdx-form input,
+.pdx .pdx-form select,
+.pdx .pdx-form textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--wx-line);
+  border-radius: 13px;
+  padding: 0 14px;
+  background: #fffdf9;
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  outline: 0;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+.pdx .pdx-form select {
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+/* multi-line fields: same paper/edge/focus treatment, sized to their rows.
+   Added when the Field Updates edit dialog joined `.pdx` — it is the first
+   dialog here with a textarea, so nothing else is affected. */
+.pdx .pdx-form textarea {
+  min-height: 96px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  resize: vertical;
+}
+.pdx .pdx-form input:hover,
+.pdx .pdx-form select:hover,
+.pdx .pdx-form textarea:hover {
+  border-color: rgba(28, 28, 26, 0.25);
+}
+.pdx .pdx-form input:focus,
+.pdx .pdx-form select:focus,
+.pdx .pdx-form textarea:focus {
+  border-color: var(--wx-blue);
+  background: var(--wx-card);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+}
+.pdx .pdx-form input::placeholder {
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+
+/* the date + number fields keep their native affordances legible on paper */
+.pdx .pdx-form input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.pdx .pdx-form input[type="date"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 0.9;
+}
+
+.pdx .project-form-wide {
+  grid-column: 1 / -1;
+}
+
+/* ============================ validation =============================== */
+.pdx .pdx-form .form-error {
+  margin: 0;
+  border: 1px solid rgba(197, 34, 31, 0.22);
+  border-radius: 13px;
+  padding: 11px 14px;
+  background: rgba(197, 34, 31, 0.06);
+  color: var(--wx-red);
+  font-size: 13.5px;
+  font-weight: 600;
+  animation: pdx-field-in 0.4s var(--pdx-ease) both;
+}
+
+/* ============================ actions =================================== */
+.pdx .pdx-actions {
+  /* The footer always spans the full two-column form grid, so Cancel/Save land
+     hard against the dialog's right edge. The project dialog got this from its
+     own `project-form-wide` class; declaring it here means every `.pdx` dialog
+     is aligned the same way without opting in. */
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  border-top: 1px solid var(--wx-line-soft);
+  padding-top: clamp(18px, 2.4vw, 24px);
+  animation: pdx-field-in 0.6s var(--pdx-ease) both;
+  animation-delay: 0.46s;
+}
+
+.pdx .pdx-actions button {
+  min-height: 46px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-family: var(--cc-sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s var(--pdx-ease),
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Cancel — quiet hairline pill */
+.pdx .pdx-cancel {
+  border: 1px solid var(--wx-line);
+  background: transparent;
+  color: var(--wx-mut);
+  box-shadow: none;
+}
+.pdx .pdx-cancel:hover,
+.pdx .pdx-cancel:focus-visible {
+  border-color: rgba(28, 28, 26, 0.3);
+  background: rgba(28, 28, 26, 0.04);
+  color: var(--wx-ink);
+  outline: 0;
+}
+
+/* Save — the ink pill used for primary actions across the reskin */
+.pdx .pdx-save {
+  border: 1px solid var(--wx-ink);
+  background: var(--wx-ink);
+  color: #f9fafd;
+  box-shadow: 0 8px 22px rgba(28, 28, 26, 0.2);
+}
+.pdx .pdx-save:hover:not(:disabled),
+.pdx .pdx-save:focus-visible:not(:disabled) {
+  background: #000;
+  box-shadow: 0 14px 32px rgba(28, 28, 26, 0.28);
+  outline: 0;
+  transform: translateY(-1px);
+}
+.pdx .pdx-save:disabled {
+  border-color: var(--wx-line);
+  background: rgba(28, 28, 26, 0.16);
+  color: rgba(255, 255, 255, 0.86);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Crew dialogs (.pdx-crew)
+   The Add / Edit Crew and Remove Crew modals reuse the shell above; these rules
+   cover the parts they add — the computed size chip, the "Labors & Operators"
+   toolbar, the repeating role rows, and the destructive confirm.
+   ========================================================================== */
+
+/* computed crew size — read-only chip, so it reads as output not input */
+.pdx .crew-size-preview {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  padding: 10px 14px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 13px;
+  background: rgba(47, 107, 255, 0.05);
+}
+.pdx .crew-size-preview span {
+  color: var(--wx-mut);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pdx .crew-size-preview strong {
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* section toolbar */
+.pdx .labor-mix-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--wx-line-soft);
+}
+.pdx .labor-mix-toolbar strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--wx-ink);
+}
+.pdx .pdx-add-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s var(--pdx-ease),
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+.pdx .pdx-add-role:hover,
+.pdx .pdx-add-role:focus-visible {
+  border-color: rgba(28, 28, 26, 0.3);
+  background: rgba(28, 28, 26, 0.04);
+  color: var(--wx-ink);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+/* repeating role rows */
+.pdx .labor-mix-rows {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+}
+.pdx .labor-mix-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) 96px 40px;
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 15px;
+  background: rgba(28, 28, 26, 0.015);
+  animation: pdx-field-in 0.5s var(--pdx-ease) both;
+}
+.pdx .labor-mix-row > label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+/* --wx-mut for the same AA reason as the main form labels above (11px/700 does
+   not qualify for the large-text exemption; --wx-faint measures 3.59:1). */
+.pdx .labor-mix-row > label > span {
+  color: var(--wx-mut);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pdx .labor-mix-row input,
+.pdx .labor-mix-row select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--wx-line);
+  border-radius: 11px;
+  padding: 0 12px;
+  background: #fffdf9;
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 14px;
+  font-weight: 600;
+  outline: 0;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+.pdx .labor-mix-row select {
+  padding-right: 32px;
+  cursor: pointer;
+}
+.pdx .labor-mix-row input:focus,
+.pdx .labor-mix-row select:focus {
+  border-color: var(--wx-blue);
+  background: var(--wx-card);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+}
+
+/* remove-role button sits on the row baseline */
+.pdx .pdx-role-remove {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 42px;
+  border: 1px solid rgba(197, 34, 31, 0.22);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--wx-red);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+.pdx .pdx-role-remove:hover:not(:disabled),
+.pdx .pdx-role-remove:focus-visible:not(:disabled) {
+  border-color: rgba(197, 34, 31, 0.45);
+  background: rgba(197, 34, 31, 0.06);
+  outline: 0;
+}
+.pdx .pdx-role-remove:disabled {
+  border-color: var(--wx-line-soft);
+  color: var(--wx-faint);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---- destructive confirm (Remove Crew / Remove Project) ---- */
+.pdx-confirm .pdx-dialog,
+.pdx .pdx-dialog.pdx-confirm {
+  width: min(560px, 100%);
+}
+.pdx .pdx-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  padding: clamp(22px, 3.4vw, 30px) clamp(22px, 3.4vw, 34px) clamp(24px, 3vw, 30px);
+  animation: pdx-field-in 0.5s var(--pdx-ease) both;
+}
+.pdx .pdx-summary {
+  display: grid;
+  gap: 4px;
+  padding: 15px 16px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 15px;
+  background: rgba(28, 28, 26, 0.02);
+}
+.pdx .pdx-summary span {
+  color: var(--wx-mut);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.pdx .pdx-summary strong {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--wx-ink);
+}
+.pdx .pdx-note {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--wx-mut);
+}
+
+/* the one red pill in the system — destructive confirm only */
+.pdx .pdx-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 24px;
+  border: 1px solid var(--wx-red);
+  border-radius: 999px;
+  background: var(--wx-red);
+  color: #fff;
+  font-family: var(--cc-sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(197, 34, 31, 0.24);
+  transition:
+    transform 0.2s var(--pdx-ease),
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+.pdx .pdx-danger:hover:not(:disabled),
+.pdx .pdx-danger:focus-visible:not(:disabled) {
+  background: #a81b19;
+  box-shadow: 0 14px 32px rgba(197, 34, 31, 0.32);
+  outline: 0;
+  transform: translateY(-1px);
+}
+.pdx .pdx-danger:disabled {
+  border-color: var(--wx-line);
+  background: rgba(197, 34, 31, 0.35);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ============================ responsive =============================== */
+@media (max-width: 720px) {
+  .pdx .pdx-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pdx .labor-mix-row {
+    grid-template-columns: minmax(0, 1fr) 84px 40px;
+  }
+  .pdx .labor-mix-row > label:first-child {
+    grid-column: 1 / -1;
+  }
+  .pdx .pdx-dialog {
+    border-radius: 22px;
+  }
+  .pdx .pdx-glow {
+    border-radius: 22px 22px 0 0;
+  }
+  .pdx .pdx-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .pdx .pdx-actions button {
+    width: 100%;
+  }
+}
+
+/* ============================ reduced motion ============================ */
+@media (prefers-reduced-motion: reduce) {
+  .pdx,
+  .pdx .pdx-dialog,
+  .pdx .pdx-form > label,
+  .pdx .pdx-form .form-error,
+  .pdx .pdx-actions,
+  .pdx .labor-mix-row {
+    animation: none;
+  }
+  .pdx .pdx-dot {
+    animation: none;
+  }
+  .pdx .pdx-close:hover,
+  .pdx .pdx-close:focus-visible {
+    transform: none;
+  }
+  .pdx .pdx-save:hover:not(:disabled),
+  .pdx .pdx-add-role:hover {
+    transform: none;
+  }
+}

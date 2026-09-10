@@ -34,6 +34,12 @@ let cached: { transporter: Transporter | null; mode: MailMode } | undefined;
    Ethereal needs network to provision its test account; if that fails we fall
    back to LOG MODE so a signup never breaks. */
 async function getTransport(): Promise<{ transporter: Transporter | null; mode: MailMode }> {
+  // Tests never touch the network: signup, verification, reset and invites all
+  // send mail, and an Ethereal account round-trip per test is what made the
+  // suite flaky. Log mode prints the message and returns immediately.
+  if (process.env.NODE_ENV === "test" && !process.env.BUILDFLOW_TEST_REAL_MAIL) {
+    return { transporter: null, mode: "log" };
+  }
   if (cached !== undefined) return cached;
 
   const host = process.env.SMTP_HOST;
@@ -49,8 +55,7 @@ async function getTransport(): Promise<{ transporter: Transporter | null; mode: 
     return cached;
   }
 
-  const wantEthereal =
-    process.env.EMAIL_MODE === "ethereal" || process.env.SMTP_ETHEREAL === "1" || process.env.SMTP_ETHEREAL === "true";
+  const wantEthereal = process.env.EMAIL_MODE === "ethereal" || process.env.SMTP_ETHEREAL === "1" || process.env.SMTP_ETHEREAL === "true";
   if (wantEthereal) {
     try {
       const account = await nodemailer.createTestAccount();
@@ -77,7 +82,14 @@ async function getTransport(): Promise<{ transporter: Transporter | null; mode: 
 
 export type MailResult = { ok: boolean; mode: MailMode; previewUrl?: string };
 
-export async function sendMail(msg: { to: string; subject: string; html: string; text: string }): Promise<MailResult> {
+export type MailAttachment = { filename: string; content: string; contentType?: string };
+export async function sendMail(msg: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  attachments?: MailAttachment[];
+}): Promise<MailResult> {
   const { transporter, mode } = await getTransport();
   if (!transporter) {
     console.log(
@@ -86,7 +98,14 @@ export async function sendMail(msg: { to: string; subject: string; html: string;
     return { ok: true, mode: "log" };
   }
   try {
-    const info = await transporter.sendMail({ from: FROM, to: msg.to, subject: msg.subject, html: msg.html, text: msg.text });
+    const info = await transporter.sendMail({
+      from: FROM,
+      to: msg.to,
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+      attachments: msg.attachments
+    });
     if (mode === "ethereal") {
       const previewUrl = nodemailer.getTestMessageUrl(info) || undefined;
       console.log(
@@ -256,4 +275,60 @@ export function contactSalesLeadEmail(lead: SalesLead) {
       `<a href="mailto:${escapeHtml(lead.email)}" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:10px">Reply to ${escapeHtml(lead.name.trim().split(/\s+/)[0] || "lead")} →</a>`
   );
   return { subject, html, text };
+}
+
+/* ── account emails: verify address, reset password ─────────────────────── */
+
+function accountEmailShell(title: string, intro: string, buttonLabel: string, link: string, footer: string) {
+  const text = `${title}\n\n${intro}\n\n${buttonLabel}: ${link}\n\n${footer}`;
+  const html = `
+    <div style="font-family:Inter,ui-sans-serif,system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#1c1c1a;line-height:1.5">
+      <p style="margin:0 0 18px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a877e">BuildFlow</p>
+      <h1 style="margin:0 0 12px;font-size:22px;font-weight:600;letter-spacing:-.01em">${title}</h1>
+      <p style="margin:0 0 22px;font-size:15px;color:#4a4944">${intro}</p>
+      <p style="margin:0 0 22px"><a href="${link}" style="display:inline-block;padding:12px 18px;border-radius:999px;background:#2f6bff;color:#fff;text-decoration:none;font-weight:600">${buttonLabel}</a></p>
+      <p style="margin:0 0 6px;font-size:12.5px;color:#8a877e">If the button does not work, paste this into your browser:</p>
+      <p style="margin:0 0 22px;font-size:12.5px;word-break:break-all"><a href="${link}" style="color:#2f6bff">${link}</a></p>
+      <p style="margin:0;font-size:12.5px;color:#8a877e">${footer}</p>
+    </div>`;
+  return { html, text };
+}
+
+export function verifyEmailMessage(name: string, link: string) {
+  return {
+    subject: "Confirm your email for BuildFlow",
+    ...accountEmailShell(
+      `Confirm it's you, ${name.split(" ")[0] || "there"}.`,
+      "Tap the button to confirm this is your address. That unlocks inviting your team and managing billing.",
+      "Confirm my email",
+      link,
+      "This link works for 24 hours. If you did not create a BuildFlow account, ignore this email."
+    )
+  };
+}
+
+export function resetPasswordMessage(name: string, link: string) {
+  return {
+    subject: "Reset your BuildFlow password",
+    ...accountEmailShell(
+      `Reset your password, ${name.split(" ")[0] || "there"}.`,
+      "Someone asked to reset the password for this BuildFlow account. If that was you, set a new one below.",
+      "Choose a new password",
+      link,
+      "This link works for one hour and can be used once. If you did not ask for this, your password is unchanged — you can ignore this email."
+    )
+  };
+}
+
+export function inviteMessage(inviterName: string, orgName: string, role: string, link: string) {
+  return {
+    subject: `${inviterName} invited you to ${orgName} on BuildFlow`,
+    ...accountEmailShell(
+      `Join ${orgName} on BuildFlow.`,
+      `${inviterName} invited you to their workspace as a ${role}. Set a password and you're in — crews, schedule and field updates included.`,
+      "Accept the invite",
+      link,
+      "This invite works for seven days. If you weren't expecting it, you can ignore this email."
+    )
+  };
 }

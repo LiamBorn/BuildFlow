@@ -1,0 +1,29 @@
+# Lint, formatting, types and every workspace's tests on each push and pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Lint, types and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Formatting
+        run: npm run format:check
+      - name: Types
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Tests in far time zones
+        run: npm run test:tz

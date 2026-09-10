@@ -139,7 +139,7 @@ export function analyzeSchedule(schedule: ParsedSchedule, opts: { now?: number }
   let conflictPairs = 0;
   for (const [resource, list] of byResource) {
     if (list.length < 2) continue;
-    const sorted = [...list].sort((a, b) => (toMs(a.start)! - toMs(b.start)!));
+    const sorted = [...list].sort((a, b) => toMs(a.start)! - toMs(b.start)!);
     for (let i = 0; i < sorted.length; i += 1) {
       const aFinish = toMs(sorted[i].finish)!;
       for (let j = i + 1; j < sorted.length; j += 1) {
@@ -206,8 +206,7 @@ export function analyzeSchedule(schedule: ParsedSchedule, opts: { now?: number }
     for (const relation of activity.predecessors) hasSuccessor.add(relation.predecessorId);
   }
   const dangling = work.filter(
-    (activity) =>
-      !activity.isMilestone && activity.predecessors.length === 0 && !hasSuccessor.has(activity.externalId)
+    (activity) => !activity.isMilestone && activity.predecessors.length === 0 && !hasSuccessor.has(activity.externalId)
   );
   // Only worth flagging when the schedule uses logic at all; a bar-chart with no
   // links everywhere isn't "12 dangling activities", it's a different problem.
@@ -273,8 +272,7 @@ export function analyzeSchedule(schedule: ParsedSchedule, opts: { now?: number }
   }
   score = Math.round(clamp(score, 0, 100));
 
-  const grade: ScheduleHealth["grade"] =
-    score >= 85 ? "Healthy" : score >= 70 ? "Monitor" : score >= 50 ? "At Risk" : "Critical";
+  const grade: ScheduleHealth["grade"] = score >= 85 ? "Healthy" : score >= 70 ? "Monitor" : score >= 50 ? "At Risk" : "Critical";
 
   return {
     score,
@@ -379,8 +377,7 @@ function buildForecastIQ(dated: ImportedActivity[], dataDateMs: number, dataDate
   const projectedFinishMs = scheduleStart + projectedTotalMs;
   const slipDays = Math.round((projectedFinishMs - plannedFinishMs) / DAY_MS);
 
-  const status: ScheduleForecastIQ["status"] =
-    slipDays <= 3 ? "on_track" : slipDays <= 20 ? "slipping" : "at_risk";
+  const status: ScheduleForecastIQ["status"] = slipDays <= 3 ? "on_track" : slipDays <= 20 ? "slipping" : "at_risk";
 
   return {
     dataDate: dataDateIso,
@@ -391,17 +388,12 @@ function buildForecastIQ(dated: ImportedActivity[], dataDateMs: number, dataDate
     percentTimeElapsed: Math.round(clamp(percentTimeElapsedRaw, 0, 100)),
     scheduleIndex: Number(scheduleIndex.toFixed(2)),
     status,
-    method:
-      "Projected from progress to the data date using the Earned Schedule method (SPI-t). An estimate, not a re-run of your logic.",
+    method: "Projected from progress to the data date using the Earned Schedule method (SPI-t). An estimate, not a re-run of your logic.",
     confidence: simulateFinish(dated, { dataDate: dataDateIso, scheduleIndex, lowProgress: false })
   };
 }
 
-function buildHeadline(
-  grade: ScheduleHealth["grade"],
-  forecastIQ: ScheduleForecastIQ,
-  findings: HealthFinding[]
-): string {
+function buildHeadline(grade: ScheduleHealth["grade"], forecastIQ: ScheduleForecastIQ, findings: HealthFinding[]): string {
   if (forecastIQ.status === "complete") return "This schedule is complete — every activity reads 100%.";
   if (forecastIQ.slipDays > 3 && forecastIQ.projectedFinish) {
     const topIssue = findings[0];

@@ -1,0 +1,403 @@
+/* ============================================================
+   AI overview (#ai-overview) — showcase layout
+   Everything ABOVE the closing CTA band. Media card on top, copy
+   underneath, in the same palette as the rest of the welcome site:
+   all colors come from the --wx-* tokens plus the page's own
+   --ov-accent-bg / --ov-accent-ink (set inline by WelcomeOverviewPage),
+   so light + dark mode both follow automatically.
+   Scoped to .aix-* under .welcome-rx — nothing leaks to the other
+   overview pages, which keep the classic layout.
+   ============================================================ */
+
+/* ---------------- hero ---------------- */
+.welcome-rx .aix-hero {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-height: clamp(400px, 58vh, 620px);
+  padding: clamp(56px, 8vh, 104px) 0 clamp(36px, 5vh, 64px);
+}
+/* Drifting dot field — full-bleed, faded into a soft cloud up and to the
+   right. Pure CSS (a masked dot grid), so there is no canvas to paint. */
+.welcome-rx .aix-dots {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background-image: radial-gradient(circle at center, var(--ov-accent-ink, #7b3ff4) 1.4px, transparent 1.7px);
+  background-size: 30px 30px;
+  opacity: 0.3;
+  -webkit-mask-image: radial-gradient(120% 88% at 76% 16%, #000 0%, rgba(0, 0, 0, 0.5) 44%, transparent 74%);
+  mask-image: radial-gradient(120% 88% at 76% 16%, #000 0%, rgba(0, 0, 0, 0.5) 44%, transparent 74%);
+  animation: aix-dot-drift 44s linear infinite;
+}
+@keyframes aix-dot-drift {
+  to {
+    background-position: 300px 120px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-rx .aix-dots {
+    animation: none;
+  }
+}
+.welcome-rx .aix-hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  text-align: left;
+}
+.welcome-rx .aix-hero .aix-title {
+  position: relative; /* the typewriter's .wx-type-real is absolutely placed */
+  margin: 16px 0 0;
+  max-width: 16ch;
+  font-size: clamp(40px, 6.2vw, 82px);
+  line-height: 1.03;
+  letter-spacing: -0.03em;
+  text-align: left;
+}
+.welcome-rx .aix-hero .aix-sub {
+  margin: 22px 0 0;
+  max-width: 56ch;
+  font-size: clamp(16px, 1.5vw, 19px);
+  line-height: 1.6;
+  color: var(--wx-mut);
+  text-align: left;
+}
+.welcome-rx .aix-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+/* ---------------- shared: chevron text links ---------------- */
+.welcome-rx .aix-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 18px;
+}
+.welcome-rx .aix-links button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wx-ink);
+  cursor: pointer;
+}
+.welcome-rx .aix-links button svg {
+  color: var(--wx-faint);
+  transition: transform 0.22s ease;
+}
+.welcome-rx .aix-links button:hover svg {
+  transform: translateX(3px);
+}
+.welcome-rx .aix-links button:focus-visible {
+  outline: 2px solid var(--ov-accent-ink, var(--wx-blue));
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ---------------- shared: media card ---------------- */
+.welcome-rx .aix-media,
+.welcome-rx .aix-lead-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(160deg, var(--ov-accent-bg, #efe9fb), var(--wx-card) 72%);
+  border: 1px solid var(--wx-line-soft);
+}
+.welcome-rx .aix-media-glow {
+  position: absolute;
+  top: -30%;
+  right: -14%;
+  width: 62%;
+  height: 128%;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ov-accent-ink, #7b3ff4) 30%, transparent), transparent 68%);
+  filter: blur(46px);
+  pointer-events: none;
+}
+
+/* ---------------- lead story ---------------- */
+.welcome-rx .aix-lead {
+  padding: clamp(20px, 3vw, 40px) 0 clamp(30px, 4vw, 56px);
+}
+.welcome-rx .aix-lead-media {
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 2.6vw, 34px);
+}
+.welcome-rx .aix-lead-frame {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.welcome-rx .aix-lead-copy {
+  margin-top: clamp(22px, 2.6vw, 34px);
+}
+.welcome-rx .aix-lead-copy h2 {
+  margin: 0 0 12px;
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(24px, 2.8vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.welcome-rx .aix-lead-copy p {
+  margin: 0 0 10px;
+  max-width: 78ch;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--wx-mut);
+}
+
+/* ---------------- showcase grid ---------------- */
+.welcome-rx .aix-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(30px, 3.6vw, 58px) clamp(22px, 2.6vw, 40px);
+}
+/* First and last run full width — the reference's full / two-up / full rhythm. */
+.welcome-rx .aix-grid > .aix-item:first-child,
+.welcome-rx .aix-grid > .aix-item:last-child {
+  grid-column: 1 / -1;
+}
+
+.welcome-rx .aix-item {
+  min-width: 0;
+}
+.welcome-rx .aix-item .aix-media {
+  aspect-ratio: 16 / 10;
+  display: grid;
+  place-items: center;
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease;
+}
+.welcome-rx .aix-grid > .aix-item:first-child .aix-media,
+.welcome-rx .aix-grid > .aix-item:last-child .aix-media {
+  aspect-ratio: 24 / 9;
+}
+.welcome-rx .aix-item:hover .aix-media {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 60px -44px rgba(28, 28, 26, 0.5);
+}
+.welcome-rx .aix-media-ic {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  background: var(--wx-card);
+  border: 1px solid var(--wx-line-soft);
+  color: var(--ov-accent-ink, #7b3ff4);
+  box-shadow: 0 18px 34px -26px rgba(28, 28, 26, 0.55);
+}
+/* Three skeleton rows below the icon — reads as a product surface without
+   needing a real screenshot per capability. */
+.welcome-rx .aix-media-rows {
+  position: absolute;
+  z-index: 1;
+  left: 12%;
+  right: 12%;
+  bottom: 14%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.welcome-rx .aix-media-rows i {
+  height: 8px;
+  border-radius: 5px;
+  background: var(--wx-ink);
+  opacity: 0.12;
+}
+.welcome-rx .aix-media-rows i:nth-child(1) {
+  width: 82%;
+}
+.welcome-rx .aix-media-rows i:nth-child(2) {
+  width: 58%;
+}
+.welcome-rx .aix-media-rows i:nth-child(3) {
+  width: 68%;
+  opacity: 0.07;
+}
+
+/* A real product shot instead of the placeholder. object-fit:contain guarantees
+   the whole chat composer stays visible — it is never cropped by the card — and
+   the tinted card + glow show through as a frame around it. */
+.welcome-rx .aix-media[data-shot="1"] {
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 2.8vw, 44px);
+}
+.welcome-rx .aix-grid > .aix-item:first-child .aix-media[data-shot="1"],
+.welcome-rx .aix-grid > .aix-item:last-child .aix-media[data-shot="1"] {
+  aspect-ratio: 3.4 / 1; /* sized to the shot so the frame stays tight */
+}
+.welcome-rx .aix-media-shot {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px -22px rgba(28, 28, 26, 0.4);
+}
+
+.welcome-rx .aix-kicker {
+  display: block;
+  margin-top: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ov-accent-ink, var(--wx-blue));
+}
+.welcome-rx .aix-item h3 {
+  margin: 8px 0 0;
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: clamp(21px, 2.2vw, 27px);
+  line-height: 1.15;
+  color: var(--wx-ink);
+}
+.welcome-rx .aix-item > p {
+  margin: 10px 0 0;
+  max-width: 70ch;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
+
+/* ---------------- gallery rail ---------------- */
+.welcome-rx .aix-rail-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 0 0 30px;
+  text-align: left;
+}
+.welcome-rx .aix-rail-head .wx-eyebrow-2 {
+  display: block;
+  margin-bottom: 12px;
+}
+.welcome-rx .aix-rail-head .wx-h2 {
+  margin: 0;
+}
+.welcome-rx .aix-rail-arrows {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.welcome-rx .aix-rail-arrows button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--wx-line);
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  cursor: pointer;
+  transition:
+    background 0.22s ease,
+    border-color 0.22s ease,
+    transform 0.22s ease;
+}
+.welcome-rx .aix-rail-arrows button:hover {
+  background: var(--wx-bg-2);
+  border-color: var(--wx-ink);
+  transform: translateY(-2px);
+}
+.welcome-rx .aix-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(250px, 310px);
+  gap: 18px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding-bottom: 8px;
+}
+.welcome-rx .aix-rail::-webkit-scrollbar {
+  display: none;
+}
+.welcome-rx .aix-rail-card {
+  scroll-snap-align: start;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+.welcome-rx .aix-rail-art {
+  height: 190px;
+  border-radius: 20px;
+  border: 1px solid var(--wx-line-soft);
+}
+.welcome-rx .aix-rail-card strong {
+  display: block;
+  margin-top: 16px;
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: 20px;
+  color: var(--wx-ink);
+}
+.welcome-rx .aix-rail-card p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--wx-mut);
+}
+.welcome-rx .aix-rail-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 14px;
+}
+.welcome-rx .aix-rail-stat b {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+  font-size: 26px;
+  color: var(--ov-accent-ink, var(--wx-ink));
+  font-variant-numeric: tabular-nums;
+}
+.welcome-rx .aix-rail-stat em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wx-faint);
+}
+
+/* ---------------- responsive ---------------- */
+@media (max-width: 900px) {
+  .welcome-rx .aix-grid {
+    grid-template-columns: 1fr;
+  }
+  .welcome-rx .aix-grid > .aix-item:first-child .aix-media,
+  .welcome-rx .aix-grid > .aix-item:last-child .aix-media,
+  .welcome-rx .aix-item .aix-media {
+    aspect-ratio: 16 / 10;
+  }
+  .welcome-rx .aix-rail-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

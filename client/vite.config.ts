@@ -73,9 +73,7 @@ function ensureBackend(): PluginOption {
           // frontend's port and the /api proxy still can't find it.
           env: { ...process.env, PORT: String(BACKEND_PORT) }
         });
-        child.on("error", (err) =>
-          log(`could not start the API: ${err.message}. Start it manually: npm --prefix server run dev`)
-        );
+        child.on("error", (err) => log(`could not start the API: ${err.message}. Start it manually: npm --prefix server run dev`));
         child.unref();
 
         const ready = await waitForPort(BACKEND_PORT, 30000);
@@ -90,7 +88,10 @@ function ensureBackend(): PluginOption {
 export default defineConfig({
   plugins: [react(), ensureBackend()],
   server: {
-    port: 5173,
+    // Honour a harness/CI-assigned PORT so the dev server can be placed on a free
+    // port; 5173 stays the default when nothing assigns one. The API port is
+    // separate and fixed (BACKEND_PORT), so moving the frontend is always safe.
+    port: Number(process.env.PORT) || 5173,
     proxy: {
       "/api": {
         target: `http://localhost:${BACKEND_PORT}`,
@@ -117,6 +118,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
-    globals: true
+    globals: true,
+    // whole-app renders take seconds on a busy machine or a CI runner; vitest's 5 s default is too tight
+    testTimeout: 20000
   }
 });

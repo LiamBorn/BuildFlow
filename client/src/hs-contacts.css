@@ -1,0 +1,1564 @@
+/* ============================================================================
+   hs-contacts.css — Sales hub → Contacts
+   HubSpot's Contacts index + contact record, in BuildFlow's palette (navy
+   #14203a, blue #2f6bff, paper #f5f6fa, lines #e6e8f0) with the app's motion:
+   staggered rise-ins for the page, rows and timeline, a slide-in record panel.
+   The index itself is the shared .hs-index system; this file adds the page
+   ground, the extra tones, the record panel and the contact dialog grid.
+   ========================================================================== */
+
+/* ---- page ground (the shell's content padding is 22px 28px 34px) -------- */
+.hs-shell .contacts-page {
+  --hsc-navy: #14203a;
+  --hsc-blue: #2f6bff;
+  --hsc-paper: #f5f6fa;
+  --hsc-line: #e6e8f0;
+  --hsc-ink: #14203a;
+  --hsc-mut: #575550;
+  --hsc-faint: #8a92a6;
+  --hsc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  margin: -22px -28px -34px;
+  padding: 22px 28px 34px;
+  min-height: calc(100% + 56px);
+  background: var(--hsc-paper);
+}
+
+/* five KPI tiles on one row (the shared strip is sized for four) */
+.contacts-page .hs-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+@media (max-width: 980px) {
+  .contacts-page .hs-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .contacts-page .hs-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.contacts-page .hs-table td:nth-child(7),
+.contacts-page .hs-table td:nth-child(9) {
+  white-space: nowrap;
+}
+
+/* ---- entrance tweens (page, rows) ---------------------------------------- */
+.contacts-page .hs-kpis,
+.contacts-page .hs-index-main {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.5s var(--hsc-ease),
+    transform 0.5s var(--hsc-ease);
+}
+.contacts-page .hs-index-main {
+  transition-delay: 0.08s;
+}
+.contacts-page .hs-kpis.in,
+.contacts-page .hs-index-main.in {
+  opacity: 1;
+  transform: none;
+}
+.contacts-page .hs-kpi {
+  animation: hsc-rise 0.5s var(--hsc-ease) both;
+  animation-delay: calc(0.05s * var(--i, 0));
+}
+.contacts-page .hs-kpi:nth-child(2) {
+  --i: 1;
+}
+.contacts-page .hs-kpi:nth-child(3) {
+  --i: 2;
+}
+.contacts-page .hs-kpi:nth-child(4) {
+  --i: 3;
+}
+.contacts-page .hs-kpi:nth-child(5) {
+  --i: 4;
+}
+.contacts-page .hs-table tbody tr {
+  animation: hsc-row-in 0.36s var(--hsc-ease) both;
+  animation-delay: calc(0.025s * var(--i, 0));
+}
+@keyframes hsc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hsc-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- extra tones the contact list needs ---------------------------------- */
+.hs-index .hs-badge.tone-teal,
+.hs-record .hs-badge.tone-teal {
+  background: #dff3f0;
+  color: #0d9488;
+}
+.hs-index .hs-badge.tone-slate,
+.hs-record .hs-badge.tone-slate {
+  background: #eceef3;
+  color: #5b6478;
+}
+.hs-index .hs-avatar.tone-blue,
+.hs-record .hs-avatar.tone-blue {
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-index .hs-avatar.tone-teal,
+.hs-record .hs-avatar.tone-teal {
+  background: #dff3f0;
+  color: #0d9488;
+}
+.hs-index .hs-avatar.tone-slate,
+.hs-record .hs-avatar.tone-slate {
+  background: #eceef3;
+  color: #5b6478;
+}
+.contacts-page .hs-avatar {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.contacts-page .hs-cell-none {
+  color: var(--hsc-faint);
+  font-style: italic;
+}
+.contacts-page .hs-link-plain {
+  color: var(--hsc-ink);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.contacts-page .hs-link-plain:hover {
+  color: var(--hsc-blue);
+}
+.contacts-page .hs-cell-actions.three {
+  width: 112px;
+  min-width: 112px;
+}
+.contacts-page .hs-cell-actions.three .hs-row-action {
+  display: inline-grid;
+  place-items: center;
+}
+.contacts-page .hs-cell-actions a.hs-row-action {
+  text-decoration: none;
+}
+.contacts-page .hs-index-actions .hs-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.contacts-page .hs-empty .hs-btn {
+  margin-top: 12px;
+}
+.contacts-page .hs-foot-right {
+  gap: 12px;
+}
+
+/* ---- contact dialog: two-column form on the shared .pdx dialog ----------- */
+.pdx .pdx-contact {
+  width: min(720px, calc(100vw - 32px));
+}
+.pdx .contact-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  align-items: start;
+}
+.pdx .contact-form .contact-form-wide {
+  grid-column: 1 / -1;
+}
+.pdx .contact-form textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+.pdx .pdx-save.pdx-danger {
+  background: #d92d20;
+  border-color: #d92d20;
+}
+@media (max-width: 640px) {
+  .pdx .contact-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- the record panel (HubSpot's contact record as a right-hand prompt) --- */
+.hs-record-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+}
+.hs-record-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 32, 58, 0.42);
+  backdrop-filter: blur(2px);
+  animation: hsc-fade 0.2s ease-out both;
+}
+.hs-record {
+  --hsc-line: #e6e8f0;
+  --hsc-blue: #2f6bff;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(600px, 100%);
+  overflow-y: auto;
+  padding: 16px 22px 28px;
+  background: #fff;
+  color: #14203a;
+  box-shadow: -24px 0 60px rgba(20, 32, 58, 0.22);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  animation: hsc-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hsc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes hsc-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hs-record-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.hs-record-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #2f6bff;
+  font:
+    600 13.5px/1 Inter,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.hs-record-back:hover {
+  background: #e8f0fe;
+}
+.hs-record-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hs-record .hs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #c9d0dc;
+  border-radius: 8px;
+  background: #fff;
+  color: #14203a;
+  font:
+    600 13px/1 Inter,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.hs-record .hs-btn:hover {
+  background: #f0f2f6;
+}
+.hs-record .hs-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.hs-record .hs-btn-primary {
+  background: #2f6bff;
+  border-color: #2f6bff;
+  color: #fff;
+}
+.hs-record .hs-btn-primary:hover {
+  background: #245ae0;
+}
+.hs-record .hs-btn-icon {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+}
+.hs-record .hs-qf {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid #c9d0dc;
+  border-radius: 8px;
+  background: #fff;
+}
+.hs-record .hs-qf select {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 28px 0 10px;
+  border: 0;
+  background: transparent;
+  color: #14203a;
+  font:
+    600 13px/1 Inter,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.hs-record .hs-qf > svg {
+  position: absolute;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  color: #8a92a6;
+}
+
+.hs-record-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid var(--hsc-line);
+}
+.hs-record-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 700;
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-record-avatar.tone-green {
+  background: #e2f1e6;
+  color: #188038;
+}
+.hs-record-avatar.tone-violet {
+  background: #efe8f8;
+  color: #7c3aed;
+}
+.hs-record-avatar.tone-amber {
+  background: #fdf0dc;
+  color: #b45309;
+}
+.hs-record-avatar.tone-teal {
+  background: #dff3f0;
+  color: #0d9488;
+}
+.hs-record-id {
+  min-width: 0;
+}
+.hs-record-id h2 {
+  margin: 0 0 2px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.hs-record-sub {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  color: #575550;
+}
+.hs-record-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 10px;
+}
+.hs-record-meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #2f6bff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.hs-record-meta a:hover {
+  text-decoration: underline;
+}
+.hs-record-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hs-record .hs-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.hs-record .hs-badge.tone-blue {
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-record .hs-badge.tone-green {
+  background: #e2f1e6;
+  color: #188038;
+}
+.hs-record .hs-badge.tone-amber {
+  background: #fdf0dc;
+  color: #b45309;
+}
+.hs-record .hs-badge.tone-red {
+  background: #fbe4e2;
+  color: #b42318;
+}
+.hs-record .hs-badge.tone-violet {
+  background: #efe8f8;
+  color: #7c3aed;
+}
+.hs-record-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #575550;
+}
+
+/* HubSpot's icon row: round outlined buttons with a label beneath */
+.hs-record-actions {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hsc-line);
+}
+.hs-record-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #14203a;
+  font:
+    600 12px/1 Inter,
+    system-ui,
+    sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+.hs-record-action > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #c9d0dc;
+  border-radius: 50%;
+  background: #fff;
+  color: #2f6bff;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.hs-record-action:hover > span,
+.hs-record-action:focus-visible > span {
+  background: #e8f0fe;
+  border-color: #2f6bff;
+  transform: translateY(-1px);
+}
+.hs-record-action.active > span {
+  background: #2f6bff;
+  border-color: #2f6bff;
+  color: #fff;
+}
+.hs-record-action.disabled {
+  color: #8a92a6;
+  cursor: not-allowed;
+}
+.hs-record-action.disabled > span {
+  color: #b6bfcc;
+}
+.hs-record-action.disabled:hover > span {
+  background: #fff;
+  border-color: #c9d0dc;
+  transform: none;
+}
+
+.hs-record-composer {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 4px;
+  padding: 14px;
+  border: 1px solid var(--hsc-line);
+  border-radius: 10px;
+  background: #f5f6fa;
+  animation: hsc-rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hs-record-composer label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #575550;
+}
+.hs-record-composer textarea,
+.hs-record-composer input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #c9d0dc;
+  border-radius: 8px;
+  background: #fff;
+  color: #14203a;
+  font:
+    500 13.5px/1.45 Inter,
+    system-ui,
+    sans-serif;
+  resize: vertical;
+}
+.hs-record-composer textarea:focus,
+.hs-record-composer input:focus {
+  outline: 2px solid rgba(47, 107, 255, 0.35);
+  outline-offset: 1px;
+  border-color: #2f6bff;
+}
+.hs-record-composer-due {
+  max-width: 200px;
+}
+.hs-record-composer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hs-record-section {
+  padding: 18px 0 6px;
+  border-bottom: 1px solid var(--hsc-line);
+}
+.hs-record-section:last-child {
+  border-bottom: 0;
+}
+.hs-record-section h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.hs-record-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.hs-record-sec-head h3 {
+  margin: 0;
+  flex: 1 1 auto;
+}
+.hs-record-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #c9d0dc;
+  border-radius: 8px;
+  background: #fff;
+  color: #8a92a6;
+}
+.hs-record-search input {
+  width: 150px;
+  border: 0;
+  background: transparent;
+  color: #14203a;
+  font:
+    500 13px/1 Inter,
+    system-ui,
+    sans-serif;
+  outline: none;
+}
+
+.hs-record-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  text-align: center;
+}
+.hs-record-highlights > div {
+  padding: 12px 10px;
+  border: 1px solid var(--hsc-line);
+  border-radius: 10px;
+  background: #fff;
+}
+.hs-record-highlights span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a92a6;
+}
+.hs-record-highlights strong {
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.hs-record-props {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 18px;
+  margin: 0;
+}
+.hs-record-props > div {
+  min-width: 0;
+}
+.hs-record-props .hs-record-prop-wide {
+  grid-column: 1 / -1;
+}
+.hs-record-props dt {
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a92a6;
+}
+.hs-record-props dd {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 550;
+  color: #14203a;
+  overflow-wrap: anywhere;
+}
+.hs-record-props dd a {
+  color: #2f6bff;
+  text-decoration: none;
+}
+.hs-record-props dd a:hover {
+  text-decoration: underline;
+}
+
+/* timeline: month heads, an icon rail with a connecting line, staggered items */
+.hs-timeline-month h4 {
+  margin: 6px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #575550;
+}
+.hs-timeline-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 0 0 16px 0;
+  animation: hsc-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.05s * var(--i, 0));
+}
+.hs-timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--hsc-line);
+}
+.hs-timeline-item:last-child::before {
+  display: none;
+}
+.hs-timeline-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-timeline-ico.tone-green {
+  background: #e2f1e6;
+  color: #188038;
+}
+.hs-timeline-ico.tone-amber {
+  background: #fdf0dc;
+  color: #b45309;
+}
+.hs-timeline-ico.tone-violet {
+  background: #efe8f8;
+  color: #7c3aed;
+}
+.hs-timeline-ico.tone-teal {
+  background: #dff3f0;
+  color: #0d9488;
+}
+.hs-timeline-ico.tone-slate {
+  background: #eceef3;
+  color: #5b6478;
+}
+.hs-timeline-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hsc-line);
+  border-radius: 10px;
+  background: #fff;
+}
+.hs-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.hs-timeline-head strong {
+  font-size: 13.5px;
+}
+.hs-timeline-head time {
+  font-size: 12px;
+  color: #8a92a6;
+  white-space: nowrap;
+}
+.hs-timeline-body p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #575550;
+}
+
+.hs-record-empty {
+  margin: 0;
+  padding: 10px 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8a92a6;
+  text-align: center;
+}
+.hs-record-assoc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.hs-record-card {
+  padding: 12px 14px;
+  border: 1px solid var(--hsc-line);
+  border-radius: 10px;
+  background: #fff;
+}
+.hs-record-card:last-child {
+  grid-column: 1 / -1;
+}
+.hs-record-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.hs-record-card-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.hs-record-card-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #2f6bff;
+  font:
+    600 12px/1 Inter,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+.hs-record-card-head button:hover {
+  background: #e8f0fe;
+}
+.hs-record-card-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hs-record-card-row .hs-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+.hs-record-card-row strong {
+  display: block;
+  font-size: 13.5px;
+}
+.hs-record-card-row span:last-child {
+  font-size: 12.5px;
+  color: #575550;
+}
+.hs-record-tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.hs-record-tasks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.hs-record-tasks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.hs-record-tasks li.done span {
+  text-decoration: line-through;
+  color: #8a92a6;
+}
+.hs-record-tasks time {
+  font-size: 12px;
+  color: #8a92a6;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .hs-record {
+    padding: 14px 16px 24px;
+  }
+  .hs-record-actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .hs-record-highlights,
+  .hs-record-props,
+  .hs-record-assoc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contacts-page .hs-kpis,
+  .contacts-page .hs-index-main {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .contacts-page .hs-kpi,
+  .contacts-page .hs-table tbody tr,
+  .hs-record,
+  .hs-record-backdrop,
+  .hs-record-composer,
+  .hs-timeline-item {
+    animation: none;
+  }
+}
+
+/* ---- record panel composers (Note · Email · Call · Text · Task · Meeting) ---- */
+.hs-record-composer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hs-record-composer-head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.hs-record-composer-head strong svg {
+  color: #2f6bff;
+}
+.hs-record-composer-head small {
+  font-size: 12px;
+  color: #8a92a6;
+}
+.hs-composer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+.hs-composer-grid .wide {
+  grid-column: 1 / -1;
+}
+.hs-record-composer select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 32px 0 11px;
+  border: 1px solid #c9d0dc;
+  border-radius: 8px;
+  background: #fff;
+  color: #14203a;
+  font:
+    500 13.5px/1.2 Inter,
+    system-ui,
+    sans-serif;
+  appearance: none;
+}
+.hs-record-composer .hs-composer-select {
+  position: relative;
+  display: block;
+}
+.hs-record-composer .hs-composer-select > svg {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  color: #8a92a6;
+}
+.hs-record-composer input[readonly] {
+  background: #eef1f6;
+  color: #575550;
+}
+.hs-record-composer .hs-composer-hint {
+  font-size: 12px;
+  color: #8a92a6;
+  font-weight: 500;
+}
+.hs-record-composer .hs-composer-count {
+  font-size: 11.5px;
+  color: #8a92a6;
+  text-align: right;
+}
+.hs-record-composer .hs-composer-count.over {
+  color: #b42318;
+}
+.hs-record-composer .hs-composer-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #14203a;
+}
+.hs-record-composer .hs-composer-check input {
+  width: auto;
+}
+.hs-record-composer-actions .hs-btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #2f6bff;
+  font:
+    600 13px/1 Inter,
+    system-ui,
+    sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  margin-right: auto;
+}
+.hs-record-composer-actions .hs-btn-link:hover {
+  background: #e8f0fe;
+}
+
+/* the dial block on the Call composer */
+.hs-record-dial {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #c9d0dc;
+  border-radius: 10px;
+  background: #fff;
+}
+.hs-record-dial strong {
+  flex: 1 1 auto;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+}
+.hs-record-dial a.hs-btn-primary {
+  text-decoration: none;
+}
+
+/* notice after an action (sent / logged / not configured / failed) */
+.hs-record-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #e6e8f0;
+  border-radius: 10px;
+  background: #f5f6fa;
+  color: #14203a;
+  font-size: 13px;
+  line-height: 1.45;
+  animation: hsc-rise 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hs-record-notice.tone-success {
+  background: #e2f1e6;
+  border-color: #cfe7d5;
+  color: #14532d;
+}
+.hs-record-notice.tone-info {
+  background: #e8f0fe;
+  border-color: #d3e1fd;
+  color: #1e3a8a;
+}
+.hs-record-notice.tone-error {
+  background: #fbe4e2;
+  border-color: #f5cdc9;
+  color: #7f1d1d;
+}
+.hs-record-notice > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.hs-record-notice > div {
+  flex: 1 1 auto;
+}
+.hs-record-notice a {
+  color: inherit;
+  font-weight: 700;
+}
+.hs-record-notice button {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.hs-record-notice button:hover {
+  opacity: 1;
+}
+
+/* tasks + meetings cards */
+.hs-record-tasks li {
+  align-items: flex-start;
+}
+.hs-record-tasks .hs-task-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 24px;
+  font-size: 11.5px;
+  color: #8a92a6;
+}
+.hs-record-tasks .hs-task-body {
+  display: grid;
+  gap: 2px;
+}
+.hs-task-pill {
+  display: inline-flex;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.hs-task-pill.p-high {
+  background: #fbe4e2;
+  color: #b42318;
+}
+.hs-task-pill.p-normal {
+  background: #e8f0fe;
+  color: #2f6bff;
+}
+.hs-task-pill.p-low {
+  background: #eceef3;
+  color: #5b6478;
+}
+.hs-record-meetings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.hs-record-meetings li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.hs-record-meetings .hs-meeting-date {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  padding: 4px 0;
+  border: 1px solid #e6e8f0;
+  border-radius: 8px;
+  background: #f5f6fa;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #575550;
+}
+.hs-record-meetings .hs-meeting-date b {
+  display: block;
+  font-size: 16px;
+  color: #14203a;
+  line-height: 1.1;
+}
+.hs-record-meetings strong {
+  display: block;
+  font-size: 13.5px;
+}
+.hs-record-meetings span {
+  display: block;
+  font-size: 12.5px;
+  color: #575550;
+}
+.hs-record-meetings .hs-meeting-notified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #188038;
+  font-weight: 600;
+}
+
+/* ---- Companies + Deals ---- */
+.hs-index .hs-badge.tone-orange,
+.hs-record .hs-badge.tone-orange {
+  background: #ffe9d6;
+  color: #c2410c;
+}
+.hs-index .hs-avatar.tone-orange,
+.hs-record .hs-avatar.tone-orange {
+  background: #ffe9d6;
+  color: #c2410c;
+}
+.hs-index .hs-avatar.tone-red,
+.hs-record .hs-avatar.tone-red {
+  background: #fbe4e2;
+  color: #b42318;
+}
+.hs-timeline-ico.tone-orange {
+  background: #ffe9d6;
+  color: #c2410c;
+}
+.hs-timeline-ico.tone-red {
+  background: #fbe4e2;
+  color: #b42318;
+}
+.contacts-page .hs-cell-overdue {
+  color: #b42318;
+  font-weight: 600;
+}
+.contacts-page .hs-layout-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+.contacts-page .hs-board-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hs-record-card-wide {
+  grid-column: 1 / -1;
+}
+.hs-record-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.hs-record-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hs-record-list li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.hs-record-list li > div > span {
+  font-size: 12.5px;
+  color: #575550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hs-record-list .hs-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+.hs-record-list .hs-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #14203a;
+  font:
+    650 13.5px/1.3 Inter,
+    system-ui,
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.hs-record-list .hs-link:hover {
+  color: #2f6bff;
+  text-decoration: underline;
+}
+.hs-record .hs-badge.tone-teal {
+  background: #dff3f0;
+  color: #0d9488;
+}
+
+/* deal pipeline board */
+.hs-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(236px, 1fr);
+  gap: 12px;
+  padding: 14px 16px 18px;
+  overflow-x: auto;
+  border-top: 1px solid #e6e8f0;
+  background: #f5f6fa;
+}
+.hs-board-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  border: 1px solid #e6e8f0;
+  border-radius: 12px;
+  background: #fff;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+.hs-board-col.is-over {
+  border-color: #2f6bff;
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.16);
+}
+.hs-board-col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid #e6e8f0;
+}
+.hs-board-col-head strong {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.hs-board-col-meta {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8a92a6;
+  white-space: nowrap;
+}
+.hs-board-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2f6bff;
+}
+.hs-board-dot.tone-teal {
+  background: #0d9488;
+}
+.hs-board-dot.tone-violet {
+  background: #7c3aed;
+}
+.hs-board-dot.tone-amber {
+  background: #b45309;
+}
+.hs-board-dot.tone-orange {
+  background: #c2410c;
+}
+.hs-board-dot.tone-green {
+  background: #188038;
+}
+.hs-board-dot.tone-red {
+  background: #b42318;
+}
+.hs-board-col-body {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  flex: 1 1 auto;
+  padding: 10px;
+}
+.hs-board-empty {
+  padding: 18px 10px;
+  border: 1px dashed #d6dae4;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #8a92a6;
+}
+.hs-deal-card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 12px 12px 10px;
+  border: 1px solid #e6e8f0;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 32, 58, 0.04);
+  cursor: grab;
+  touch-action: none;
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+  animation: hsc-row-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hs-deal-card:hover {
+  border-color: #c9d0dc;
+  box-shadow: 0 6px 16px rgba(20, 32, 58, 0.1);
+}
+/* pick-up: the column keeps a faded, dashed ghost of the card */
+.hs-deal-card.is-dragging {
+  animation: none; /* the mount animation's fill would otherwise pin opacity at 1 */
+  opacity: 0.38;
+  border-style: dashed;
+  border-color: #9db8ff;
+  background: #f5f6fa;
+  box-shadow: none;
+  cursor: grabbing;
+}
+/* flight: the floating card lifts with a spring and a deep shadow */
+.hs-deal-card.hs-deal-overlay {
+  cursor: grabbing;
+  border-color: #2f6bff;
+  box-shadow:
+    0 26px 52px rgba(20, 32, 58, 0.28),
+    0 6px 14px rgba(20, 32, 58, 0.14);
+  animation: hs-deal-lift 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hs-deal-lift {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  60% {
+    transform: scale(1.06) rotate(1.8deg);
+  }
+  100% {
+    transform: scale(1.03) rotate(1deg);
+  }
+}
+/* landing: a pulse once the card has flown into its new column */
+.hs-deal-card.is-landing {
+  animation: hs-deal-land 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.32s;
+}
+@keyframes hs-deal-land {
+  0% {
+    transform: scale(0.96);
+    border-color: #2f6bff;
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.55);
+  }
+  45% {
+    transform: scale(1.025);
+    border-color: #2f6bff;
+    box-shadow: 0 0 0 12px rgba(47, 107, 255, 0);
+  }
+  100% {
+    transform: scale(1);
+    border-color: #e6e8f0;
+    box-shadow: 0 1px 2px rgba(20, 32, 58, 0.04);
+  }
+}
+/* the column being hovered opens a slot for the incoming card */
+.hs-board-col.is-over .hs-board-col-head {
+  background: #e8f0fe;
+  border-bottom-color: #c9dbff;
+}
+.hs-board-dropslot {
+  padding: 16px 10px;
+  border: 2px dashed #2f6bff;
+  border-radius: 10px;
+  background: #e8f0fe;
+  color: #2f6bff;
+  font:
+    700 12.5px/1 Inter,
+    system-ui,
+    sans-serif;
+  text-align: center;
+  transform-origin: top center;
+  animation: hs-dropslot-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hs-dropslot-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-deal-card.hs-deal-overlay,
+  .hs-deal-card.is-landing,
+  .hs-board-dropslot {
+    animation: none;
+  }
+}
+.hs-deal-card-title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2f6bff;
+  font:
+    650 13.5px/1.3 Inter,
+    system-ui,
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.hs-deal-card-title:hover {
+  text-decoration: underline;
+}
+.hs-deal-card-amount {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #14203a;
+}
+.hs-deal-card-meta {
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  color: #575550;
+}
+.hs-deal-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hs-deal-card-meta svg {
+  flex: none;
+  color: #8a92a6;
+}
+.hs-deal-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.hs-deal-card-owner {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e8f0fe;
+  color: #2f6bff;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.hs-task-pill.p-medium {
+  background: #fdf0dc;
+  color: #b45309;
+}
+
+/* deal record: stage track + close actions */
+.hs-stage-track {
+  display: flex;
+  gap: 4px;
+  padding: 14px 0 4px;
+}
+.hs-stage-step {
+  flex: 1 1 0;
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8a92a6;
+  font:
+    600 10.5px/1.2 Inter,
+    system-ui,
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.hs-stage-step > span {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: #e6e8f0;
+  transition: background 0.15s ease;
+}
+.hs-stage-step.done {
+  color: #14203a;
+}
+.hs-stage-step.done > span {
+  background: #2f6bff;
+}
+.hs-stage-step.current {
+  color: #2f6bff;
+}
+.hs-stage-step:hover > span {
+  background: #9db8ff;
+}
+.hs-deal-close-actions {
+  padding: 8px 0 12px;
+  border-bottom: 1px solid #e6e8f0;
+}

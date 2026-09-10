@@ -245,7 +245,13 @@ export function calculateCpm(tasks: CpmTask[], links: CpmLink[]): CpmResult {
     }
   }
   if (order.length !== tasks.length) {
-    return { ...empty, cycle: findCycle(tasks.map((task) => task.id), successors) };
+    return {
+      ...empty,
+      cycle: findCycle(
+        tasks.map((task) => task.id),
+        successors
+      )
+    };
   }
 
   // ---- forward pass: earliest dates the network allows ----------------------
@@ -259,10 +265,18 @@ export function calculateCpm(tasks: CpmTask[], links: CpmLink[]): CpmResult {
       const predFinish = earlyFinish.get(link.predecessorId)!;
       let required: number;
       switch (link.type) {
-        case "FS": required = predFinish + link.lag; break;
-        case "SS": required = predStart + link.lag; break;
-        case "FF": required = predFinish + link.lag - task.duration; break;
-        case "SF": required = predStart + link.lag - task.duration; break;
+        case "FS":
+          required = predFinish + link.lag;
+          break;
+        case "SS":
+          required = predStart + link.lag;
+          break;
+        case "FF":
+          required = predFinish + link.lag - task.duration;
+          break;
+        case "SF":
+          required = predStart + link.lag - task.duration;
+          break;
       }
       start = Math.max(start, required);
     }
@@ -289,10 +303,18 @@ export function calculateCpm(tasks: CpmTask[], links: CpmLink[]): CpmResult {
       const succFinish = lateFinish.get(link.successorId)!;
       let allowed: number;
       switch (link.type) {
-        case "FS": allowed = succStart - link.lag; break;
-        case "SS": allowed = succStart - link.lag + task.duration; break;
-        case "FF": allowed = succFinish - link.lag; break;
-        case "SF": allowed = succFinish - link.lag + task.duration; break;
+        case "FS":
+          allowed = succStart - link.lag;
+          break;
+        case "SS":
+          allowed = succStart - link.lag + task.duration;
+          break;
+        case "FF":
+          allowed = succFinish - link.lag;
+          break;
+        case "SF":
+          allowed = succFinish - link.lag + task.duration;
+          break;
       }
       finish = Math.min(finish, allowed);
     }
@@ -307,7 +329,6 @@ export function calculateCpm(tasks: CpmTask[], links: CpmLink[]): CpmResult {
   // ---- float + critical path ----------------------------------------------
   const results: Record<string, CpmTaskResult> = {};
   for (const id of order) {
-    const task = byId.get(id)!;
     const es = earlyStart.get(id)!;
     const ef = earlyFinish.get(id)!;
     const ls = lateStart.get(id)!;
@@ -324,10 +345,18 @@ export function calculateCpm(tasks: CpmTask[], links: CpmLink[]): CpmResult {
         const succFinish = earlyFinish.get(link.successorId)!;
         let slack: number;
         switch (link.type) {
-          case "FS": slack = succStart - (ef + link.lag); break;
-          case "SS": slack = succStart - (es + link.lag); break;
-          case "FF": slack = succFinish - (ef + link.lag); break;
-          case "SF": slack = succFinish - (es + link.lag); break;
+          case "FS":
+            slack = succStart - (ef + link.lag);
+            break;
+          case "SS":
+            slack = succStart - (es + link.lag);
+            break;
+          case "FF":
+            slack = succFinish - (ef + link.lag);
+            break;
+          case "SF":
+            slack = succFinish - (es + link.lag);
+            break;
         }
         free = Math.min(free, slack);
       }

@@ -20,10 +20,7 @@ const link = (predecessorId: string, successorId: string, type: CpmLink["type"] 
 
 describe("cpm — forward/backward pass", () => {
   it("schedules a simple finish-to-start chain and makes all of it critical", () => {
-    const result = calculateCpm(
-      [task("a", 2), task("b", 3), task("c", 1)],
-      [link("a", "b"), link("b", "c")]
-    );
+    const result = calculateCpm([task("a", 2), task("b", 3), task("c", 1)], [link("a", "b"), link("b", "c")]);
 
     expect(result.cycle).toBeNull();
     expect(result.projectStart).toBe(0);
@@ -94,10 +91,7 @@ describe("cpm — relation types and lag", () => {
   });
 
   it("takes the binding relation when a task has several predecessors", () => {
-    const result = calculateCpm(
-      [task("a", 2), task("b", 6), task("c", 1)],
-      [link("a", "c", "FS", 0), link("b", "c", "FS", 0)]
-    );
+    const result = calculateCpm([task("a", 2), task("b", 6), task("c", 1)], [link("a", "c", "FS", 0), link("b", "c", "FS", 0)]);
     expect(result.tasks.c.earlyStart).toBe(6); // b is the driver, not a
   });
 });
@@ -110,30 +104,21 @@ describe("cpm — constraints", () => {
   });
 
   it("SNET propagates through the network", () => {
-    const result = calculateCpm(
-      [task("a", 2), task("b", 2, { constraintType: "SNET", constraintDate: 10 })],
-      [link("a", "b")]
-    );
+    const result = calculateCpm([task("a", 2), task("b", 2, { constraintType: "SNET", constraintDate: 10 })], [link("a", "b")]);
     expect(result.tasks.b.earlyStart).toBe(10);
     expect(result.tasks.a.totalFloat).toBe(8); // a can drift until it drives b
   });
 
   it("FNLT produces negative float when the plan cannot make the date", () => {
     // needs 6 days but must finish by day 4 → 2 days behind
-    const result = calculateCpm(
-      [task("a", 3), task("b", 3, { constraintType: "FNLT", constraintDate: 4 })],
-      [link("a", "b")]
-    );
+    const result = calculateCpm([task("a", 3), task("b", 3, { constraintType: "FNLT", constraintDate: 4 })], [link("a", "b")]);
     expect(result.tasks.b.totalFloat).toBe(-2);
     expect(result.tasks.b.critical).toBe(true);
     expect(result.tasks.a.totalFloat).toBe(-2); // the slip pushes back up the chain
   });
 
   it("MSO pins the start hard", () => {
-    const result = calculateCpm(
-      [task("a", 2), task("b", 2, { constraintType: "MSO", constraintDate: 7 })],
-      [link("a", "b")]
-    );
+    const result = calculateCpm([task("a", 2), task("b", 2, { constraintType: "MSO", constraintDate: 7 })], [link("a", "b")]);
     expect(result.tasks.b.earlyStart).toBe(7);
     expect(result.tasks.b.earlyFinish).toBe(9);
   });
@@ -146,10 +131,7 @@ describe("cpm — edge cases", () => {
   });
 
   it("detects a dependency cycle instead of hanging", () => {
-    const result = calculateCpm(
-      [task("a", 1), task("b", 1), task("c", 1)],
-      [link("a", "b"), link("b", "c"), link("c", "a")]
-    );
+    const result = calculateCpm([task("a", 1), task("b", 1), task("c", 1)], [link("a", "b"), link("b", "c"), link("c", "a")]);
     expect(result.cycle).not.toBeNull();
     expect(result.cycle!.length).toBeGreaterThan(0);
     expect(result.criticalPath).toEqual([]);

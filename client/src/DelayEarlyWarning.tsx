@@ -197,8 +197,8 @@ export function DelayEarlyWarning() {
       ) : (
         <>
           <p className="diq-lead">
-            An early read from the live schedule — the plan hasn&rsquo;t changed. Warn the trades now, or resolve the
-            slip in the variance drawer.
+            An early read from the live schedule — the plan hasn&rsquo;t changed. Warn the trades now, or resolve the slip in the variance
+            drawer.
           </p>
           <div className="diq-list">
             {risks.map((risk) => (

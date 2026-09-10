@@ -8,9 +8,16 @@
 
 /* shared hero action row */
 .welcome-rx .tpx-hero,
-.welcome-rx .ptx-hero { max-width: 780px; }
+.welcome-rx .ptx-hero {
+  max-width: 780px;
+}
 .welcome-rx .tpx-hero-actions,
-.welcome-rx .ptx-hero-actions { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 28px; }
+.welcome-rx .ptx-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-top: 28px;
+}
 
 /* ============================ TEMPLATES ============================ */
 .welcome-rx .tpx-filter {
@@ -29,15 +36,22 @@
   border-radius: 999px;
   padding: 8px 16px;
   cursor: pointer;
-  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
 }
-.welcome-rx .tpx-chip:hover { color: var(--wx-ink); border-color: var(--wx-line); transform: translateY(-1px); }
+.welcome-rx .tpx-chip:hover {
+  color: var(--wx-ink);
+  border-color: var(--wx-line);
+  transform: translateY(-1px);
+}
 .welcome-rx .tpx-chip.is-active {
   color: #fff;
   background: var(--wx-ink);
   border-color: var(--wx-ink);
 }
-.welcome-rx.wx-dark .tpx-chip.is-active { color: #14161c; }
 
 .welcome-rx .tpx-grid {
   display: grid;
@@ -52,14 +66,23 @@
   background: var(--wx-card);
   box-shadow: 0 30px 60px -50px rgba(28, 28, 26, 0.5);
   padding: 22px;
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease, border-color 0.24s ease;
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.24s ease,
+    border-color 0.24s ease;
 }
 .welcome-rx .tpx-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 44px 80px -46px rgba(28, 28, 26, 0.55);
   border-color: var(--wx-line);
 }
-.welcome-rx .tpx-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; }
+.welcome-rx .tpx-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 15px;
+}
 .welcome-rx .tpx-card-ic {
   display: grid;
   place-items: center;
@@ -87,7 +110,13 @@
   margin: 0 0 6px;
   color: var(--wx-ink);
 }
-.welcome-rx .tpx-card p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--wx-mut); flex: 1; }
+.welcome-rx .tpx-card p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--wx-mut);
+  flex: 1;
+}
 .welcome-rx .tpx-card-foot {
   display: flex;
   align-items: center;
@@ -97,8 +126,17 @@
   padding-top: 14px;
   border-top: 1px solid var(--wx-line-soft);
 }
-.welcome-rx .tpx-meta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--wx-faint); }
-.welcome-rx .tpx-meta svg { color: var(--wx-blue); }
+.welcome-rx .tpx-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wx-faint);
+}
+.welcome-rx .tpx-meta svg {
+  color: var(--wx-blue);
+}
 .welcome-rx .tpx-use {
   font: inherit;
   font-size: 13px;
@@ -113,7 +151,9 @@
   padding: 0;
   transition: gap 0.16s ease;
 }
-.welcome-rx .tpx-use:hover { gap: 9px; }
+.welcome-rx .tpx-use:hover {
+  gap: 9px;
+}
 
 /* closing "start from scratch" band */
 .welcome-rx .tpx-cta,
@@ -123,8 +163,7 @@
   border: 1px solid var(--wx-line-soft);
   background:
     radial-gradient(120% 160% at 0% 0%, rgba(26, 115, 232, 0.1), transparent 58%),
-    radial-gradient(120% 160% at 100% 100%, rgba(155, 114, 203, 0.1), transparent 58%),
-    var(--wx-card);
+    radial-gradient(120% 160% at 100% 100%, rgba(155, 114, 203, 0.1), transparent 58%), var(--wx-card);
   box-shadow: 0 40px 80px -52px rgba(28, 28, 26, 0.5);
   padding: clamp(28px, 4vw, 52px);
   text-align: center;
@@ -139,12 +178,26 @@
   color: var(--wx-ink);
 }
 .welcome-rx .tpx-cta p,
-.welcome-rx .ptx-cta p { margin: 0 auto 22px; max-width: 52ch; font-size: 15px; line-height: 1.6; color: var(--wx-mut); }
+.welcome-rx .ptx-cta p {
+  margin: 0 auto 22px;
+  max-width: 52ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
 .welcome-rx .tpx-cta-actions,
-.welcome-rx .ptx-cta-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 13px; }
+.welcome-rx .ptx-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 13px;
+}
 
 /* ============================ PARTNERS ============================ */
-.welcome-rx .ptx-sec-head { max-width: 640px; margin: clamp(46px, 8vh, 96px) 0 30px; }
+.welcome-rx .ptx-sec-head {
+  max-width: 640px;
+  margin: clamp(46px, 8vh, 96px) 0 30px;
+}
 .welcome-rx .ptx-sec-head h2 {
   font-family: var(--wx-serif);
   font-weight: 500;
@@ -153,18 +206,32 @@
   margin: 12px 0 0;
   color: var(--wx-ink);
 }
-.welcome-rx .ptx-sec-head p { margin: 12px 0 0; font-size: 15.5px; line-height: 1.6; color: var(--wx-mut); }
+.welcome-rx .ptx-sec-head p {
+  margin: 12px 0 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
 
-.welcome-rx .ptx-types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.welcome-rx .ptx-types {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
 .welcome-rx .ptx-type {
   border-radius: 18px;
   border: 1px solid var(--wx-line-soft);
   background: var(--wx-card);
   box-shadow: 0 34px 66px -50px rgba(28, 28, 26, 0.5);
   padding: clamp(22px, 2.4vw, 30px);
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease;
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.24s ease;
 }
-.welcome-rx .ptx-type:hover { transform: translateY(-4px); box-shadow: 0 46px 84px -46px rgba(28, 28, 26, 0.55); }
+.welcome-rx .ptx-type:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 46px 84px -46px rgba(28, 28, 26, 0.55);
+}
 .welcome-rx .ptx-type-ic {
   display: grid;
   place-items: center;
@@ -183,12 +250,38 @@
   margin: 0 0 8px;
   color: var(--wx-ink);
 }
-.welcome-rx .ptx-type > p { margin: 0 0 16px; font-size: 13.5px; line-height: 1.58; color: var(--wx-mut); }
-.welcome-rx .ptx-type ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
-.welcome-rx .ptx-type li { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.4; color: var(--wx-mut); }
-.welcome-rx .ptx-type li svg { flex: none; color: var(--wx-blue); margin-top: 1px; }
+.welcome-rx .ptx-type > p {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  line-height: 1.58;
+  color: var(--wx-mut);
+}
+.welcome-rx .ptx-type ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+.welcome-rx .ptx-type li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--wx-mut);
+}
+.welcome-rx .ptx-type li svg {
+  flex: none;
+  color: var(--wx-blue);
+  margin-top: 1px;
+}
 
-.welcome-rx .ptx-benefits { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.welcome-rx .ptx-benefits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
 .welcome-rx .ptx-benefit {
   border-radius: 14px;
   border: 1px solid var(--wx-line-soft);
@@ -205,15 +298,32 @@
   color: var(--wx-blue);
   margin-bottom: 12px;
 }
-.welcome-rx .ptx-benefit strong { display: block; font-size: 14.5px; font-weight: 600; color: var(--wx-ink); margin-bottom: 5px; }
-.welcome-rx .ptx-benefit p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--wx-mut); }
+.welcome-rx .ptx-benefit strong {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--wx-ink);
+  margin-bottom: 5px;
+}
+.welcome-rx .ptx-benefit p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--wx-mut);
+}
 
 /* ============================ responsive ============================ */
 @media (max-width: 900px) {
-  .welcome-rx .ptx-types { grid-template-columns: 1fr; }
+  .welcome-rx .ptx-types {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 560px) {
-  .welcome-rx .tpx-grid { grid-template-columns: 1fr; }
+  .welcome-rx .tpx-grid {
+    grid-template-columns: 1fr;
+  }
   .welcome-rx .tpx-cta-actions,
-  .welcome-rx .ptx-cta-actions { flex-direction: column; }
+  .welcome-rx .ptx-cta-actions {
+    flex-direction: column;
+  }
 }

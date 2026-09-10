@@ -1,0 +1,175 @@
+/* ===========================================================================
+   Bookmarks page — the starred pages grouped by category, then the whole
+   catalogue so a page can be starred from here. Index-page tokens (--hsx-*).
+   ======================================================================== */
+.bookmarks-page .hs-index-main {
+  gap: 20px;
+}
+.bookmarks-page .hs-index-head {
+  align-items: baseline;
+}
+.bookmarks-page .bm-count {
+  margin: 0;
+  color: var(--hsx-mut);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.bookmarks-page .bm-groups {
+  display: grid;
+  gap: 20px;
+}
+.bookmarks-page .bm-group {
+  display: grid;
+  gap: 10px;
+}
+.bookmarks-page .bm-group h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--hsx-mut);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bookmarks-page .bm-group h2 svg {
+  color: var(--hsx-faint);
+}
+.bookmarks-page .bm-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
+  gap: 10px;
+}
+
+.bookmarks-page .bm-tile {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--hsx-line);
+  border-radius: 10px;
+  background: var(--hsx-card);
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s var(--hsx-ease);
+  animation: bm-rise 0.4s var(--hsx-ease) both;
+}
+.bookmarks-page .bm-tile:hover {
+  border-color: #c9d0dc;
+  box-shadow: 0 6px 16px rgba(20, 32, 58, 0.1);
+  transform: translateY(-1px);
+}
+.bookmarks-page .bm-tile.is-starred {
+  border-color: rgba(240, 179, 84, 0.55);
+}
+@keyframes bm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bookmarks-page .bm-tile-open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 4px 12px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--hsx-ink);
+  font-family: var(--hsx-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.bookmarks-page .bm-tile-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--hsx-blue-soft);
+  color: var(--hsx-blue);
+}
+.bookmarks-page .bm-tile-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bookmarks-page .bm-tile-lock {
+  flex: none;
+  margin-left: auto;
+  color: var(--hsx-violet);
+}
+
+.bookmarks-page .bm-tile-star {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  border: 0;
+  border-left: 1px solid var(--hsx-line-soft);
+  background: transparent;
+  color: #b6bfcf;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease;
+}
+.bookmarks-page .bm-tile-star:hover {
+  background: var(--hsx-hover);
+  color: var(--hsx-blue);
+}
+.bookmarks-page .bm-tile-star.is-on {
+  color: #e8a33d;
+}
+.bookmarks-page .bm-tile-star.is-on svg {
+  fill: currentColor;
+}
+
+.bookmarks-page .bm-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 34px 24px 38px;
+  border: 1px dashed var(--hsx-line);
+  border-radius: 12px;
+  text-align: center;
+}
+.bookmarks-page .bm-empty svg {
+  color: #e8a33d;
+}
+.bookmarks-page .bm-empty strong {
+  color: var(--hsx-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+.bookmarks-page .bm-empty span {
+  max-width: 460px;
+  color: var(--hsx-mut);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bookmarks-page .bm-tile {
+    animation: none;
+    transition: none;
+  }
+  .bookmarks-page .bm-tile:hover {
+    transform: none;
+  }
+}

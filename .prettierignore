@@ -1,0 +1,6 @@
+node_modules
+dist
+coverage
+client/public
+server/data
+*.tsbuildinfo

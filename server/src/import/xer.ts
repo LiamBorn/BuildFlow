@@ -14,15 +14,8 @@
    NAME against that table's %F header. Never by index.
    ========================================================================= */
 
-import {
-  ImportedActivity,
-  ImportedProject,
-  ImportedRelation,
-  ImportedWbs,
-  ParsedSchedule,
-  RelationType,
-  ScheduleImportError
-} from "./types.js";
+import type { ImportedActivity, ImportedProject, ImportedRelation, ImportedWbs, ParsedSchedule, RelationType } from "./types.js";
+import { ScheduleImportError } from "./types.js";
 
 /** One XER table: its %F column names plus every %R row, as name→value maps. */
 type XerTable = {

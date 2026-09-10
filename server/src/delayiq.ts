@@ -16,12 +16,13 @@
    here and a variance there can never disagree about the maths.
    ========================================================================= */
 
-import type { Job, JobDependency } from "@buildflow/shared";
+import type { Job, JobDependency, WorkCalendarSetting } from "@buildflow/shared";
 import {
   buildProposal,
   forecastIQFinish,
   plannedPercentAt,
   scheduleCalendar,
+  scheduleCalendarFor,
   VARIANCE_DAY_THRESHOLD
 } from "./variance.js";
 
@@ -85,12 +86,18 @@ export type DelayRisk = {
  *   2. overdue_start — 0% with its planned start already past AND every
  *                      predecessor complete, so nothing upstream is the excuse
  */
-export function detectDelayRisks(jobs: Job[], dependencies: JobDependency[], asOf: string): DelayRisk[] {
+export function detectDelayRisks(
+  jobs: Job[],
+  dependencies: JobDependency[],
+  asOf: string,
+  /** The workspace's working days and holidays; without them, the default six-day week. */
+  workCalendar?: WorkCalendarSetting
+): DelayRisk[] {
   if (jobs.length === 0) return [];
 
   const asOfDate = asOf.slice(0, 10);
   const epoch = jobs.reduce((min, job) => (job.startDate < min ? job.startDate : min), jobs[0].startDate);
-  const calendar = scheduleCalendar(epoch);
+  const calendar = workCalendar ? scheduleCalendarFor(epoch, workCalendar) : scheduleCalendar(epoch);
   const nowIndex = calendar.toIndex(asOfDate);
 
   const tradeByJob = new Map(jobs.map((job) => [job.id, job.phase]));

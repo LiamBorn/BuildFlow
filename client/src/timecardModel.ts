@@ -6,7 +6,7 @@
 // stable and reproducible, matching BuildFlow's "transparent model" approach.
 
 import type { BootstrapPayload } from "@buildflow/shared";
-import { weekDays } from "./scheduleUtils";
+import { weekDays } from "./schedule/scheduleUtils";
 
 export type TcClassification = "Employee" | "Subcontractor" | "Apprentice";
 export type TcCategory = "Labor" | "Operator" | "Supervisor";
@@ -453,11 +453,7 @@ export function breakdownByProject(entries: TcEntry[], workerById: Map<string, T
     .sort((a, b) => b.totals.burdenedCost - a.totals.burdenedCost);
 }
 
-export function breakdownByCrew(
-  entries: TcEntry[],
-  crews: TcCrew[],
-  workerById: Map<string, TcWorker>
-): TcBreakdownRow[] {
+export function breakdownByCrew(entries: TcEntry[], crews: TcCrew[], workerById: Map<string, TcWorker>): TcBreakdownRow[] {
   return crews
     .map((crew) => {
       const rows = entries.filter((entry) => entry.crewId === crew.id);
@@ -485,11 +481,7 @@ export function breakdownByPhase(entries: TcEntry[], workerById: Map<string, TcW
     .sort((a, b) => b.totals.totalHours - a.totals.totalHours);
 }
 
-export function breakdownByWorker(
-  entries: TcEntry[],
-  workers: TcWorker[],
-  workerById: Map<string, TcWorker>
-): TcBreakdownRow[] {
+export function breakdownByWorker(entries: TcEntry[], workers: TcWorker[], workerById: Map<string, TcWorker>): TcBreakdownRow[] {
   return workers
     .map((worker) => {
       const rows = entries.filter((entry) => entry.workerId === worker.id);
@@ -559,12 +551,54 @@ export function buildTimecards(workers: TcWorker[], entries: TcEntry[], workerBy
 
 export function buildAuditTrail(): TcAuditEvent[] {
   return [
-    { id: "a1", at: "Jun 19 · 5:04 PM", actor: "liam santos", action: "Approved timecard", detail: "Framing Crew 2 · week of Jun 15", tone: "green" },
-    { id: "a2", at: "Jun 19 · 4:41 PM", actor: "M. Alvarez", action: "Requested correction", detail: "Concrete Crew 1 · T. Grant OT mismatch", tone: "amber" },
-    { id: "a3", at: "Jun 19 · 2:18 PM", actor: "S. Whitfield", action: "Submitted timecards", detail: "Utility Crew 3 · 5 workers", tone: "blue" },
-    { id: "a4", at: "Jun 18 · 6:02 PM", actor: "System", action: "Flagged discrepancy", detail: "Paving Crew 4 · actual vs scheduled +2.5 hrs", tone: "red" },
-    { id: "a5", at: "Jun 18 · 5:36 PM", actor: "A. Coleman", action: "Logged replacement", detail: "R. Vance in for J. Diaz (called out)", tone: "violet" },
-    { id: "a6", at: "Jun 18 · 7:12 AM", actor: "Field Sync", action: "Imported hours", detail: "Daily progress report → 3 entries", tone: "blue" }
+    {
+      id: "a1",
+      at: "Jun 19 · 5:04 PM",
+      actor: "liam santos",
+      action: "Approved timecard",
+      detail: "Framing Crew 2 · week of Jun 15",
+      tone: "green"
+    },
+    {
+      id: "a2",
+      at: "Jun 19 · 4:41 PM",
+      actor: "M. Alvarez",
+      action: "Requested correction",
+      detail: "Concrete Crew 1 · T. Grant OT mismatch",
+      tone: "amber"
+    },
+    {
+      id: "a3",
+      at: "Jun 19 · 2:18 PM",
+      actor: "S. Whitfield",
+      action: "Submitted timecards",
+      detail: "Utility Crew 3 · 5 workers",
+      tone: "blue"
+    },
+    {
+      id: "a4",
+      at: "Jun 18 · 6:02 PM",
+      actor: "System",
+      action: "Flagged discrepancy",
+      detail: "Paving Crew 4 · actual vs scheduled +2.5 hrs",
+      tone: "red"
+    },
+    {
+      id: "a5",
+      at: "Jun 18 · 5:36 PM",
+      actor: "A. Coleman",
+      action: "Logged replacement",
+      detail: "R. Vance in for J. Diaz (called out)",
+      tone: "violet"
+    },
+    {
+      id: "a6",
+      at: "Jun 18 · 7:12 AM",
+      actor: "Field Sync",
+      action: "Imported hours",
+      detail: "Daily progress report → 3 entries",
+      tone: "blue"
+    }
   ];
 }
 

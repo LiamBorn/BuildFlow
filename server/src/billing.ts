@@ -81,9 +81,7 @@ export function configuredPlans(): Record<BillingPlanId, boolean> {
   };
 }
 
-export type CheckoutResult =
-  | { ok: true; url: string }
-  | { ok: false; reason: "not_configured" | "price_not_configured"; message: string };
+export type CheckoutResult = { ok: true; url: string } | { ok: false; reason: "not_configured" | "price_not_configured"; message: string };
 
 export async function createCheckoutSession(args: {
   plan: BillingPlanId;
@@ -95,7 +93,11 @@ export async function createCheckoutSession(args: {
 }): Promise<CheckoutResult> {
   const stripe = getStripe();
   if (!stripe) {
-    return { ok: false, reason: "not_configured", message: "Billing isn't connected yet. Add STRIPE_SECRET_KEY in server/.env to accept payments." };
+    return {
+      ok: false,
+      reason: "not_configured",
+      message: "Billing isn't connected yet. Add STRIPE_SECRET_KEY in server/.env to accept payments."
+    };
   }
   const price = priceIdFor(args.plan, args.period);
   if (!price) {
@@ -121,9 +123,7 @@ export async function createCheckoutSession(args: {
   return { ok: true, url: session.url };
 }
 
-export type PortalResult =
-  | { ok: true; url: string }
-  | { ok: false; reason: "not_configured" | "no_customer"; message: string };
+export type PortalResult = { ok: true; url: string } | { ok: false; reason: "not_configured" | "no_customer"; message: string };
 
 export async function createPortalSession(args: { customerId: string; returnUrl: string }): Promise<PortalResult> {
   const stripe = getStripe();

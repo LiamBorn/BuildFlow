@@ -37,85 +37,154 @@
 }
 
 /* ============================ background field ============================ */
-.delayIQ-rx .dx-bg { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-.delayIQ-rx .dx-aurora { position: absolute; border-radius: 50%; filter: blur(50px); opacity: 0.55; will-change: transform; }
+.delayIQ-rx .dx-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+.delayIQ-rx .dx-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.55;
+  will-change: transform;
+}
 .delayIQ-rx .dx-aurora-1 {
-  width: 42vw; height: 42vw; top: -18vw; left: -12vw;
+  width: 42vw;
+  height: 42vw;
+  top: -18vw;
+  left: -12vw;
   background: radial-gradient(circle, rgba(66, 133, 244, 0.12), transparent 62%);
   transform: translate(calc(var(--px, 0) * 16px), calc(var(--py, 0) * 12px));
 }
 .delayIQ-rx .dx-aurora-2 {
-  width: 38vw; height: 38vw; top: -12vw; right: -12vw;
+  width: 38vw;
+  height: 38vw;
+  top: -12vw;
+  right: -12vw;
   background: radial-gradient(circle, rgba(217, 101, 112, 0.1), transparent 62%);
   transform: translate(calc(var(--px, 0) * -20px), calc(var(--py, 0) * 14px));
 }
 .delayIQ-rx .dx-aurora-3 {
-  width: 50vw; height: 50vw; top: 44vw; left: 32vw;
+  width: 50vw;
+  height: 50vw;
+  top: 44vw;
+  left: 32vw;
   background: radial-gradient(circle, rgba(155, 114, 203, 0.07), transparent 60%);
   transform: translate(calc(var(--px, 0) * 12px), calc(var(--py, 0) * -10px));
 }
 .delayIQ-rx .dx-cursor {
-  position: fixed; left: var(--mx, -400px); top: var(--my, -400px);
-  width: 480px; height: 480px; transform: translate(-50%, -50%); border-radius: 50%;
+  position: fixed;
+  left: var(--mx, -400px);
+  top: var(--my, -400px);
+  width: 480px;
+  height: 480px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
   background: radial-gradient(circle, rgba(66, 133, 244, 0.05), transparent 62%);
-  pointer-events: none; z-index: -1;
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* ---- scroll reveal (progressive enhancement) ---- */
 .delayIQ-rx.dx-ready [data-reveal] {
   opacity: 0;
   transform: translateY(26px);
-  transition: opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: calc(var(--i, 0) * 80ms);
 }
-.delayIQ-rx.dx-ready [data-reveal].in { opacity: 1; transform: none; }
+.delayIQ-rx.dx-ready [data-reveal].in {
+  opacity: 1;
+  transform: none;
+}
 
 /* ============================ hero header =============================== */
-.delayIQ-rx .delayIQs-hero { max-width: 46ch; }
+.delayIQ-rx .delayIQs-hero {
+  max-width: 46ch;
+}
 .delayIQ-rx .dx-eyebrow {
-  display: inline-flex; align-items: center; gap: 9px;
-  padding: 7px 15px 7px 12px; border: 1px solid var(--wx-line); border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7); color: var(--wx-mut);
-  font-size: 12.5px; font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 15px 7px 12px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--wx-mut);
+  font-size: 12.5px;
+  font-weight: 600;
 }
 .delayIQ-rx .dx-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--wx-g-coral); box-shadow: 0 0 0 4px rgba(217, 101, 112, 0.14);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--wx-g-coral);
+  box-shadow: 0 0 0 4px rgba(217, 101, 112, 0.14);
   animation: dx-pulse 2.6s ease-in-out infinite;
 }
-@keyframes dx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes dx-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
 .delayIQ-rx .dx-title {
   margin: 20px 0 0;
   font-family: var(--wx-serif);
   font-size: clamp(34px, 4.6vw, 58px);
-  line-height: 1.05; font-weight: 500; letter-spacing: -0.015em; color: var(--wx-ink);
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--wx-ink);
 }
 .delayIQ-rx .dx-title em {
-  font-style: italic; font-weight: 500;
+  font-style: italic;
+  font-weight: 500;
   background: linear-gradient(105deg, var(--wx-g-blue), var(--wx-g-purple) 55%, var(--wx-g-coral));
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 .delayIQ-rx .dx-sub {
-  margin: 16px 0 0; max-width: 54ch;
-  font-size: clamp(15px, 1.2vw, 17px); line-height: 1.6; color: var(--wx-mut);
+  margin: 16px 0 0;
+  max-width: 54ch;
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.6;
+  color: var(--wx-mut);
 }
 
 /* ============================ panels =================================== */
-.delayIQ-rx .dashboard-grid { gap: 20px; }
+.delayIQ-rx .dashboard-grid {
+  gap: 20px;
+}
 .delayIQ-rx .panel {
   border: 1px solid var(--wx-line-soft);
   border-radius: var(--wx-radius);
   background: var(--wx-card);
   box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
   padding: 24px;
-  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.34s ease, border-color 0.34s ease;
+  transition:
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.34s ease,
+    border-color 0.34s ease;
 }
 .delayIQ-rx .panel:hover {
   transform: translateY(-4px);
   box-shadow: 0 30px 60px rgba(28, 28, 26, 0.12);
   border-color: var(--wx-line);
 }
-.delayIQ-rx .panel-header { margin-bottom: 18px; align-items: baseline; }
+.delayIQ-rx .panel-header {
+  margin-bottom: 18px;
+  align-items: baseline;
+}
 .delayIQ-rx .panel-header h2 {
   font-family: var(--wx-serif);
   font-size: 20px;
@@ -125,41 +194,103 @@
   color: var(--wx-ink);
 }
 .delayIQ-rx .panel-header button {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 13px; border: 1px solid var(--wx-line); border-radius: 999px;
-  background: #fffdf9; color: var(--wx-mut); font-size: 12.5px; font-weight: 600;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: #fffdf9;
+  color: var(--wx-mut);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
-.delayIQ-rx .panel-header button:hover { background: var(--wx-ink); color: #f9fafd; border-color: var(--wx-ink); }
+.delayIQ-rx .panel-header button:hover {
+  background: var(--wx-ink);
+  color: #f9fafd;
+  border-color: var(--wx-ink);
+}
 
 /* ============================ delayIQ rows ============================== */
-.delayIQ-rx .delayIQ-row { border-bottom: 1px solid var(--wx-line-soft); border-radius: 10px; transition: background 0.18s ease; }
-.delayIQ-rx .delayIQ-row:hover { background: var(--wx-bg-2); }
-.delayIQ-rx .delayIQ-row svg { color: var(--wx-g-coral); }
-.delayIQ-rx .delayIQ-row strong { color: var(--wx-ink); font-weight: 600; }
-.delayIQ-rx .delayIQ-row em { color: var(--wx-faint); }
-.delayIQ-rx .delayIQ-row b { color: var(--wx-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.delayIQ-rx .delayIQ-row {
+  border-bottom: 1px solid var(--wx-line-soft);
+  border-radius: 10px;
+  transition: background 0.18s ease;
+}
+.delayIQ-rx .delayIQ-row:hover {
+  background: var(--wx-bg-2);
+}
+.delayIQ-rx .delayIQ-row svg {
+  color: var(--wx-g-coral);
+}
+.delayIQ-rx .delayIQ-row strong {
+  color: var(--wx-ink);
+  font-weight: 600;
+}
+.delayIQ-rx .delayIQ-row em {
+  color: var(--wx-faint);
+}
+.delayIQ-rx .delayIQ-row b {
+  color: var(--wx-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 
 /* resource rows (delayIQ categories) */
-.delayIQ-rx .resource-row { border-bottom: 1px solid var(--wx-line-soft); border-radius: 10px; transition: background 0.18s ease; }
-.delayIQ-rx .resource-row:hover { background: var(--wx-bg-2); }
-.delayIQ-rx .resource-row svg { color: var(--wx-g-coral); }
-.delayIQ-rx .resource-row strong { color: var(--wx-ink); font-weight: 600; }
-.delayIQ-rx .resource-row em { color: var(--wx-faint); }
+.delayIQ-rx .resource-row {
+  border-bottom: 1px solid var(--wx-line-soft);
+  border-radius: 10px;
+  transition: background 0.18s ease;
+}
+.delayIQ-rx .resource-row:hover {
+  background: var(--wx-bg-2);
+}
+.delayIQ-rx .resource-row svg {
+  color: var(--wx-g-coral);
+}
+.delayIQ-rx .resource-row strong {
+  color: var(--wx-ink);
+  font-weight: 600;
+}
+.delayIQ-rx .resource-row em {
+  color: var(--wx-faint);
+}
 
 /* ============================ log-delayIQ form ========================= */
-.delayIQ-rx .form-stack label { color: var(--wx-mut); font-weight: 600; }
+.delayIQ-rx .form-stack label {
+  color: var(--wx-mut);
+  font-weight: 600;
+}
 .delayIQ-rx .form-stack input,
 .delayIQ-rx .form-stack select {
-  border: 1px solid var(--wx-line); border-radius: 12px; background: #fffdf9; color: var(--wx-ink);
+  border: 1px solid var(--wx-line);
+  border-radius: 12px;
+  background: #fffdf9;
+  color: var(--wx-ink);
 }
 .delayIQ-rx .form-stack input:focus,
-.delayIQ-rx .form-stack select:focus { border-color: var(--wx-blue); outline: none; }
-.delayIQ-rx .primary-button {
-  border-radius: 999px; background: var(--wx-ink); color: #f9fafd; border: 1px solid var(--wx-ink);
-  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+.delayIQ-rx .form-stack select:focus {
+  border-color: var(--wx-blue);
+  outline: none;
 }
-.delayIQ-rx .primary-button:hover:not(:disabled) { background: #000; transform: translateY(-1px); }
+.delayIQ-rx .primary-button {
+  border-radius: 999px;
+  background: var(--wx-ink);
+  color: #f9fafd;
+  border: 1px solid var(--wx-ink);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.delayIQ-rx .primary-button:hover:not(:disabled) {
+  background: #000;
+  transform: translateY(-1px);
+}
 
 /* ============================ empty states =========================== */
 .delayIQ-rx .inline-empty-state,
@@ -170,17 +301,30 @@
   color: var(--wx-mut);
 }
 .delayIQ-rx .inline-empty-state svg,
-.delayIQ-rx .empty-state svg { color: var(--wx-faint); }
+.delayIQ-rx .empty-state svg {
+  color: var(--wx-faint);
+}
 .delayIQ-rx .inline-empty-state strong,
-.delayIQ-rx .empty-state strong { color: var(--wx-ink); }
-.delayIQ-rx .empty-state strong { font-family: var(--wx-serif); font-weight: 500; }
+.delayIQ-rx .empty-state strong {
+  color: var(--wx-ink);
+}
+.delayIQ-rx .empty-state strong {
+  font-family: var(--wx-serif);
+  font-weight: 500;
+}
 .delayIQ-rx .inline-empty-state em,
-.delayIQ-rx .empty-state p { color: var(--wx-faint); }
+.delayIQ-rx .empty-state p {
+  color: var(--wx-faint);
+}
 
 /* ============================ badges ================================= */
 .delayIQ-rx .badge {
-  border-radius: 999px; background: #ebedfb; color: var(--wx-mut);
-  font-weight: 700; font-size: 11.5px; letter-spacing: 0.01em;
+  border-radius: 999px;
+  background: #ebedfb;
+  color: var(--wx-mut);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
 }
 .delayIQ-rx .badge.confirmed,
 .delayIQ-rx .badge.on-site,
@@ -188,39 +332,364 @@
 .delayIQ-rx .badge.complete,
 .delayIQ-rx .badge.available,
 .delayIQ-rx .badge.scheduled,
-.delayIQ-rx .badge.low { background: #e2f1e6; color: var(--wx-green); }
+.delayIQ-rx .badge.low {
+  background: #e2f1e6;
+  color: var(--wx-green);
+}
 .delayIQ-rx .badge.ready-to-start,
 .delayIQ-rx .badge.planned,
 .delayIQ-rx .badge.medium,
 .delayIQ-rx .badge.monitor,
 .delayIQ-rx .badge.ordered,
-.delayIQ-rx .badge.waiting-on-delivery { background: #d2defb; color: var(--wx-amber); }
+.delayIQ-rx .badge.waiting-on-delivery {
+  background: #d2defb;
+  color: var(--wx-amber);
+}
 .delayIQ-rx .badge.delayIQed,
 .delayIQ-rx .badge.high,
 .delayIQ-rx .badge.maintenance,
 .delayIQ-rx .badge.missing,
 .delayIQ-rx .badge.at-risk,
 .delayIQ-rx .badge.open,
-.delayIQ-rx .badge.overbooked { background: #fbe4e2; color: var(--wx-red); }
+.delayIQ-rx .badge.overbooked {
+  background: #fbe4e2;
+  color: var(--wx-red);
+}
 
 /* ============================ recharts polish ======================== */
-.delayIQ-rx .recharts-cartesian-grid line { stroke: var(--wx-line-soft); }
-.delayIQ-rx .recharts-text { fill: var(--wx-faint); font-size: 12px; }
+.delayIQ-rx .recharts-cartesian-grid line {
+  stroke: var(--wx-line-soft);
+}
+.delayIQ-rx .recharts-text {
+  fill: var(--wx-faint);
+  font-size: 12px;
+}
 .delayIQ-rx .recharts-default-tooltip {
   border-radius: 12px !important;
   border: 1px solid var(--wx-line-soft) !important;
   box-shadow: 0 16px 36px rgba(28, 28, 26, 0.14) !important;
 }
 
+/* ==========================================================================
+   Dashboard parity  (mirrors the identical blocks in materials-redesign.css and
+   field-updates-redesign.css)
+   Moves DelayIQs off the serif editorial hero onto the Dashboard's
+   command-center language: sans-serif display type, a gradient icon tile, the
+   toned KPI row, 18px panel geometry, and the shared
+   cubic-bezier(0.22, 1, 0.36, 1) curve. Declared after the rules above so it
+   wins at equal specificity. Every reveal, cursor-parallax aurora and panel
+   hover above is untouched.
+   ========================================================================== */
+
+/* semantic tone tokens, matching the Dashboard's tokens in hs-home.css so the shared cc-* pieces
+   resolve to identical colors on every page */
+.delayIQ-rx {
+  --cc-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cc-blue: #2f6bff;
+  --cc-blue-soft: #e8f0fe;
+  --cc-green: #188038;
+  --cc-green-soft: #e2f1e6;
+  --cc-amber: #b45309;
+  --cc-amber-soft: #fdf0dc;
+  --cc-red: #c5221f;
+  --cc-red-soft: #fbe4e2;
+  --cc-violet: #6d28d9;
+  --cc-violet-soft: #efe8f8;
+  --cc-orange: #c2410c;
+  --cc-orange-soft: #feecdc;
+  font-family: var(--cc-sans);
+  color-scheme: light;
+}
+
+/* ---- hero: gradient icon tile + sans-serif title ---- */
+.delayIQ-rx .cc-hero {
+  max-width: none;
+}
+.delayIQ-rx .dx-hero-copy {
+  display: grid;
+  gap: 14px;
+}
+.delayIQ-rx .cc-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  padding: 6px 14px 6px 11px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.delayIQ-rx .cc-hero-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+.delayIQ-rx .cc-hero-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
+  box-shadow: 0 12px 26px rgba(66, 92, 244, 0.32);
+}
+.delayIQ-rx .cc-hero-title {
+  margin: 2px 0 0;
+  font-family: var(--cc-sans);
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--wx-ink);
+}
+.delayIQ-rx .cc-hero-sub {
+  margin: 8px 0 0;
+  max-width: 54ch;
+  font-family: var(--cc-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+  color: var(--wx-mut);
+}
+
+/* ---- KPI tiles: the Dashboard cc-stat shape ---- */
+.delayIQ-rx .cc-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+.delayIQ-rx .cc-stat {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-height: 0;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 18px 18px 16px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+.delayIQ-rx .cc-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 26px 52px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line);
+}
+.delayIQ-rx .cc-stat-top {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.delayIQ-rx .cc-stat-ico {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.delayIQ-rx .cc-stat-ico svg {
+  width: 17px;
+  height: 17px;
+}
+.delayIQ-rx .cc-stat-ico.tone-blue {
+  background: var(--cc-blue-soft);
+  color: var(--cc-blue);
+}
+.delayIQ-rx .cc-stat-ico.tone-green {
+  background: var(--cc-green-soft);
+  color: var(--cc-green);
+}
+.delayIQ-rx .cc-stat-ico.tone-violet {
+  background: var(--cc-violet-soft);
+  color: var(--cc-violet);
+}
+.delayIQ-rx .cc-stat-ico.tone-amber {
+  background: var(--cc-amber-soft);
+  color: var(--cc-amber);
+}
+.delayIQ-rx .cc-stat-ico.tone-red {
+  background: var(--cc-red-soft);
+  color: var(--cc-red);
+}
+.delayIQ-rx .cc-stat-ico.tone-orange {
+  background: var(--cc-orange-soft);
+  color: var(--cc-orange);
+}
+.delayIQ-rx .cc-stat-label {
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wx-mut);
+  letter-spacing: 0.005em;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-transform: none;
+}
+.delayIQ-rx .cc-stat-mid {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+.delayIQ-rx .cc-stat-value {
+  font-family: var(--cc-sans);
+  font-size: 32px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+/* This page had no stagger grid before the KPI row, so the shared
+   [data-reveal-stagger] rules the other pages carry were never declared here.
+   Same values as materials-redesign.css so the tiles land in the same sequence. */
+.delayIQ-rx.dx-ready [data-reveal-stagger] > * {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.delayIQ-rx.dx-ready [data-reveal-stagger].in > * {
+  opacity: 1;
+  transform: none;
+}
+.delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1) {
+  transition-delay: 0.04s;
+}
+.delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2) {
+  transition-delay: 0.1s;
+}
+.delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3) {
+  transition-delay: 0.16s;
+}
+.delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4) {
+  transition-delay: 0.22s;
+}
+.delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5) {
+  transition-delay: 0.28s;
+}
+
+/* the stagger rule sets `transition` on every direct child, which would strip
+   the tiles' hover tween — restate both concerns together */
+.delayIQ-rx.dx-ready [data-reveal-stagger] > .cc-stat {
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+
+/* ---- panels + rows: the same 18px geometry and Inter type as the card pages ---- */
+.delayIQ-rx .panel {
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+}
+.delayIQ-rx .panel:hover {
+  box-shadow: 0 26px 52px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line);
+}
+.delayIQ-rx .panel-header h2 {
+  font-family: var(--cc-sans);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.delayIQ-rx .delayIQ-row strong,
+.delayIQ-rx .resource-row strong {
+  font-family: var(--cc-sans);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.delayIQ-rx .delayIQ-row em,
+.delayIQ-rx .resource-row em {
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wx-mut);
+}
+.delayIQ-rx .delayIQ-row b {
+  font-family: var(--cc-sans);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--wx-ink);
+}
+
+/* "Add DelayIQ" — the ink pill the other pages use for their primary action */
+.delayIQ-rx .primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--wx-ink);
+  border-radius: 11px;
+  background: var(--wx-ink);
+  color: #f9fafd;
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 22px rgba(28, 28, 26, 0.2);
+}
+
+/* the log form's fields, at the same metrics as the other pages' search chip */
+.delayIQ-rx .form-stack label {
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wx-mut);
+}
+.delayIQ-rx .form-stack input,
+.delayIQ-rx .form-stack select {
+  min-height: 40px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 11px;
+  background: var(--wx-card);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--wx-ink);
+  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.04);
+}
+
 /* ============================ responsive ============================= */
 @media (max-width: 720px) {
-  .delayIQ-rx { padding: 24px clamp(14px, 4vw, 24px) 56px; }
+  .delayIQ-rx {
+    padding: 24px clamp(14px, 4vw, 24px) 56px;
+  }
 }
 
 /* ============================ reduced motion ========================= */
 @media (prefers-reduced-motion: reduce) {
-  .delayIQ-rx .dx-dot { animation: none; }
-  .delayIQ-rx.dx-ready [data-reveal] { transition-duration: 0.3s; }
-  .delayIQ-rx .panel { transition-duration: 0.2s; }
-  .delayIQ-rx .dx-aurora { transform: none !important; }
+  .delayIQ-rx .dx-dot {
+    animation: none;
+  }
+  .delayIQ-rx.dx-ready [data-reveal],
+  .delayIQ-rx.dx-ready [data-reveal-stagger] > * {
+    transition-duration: 0.3s;
+  }
+  .delayIQ-rx .panel {
+    transition-duration: 0.2s;
+  }
+  .delayIQ-rx .dx-aurora {
+    transform: none !important;
+  }
 }

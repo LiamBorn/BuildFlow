@@ -59,9 +59,7 @@ describe("schedule health — forecastIQ", () => {
 
   it("treats a not-yet-started schedule as on plan, not failing", () => {
     const health = analyzeSchedule(
-      schedule([
-        activity({ externalId: "1", code: "A1", start: "2026-09-01", finish: "2026-12-01", percentComplete: 0 })
-      ]),
+      schedule([activity({ externalId: "1", code: "A1", start: "2026-09-01", finish: "2026-12-01", percentComplete: 0 })]),
       { now: NOW }
     );
     expect(health.forecastIQ.status).toBe("not_started");
@@ -83,10 +81,9 @@ describe("schedule health — forecastIQ", () => {
 
   it("uses the file's data date over 'now' when present", () => {
     const health = analyzeSchedule(
-      schedule(
-        [activity({ externalId: "1", code: "A1", start: "2026-01-01", finish: "2026-12-31", percentComplete: 50 })],
-        { dataDate: "2026-06-01" }
-      ),
+      schedule([activity({ externalId: "1", code: "A1", start: "2026-01-01", finish: "2026-12-31", percentComplete: 50 })], {
+        dataDate: "2026-06-01"
+      }),
       { now: NOW }
     );
     expect(health.dataDate).toBe("2026-06-01");
@@ -131,7 +128,13 @@ describe("schedule health — findings", () => {
     const withLogic = analyzeSchedule(
       schedule([
         activity({ externalId: "1", code: "A1", start: "2026-08-01", finish: "2026-08-10" }),
-        activity({ externalId: "2", code: "A2", start: "2026-08-11", finish: "2026-08-20", predecessors: [{ predecessorId: "1", type: "FS", lagHours: 0 }] }),
+        activity({
+          externalId: "2",
+          code: "A2",
+          start: "2026-08-11",
+          finish: "2026-08-20",
+          predecessors: [{ predecessorId: "1", type: "FS", lagHours: 0 }]
+        }),
         // linked into nothing, and nothing links to it
         activity({ externalId: "3", code: "ORPHAN", start: "2026-08-25", finish: "2026-08-30" })
       ]),
@@ -156,7 +159,13 @@ describe("schedule health — findings", () => {
     const health = analyzeSchedule(
       schedule([
         activity({ externalId: "1", code: "A1", start: "2026-08-01", finish: "2026-08-10" }),
-        activity({ externalId: "2", code: "A2", start: "2026-08-08", finish: "2026-08-18", predecessors: [{ predecessorId: "1", type: "FS", lagHours: -16 }] })
+        activity({
+          externalId: "2",
+          code: "A2",
+          start: "2026-08-08",
+          finish: "2026-08-18",
+          predecessors: [{ predecessorId: "1", type: "FS", lagHours: -16 }]
+        })
       ]),
       { now: NOW }
     );
@@ -184,9 +193,7 @@ describe("schedule health — findings", () => {
       { now: NOW }
     );
     const clean = analyzeSchedule(
-      schedule([
-        activity({ externalId: "1", code: "A1", start: "2026-01-01", finish: "2026-12-31", percentComplete: 55 })
-      ]),
+      schedule([activity({ externalId: "1", code: "A1", start: "2026-01-01", finish: "2026-12-31", percentComplete: 55 })]),
       { now: NOW }
     );
     expect(messy.score).toBeLessThan(clean.score);

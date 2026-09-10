@@ -1,0 +1,200 @@
+/* ============================================================================
+   quantum-cloud-loader.css — the 21st.dev "Quantum Cloud Loader", Tailwind
+   utilities ported to plain CSS. Plays in the BuildFlow AI thread while a
+   reply is being generated (components/ui/quantum-cloud-loader.tsx).
+
+   Design principles kept from the original:
+   - No gradients
+   - No abrupt direction changes
+   - Long, smooth animation curves
+   - Slight depth through scale + opacity
+   - Different orbital speeds create natural interaction
+   ========================================================================== */
+.qc-loader {
+  --qc-red: #f87171;
+  --qc-blue: #2f6bff; /* BuildFlow blue where the original used tailwind blue-400 */
+  --qc-yellow: #facc15;
+  --qc-green: #4ade80;
+  --qc-ease: cubic-bezier(0.37, 0, 0.63, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  overflow: hidden;
+}
+.qc-loader.is-compact {
+  min-height: 56px;
+}
+.qc-stage {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 176px;
+  height: 96px;
+}
+.qc-loader.is-compact .qc-stage {
+  height: 56px;
+}
+.qc-particle {
+  position: absolute;
+  will-change: transform, opacity;
+}
+.qc-dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+/* RED — fast but smooth horizontal orbit */
+.qc-red {
+  z-index: 30;
+  width: 16px;
+  height: 16px;
+  animation: quantum-red 3.8s var(--qc-ease) infinite;
+}
+.qc-red .qc-dot {
+  background: var(--qc-red);
+  box-shadow:
+    0 0 12px rgba(248, 113, 113, 0.75),
+    0 0 24px rgba(248, 113, 113, 0.3);
+}
+
+/* BLUE — slow, heavy orbital movement */
+.qc-blue {
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  animation: quantum-blue 5.6s var(--qc-ease) infinite;
+}
+.qc-blue .qc-dot {
+  background: var(--qc-blue);
+  box-shadow:
+    0 0 16px rgba(47, 107, 255, 0.7),
+    0 0 30px rgba(47, 107, 255, 0.25);
+}
+
+/* YELLOW — smooth central oscillator */
+.qc-yellow {
+  z-index: 40;
+  width: 20px;
+  height: 20px;
+  animation: quantum-yellow 3.1s var(--qc-ease) infinite;
+}
+.qc-yellow .qc-dot {
+  background: var(--qc-yellow);
+  box-shadow:
+    0 0 14px rgba(250, 204, 21, 0.75),
+    0 0 26px rgba(250, 204, 21, 0.3);
+}
+
+/* GREEN — slow wide orbital sweep */
+.qc-green {
+  z-index: 0;
+  width: 14px;
+  height: 14px;
+  animation: quantum-green 6.4s var(--qc-ease) infinite alternate;
+}
+.qc-green .qc-dot {
+  background: var(--qc-green);
+  box-shadow:
+    0 0 12px rgba(74, 222, 128, 0.75),
+    0 0 24px rgba(74, 222, 128, 0.3);
+}
+
+@keyframes quantum-red {
+  0% {
+    transform: translate3d(-46px, 7px, 0) scale(0.72);
+    opacity: 0.45;
+  }
+  25% {
+    transform: translate3d(-23px, -7px, 0) scale(0.95);
+    opacity: 0.78;
+  }
+  50% {
+    transform: translate3d(46px, 0, 0) scale(1.18);
+    opacity: 1;
+  }
+  75% {
+    transform: translate3d(23px, 7px, 0) scale(0.95);
+    opacity: 0.78;
+  }
+  100% {
+    transform: translate3d(-46px, 7px, 0) scale(0.72);
+    opacity: 0.45;
+  }
+}
+@keyframes quantum-blue {
+  0% {
+    transform: translate3d(38px, -4px, 0) scale(1);
+    opacity: 0.95;
+  }
+  25% {
+    transform: translate3d(19px, 7px, 0) scale(0.88);
+    opacity: 0.72;
+  }
+  50% {
+    transform: translate3d(-38px, 3px, 0) scale(0.68);
+    opacity: 0.42;
+  }
+  75% {
+    transform: translate3d(-19px, -7px, 0) scale(0.88);
+    opacity: 0.72;
+  }
+  100% {
+    transform: translate3d(38px, -4px, 0) scale(1);
+    opacity: 0.95;
+  }
+}
+@keyframes quantum-yellow {
+  0% {
+    transform: translate3d(-27px, 2px, 0) scale(0.82);
+    opacity: 0.65;
+  }
+  20% {
+    transform: translate3d(-17px, -5px, 0) scale(0.94);
+    opacity: 0.82;
+  }
+  50% {
+    transform: translate3d(27px, 0, 0) scale(1.08);
+    opacity: 1;
+  }
+  80% {
+    transform: translate3d(17px, 5px, 0) scale(0.94);
+    opacity: 0.82;
+  }
+  100% {
+    transform: translate3d(-27px, 2px, 0) scale(0.82);
+    opacity: 0.65;
+  }
+}
+@keyframes quantum-green {
+  0% {
+    transform: translate3d(64px, 6px, 0) scale(0.52);
+    opacity: 0.25;
+  }
+  20% {
+    transform: translate3d(43px, -5px, 0) scale(0.68);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate3d(0, 3px, 0) scale(1);
+    opacity: 0.9;
+  }
+  80% {
+    transform: translate3d(-43px, -5px, 0) scale(0.68);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate3d(-64px, 6px, 0) scale(0.52);
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qc-particle {
+    animation: none;
+  }
+}

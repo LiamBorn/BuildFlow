@@ -134,12 +134,31 @@
 }
 /* Deep-link target: offset for the sticky nav, plus a brief brand-orange ring
    flash when a "Read update" card scrolls you straight to its entry. */
-.updates-page .updates-entry { scroll-margin-top: 96px; }
-.updates-page .updates-entry.is-target { animation: upd-target-flash 2.4s cubic-bezier(0.22, 1, 0.36, 1); }
+.updates-page .updates-entry {
+  scroll-margin-top: 96px;
+}
+.updates-page .updates-entry.is-target {
+  animation: upd-target-flash 2.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
 @keyframes upd-target-flash {
-  0% { box-shadow: 0 1px 0 rgba(16, 19, 26, 0.02), 0 30px 60px -50px rgba(16, 19, 26, 0.45); border-color: #e7ecf2; }
-  10% { box-shadow: 0 0 0 4px rgba(245, 130, 31, 0.5), 0 24px 60px -40px rgba(245, 130, 31, 0.35); border-color: #f5821f; }
-  100% { box-shadow: 0 1px 0 rgba(16, 19, 26, 0.02), 0 30px 60px -50px rgba(16, 19, 26, 0.45); border-color: #e7ecf2; }
+  0% {
+    box-shadow:
+      0 1px 0 rgba(16, 19, 26, 0.02),
+      0 30px 60px -50px rgba(16, 19, 26, 0.45);
+    border-color: #e7ecf2;
+  }
+  10% {
+    box-shadow:
+      0 0 0 4px rgba(245, 130, 31, 0.5),
+      0 24px 60px -40px rgba(245, 130, 31, 0.35);
+    border-color: #f5821f;
+  }
+  100% {
+    box-shadow:
+      0 1px 0 rgba(16, 19, 26, 0.02),
+      0 30px 60px -50px rgba(16, 19, 26, 0.45);
+    border-color: #e7ecf2;
+  }
 }
 
 .updates-page .updates-entry:first-child {

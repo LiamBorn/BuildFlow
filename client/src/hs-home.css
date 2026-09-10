@@ -1,0 +1,2241 @@
+/* ============================================================================
+   hs-home.css — HubSpot "Home" treatment for the BuildFlow Dashboard
+   Re-expresses the AI Command Center in HubSpot Home's language: a plain
+   light page (no aurora field), a date line with a Customize control, a big
+   time-of-day greeting, and every section as a flat bordered widget with an
+   icon + title header. All content and behaviour (AI prompt, quick actions,
+   performance stats, KPIs + feeds, apps, workflows, the approvals / alerts /
+   recommendations rail, schedule band, TimeCard cards, production context
+   panels, drag-to-rearrange) is unchanged. Colors are BuildFlow's own.
+   Scoped to `.dash-rx.hs-home`. The command-center rules it used to override
+   sit at the top of this file, in their original order, so the cascade is unchanged.
+   ========================================================================== */
+
+/* ============================================================================
+   Command center rules, folded in from command-center.css (PL-18, 2026-09-09).
+   Only the rules the Dashboard still renders survived the fold: the AI prompt,
+   workflows and progress-ring blocks styled markup that no longer exists.
+   ============================================================================ */
+
+/* ============================================================================
+   command-center.css — BuildFlow AI Command Center
+   Redesigns the Program HUD Dashboard to the modern AI-SaaS reference language:
+   sparkline stat cards, gradient AI prompt hero, quick actions, apps grid,
+   live AI workflows with progress rings, and a right rail of Approvals /
+   Alerts / Recommendations.
+   Scoped entirely to `.dash-rx`; reuses the --wx-* tokens + motion hooks
+   (data-reveal / dx-tilt / aurora) so every existing animation still runs.
+   ========================================================================== */
+.dash-rx {
+  --cc-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cc-blue: #2f6bff;
+  --cc-blue-soft: #e8f0fe;
+  --cc-green: #188038;
+  --cc-green-soft: #e2f1e6;
+  --cc-amber: #b45309;
+  --cc-amber-soft: #fdf0dc;
+  --cc-red: #c5221f;
+  --cc-red-soft: #fbe4e2;
+  --cc-violet: #6d28d9;
+  --cc-violet-soft: #efe8f8;
+  --cc-orange: #c2410c;
+  --cc-orange-soft: #feecdc;
+}
+
+/* widen the inner column so the right rail fits comfortably */
+.dash-rx .dx-inner {
+  max-width: 1340px;
+}
+
+/* ============================ hero + AI prompt ========================== */
+.dash-rx .cc-hero {
+  display: grid;
+  gap: 14px;
+  max-width: none;
+}
+
+/* ============================ quick actions ============================= */
+.dash-rx .cc-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.dash-rx .cc-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 11px;
+  background: var(--wx-card);
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.04);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.dash-rx .cc-quick-btn svg {
+  color: var(--cc-blue);
+}
+.dash-rx .cc-quick-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--wx-line);
+  box-shadow: 0 12px 24px rgba(28, 28, 26, 0.1);
+}
+
+/* ============================ performance stat cards ==================== */
+.dash-rx .cc-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+.dash-rx .cc-stat {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 18px 18px 16px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.32s ease,
+    border-color 0.32s ease;
+}
+.dash-rx .cc-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 26px 52px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line);
+}
+.dash-rx .cc-stat-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+.dash-rx .cc-stat-ico {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex: none;
+}
+.dash-rx .cc-stat-ico svg {
+  width: 18px;
+  height: 18px;
+}
+.dash-rx .cc-stat-label {
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wx-mut);
+  letter-spacing: 0.005em;
+  line-height: 1.2;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+.dash-rx .cc-stat-mid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 10px;
+  margin-top: 12px;
+  min-width: 0;
+}
+.dash-rx .cc-stat-value {
+  flex: 0 0 100%;
+  min-width: 0;
+  font-family: var(--cc-sans);
+  font-size: 32px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .cc-stat-value small {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wx-faint);
+  letter-spacing: 0;
+}
+.dash-rx .cc-spark {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 160px;
+  height: 30px;
+}
+.dash-rx .cc-spark-fill {
+  fill: color-mix(in srgb, currentColor 15%, transparent);
+  stroke: none;
+}
+.dash-rx .cc-spark-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dash-rx .cc-stat-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 7px;
+  margin-top: 12px;
+}
+.dash-rx .cc-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .cc-trend svg {
+  width: 13px;
+  height: 13px;
+}
+.dash-rx .cc-trend.up {
+  background: var(--cc-green-soft);
+  color: var(--cc-green);
+}
+.dash-rx .cc-trend.down {
+  background: var(--cc-red-soft);
+  color: var(--cc-red);
+}
+.dash-rx .cc-trend.flag {
+  background: var(--cc-amber-soft);
+  color: var(--cc-amber);
+}
+.dash-rx .cc-stat-note {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--wx-faint);
+  min-width: 0;
+}
+
+/* tone helpers shared by stat icons, sparklines, rings */
+.dash-rx .tone-blue {
+  color: var(--cc-blue);
+}
+.dash-rx .tone-green {
+  color: var(--cc-green);
+}
+.dash-rx .tone-amber {
+  color: var(--cc-amber);
+}
+.dash-rx .tone-red {
+  color: var(--cc-red);
+}
+.dash-rx .tone-violet {
+  color: var(--cc-violet);
+}
+.dash-rx .tone-orange {
+  color: var(--cc-orange);
+}
+.dash-rx .cc-stat-ico.tone-blue {
+  background: var(--cc-blue-soft);
+}
+.dash-rx .cc-stat-ico.tone-green {
+  background: var(--cc-green-soft);
+}
+.dash-rx .cc-stat-ico.tone-amber {
+  background: var(--cc-amber-soft);
+}
+.dash-rx .cc-stat-ico.tone-red {
+  background: var(--cc-red-soft);
+}
+.dash-rx .cc-stat-ico.tone-violet {
+  background: var(--cc-violet-soft);
+}
+.dash-rx .cc-stat-ico.tone-orange {
+  background: var(--cc-orange-soft);
+}
+
+/* ============================ two-column layout ======================== */
+.dash-rx .cc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 22px;
+  align-items: start;
+}
+.dash-rx .cc-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(22px, 3vh, 34px);
+  min-width: 0;
+}
+
+/* operational KPI row — stretch evenly full-width (matches the perf stat row) */
+.dash-rx .kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* section heading used by apps / workflows */
+.dash-rx .cc-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: -6px;
+}
+.dash-rx .cc-sec-head h2 {
+  font-family: var(--cc-sans);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--wx-ink);
+}
+.dash-rx .cc-link {
+  border: 0;
+  background: none;
+  color: var(--cc-blue);
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.dash-rx .cc-link:hover {
+  opacity: 0.7;
+}
+
+/* ============================ BuildFlow apps =========================== */
+.dash-rx .cc-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.dash-rx .cc-app {
+  text-align: left;
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 16px;
+  background: var(--wx-card);
+  padding: 16px;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(28, 28, 26, 0.05);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease,
+    border-color 0.28s ease;
+}
+.dash-rx .cc-app:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 44px rgba(28, 28, 26, 0.12);
+  border-color: var(--wx-line);
+}
+.dash-rx .cc-app-ico {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.dash-rx .cc-app-ico.tone-blue {
+  background: var(--cc-blue-soft);
+  color: var(--cc-blue);
+}
+.dash-rx .cc-app-ico.tone-green {
+  background: var(--cc-green-soft);
+  color: var(--cc-green);
+}
+.dash-rx .cc-app-ico.tone-amber {
+  background: var(--cc-amber-soft);
+  color: var(--cc-amber);
+}
+.dash-rx .cc-app-ico.tone-violet {
+  background: var(--cc-violet-soft);
+  color: var(--cc-violet);
+}
+.dash-rx .cc-app-ico.tone-orange {
+  background: var(--cc-orange-soft);
+  color: var(--cc-orange);
+}
+.dash-rx .cc-app h3 {
+  font-family: var(--cc-sans);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--wx-ink);
+}
+.dash-rx .cc-app p {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.dash-rx .cc-app-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--cc-green-soft);
+  color: var(--cc-green);
+  font-size: 11px;
+  font-weight: 700;
+}
+.dash-rx .cc-app-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dash-rx .cc-app.add {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  border-style: dashed;
+  border-color: var(--wx-line);
+  background: transparent;
+  color: var(--wx-mut);
+  box-shadow: none;
+}
+.dash-rx .cc-app.add:hover {
+  background: var(--wx-card);
+  color: var(--cc-blue);
+}
+.dash-rx .cc-app.add span {
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ============================ right-rail panels ======================== */
+.dash-rx .cc-panel {
+  border: 1px solid var(--wx-line-soft);
+  border-radius: 18px;
+  background: var(--wx-card);
+  padding: 18px;
+  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+}
+.dash-rx .cc-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.dash-rx .cc-panel-head h2 {
+  font-family: var(--cc-sans);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--wx-ink);
+}
+.dash-rx .cc-list {
+  display: grid;
+  gap: 12px;
+}
+
+/* approvals */
+.dash-rx .cc-approval {
+  border-bottom: 1px solid var(--wx-line-soft);
+  padding-bottom: 12px;
+}
+.dash-rx .cc-approval:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.dash-rx .cc-appr-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.dash-rx .cc-appr-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex: none;
+  background: var(--cc-blue);
+}
+.dash-rx .cc-appr-main {
+  flex: 1;
+  min-width: 0;
+}
+.dash-rx .cc-appr-main strong {
+  display: block;
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.dash-rx .cc-appr-main span {
+  font-size: 12px;
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.dash-rx .cc-appr-side {
+  text-align: right;
+  flex: none;
+}
+.dash-rx .cc-appr-side b {
+  display: block;
+  font-family: var(--cc-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .cc-appr-side em {
+  font-size: 11px;
+  color: var(--wx-faint);
+  font-style: normal;
+}
+.dash-rx .cc-appr-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 15px;
+}
+.dash-rx .cc-btn {
+  flex: 1;
+  border-radius: 9px;
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 650;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.dash-rx .cc-btn:active {
+  transform: scale(0.97);
+}
+.dash-rx .cc-btn.ghost {
+  border: 1px solid var(--wx-line);
+  background: #fff;
+  color: var(--wx-mut);
+}
+.dash-rx .cc-btn.ghost:hover {
+  background: var(--wx-bg-2);
+  color: var(--wx-ink);
+}
+.dash-rx .cc-btn.primary {
+  border: 1px solid var(--cc-blue);
+  background: var(--cc-blue);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(47, 107, 255, 0.28);
+}
+.dash-rx .cc-btn.primary:hover {
+  background: #245ae0;
+}
+.dash-rx .cc-empty-line {
+  font-size: 12.5px;
+  color: var(--wx-faint);
+  font-weight: 500;
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* alerts */
+.dash-rx .cc-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+.dash-rx .cc-alert-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: color-mix(in srgb, currentColor 13%, transparent);
+}
+.dash-rx .cc-alert-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.dash-rx .cc-alert-body {
+  flex: 1;
+  min-width: 0;
+}
+.dash-rx .cc-alert-body strong {
+  display: block;
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.dash-rx .cc-alert-body span {
+  font-size: 12px;
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.dash-rx .cc-alert-time {
+  font-size: 11px;
+  color: var(--wx-faint);
+  font-weight: 500;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* recommendations */
+.dash-rx .cc-rec {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.dash-rx .cc-rec-ico {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  background: var(--cc-blue-soft);
+  color: var(--cc-blue);
+}
+.dash-rx .cc-rec-ico svg {
+  width: 16px;
+  height: 16px;
+}
+.dash-rx .cc-rec-body {
+  flex: 1;
+  min-width: 0;
+}
+.dash-rx .cc-rec-body strong {
+  display: block;
+  font-family: var(--cc-sans);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wx-ink);
+}
+.dash-rx .cc-rec-body span {
+  font-size: 12px;
+  color: var(--wx-faint);
+  font-weight: 500;
+}
+.dash-rx .cc-rec-btn {
+  flex: none;
+  border: 1px solid var(--wx-line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--wx-ink);
+  font-family: var(--cc-sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.dash-rx .cc-rec-btn:hover {
+  background: var(--cc-blue);
+  color: #fff;
+  border-color: var(--cc-blue);
+}
+
+/* ============================ responsive =============================== */
+@media (max-width: 1180px) {
+  .dash-rx .cc-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dash-rx .cc-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 820px) {
+  .dash-rx .cc-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash-rx .cc-apps-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .dash-rx .cc-stat-grid,
+  .dash-rx .cc-apps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================ display type: unify to sans ==============
+   The reference HUD is entirely sans-serif. Override the dashboard's serif
+   display type (headings, KPI numbers, panel titles) so the whole page reads
+   as one modern system instead of mixing serif + sans. */
+.dash-rx .dx-h2,
+.dash-rx .panel-header h2,
+.dash-rx .tc-dash-head h2,
+.dash-rx .dashboard-feed-panel h2 {
+  font-family: var(--cc-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dash-rx .kpi-card strong,
+.dash-rx .tc-dash-card strong,
+.dash-rx .dashboard-feed-panel h2 {
+  font-family: var(--cc-sans);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.dash-rx .kpi-card p {
+  letter-spacing: 0.06em;
+}
+
+/* ============================ draggable layout ========================= */
+/* Each reorderable section is wrapped in a .dash-block. The grip handle is
+   revealed on hover so the section content stays clean; the whole card is the
+   drag surface for the metric cards. */
+.dash-rx .dash-block {
+  position: relative;
+}
+
+.dash-rx .dash-drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 7;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--wx-line-soft);
+  background: color-mix(in srgb, var(--wx-card) 90%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--wx-faint);
+  cursor: grab;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+  touch-action: none;
+}
+.dash-rx .dash-block:hover > .dash-drag-handle,
+.dash-rx .dash-drag-handle:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+.dash-rx .dash-drag-handle:hover {
+  color: var(--cc-blue);
+  border-color: var(--cc-blue);
+}
+.dash-rx .dash-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* The lifted item floats above the grid with a shadow while its neighbours glide
+   to open a gap where it will land — the gap is the drop indicator, so no
+   separate placeholder outline is needed. */
+.dash-rx .dash-block.is-dragging {
+  cursor: grabbing;
+  border-radius: 18px;
+  box-shadow: 0 20px 46px rgba(28, 28, 26, 0.16);
+}
+
+/* metric cards — whole card is the drag surface (side-to-side reorder) */
+.dash-rx .cc-stat.dash-card,
+.dash-rx .dash-kpi {
+  cursor: grab;
+}
+.dash-rx .cc-stat.dash-card:active,
+.dash-rx .dash-kpi:active {
+  cursor: grabbing;
+}
+.dash-rx .cc-stat.dash-card.is-dragging,
+.dash-rx .dash-kpi.is-dragging .kpi-card {
+  box-shadow:
+    0 22px 48px rgba(28, 28, 26, 0.22),
+    0 6px 16px rgba(28, 28, 26, 0.13);
+}
+.dash-rx .cc-stat.dash-card.is-dragging {
+  border-color: color-mix(in srgb, var(--cc-blue) 32%, var(--wx-line));
+}
+.dash-rx .dash-kpi.is-dragging .dx-tilt {
+  transform: none !important;
+}
+
+/* the KPI wrapper must behave as the grid cell so DxTilt/KpiCard fill it */
+.dash-rx .kpi-grid > .dash-kpi {
+  display: flex;
+  min-width: 0;
+}
+.dash-rx .kpi-grid > .dash-kpi > .dx-tilt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* reset-to-default control in the hero */
+.dash-rx .cc-hero {
+  position: relative;
+}
+.dash-rx .dash-reset {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--wx-line);
+  background: var(--wx-card);
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(28, 28, 26, 0.06);
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+.dash-rx .dash-reset:hover {
+  color: var(--cc-blue);
+  border-color: var(--cc-blue);
+}
+.dash-rx .dash-reset svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-rx .dash-drag-handle {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   Home (the rules below override the folded ones above, as they always did)
+   ============================================================================ */
+
+.dash-rx.hs-home {
+  --hsh-line: #e6e8f0;
+  --hsh-line-soft: #eef0f4;
+  --hsh-ink: #14203a;
+  --hsh-mut: #575550;
+  --hsh-faint: #8a877e;
+  --hsh-blue: #2f6bff;
+  --hsh-blue-soft: #e8f0fe;
+  --hsh-hover: #f0f2f6;
+  --hsh-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --hsh-radius: 8px;
+  padding: 24px clamp(20px, 3vw, 40px) 56px;
+  min-height: calc(100vh - 56px);
+  background: #f5f6fa;
+  font-family: var(--hsh-sans);
+}
+
+/* flat page: no aurora field or cursor tint */
+.dash-rx.hs-home .dx-bg,
+.dash-rx.hs-home .dx-cursor {
+  display: none;
+}
+.dash-rx.hs-home .dx-inner {
+  gap: 22px;
+  max-width: 1280px;
+}
+
+/* ============================ Home header ============================== */
+.dash-rx.hs-home .hs-home-head {
+  display: grid;
+  gap: 6px;
+  max-width: none;
+}
+.dash-rx.hs-home .hs-home-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dash-rx.hs-home .hs-home-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hsh-mut);
+}
+.dash-rx.hs-home .hs-home-topline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* the reset control was absolutely positioned in the old hero; it now sits in the action row */
+.dash-rx.hs-home .dash-reset {
+  position: static;
+}
+.dash-rx.hs-home .dash-reset:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dash-rx.hs-home .hs-home-customize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--hsh-ink);
+  font-family: var(--hsh-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.dash-rx.hs-home .hs-home-customize:hover {
+  background: var(--hsh-hover);
+}
+.dash-rx.hs-home .hs-home-customize.active {
+  background: var(--hsh-blue-soft);
+  border-color: rgba(47, 107, 255, 0.35);
+  color: var(--hsh-blue);
+}
+.dash-rx.hs-home .hs-home-greeting {
+  margin: 4px 0 0;
+  font-family: var(--hsh-sans);
+  font-size: clamp(26px, 3vw, 32px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--hsh-ink);
+}
+.dash-rx.hs-home .hs-home-sub {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--hsh-mut);
+}
+.dash-rx.hs-home .hs-home-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border: 1px dashed rgba(47, 107, 255, 0.45);
+  border-radius: 6px;
+  background: var(--hsh-blue-soft);
+  color: var(--hsh-blue);
+  font-size: 13px;
+  font-weight: 600;
+}
+/* setup context → flat info banner */
+.dash-rx.hs-home .business-context-banner {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #c9daf9;
+  border-radius: var(--hsh-radius);
+  background: var(--hsh-blue-soft);
+  box-shadow: none;
+}
+.dash-rx.hs-home .business-context-banner span {
+  background: #fff;
+}
+.dash-rx.hs-home .business-context-banner strong {
+  color: var(--hsh-ink);
+}
+
+/* ============================ widget headers ========================== */
+.dash-rx.hs-home .hs-widget-head,
+.dash-rx.hs-home .cc-sec-head,
+.dash-rx.hs-home .cc-panel-head,
+.dash-rx.hs-home .panel-header,
+.dash-rx.hs-home .tc-dash-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+}
+.dash-rx.hs-home .hs-widget-head h2,
+.dash-rx.hs-home .cc-sec-head h2,
+.dash-rx.hs-home .cc-panel-head h2,
+.dash-rx.hs-home .panel-header h2,
+.dash-rx.hs-home .tc-dash-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--hsh-sans);
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  color: var(--hsh-ink);
+}
+.dash-rx.hs-home .hs-widget-head h2 svg,
+.dash-rx.hs-home .tc-dash-head h2 svg {
+  width: 16px;
+  height: 16px;
+  color: var(--hsh-mut);
+}
+/* right-side header actions ("View all", "Manage", panel actions) → small bordered buttons */
+.dash-rx.hs-home .cc-link,
+.dash-rx.hs-home .panel-header button,
+.dash-rx.hs-home .tc-dash-open {
+  padding: 5px 10px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--hsh-ink);
+  font-family: var(--hsh-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.dash-rx.hs-home .cc-link:hover,
+.dash-rx.hs-home .panel-header button:hover,
+.dash-rx.hs-home .tc-dash-open:hover {
+  background: var(--hsh-hover);
+  color: var(--hsh-ink);
+  border-color: #d6dae4;
+  opacity: 1;
+}
+
+/* ============================ flat bordered widgets ==================== */
+.dash-rx.hs-home .cc-ai,
+.dash-rx.hs-home .cc-stat,
+.dash-rx.hs-home .kpi-card,
+.dash-rx.hs-home .cc-app,
+.dash-rx.hs-home .cc-wf,
+.dash-rx.hs-home .cc-panel,
+.dash-rx.hs-home .panel,
+.dash-rx.hs-home .tc-dash-card,
+.dash-rx.hs-home .dashboard-feed-panel,
+.dash-rx.hs-home .ss-band {
+  border: 1px solid var(--hsh-line);
+  border-radius: var(--hsh-radius);
+  background: #fff;
+  box-shadow: none;
+}
+.dash-rx.hs-home .cc-stat:hover,
+.dash-rx.hs-home .kpi-card-button:hover,
+.dash-rx.hs-home .cc-app:hover,
+.dash-rx.hs-home .cc-wf:hover,
+.dash-rx.hs-home .panel:hover,
+.dash-rx.hs-home .tc-dash-card:hover,
+.dash-rx.hs-home .ss-band:hover {
+  transform: none;
+  box-shadow: 0 1px 3px rgba(20, 32, 58, 0.06);
+  border-color: #d6dae4;
+}
+.dash-rx.hs-home .kpi-card-button.active {
+  border-color: rgba(47, 107, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12);
+}
+/* the AI prompt keeps its gradient rim, calmer */
+.dash-rx.hs-home .cc-ai::before {
+  opacity: 0.6;
+}
+/* quick actions → HubSpot's small gray buttons */
+.dash-rx.hs-home .cc-quick-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: none;
+  font-size: 13px;
+}
+.dash-rx.hs-home .cc-quick-btn:hover {
+  transform: none;
+  background: var(--hsh-hover);
+  box-shadow: none;
+  border-color: #d6dae4;
+}
+.dash-rx.hs-home .cc-quick-btn svg {
+  color: var(--hsh-blue);
+}
+
+/* performance stats + KPI tiles: sans type at HubSpot scale */
+.dash-rx.hs-home .cc-stat {
+  padding: 14px 16px;
+}
+.dash-rx.hs-home .cc-stat-value {
+  font-size: 26px;
+}
+.dash-rx.hs-home .kpi-card {
+  gap: 12px;
+  min-height: 0;
+  padding: 16px 18px 14px;
+}
+.dash-rx.hs-home .kpi-card strong {
+  font-family: var(--hsh-sans);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.dash-rx.hs-home .kpi-card p {
+  color: var(--hsh-mut);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.dash-rx.hs-home .kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.dash-rx.hs-home .kpi-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* apps / workflows / rail */
+.dash-rx.hs-home .cc-app {
+  padding: 14px;
+}
+.dash-rx.hs-home .cc-app-ico {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 10px;
+  border-radius: 9px;
+}
+.dash-rx.hs-home .cc-wf {
+  padding: 12px 14px 12px 16px;
+}
+.dash-rx.hs-home .cc-wf-view,
+.dash-rx.hs-home .cc-rec-btn,
+.dash-rx.hs-home .cc-btn {
+  border-radius: 6px;
+}
+.dash-rx.hs-home .cc-panel {
+  padding: 16px;
+}
+
+/* lower "Production Context" section */
+.dash-rx.hs-home .dx-eyebrow-2 {
+  margin-bottom: 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--hsh-mut);
+}
+.dash-rx.hs-home .dx-h2 {
+  font-family: var(--hsh-sans);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.dash-rx.hs-home .dx-h2 em {
+  font-style: normal;
+}
+.dash-rx.hs-home .panel {
+  padding: 16px 18px;
+}
+.dash-rx.hs-home .dashboard-grid {
+  gap: 16px;
+}
+.dash-rx.hs-home .tc-dash-card {
+  padding: 14px 16px;
+}
+.dash-rx.hs-home .tc-dash-card strong {
+  font-family: var(--hsh-sans);
+  font-size: 24px;
+  font-weight: 700;
+}
+.dash-rx.hs-home .tc-dash-card p {
+  color: var(--hsh-mut);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.dash-rx.hs-home .tc-dash-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  box-shadow: none;
+}
+.dash-rx.hs-home .dashboard-feed-panel h2 {
+  font-family: var(--hsh-sans);
+  font-size: 16px;
+  font-weight: 650;
+}
+.dash-rx.hs-home .mini-schedule,
+.dash-rx.hs-home .inline-empty-state {
+  border-radius: 6px;
+  background: #fafbfd;
+}
+
+/* spacing */
+.dash-rx.hs-home .cc-main {
+  gap: 22px;
+}
+.dash-rx.hs-home .cc-rail {
+  gap: 16px;
+  top: 70px;
+}
+.dash-rx.hs-home .cc-stat-grid,
+.dash-rx.hs-home .kpi-grid,
+.dash-rx.hs-home .cc-apps-grid {
+  gap: 12px;
+}
+.dash-rx.hs-home .cc-apps-grid,
+.dash-rx.hs-home .cc-workflows {
+  margin-top: 0;
+}
+.dash-rx.hs-home .cc-workflows {
+  gap: 8px;
+}
+
+/* ============================ drag & drop (HubSpot dashboard-style) ===== */
+/* A 6-dot grip sits in the widget's top-left gutter and appears on hover with a
+   "Drag to move" tip. While dragging, the lifted widget rides the pointer as a
+   shadowed ghost (DragOverlay), its slot becomes a dashed placeholder filled
+   with the layout's gray tiles that glides to wherever it will land, and the
+   neighbouring widgets reflow around it. */
+.dash-rx.hs-home .dash-drag-handle {
+  top: 1px;
+  left: -22px; /* in the gutter beside the block, aligned with its head row */
+  width: 18px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  backdrop-filter: none;
+  color: #6b7590;
+  transform: none;
+}
+.dash-rx.hs-home .dash-drag-handle svg {
+  width: 16px;
+  height: 16px;
+}
+.dash-rx.hs-home .dash-block > .dash-drag-handle:has(+ .hs-widget-head) {
+  top: -3px;
+} /* 17px head row */
+.dash-rx.hs-home .cc-rail .dash-block > .dash-drag-handle {
+  top: 18px;
+} /* panel head sits inside the card */
+.dash-rx.hs-home .dash-drag-handle:hover {
+  color: #14203a;
+  background: #f0f2f6;
+  border: 0;
+}
+.dash-rx.hs-home .dash-drag-handle::after {
+  content: "Drag to move";
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #14203a;
+  color: #fff;
+  font:
+    600 12px/1 Inter,
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+.dash-rx.hs-home .dash-drag-handle:hover::after {
+  opacity: 1;
+  transform: none;
+}
+.dash-rx.hs-home.is-rearranging .dash-drag-handle::after {
+  display: none;
+}
+.dash-rx.hs-home.is-customizing .dash-drag-handle {
+  opacity: 1;
+  transform: none;
+  color: var(--hsh-blue);
+  background: var(--hsh-blue-soft);
+}
+.dash-rx.hs-home.is-customizing .dash-block {
+  outline: 1px dashed rgba(47, 107, 255, 0.4);
+  outline-offset: 6px;
+  border-radius: var(--hsh-radius);
+}
+
+/* the placeholder: the widget's own slot while it is lifted */
+.dash-rx.hs-home .dash-block.is-dragging,
+.dash-rx.hs-home .cc-stat.dash-card.is-dragging,
+.dash-rx.hs-home .dash-kpi.is-dragging {
+  box-shadow: none;
+  border-color: transparent;
+  outline: 2px dashed #8b95ab;
+  outline-offset: -2px;
+  border-radius: var(--hsh-radius);
+  background-color: var(--hsh-paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='4' y='4' width='92' height='92' rx='6' fill='%23e2e5ec'/%3E%3C/svg%3E");
+  background-size: calc(100% / 3) 176px;
+  background-origin: padding-box;
+  cursor: grabbing;
+}
+.dash-rx.hs-home .cc-stat.dash-card.is-dragging,
+.dash-rx.hs-home .dash-kpi.is-dragging {
+  background-size: calc(100% / 2) 100%;
+}
+.dash-rx.hs-home .dash-block.is-dragging > *,
+.dash-rx.hs-home .cc-stat.dash-card.is-dragging > *,
+.dash-rx.hs-home .dash-kpi.is-dragging > * {
+  visibility: hidden;
+}
+.dash-rx.hs-home.is-customizing .dash-block.is-dragging {
+  outline: 2px dashed #8b95ab;
+  outline-offset: -2px;
+}
+
+/* the ghost: a clone of the lifted widget riding the pointer */
+.dash-rx.hs-home .dash-ghost {
+  width: 100%;
+  height: 100%;
+  cursor: grabbing;
+}
+.dash-rx.hs-home .dash-ghost > * {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: var(--hsh-radius);
+  background: #fff;
+  box-shadow:
+    0 26px 60px rgba(20, 32, 58, 0.26),
+    0 6px 16px rgba(20, 32, 58, 0.14);
+  outline: 1px solid #c9d0dc;
+}
+.dash-rx.hs-home .dash-ghost .dash-drag-handle {
+  opacity: 1;
+  transform: none;
+  color: #14203a;
+}
+.dash-rx.hs-home .dash-ghost .dash-drag-handle::after {
+  display: none;
+}
+.dash-rx.hs-home .dash-ghost .dx-tilt {
+  transform: none !important;
+}
+.dash-rx.hs-home.is-rearranging,
+.dash-rx.hs-home.is-rearranging * {
+  cursor: grabbing !important;
+}
+
+@media (max-width: 720px) {
+  .dash-rx.hs-home {
+    padding: 18px 16px 48px;
+  }
+  .dash-rx.hs-home .hs-home-topline {
+    flex-wrap: wrap;
+  }
+}
+
+/* TimeCard is an add-on until purchased: the Home cards keep their numbers, the
+   header gets the nav's up-arrow and a "Get TimeCard" call to action (opening
+   any of the cards prompts for the add-on) */
+.dash-rx.hs-home .tc-dash-head h2 .tc-dash-addon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--hsh-blue-soft);
+  color: var(--hsh-blue);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+.dash-rx.hs-home .tc-dash-head h2 .tc-dash-addon svg {
+  width: 12px;
+  height: 12px;
+  color: var(--hsh-blue);
+}
+.dash-rx.hs-home .tc-dash-open.locked {
+  border-style: dashed;
+}
+
+/* ===========================================================================
+   Home v2 — the layout in the September 2026 reference recording: one centred
+   column of sections, each a small icon + label header sitting ABOVE a flat
+   bordered card, an announcement banner on top, split cards with a tinted
+   preview pane, and inline empty states. Same tokens as the rest of the app.
+   ======================================================================== */
+
+/* ------------------------------ the column ------------------------------ */
+.dash-rx.hs-home .dx-inner {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  gap: 30px;
+}
+.dash-rx.hs-home .cc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 30px;
+}
+/* the actionable panels (approvals · alerts · recommendations) lead the page,
+   the way Meetings and Tasks lead the reference */
+.dash-rx.hs-home .cc-rail {
+  order: -1;
+  position: static;
+  display: grid;
+  /* the page is one column at every width; the media query in command-center.css
+     puts the rail in two, so this has to be stated here too */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 30px;
+  top: auto;
+}
+@media (max-width: 1180px) {
+  .dash-rx.hs-home .cc-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.dash-rx.hs-home .cc-main {
+  gap: 30px;
+}
+
+/* ------------------------- announcement banner -------------------------- */
+.dash-rx.hs-home .hs-home-promo {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 18px 46px 18px 22px;
+  border: 0;
+  border-radius: var(--hsh-radius);
+  background: #efe8f8;
+  color: #3b1d70;
+  animation: hsh-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.dash-rx.hs-home .hs-home-promo h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.dash-rx.hs-home .hs-home-promo p {
+  margin: 0;
+  color: #4c2a86;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.dash-rx.hs-home .hs-home-promo-action {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  margin-top: 6px;
+  padding: 0 12px;
+  border: 1px solid #3b1d70;
+  border-radius: 6px;
+  background: transparent;
+  color: #3b1d70;
+  font: 600 13px var(--hsh-sans);
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+.dash-rx.hs-home .hs-home-promo-action:hover {
+  background: rgba(59, 29, 112, 0.08);
+}
+.dash-rx.hs-home .hs-home-promo-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #3b1d70;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+.dash-rx.hs-home .hs-home-promo-close:hover {
+  background: rgba(59, 29, 112, 0.12);
+}
+@keyframes hsh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------- header above the card, not in it ----------------- */
+.dash-rx.hs-home .hs-widget-head,
+.dash-rx.hs-home .cc-sec-head,
+.dash-rx.hs-home .cc-panel-head,
+.dash-rx.hs-home .tc-dash-head {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.dash-rx.hs-home .hs-widget-head h2,
+.dash-rx.hs-home .cc-sec-head h2,
+.dash-rx.hs-home .cc-panel-head h2,
+.dash-rx.hs-home .tc-dash-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--hsh-ink);
+}
+.dash-rx.hs-home .cc-panel-head h2 svg,
+.dash-rx.hs-home .cc-sec-head h2 svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--hsh-mut);
+}
+
+/* the rail panels: the header lifts out and the list becomes the card */
+.dash-rx.hs-home .cc-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.dash-rx.hs-home .cc-panel:hover {
+  box-shadow: none;
+  border-color: transparent;
+}
+.dash-rx.hs-home .cc-panel > .cc-list,
+.dash-rx.hs-home .hs-card {
+  padding: 16px 18px;
+  border: 1px solid var(--hsh-line);
+  border-radius: var(--hsh-radius);
+  background: #fff;
+}
+.dash-rx.hs-home .cc-panel > .cc-list:empty {
+  display: none;
+}
+
+/* quick actions read as one card of buttons */
+.dash-rx.hs-home .cc-quick {
+  padding: 14px 16px;
+  border: 1px solid var(--hsh-line);
+  border-radius: var(--hsh-radius);
+  background: #fff;
+}
+
+/* ------------------------------ empty state ----------------------------- */
+.dash-rx.hs-home .cc-empty-line {
+  margin: 0;
+  color: var(--hsh-ink);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.dash-rx.hs-home .hs-home-empty {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+.dash-rx.hs-home .hs-home-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--hsh-ink);
+  font: 600 13px var(--hsh-sans);
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+.dash-rx.hs-home .hs-home-empty-btn:hover {
+  background: var(--hsh-hover);
+  border-color: #d6dae4;
+}
+
+/* --------------------------- segmented toggle --------------------------- */
+.dash-rx.hs-home .hs-home-seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--hsh-line);
+  border-radius: 6px;
+  background: #fff;
+}
+.dash-rx.hs-home .hs-home-seg button {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--hsh-mut);
+  font: 600 12.5px var(--hsh-sans);
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+.dash-rx.hs-home .hs-home-seg button + button {
+  border-left: 1px solid var(--hsh-line);
+}
+.dash-rx.hs-home .hs-home-seg button:hover {
+  background: var(--hsh-hover);
+}
+.dash-rx.hs-home .hs-home-seg button.active {
+  background: var(--hsh-hover);
+  color: var(--hsh-ink);
+}
+.dash-rx.hs-home .cc-panel-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ------------------- split card: copy left, tinted list right ----------- */
+.dash-rx.hs-home .hs-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  overflow: hidden;
+  border: 1px solid var(--hsh-line);
+  border-radius: var(--hsh-radius);
+  background: #fff;
+}
+.dash-rx.hs-home .hs-split-copy {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 20px 22px;
+}
+.dash-rx.hs-home .hs-split-copy h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--hsh-ink);
+}
+.dash-rx.hs-home .hs-split-copy p {
+  margin: 0;
+  color: var(--hsh-mut);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.dash-rx.hs-home .hs-split-copy .hs-home-empty-btn {
+  margin-top: 4px;
+}
+.dash-rx.hs-home .hs-split-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px;
+  border-left: 1px solid var(--hsh-line);
+  background: var(--hsh-hover);
+  grid-template-columns: minmax(0, 1fr);
+}
+.dash-rx.hs-home .hs-split-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 6px;
+  background: #fff;
+  min-width: 0;
+}
+.dash-rx.hs-home .hs-split-avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--hsh-hover);
+  color: var(--hsh-mut);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.dash-rx.hs-home .hs-split-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hsh-ink);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.dash-rx.hs-home .hs-split-tag {
+  flex: none;
+  padding: 3px 9px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--hsh-mut);
+  font-size: 11px;
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .dash-rx.hs-home .hs-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash-rx.hs-home .hs-split-list {
+    border-left: 0;
+    border-top: 1px solid var(--hsh-line);
+  }
+}
+
+/* the rows below the command centre share the column and the flat frames */
+.dash-rx.hs-home .dx-sec-head {
+  margin: 0;
+}
+.dash-rx.hs-home .dx-sec-head .dx-eyebrow-2 {
+  display: none;
+}
+.dash-rx.hs-home .dx-sec-head .dx-h2 {
+  margin: 0;
+  font-family: var(--hsh-sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--hsh-ink);
+}
+.dash-rx.hs-home .dx-sec-head .dx-h2 em {
+  font-style: normal;
+  color: var(--hsh-mut);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-rx.hs-home .hs-home-promo {
+    animation: none;
+  }
+}
+
+/* row actions sit at their natural width now the column is wide, not stretched
+   across it the way they were in the old 340px rail */
+.dash-rx.hs-home .cc-appr-actions {
+  justify-content: flex-end;
+}
+.dash-rx.hs-home .cc-btn {
+  flex: 0 0 auto;
+  min-width: 92px;
+  padding: 0 14px;
+}
+.dash-rx.hs-home .cc-approval {
+  padding-bottom: 14px;
+}
+.dash-rx.hs-home .cc-approval:last-child {
+  padding-bottom: 0;
+}
+
+/* ===========================================================================
+   Panel board — every panel has a cell and a size on a six-column grid, the
+   way HubSpot's dashboard editor works. Drag the grip to move a panel anywhere,
+   drag the dotted corner to resize it; the others push out of the way and pack
+   back up (dashGrid.ts). While editing, the grey cell grid shows through and a
+   dashed placeholder marks the drop cell. Same tokens and tweens as the boards
+   elsewhere in the app.
+   ======================================================================== */
+.dash-rx.hs-home .cc-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.dash-rx.hs-home .dash-board {
+  position: relative;
+  min-width: 0;
+}
+.dash-rx.hs-home .dash-board .dash-block {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  transition:
+    top 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* the body fills the cell; anything taller than the panel scrolls inside it */
+.dash-rx.hs-home .dash-board .dash-block-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.dash-rx.hs-home .dash-board .dash-block-body > * {
+  min-height: 0;
+}
+/* the panel in flight rides the pointer with the deal card's lift shadow; no
+   tiles, no hidden children — the dashed placeholder marks its target instead */
+.dash-rx.hs-home .dash-board .dash-block.is-dragging,
+.dash-rx.hs-home.is-customizing .dash-board .dash-block.is-dragging {
+  z-index: 30;
+  transition: width 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  outline: 0;
+  border-radius: var(--hsh-radius);
+  background: transparent;
+  background-image: none;
+  filter: drop-shadow(0 26px 40px rgba(20, 32, 58, 0.22)) drop-shadow(0 6px 12px rgba(20, 32, 58, 0.12));
+  cursor: grabbing;
+}
+.dash-rx.hs-home .dash-board .dash-block.is-dragging > * {
+  visibility: visible;
+}
+.dash-rx.hs-home .dash-board .dash-block.is-resizing {
+  z-index: 30;
+  transition: none;
+  outline: 2px solid var(--hsh-blue);
+  outline-offset: 2px;
+  border-radius: var(--hsh-radius);
+}
+/* landing: the board's pulse once a panel has settled */
+.dash-rx.hs-home .dash-board .dash-block.is-landing {
+  animation: dash-land 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  border-radius: var(--hsh-radius);
+}
+@keyframes dash-land {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.5);
+  }
+  45% {
+    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+  }
+}
+/* the grey cell grid behind the panels while one is being moved or resized */
+.dash-rx.hs-home .dash-cells {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: hsh-fade-in 0.18s ease-out both;
+}
+.dash-rx.hs-home .dash-cell {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 8px;
+  background: #e2e5ec;
+}
+@keyframes hsh-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* where the panel will land: the board's dashed drop slot */
+.dash-rx.hs-home .dash-placeholder {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 2px dashed #8b95ab;
+  border-radius: var(--hsh-radius);
+  background: rgba(232, 240, 254, 0.7);
+  pointer-events: none;
+  transition:
+    top 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: hs-dropslot-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* the corner handle: HubSpot's dotted triangle, shown on hover and in Customize */
+.dash-rx.hs-home .dash-resize {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: radial-gradient(circle, #8b95ab 1.3px, transparent 1.6px);
+  background-size: 6px 6px;
+  background-position: 1px 1px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.dash-rx.hs-home .dash-block:hover .dash-resize,
+.dash-rx.hs-home.is-customizing .dash-resize,
+.dash-rx.hs-home .dash-block.is-resizing .dash-resize {
+  opacity: 1;
+}
+.dash-rx.hs-home .dash-resize:hover,
+.dash-rx.hs-home .dash-block.is-resizing .dash-resize {
+  background-image: radial-gradient(circle, var(--hsh-blue) 1.3px, transparent 1.6px);
+}
+.dash-rx.hs-home .dash-board.is-resize,
+.dash-rx.hs-home .dash-board.is-resize * {
+  cursor: nwse-resize !important;
+}
+/* a panel narrower than the page gives up fixed inner column counts so tiles reflow */
+.dash-rx.hs-home .dash-board .cc-stat-grid,
+.dash-rx.hs-home .dash-board .kpi-grid,
+.dash-rx.hs-home .dash-board .cc-apps-grid {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+}
+/* the drag handle sits over the top-left corner of the panel on the board */
+.dash-rx.hs-home .dash-board .dash-block > .dash-drag-handle {
+  left: -6px;
+}
+/* keyboard: a focused grip stays visible, and the live region is read, not seen */
+.dash-rx.hs-home .dash-board .dash-drag-handle:focus-visible {
+  opacity: 1;
+  transform: none;
+  color: var(--hsh-blue);
+  background: var(--hsh-blue-soft);
+  outline: 2px solid var(--hsh-blue);
+  outline-offset: 2px;
+}
+.dash-rx.hs-home .dash-board-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* narrow screens: one stacked column, no editing */
+.dash-rx.hs-home .dash-board.is-stacked {
+  display: grid;
+  gap: 30px;
+}
+.dash-rx.hs-home .dash-board.is-stacked .dash-block {
+  position: static;
+  width: auto;
+  height: auto;
+}
+.dash-rx.hs-home .dash-board.is-stacked .dash-block-body {
+  overflow: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-rx.hs-home .dash-board .dash-block,
+  .dash-rx.hs-home .dash-placeholder {
+    transition: none;
+    animation: none;
+  }
+  .dash-rx.hs-home .dash-cells,
+  .dash-rx.hs-home .dash-board .dash-block.is-landing {
+    animation: none;
+  }
+}
+
+/* a panel sharing a row is a third as wide: its header wraps instead of
+   colliding, and the title keeps priority over the controls */
+.dash-rx.hs-home .cc-panel-head,
+.dash-rx.hs-home .hs-widget-head,
+.dash-rx.hs-home .cc-sec-head {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.dash-rx.hs-home .cc-panel-head h2,
+.dash-rx.hs-home .hs-widget-head h2,
+.dash-rx.hs-home .cc-sec-head h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dash-rx.hs-home .cc-panel-head-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+/* ---- Home v2: real approvals + early warnings (Phase 1) ---------------------
+   Severity and status read as chips so a High risk or a rejected variance is
+   visible before the text is. Semantic tones, separate from the accent. */
+.dash-rx .cc-sev {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+  background: var(--cc-blue-soft);
+  color: var(--cc-blue);
+}
+.dash-rx .cc-sev-high,
+.dash-rx .cc-sev-rejected { background: var(--cc-red-soft); color: var(--cc-red); }
+.dash-rx .cc-sev-medium,
+.dash-rx .cc-sev-superseded { background: var(--cc-amber-soft); color: var(--cc-amber); }
+.dash-rx .cc-sev-low,
+.dash-rx .cc-sev-accepted { background: var(--cc-green-soft); color: var(--cc-green); }
+.dash-rx .cc-appr-side time,
+.dash-rx .cc-alert-time { font-variant-numeric: tabular-nums; }
+.dash-rx .cc-appr-error {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--cc-red-soft);
+  color: var(--cc-red);
+  font-size: 13px;
+}
+.dash-rx .cc-btn:disabled { opacity: 0.6; cursor: progress; }
+
+/* ---- Phase 2: the status band says so when it cannot load ------------------ */
+.ss-strip.ss-failed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--cc-amber-soft, #fdf0dc);
+  border-radius: 10px;
+  background: var(--cc-amber-soft, #fdf0dc);
+  color: var(--cc-amber, #b45309);
+  font-size: 13.5px;
+}
+.ss-strip.ss-failed .ss-retry {
+  margin-left: auto;
+  padding: 5px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---- Phase 2: the Dashboard's shape while bootstrap loads ------------------ */
+.dash-skeleton { min-height: 100vh; }
+.dash-skeleton .dash-skel-head { display: grid; gap: 10px; margin: 8px 0 22px; }
+.dash-skeleton .dash-skel-strip { height: 128px; margin-bottom: 30px; border-radius: 12px; background: var(--cc-blue-soft, #e8f0fe); opacity: 0.55; }
+.dash-skeleton .dash-skel-board {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: 40px;
+  gap: 16px;
+}
+.dash-skeleton .dash-skel-block {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: 12px;
+  background: #fff;
+}
+.dash-skeleton .dash-skel-line {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(28, 28, 26, 0.06), rgba(28, 28, 26, 0.12), rgba(28, 28, 26, 0.06));
+  background-size: 200% 100%;
+  animation: dash-skel-shimmer 1.4s ease-in-out infinite;
+}
+.dash-skeleton .dash-skel-line.tall { height: 26px; }
+.dash-skeleton .w-40 { width: 40%; } .dash-skeleton .w-52 { width: 52%; } .dash-skeleton .w-64 { width: 64%; } .dash-skeleton .w-80 { width: 80%; }
+@keyframes dash-skel-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .dash-skeleton .dash-skel-line { animation: none; } }
+@media (max-width: 900px) {
+  .dash-skeleton .dash-skel-board { display: grid; grid-template-columns: 1fr; grid-auto-rows: auto; }
+  .dash-skeleton .dash-skel-block { grid-column: auto !important; grid-row: auto !important; min-height: 120px; }
+}
+
+/* ---- Phase 3: one notice above the board; the trade line lives in the greeting ---- */
+.dash-rx .hs-home-meta {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--wx-mut, #575550);
+  overflow-wrap: anywhere;
+}
+/* the promoted legacy bodies sit inside a board block: no double frame, a quiet
+   "View all" at the foot, and the pie keeps its two-column row */
+.dash-rx .cc-legacy-panel { display: grid; gap: 10px; }
+.dash-rx .cc-legacy-panel .chart-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.dash-rx .cc-legacy-panel .legend-list { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
+.dash-rx .cc-legacy-panel .legend-list span { display: flex; align-items: center; gap: 8px; }
+.dash-rx .cc-legacy-panel .legend-list strong { margin-left: auto; font-variant-numeric: tabular-nums; }
+.dash-rx .cc-legacy-panel .cc-legacy-more { justify-self: start; }
+.dash-rx .cc-legacy-panel .weather-alert { display: flex; gap: 14px; align-items: flex-start; }
+.dash-rx .cc-legacy-panel .weather-alert > div { display: grid; gap: 4px; min-width: 0; }
+.dash-rx .cc-legacy-panel .weather-alert svg { flex: none; width: 44px; height: 44px; color: var(--cc-amber, #b45309); }
+.dash-rx .cc-legacy-panel .panel-note { font-size: 13px; }
+/* the KPI cards' label + delta lines could not shrink below their words at 390px */
+.dash-rx .kpi-card > *, .dash-rx .kpi-card p, .dash-rx .kpi-card strong { min-width: 0; }
+.dash-rx .kpi-card p { overflow-wrap: anywhere; }
+
+/* ---- Phase 3: the top bar carries the email confirmation as a pill ---- */
+.topbar-verify {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 6px;
+  padding: 6px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.topbar-verify:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.5); }
+.topbar-verify:disabled { cursor: default; opacity: 0.85; }
+.topbar-verify.is-sent { border-color: transparent; background: rgba(111, 207, 142, 0.25); }
+@media (max-width: 720px) { .topbar-verify span, .topbar-verify { font-size: 0; gap: 0; padding: 7px; } .topbar-verify svg { font-size: 14px; } }
+
+/* ---- Phase 4: a scrolling panel body is a focusable region ------------------ */
+.dash-rx .dash-block-body.is-scrollable:focus-visible {
+  outline: 2px solid var(--cc-blue, #2f6bff);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* ---- ADD-3: Today's plan — crews down the panel, jobs in start-time order ---- */
+.dash-rx .cc-today { gap: 12px; }
+.dash-rx .cc-today-group h3 {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--wx-ink, #1c1c1a);
+}
+.dash-rx .cc-today-group h3 span { font-weight: 500; color: var(--wx-mut, #575550); }
+.dash-rx .cc-today-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.dash-rx .cc-today-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.dash-rx .cc-today-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--cc-blue, #2f6bff);
+  padding-top: 1px;
+}
+.dash-rx .cc-today-job { display: grid; gap: 2px; min-width: 0; }
+.dash-rx .cc-today-job strong { font-size: 13.5px; font-weight: 600; color: var(--wx-ink, #1c1c1a); }
+.dash-rx .cc-today-job span { font-size: 12.5px; color: var(--wx-mut, #575550); overflow-wrap: anywhere; }
+.dash-rx .cc-today-group.is-unassigned h3 { color: var(--cc-amber, #b45309); }
+.dash-rx .cc-today-group.is-unassigned .cc-today-time { color: var(--cc-amber, #b45309); }
+.dash-rx .cc-today-group.is-unassigned .cc-today-row { border-color: var(--cc-amber-soft, #fdf0dc); background: var(--cc-amber-soft, #fdf0dc); }
+
+/* ---- Phase 5: hide a panel while customizing; hidden ones wait in a list ---- */
+/* the corner badge sits on the panel's edge, clear of any "View all" inside the card */
+.dash-rx.hs-home .dash-board .dash-block > .dash-hide {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 8;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--hsh-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--hsh-mut);
+  box-shadow: 0 1px 2px rgba(28, 28, 26, 0.08);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.dash-rx.hs-home .dash-board .dash-block > .dash-hide:hover,
+.dash-rx.hs-home .dash-board .dash-block > .dash-hide:focus-visible {
+  color: var(--hsh-blue);
+  border-color: var(--hsh-blue);
+  background: var(--hsh-blue-soft);
+}
+.dash-rx.hs-home .hs-home-hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.dash-rx.hs-home .hs-home-hidden-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hsh-mut);
+}
+.dash-rx.hs-home .hs-home-hidden-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--hsh-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--hsh-ink);
+  font-family: var(--hsh-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.dash-rx.hs-home .hs-home-hidden-chip:hover,
+.dash-rx.hs-home .hs-home-hidden-chip:focus-visible {
+  background: var(--hsh-blue-soft);
+  border-color: rgba(47, 107, 255, 0.35);
+  color: var(--hsh-blue);
+}
+
+/* ---- Phase 5: a week that held steady is said, not coloured as a rise or a fall ---- */
+.dash-rx .cc-trend.flat {
+  background: var(--hsh-hover, #f0f1f3);
+  color: var(--hsh-mut, #575550);
+}

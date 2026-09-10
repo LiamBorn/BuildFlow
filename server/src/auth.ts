@@ -47,6 +47,16 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 
 /** A fresh opaque session token (URL-safe, unguessable). */
+/** A one-time token for email links (verify / reset). URL-safe, 256 bits. */
+export function newAuthToken(): string {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+/** Tokens are stored hashed, so a copy of the database cannot be used to reset passwords. */
+export function hashToken(raw: string): string {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
 export function newSessionToken(): string {
   return crypto.randomBytes(32).toString("base64url");
 }

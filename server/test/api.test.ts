@@ -38,6 +38,444 @@ describe("BuildFlow API", () => {
     await agent.post("/api/business-profile").send({ businessType: "Solar" }).expect(400);
   });
 
+  it("validates signup per field: company and terms are required, common passwords are refused, duplicates say so", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-signup-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    const good = {
+      email: "dana@asphaltco.com",
+      password: "Roller-Tack-2026",
+      name: "Dana Brooks",
+      orgName: "Asphalt Co",
+      acceptTerms: true
+    };
+
+    const noCompany = await agent
+      .post("/api/auth/signup")
+      .send({ ...good, orgName: "" })
+      .expect(400);
+    expect(noCompany.body.field).toBe("company");
+
+    const noTerms = await agent
+      .post("/api/auth/signup")
+      .send({ ...good, acceptTerms: false })
+      .expect(400);
+    expect(noTerms.body.field).toBe("terms");
+
+    const common = await agent
+      .post("/api/auth/signup")
+      .send({ ...good, password: "password123" })
+      .expect(400);
+    expect(common.body).toMatchObject({ field: "password", code: "weak_password" });
+
+    const ownEmail = await agent
+      .post("/api/auth/signup")
+      .send({ ...good, password: "dana@asphaltco" })
+      .expect(400);
+    expect(ownEmail.body.field).toBe("password");
+
+    const created = await agent.post("/api/auth/signup").send(good).expect(201);
+    expect(created.body.account.acceptedTermsAt).toBeTruthy();
+    expect(created.body.org.name).toBe("Asphalt Co");
+
+    const dup = await agent
+      .post("/api/auth/signup")
+      .send({ ...good, email: "DANA@asphaltco.com" })
+      .expect(409);
+    expect(dup.body).toMatchObject({ field: "email", code: "email_taken" });
+  });
+
+  it("records the plan, add-ons and seats on the org and runs paid plans as a dated trial", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-setup-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    await agent
+      .post("/api/auth/signup")
+      .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+      .expect(201);
+
+    // Paid plan, two add-ons, eight seats → all on the org, plus a 14-day trial.
+    const setup = await agent
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "business", selectedProducts: ["map-field-ops", "time-cards"], seats: 8 })
+      .expect(200);
+    expect(setup.body).toMatchObject({
+      selectedPlan: "business",
+      selectedProducts: ["map-field-ops", "time-cards"],
+      seats: 8,
+      billingStatus: "trial"
+    });
+    const trialEnd = new Date(setup.body.trialEndsAt).getTime();
+    expect(trialEnd - Date.now()).toBeGreaterThan(13 * 24 * 60 * 60 * 1000);
+    expect(trialEnd - Date.now()).toBeLessThanOrEqual(14 * 24 * 60 * 60 * 1000);
+
+    // It comes back on a plain bootstrap (another device would see the same).
+    const again = await agent.get("/api/bootstrap").expect(200);
+    expect(again.body).toMatchObject({ selectedPlan: "business", seats: 8, billingStatus: "trial" });
+    expect(again.body.trialEndsAt).toBe(setup.body.trialEndsAt);
+
+    // The org record carries the plan label too.
+    const me = await agent.get("/api/auth/me").expect(200);
+    expect(me.body.org.plan).toBe("Business");
+
+    // Dropping to Free ends the trial; no add-ons is a valid choice.
+    const free = await agent
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "free", selectedProducts: [], seats: 3 })
+      .expect(200);
+    expect(free.body).toMatchObject({ selectedPlan: "free", selectedProducts: [], seats: 3, billingStatus: "free", trialEndsAt: null });
+
+    // An unknown add-on id is refused rather than stored.
+    await agent
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedProducts: ["not-a-product"] })
+      .expect(400);
+  });
+
+  it("confirms an email from the emailed link and resets a password from another", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-auth-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    const good = {
+      email: "dana@asphaltco.com",
+      password: "Roller-Tack-2026",
+      name: "Dana Brooks",
+      orgName: "Asphalt Co",
+      acceptTerms: true
+    };
+    const created = await agent.post("/api/auth/signup").send(good).expect(201);
+    expect(created.body.account.emailVerifiedAt).toBeNull();
+
+    // ── verification: the link's token confirms the address exactly once
+    const sent = await agent.post("/api/auth/verify/request").expect(200);
+    expect(sent.body.debugToken).toBeTruthy();
+    await request(app).post("/api/auth/verify").send({ token: "not-a-real-token" }).expect(400);
+    const verified = await request(app).post("/api/auth/verify").send({ token: sent.body.debugToken }).expect(200);
+    expect(verified.body.account.emailVerifiedAt).toBeTruthy();
+    await request(app).post("/api/auth/verify").send({ token: sent.body.debugToken }).expect(400); // used
+    const me = await agent.get("/api/auth/me").expect(200);
+    expect(me.body.account.emailVerifiedAt).toBeTruthy();
+    const boot = await agent.get("/api/bootstrap").expect(200);
+    expect(boot.body.account).toMatchObject({ email: "dana@asphaltco.com" });
+    expect(boot.body.account.emailVerifiedAt).toBeTruthy();
+
+    // ── forgot password: unknown emails get the same 200 as known ones
+    const unknown = await request(app).post("/api/auth/reset/request").send({ email: "nobody@asphaltco.com" }).expect(200);
+    expect(unknown.body.debugToken).toBeUndefined();
+    const reset = await request(app).post("/api/auth/reset/request").send({ email: "DANA@asphaltco.com" }).expect(200);
+    expect(reset.body.debugToken).toBeTruthy();
+
+    // a weak new password is refused but hands back a fresh token
+    const weak = await request(app).post("/api/auth/reset").send({ token: reset.body.debugToken, password: "password123" }).expect(400);
+    expect(weak.body).toMatchObject({ field: "password", code: "weak_password" });
+    expect(weak.body.token).toBeTruthy();
+    await request(app).post("/api/auth/reset").send({ token: reset.body.debugToken, password: "Screed-Hand-2026" }).expect(400); // consumed
+
+    const fresh = request.agent(app);
+    const done = await fresh.post("/api/auth/reset").send({ token: weak.body.token, password: "Screed-Hand-2026" }).expect(200);
+    expect(done.body.account.email).toBe("dana@asphaltco.com");
+    await fresh.get("/api/auth/me").expect(200); // signed in by the reset
+    await agent.get("/api/auth/me").expect(401); // every older session is out
+
+    await request(app).post("/api/auth/login").send({ email: good.email, password: good.password }).expect(401);
+    await request(app).post("/api/auth/login").send({ email: good.email, password: "Screed-Hand-2026" }).expect(200);
+  });
+
+  it("locks an email after five wrong passwords and throttles signups per address", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-limits-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const good = {
+      email: "dana@asphaltco.com",
+      password: "Roller-Tack-2026",
+      name: "Dana Brooks",
+      orgName: "Asphalt Co",
+      acceptTerms: true
+    };
+    await request(app).post("/api/auth/signup").send(good).expect(201);
+
+    for (let i = 0; i < 5; i += 1) {
+      await request(app)
+        .post("/api/auth/login")
+        .send({ email: good.email, password: "wrong-pass-" + i })
+        .expect(401);
+    }
+    const locked = await request(app).post("/api/auth/login").send({ email: good.email, password: good.password }).expect(429);
+    expect(locked.headers["retry-after"]).toBeTruthy();
+    expect(locked.body.error).toMatch(/Too many sign-in attempts/);
+
+    // signup is capped per IP: the limiter answers before validation does
+    for (let i = 0; i < 9; i += 1) {
+      await request(app)
+        .post("/api/auth/signup")
+        .send({ ...good, email: `crew${i}@asphaltco.com`, orgName: `Crew ${i}` })
+        .expect(201);
+    }
+    const capped = await request(app)
+      .post("/api/auth/signup")
+      .send({ ...good, email: "crew99@asphaltco.com" })
+      .expect(429);
+    expect(capped.body.retryAfterSec).toBeGreaterThan(0);
+  });
+
+  it("invites teammates: held until the owner confirms their email, then accepted into the workspace", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-team-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const owner = request.agent(app);
+    await owner
+      .post("/api/auth/signup")
+      .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+      .expect(201);
+    await owner
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "free", selectedProducts: [], seats: 3 })
+      .expect(200);
+
+    // Unverified owner: invites are stored but held.
+    const held = await owner
+      .post("/api/team/invites")
+      .send({
+        invites: [
+          { email: "sam@asphaltco.com", role: "Superintendent" },
+          { email: "dana@asphaltco.com", role: "Crew Lead" }
+        ]
+      })
+      .expect(201);
+    expect(held.body.results).toEqual([
+      { email: "sam@asphaltco.com", status: "held", reason: "Goes out when you confirm your email." },
+      { email: "dana@asphaltco.com", status: "skipped", reason: "Already has a BuildFlow account." }
+    ]);
+    const team = await owner.get("/api/team").expect(200);
+    expect(team.body.emailVerified).toBe(false);
+    expect(team.body.invites).toHaveLength(1);
+    expect(team.body.invites[0].sentAt).toBeNull();
+    await owner.post(`/api/team/invites/${team.body.invites[0].id}/resend`).expect(403);
+
+    // Confirming the owner's email releases the held invite (a fresh token is minted).
+    const sent = await owner.post("/api/auth/verify/request").expect(200);
+    await request(app).post("/api/auth/verify").send({ token: sent.body.debugToken }).expect(200);
+    const after = await owner.get("/api/team").expect(200);
+    expect(after.body.emailVerified).toBe(true);
+    expect(after.body.invites[0].sentAt).toBeTruthy();
+
+    // Resend hands back a link token in test mode… via refresh; use the store to read it back
+    const resent = await owner.post(`/api/team/invites/${after.body.invites[0].id}/resend`).expect(200);
+    expect(resent.body.ok).toBe(true);
+
+    // Peek + accept from the invited person's side. Grab the token through the store (no email in tests).
+    const mainStore = (app.locals.storeManager as { main: { all: <T>(sql: string) => T[]; inviteByToken: (t: string) => unknown } }).main;
+    const rows = mainStore.all<{ id: string; tokenHash: string }>("SELECT id, tokenHash FROM invites");
+    expect(rows).toHaveLength(1);
+    await request(app).get("/api/auth/invite/not-a-token").expect(404);
+    // The raw token is not recoverable from its hash; accept by creating a known one through refresh-with-token path:
+    const { refreshInvite } = mainStore as unknown as {
+      refreshInvite: (id: string, orgId: string, ttl: number) => { token: string } | undefined;
+    };
+    const orgId = (await owner.get("/api/auth/me").expect(200)).body.org.id as string;
+    const fresh = refreshInvite.call(mainStore, rows[0].id, orgId, 60_000)!;
+    const preview = await request(app)
+      .get(`/api/auth/invite/${encodeURIComponent(fresh.token)}`)
+      .expect(200);
+    expect(preview.body).toMatchObject({
+      email: "sam@asphaltco.com",
+      role: "Superintendent",
+      orgName: "Asphalt Co",
+      inviterName: "Dana Brooks"
+    });
+
+    const sam = request.agent(app);
+    await sam
+      .post("/api/auth/invite/accept")
+      .send({ token: fresh.token, name: "Sam Ortiz", password: "password123", acceptTerms: true })
+      .expect(400);
+    const joined = await sam
+      .post("/api/auth/invite/accept")
+      .send({ token: fresh.token, name: "Sam Ortiz", password: "Paver-Screed-2026", acceptTerms: true })
+      .expect(201);
+    expect(joined.body.account).toMatchObject({ email: "sam@asphaltco.com", orgId, role: "member" });
+    expect(joined.body.account.emailVerifiedAt).toBeTruthy();
+    await request(app)
+      .get(`/api/auth/invite/${encodeURIComponent(fresh.token)}`)
+      .expect(404); // accepted
+
+    // Sam is a real person in Dana's workspace with the invited role, and lands past onboarding.
+    const samBoot = await sam.get("/api/bootstrap").expect(200);
+    expect(samBoot.body.activeUser).toMatchObject({ name: "Sam Ortiz", role: "Superintendent", isSample: false });
+    expect(samBoot.body.onboardingCompletedAt).toBeTruthy();
+    expect(samBoot.body.users.some((user: { name: string }) => user.name === "Dana Brooks")).toBe(true);
+    const ownerTeam = await owner.get("/api/team").expect(200);
+    expect(ownerTeam.body.invites).toHaveLength(0);
+
+    // The owner sets roles; the teammate cannot, and nonsense roles are refused.
+    expect(ownerTeam.body.canManage).toBe(true);
+    const samRow = ownerTeam.body.users.find((user: { name: string }) => user.name === "Sam Ortiz");
+    const promoted = await owner.patch(`/api/team/users/${samRow.id}`).send({ role: "Project Manager" }).expect(200);
+    expect(promoted.body.user).toMatchObject({ id: samRow.id, role: "Project Manager", title: "Project Manager" });
+    await owner.patch(`/api/team/users/${samRow.id}`).send({ role: "Boss" }).expect(400);
+    await owner.patch("/api/team/users/nobody").send({ role: "Crew Lead" }).expect(404);
+    expect((await sam.get("/api/team").expect(200)).body.canManage).toBe(false);
+    await sam.patch(`/api/team/users/${samRow.id}`).send({ role: "Crew Lead" }).expect(403);
+    expect((await sam.get("/api/bootstrap").expect(200)).body.activeUser.role).toBe("Project Manager");
+
+    // Sample teammates can be removed; real people cannot (from here).
+    const sample = ownerTeam.body.users.find((user: { isSample: boolean }) => user.isSample);
+    await owner.delete(`/api/team/users/${sample.id}`).expect(204);
+    const samUser = ownerTeam.body.users.find((user: { name: string }) => user.name === "Sam Ortiz");
+    await owner.delete(`/api/team/users/${samUser.id}`).expect(400);
+
+    // Revoke: a new held invite disappears.
+    const more = await owner
+      .post("/api/team/invites")
+      .send({ invites: [{ email: "lee@asphaltco.com", role: "Crew Lead" }] })
+      .expect(201);
+    await owner.delete(`/api/team/invites/${more.body.invites[0].id}`).expect(204);
+    expect((await owner.get("/api/team").expect(200)).body.invites).toHaveLength(0);
+  });
+
+  it("renames the company and changes the account email with re-verification", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-edits-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    await agent
+      .post("/api/auth/signup")
+      .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+      .expect(201);
+    const sent = await agent.post("/api/auth/verify/request").expect(200);
+    await request(app).post("/api/auth/verify").send({ token: sent.body.debugToken }).expect(200);
+
+    const renamed = await agent.patch("/api/org").send({ name: "Asphalt Co of Texas" }).expect(200);
+    expect(renamed.body.org.name).toBe("Asphalt Co of Texas");
+    await agent.patch("/api/org").send({ name: "A" }).expect(400);
+
+    const name = await agent.patch("/api/auth/account").send({ name: "Dana B. Brooks" }).expect(200);
+    expect(name.body.account.name).toBe("Dana B. Brooks");
+    expect(name.body.verificationSent).toBe(false);
+    const boot = await agent.get("/api/bootstrap").expect(200);
+    expect(boot.body.activeUser.name).toBe("Dana B. Brooks");
+
+    const email = await agent.patch("/api/auth/account").send({ email: "dana@asphaltco.net" }).expect(200);
+    expect(email.body.account.email).toBe("dana@asphaltco.net");
+    expect(email.body.account.emailVerifiedAt).toBeNull();
+    expect(email.body.verificationSent).toBe(true);
+    await request(app).post("/api/auth/login").send({ email: "dana@asphaltco.net", password: "Roller-Tack-2026" }).expect(200);
+    const me = await agent.get("/api/auth/me").expect(200);
+    expect(me.body.demo).toBe(false);
+  });
+
+  it("issues a persistent cookie by default and a browser-session cookie when not remembered", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-cookie-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const good = {
+      email: "dana@asphaltco.com",
+      password: "Roller-Tack-2026",
+      name: "Dana Brooks",
+      orgName: "Asphalt Co",
+      acceptTerms: true
+    };
+
+    // signup honours remember=false: no Max-Age → the browser drops it on close
+    const shortLived = await request(app)
+      .post("/api/auth/signup")
+      .send({ ...good, remember: false })
+      .expect(201);
+    const signupCookie = String(shortLived.headers["set-cookie"]?.[0] ?? "");
+    expect(signupCookie).toMatch(/^bf_session=/);
+    expect(signupCookie).toMatch(/HttpOnly/i);
+    expect(signupCookie).toMatch(/SameSite=Lax/i);
+    expect(signupCookie).not.toMatch(/Max-Age/i);
+
+    // login defaults to the 30-day cookie
+    const persistent = await request(app).post("/api/auth/login").send({ email: good.email, password: good.password }).expect(200);
+    const loginCookie = String(persistent.headers["set-cookie"]?.[0] ?? "");
+    expect(loginCookie).toMatch(/Max-Age=2592000/);
+
+    // and the body never leaks the hash or the token
+    expect(JSON.stringify(persistent.body)).not.toMatch(/passwordHash|bf_session/);
+    expect(persistent.body.demo).toBe(false);
+  });
+
+  it("keeps tutorial progress on the person, not the browser", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-tutorial-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    await agent
+      .post("/api/auth/signup")
+      .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+      .expect(201);
+    expect((await agent.get("/api/bootstrap").expect(200)).body.userSettings).toEqual({});
+
+    await agent.put("/api/me/settings/tutorial:asphalt--free--core").send({ value: "skipped" }).expect(200);
+    await agent.put("/api/me/settings/bad key!").send({ value: "x" }).expect(400);
+    await agent.put("/api/me/settings/tutorial:asphalt--free--core").send({ value: 42 }).expect(400);
+
+    // A second device is just a second session on the same login: same answer.
+    const other = request.agent(app);
+    await other.post("/api/auth/login").send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026" }).expect(200);
+    const boot = await other.get("/api/bootstrap").expect(200);
+    expect(boot.body.userSettings).toEqual({ "tutorial:asphalt--free--core": "skipped" });
+
+    // Settings are per person: a teammate does not inherit them.
+    await agent
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "free", selectedProducts: [], seats: 2 })
+      .expect(200);
+    const sent = await agent.post("/api/auth/verify/request").expect(200);
+    await request(app).post("/api/auth/verify").send({ token: sent.body.debugToken }).expect(200);
+    await agent
+      .post("/api/team/invites")
+      .send({ invites: [{ email: "sam@asphaltco.com", role: "Crew Lead" }] })
+      .expect(201);
+    const mainStore = (
+      app.locals.storeManager as {
+        main: { all: <T>(sql: string) => T[]; refreshInvite: (id: string, orgId: string, ttl: number) => { token: string } | undefined };
+      }
+    ).main;
+    const [row] = mainStore.all<{ id: string }>("SELECT id FROM invites");
+    const orgId = (await agent.get("/api/auth/me").expect(200)).body.org.id as string;
+    const { token } = mainStore.refreshInvite(row.id, orgId, 60_000)!;
+    const sam = request.agent(app);
+    await sam
+      .post("/api/auth/invite/accept")
+      .send({ token, name: "Sam Ortiz", password: "Paver-Screed-2026", acceptTerms: true })
+      .expect(201);
+    expect((await sam.get("/api/bootstrap").expect(200)).body.userSettings).toEqual({});
+  });
+
+  it("reports an ended trial and lets the owner drop to Free or head to checkout from Settings", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-trial-end-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const agent = request.agent(app);
+    await agent
+      .post("/api/auth/signup")
+      .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+      .expect(201);
+    await agent
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "pro", selectedProducts: [], seats: 4 })
+      .expect(200);
+    expect((await agent.get("/api/bootstrap").expect(200)).body.billingStatus).toBe("trial");
+
+    // Time passes: the trial clock is a workspace setting, so wind it back.
+    const orgId = (await agent.get("/api/auth/me").expect(200)).body.org.id as string;
+    const manager = app.locals.storeManager as {
+      getOrgStore: (id: string) => Promise<{ setWorkspaceSetting: (k: string, v: string) => void }>;
+    };
+    (await manager.getOrgStore(orgId)).setWorkspaceSetting("trialEndsAt", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    const ended = await agent.get("/api/bootstrap").expect(200);
+    expect(ended.body.billingStatus).toBe("trial_expired");
+
+    // Settings → "Add a payment method": checkout knows to come back to Settings (Stripe is not configured here, so it says so).
+    const checkout = await request(app)
+      .post("/api/billing/checkout")
+      .send({ plan: "pro", period: "monthly", seats: 4, returnTo: "settings", origin: "http://localhost:5432" })
+      .expect(200);
+    expect(checkout.body.configured).toBe(false);
+    await request(app).post("/api/billing/checkout").send({ plan: "pro", period: "monthly", returnTo: "elsewhere" }).expect(400);
+
+    // Settings → "Switch to Free": the trial ends with the plan.
+    const free = await agent.post("/api/business-profile").send({ businessType: "Asphalt", selectedPlan: "free", seats: 4 }).expect(200);
+    expect(free.body).toMatchObject({ selectedPlan: "free", billingStatus: "free", trialEndsAt: null });
+  });
+
   it("seeds a populated starter workspace when a new account picks its trade", async () => {
     // A brand-new account, not the shared demo — its own empty, isolated workspace.
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-seed-"));
@@ -45,19 +483,37 @@ describe("BuildFlow API", () => {
     const agent = request.agent(app);
     await agent
       .post("/api/auth/signup")
-      .send({ email: "dana@asphaltco.com", password: "buildflow123", name: "Dana Brooks", orgName: "Asphalt Co" })
+      .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
       .expect(201);
 
     // Fresh signup starts blank — this is what used to be all a real account ever had.
     const empty = await agent.get("/api/bootstrap").expect(200);
     expect(empty.body.projects).toEqual([]);
     expect(empty.body.jobs).toEqual([]);
+    // …but the owner is already a person in it, and onboarding is not done yet.
+    expect(empty.body.onboardingCompletedAt).toBeNull();
+    expect(empty.body.users).toHaveLength(1);
+    expect(empty.body.activeUser).toMatchObject({
+      name: "Dana Brooks",
+      title: "Owner",
+      role: "Project Manager",
+      avatar: "DB",
+      isSample: false
+    });
+    expect(empty.body.activeUser.accountId).toBeTruthy();
 
     // Picking a trade during onboarding seeds a realistic starter workspace for it.
     const seeded = await agent.post("/api/business-profile").send({ businessType: "Asphalt" }).expect(200);
     expect(seeded.body.projects.length).toBeGreaterThan(0);
     expect(seeded.body.jobs.length).toBeGreaterThan(0);
     expect(seeded.body.crews.length).toBeGreaterThan(0);
+    // Picking the trade completes onboarding; the owner stays the active user and
+    // the seeded teammates are marked as samples.
+    expect(seeded.body.onboardingCompletedAt).toBeTruthy();
+    expect(seeded.body.activeUser.name).toBe("Dana Brooks");
+    const samples = seeded.body.users.filter((user: { isSample: boolean }) => user.isSample);
+    expect(samples.length).toBeGreaterThan(0);
+    expect(seeded.body.users.some((user: { accountId?: string | null }) => Boolean(user.accountId))).toBe(true);
 
     // It persists across a reload — the whole point of the fix.
     const reload = await agent.get("/api/bootstrap").expect(200);
@@ -183,7 +639,9 @@ describe("BuildFlow API", () => {
     const bootstrap = await agent.get("/api/bootstrap").expect(200);
     expect(bootstrap.body.materials).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Night Shift HMA" })]));
     expect(bootstrap.body.equipment).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Paver 1" })]));
-    expect(bootstrap.body.fieldUpdates).toEqual(expect.arrayContaining([expect.objectContaining({ message: "Night paving setup entered from scratch." })]));
+    expect(bootstrap.body.fieldUpdates).toEqual(
+      expect.arrayContaining([expect.objectContaining({ message: "Night paving setup entered from scratch." })])
+    );
     expect(bootstrap.body.delayIQs).toEqual(expect.arrayContaining([expect.objectContaining({ title: "Lane closure moved" })]));
   });
 
@@ -320,29 +778,223 @@ describe("BuildFlow API", () => {
     }
   });
 
-  it("flags schedule assignment conflicts without blocking the assignment", async () => {
+  it("asks before double-booking a crew, and books anyway with the notes when told to", async () => {
     const agent = await testApp();
-    // The seed shifts every date by run-date, so read the date crew-concrete is
-    // actually booked (its Riverside assignment) instead of hardcoding 2026-06-15.
     const bootstrap = await agent.get("/api/bootstrap").expect(200);
     const booked = bootstrap.body.assignments.find(
       (a: { crewId: string; jobId: string; date: string }) => a.crewId === "crew-concrete" && a.jobId === "j-riverside-concrete"
     );
     expect(booked).toBeDefined();
 
-    // Same crew, different job, same day → double-booked; Pinecrest's materials
-    // aren't ready → both conflicts fire, regardless of when the suite runs.
+    // Same crew, different job, same day → 409 with the clash, nothing written
+    const clash = await agent
+      .post("/api/schedule/assign")
+      .send({ jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: booked.date })
+      .expect(409);
+    expect(clash.body.code).toBe("conflict");
+    expect(clash.body.error).toMatch(/Concrete Crew 1 is on .* that day/);
+    expect(clash.body.clashes[0]).toMatchObject({
+      crewId: "crew-concrete",
+      jobId: "j-riverside-concrete",
+      movingJobId: "j-pinecrest-foundation"
+    });
+    expect((await agent.get("/api/bootstrap")).body.assignments).toHaveLength(bootstrap.body.assignments.length);
+
+    // The planner chooses to: booked, with both notes (Pinecrest's materials aren't ready either)
     const response = await agent
       .post("/api/schedule/assign")
-      .send({
-        jobId: "j-pinecrest-foundation",
-        crewId: "crew-concrete",
-        date: booked.date
-      })
+      .send({ jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: booked.date, force: true })
       .expect(201);
-
     expect(response.body.conflicts).toContain("Double-booked crew");
     expect(response.body.conflicts).toContain("Missing materials");
+
+    // Moving a booking onto a taken crew-day asks the same way
+    await agent.patch(`/api/schedule/${response.body.id}`).send({ date: booked.date }).expect(409);
+    await agent.patch(`/api/schedule/${response.body.id}`).send({ date: booked.date, force: true }).expect(200);
+  });
+
+  it("re-books a set of moves in one transaction: all of it, or none of it", async () => {
+    const agent = await testApp();
+    const bootstrap = await agent.get("/api/bootstrap").expect(200);
+    const booked = bootstrap.body.assignments.find(
+      (a: { crewId: string; jobId: string; date: string }) => a.crewId === "crew-concrete" && a.jobId === "j-riverside-concrete"
+    );
+    const count = bootstrap.body.assignments.length;
+    const shift = (iso: string, days: number) => {
+      const date = new Date(`${iso}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate() + days);
+      return date.toISOString().slice(0, 10);
+    };
+    const freeDay = shift(booked.date, 30);
+
+    // an unknown id anywhere in the batch → nothing changes
+    await agent
+      .post("/api/schedule/rebook")
+      .send({
+        moves: [
+          { op: "move", id: booked.id, date: freeDay },
+          { op: "unbook", id: "as-nope" }
+        ]
+      })
+      .expect(404);
+    const untouched = await agent.get("/api/bootstrap").expect(200);
+    expect(untouched.body.assignments.find((a: { id: string }) => a.id === booked.id).date).toBe(booked.date);
+
+    // a clash anywhere in the batch → 409 with who is already there, nothing changes
+    const clash = await agent
+      .post("/api/schedule/rebook")
+      .send({ moves: [{ op: "book", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: booked.date }] })
+      .expect(409);
+    expect(clash.body.code).toBe("conflict");
+    expect(clash.body.clashes[0]).toMatchObject({
+      crewName: "Concrete Crew 1",
+      jobId: "j-riverside-concrete",
+      movingJobId: "j-pinecrest-foundation"
+    });
+    expect((await agent.get("/api/bootstrap")).body.assignments).toHaveLength(count);
+
+    // move the crew off that day, book the other job onto it and set the job's dates — one request, one transaction
+    const ok = await agent
+      .post("/api/schedule/rebook")
+      .send({
+        moves: [
+          { op: "move", id: booked.id, date: freeDay },
+          { op: "book", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: booked.date },
+          { op: "job", id: "j-pinecrest-foundation", startDate: booked.date, endDate: booked.date }
+        ]
+      })
+      .expect(200);
+    expect(ok.body.assignments).toHaveLength(2);
+    expect(ok.body.assignments.find((a: { id: string }) => a.id === booked.id).date).toBe(freeDay);
+    const pinecrest = ok.body.assignments.find((a: { jobId: string }) => a.jobId === "j-pinecrest-foundation");
+    expect(pinecrest.conflicts).not.toContain("Double-booked crew");
+    expect(ok.body.jobs[0]).toMatchObject({ id: "j-pinecrest-foundation", startDate: booked.date, endDate: booked.date });
+    expect(ok.body.clashes).toEqual([]);
+    expect((await agent.get("/api/bootstrap")).body.assignments).toHaveLength(count + 1);
+
+    // forced, a clash books anyway and carries the note; unbook drops it again
+    const forced = await agent
+      .post("/api/schedule/rebook")
+      .send({ moves: [{ op: "book", jobId: "j-pinecrest-foundation", crewId: "crew-concrete", date: freeDay }], force: true })
+      .expect(200);
+    expect(forced.body.assignments[0].conflicts).toContain("Double-booked crew");
+    expect(forced.body.clashes).toHaveLength(1);
+    const dropped = await agent
+      .post("/api/schedule/rebook")
+      .send({ moves: [{ op: "unbook", id: forced.body.assignments[0].id }] })
+      .expect(200);
+    expect(dropped.body.removed).toEqual([forced.body.assignments[0].id]);
+  });
+
+  it("gives a booking its job's status, and keeps it when the job changes", async () => {
+    const agent = await testApp();
+    const job = await agent
+      .post("/api/jobs")
+      .send({
+        projectId: "p-riverside",
+        name: "Status Follows Job",
+        phase: "Concrete - Status",
+        location: "Downtown, Austin",
+        startDate: "2026-06-23",
+        endDate: "2026-06-23",
+        startTime: "7:00 AM",
+        endTime: "3:30 PM",
+        requiredLabor: 4,
+        requiredEquipment: "Line Pump",
+        materialsStatus: "Ordered",
+        status: "Planned",
+        priority: "Normal",
+        notes: ""
+      })
+      .expect(201);
+    const booked = await agent
+      .post("/api/schedule/assign")
+      .send({ jobId: job.body.id, crewId: "crew-concrete", date: "2026-06-23" })
+      .expect(201);
+    expect(booked.body.status).toBe("Planned");
+
+    await agent.patch(`/api/jobs/${job.body.id}`).send({ status: "In Progress" }).expect(200);
+    const after = await agent.get("/api/bootstrap").expect(200);
+    const bookings = after.body.assignments.filter((a: { jobId: string }) => a.jobId === job.body.id);
+    expect(bookings).toHaveLength(1);
+    expect(bookings[0].status).toBe("In Progress");
+  });
+
+  it("gives crews an hourly rate: the one set, or the specialty's default", async () => {
+    const agent = await testApp();
+    const bootstrap = await agent.get("/api/bootstrap").expect(200);
+    for (const crew of bootstrap.body.crews) expect(typeof crew.rate).toBe("number");
+    const priced = await agent
+      .post("/api/crews")
+      .send({
+        name: "Priced Crew",
+        specialty: "Concrete",
+        foreman: "Dana Brooks",
+        laborMix: [{ category: "Labor", role: "Laborers", count: 2 }],
+        rate: 101
+      })
+      .expect(201);
+    expect(priced.body.rate).toBe(101);
+    const defaulted = await agent
+      .post("/api/crews")
+      .send({
+        name: "Default Crew",
+        specialty: "Concrete",
+        foreman: "Dana Brooks",
+        laborMix: [{ category: "Labor", role: "Laborers", count: 2 }]
+      })
+      .expect(201);
+    expect(defaulted.body.rate).toBe(88);
+    const updated = await agent
+      .patch(`/api/crews/${defaulted.body.id}`)
+      .send({
+        name: "Default Crew",
+        specialty: "Concrete",
+        foreman: "Dana Brooks",
+        laborMix: [{ category: "Labor", role: "Laborers", count: 2 }],
+        rate: 90
+      })
+      .expect(200);
+    expect(updated.body.rate).toBe(90);
+  });
+
+  it("keeps the working week and holidays as org data", async () => {
+    const agent = await testApp();
+    const before = await agent.get("/api/bootstrap").expect(200);
+    expect(before.body.workCalendar.workingDays).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(before.body.workCalendar.holidays.length).toBeGreaterThan(0);
+    const saved = await agent
+      .put("/api/schedule/work-calendar")
+      .send({
+        workingDays: [1, 2, 3, 4, 5],
+        holidays: [
+          { date: "2027-07-05", name: "Independence Day (observed)" },
+          { date: "2027-01-01", name: "New Year's Day" }
+        ]
+      })
+      .expect(200);
+    expect(saved.body.workingDays).toEqual([1, 2, 3, 4, 5]);
+    expect(saved.body.holidays.map((h: { date: string }) => h.date)).toEqual(["2027-01-01", "2027-07-05"]);
+    const after = await agent.get("/api/bootstrap").expect(200);
+    expect(after.body.workCalendar).toEqual(saved.body);
+    await agent.put("/api/schedule/work-calendar").send({ workingDays: [], holidays: [] }).expect(400);
+  });
+
+  it("serves a crew's bookings as a calendar feed a phone can subscribe to", async () => {
+    const agent = await testApp();
+    const feeds = await agent.get("/api/schedule/feeds").expect(200);
+    const concrete = feeds.body.crews.find((c: { id: string }) => c.id === "crew-concrete");
+    expect(concrete.url).toMatch(/\/api\/feeds\/.+\/crew-concrete\.ics\?key=/);
+    const path = concrete.url.replace(/^https?:\/\/[^/]+/, "");
+    // no cookie: the key in the link is the pass
+    const ics = await request(agent.app).get(path).expect(200);
+    expect(ics.headers["content-type"]).toMatch(/text\/calendar/);
+    expect(ics.text).toContain("BEGIN:VCALENDAR");
+    expect(ics.text).toContain("X-WR-CALNAME:BuildFlow · Concrete Crew 1");
+    expect(ics.text).toMatch(/BEGIN:VEVENT[\s\S]*SUMMARY:[\s\S]*END:VEVENT/);
+    await request(agent.app)
+      .get(path.replace(/key=.*$/, "key=wrong"))
+      .expect(403);
   });
 
   it("creates jobs and makes them available for schedule assignment", async () => {
@@ -451,9 +1103,7 @@ describe("BuildFlow API", () => {
     });
 
     const bootstrap = await agent.get("/api/bootstrap").expect(200);
-    expect(bootstrap.body.equipment).toEqual(
-      expect.arrayContaining([expect.objectContaining({ name: "Forklift #9", type: "Forklift" })])
-    );
+    expect(bootstrap.body.equipment).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Forklift #9", type: "Forklift" })]));
   });
 
   it("rejects invalid equipment creation input", async () => {
@@ -507,9 +1157,7 @@ describe("BuildFlow API", () => {
     await agent.delete(`/api/equipment/${created.body.id}`).expect(404);
 
     const bootstrap = await agent.get("/api/bootstrap").expect(200);
-    expect(bootstrap.body.equipment).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: created.body.id })])
-    );
+    expect(bootstrap.body.equipment).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: created.body.id })]));
   });
 
   it("creates materials and returns them in bootstrap data", async () => {
@@ -560,7 +1208,10 @@ describe("BuildFlow API", () => {
       await agent.post("/api/materials").send(invalidMaterial).expect(400);
     }
 
-    await agent.post("/api/materials").send({ ...validMaterial, projectId: "missing-project" }).expect(404);
+    await agent
+      .post("/api/materials")
+      .send({ ...validMaterial, projectId: "missing-project" })
+      .expect(404);
   });
 
   it("uses newly created crews for schedule assignments", async () => {
@@ -814,10 +1465,7 @@ describe("BuildFlow API", () => {
       })
       .expect(201);
 
-    const accepted = await agent
-      .post(`/api/schedule/variances/${second.body.variance.id}/accept`)
-      .send({ userId: "u-matt" })
-      .expect(200);
+    const accepted = await agent.post(`/api/schedule/variances/${second.body.variance.id}/accept`).send({ userId: "u-matt" }).expect(200);
     expect(accepted.body.variance.status).toBe("accepted");
 
     const afterAccept = await agent.get("/api/bootstrap").expect(200);

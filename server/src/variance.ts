@@ -25,9 +25,11 @@ import {
   forecastIQFinish,
   plannedPercentAt,
   scheduleCalendar,
+  scheduleCalendarFor,
   type CpmLink,
   type CpmTask,
   type Job,
+  type WorkCalendarSetting,
   type JobDependency,
   type ScheduleVariance,
   type Status,
@@ -39,7 +41,7 @@ import {
 
 // Re-exported so the engine stays the one import a caller needs, and so the
 // tests exercise the same functions the client renders from.
-export { forecastIQFinish, plannedPercentAt, scheduleCalendar };
+export { forecastIQFinish, plannedPercentAt, scheduleCalendar, scheduleCalendarFor };
 
 /**
  * Drift below this many working days is noise, not a variance — a crew
@@ -193,14 +195,16 @@ export function detectVariance(
   jobId: string,
   reportedPercent: number,
   status: Status,
-  asOf: string
+  asOf: string,
+  /** The workspace's working days and holidays; without them, the default six-day week. */
+  workCalendar?: WorkCalendarSetting
 ): VarianceDetection | null {
   const job = jobs.find((item) => item.id === jobId);
   if (!job) return null;
 
   // Anchor the axis at the earliest date in play so no index goes negative.
   const epoch = jobs.reduce((min, item) => (item.startDate < min ? item.startDate : min), job.startDate);
-  const calendar = scheduleCalendar(epoch);
+  const calendar = workCalendar ? scheduleCalendarFor(epoch, workCalendar) : scheduleCalendar(epoch);
   const asOfDate = asOf.slice(0, 10);
 
   const plannedPercent = plannedPercentAt(job, asOfDate, calendar);

@@ -16,7 +16,9 @@
   border-radius: 14px;
   padding: 12px 14px;
   background: var(--wx-bg-2);
-  transition: border-color 0.18s ease, background 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease;
 }
 .field-rx .fp-progress[data-reporting="on"] {
   border-color: color-mix(in srgb, var(--wx-blue) 40%, var(--wx-line-soft));
@@ -227,7 +229,9 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.16s ease, border-color 0.16s ease;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
 .sched-rx .sv-pill:hover {
   background: color-mix(in srgb, var(--wx-amber) 18%, var(--wx-card));
@@ -578,7 +582,9 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background 0.16s ease, border-color 0.16s ease;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
 .sched-rx .sv-actions button:disabled {
   opacity: 0.55;

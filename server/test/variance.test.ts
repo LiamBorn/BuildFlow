@@ -86,6 +86,18 @@ describe("detectVariance", () => {
     expect(result!.proposal.proposedEnd).toBe("2026-06-23");
   });
 
+  it("runs on the workspace's own calendar: a holiday and a five-day week push the plan and the forecast out", () => {
+    // Mon–Fri only, and Thu 18 June is a holiday: the job's window has four working days,
+    // so by Wednesday three of them have passed (75%), and the 40% pace forecasts
+    // Thu 25 June — the axis skips the holiday, the weekend and Sunday alike.
+    const setting = { workingDays: [1, 2, 3, 4, 5], holidays: [{ date: "2026-06-18", name: "Company holiday" }] };
+    const result = detectVariance([job()], [], "j-1", 40, "On Site", "2026-06-17", setting);
+    expect(result).not.toBeNull();
+    expect(result!.plannedPercent).toBe(75);
+    expect(result!.varianceDays).toBe(4);
+    expect(result!.proposal.proposedEnd).toBe("2026-06-25");
+  });
+
   it("flags a blocked job even when the numbers agree with the plan", () => {
     // The percent says on-plan, but the field says work has stopped — the
     // status carries information the number cannot.
@@ -140,10 +152,7 @@ describe("buildProposal — downstream ripple", () => {
   });
 
   it("declines to price a network with a dependency cycle", () => {
-    const cyclic: JobDependency[] = [
-      ...chain,
-      { id: "d-3", predecessorId: "j-inspect", successorId: "j-slab", type: "FS", lagDays: 0 }
-    ];
+    const cyclic: JobDependency[] = [...chain, { id: "d-3", predecessorId: "j-inspect", successorId: "j-slab", type: "FS", lagDays: 0 }];
     expect(buildProposal([slab, mep, inspect], cyclic, "j-slab", "2026-06-23", calendar)).toBeNull();
   });
 

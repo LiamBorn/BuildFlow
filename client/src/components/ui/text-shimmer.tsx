@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { useMemo, type CSSProperties, type ElementType } from "react"
+import { useMemo, type CSSProperties, type ElementType } from "react";
 
 interface TextShimmerProps {
-  children: string
-  as?: ElementType
-  className?: string
-  duration?: number // seconds
-  spread?: number
-  baseColor?: string
-  highlightColor?: string
+  children: string;
+  as?: ElementType;
+  className?: string;
+  duration?: number; // seconds
+  spread?: number;
+  baseColor?: string;
+  highlightColor?: string;
 }
 
 // Ported from the shadcn / framer-motion "TextShimmer" to this codebase's stack
@@ -24,10 +24,10 @@ export function TextShimmer({
   duration = 2,
   spread = 2,
   baseColor = "#9aa2ad",
-  highlightColor = "#2f6bff",
+  highlightColor = "#2f6bff"
 }: TextShimmerProps) {
   // Bright-band width scales with the text length, like the original component.
-  const dynamicSpread = useMemo(() => children.length * spread, [children, spread])
+  const dynamicSpread = useMemo(() => children.length * spread, [children, spread]);
 
   const style = {
     "--shimmer-spread": `${dynamicSpread}px`,
@@ -39,8 +39,8 @@ export function TextShimmer({
     backgroundSize: "250% 100%, auto",
     WebkitBackgroundClip: "text",
     backgroundClip: "text",
-    animation: `cc-text-shimmer ${duration}s linear infinite`,
-  } as CSSProperties
+    animation: `cc-text-shimmer ${duration}s linear infinite`
+  } as CSSProperties;
 
   return (
     <>
@@ -54,5 +54,5 @@ export function TextShimmer({
         {children}
       </Component>
     </>
-  )
+  );
 }

@@ -216,9 +216,7 @@ export function buildImportPlan(schedule: ParsedSchedule, options: ImportPlanOpt
     });
 
     const finishes = jobs.map((job) => job.endDate).sort();
-    const overallPercent = Math.round(
-      phases.reduce((sum, phase) => sum + phase.percentComplete, 0) / Math.max(1, phases.length)
-    );
+    const overallPercent = Math.round(phases.reduce((sum, phase) => sum + phase.percentComplete, 0) / Math.max(1, phases.length));
 
     projects.push({
       externalId: project.externalId,

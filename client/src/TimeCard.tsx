@@ -2,6 +2,7 @@ import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  CircleArrowUp,
   Boxes,
   CalendarClock,
   Camera,
@@ -50,7 +51,7 @@ import {
   YAxis
 } from "recharts";
 import type { BootstrapPayload } from "@buildflow/shared";
-import { weekDays } from "./scheduleUtils";
+import { weekDays } from "./schedule/scheduleUtils";
 import {
   BURDEN_RATE,
   OVERTIME_MULTIPLIER,
@@ -198,9 +199,7 @@ export function TimeCardPage({ data }: { data: BootstrapPayload }) {
 
   const week = model.weekLabel;
   const totals = useMemo(() => totalsFor(entries, model.workerById), [entries, model.workerById]);
-  const otPendingHours = timecards
-    .filter((card) => card.overtimePending)
-    .reduce((sum, card) => sum + card.overtimeHours, 0);
+  const otPendingHours = timecards.filter((card) => card.overtimePending).reduce((sum, card) => sum + card.overtimeHours, 0);
   const pendingApprovals = timecards.filter((card) =>
     card.chain.some((step) => step.state === "Pending" || step.state === "Rejected")
   ).length;
@@ -209,7 +208,7 @@ export function TimeCardPage({ data }: { data: BootstrapPayload }) {
 
   return (
     <div className="page-stack tc-page">
-      <div className="page-title tc-page-title">
+      <div className="page-title tc-page-title" data-tutorial-id="timecard-page-title">
         <div>
           <h1>TimeCard</h1>
           <p>Daily labor hours, cost, approvals, and certified-payroll compliance · {week}</p>
@@ -279,13 +278,7 @@ export function TimeCardPage({ data }: { data: BootstrapPayload }) {
       {tab === "cost" && <LaborCostTab model={model} entries={entries} />}
       {tab === "crew" && <CrewTab model={model} entries={entries} />}
       {tab === "approvals" && (
-        <ApprovalsTab
-          model={model}
-          timecards={timecards}
-          setTimecards={setTimecards}
-          audit={audit}
-          setAudit={setAudit}
-        />
+        <ApprovalsTab model={model} timecards={timecards} setTimecards={setTimecards} audit={audit} setAudit={setAudit} />
       )}
       {tab === "integrations" && <IntegrationsTab model={model} data={data} />}
       {tab === "reporting" && <ReportingTab model={model} entries={entries} />}
@@ -371,14 +364,10 @@ function TimeEntryTab({
   };
 
   const syncAll = () => {
-    setEntries((prev) =>
-      prev.map((entry) => (entry.synced ? entry : { ...entry, synced: true, status: "Submitted" as const }))
-    );
+    setEntries((prev) => prev.map((entry) => (entry.synced ? entry : { ...entry, synced: true, status: "Submitted" as const })));
   };
 
-  const recent = [...entries]
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
-    .slice(0, 12);
+  const recent = [...entries].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)).slice(0, 12);
 
   return (
     <div className="tc-body tc-entry-grid">
@@ -441,7 +430,14 @@ function TimeEntryTab({
           </label>
           <label className="tc-field">
             <span>Overtime hours</span>
-            <input type="number" min={0} max={12} step={0.5} value={overtime} onChange={(event) => setOvertime(Number(event.target.value))} />
+            <input
+              type="number"
+              min={0}
+              max={12}
+              step={0.5}
+              value={overtime}
+              onChange={(event) => setOvertime(Number(event.target.value))}
+            />
           </label>
           <div className="tc-verify-row">
             <button type="button" className={`tc-verify${photo ? " on" : ""}`} onClick={() => setPhoto((value) => !value)}>
@@ -456,11 +452,10 @@ function TimeEntryTab({
           <div className="tc-entry-submit">
             <span className="tc-entry-cost">
               Est.{" "}
-              {formatCurrency(
-                (Number(regular) || 0) * worker.baseRate +
-                  (Number(overtime) || 0) * worker.baseRate * OVERTIME_MULTIPLIER
-              )}
-              <em>{formatRate(worker.baseRate)} · {worker.role}</em>
+              {formatCurrency((Number(regular) || 0) * worker.baseRate + (Number(overtime) || 0) * worker.baseRate * OVERTIME_MULTIPLIER)}
+              <em>
+                {formatRate(worker.baseRate)} · {worker.role}
+              </em>
             </span>
             <button type="submit" className="tc-btn primary">
               <Plus size={16} />
@@ -488,7 +483,9 @@ function TimeEntryTab({
           <span className="tc-offline-icon">{unsynced.length ? <WifiOff size={18} /> : <CheckCircle2 size={18} />}</span>
           <div>
             <strong>{unsynced.length ? `${unsynced.length} entries stored offline` : "All entries synced"}</strong>
-            <em>{unsynced.length ? "Captured on the jobsite — will sync when connected." : "Local device is up to date with BuildFlow."}</em>
+            <em>
+              {unsynced.length ? "Captured on the jobsite — will sync when connected." : "Local device is up to date with BuildFlow."}
+            </em>
           </div>
           {unsynced.length > 0 && (
             <button type="button" className="tc-btn small" onClick={syncAll}>
@@ -635,7 +632,9 @@ function LaborCostTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
                     {row.sublabel && <em className="tc-cell-em">{row.sublabel}</em>}
                   </td>
                   <td className="num">{Math.round(row.totals.regularHours)}</td>
-                  <td className="num">{row.totals.overtimeHours ? <b className="tc-ot">{Math.round(row.totals.overtimeHours)}</b> : "—"}</td>
+                  <td className="num">
+                    {row.totals.overtimeHours ? <b className="tc-ot">{Math.round(row.totals.overtimeHours)}</b> : "—"}
+                  </td>
                   <td className="num">{Math.round(row.totals.totalHours)}</td>
                   <td className="num">{formatCurrency(row.totals.baseCost)}</td>
                   <td className="num">
@@ -692,7 +691,12 @@ function LaborCostTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
         </p>
       </SectionCard>
 
-      <SectionCard title="Project profitability impact" subtitle="Actual burdened labor vs weekly budget" icon={Gauge} className="tc-span-2">
+      <SectionCard
+        title="Project profitability impact"
+        subtitle="Actual burdened labor vs weekly budget"
+        icon={Gauge}
+        className="tc-span-2"
+      >
         <div className="tc-budget-list">
           {breakdownByProject(entries, model.workerById).map((row) => {
             const budget = row.budgetHours ?? 0;
@@ -788,7 +792,12 @@ function LaborCostTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
 function CrewTab({ model, entries }: { model: Model; entries: TcEntry[] }) {
   return (
     <div className="tc-body">
-      <SectionCard title="Attendance verification" subtitle="Scheduled crew vs. who actually logged time" icon={UserCheck} className="tc-span-2">
+      <SectionCard
+        title="Attendance verification"
+        subtitle="Scheduled crew vs. who actually logged time"
+        icon={UserCheck}
+        className="tc-span-2"
+      >
         <div className="tc-attend-grid">
           {model.attendance.map((row) => {
             const pct = row.scheduled > 0 ? Math.round((row.actual / row.scheduled) * 100) : 0;
@@ -821,7 +830,10 @@ function CrewTab({ model, entries }: { model: Model; entries: TcEntry[] }) {
             const meta = crewMeta(crew.id);
             const project = model.projects.find((item) => item.id === crew.projectId);
             const crewWorkers = model.workers.filter((worker) => worker.crewId === crew.id);
-            const crewHours = totalsFor(entries.filter((entry) => entry.crewId === crew.id), model.workerById);
+            const crewHours = totalsFor(
+              entries.filter((entry) => entry.crewId === crew.id),
+              model.workerById
+            );
             return (
               <div className="tc-roster-card" key={crew.id}>
                 <header>
@@ -1091,9 +1103,7 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
   const totals = totalsFor(model.entries, model.workerById);
   const scheduleActual = Math.round(totals.totalHours);
   const schedulePlanned = model.crews.reduce((sum, crew) => sum + crew.scheduledHeadcount * 40, 0);
-  const equipmentHours = model.entries
-    .filter((entry) => entry.source === "Equipment")
-    .reduce((sum, entry) => sum + entryHours(entry), 0);
+  const equipmentHours = model.entries.filter((entry) => entry.source === "Equipment").reduce((sum, entry) => sum + entryHours(entry), 0);
   const fieldSyncCount = model.entries.filter((entry) => entry.source === "Field Sync").length;
 
   const integrations = [
@@ -1152,7 +1162,12 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
 
   return (
     <div className="tc-body">
-      <SectionCard title="Connected BuildFlow modules" subtitle="TimeCard pulls and pushes across the platform" icon={Link2} className="tc-span-2">
+      <SectionCard
+        title="Connected BuildFlow modules"
+        subtitle="TimeCard pulls and pushes across the platform"
+        icon={Link2}
+        className="tc-span-2"
+      >
         <div className="tc-integration-grid">
           {integrations.map((item) => {
             const Icon = item.icon;
@@ -1189,7 +1204,12 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
               data={model.crews.map((crew) => ({
                 name: crew.name.replace(" Crew", ""),
                 planned: crew.scheduledHeadcount * 40,
-                actual: Math.round(totalsFor(model.entries.filter((entry) => entry.crewId === crew.id), model.workerById).totalHours)
+                actual: Math.round(
+                  totalsFor(
+                    model.entries.filter((entry) => entry.crewId === crew.id),
+                    model.workerById
+                  ).totalHours
+                )
               }))}
               barGap={6}
               margin={{ top: 10, right: 16, bottom: 4, left: -12 }}
@@ -1347,8 +1367,7 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
             <div>
               <span>Approved timecards</span>
               <strong>
-                {model.timecards.filter((card) => card.chain.every((step) => step.state === "Approved")).length} /{" "}
-                {model.timecards.length}
+                {model.timecards.filter((card) => card.chain.every((step) => step.state === "Approved")).length} / {model.timecards.length}
               </strong>
             </div>
             <div>
@@ -1438,7 +1457,11 @@ function ComplianceTab({ model, entries }: { model: Model; entries: TcEntry[] })
                     </span>
                   </td>
                   <td>
-                    <TcPill tone={worker.classification === "Apprentice" ? "amber" : worker.classification === "Subcontractor" ? "violet" : "blue"}>
+                    <TcPill
+                      tone={
+                        worker.classification === "Apprentice" ? "amber" : worker.classification === "Subcontractor" ? "violet" : "blue"
+                      }
+                    >
                       {worker.classification}
                     </TcPill>
                   </td>
@@ -1550,7 +1573,16 @@ function ComplianceTab({ model, entries }: { model: Model; entries: TcEntry[] })
 // 8. Dashboard widgets (rendered on the main BuildFlow dashboard)
 // ---------------------------------------------------------------------------
 
-export function TimeCardDashboardCards({ data, onOpen }: { data: BootstrapPayload; onOpen: () => void }) {
+export function TimeCardDashboardCards({
+  data,
+  onOpen,
+  locked = false
+}: {
+  data: BootstrapPayload;
+  onOpen: () => void;
+  /** TimeCard is an add-on the workspace doesn't have yet — onOpen prompts for it. */
+  locked?: boolean;
+}) {
   const model = useMemo(() => buildTimecardModel(data), [data]);
   const totals = useMemo(() => totalsFor(model.entries, model.workerById), [model]);
   const today = tcWorkDays[3].date;
@@ -1561,9 +1593,7 @@ export function TimeCardDashboardCards({ data, onOpen }: { data: BootstrapPayloa
   const budgetPct = Math.round((totals.totalHours / weeklyBudget) * 100);
   const otPending = model.timecards.filter((card) => card.overtimePending);
   const otPendingHours = otPending.reduce((sum, card) => sum + card.overtimeHours, 0);
-  const utilization = Math.round(
-    (totals.totalHours / (model.crews.reduce((sum, crew) => sum + crew.scheduledHeadcount, 0) * 48)) * 100
-  );
+  const utilization = Math.round((totals.totalHours / (model.crews.reduce((sum, crew) => sum + crew.scheduledHeadcount, 0) * 48)) * 100);
   const pendingCrews = model.crews
     .map((crew) => ({
       crew,
@@ -1579,9 +1609,22 @@ export function TimeCardDashboardCards({ data, onOpen }: { data: BootstrapPayloa
       <header className="tc-dash-head">
         <h2>
           <Clock size={18} /> TimeCard
+          {locked && (
+            <span className="tc-dash-addon" title="TimeCard is an add-on — choose it to see where to get it">
+              <CircleArrowUp size={12} /> Add-on
+            </span>
+          )}
         </h2>
-        <button type="button" className="tc-dash-open" onClick={onOpen}>
-          Open TimeCard <ArrowRight size={16} />
+        <button type="button" className={`tc-dash-open${locked ? " locked" : ""}`} onClick={onOpen}>
+          {locked ? (
+            <>
+              Get TimeCard <CircleArrowUp size={16} />
+            </>
+          ) : (
+            <>
+              Open TimeCard <ArrowRight size={16} />
+            </>
+          )}
         </button>
       </header>
       <div className="tc-dash-grid">
@@ -1599,7 +1642,9 @@ export function TimeCardDashboardCards({ data, onOpen }: { data: BootstrapPayloa
           </span>
           <p>Hours this week</p>
           <strong>{Math.round(totals.totalHours)}</strong>
-          <em>{budgetPct}% of {weeklyBudget} budgeted</em>
+          <em>
+            {budgetPct}% of {weeklyBudget} budgeted
+          </em>
         </button>
         <button type="button" className="tc-dash-card" onClick={onOpen}>
           <span className="tc-dash-icon amber">
@@ -1644,7 +1689,12 @@ export function TimeCardDashboardCards({ data, onOpen }: { data: BootstrapPayloa
           <p>Crews with pending approvals</p>
           <strong>{pendingCrews.length}</strong>
           <em className="tc-dash-crewnames">
-            {pendingCrews.length ? pendingCrews.slice(0, 2).map((row) => row.crew.name).join(", ") : "All approved"}
+            {pendingCrews.length
+              ? pendingCrews
+                  .slice(0, 2)
+                  .map((row) => row.crew.name)
+                  .join(", ")
+              : "All approved"}
           </em>
         </button>
       </div>

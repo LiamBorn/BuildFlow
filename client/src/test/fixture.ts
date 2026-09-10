@@ -5,6 +5,7 @@ export const bootstrapFixture: BootstrapPayload = {
     { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
     { id: "u-carlos", name: "Carlos Ramirez", role: "Crew Lead", title: "Crew Lead - Crew 2", avatar: "CR" }
   ],
+  onboardingCompletedAt: "2026-01-05T09:00:00.000Z",
   activeUser: { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
   projects: [
     {
@@ -94,9 +95,7 @@ export const bootstrapFixture: BootstrapPayload = {
       ]
     }
   ],
-  equipment: [
-    { id: "eq-pump", name: "Concrete Pump #2", type: "Pump", status: "In Use", assignedTo: "p-riverside" }
-  ],
+  equipment: [{ id: "eq-pump", name: "Concrete Pump #2", type: "Pump", status: "In Use", assignedTo: "p-riverside" }],
   materials: [
     {
       id: "mat-concrete",
@@ -144,9 +143,7 @@ export const bootstrapFixture: BootstrapPayload = {
       description: "Site prep slowed by rain."
     }
   ],
-  readiness: [
-    { id: "ready-1", projectId: "p-riverside", label: "Contract Signed", complete: true, dueDate: "2026-03-12" }
-  ],
+  readiness: [{ id: "ready-1", projectId: "p-riverside", label: "Contract Signed", complete: true, dueDate: "2026-03-12" }],
   inspections: [
     {
       id: "insp-1",

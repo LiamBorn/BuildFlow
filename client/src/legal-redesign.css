@@ -1,19 +1,3 @@
-/* =========================================================================
-   Legal pages — Privacy Policy / Terms of Service / Security
-   Routes: #privacy · #terms · #security   (WelcomeLegalPage in App.tsx)
-
-   Built on the shared `.cs-page` welcome system so it inherits the theme
-   exactly: --wx-* tokens (auto light/dark), --wx-serif, the wx-bg auroras,
-   .wx-cursor tint, [data-reveal] reveal tweens, and the wx-footer — identical
-   motion + styling to the Contact Sales page. Only the doc layout (sticky
-   table-of-contents + article sections) is page-specific here.
-   All surfaces use --wx-* tokens so dark mode (.welcome-rx.wx-dark) just works.
-   ========================================================================= */
-
-.welcome-rx .lgx-hero {
-  max-width: 760px;
-  padding-bottom: clamp(6px, 1.6vh, 20px);
-}
 .welcome-rx .lgx-updated {
   display: inline-flex;
   align-items: center;
@@ -23,7 +7,9 @@
   font-weight: 500;
   color: var(--wx-faint);
 }
-.welcome-rx .lgx-updated svg { color: var(--wx-blue); }
+.welcome-rx .lgx-updated svg {
+  color: var(--wx-blue);
+}
 
 /* ============================== draft / not-binding banner ============================== */
 /* Shown on every legal page while LEGAL_DRAFT is true (App.tsx). Amber "caution"
@@ -37,9 +23,7 @@
   border-radius: 16px;
   border: 1px solid #e6b566;
   border-left: 4px solid #cf8a1f;
-  background:
-    radial-gradient(120% 150% at 0% 0%, rgba(207, 138, 31, 0.12), transparent 60%),
-    #fff8ea;
+  background: radial-gradient(120% 150% at 0% 0%, rgba(207, 138, 31, 0.12), transparent 60%), #fff8ea;
   box-shadow: 0 30px 60px -50px rgba(28, 28, 26, 0.5);
   padding: clamp(16px, 2vw, 22px) clamp(18px, 2.2vw, 26px);
 }
@@ -68,26 +52,19 @@
   line-height: 1.6;
   color: var(--wx-mut);
 }
-.welcome-rx .lgx-draft b { color: var(--wx-ink); font-weight: 600; }
+.welcome-rx .lgx-draft b {
+  color: var(--wx-ink);
+  font-weight: 600;
+}
 .welcome-rx .lgx-draft a {
   color: #b45309;
   cursor: pointer;
   text-decoration: none;
   font-weight: 600;
 }
-.welcome-rx .lgx-draft a:hover { text-decoration: underline; }
-
-/* dark mode — amber reads on the dark welcome chrome */
-.welcome-rx.wx-dark .lgx-draft {
-  border-color: rgba(230, 169, 75, 0.4);
-  border-left-color: #e6a94b;
-  background:
-    radial-gradient(120% 150% at 0% 0%, rgba(230, 169, 75, 0.14), transparent 60%),
-    rgba(230, 169, 75, 0.05);
+.welcome-rx .lgx-draft a:hover {
+  text-decoration: underline;
 }
-.welcome-rx.wx-dark .lgx-draft-ic { background: rgba(230, 169, 75, 0.18); color: #f0c680; }
-.welcome-rx.wx-dark .lgx-draft-title { color: #f4cf8c; }
-.welcome-rx.wx-dark .lgx-draft a { color: #f0c680; }
 
 /* ============================== body: TOC + article ============================== */
 .welcome-rx .lgx-body {
@@ -113,7 +90,10 @@
   color: var(--wx-faint);
   margin-bottom: 6px;
 }
-.welcome-rx .lgx-toc nav { display: grid; gap: 1px; }
+.welcome-rx .lgx-toc nav {
+  display: grid;
+  gap: 1px;
+}
 .welcome-rx .lgx-toc nav a {
   font-size: 13.5px;
   line-height: 1.35;
@@ -122,7 +102,10 @@
   padding: 6px 11px;
   border-radius: 8px;
   border-left: 2px solid transparent;
-  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
 .welcome-rx .lgx-toc nav a:hover {
   color: var(--wx-ink);
@@ -148,11 +131,22 @@
   padding: 8px 11px;
   border-radius: 10px;
   border: 1px solid transparent;
-  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
 }
-.welcome-rx .lgx-switch a svg { color: var(--wx-faint); transition: color 0.16s ease; }
-.welcome-rx .lgx-switch a:hover { color: var(--wx-ink); background: var(--wx-bg-2); }
-.welcome-rx .lgx-switch a:hover svg { color: var(--wx-blue); }
+.welcome-rx .lgx-switch a svg {
+  color: var(--wx-faint);
+  transition: color 0.16s ease;
+}
+.welcome-rx .lgx-switch a:hover {
+  color: var(--wx-ink);
+  background: var(--wx-bg-2);
+}
+.welcome-rx .lgx-switch a:hover svg {
+  color: var(--wx-blue);
+}
 .welcome-rx .lgx-switch a.is-active {
   color: var(--wx-ink);
   font-weight: 600;
@@ -160,10 +154,16 @@
   border-color: var(--wx-line-soft);
   box-shadow: 0 10px 26px -20px rgba(28, 28, 26, 0.5);
 }
-.welcome-rx .lgx-switch a.is-active svg { color: var(--wx-blue); }
+.welcome-rx .lgx-switch a.is-active svg {
+  color: var(--wx-blue);
+}
 
 /* ============================== article ============================== */
-.welcome-rx .lgx-doc { display: grid; gap: 14px; min-width: 0; }
+.welcome-rx .lgx-doc {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
 .welcome-rx .lgx-section {
   scroll-margin-top: 92px;
   border-radius: 16px;
@@ -198,24 +198,38 @@
   line-height: 1.68;
   color: var(--wx-mut);
 }
-.welcome-rx .lgx-section p:last-child { margin-bottom: 0; }
+.welcome-rx .lgx-section p:last-child {
+  margin-bottom: 0;
+}
 .welcome-rx .lgx-section ul {
   margin: 0 0 11px;
   padding-left: 20px;
   display: grid;
   gap: 6px;
 }
-.welcome-rx .lgx-section ul:last-child { margin-bottom: 0; }
+.welcome-rx .lgx-section ul:last-child {
+  margin-bottom: 0;
+}
 .welcome-rx .lgx-section li {
   font-size: 14px;
   line-height: 1.6;
   color: var(--wx-mut);
   padding-left: 4px;
 }
-.welcome-rx .lgx-section li::marker { color: var(--wx-blue); }
-.welcome-rx .lgx-section strong { color: var(--wx-ink); font-weight: 600; }
-.welcome-rx .lgx-section a { color: var(--wx-blue); text-decoration: none; }
-.welcome-rx .lgx-section a:hover { text-decoration: underline; }
+.welcome-rx .lgx-section li::marker {
+  color: var(--wx-blue);
+}
+.welcome-rx .lgx-section strong {
+  color: var(--wx-ink);
+  font-weight: 600;
+}
+.welcome-rx .lgx-section a {
+  color: var(--wx-blue);
+  text-decoration: none;
+}
+.welcome-rx .lgx-section a:hover {
+  text-decoration: underline;
+}
 
 /* closing "questions?" note */
 .welcome-rx .lgx-note {
@@ -225,9 +239,7 @@
   margin-top: 4px;
   border-radius: 16px;
   border: 1px solid var(--wx-line-soft);
-  background:
-    radial-gradient(120% 150% at 0% 0%, rgba(26, 115, 232, 0.09), transparent 60%),
-    var(--wx-card);
+  background: radial-gradient(120% 150% at 0% 0%, rgba(26, 115, 232, 0.09), transparent 60%), var(--wx-card);
   box-shadow: 0 30px 60px -50px rgba(28, 28, 26, 0.5);
   padding: clamp(20px, 2.4vw, 28px);
 }
@@ -249,22 +261,36 @@
   margin: 2px 0 5px;
   color: var(--wx-ink);
 }
-.welcome-rx .lgx-note p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--wx-mut); }
+.welcome-rx .lgx-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wx-mut);
+}
 .welcome-rx .lgx-note a {
   color: var(--wx-blue);
   cursor: pointer;
   text-decoration: none;
   font-weight: 500;
 }
-.welcome-rx .lgx-note a:hover { text-decoration: underline; }
+.welcome-rx .lgx-note a:hover {
+  text-decoration: underline;
+}
 
 /* ============================== responsive ============================== */
 @media (max-width: 860px) {
-  .welcome-rx .lgx-body { grid-template-columns: 1fr; }
-  .welcome-rx .lgx-toc { position: static; top: auto; }
+  .welcome-rx .lgx-body {
+    grid-template-columns: 1fr;
+  }
+  .welcome-rx .lgx-toc {
+    position: static;
+    top: auto;
+  }
   /* the in-page section list is a desktop convenience — hide it on mobile,
      keep the doc switcher as a horizontal row */
-  .welcome-rx .lgx-toc > nav { display: none; }
+  .welcome-rx .lgx-toc > nav {
+    display: none;
+  }
   .welcome-rx .lgx-switch {
     margin-top: 0;
     padding-top: 0;
@@ -272,9 +298,16 @@
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
   }
-  .welcome-rx .lgx-switch a { justify-content: center; }
+  .welcome-rx .lgx-switch a {
+    justify-content: center;
+  }
 }
 @media (max-width: 520px) {
-  .welcome-rx .lgx-switch { grid-auto-flow: row; }
-  .welcome-rx .lgx-note { flex-direction: column; gap: 12px; }
+  .welcome-rx .lgx-switch {
+    grid-auto-flow: row;
+  }
+  .welcome-rx .lgx-note {
+    flex-direction: column;
+    gap: 12px;
+  }
 }

@@ -35,32 +35,52 @@
   -webkit-font-smoothing: antialiased;
 }
 /* clean white panel — no aurora glow (matches reference) */
-.sidebar-rx.sidebar::after { display: none; }
-.sidebar-rx.sidebar.collapsed::after { display: none; }
+.sidebar-rx.sidebar::after {
+  display: none;
+}
+.sidebar-rx.sidebar.collapsed::after {
+  display: none;
+}
 
-/* ---- toggle button (cream disc on the edge) ---- */
+/* ---- toggle button (accent disc on the edge) ----
+   This sits on the seam between the white sidebar and the near-white content
+   area, so a pale disc disappears. It uses the sidebar's own accent (the same
+   --wx-blue as the active nav icon) with a white ring, which reads clearly
+   against both surfaces. */
 .sidebar-rx .sidebar-toggle {
-  border: 1px solid var(--wx-line);
-  background: #fffdf9;
-  color: var(--wx-ink);
-  box-shadow: 0 10px 26px rgba(28, 28, 26, 0.16);
-  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s ease, background 0.2s ease;
+  border: 3px solid #fff;
+  background: var(--wx-blue);
+  color: #fff;
+  box-shadow:
+    0 8px 22px rgba(26, 115, 232, 0.42),
+    0 2px 6px rgba(28, 28, 26, 0.18);
+  transition:
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.24s ease,
+    background 0.2s ease;
 }
 .sidebar-rx .sidebar-toggle:hover,
 .sidebar-rx .sidebar-toggle:focus-visible {
-  background: #fff;
-  color: var(--wx-ink);
-  box-shadow: 0 16px 34px rgba(28, 28, 26, 0.22);
-  transform: translateX(3px) scale(1.05);
+  background: #0b5ed7;
+  color: #fff;
+  box-shadow:
+    0 12px 30px rgba(26, 115, 232, 0.52),
+    0 3px 8px rgba(28, 28, 26, 0.22);
+  transform: translateX(3px) scale(1.06);
 }
-.sidebar-rx .sidebar-toggle svg { stroke-width: 2.4; }
+.sidebar-rx .sidebar-toggle svg {
+  stroke-width: 3;
+  opacity: 1;
+}
 
 /* ---- brand wordmark ---- */
 .sidebar-rx .brand {
   border-bottom: 1px solid var(--wx-line-soft);
   transition: opacity 0.2s ease;
 }
-.sidebar-rx .brand:hover { opacity: 0.82; }
+.sidebar-rx .brand:hover {
+  opacity: 0.82;
+}
 .sidebar-rx .brand strong {
   font-family: var(--cc-sans);
   font-weight: 750;
@@ -69,10 +89,16 @@
   color: var(--sb-navy);
 }
 /* reference wordmark is just "BuildFlow" — hide the module subtitle */
-.sidebar-rx .brand em { display: none; }
+.sidebar-rx .brand em {
+  display: none;
+}
 
 /* ============================ nav + magic indicator ==================== */
-.sidebar-rx .nav-list { position: relative; z-index: 1; gap: 4px; }
+.sidebar-rx .nav-list {
+  position: relative;
+  z-index: 1;
+  gap: 4px;
+}
 
 .sidebar-rx .nav-indicator {
   position: absolute;
@@ -93,7 +119,9 @@
     opacity 0.3s ease;
 }
 /* reference active pill is a flat light-blue fill — no accent bar */
-.sidebar-rx .nav-indicator::before { display: none; }
+.sidebar-rx .nav-indicator::before {
+  display: none;
+}
 
 .sidebar-rx .nav-item {
   position: relative;
@@ -105,25 +133,41 @@
   translate: -12px 0;
   animation: sb-nav-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: calc(var(--nav-i, 0) * 0.045s + 0.12s);
-  transition: color 0.2s ease, background 0.2s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes sb-nav-in {
-  from { opacity: 0; translate: -12px 0; }
-  to { opacity: 1; translate: 0 0; }
+  from {
+    opacity: 0;
+    translate: -12px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 .sidebar-rx .nav-item svg {
   color: var(--sb-slate);
   opacity: 0.85;
-  transition: color 0.2s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    color 0.2s ease,
+    transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.sidebar-rx .nav-item span { font-weight: 550; }
+.sidebar-rx .nav-item span {
+  font-weight: 550;
+}
 
 /* hover (non-active) — subtle blue wash */
 .sidebar-rx .nav-item:not(.active):hover {
   color: var(--sb-navy);
   background: rgba(47, 107, 255, 0.06);
 }
-.sidebar-rx .nav-item:not(.active):hover svg { color: var(--wx-blue); opacity: 1; }
+.sidebar-rx .nav-item:not(.active):hover svg {
+  color: var(--wx-blue);
+  opacity: 1;
+}
 
 /* active — sits on the sliding light-blue pill, blue icon + label */
 .sidebar-rx .nav-item.active {
@@ -131,15 +175,30 @@
   background: transparent;
   box-shadow: none;
 }
-.sidebar-rx .nav-item.active span { font-weight: 650; }
-.sidebar-rx .nav-item.active svg { color: var(--wx-blue); opacity: 1; }
+.sidebar-rx .nav-item.active span {
+  font-weight: 650;
+}
+.sidebar-rx .nav-item.active svg {
+  color: var(--wx-blue);
+  opacity: 1;
+}
 
 /* recommended — keep the label readable slate (base theme tints it light blue),
    and mark it with a subtle blue dot after the label */
-.sidebar-rx .nav-item.recommended:not(.active) { color: var(--sb-slate); }
-.sidebar-rx .nav-item.recommended:not(.active) svg { color: var(--sb-slate); opacity: 0.85; }
-.sidebar-rx .nav-item.recommended:not(.active):hover { color: var(--sb-navy); }
-.sidebar-rx .nav-item.recommended:not(.active):hover svg { color: var(--wx-blue); opacity: 1; }
+.sidebar-rx .nav-item.recommended:not(.active) {
+  color: var(--sb-slate);
+}
+.sidebar-rx .nav-item.recommended:not(.active) svg {
+  color: var(--sb-slate);
+  opacity: 0.85;
+}
+.sidebar-rx .nav-item.recommended:not(.active):hover {
+  color: var(--sb-navy);
+}
+.sidebar-rx .nav-item.recommended:not(.active):hover svg {
+  color: var(--wx-blue);
+  opacity: 1;
+}
 .sidebar-rx .nav-item.recommended:not(.active) span::after {
   content: "";
   display: inline-block;
@@ -152,7 +211,15 @@
   box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.14);
   animation: sb-dot 2.6s ease-in-out infinite;
 }
-@keyframes sb-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes sb-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
 
 /* ============================ footer: account profile ================= */
 .sidebar-rx .sidebar-account {
@@ -170,7 +237,9 @@
   color: var(--sb-navy);
   transition: background 0.18s ease;
 }
-.sidebar-rx .sidebar-account:hover { background: rgba(47, 107, 255, 0.06); }
+.sidebar-rx .sidebar-account:hover {
+  background: rgba(47, 107, 255, 0.06);
+}
 .sidebar-rx .sidebar-account-avatar {
   display: grid;
   place-items: center;
@@ -185,7 +254,12 @@
   font-size: 13px;
   text-transform: uppercase;
 }
-.sidebar-rx .sidebar-account-meta { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.sidebar-rx .sidebar-account-meta {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
 .sidebar-rx .sidebar-account-meta strong {
   font-family: var(--cc-sans);
   font-size: 13.5px;
@@ -204,17 +278,35 @@
   font-weight: 500;
   color: var(--wx-faint);
 }
-.sidebar-rx .sidebar-account > svg { color: var(--wx-faint); flex: none; }
+.sidebar-rx .sidebar-account > svg {
+  color: var(--wx-faint);
+  flex: none;
+}
 
 /* collapsed: show only the avatar */
-.sidebar-rx.collapsed .sidebar-account { justify-content: center; padding: 12px 0; }
+.sidebar-rx.collapsed .sidebar-account {
+  justify-content: center;
+  padding: 12px 0;
+}
 .sidebar-rx.collapsed .sidebar-account-meta,
-.sidebar-rx.collapsed .sidebar-account > svg { display: none; }
+.sidebar-rx.collapsed .sidebar-account > svg {
+  display: none;
+}
 
 /* ============================ reduced motion ========================= */
 @media (prefers-reduced-motion: reduce) {
-  .sidebar-rx .nav-item { animation-duration: 0.01s; opacity: 1; translate: none; }
-  .sidebar-rx .sidebar-card { animation: none; }
-  .sidebar-rx .nav-item.recommended:not(.active) span::after { animation: none; }
-  .sidebar-rx .nav-indicator { transition-duration: 0.2s; }
+  .sidebar-rx .nav-item {
+    animation-duration: 0.01s;
+    opacity: 1;
+    translate: none;
+  }
+  .sidebar-rx .sidebar-card {
+    animation: none;
+  }
+  .sidebar-rx .nav-item.recommended:not(.active) span::after {
+    animation: none;
+  }
+  .sidebar-rx .nav-indicator {
+    transition-duration: 0.2s;
+  }
 }

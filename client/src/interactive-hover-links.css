@@ -1,0 +1,173 @@
+/* ============================================================================
+   interactive-hover-links.css — the 21st.dev "Interactive hover links",
+   Tailwind utilities ported to plain CSS (components/ui/interactive-hover-links.tsx).
+   Motion (letter fan-out, floating picture, sliding arrow) is framer-motion; this
+   file is the static look. Tokens fall back so it works outside .welcome-rx.
+   ========================================================================== */
+.ihl-section {
+  width: 100%;
+  padding: 16px;
+  background: var(--wx-card, #ffffff);
+}
+@media (min-width: 768px) {
+  .ihl-section {
+    padding: 64px 32px;
+  }
+}
+.ihl-list {
+  max-width: 1024px;
+  margin: 0 auto;
+}
+
+.ihl-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 2px solid var(--wx-line, rgba(28, 28, 26, 0.13));
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.5s;
+}
+@media (min-width: 768px) {
+  .ihl-link {
+    padding: 32px 0;
+  }
+}
+.ihl-link:hover,
+.ihl-link:focus-visible {
+  border-bottom-color: var(--wx-ink, #1c1c1a);
+}
+.ihl-link:focus-visible {
+  outline: 2px solid var(--wx-blue, #2f6bff);
+  outline-offset: 4px;
+}
+
+.ihl-text {
+  position: relative;
+  z-index: 10;
+  min-width: 0;
+}
+.ihl-heading {
+  position: relative;
+  z-index: 10;
+  display: block;
+  font-size: clamp(34px, 8vw, 60px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wx-mut, #575550);
+  transition: color 0.5s;
+}
+.ihl-letter {
+  display: inline-block;
+}
+.ihl-subheading {
+  position: relative;
+  z-index: 10;
+  display: block;
+  margin-top: 8px;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--wx-mut, #575550);
+  transition: color 0.5s;
+}
+.ihl-link:hover .ihl-heading,
+.ihl-link:hover .ihl-subheading {
+  color: var(--wx-ink, #1c1c1a);
+}
+
+.ihl-image {
+  position: absolute;
+  z-index: 0;
+  width: 128px;
+  height: 96px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .ihl-image {
+    width: 256px;
+    height: 192px;
+  }
+}
+
+.ihl-trailing {
+  position: relative;
+  z-index: 10;
+  flex: none;
+  overflow: hidden;
+}
+.ihl-arrow {
+  padding: 16px;
+}
+.ihl-arrow svg {
+  display: block;
+  width: 32px;
+  height: 32px;
+  color: var(--wx-ink, #1c1c1a);
+  transition: transform 0.3s;
+}
+@media (min-width: 768px) {
+  .ihl-arrow svg {
+    width: 48px;
+    height: 48px;
+  }
+}
+/* an expanded accordion head keeps its arrow, pointing down */
+.ihl-link.is-expanded .ihl-arrow {
+  opacity: 1 !important;
+  transform: none !important;
+}
+.ihl-link.is-expanded .ihl-arrow svg {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ihl-link,
+  .ihl-heading,
+  .ihl-subheading,
+  .ihl-arrow svg {
+    transition: none;
+  }
+}
+
+/* compact rows for menu panels: smaller type, picture and arrow */
+.ihl-link.is-compact {
+  padding: 10px 4px;
+  border-bottom-width: 1px;
+}
+.ihl-link.is-compact .ihl-heading {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.ihl-link.is-compact .ihl-subheading {
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+.ihl-link.is-compact .ihl-image {
+  width: 96px;
+  height: 72px;
+  border-radius: 6px;
+}
+.ihl-link.is-compact .ihl-arrow {
+  padding: 6px 2px 6px 10px;
+}
+.ihl-link.is-compact .ihl-arrow svg {
+  width: 20px;
+  height: 20px;
+}

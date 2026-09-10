@@ -1,3 +1,4 @@
+import { tradeProfiles } from "@buildflow/shared";
 import type {
   BootstrapPayload,
   BusinessTypeId,
@@ -20,15 +21,12 @@ type TradeTemplate = {
   projectType: string;
   projectNames: [string, string, string];
   locationPrefix: string;
-  phases: string[];
   jobs: string[];
   crews: Array<Pick<Crew, "name" | "specialty" | "lead" | "size" | "capacity" | "utilization" | "icon" | "status" | "laborMix">>;
   equipment: Array<Pick<Equipment, "name" | "type" | "status">>;
   materials: Array<Pick<Material, "name" | "status" | "quantity">>;
-  readiness: string[];
   delayIQ: Pick<DelayIQ, "category" | "title" | "impactDays" | "severity" | "status" | "description">;
   inspectionTitles: [string, string, string];
-  weather: Pick<WeatherAlert, "title" | "details" | "severity">;
 };
 
 const profileUsers: User[] = [
@@ -63,52 +61,65 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function compactCrew(trade: string, name: string, specialty: string, lead: string, icon: string, utilization: number): TradeTemplate["crews"][number] {
+type LaborMix = Crew["laborMix"];
+/** [category, role, count] — terse so 13 trades × 5 crews stays readable. */
+type MixSpec = Array<[Crew["laborMix"][number]["category"], string, number]>;
+const mix = (spec: MixSpec): LaborMix => spec.map(([category, role, count]) => ({ category, role, count }));
+
+function compactCrew(
+  name: string,
+  specialty: string,
+  lead: string,
+  icon: string,
+  utilization: number,
+  laborMix: LaborMix
+): TradeTemplate["crews"][number] {
   return {
     name,
     specialty,
     lead,
-    size: 6,
+    // headcount is the sum of the roles, not a fixed 6 — a two-tech testing
+    // crew and a seven-hand paving crew should not read the same size
+    size: laborMix.reduce((sum, item) => sum + item.count, 0),
     capacity: 40,
     utilization,
     icon,
     status: utilization > 84 ? "Overbooked" : utilization > 55 ? "Scheduled" : "Available",
-    laborMix: [
-      { category: "Labor", role: `${trade} Lead Hands`, count: 2 },
-      { category: "Labor", role: `${trade} Laborers`, count: 2 },
-      { category: "Operator", role: "Equipment Operator", count: 1 }
-    ]
+    laborMix
   };
 }
 
-function compactTemplate(
-  trade: Exclude<BusinessTypeId, "Asphalt">,
-  input: {
-    projectType: string;
-    projectNames: [string, string, string];
-    locationPrefix: string;
-    phases: string[];
-    jobs: string[];
-    crewSpecialties: [string, string, string, string, string];
-    equipment: [string, string, string, string, string, string];
-    materials: [string, string, string, string, string, string];
-    readiness: [string, string, string, string, string, string];
-    delayIQCategory: string;
-    delayIQTitle: string;
-    delayIQDescription: string;
-    inspectionTitles: [string, string, string];
-    weatherTitle: string;
-    weatherDetails: string;
-  }
-): TradeTemplate {
+function compactTemplate(input: {
+  projectType: string;
+  projectNames: [string, string, string];
+  locationPrefix: string;
+  jobs: string[];
+  crewSpecialties: [string, string, string, string, string];
+  /** Real roles per crew, in crewSpecialties order — what the crew actually fields. */
+  laborMixes: [MixSpec, MixSpec, MixSpec, MixSpec, MixSpec];
+  equipment: [string, string, string, string, string, string];
+  materials: [string, string, string, string, string, string];
+  /** How the trade counts each material — tons, cy, squares, lf — not "42 units". */
+  quantities: [string, string, string, string, string, string];
+  delayIQCategory: string;
+  delayIQTitle: string;
+  delayIQDescription: string;
+  inspectionTitles: [string, string, string];
+}): TradeTemplate {
   return {
     projectType: input.projectType,
     projectNames: input.projectNames,
     locationPrefix: input.locationPrefix,
-    phases: input.phases,
     jobs: input.jobs,
     crews: input.crewSpecialties.map((specialty, index) =>
-      compactCrew(trade, `${specialty} Crew ${index + 1}`, specialty, ["Sam Patel", "Dana Brooks", "Priya Patel", "Morgan Lee", "Anthony Russo"][index], ["users", "wrench", "truck", "hard-hat", "map"][index], [78, 64, 72, 46, 88][index])
+      compactCrew(
+        `${specialty} Crew ${index + 1}`,
+        specialty,
+        ["Sam Patel", "Dana Brooks", "Priya Patel", "Morgan Lee", "Anthony Russo"][index],
+        ["users", "wrench", "truck", "hard-hat", "map"][index],
+        [78, 64, 72, 46, 88][index],
+        mix(input.laborMixes[index])
+      )
     ),
     equipment: input.equipment.map((name, index) => ({
       name,
@@ -118,9 +129,8 @@ function compactTemplate(
     materials: input.materials.map((name, index) => ({
       name,
       status: (["Ready", "Ready", "Ordered", "Ready", "Missing", "Waiting on Delivery"] as Material["status"][])[index],
-      quantity: ["18 loads", "42 units", "7 pallets", "260 ft", "Pending", "12 kits"][index]
+      quantity: input.quantities[index]
     })),
-    readiness: input.readiness,
     delayIQ: {
       category: input.delayIQCategory,
       title: input.delayIQTitle,
@@ -129,12 +139,7 @@ function compactTemplate(
       status: "Open",
       description: input.delayIQDescription
     },
-    inspectionTitles: input.inspectionTitles,
-    weather: {
-      title: input.weatherTitle,
-      details: input.weatherDetails,
-      severity: "Medium"
-    }
+    inspectionTitles: input.inspectionTitles
   };
 }
 
@@ -142,8 +147,15 @@ const asphaltTemplate: TradeTemplate = {
   projectType: "Asphalt",
   projectNames: ["I-35 Asphalt Overlay", "Tech Ridge Parking Lot", "Riverside Road Resurface"],
   locationPrefix: "Asphalt production",
-  phases: ["Traffic Control", "Milling", "Base Prep", "Tack Coat", "Binder Course", "Surface Course", "Compaction", "Striping"],
-  jobs: ["Mainline Milling", "Aggregate Base Prep", "Tack Coat Application", "Binder Course Paving", "Surface Course Paving", "Final Compaction", "Layout and Striping"],
+  jobs: [
+    "Mainline Milling",
+    "Aggregate Base Prep",
+    "Tack Coat Application",
+    "Binder Course Paving",
+    "Surface Course Paving",
+    "Final Compaction",
+    "Layout and Striping"
+  ],
   crews: [
     {
       name: "Milling Crew 1",
@@ -238,7 +250,6 @@ const asphaltTemplate: TradeTemplate = {
     { name: "Striping Paint", status: "Ready", quantity: "140 gal" },
     { name: "Temporary Traffic Devices", status: "Missing", quantity: "48 cones / 12 barrels" }
   ],
-  readiness: ["Lane closure permit", "Plant slot confirmed", "Trucking plan set", "Traffic control plan", "Weather window checked", "Density testing booked"],
   delayIQ: {
     category: "Plant / trucking",
     title: "Mix plant slot moved",
@@ -247,235 +258,450 @@ const asphaltTemplate: TradeTemplate = {
     status: "Open",
     description: "Binder and surface course work need resequencing after the asphalt plant moved the morning load window."
   },
-  inspectionTitles: ["Density Testing", "Surface Smoothness Review", "Striping Layout Approval"],
-  weather: {
-    title: "Temperature window watch",
-    details: "Surface course needs dry pavement and air temperatures above 50 degrees F through compaction.",
-    severity: "Medium"
-  }
+  inspectionTitles: ["Density Testing", "Surface Smoothness Review", "Striping Layout Approval"]
 };
 
 const compactTemplates: Record<Exclude<BusinessTypeId, "Asphalt">, TradeTemplate> = {
-  Concrete: compactTemplate("Concrete", {
+  Concrete: compactTemplate({
     projectType: "Concrete",
     projectNames: ["Riverside Slab Package", "North Austin Foundation", "South Yard Tilt-Up Panels"],
     locationPrefix: "Concrete placement",
-    phases: ["Layout", "Formwork", "Rebar", "Embed Checks", "Pour", "Cure and Strip"],
     jobs: ["Footing Layout", "Wall Formwork", "Rebar Placement", "Embed Inspection", "Slab Pour", "Cure and Strip Forms"],
     crewSpecialties: ["Formwork", "Rebar", "Pour", "Finishing", "Pump Support"],
+    laborMixes: [
+      [
+        ["Labor", "Form Carpenters", 3],
+        ["Labor", "Form Laborers", 2],
+        ["Operator", "Telehandler Operator", 1]
+      ],
+      [
+        ["Labor", "Rodbusters", 4],
+        ["Labor", "Rebar Helpers", 1]
+      ],
+      [
+        ["Labor", "Pour Hands", 3],
+        ["Labor", "Vibrator Hands", 2],
+        ["Operator", "Screed Operator", 1]
+      ],
+      [
+        ["Labor", "Finishers", 3],
+        ["Operator", "Trowel Machine Operator", 1]
+      ],
+      [
+        ["Operator", "Pump Operator", 1],
+        ["Labor", "Hose Hands", 2],
+        ["Labor", "Washout / Cleanup", 1]
+      ]
+    ],
     equipment: ["Concrete Pump #2", "Laser Screed #1", "Telehandler #3", "Vibrator Set #4", "Ride-On Trowel #5", "Rebar Bender #6"],
     materials: ["Ready Mix Concrete", "Rebar Package", "Anchor Bolts", "Cure Compound", "Vapor Barrier", "Expansion Joint"],
-    readiness: ["Mix design approved", "Pump booked", "Rebar released", "Embeds checked", "Pour cards signed", "Cylinder testing booked"],
+    quantities: ["240 cy", "18 tons", "96 each", "40 gal", "12,000 sq ft", "600 lf"],
     delayIQCategory: "Concrete supply",
     delayIQTitle: "Ready mix truck spacing",
     delayIQDescription: "Truck spacing is wider than plan and may extend the slab pour window.",
-    inspectionTitles: ["Rebar Inspection", "Embed Inspection", "Cylinder Break Review"],
-    weatherTitle: "Pour weather watch",
-    weatherDetails: "Heat and wind may shorten finishing time during afternoon pours."
+    inspectionTitles: ["Rebar Inspection", "Embed Inspection", "Cylinder Break Review"]
   }),
-  Roofing: compactTemplate("Roofing", {
+  Roofing: compactTemplate({
     projectType: "Roofing",
     projectNames: ["Harborview Roof Replacement", "Tech Ridge TPO Install", "Riverside Leak Repair"],
     locationPrefix: "Roofing production",
-    phases: ["Tear-Off", "Dry-In", "Insulation", "Membrane", "Flashing", "Punch"],
     jobs: ["Safety Setup", "Tear-Off Zone A", "Deck Repair", "Insulation Install", "Membrane Weld", "Flashing and Punch"],
     crewSpecialties: ["Tear-Off", "Dry-In", "Membrane", "Sheet Metal", "Service"],
+    laborMixes: [
+      [
+        ["Labor", "Tear-Off Laborers", 4],
+        ["Labor", "Debris Chute Hand", 1],
+        ["Operator", "Hoist Operator", 1]
+      ],
+      [
+        ["Labor", "Roofers", 3],
+        ["Labor", "Fastener Hands", 2]
+      ],
+      [
+        ["Labor", "Membrane Installers", 3],
+        ["Labor", "Welder / Seam Tech", 2]
+      ],
+      [
+        ["Labor", "Sheet Metal Mechanics", 2],
+        ["Labor", "Flashing Hands", 1]
+      ],
+      [["Labor", "Service Techs", 2]]
+    ],
     equipment: ["Roof Hoist #1", "Telehandler #2", "Safety Cart #3", "Welding Kit #4", "Dump Trailer #5", "Sheet Metal Brake #6"],
     materials: ["TPO Membrane", "ISO Insulation", "Fastener Buckets", "Flashing Metal", "Sealant Cases", "Walk Pads"],
-    readiness: ["Fall protection staged", "Material loaded", "Tear-off dumpster set", "Deck scan complete", "Weather window checked", "Warranty detail approved"],
+    quantities: ["180 squares", "320 boards", "24 buckets", "900 lf", "16 cases", "40 pads"],
     delayIQCategory: "Weather",
     delayIQTitle: "Dry-in window at risk",
     delayIQDescription: "ForecastIQ shows rain may block tear-off until temporary dry-in is ready.",
-    inspectionTitles: ["Deck Inspection", "Membrane Probe Test", "Final Roof Walk"],
-    weatherTitle: "Rain window watch",
-    weatherDetails: "Tear-off should pause if dry-in cannot be completed before afternoon showers."
+    inspectionTitles: ["Deck Inspection", "Membrane Probe Test", "Final Roof Walk"]
   }),
-  "General Contractor": compactTemplate("General Contractor", {
+  "General Contractor": compactTemplate({
     projectType: "General Contractor",
     projectNames: ["Downtown Retail Buildout", "Riverside Office Renovation", "North Austin Shell Finish"],
     locationPrefix: "GC coordination",
-    phases: ["Mobilization", "Rough-In", "Inspections", "Finishes", "Punch", "Closeout"],
     jobs: ["Mobilize Site", "Coordinate MEP Rough-In", "Frame and Drywall", "Inspection Walk", "Finish Sequence", "Punch List Push"],
     crewSpecialties: ["Supervision", "Carpentry", "Punch", "Logistics", "Safety"],
+    laborMixes: [
+      [
+        ["Labor", "Superintendent", 1],
+        ["Labor", "Assistant Super", 1],
+        ["Labor", "Field Engineer", 1]
+      ],
+      [
+        ["Labor", "Carpenters", 3],
+        ["Labor", "Carpenter Helpers", 1]
+      ],
+      [
+        ["Labor", "Punch Carpenters", 2],
+        ["Labor", "Painter / Patch", 1]
+      ],
+      [
+        ["Operator", "Forklift Operator", 1],
+        ["Labor", "Material Handlers", 2]
+      ],
+      [
+        ["Labor", "Safety Coordinator", 1],
+        ["Labor", "Flaggers", 1]
+      ]
+    ],
     equipment: ["Scissor Lift #2", "Forklift #3", "Job Box Set #4", "Temp Power Cart #5", "Cleanup Trailer #6", "Layout Laser #7"],
     materials: ["Framing Package", "Door Hardware", "Ceiling Tile", "Paint Kit", "Safety Supplies", "Closeout Labels"],
-    readiness: ["Submittals released", "Subcontractors confirmed", "Inspection calendar", "Access plan", "Material staging", "Owner walk scheduled"],
+    quantities: ["1 lot", "48 sets", "14 pallets", "60 gal", "8 cases", "1 lot"],
     delayIQCategory: "Trade coordination",
     delayIQTitle: "Inspection sequence conflict",
     delayIQDescription: "MEP and framing inspections need resequencing before finishes can start.",
-    inspectionTitles: ["Rough-In Inspection", "Above-Ceiling Inspection", "Substantial Completion Walk"],
-    weatherTitle: "Delivery access watch",
-    weatherDetails: "Morning storms may affect exterior deliveries and loading dock access."
+    inspectionTitles: ["Rough-In Inspection", "Above-Ceiling Inspection", "Substantial Completion Walk"]
   }),
-  Excavation: compactTemplate("Excavation", {
+  Excavation: compactTemplate({
     projectType: "Excavation",
     projectNames: ["Pinecrest Mass Excavation", "South Austin Detention Pond", "Riverside Utility Trench"],
     locationPrefix: "Excavation production",
-    phases: ["Survey", "Clearing", "Mass Cut", "Haul-Off", "Trench", "Backfill"],
     jobs: ["Survey Stakes", "Clear and Grub", "Mass Cut Area A", "Load and Haul", "Utility Trench", "Backfill and Compact"],
     crewSpecialties: ["Mass Earthwork", "Trenching", "Haul-Off", "Grade Check", "Backfill"],
+    laborMixes: [
+      [
+        ["Operator", "Excavator Operator", 1],
+        ["Operator", "Dozer Operator", 1],
+        ["Labor", "Spotters", 2]
+      ],
+      [
+        ["Operator", "Excavator Operator", 1],
+        ["Labor", "Pipe Laborers", 2],
+        ["Labor", "Trench Safety Hand", 1]
+      ],
+      [
+        ["Operator", "Loader Operator", 1],
+        ["Operator", "Haul Truck Drivers", 4]
+      ],
+      [
+        ["Labor", "Grade Checker", 1],
+        ["Labor", "Survey Hand", 1]
+      ],
+      [
+        ["Operator", "Compactor Operator", 1],
+        ["Labor", "Backfill Laborers", 2]
+      ]
+    ],
     equipment: ["Excavator 320", "Dozer D6", "Loader 938", "Haul Truck Fleet", "Plate Compactor", "Trench Box Set"],
     materials: ["Select Fill", "Bedding Stone", "Silt Fence", "Trench Plates", "Fuel Delivery", "Geotextile Fabric"],
-    readiness: ["Locates complete", "Spoils route approved", "Erosion controls set", "Survey stakes checked", "Dump site confirmed", "Compaction testing booked"],
+    quantities: ["1,800 cy", "220 tons", "1,400 lf", "10 each", "1,200 gal", "6 rolls"],
     delayIQCategory: "Site conditions",
     delayIQTitle: "Wet subgrade delayIQ",
     delayIQDescription: "Wet subgrade needs drying and proof-roll approval before backfill.",
-    inspectionTitles: ["Erosion Control Check", "Trench Safety Review", "Compaction Test"],
-    weatherTitle: "Rain and haul road watch",
-    weatherDetails: "Soft haul roads may slow truck cycles after overnight rain."
+    inspectionTitles: ["Erosion Control Check", "Trench Safety Review", "Compaction Test"]
   }),
-  Utilities: compactTemplate("Utilities", {
+  Utilities: compactTemplate({
     projectType: "Utilities",
     projectNames: ["Riverside Water Main", "Tech Ridge Storm Line", "South Austin Electric Ductbank"],
     locationPrefix: "Utility production",
-    phases: ["Locates", "Trench", "Pipe / Conduit", "Tie-In", "Test", "Backfill"],
     jobs: ["Utility Locates", "Open Trench Run 1", "Pipe Bedding", "Main Tie-In", "Pressure Test", "Backfill and Patch"],
     crewSpecialties: ["Pipe", "Conduit", "Tie-In", "Testing", "Patch"],
+    laborMixes: [
+      [
+        ["Operator", "Excavator Operator", 1],
+        ["Labor", "Pipe Layers", 2],
+        ["Labor", "Top Man", 1]
+      ],
+      [
+        ["Labor", "Conduit Installers", 2],
+        ["Labor", "Duct Bank Hands", 2]
+      ],
+      [
+        ["Labor", "Tie-In Mechanics", 2],
+        ["Operator", "Vac Truck Operator", 1],
+        ["Labor", "Valve Hand", 1]
+      ],
+      [["Labor", "Test Techs", 2]],
+      [
+        ["Labor", "Patch Crew", 2],
+        ["Operator", "Plate Compactor Operator", 1]
+      ]
+    ],
     equipment: ["Mini Excavator #1", "Vac Truck #2", "Fusion Machine #3", "Utility Truck #4", "Plate Compactor #5", "Generator #6"],
     materials: ["Ductile Pipe", "PVC Conduit", "Valve Box Set", "Bedding Stone", "Tracer Wire", "Patch Asphalt"],
-    readiness: ["811 locates clear", "Shutdown notice sent", "Pipe delivered", "Testing kit staged", "Bypass plan ready", "Backfill source confirmed"],
+    quantities: ["1,200 lf", "60 sticks", "8 each", "140 tons", "1,500 ft", "22 tons"],
     delayIQCategory: "Locate conflict",
     delayIQTitle: "Unknown crossing found",
     delayIQDescription: "Crew found an unmarked crossing and needs daylighting before tie-in.",
-    inspectionTitles: ["Open Trench Inspection", "Pressure Test", "Patch Acceptance"],
-    weatherTitle: "Trench water watch",
-    weatherDetails: "Rain could require pump-down before morning trench work."
+    inspectionTitles: ["Open Trench Inspection", "Pressure Test", "Patch Acceptance"]
   }),
-  Framing: compactTemplate("Framing", {
+  Framing: compactTemplate({
     projectType: "Framing",
     projectNames: ["Harborview Wood Frame", "Riverside Tenant Framing", "North Austin Podium Walls"],
     locationPrefix: "Framing production",
-    phases: ["Layout", "Wall Panels", "Decking", "Shear", "Hardware", "Inspection"],
     jobs: ["Layout Lines", "Wall Panel Install", "Floor Decking", "Shear Wall Nail-Off", "Hardware Install", "Framing Inspection Prep"],
     crewSpecialties: ["Wall Framing", "Decking", "Shear Wall", "Hardware", "Punch"],
+    laborMixes: [
+      [
+        ["Labor", "Framers", 4],
+        ["Labor", "Framing Helpers", 2]
+      ],
+      [
+        ["Labor", "Deck Framers", 3],
+        ["Operator", "Forklift Operator", 1]
+      ],
+      [["Labor", "Nail-Off Framers", 3]],
+      [["Labor", "Hardware Installers", 2]],
+      [["Labor", "Punch Framers", 2]]
+    ],
     equipment: ["Boom Lift #4", "Forklift #5", "Framing Saw Set", "Compressor Cart", "Material Rack", "Laser Layout Kit"],
     materials: ["Stud Packs", "Sheathing", "Hangars", "Anchor Hardware", "Nails and Fasteners", "Blocking Lumber"],
-    readiness: ["Lumber drop complete", "Layout approved", "Hardware released", "Lift reserved", "Shear schedule set", "Inspection booked"],
+    quantities: ["2,400 studs", "620 sheets", "380 each", "140 each", "30 boxes", "180 lf"],
     delayIQCategory: "Material",
     delayIQTitle: "Hardware release delayIQ",
     delayIQDescription: "Hold-down hardware is late and may block shear wall close-in.",
-    inspectionTitles: ["Framing Inspection", "Shear Wall Inspection", "Hardware Walk"],
-    weatherTitle: "Wind lift watch",
-    weatherDetails: "High gusts may pause exterior sheathing and boom lift work."
+    inspectionTitles: ["Framing Inspection", "Shear Wall Inspection", "Hardware Walk"]
   }),
-  Electrical: compactTemplate("Electrical", {
+  Electrical: compactTemplate({
     projectType: "Electrical",
     projectNames: ["Riverside Electrical Rough-In", "Tech Ridge Service Upgrade", "Harborview Lighting Package"],
     locationPrefix: "Electrical production",
-    phases: ["Underground", "Rough-In", "Panel Set", "Trim", "Testing", "Energize"],
     jobs: ["Underground Conduit", "Branch Rough-In", "Panel Set", "Lighting Rough-In", "Device Trim", "Megger Test and Energize"],
     crewSpecialties: ["Underground", "Rough-In", "Panel", "Lighting", "Trim"],
+    laborMixes: [
+      [
+        ["Labor", "Electricians", 2],
+        ["Labor", "Apprentices", 2],
+        ["Operator", "Mini Excavator Operator", 1]
+      ],
+      [
+        ["Labor", "Journeyman Electricians", 3],
+        ["Labor", "Apprentices", 2]
+      ],
+      [
+        ["Labor", "Gear Electricians", 2],
+        ["Labor", "Apprentice", 1]
+      ],
+      [
+        ["Labor", "Lighting Electricians", 2],
+        ["Labor", "Apprentice", 1],
+        ["Operator", "Lift Operator", 1]
+      ],
+      [["Labor", "Trim Electricians", 2]]
+    ],
     equipment: ["Conduit Bender #1", "Scissor Lift #2", "Wire Tugger #3", "Gang Box #4", "Generator #5", "Megger Tester #6"],
     materials: ["EMT Conduit", "Copper Wire", "Panelboards", "Lighting Fixtures", "Device Boxes", "Switchgear"],
-    readiness: ["Sleeves laid out", "Panel release confirmed", "Lift reserved", "Fixture package checked", "Power shutdown scheduled", "Inspection booked"],
+    quantities: ["4,200 ft", "18,000 ft", "6 panels", "240 each", "36 boxes", "1 lineup"],
     delayIQCategory: "Gear lead time",
     delayIQTitle: "Switchgear delivery risk",
     delayIQDescription: "Switchgear delivery is at risk and may affect energization sequence.",
-    inspectionTitles: ["Underground Inspection", "Rough Electrical Inspection", "Final Electrical Inspection"],
-    weatherTitle: "Exterior rough-in watch",
-    weatherDetails: "Storms may pause exterior conduit and rooftop equipment feeds."
+    inspectionTitles: ["Underground Inspection", "Rough Electrical Inspection", "Final Electrical Inspection"]
   }),
-  Plumbing: compactTemplate("Plumbing", {
+  Plumbing: compactTemplate({
     projectType: "Plumbing",
     projectNames: ["Pinecrest Plumbing Rough-In", "Riverside Restroom Core", "Harborview Domestic Water"],
     locationPrefix: "Plumbing production",
-    phases: ["Underground", "Top-Out", "Pressure Test", "Fixtures", "Trim", "Final"],
     jobs: ["Underground Waste", "Domestic Water Top-Out", "Sleeve Firestopping", "Pressure Test", "Fixture Set", "Trim and Final"],
     crewSpecialties: ["Underground", "Top-Out", "Fixture", "Testing", "Service"],
+    laborMixes: [
+      [
+        ["Labor", "Plumbers", 2],
+        ["Labor", "Apprentices", 1],
+        ["Operator", "Mini Excavator Operator", 1]
+      ],
+      [
+        ["Labor", "Journeyman Plumbers", 3],
+        ["Labor", "Apprentices", 1]
+      ],
+      [
+        ["Labor", "Fixture Setters", 2],
+        ["Labor", "Apprentice", 1]
+      ],
+      [
+        ["Labor", "Test Tech", 1],
+        ["Labor", "Apprentice", 1]
+      ],
+      [["Labor", "Service Plumbers", 2]]
+    ],
     equipment: ["Mini Excavator #1", "Pipe Threader #2", "Scissor Lift #3", "Fusion Kit #4", "Hydro Test Pump #5", "Material Cart #6"],
     materials: ["PVC Pipe", "Copper Pipe", "Fixture Carriers", "Valves", "Fixtures", "Firestop Kits"],
-    readiness: ["Sleeves approved", "Pipe delivered", "Test pump staged", "Fixture release checked", "Water shutdown scheduled", "Inspection booked"],
+    quantities: ["1,600 lf", "900 lf", "42 each", "64 each", "88 fixtures", "20 kits"],
     delayIQCategory: "Inspection",
     delayIQTitle: "Pressure test retake",
     delayIQDescription: "A pressure test retake may push fixture set work by one production day.",
-    inspectionTitles: ["Underground Plumbing", "Top-Out Inspection", "Final Plumbing"],
-    weatherTitle: "Underground water watch",
-    weatherDetails: "Wet trench conditions may slow underground waste installation."
+    inspectionTitles: ["Underground Plumbing", "Top-Out Inspection", "Final Plumbing"]
   }),
-  HVAC: compactTemplate("HVAC", {
+  HVAC: compactTemplate({
     projectType: "HVAC",
     projectNames: ["Tech Ridge Rooftop Units", "Riverside Duct Rough-In", "Pinecrest Mechanical Room"],
     locationPrefix: "HVAC production",
-    phases: ["Layout", "Duct", "Equipment Set", "Piping", "Controls", "Startup"],
     jobs: ["Duct Layout", "Main Duct Install", "RTU Set", "Refrigerant Piping", "Controls Rough-In", "Startup and Balance"],
     crewSpecialties: ["Duct", "Equipment Set", "Piping", "Controls", "TAB Support"],
+    laborMixes: [
+      [
+        ["Labor", "Sheet Metal Installers", 3],
+        ["Labor", "Duct Helpers", 2]
+      ],
+      [
+        ["Labor", "Rigging Mechanics", 2],
+        ["Operator", "Crane Signal Person", 1],
+        ["Labor", "Set Helpers", 2]
+      ],
+      [
+        ["Labor", "Pipefitters", 2],
+        ["Labor", "Brazers", 1]
+      ],
+      [["Labor", "Controls Techs", 2]],
+      [
+        ["Labor", "TAB Techs", 1],
+        ["Labor", "Helper", 1]
+      ]
+    ],
     equipment: ["Crane Slot #1", "Duct Lift #2", "Scissor Lift #3", "Vac Pump #4", "Welding Cart #5", "Balance Hood #6"],
     materials: ["Sheet Metal Duct", "RTUs", "Refrigerant Pipe", "VAV Boxes", "Controls Cable", "Grilles and Diffusers"],
-    readiness: ["Roof curb ready", "Crane booked", "Equipment released", "Duct sections staged", "Controls drawings approved", "Startup tech scheduled"],
+    quantities: ["9,500 lbs", "6 units", "1,100 lf", "28 each", "6,000 ft", "160 each"],
     delayIQCategory: "Equipment",
     delayIQTitle: "RTU delivery shift",
     delayIQDescription: "Rooftop unit delivery moved, requiring crane and duct tie-in resequencing.",
-    inspectionTitles: ["Duct Inspection", "Equipment Set Review", "Startup Report"],
-    weatherTitle: "Crane wind watch",
-    weatherDetails: "High winds may affect rooftop unit crane picks."
+    inspectionTitles: ["Duct Inspection", "Equipment Set Review", "Startup Report"]
   }),
-  Masonry: compactTemplate("Masonry", {
+  Masonry: compactTemplate({
     projectType: "Masonry",
     projectNames: ["Riverside Block Walls", "Harborview Brick Veneer", "Tech Ridge Screen Wall"],
     locationPrefix: "Masonry production",
-    phases: ["Layout", "Scaffold", "Block", "Brick", "Grout", "Clean Down"],
     jobs: ["Wall Layout", "Scaffold Setup", "CMU Install", "Brick Veneer", "Grout Cells", "Clean and Seal"],
     crewSpecialties: ["CMU", "Brick", "Scaffold", "Grout", "Cleanup"],
+    laborMixes: [
+      [
+        ["Labor", "Block Masons", 4],
+        ["Labor", "Mason Tenders", 3]
+      ],
+      [
+        ["Labor", "Brick Masons", 3],
+        ["Labor", "Mason Tenders", 2]
+      ],
+      [
+        ["Labor", "Scaffold Erectors", 3],
+        ["Operator", "Telehandler Operator", 1]
+      ],
+      [
+        ["Labor", "Grout Hands", 2],
+        ["Operator", "Grout Pump Operator", 1]
+      ],
+      [["Labor", "Washdown Laborers", 2]]
+    ],
     equipment: ["Masonry Scaffold #1", "Telehandler #2", "Mortar Mixer #3", "Grout Pump #4", "Saw Station #5", "Material Basket #6"],
     materials: ["CMU Block", "Face Brick", "Mortar", "Grout", "Lintels", "Wall Ties"],
-    readiness: ["Scaffold tagged", "Block delivered", "Mortar silo set", "Lintels released", "Grout inspection booked", "Washdown area ready"],
+    quantities: ["9,600 block", "24,000 brick", "140 bags", "48 cy", "22 each", "6 boxes"],
     delayIQCategory: "Material staging",
     delayIQTitle: "Brick delivery split",
     delayIQDescription: "Brick delivery was split and the veneer crew needs resequencing.",
-    inspectionTitles: ["Reinforcement Inspection", "Grout Lift Inspection", "Final Masonry Walk"],
-    weatherTitle: "Cold weather masonry watch",
-    weatherDetails: "Low overnight temperatures may require protection for fresh masonry."
+    inspectionTitles: ["Reinforcement Inspection", "Grout Lift Inspection", "Final Masonry Walk"]
   }),
-  Drywall: compactTemplate("Drywall", {
+  Drywall: compactTemplate({
     projectType: "Drywall",
     projectNames: ["Riverside Interior Buildout", "Harborview Unit Board", "Tech Ridge Corridor Finish"],
     locationPrefix: "Drywall production",
-    phases: ["Framing", "Board Hang", "Tape", "Texture", "Sand", "Punch"],
     jobs: ["Metal Stud Layout", "Board Hang Area A", "Tape First Coat", "Texture Corridor", "Sand and Touch-Up", "Punch Units"],
     crewSpecialties: ["Metal Stud", "Board Hang", "Tape", "Texture", "Punch"],
+    laborMixes: [
+      [
+        ["Labor", "Stud Framers", 3],
+        ["Labor", "Helpers", 1]
+      ],
+      [
+        ["Labor", "Hangers", 4],
+        ["Operator", "Panel Hoist Operator", 1]
+      ],
+      [
+        ["Labor", "Tapers", 3],
+        ["Labor", "Finishers", 1]
+      ],
+      [
+        ["Labor", "Texture Sprayers", 2],
+        ["Labor", "Masking Hand", 1]
+      ],
+      [["Labor", "Punch Finishers", 2]]
+    ],
     equipment: ["Drywall Lift #1", "Scissor Lift #2", "Texture Rig #3", "Material Cart #4", "Sanding Station #5", "Panel Hoist #6"],
     materials: ["Drywall Board", "Metal Studs", "Joint Compound", "Corner Bead", "Texture Mix", "Fasteners"],
-    readiness: ["Board stocked", "Framing signed off", "Lift reserved", "Humidity checked", "Texture sample approved", "Punch list issued"],
+    quantities: ["1,400 sheets", "3,200 studs", "90 buckets", "2,200 lf", "40 bags", "24 boxes"],
     delayIQCategory: "Predecessor trade",
     delayIQTitle: "Rough-in wall release late",
     delayIQDescription: "MEP rough-in areas were released late and board hanging must be resequenced.",
-    inspectionTitles: ["Framing Inspection", "Above-Ceiling Review", "Finish Level Walk"],
-    weatherTitle: "Humidity drying watch",
-    weatherDetails: "High humidity may extend compound dry times between coats."
+    inspectionTitles: ["Framing Inspection", "Above-Ceiling Review", "Finish Level Walk"]
   }),
-  Landscaping: compactTemplate("Landscaping", {
+  Landscaping: compactTemplate({
     projectType: "Landscaping",
     projectNames: ["Riverside Streetscape", "Pinecrest Irrigation", "Tech Ridge Planting"],
     locationPrefix: "Landscape production",
-    phases: ["Grading", "Irrigation", "Hardscape", "Planting", "Mulch", "Punch"],
     jobs: ["Fine Grade Beds", "Irrigation Mainline", "Paver Walk Prep", "Tree Planting", "Mulch Install", "Punch and Cleanup"],
     crewSpecialties: ["Irrigation", "Planting", "Hardscape", "Fine Grade", "Maintenance"],
+    laborMixes: [
+      [
+        ["Labor", "Irrigation Techs", 2],
+        ["Operator", "Trencher Operator", 1],
+        ["Labor", "Laborers", 1]
+      ],
+      [
+        ["Labor", "Planting Crew", 4],
+        ["Labor", "Crew Lead", 1]
+      ],
+      [
+        ["Labor", "Paver Installers", 3],
+        ["Operator", "Skid Steer Operator", 1]
+      ],
+      [
+        ["Operator", "Skid Steer Operator", 1],
+        ["Labor", "Rake Hands", 2]
+      ],
+      [["Labor", "Maintenance Crew", 2]]
+    ],
     equipment: ["Skid Steer #1", "Mini Excavator #2", "Trencher #3", "Water Truck #4", "Plate Compactor #5", "Sod Roller #6"],
     materials: ["Plant Material", "Irrigation Pipe", "Pavers", "Topsoil", "Mulch", "Sod"],
-    readiness: ["Plant delivery confirmed", "Irrigation layout marked", "Soil amendment staged", "Water source checked", "Hardscape base ready", "Owner plant walk scheduled"],
+    quantities: ["640 plants", "3,800 lf", "14 pallets", "160 cy", "90 cy", "4,200 sq ft"],
     delayIQCategory: "Nursery supply",
     delayIQTitle: "Tree delivery substitution",
     delayIQDescription: "Nursery substitution needs owner approval before the planting crew can finish.",
-    inspectionTitles: ["Irrigation Pressure Test", "Planting Walk", "Final Landscape Punch"],
-    weatherTitle: "Heat watering watch",
-    weatherDetails: "High heat requires morning planting and extra watering cycles."
+    inspectionTitles: ["Irrigation Pressure Test", "Planting Walk", "Final Landscape Punch"]
   }),
-  Painting: compactTemplate("Painting", {
+  Painting: compactTemplate({
     projectType: "Painting",
     projectNames: ["Riverside Interior Paint", "Harborview Corridor Coatings", "Tech Ridge Exterior Repaint"],
     locationPrefix: "Painting production",
-    phases: ["Prep", "Prime", "First Coat", "Second Coat", "Touch-Up", "Final Walk"],
     jobs: ["Mask and Prep", "Prime Walls", "First Coat Area A", "Second Coat Corridors", "Door Frame Touch-Up", "Final Punch Paint"],
     crewSpecialties: ["Prep", "Spray", "Roller", "Touch-Up", "Final Punch"],
+    laborMixes: [
+      [
+        ["Labor", "Prep Painters", 3],
+        ["Labor", "Masking Hands", 1]
+      ],
+      [
+        ["Labor", "Spray Painters", 2],
+        ["Labor", "Backroller", 1],
+        ["Operator", "Lift Operator", 1]
+      ],
+      [["Labor", "Roller Painters", 3]],
+      [["Labor", "Touch-Up Painters", 2]],
+      [["Labor", "Punch Painters", 2]]
+    ],
     equipment: ["Airless Sprayer #1", "Scissor Lift #2", "Drying Fans #3", "Masking Station #4", "Pressure Washer #5", "Paint Cart #6"],
     materials: ["Primer", "Wall Paint", "Exterior Coating", "Masking Film", "Caulk", "Touch-Up Kits"],
-    readiness: ["Color schedule approved", "Areas released", "Material tinted", "Ventilation set", "Lift reserved", "Punch tags issued"],
+    quantities: ["120 gal", "260 gal", "180 gal", "36 rolls", "14 cases", "20 kits"],
     delayIQCategory: "Area release",
     delayIQTitle: "Finish areas not released",
     delayIQDescription: "Several rooms are not ready for paint because drywall punch is still open.",
-    inspectionTitles: ["Mockup Approval", "Coverage Review", "Final Paint Walk"],
-    weatherTitle: "Exterior coating weather watch",
-    weatherDetails: "Wind and humidity may affect exterior coating application."
+    inspectionTitles: ["Mockup Approval", "Coverage Review", "Final Paint Walk"]
   })
 };
 
@@ -486,6 +712,10 @@ const templates: Record<BusinessTypeId, TradeTemplate> = {
 
 export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPayload {
   const template = templates[businessType];
+  // phases, readiness checks and the weather rule live on the shared trade
+  // profile so the seeded workspace and the running app describe the trade
+  // the same way
+  const profile = tradeProfiles[businessType];
   const baseSlug = slugify(businessType);
   const projectIds = template.projectNames.map((_, index) => `p-${baseSlug}-${index + 1}`);
   const projects: Project[] = template.projectNames.map((name, index) => {
@@ -501,6 +731,9 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
       managerId: index === 1 ? "u-jessica" : "u-matt",
       targetCompletion: ["2026-07-30", "2026-08-21", "2026-09-04"][index],
       percentComplete: [52, 24, 68][index],
+      // Contract values so a brand-new account's portfolio band and backlog
+      // report show dollars on day one instead of "not priced".
+      value: [2_400_000, 1_150_000, 3_800_000][index],
       scheduleHealth: (["On Track", "Monitor", "At Risk"] as Project["scheduleHealth"][])[index],
       status: (["In Progress", "Ready to Start", "DelayIQed"] as Project["status"][])[index],
       image: index === 0 ? "parking-garage" : index === 1 ? "warehouse" : "office-building",
@@ -510,7 +743,7 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
   });
 
   const phases: Phase[] = projectIds.flatMap((projectId, projectIndex) =>
-    template.phases.slice(0, 6).map((name, index) => ({
+    profile.phases.slice(0, 6).map((name, index) => ({
       id: `phase-${baseSlug}-${projectIndex + 1}-${slugify(name)}`,
       projectId,
       name,
@@ -598,17 +831,17 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
       id: `delayIQ-${baseSlug}-weather`,
       projectId: projectIds[0],
       category: "Weather",
-      title: template.weather.title,
+      title: profile.weather.title,
       impactDays: 1,
-      severity: template.weather.severity,
+      severity: "Medium",
       status: "Monitoring",
       reportedAt: "2026-06-15",
-      description: template.weather.details
+      description: profile.weather.rule
     }
   ];
 
   const readiness: ReadinessItem[] = projectIds.flatMap((projectId) =>
-    template.readiness.map((label, index) => ({
+    profile.readinessChecks.map((label, index) => ({
       id: `ready-${projectId}-${index + 1}`,
       projectId,
       label,
@@ -629,9 +862,9 @@ export function createBusinessProfile(businessType: BusinessTypeId): BootstrapPa
     {
       id: `wa-${baseSlug}-1`,
       projectId: projectIds[0],
-      title: template.weather.title,
-      details: template.weather.details,
-      severity: template.weather.severity,
+      title: profile.weather.title,
+      details: profile.weather.rule,
+      severity: "Medium",
       startsAt: "2026-06-18T12:00:00.000Z"
     }
   ];

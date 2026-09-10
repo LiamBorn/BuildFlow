@@ -1,0 +1,1142 @@
+/* ============================================================================
+   app-shell-hubspot.css — HubSpot-style app shell for BuildFlow
+   Restructures the workspace chrome to HubSpot's layout: a full-width dark
+   top bar (brand · global search · AI · create / help / settings / alerts ·
+   account), a slim icon-only left rail whose hubs open hover flyouts of
+   grouped sub-pages, and a light content area. Colors are BuildFlow's own
+   (navy #14203a / blue #2f6bff / paper #f5f6fa) — no HubSpot palette.
+   Scoped to `.hs-shell`, `.hs-rail`, `.hs-topbar`.
+   ========================================================================== */
+
+.hs-shell {
+  --hs-navy: #14203a;
+  --hs-navy-2: #1b2a47;
+  --hs-navy-3: #24365a;
+  --hs-line-on-navy: rgba(255, 255, 255, 0.08);
+  --hs-text-on-navy: #ecf4ff;
+  --hs-muted-on-navy: #b9c6d8;
+  --hs-dim-on-navy: #8fa1ba;
+  --hs-blue: #2f6bff;
+  --hs-paper: #f5f6fa;
+  --hs-card: #ffffff;
+  --hs-ink: #14203a;
+  --hs-line: #e6e8f0;
+  --hs-hover: #f0f2f6;
+  --hs-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --hs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --hs-topbar-h: 56px;
+  --hs-rail-w: 56px;
+}
+
+/* ============================ frame ==================================== */
+.app-shell.hs-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--hs-paper);
+}
+.hs-shell .hs-body {
+  display: grid;
+  grid-template-columns: var(--hs-rail-w) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+.hs-shell.settings-shell .hs-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+.hs-shell .main-panel {
+  min-width: 0;
+}
+
+/* ============================ top bar ================================== */
+.hs-shell .topbar.hs-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  height: var(--hs-topbar-h);
+  min-height: var(--hs-topbar-h);
+  padding: 0 14px 0 10px;
+  background: var(--hs-navy);
+  border-bottom: 1px solid var(--hs-line-on-navy);
+  backdrop-filter: none;
+  color: var(--hs-text-on-navy);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* brand */
+.hs-shell .hs-topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-family: var(--hs-sans);
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.hs-shell .hs-topbar-brand:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.hs-shell .hs-topbar-brand .brand-mark {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+}
+
+/* global search */
+.hs-shell .topbar.hs-topbar .search-box {
+  width: min(440px, 100%);
+  min-height: 36px;
+  gap: 8px;
+  padding: 0 10px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--hs-muted-on-navy);
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.hs-shell .topbar.hs-topbar .search-box > svg {
+  color: var(--hs-muted-on-navy);
+}
+.hs-shell .topbar.hs-topbar .search-box input {
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.hs-shell .topbar.hs-topbar .search-box input::placeholder {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 500;
+}
+.hs-shell .topbar.hs-topbar .search-box kbd {
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--hs-muted-on-navy);
+  font-size: 11px;
+  font-weight: 600;
+}
+.hs-shell .topbar.hs-topbar .search-box:focus-within {
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.35);
+  color: var(--hs-ink);
+}
+.hs-shell .topbar.hs-topbar .search-box:focus-within > svg {
+  color: var(--hs-ink);
+}
+.hs-shell .topbar.hs-topbar .search-box:focus-within input {
+  color: var(--hs-ink);
+}
+.hs-shell .topbar.hs-topbar .search-box:focus-within input::placeholder {
+  color: #8b95a5;
+}
+.hs-shell .topbar.hs-topbar .search-box:focus-within kbd {
+  background: #eef0f4;
+  border-color: #e2e5ee;
+  color: #7b8698;
+}
+
+/* AI button — BuildFlow's blue→purple gradient sparkle */
+.hs-shell .hs-ai-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #4285f4, #9b72cb);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(66, 92, 244, 0.35);
+  transition:
+    transform 0.2s var(--hs-ease),
+    box-shadow 0.2s ease;
+}
+.hs-shell .hs-ai-button:hover {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 10px 22px rgba(66, 92, 244, 0.45);
+}
+
+/* action cluster (create · help · settings · alerts · account) */
+.hs-shell .topbar.hs-topbar .topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+/* HubSpot order (create · help · settings · alerts · | · account) via flex order,
+   so the existing notification/account panels keep their DOM + behavior. */
+.hs-shell .topbar.hs-topbar .topbar-actions .hs-create {
+  order: 1;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .topbar-help-button {
+  order: 2;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .hs-settings-button {
+  order: 3;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .notification-center {
+  order: 4;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .hs-topbar-divider {
+  order: 5;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .reports-account-menu {
+  order: 6;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .icon-button {
+  position: relative;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--hs-muted-on-navy);
+  box-shadow: none;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .icon-button:hover,
+.hs-shell .topbar.hs-topbar .topbar-actions .icon-button:focus-visible,
+.hs-shell .topbar.hs-topbar .topbar-actions .icon-button[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 0;
+  outline: 0;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions .icon-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.45);
+}
+.hs-shell .topbar.hs-topbar .topbar-help-button {
+  color: var(--hs-muted-on-navy);
+}
+.hs-shell .topbar.hs-topbar .topbar-help-button:hover {
+  color: #fff;
+}
+.hs-shell .hs-topbar-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 8px 0 6px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* notification badge on the bell */
+.hs-shell .topbar.hs-topbar .notification-center .bubble {
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  border: 2px solid var(--hs-navy);
+  background: var(--hs-blue);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* account button */
+.hs-shell .topbar.hs-topbar .reports-user-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 2px 4px 2px 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+.hs-shell .topbar.hs-topbar .reports-user-button:hover,
+.hs-shell .topbar.hs-topbar .reports-user-button[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.12);
+}
+.hs-shell .topbar.hs-topbar .reports-user-button > svg {
+  width: 15px;
+  height: 15px;
+  color: var(--hs-muted-on-navy);
+}
+.hs-shell .topbar.hs-topbar .reports-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: var(--hs-blue);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* create menu (HubSpot "Create new") */
+.hs-shell .hs-create {
+  position: relative;
+}
+.hs-shell .hs-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 208px;
+  padding: 6px;
+  border: 1px solid var(--hs-line);
+  border-radius: 10px;
+  background: var(--hs-card);
+  box-shadow: 0 20px 48px rgba(15, 35, 64, 0.2);
+  z-index: 60;
+  transform-origin: top right;
+  animation: hs-pop 0.16s var(--hs-ease) both;
+}
+.hs-shell .hs-menu-head {
+  padding: 6px 10px 8px;
+  color: #7b8698;
+  font-family: var(--hs-sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.hs-shell .hs-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--hs-ink);
+  font-family: var(--hs-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.hs-shell .hs-menu-item svg {
+  color: var(--hs-blue);
+  flex: none;
+}
+.hs-shell .hs-menu-item:hover {
+  background: var(--hs-hover);
+}
+@keyframes hs-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================ left icon rail =========================== */
+.hs-shell .sidebar.hs-rail {
+  position: sticky;
+  top: var(--hs-topbar-h);
+  z-index: 30;
+  isolation: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: var(--hs-rail-w);
+  height: calc(100vh - var(--hs-topbar-h));
+  padding: 10px 0 10px;
+  background: var(--hs-navy);
+  border-right: 1px solid var(--hs-line-on-navy);
+  color: var(--hs-muted-on-navy);
+  overflow: visible;
+  -webkit-font-smoothing: antialiased;
+}
+.hs-shell .sidebar.hs-rail::after {
+  display: none;
+}
+
+.hs-shell .hs-rail-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.hs-shell .hs-rail-slot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.hs-shell .hs-rail-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--hs-muted-on-navy);
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.2s var(--hs-ease);
+}
+.hs-shell .hs-rail-btn:hover,
+.hs-shell .hs-rail-btn.open,
+.hs-shell .hs-rail-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  outline: 0;
+}
+.hs-shell .hs-rail-btn.active {
+  background: var(--hs-blue);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(47, 107, 255, 0.38);
+}
+.hs-shell .hs-rail-btn.recommended::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hs-blue);
+  box-shadow: 0 0 0 2px var(--hs-navy);
+}
+.hs-shell .hs-rail-bottom {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--hs-line-on-navy);
+}
+
+/* ============================ top bar: one row at every width ============ */
+/* The legacy .topbar stacks its children at narrower widths; the HubSpot bar is
+   a fixed-height row, so the stacked rows spilled over the page. Keep it a
+   single row and let the search shrink, dropping the brand word first. */
+.hs-shell .topbar.hs-topbar {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+.hs-shell .topbar.hs-topbar > * {
+  flex: 0 0 auto;
+}
+.hs-shell .topbar.hs-topbar .search-box {
+  flex: 1 1 160px;
+  width: auto;
+  max-width: 440px;
+  min-width: 0;
+}
+.hs-shell .topbar.hs-topbar .search-box input {
+  min-width: 0;
+}
+.hs-shell .topbar.hs-topbar .topbar-actions {
+  flex: 0 0 auto;
+  width: auto;
+}
+@media (max-width: 1040px) {
+  .hs-shell .topbar.hs-topbar {
+    gap: 10px;
+  }
+  .hs-shell .hs-topbar-brand > span:not(.brand-mark) {
+    display: none;
+  } /* the word goes, the mark stays */
+  .hs-shell .topbar.hs-topbar .search-box kbd {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .hs-shell .topbar.hs-topbar .search-box {
+    flex-basis: 110px;
+  }
+  .hs-shell .topbar.hs-topbar .hs-topbar-divider {
+    display: none;
+  }
+}
+
+/* ============================ rail icon hover motion =================== */
+/* Hovering a category icon: the icon springs up with a little tilt while its
+   strokes redraw themselves, and a soft blue ring pulses out from the button.
+   Keyed on :hover / :focus-visible only, so open/active states stay calm; the
+   hover scale is a transition so leaving eases back instead of snapping. */
+.hs-shell .hs-rail-btn svg {
+  transform-origin: 50% 50%;
+  transition: transform 0.25s var(--hs-ease);
+}
+.hs-shell .hs-rail-btn:hover svg,
+.hs-shell .hs-rail-btn:focus-visible svg {
+  transform: scale(1.08);
+  animation: hs-rail-pop 0.5s var(--hs-ease);
+}
+.hs-shell .hs-rail-btn:hover svg *,
+.hs-shell .hs-rail-btn:focus-visible svg * {
+  animation: hs-rail-draw 0.6s ease-out;
+}
+.hs-shell .hs-rail-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+.hs-shell .hs-rail-btn:hover::before,
+.hs-shell .hs-rail-btn:focus-visible::before {
+  animation: hs-rail-ring 0.7s ease-out;
+}
+@keyframes hs-rail-pop {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.24) rotate(-9deg);
+  }
+  65% {
+    transform: scale(0.96) rotate(5deg);
+  }
+  100% {
+    transform: scale(1.08) rotate(0deg);
+  }
+}
+@keyframes hs-rail-draw {
+  from {
+    stroke-dasharray: 120;
+    stroke-dashoffset: 120;
+  }
+  to {
+    stroke-dasharray: 120;
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes hs-rail-ring {
+  0% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.55);
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 0 12px rgba(47, 107, 255, 0);
+  }
+}
+
+/* ============================ top bar icon hover motion ================ */
+/* Each control moves the way it works: the create "+" spins (and turns into an
+   × while its menu is open), the settings gear turns, the bell swings from its
+   crown with its badge hopping, the AI sparkle twinkles, and help / logo /
+   avatar spring — with the rail's stroke redraw on the line icons so the bar
+   and the rail feel like one system. Hover / focus only; ease back on leave. */
+.hs-shell .hs-topbar .icon-button svg,
+.hs-shell .hs-ai-button svg,
+.hs-shell .hs-topbar-brand .brand-mark,
+.hs-shell .reports-user-button > *:first-child {
+  transform-origin: 50% 50%;
+  transition: transform 0.25s var(--hs-ease);
+}
+/* line icons (help + any icon button): spring + redraw */
+.hs-shell .hs-topbar .icon-button:hover svg,
+.hs-shell .hs-topbar .icon-button:focus-visible svg {
+  transform: scale(1.08);
+  animation: hs-rail-pop 0.5s var(--hs-ease);
+}
+.hs-shell .hs-topbar .icon-button:hover svg *,
+.hs-shell .hs-topbar .icon-button:focus-visible svg * {
+  animation: hs-rail-draw 0.6s ease-out;
+}
+/* create "+": a half spin on hover; an × while the menu is open */
+.hs-shell .hs-topbar .hs-create .icon-button:hover svg,
+.hs-shell .hs-topbar .hs-create .icon-button:focus-visible svg {
+  transform: rotate(180deg) scale(1.08);
+  animation: hs-top-spin 0.55s var(--hs-ease);
+}
+.hs-shell .hs-topbar .hs-create .icon-button[aria-expanded="true"] svg {
+  transform: rotate(45deg) scale(1.08);
+  animation: none;
+}
+/* settings gear: turns half a revolution */
+.hs-shell .hs-topbar .hs-settings-button:hover svg,
+.hs-shell .hs-topbar .hs-settings-button:focus-visible svg {
+  transform: rotate(180deg) scale(1.08);
+  animation: hs-top-gear 0.7s var(--hs-ease);
+}
+/* bell: swings from its crown, badge hops along */
+.hs-shell .hs-topbar .notification-center .icon-button svg {
+  transform-origin: 50% 10%;
+}
+.hs-shell .hs-topbar .notification-center .icon-button:hover svg,
+.hs-shell .hs-topbar .notification-center .icon-button:focus-visible svg {
+  transform: none;
+  animation: hs-top-bell 0.9s ease-in-out;
+}
+.hs-shell .hs-topbar .notification-center .icon-button:hover .bubble,
+.hs-shell .hs-topbar .notification-center .icon-button:focus-visible .bubble {
+  animation: hs-top-badge 0.5s var(--hs-ease);
+}
+/* AI sparkle: twinkles */
+.hs-shell .hs-ai-button:hover svg,
+.hs-shell .hs-ai-button:focus-visible svg {
+  transform: scale(1.1);
+  animation: hs-top-twinkle 0.8s ease-in-out;
+}
+/* logo + avatar: spring */
+.hs-shell .hs-topbar-brand:hover .brand-mark,
+.hs-shell .hs-topbar-brand:focus-visible .brand-mark,
+.hs-shell .reports-user-button:hover > *:first-child,
+.hs-shell .reports-user-button:focus-visible > *:first-child {
+  transform: scale(1.08);
+  animation: hs-rail-pop 0.5s var(--hs-ease);
+}
+@keyframes hs-top-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  60% {
+    transform: rotate(200deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(180deg) scale(1.08);
+  }
+}
+@keyframes hs-top-gear {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(180deg) scale(1.08);
+  }
+}
+@keyframes hs-top-bell {
+  0% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(16deg);
+  }
+  30% {
+    transform: rotate(-13deg);
+  }
+  45% {
+    transform: rotate(9deg);
+  }
+  60% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes hs-top-badge {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-4px) scale(1.18);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes hs-top-twinkle {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    transform: scale(1.3) rotate(18deg);
+  }
+  60% {
+    transform: scale(0.92) rotate(-10deg);
+  }
+  100% {
+    transform: scale(1.1) rotate(0deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-shell .hs-topbar .icon-button svg,
+  .hs-shell .hs-topbar .icon-button:hover svg,
+  .hs-shell .hs-topbar .icon-button:hover svg *,
+  .hs-shell .hs-topbar .notification-center .icon-button:hover .bubble,
+  .hs-shell .hs-ai-button:hover svg,
+  .hs-shell .hs-topbar-brand:hover .brand-mark,
+  .hs-shell .reports-user-button:hover > *:first-child {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
+/* hover flyout (hub name + grouped sub-pages) */
+.hs-shell .hs-flyout {
+  position: absolute;
+  left: var(--hs-rail-w);
+  top: var(--hs-flyout-top, 8px);
+  min-width: 228px;
+  padding: 8px;
+  border: 1px solid var(--hs-line-on-navy);
+  border-radius: 12px;
+  background: var(--hs-navy-2);
+  box-shadow: 0 24px 60px rgba(8, 21, 35, 0.45);
+  z-index: 50;
+  transform-origin: left top;
+  animation: hs-flyout-in 0.16s var(--hs-ease) both;
+}
+/* invisible bridge so the pointer can cross from the rail without closing */
+.hs-shell .hs-flyout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 10px;
+}
+.hs-shell .hs-flyout-head {
+  padding: 8px 10px 10px;
+  color: #fff;
+  font-family: var(--hs-sans);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.hs-shell .hs-flyout-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #d5deea;
+  font-family: var(--hs-sans);
+  font-size: 13.5px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.hs-shell .hs-flyout-item svg {
+  color: var(--hs-dim-on-navy);
+  flex: none;
+  transition: color 0.15s ease;
+}
+.hs-shell .hs-flyout-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.hs-shell .hs-flyout-item:hover svg {
+  color: #fff;
+}
+.hs-shell .hs-flyout-item.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-weight: 650;
+}
+.hs-shell .hs-flyout-item.active svg {
+  color: #fff;
+}
+.hs-shell .hs-flyout-item.recommended:not(.active) .hs-flyout-label::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--hs-blue);
+  vertical-align: middle;
+}
+.hs-shell .hs-flyout-divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--hs-line-on-navy);
+}
+
+/* add-on programs not in the workspace yet (HubSpot-style): an up-arrow on the
+   item, a side bubble explaining the add-on on hover/focus, and choosing the
+   item prompts where to buy it instead of navigating */
+.hs-shell .hs-flyout-item {
+  position: relative;
+}
+.hs-shell .hs-flyout-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* release pills (HubSpot's "New" / "Beta"): flyout items, the hub icon, Create new */
+.hs-shell .hs-flyout-tag,
+.hs-shell .hs-menu-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: #fff;
+  background: var(--hs-blue);
+  animation: hs-tag-in 0.35s var(--hs-ease) both;
+}
+.hs-shell .hs-flyout-tag.beta,
+.hs-shell .hs-menu-tag.beta {
+  background: #7c3aed;
+}
+.hs-shell .hs-flyout-item.locked .hs-flyout-tag {
+  opacity: 0.85;
+}
+.hs-shell .hs-rail-tag {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hs-blue);
+  box-shadow:
+    0 0 0 2px var(--hs-navy),
+    0 0 0 4px rgba(47, 107, 255, 0.35);
+  animation: hs-tag-ping 2.4s ease-out infinite;
+}
+.hs-shell .hs-rail-tag.beta {
+  background: #a78bfa;
+  box-shadow:
+    0 0 0 2px var(--hs-navy),
+    0 0 0 4px rgba(167, 139, 250, 0.35);
+}
+.hs-shell .hs-rail-btn.active .hs-rail-tag {
+  box-shadow: 0 0 0 2px var(--hs-blue);
+  animation: none;
+}
+@keyframes hs-tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hs-tag-ping {
+  0%,
+  60%,
+  100% {
+    box-shadow:
+      0 0 0 2px var(--hs-navy),
+      0 0 0 4px rgba(47, 107, 255, 0.35);
+  }
+  30% {
+    box-shadow:
+      0 0 0 2px var(--hs-navy),
+      0 0 0 8px rgba(47, 107, 255, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-shell .hs-flyout-tag,
+  .hs-shell .hs-menu-tag,
+  .hs-shell .hs-rail-tag {
+    animation: none;
+  }
+}
+.hs-shell .hs-flyout-upgrade {
+  margin-left: 6px;
+  color: var(--hs-dim-on-navy);
+  opacity: 0.9;
+}
+.hs-shell .hs-flyout-item.locked {
+  color: #b9c4d6;
+}
+.hs-shell .hs-flyout-item.locked:hover .hs-flyout-upgrade,
+.hs-shell .hs-flyout-item.locked:focus-visible .hs-flyout-upgrade {
+  color: #fff;
+  opacity: 1;
+}
+.hs-shell .hs-flyout-tip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 14px);
+  width: 244px;
+  padding: 10px 12px 11px;
+  border: 1px solid var(--hs-line-on-navy);
+  border-radius: 10px;
+  background: var(--hs-navy-2);
+  color: #dbe3ee;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 18px 44px rgba(8, 21, 35, 0.5);
+  opacity: 0;
+  transform: translate(-4px, -50%);
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+  z-index: 2;
+}
+.hs-shell .hs-flyout-tip::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -6px;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%) rotate(45deg);
+  border-left: 1px solid var(--hs-line-on-navy);
+  border-bottom: 1px solid var(--hs-line-on-navy);
+  background: var(--hs-navy-2);
+}
+.hs-shell .hs-flyout-tip strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #fff;
+  font-weight: 700;
+}
+.hs-shell .hs-flyout-item:hover .hs-flyout-tip,
+.hs-shell .hs-flyout-item:focus-visible .hs-flyout-tip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+@keyframes hs-flyout-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================ content area ============================ */
+.hs-shell .content-scroll {
+  padding: 22px 28px 34px;
+}
+.hs-shell.reports-shell {
+  background: var(--hs-paper);
+}
+
+/* ============================ reduced motion ========================== */
+@media (prefers-reduced-motion: reduce) {
+  .hs-shell .hs-flyout,
+  .hs-shell .hs-menu {
+    animation: none;
+  }
+  .hs-shell .hs-ai-button,
+  .hs-shell .hs-rail-btn {
+    transition: none;
+  }
+  .hs-shell .hs-rail-btn svg,
+  .hs-shell .hs-rail-btn:hover svg,
+  .hs-shell .hs-rail-btn:hover svg *,
+  .hs-shell .hs-rail-btn:hover::before {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ===========================================================================
+   Bookmarks — a star on every page in a category flyout, and a quick-access
+   menu in the top bar holding whatever has been starred.
+   ======================================================================== */
+.hs-shell .hs-flyout-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.hs-shell .hs-flyout-row .hs-flyout-item {
+  flex: 1;
+  min-width: 0;
+}
+.hs-shell .hs-flyout-star {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #b6bfcf;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.14s ease,
+    color 0.14s ease,
+    background 0.14s ease;
+}
+.hs-shell .hs-flyout-row:hover .hs-flyout-star,
+.hs-shell .hs-flyout-star:focus-visible {
+  opacity: 1;
+}
+.hs-shell .hs-flyout-star:hover {
+  background: var(--hs-hover);
+  color: var(--hs-blue);
+}
+/* a starred page keeps its star showing, filled, whether or not the row is hovered */
+.hs-shell .hs-flyout-star.is-on {
+  opacity: 1;
+  color: #e8a33d;
+}
+.hs-shell .hs-flyout-star.is-on svg {
+  fill: currentColor;
+}
+
+.hs-shell .hs-bookmarks {
+  position: relative;
+}
+.hs-shell .hs-bookmarks-btn {
+  position: relative;
+}
+.hs-shell .hs-bookmarks-btn.has-items svg {
+  color: #f0b354;
+  fill: #f0b354;
+}
+.hs-shell .hs-bookmarks-count {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--hs-blue);
+  color: #fff;
+  font-family: var(--hs-sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.hs-shell .hs-bookmarks-menu {
+  min-width: 264px;
+}
+.hs-shell .hs-bookmark-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.hs-shell .hs-bookmark-row .hs-menu-item {
+  flex: 1;
+  min-width: 0;
+}
+.hs-shell .hs-bookmark-row .hs-menu-item.is-current {
+  background: var(--hs-hover);
+}
+.hs-shell .hs-bookmark-hub {
+  margin-left: auto;
+  padding-left: 8px;
+  color: #8a94a6;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.hs-shell .hs-bookmark-remove {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #97a1b2;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.14s ease,
+    background 0.14s ease,
+    color 0.14s ease;
+}
+.hs-shell .hs-bookmark-row:hover .hs-bookmark-remove,
+.hs-shell .hs-bookmark-remove:focus-visible {
+  opacity: 1;
+}
+.hs-shell .hs-bookmark-remove:hover {
+  background: #fbe4e2;
+  color: #c5221f;
+}
+.hs-shell .hs-bookmarks-empty {
+  margin: 0;
+  padding: 6px 10px 10px;
+  max-width: 244px;
+  color: #7b8698;
+  font-family: var(--hs-sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.hs-shell .hs-bookmarks-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border: 0;
+  border-top: 1px solid var(--hs-line);
+  border-radius: 0 0 7px 7px;
+  background: transparent;
+  color: var(--hs-blue);
+  font-family: var(--hs-sans);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.hs-shell .hs-bookmarks-add:hover {
+  background: var(--hs-hover);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hs-shell .hs-flyout-star,
+  .hs-shell .hs-bookmark-remove {
+    transition: none;
+  }
+}
+
+/* ============================ phones ================================== */
+/* The search box keeps a usable width; low-priority actions step aside and
+   the bell and account stay. Settings is still one tap away on the rail. */
+@media (max-width: 560px) {
+  .hs-shell .topbar.hs-topbar {
+    gap: 6px;
+    padding: 0 8px 0 6px;
+  }
+  .hs-shell .topbar.hs-topbar .search-box {
+    flex: 1 1 90px;
+  }
+  .hs-shell .topbar.hs-topbar .topbar-actions {
+    gap: 2px;
+  }
+  .hs-shell .topbar.hs-topbar .topbar-actions > .hs-bookmarks,
+  .hs-shell .topbar.hs-topbar .topbar-actions > .hs-create,
+  .hs-shell .topbar.hs-topbar .topbar-actions > .topbar-help-button,
+  .hs-shell .topbar.hs-topbar .topbar-actions > .hs-settings-button {
+    display: none;
+  }
+}

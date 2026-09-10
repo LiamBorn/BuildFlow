@@ -1,0 +1,699 @@
+/**
+ * The one page frame every schedule view stands in. `useSchedulePage` derives what the
+ * seven pages used to derive for themselves — the workspace (bench-aware), the shared
+ * context, the live feed and the view keys, the filtered scope, the shared week, the
+ * calendar, the KPIs, the alerts, the lookup maps, the notice, the conflict question, the
+ * save and the drawer, plus the drag sensors and the one way a drop runs with its Undo —
+ * and `SchedulePageFrame` renders the chrome around a page's board: the aurora, the hero,
+ * the control row, the filters, the saved views, the KPI grid, the board section with its
+ * notice, the alerts panel, the dialogs and the drawer. A page keeps its board and its
+ * drop rules.
+ */
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { CalendarDays, ChevronDown, Crosshair } from "lucide-react";
+import { useCallback, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import {
+  holidayMap,
+  type BootstrapPayload,
+  type CreateJobInput,
+  type DependencyType,
+  type Job,
+  type JobDependency,
+  type ScheduleAssignment
+} from "@buildflow/shared";
+import { assignJob, createDependency, createJob, deleteDependency, setScheduleBaseline } from "../api";
+import { addDays, parseIsoDate, toIsoDate } from "../components/ui/gantt";
+import { useHudMotion } from "../useHudMotion";
+import { ScheduleAlertsPanel, deriveScheduleAlerts, type ScheduleAlert } from "./alerts";
+import { useBenchData } from "./bench";
+import { withConflictAsk } from "./conflicts";
+import { GanttLinkDialog } from "./GanttLinkDialog";
+import { buildScheduleCpm } from "./cpm";
+import { applyScheduleFilters, resolveScheduleFilters } from "./filters";
+import { ScheduleNotice, scheduleCollision, useConflictAsk, useJobSave, useScheduleNotice, useScheduleSensors } from "./hooks";
+import { computeScheduleKpis, workCalendarOf } from "./kpis";
+import type { ScheduleTarget } from "./links";
+import { useScheduleLive } from "./live";
+import { firstOfScheduleMonth } from "./month";
+import { JobDrawer } from "./parts/JobDrawer";
+import { ScheduleKpiGrid, crewScheduleOrder } from "./parts/shared";
+import { ScheduleJobPickerDialog } from "./parts/week";
+import { getUnassignedJobs } from "./scheduleUtils";
+import { SavedViewsBar } from "./SavedViewsBar";
+import { ScheduleFilters } from "./ScheduleFilters";
+import { useScheduleContext, type SchedulePage as SchedulePageId } from "./useScheduleContext";
+import { useScheduleViewKeys } from "./viewKeys";
+import { WEEK_DAYS, dayOf, formatScheduleDate, initialWeekStart, mondayOf, scheduleWeekDays } from "./week";
+
+export type SchedulePageInput = {
+  data: BootstrapPayload;
+  reload: () => Promise<void>;
+  /** Opens another schedule view (keys 1–6) or the page an alert points at. */
+  onOpenPage?: (page: ScheduleTarget) => void;
+  page: SchedulePageId;
+  /** How the shared filters apply here — the Kanban is the status view and keeps every status on its board. */
+  filterOptions?: Parameters<typeof applyScheduleFilters>[2];
+  /** The page's own patches on jobs, shown until the server answers (a Gantt bar moves at once). */
+  overrides?: Record<string, Partial<Job>>;
+  /** Build the CPM readout — the landing and the Gantt show it; the boards do not pay for it. */
+  cpm?: boolean;
+};
+
+/** A change to the schedule and its way back, run the way every board runs one. */
+export type ScheduleChange<T> = {
+  /** The card the board shows as pending while the change is saved. */
+  id: string;
+  /** What the notices call it. */
+  name: string;
+  /** "move" or "book" — the verb of the failure notice. */
+  verb?: string;
+  /** The write; retried with `force` after the planner answers "book anyway". */
+  write: (force: boolean) => Promise<T>;
+  /** The notice when it lands. */
+  done: string;
+  /** The notice when the planner chose not to double-book. */
+  stays?: string;
+  /** Reverses the change; without it the notice offers no Undo. */
+  undo?: ((result: T) => Promise<unknown>) | null;
+  /** The notice after the Undo. */
+  undone?: string;
+  /** The card the board shows as pending while the Undo runs (the moved booking, by default the same card). */
+  undoId?: (result: T) => string;
+};
+
+export function useSchedulePage({
+  data: liveData,
+  reload,
+  onOpenPage,
+  page,
+  filterOptions,
+  overrides,
+  cpm: wantCpm = false
+}: SchedulePageInput) {
+  // development: `?bench=<n>` on the deep link renders the page against a generated n-job workspace (P3.5)
+  const bench = useBenchData(liveData);
+  // the page's own patches (a Gantt bar moves at once) sit on the server's jobs until fresh data settles them
+  const data = useMemo(
+    () =>
+      overrides && Object.keys(overrides).length > 0
+        ? { ...bench, jobs: bench.jobs.map((job) => (overrides[job.id] ? { ...job, ...overrides[job.id] } : job)) }
+        : bench,
+    [bench, overrides]
+  );
+  // the week, month, crew type, crew, project, region and status set follow you across the Schedule pages (and survive a reload)
+  const [context, updateContext] = useScheduleContext(data.activeUser.id);
+  // other tabs' changes arrive here: reload, and flash the cards they touched
+  useScheduleLive(reload);
+  // keys 1–6 switch views
+  useScheduleViewKeys(onOpenPage, page);
+
+  // the shared week: the context's, or the week with the nearest booking
+  const weekStart = useMemo(
+    () => (context.weekStart ? parseIsoDate(context.weekStart) : initialWeekStart(data.assignments)),
+    [context.weekStart, data.assignments]
+  );
+  const setWeekStart = useCallback(
+    (next: Date | ((current: Date) => Date)) =>
+      updateContext({ weekStart: toIsoDate(typeof next === "function" ? next(weekStart) : next) }),
+    [updateContext, weekStart]
+  );
+  const weekDays = useMemo(() => scheduleWeekDays(weekStart), [weekStart]);
+  const weekIso = useMemo(() => weekDays.map((day) => day.date), [weekDays]);
+  const weekStartIso = weekDays[0].date;
+  const weekEndIso = weekDays[WEEK_DAYS - 1].date;
+  const isThisWeek = weekStartIso === toIsoDate(mondayOf(new Date()));
+  // the same words for the same week on every schedule page
+  const weekRange = `${weekDays[0].label} - ${weekDays[WEEK_DAYS - 1].label}, ${weekStartIso.slice(0, 4)}`;
+  // today, and the shared month: the context's, or the one we are in
+  const today = toIsoDate(new Date());
+  const monthAnchor = context.monthAnchor ?? firstOfScheduleMonth(today);
+  const setMonthAnchor = useCallback(
+    (next: string | ((current: string) => string)) => updateContext({ monthAnchor: typeof next === "function" ? next(monthAnchor) : next }),
+    [updateContext, monthAnchor]
+  );
+
+  // the shared filters — project, crew type, crew, region, the status set — mean the same on every schedule page
+  const scope = useMemo(() => applyScheduleFilters(data, context, filterOptions), [data, context, filterOptions]);
+  // the filters as they resolve against this workspace (a project that no longer exists is no filter)
+  const filters = useMemo(() => resolveScheduleFilters(context, data), [context, data]);
+  const jobs = scope.jobs;
+  const crews = useMemo(() => [...scope.crews].sort((a, b) => crewScheduleOrder(a) - crewScheduleOrder(b)), [scope.crews]);
+  const weekAssignments = useMemo(
+    () =>
+      scope.assignments.filter((assignment) => {
+        const day = dayOf(assignment);
+        return day >= weekStartIso && day <= weekEndIso;
+      }),
+    [scope.assignments, weekStartIso, weekEndIso]
+  );
+  // jobs with no crew booked yet: the Week board's queue, the landing's panel
+  const unassigned = useMemo(() => getUnassignedJobs(jobs, data.assignments), [jobs, data.assignments]);
+  // holidays and working days come from Settings › Work calendar
+  const calendar = useMemo(() => workCalendarOf(data), [data]);
+  const holidays = useMemo(() => holidayMap(calendar), [calendar]);
+  // the whole plan as a CPM network on a working-day axis — float and the critical path mean nothing on a filtered subset
+  const cpm = useMemo(
+    () =>
+      wantCpm
+        ? buildScheduleCpm(
+            data.jobs.filter((job) => job.startDate && job.endDate),
+            data.dependencies ?? [],
+            calendar
+          )
+        : null,
+    [wantCpm, data.jobs, data.dependencies, calendar]
+  );
+  // the same KPI maths as every schedule page, for this week and these filters
+  const kpis = useMemo(
+    () => computeScheduleKpis({ crews, jobs, weekAssignments, weekDays: weekIso, phases: data.phases, projects: data.projects, calendar }),
+    [crews, jobs, weekAssignments, weekIso, data.phases, data.projects, calendar]
+  );
+  // the same alerts every schedule page raises, for what the filters show
+  const alerts = useMemo(() => deriveScheduleAlerts(data, jobs, scope.assignments), [data, jobs, scope.assignments]);
+  // an alert opens the place it is dealt with — a Week alert changes the shared week on the way; on the Week board that is all it does
+  const openAlert = useCallback(
+    (alert: ScheduleAlert) => {
+      if (alert.link.weekStart) updateContext({ weekStart: alert.link.weekStart });
+      if (alert.link.page === page) return;
+      onOpenPage?.(alert.link.page);
+    },
+    [updateContext, onOpenPage, page]
+  );
+
+  const crewsById = useMemo(() => new Map(data.crews.map((crew) => [crew.id, crew])), [data.crews]);
+  const jobsById = useMemo(() => new Map(data.jobs.map((job) => [job.id, job])), [data.jobs]);
+  const projectsById = useMemo(() => new Map(data.projects.map((project) => [project.id, project])), [data.projects]);
+  // the crews booked on each job, as the drawer and the chart name them
+  const crewNamesByJob = useMemo(() => {
+    const names = new Map<string, string[]>();
+    for (const assignment of data.assignments) {
+      const name = crewsById.get(assignment.crewId)?.name;
+      if (!name) continue;
+      const list = names.get(assignment.jobId) ?? [];
+      if (!list.includes(name)) list.push(name);
+      names.set(assignment.jobId, list);
+    }
+    return new Map([...names].map(([jobId, list]) => [jobId, list.join(", ")]));
+  }, [data.assignments, crewsById]);
+  const crewNamesForJob = useCallback((jobId: string) => crewNamesByJob.get(jobId) ?? "", [crewNamesByJob]);
+
+  const { notice, say } = useScheduleNotice();
+  // the server asks before it double-books a crew; this is how the page answers
+  const { ask, dialog: conflictDialog } = useConflictAsk();
+  // the one way a schedule page saves a job: a move carries its bookings along and asks before a double-booking
+  const patchJob = useJobSave({ assignments: data.assignments, reload, say, ask });
+
+  // the drawer: a job, opened from a booking's card or from the job itself
+  const [selected, setSelected] = useState<{ jobId: string; assignmentId: string | null } | null>(null);
+  const selectedJob = selected ? (data.jobs.find((job) => job.id === selected.jobId) ?? null) : null;
+  const selectedAssignmentId = selected?.assignmentId ?? null;
+  const openJob = useCallback((jobId: string) => setSelected({ jobId, assignmentId: null }), []);
+  const openBooking = useCallback(
+    (assignment: ScheduleAssignment) => setSelected({ jobId: assignment.jobId, assignmentId: assignment.id }),
+    []
+  );
+  const closeDrawer = useCallback(() => setSelected(null), []);
+
+  // drags: the sensors every board uses, a guard for the click that ends a drag, and the card being saved
+  const sensors = useScheduleSensors();
+  const suppressClick = useRef(false);
+  const releaseClick = useCallback(() => {
+    window.setTimeout(() => {
+      suppressClick.current = false;
+    }, 150);
+  }, []);
+  const [busy, setBusy] = useState(false);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  /**
+   * Runs a change the way every board does: the card goes pending, the write asks before a
+   * double-booking, the notice lands with its Undo, and a failure says what could not happen.
+   * Resolves with the write's result, or null when nothing was written.
+   */
+  const runChange = useCallback(
+    async <T,>({ id, name, verb = "move", write, done, stays, undo, undone, undoId }: ScheduleChange<T>): Promise<T | null> => {
+      const failed = (what: string, error: unknown) =>
+        say(`Could not ${what} ${name}: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
+      setBusy(true);
+      setPendingId(id);
+      try {
+        const result = await withConflictAsk(write, ask);
+        if (result === null) {
+          say(stays ?? `${name} stays where it was.`);
+          return null;
+        }
+        await reload();
+        say(done, {
+          // the way back is the state before, so Undo needs no asking
+          undo: undo
+            ? async () => {
+                setBusy(true);
+                setPendingId(undoId?.(result) ?? id);
+                try {
+                  await undo(result);
+                  await reload();
+                  say(undone ?? `${name} as it was`);
+                } catch (error) {
+                  failed("move back", error);
+                } finally {
+                  setBusy(false);
+                  setPendingId(null);
+                }
+              }
+            : undefined
+        });
+        return result;
+      } catch (error) {
+        failed(verb, error);
+        return null;
+      } finally {
+        setBusy(false);
+        setPendingId(null);
+      }
+    },
+    [ask, reload, say]
+  );
+  // "Add job" in a cell, or "New Activity": the one job form, on a crew and a day
+  const [picker, setPicker] = useState<{ crewId: string; date: string } | null>(null);
+  const pickerCrew = picker ? (crewsById.get(picker.crewId) ?? null) : null;
+  const openPicker = useCallback((crewId: string, date: string) => setPicker({ crewId, date }), []);
+  const closePicker = useCallback(() => setPicker(null), []);
+  // "New Activity": the form on the first crew in view and the first day of the week
+  const newActivity = useCallback(() => {
+    const first = scope.crews[0] ?? data.crews[0];
+    if (!first) {
+      say("Add a crew before scheduling work.", { error: true });
+      return;
+    }
+    setPicker({ crewId: first.id, date: weekStartIso });
+  }, [scope.crews, data.crews, weekStartIso, say]);
+  /** Creates the job and books it on the crew and the day the picker is open for; the server asks before it double-books the crew. */
+  const createBooking = useCallback(
+    async (input: CreateJobInput, crewId: string): Promise<{ job: Job; booked: boolean; date: string } | null> => {
+      if (!picker) return null;
+      const { date } = picker;
+      setBusy(true);
+      try {
+        const job = await createJob(input);
+        // a "no" leaves the new job unbooked, in the Week board's queue
+        const booked = (await withConflictAsk((force) => assignJob({ jobId: job.id, crewId, date }, { force }), ask)) !== null;
+        setPicker(null);
+        await reload();
+        say(
+          booked
+            ? `${job.name} scheduled for ${crewsById.get(crewId)?.name ?? "crew"} on ${formatScheduleDate(date)}`
+            : `${job.name} created but not booked — find it in the Week board's queue.`
+        );
+        return { job, booked, date };
+      } catch (error) {
+        say(`Could not schedule the job: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
+        return null;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [picker, ask, reload, say, crewsById]
+  );
+  // dependencies: the links a job has, and the one way a link is drawn or taken away — from the drawer on
+  // every page, from the bar's menu on the Gantt; each notice carries its Undo
+  const dependencies = useMemo(() => data.dependencies ?? [], [data.dependencies]);
+  const linksOf = useCallback(
+    (jobId: string) => dependencies.filter((link) => link.predecessorId === jobId || link.successorId === jobId),
+    [dependencies]
+  );
+  // the jobs a link can lead to: every dated job, earliest first
+  const linkableJobs = useMemo(
+    () =>
+      data.jobs
+        .filter((job) => job.startDate && job.endDate)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name)),
+    [data.jobs]
+  );
+  // "Link to another job…": the job a new dependency starts from
+  const [linkFrom, setLinkFrom] = useState<Job | null>(null);
+  const linkJobs = useCallback(
+    async (predecessor: Job, successor: Job, type: DependencyType, lagDays: number) => {
+      try {
+        const link = await createDependency({ predecessorId: predecessor.id, successorId: successor.id, type, lagDays });
+        await reload();
+        say(`${predecessor.name} → ${successor.name} linked (${type}${lagDays ? `, ${lagDays}d lag` : ""})`, {
+          undo: async () => {
+            await deleteDependency(link.id);
+            await reload();
+            say(`${predecessor.name} and ${successor.name} unlinked again`);
+          }
+        });
+      } catch (error) {
+        say(`Could not link the jobs: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
+      }
+    },
+    [reload, say]
+  );
+  const unlinkJobs = useCallback(
+    async (link: JobDependency) => {
+      const name = (id: string) => jobsById.get(id)?.name ?? id;
+      const label = `${name(link.predecessorId)} and ${name(link.successorId)}`;
+      try {
+        await deleteDependency(link.id);
+        await reload();
+        say(`${label} unlinked`, {
+          undo: async () => {
+            await createDependency({
+              predecessorId: link.predecessorId,
+              successorId: link.successorId,
+              type: link.type,
+              lagDays: link.lagDays
+            });
+            await reload();
+            say(`${label} linked again`);
+          }
+        });
+      } catch (error) {
+        say(`Could not unlink ${label}: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
+      }
+    },
+    [reload, say, jobsById]
+  );
+  // "Set baseline": snapshot the current plan as what slip is measured against (the CPM readout's button)
+  const saveBaseline = useCallback(async () => {
+    setBusy(true);
+    try {
+      await setScheduleBaseline();
+      await reload();
+      say("Baseline saved — slip is now measured against today's plan.");
+    } catch (error) {
+      say(`Could not save the baseline: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
+    } finally {
+      setBusy(false);
+    }
+  }, [reload, say]);
+
+  return {
+    page,
+    data,
+    reload,
+    onOpenPage,
+    context,
+    updateContext,
+    weekStart,
+    setWeekStart,
+    weekDays,
+    weekIso,
+    weekStartIso,
+    weekEndIso,
+    isThisWeek,
+    weekRange,
+    today,
+    monthAnchor,
+    setMonthAnchor,
+    scope,
+    filters,
+    jobs,
+    crews,
+    weekAssignments,
+    unassigned,
+    calendar,
+    holidays,
+    kpis,
+    cpm,
+    alerts,
+    openAlert,
+    crewsById,
+    jobsById,
+    projectsById,
+    crewNamesByJob,
+    crewNamesForJob,
+    notice,
+    say,
+    ask,
+    conflictDialog,
+    patchJob,
+    selectedJob,
+    selectedAssignmentId,
+    openJob,
+    openBooking,
+    closeDrawer,
+    sensors,
+    suppressClick,
+    releaseClick,
+    busy,
+    setBusy,
+    pendingId,
+    setPendingId,
+    runChange,
+    picker,
+    pickerCrew,
+    openPicker,
+    closePicker,
+    newActivity,
+    createBooking,
+    dependencies,
+    linksOf,
+    linkableJobs,
+    linkFrom,
+    setLinkFrom,
+    linkJobs,
+    unlinkJobs,
+    saveBaseline
+  };
+}
+
+export type SchedulePageState = ReturnType<typeof useSchedulePage>;
+
+/** The previous/next week stepper every week-bound page carries. */
+export function WeekStepper({ page }: { page: SchedulePageState }) {
+  const { weekRange, setWeekStart } = page;
+  return (
+    <div className="week-stepper" aria-label={`Selected week ${weekRange}`}>
+      <button type="button" aria-label="Previous week" onClick={() => setWeekStart((start) => addDays(start, -WEEK_DAYS))}>
+        <ChevronDown className="previous-week" size={18} />
+      </button>
+      <strong>{weekRange}</strong>
+      <button type="button" aria-label="Next week" onClick={() => setWeekStart((start) => addDays(start, WEEK_DAYS))}>
+        <ChevronDown className="next-week" size={18} />
+      </button>
+    </div>
+  );
+}
+
+/** "This week": back to the current week, disabled when already there. */
+export function ThisWeekButton({ page }: { page: SchedulePageState }) {
+  const { setWeekStart, isThisWeek } = page;
+  return (
+    <button
+      type="button"
+      className="outline-button"
+      onClick={() => setWeekStart(mondayOf(new Date()))}
+      disabled={isThisWeek}
+      title="Back to the current week"
+    >
+      <Crosshair size={16} /> This week
+    </button>
+  );
+}
+
+/** "Schedule": back to the overview. */
+export function BackToScheduleButton({ onOpenSchedule }: { onOpenSchedule: () => void }) {
+  return (
+    <button type="button" className="outline-button" onClick={onOpenSchedule} title="Back to the Schedule overview">
+      <CalendarDays size={16} /> Schedule
+    </button>
+  );
+}
+
+export type SchedulePageFrameProps = {
+  page: SchedulePageState;
+  /** The page's own root class, e.g. "week-page". */
+  pageClass?: string;
+  eyebrow: ReactNode;
+  title: ReactNode;
+  titleTutorialId?: string;
+  sub: ReactNode;
+  releaseTag?: ReactNode;
+  /** A band between the hero and the control row (the landing's status band). */
+  band?: ReactNode;
+  /** The landing's motion: the cursor glow and reveal-on-scroll for the hero, the control row and its [data-reveal] blocks. */
+  motion?: boolean;
+  /** The control row's contents: the week stepper and the page's actions. */
+  controls: ReactNode;
+  /** How the shared filters show here (the Kanban keeps every status, and says so). */
+  filters?: Pick<ComponentProps<typeof ScheduleFilters>, "statuses" | "note">;
+  /** The board section the frame wraps around the children — false when the page lays out its own board and rail. */
+  board?: boolean;
+  boardLabel?: string;
+  boardTutorialId?: string;
+  /** The alerts panel under the board; false when the board carries its own rail. */
+  alerts?: boolean;
+  onOpenSchedule?: () => void;
+  /** The page's drop rule and its announcements; with them the board stands in a DndContext. */
+  drag?: { accessibility: ComponentProps<typeof DndContext>["accessibility"]; onDragEnd: (event: DragEndEvent) => void | Promise<void> };
+  /** After the picker creates and books a job (the landing goes to the Week board on that week). */
+  onBooked?: (booking: { job: Job; booked: boolean; date: string }) => void;
+  /** The page's own dialogs (a day summary, an import). */
+  dialogs?: ReactNode;
+  children: ReactNode;
+};
+
+export function SchedulePageFrame({
+  page,
+  pageClass,
+  eyebrow,
+  title,
+  titleTutorialId,
+  sub,
+  releaseTag,
+  band,
+  motion = false,
+  controls,
+  filters,
+  board = true,
+  boardLabel,
+  boardTutorialId,
+  alerts: showAlerts = true,
+  onOpenSchedule,
+  drag,
+  onBooked,
+  dialogs,
+  children
+}: SchedulePageFrameProps) {
+  const {
+    data,
+    reload,
+    onOpenPage,
+    context,
+    updateContext,
+    kpis,
+    notice,
+    alerts,
+    openAlert,
+    conflictDialog,
+    selectedJob,
+    closeDrawer,
+    patchJob,
+    projectsById,
+    crewNamesForJob,
+    jobsById,
+    dependencies,
+    linksOf,
+    linkableJobs,
+    linkFrom,
+    setLinkFrom,
+    linkJobs,
+    unlinkJobs,
+    busy,
+    picker,
+    pickerCrew,
+    closePicker,
+    createBooking,
+    sensors,
+    suppressClick,
+    releaseClick
+  } = page;
+  // the landing's motion only; without the ref the hook does nothing
+  const rootRef = useRef<HTMLDivElement>(null);
+  useHudMotion(rootRef);
+  const body = (
+    <div
+      className={["schedule-page", pageClass, "page-stack", "sched-rx", "gantt-page"].filter(Boolean).join(" ")}
+      ref={motion ? rootRef : undefined}
+    >
+      <div className="dx-bg" aria-hidden="true">
+        <span className="dx-aurora dx-aurora-1" />
+        <span className="dx-aurora dx-aurora-2" />
+        <span className="dx-aurora dx-aurora-3" />
+      </div>
+      {motion && <div className="dx-cursor" aria-hidden="true" />}
+      <div className="schedule-title-row dx-hero" data-reveal={motion || undefined}>
+        <span className="dx-eyebrow">
+          <span className="dx-dot" />
+          {eyebrow}
+        </span>
+        <h1 className="dx-title" data-tutorial-id={titleTutorialId}>
+          {title}
+          {releaseTag}
+        </h1>
+        <p className="dx-sub">{sub}</p>
+      </div>
+
+      {band}
+      <div className="schedule-control-row" data-reveal={motion || undefined}>
+        {controls}
+      </div>
+
+      <ScheduleFilters data={data} context={context} onChange={updateContext} {...filters} />
+      <SavedViewsBar data={data} context={context} page={page.page} onChange={updateContext} onOpenPage={onOpenPage} reload={reload} />
+
+      <ScheduleKpiGrid kpis={kpis} />
+
+      {board ? (
+        <section className="schedule-board" aria-label={boardLabel} data-tutorial-id={boardTutorialId}>
+          <ScheduleNotice notice={notice} />
+          {children}
+        </section>
+      ) : (
+        children
+      )}
+      {showAlerts && <ScheduleAlertsPanel alerts={alerts} onOpen={openAlert} under />}
+      {linkFrom && (
+        <GanttLinkDialog
+          from={linkFrom}
+          jobs={linkableJobs}
+          existing={dependencies}
+          onClose={() => setLinkFrom(null)}
+          onLink={async (successor, type, lagDays) => {
+            setLinkFrom(null);
+            await linkJobs(linkFrom, successor, type, lagDays);
+          }}
+        />
+      )}
+      {picker && pickerCrew && (
+        <ScheduleJobPickerDialog
+          crew={pickerCrew}
+          crews={data.crews}
+          date={picker.date}
+          projects={data.projects}
+          busy={busy}
+          onClose={closePicker}
+          onCreateJob={async (input, crewId) => {
+            const booking = await createBooking(input, crewId);
+            if (booking) onBooked?.(booking);
+          }}
+        />
+      )}
+      {dialogs}
+      {conflictDialog}
+
+      {selectedJob && (
+        <JobDrawer
+          job={selectedJob}
+          projectName={projectsById.get(selectedJob.projectId)?.name ?? "Unfiled"}
+          crews={crewNamesForJob(selectedJob.id)}
+          links={linksOf(selectedJob.id)}
+          jobsById={jobsById}
+          onLink={() => setLinkFrom(selectedJob)}
+          onUnlink={(link) => void unlinkJobs(link)}
+          onClose={closeDrawer}
+          onOpenSchedule={onOpenSchedule ?? closeDrawer}
+          onSave={async (patch) => {
+            const ok = await patchJob(selectedJob, patch, `${selectedJob.name} saved`);
+            if (ok) closeDrawer();
+          }}
+        />
+      )}
+    </div>
+  );
+  if (!drag) return body;
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={scheduleCollision}
+      accessibility={drag.accessibility}
+      onDragStart={() => {
+        suppressClick.current = true;
+      }}
+      onDragCancel={releaseClick}
+      onDragEnd={(event) => void drag.onDragEnd(event)}
+    >
+      {body}
+    </DndContext>
+  );
+}
