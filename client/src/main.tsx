@@ -24,7 +24,6 @@ import "./equipment-redesign.css";
 import "./materials-redesign.css";
 import "./field-updates-redesign.css";
 import "./delayIQs-redesign.css";
-import "./sidebar-redesign.css";
 import "./assistant-global.css";
 import "./settings-redesign.css";
 import "./field-variance.css";

@@ -125,8 +125,48 @@
   --bf-slide: 3px;
   --bf-press-scale: 0.94;
 
-  /* ---- focus ------------------------------------------------------------- */
-  --bf-focus-ring: 0 0 0 4px rgba(26, 115, 232, 0.12);
+  /* ---- focus -------------------------------------------------------------
+     On the accent, which is #2f6bff by decision, not the Welcome Page's
+     #1a73e8 that this ring was first measured from. */
+  --bf-focus-ring: 0 0 0 4px rgba(47, 107, 255, 0.12);
+
+  /* ========================================================================
+     The dense companion scale (Phase 4, step 1).
+     The type ladder above is the Welcome Page's. These are the app-side
+     values it compresses to: same shape, ~3.5x narrower span. Rationale and
+     the per-role compression factors are in REDESIGN_PLAN.md section 1.
+     ===================================================================== */
+
+  /* ---- dense type --------------------------------------------------------
+     The eyebrow is the one role that does NOT re-scale: 11.5px uppercase
+     carries over at 1:1 and is what ties a 13px table to a 96px hero. */
+  --bf-app-title: clamp(22px, 1.9vw, 26px); /* page h1, never below today's 22px */
+  --bf-app-title-track: -0.02em;
+  --bf-app-title-lead: 1.14;
+  --bf-app-section: 16px; /* card / section head */
+  --bf-app-panel: 14.5px; /* dashboard panel h2, frozen: the board measures against it */
+  --bf-app-figure: clamp(20px, 1.6vw, 26px); /* KPI value */
+  --bf-app-figure-track: -0.02em;
+  --bf-app-lede: 14px;
+  --bf-app-row-strong: 13.5px; /* primary cell, menu row */
+  --bf-app-row: 13px; /* table cell, list row */
+  --bf-app-meta: 12px; /* timestamp, secondary */
+  --bf-app-eyebrow: 11.5px; /* uppercase label / column head */
+  --bf-app-eyebrow-track: 0.045em;
+  --bf-app-micro: 11px; /* badge, pill text */
+  --bf-app-lead-row: 1.45;
+
+  /* ---- dense measures ----------------------------------------------------
+     No page max-width in-app: a 6-column board and a 12-column table need the
+     width. Prose still gets a ch cap wherever it runs. */
+  --bf-app-prose: 62ch; /* empty states, tutorial body, add-on copy, AI messages */
+  --bf-app-gutter-y: clamp(18px, 2vw, 28px);
+  --bf-app-gutter-x: clamp(18px, 2.4vw, 32px);
+
+  /* ---- the hover moves, re-scaled for a dense surface ------------------- */
+  --bf-lift-dense: -4px; /* cards under ~200px tall lift less than the page's -6px */
+  --bf-spotlight-r: 220px; /* the tilt move's in-app stand-in: a pointer-follow sheen */
+  --bf-spotlight-a: 0.06;
 }
 
 /* The reveal contract's reduced-motion half, matching what the Welcome Page
@@ -139,7 +179,9 @@
     --bf-reveal-stagger: 0ms;
     --bf-lift: 0px;
     --bf-lift-small: 0px;
+    --bf-lift-dense: 0px;
     --bf-slide: 0px;
     --bf-press-scale: 1;
+    --bf-spotlight-a: 0;
   }
 }
