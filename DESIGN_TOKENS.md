@@ -48,25 +48,49 @@ Eleven app scopes use `#2f6bff`. Three signed-out scopes use `#1a73e8`. One of t
 it is a brand call rather than a technical one. Note that the auth split screen (`.acct-split`)
 currently sits on the Welcome Page's blue, so whichever way this goes, the funnel follows it.
 
-**2. `--wx-serif` is stale and is a trap.** In ten app scopes the token still holds a serif stack:
+**2. `--wx-serif` renders a serif in the app's dialogs.** In ten app scopes the token still holds:
 
 ```
-"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif
+"Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif
 ```
 
-On the Welcome Page it holds the Inter sans stack instead. Twenty-seven rules across the app still
-reference `var(--wx-serif)`, but **nothing renders serif**: I walked the Dashboard, Projects,
-Materials, Field Updates and DelayIQs pages in the browser and counted zero elements computing to
-Iowan or Palatino, because a later stylesheet overrides every one of those rules. The token is dead
-weight that will silently produce Palatino the moment new work consumes it. It should be deleted
-from the app scopes, not carried forward.
+On the Welcome Page the same token holds the Inter sans stack instead.
 
-**3. `--wx-amber` holds a blue.** Seven app scopes declare `--wx-amber: #0032b0`, which is a dark
-blue. Crews declares the same token as `#b45309`, an actual amber. This one does render: the
-"Planned" badge on the Schedule page computes to `rgb(0, 50, 176)`, and the same token drives
-`.health.amber`, the `ready-to-start` badges, the variance review pill and the medium-severity
-severity badge. So a warning-coloured semantic is blue on most pages and amber on Crews. Tell me
-which is intended and I will make it consistent.
+**Corrected 2026-09-10.** An earlier draft of this file said nothing rendered serif. That was
+wrong, and wrong in a way worth recording: I had walked the Dashboard, Projects, Materials, Field
+Updates and DelayIQs **pages** and counted zero serif elements, and concluded the token was dead.
+I never opened a **dialog**. On the page surfaces the conclusion holds, because a later stylesheet
+overrides all 27 rules there. In dialogs it does not:
+
+| Surface | Rule | Renders |
+|---|---|---|
+| Project add/edit dialog title | `project-dialog-redesign.css:158` | Iowan Old Style, **42px**, weight 500 |
+| Crew, equipment, material dialog headings | `.equip-rx / .mat-rx .crew-dialog-header h2` | Iowan Old Style, 24px |
+
+Verified in the browser: the "New Project" dialog's title computes to
+`"Iowan Old Style", "Palatino Linotype", …` at `42px`. Nothing after import 21 in `main.tsx`
+mentions `.pdx-title`, so nothing overrides it. Nine dialog titles across six pages are affected.
+
+So this is not dead weight to delete quietly. It is **the single most visible typographic
+mismatch between the app and the Welcome Page**: the largest display type anywhere in the signed-in
+product is a 42px serif, in a language that is otherwise Inter-only. The token should be retired
+and those nine titles restated in Inter, which is a deliberate visual change to flag rather than a
+cleanup to slip in.
+
+**3. Two "amber" tokens hold blues.** Seven app scopes declare `--wx-amber: #0032b0`, a dark blue.
+Crews declares the same token as `#b45309`, an actual amber. This one renders: the "Planned" badge
+on the Schedule page computes to `rgb(0, 50, 176)`, and the token also drives `.health.amber`, the
+`ready-to-start` badges, the variance review pill and the medium-severity pill. So a
+warning-coloured semantic is blue on most pages and amber on Crews.
+
+There is a second one, found later: **`--tc-amber: #0b4ae8`** (`timecard.css:11`), also a blue, so
+every "amber" pill on TimeCard renders blue too: the overtime approval, the Overtime 1.5x badge,
+Apprentice, Conditional lien and the OT stat chip.
+
+**Decision taken:** both stay exactly as they render for now, revisited in Phase 4. Worth knowing
+that the chrome flip makes this louder rather than quieter, because a blue "Planned" badge sitting
+beside the `#2f6bff` accent is far more noticeable on a paper ground than it was against the
+current navy chrome.
 
 ## Colour
 
