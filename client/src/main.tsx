@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { initAnalytics } from "./analytics";
+import "./design-tokens.css"; // the redesign's scale: additive --bf-* tokens, read by everything, overridden by nothing
 import "./styles.css";
 import "./redesign.css";
 import "./timecard.css";

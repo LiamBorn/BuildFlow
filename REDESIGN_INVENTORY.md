@@ -12,25 +12,30 @@ second agent then re-derived the same area independently and hunted for omission
 it found is folded in below under *Omission check*. Counts are of distinct catalogued items, not
 of pixels: a single card contributing six labelled figures counts six.
 
-| Area | Screens | Information items | Actions | Omission check |
-|---|---:|---:|---:|---|
-| [App shell (rail, flyouts, top bar, global overlays)](#app-shell) | 16 | 130 | 94 | yes |
-| [Dashboard (Home) and the panel board](#dashboard) | 23 | 143 | 60 | yes |
-| [Schedule landing and shared schedule chrome](#schedule-landing) | 25 | 147 | 91 | yes |
-| [Schedule: Week board and Month calendar](#schedule-week-month) | 9 | 97 | 63 | yes |
-| [Schedule: List, Kanban and Matrix](#schedule-list-kanban-matrix) | 3 | 54 | 42 | yes |
-| [Schedule: Gantt Chart](#gantt) | 7 | 44 | 58 | yes |
-| [Projects and the project editor dialog](#projects) | 8 | 86 | 46 | yes |
-| [Crews, Equipment and Materials](#crews-equipment-materials) | 12 | 126 | 78 | yes |
-| [Field Updates, DelayIQs and Reports](#field-delayiq-reports) | 14 | 139 | 86 | yes |
-| [Map & Field Ops and TimeCard](#map-timecard) | 19 | 146 | 75 | yes |
-| [Sales hub: Contacts, Companies, Deals](#sales-hub) | 11 | 124 | 120 | yes |
-| [Bookmarks, shared index chrome and shared primitives](#bookmarks-index-shared) | 10 | 85 | 42 | yes |
-| [Settings (every category and field)](#settings) | 17 | 130 | 86 | yes |
-| [AI modules and sub-programs](#ai-modules) | 12 | 120 | 75 | yes |
-| [Cross-cutting: loading, empty, error states and full motion inventory](#states-and-motion) | 18 | 121 | 49 | yes |
-| [Welcome Page design language (redesign reference, not a redesign target)](#welcome-reference) | 14 | 167 | 50 | yes |
-| **Total** | **218** | **1859** | **1115** | |
+| Area | Screens | Information items | Actions | Omission check | Scope |
+|---|---:|---:|---:|---|---|
+| [Auth: create account, log in, forgot password](#auth-signup) | 5 | 57 | 35 | yes | redesign |
+| [Auth: business type and additional products](#auth-onboarding) | 6 | 95 | 27 | yes | redesign |
+| [Auth: reset password and verify email](#auth-recovery) | 6 | 50 | 24 | yes | redesign |
+| [Auth: invite team and accept invite](#auth-invites) | 5 | 51 | 27 | yes | redesign |
+| [App shell (rail, flyouts, top bar, global overlays)](#app-shell) | 16 | 130 | 94 | yes | redesign |
+| [Dashboard (Home) and the panel board](#dashboard) | 23 | 143 | 60 | yes | redesign |
+| [Schedule landing and shared schedule chrome](#schedule-landing) | 25 | 147 | 91 | yes | redesign |
+| [Schedule: Week board and Month calendar](#schedule-week-month) | 9 | 97 | 63 | yes | redesign |
+| [Schedule: List, Kanban and Matrix](#schedule-list-kanban-matrix) | 3 | 54 | 42 | yes | redesign |
+| [Schedule: Gantt Chart](#gantt) | 7 | 44 | 58 | yes | redesign |
+| [Projects and the project editor dialog](#projects) | 8 | 86 | 46 | yes | redesign |
+| [Crews, Equipment and Materials](#crews-equipment-materials) | 12 | 126 | 78 | yes | redesign |
+| [Field Updates, DelayIQs and Reports](#field-delayiq-reports) | 14 | 139 | 86 | yes | redesign |
+| [Map & Field Ops and TimeCard](#map-timecard) | 19 | 146 | 75 | yes | redesign |
+| [Sales hub: Contacts, Companies, Deals](#sales-hub) | 11 | 124 | 120 | yes | redesign |
+| [Bookmarks, shared index chrome and shared primitives](#bookmarks-index-shared) | 10 | 85 | 42 | yes | redesign |
+| [Settings (every category and field)](#settings) | 17 | 130 | 86 | yes | redesign |
+| [AI modules and sub-programs](#ai-modules) | 12 | 120 | 75 | yes | redesign |
+| [Cross-cutting: loading, empty, error states and full motion inventory](#states-and-motion) | 18 | 121 | 49 | yes | redesign |
+| [Welcome Page design language (redesign reference, not a redesign target)](#welcome-reference) | 14 | 167 | 50 | yes | reference |
+| **Total** | **240** | **2112** | **1228** | | |
+| **Redesign targets only** | **226** | **1945** | **1178** | | |
 
 ## Route coverage
 
@@ -65,7 +70,1803 @@ Every value in the `Page` union in `client/src/App.tsx:361` must have a home aft
 Behind the single `welcome` route sit 53 more views (the `WelcomeView` union, `App.tsx:385`).
 Those are catalogued in [Appendix A](#appendix-public-routes): 46 are the marketing site, which
 already carries the design language being matched and is out of scope, and 7 are the auth and
-onboarding funnel, which needs a scope decision before Phase 4.
+onboarding funnel, which is in scope and inventoried in the main body.
+
+<a id="auth-signup"></a>
+
+## Auth: create account, log in, forgot password
+
+`auth-signup` — 5 screens, 57 information items, 35 actions.
+
+**Source:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx`, `/Users/liamsantos/Documents/Production Scheduling/client/src/api.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/analytics.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/main.tsx`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/passwordPolicy.ts`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/index.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/app.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/auth.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/rateLimit.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/App.test.tsx`, `/Users/liamsantos/Documents/Production Scheduling/client/src/test/appHarness.tsx`, `/Users/liamsantos/Documents/Production Scheduling/server/test/api.test.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/test/oauth.test.ts`
+
+**Styles:** `/Users/liamsantos/Documents/Production Scheduling/client/src/account-redesign.css`, `/Users/liamsantos/Documents/Production Scheduling/client/src/welcome-redesign.css`, `/Users/liamsantos/Documents/Production Scheduling/client/src/styles.css`, `/Users/liamsantos/Documents/Production Scheduling/client/src/redesign.css`
+
+### Create account (signup mode)
+
+**Route:** #create-account (welcomeView "createAccount", mode "signup")  
+**Entry:** `App.tsx:6587 (mode === "signup"; mounted at App.tsx:3908-3909)`
+
+Top of the registration funnel: create the owner account AND the org/workspace in one form, then hand off to the business-type onboarding question.
+
+**Information displayed** (20)
+
+- [ ] Back control copy: '← Back to BuildFlow' (.acct-back)
+- [ ] Brand lockup: <BuildFlowLogoMark /> + 'BuildFlow' (.acct-brand)
+- [ ] Eyebrow chip: pulsing dot + 'Launching September 21st' (LAUNCH_DATE_LABEL, built from LAUNCH_DATE = new Date(2026, 8, 21); App.tsx:13476)
+- [ ] H1 (id=create-account-title): 'Create your workspace.'
+- [ ] Sub-headline: 'Coordinate crews, materials, and schedules in one place.'
+- [ ] Field label: 'Your name'
+- [ ] Field label: 'Company'
+- [ ] Company helper line (id=account-company-hint): 'This becomes your workspace name. You can rename it later in Settings.'
+- [ ] Field label: 'Work email' (label text is 'Email' in login mode)
+- [ ] Personal-domain inline hint (id=account-email-hint, only when the typed email's domain is in PERSONAL_EMAIL_DOMAINS): 'That looks like a personal address. It works, but a company email keeps this workspace with the business if people change.'
+- [ ] Field label: 'Password'
+- [ ] Password helper line (id=account-password-hint): 'At least 8 characters. A longer phrase with a number or symbol is strongest. Avoid common words and your email.'
+- [ ] Password strength meter (renders only when password.length > 0): four segment bars + a row reading 'Password strength' and a bold label — one of 'Too weak' / 'Weak' / 'Fair' / 'Strong' / 'Very strong' (aria-live=polite; container carries data-score=0..4)
+- [ ] Terms line, links outside the <label> so opening them does not tick the box: 'I agree to the' + link 'Terms & Conditions' + ' and ' + link 'Privacy Policy' + '.'
+- [ ] Remember checkbox copy: 'Keep me signed in for 30 days'
+- [ ] Divider copy (only when >=1 OAuth provider configured): 'or continue with'
+- [ ] Provider button labels: 'Google' (with a 'G' mark) and 'Microsoft' (with a four-square mark)
+- [ ] Mode-switch copy: 'Existing user? ' + button 'Log in'
+- [ ] Submit copy: 'Create account' (idle) / 'Creating your workspace…' (busy)
+- [ ] Aside (aria-hidden=true, hidden below 900px): brand row 'BuildFlow'; the AcctScheduleViz card headed by a pulsing live dot + 'Live schedule' + 'Mon — Fri'; four crew lane labels 'Framing', 'Concrete', 'Electrical', 'Roofing'; typewriter line 'Where crews, projects, and schedules ' + emphasised 'run as one.'; cite 'Run the whole jobsite from one place.'
+
+**Actions supported** (13)
+
+- [ ] '← Back to BuildFlow' button -> onBack = showWelcomeHome (returns to welcomeView "home")
+- [ ] Submit 'Create account' -> submit() validates all five fields client-side, then apiSignup({email trimmed, password, name trimmed, orgName: company trimmed, acceptTerms: true, remember}) -> POST /api/auth/signup; on success the parent reloads the workspace and navigates (this component unmounts)
+- [ ] Implicit form submit on Enter in any input (native <form onSubmit>); submit() is re-entrancy guarded by `if (busy) return`
+- [ ] Show/hide password toggle button (.acct-pw-toggle) -> setShowPassword(!v); swaps input type text<->password and the lucide icon Eye <-> EyeOff; aria-label toggles 'Show password' / 'Hide password'
+- [ ] 'Terms & Conditions' anchor href=#terms -> the legal page route (leaves the auth view)
+- [ ] 'Privacy Policy' anchor href=#privacy -> the legal page route
+- [ ] Terms checkbox -> setAcceptTerms; also clears the 'terms' field error
+- [ ] 'Keep me signed in for 30 days' checkbox -> setRemember (default TRUE); false asks the server for a browser-session cookie
+- [ ] 'Google' provider button -> startWithProvider('google'): if the terms box is unticked it sets fieldErrors.terms and returns WITHOUT navigating; otherwise window.location.assign(apiOauthStartUrl('google', {mode:'signup', acceptTerms, remember})) => /api/auth/oauth/google/start?mode=signup&remember=1&terms=1&returnTo=<origin>
+- [ ] 'Microsoft' provider button -> same path with provider=microsoft
+- [ ] 'Log in' mode-switch button -> setMode('login'), setResetSent(false), clears fieldErrors and error (keeps whatever was typed in the shared email/password state)
+- [ ] 'Log in instead' inline button — appears inside the email field error only after a 409 email_taken -> switchToLogin() (keeps the typed email on purpose)
+- [ ] Typing in any field calls clearField(field): clears that field's error, clears the page-level error, and clears emailTaken
+
+**Charts** (2)
+
+- [ ] AcctScheduleViz (App.tsx:6519) — decorative 4-lane crew x week board; 8 blocks positioned by left%/width% with per-block animationDelay 0.2s…2.65s, tones blue/cyan/violet, one block flagged fix:true (Electrical lane) that lands double-booked in amber then slides into the free slot
+- [ ] Password strength meter — 4-segment bar driven by data-score (not a real chart, but a data-driven visual)
+
+**Form inputs** (6)
+
+- [ ] id=account-name | label 'Your name' | type=text | required (client: 'Enter your name.') | placeholder 'Jordan Reyes' | autoComplete=name | no maxLength attribute (server caps at 120: 'Name is too long (120 characters max).') | aria-invalid + aria-describedby=account-name-error when invalid
+- [ ] id=account-company | label 'Company' | type=text | required, must be >= 2 trimmed chars (client: 'Enter your company name.') | placeholder 'Reyes Construction' | autoComplete=organization | no maxLength attribute (server caps at 160: 'Company name is too long (160 characters max).') | aria-describedby=account-company-error when invalid else account-company-hint
+- [ ] id=account-email | label 'Work email' | type=email | required | empty -> 'Enter your email address.'; fails EMAIL_PATTERN -> 'Enter a valid email address.' | placeholder 'name@company.com' | autoComplete=email | no maxLength attribute (server caps at 320: 'That email is too long.') | 409 from server -> 'An account with this email already exists.' + code email_taken + the 'Log in instead' inline link
+- [ ] id=account-password | label 'Password' | type=password (or text while shown) | required | validated by shared passwordProblem(password, email): 'Password must be at least 8 characters.' / 'That password is too common. Pick something harder to guess.' / "Don't use your email address in your password." | placeholder 'At least 8 characters' | autoComplete=new-password | no maxLength attribute (server caps at 200: 'Password is too long (200 characters max).') | aria-describedby=account-password-error when invalid else account-password-hint
+- [ ] id=account-terms | type=checkbox | required, unchecked by default | invalid message 'Please agree to the Terms & Conditions and Privacy Policy.' | wrapper gets class acct-terms is-invalid (red outline on the box)
+- [ ] unnamed remember checkbox inside <label className=acct-remember> | type=checkbox | checked by default | no validation | posts as `remember` on the signup body
+
+**Loading states** (3)
+
+- Submit button disabled with copy 'Creating your workspace…' while busy (.acct-primary:disabled — opacity .65, cursor not-allowed)
+- OAuth status fetch is silent: the divider + provider buttons simply are not in the DOM until /api/auth/oauth/status answers with a configured provider (no skeleton, no disabled button — deliberate, per the test comment 'a disabled sign-in button costs trust')
+- After a successful signup the parent runs enterAfterAuth() which flips App-level isLoading, so the whole auth page is replaced by the app's loading screen
+
+**Error states** (12)
+
+- Per-field errors render as <p className=acct-field-error role=alert> under the input; the input gains .is-invalid (red border + red focus ring)
+- name: 'Enter your name.'
+- company: 'Enter your company name.'
+- email: 'Enter your email address.' / 'Enter a valid email address.' / server 'An account with this email already exists.' (409, code email_taken) which additionally renders the 'Log in instead' button
+- password: 'Password must be at least 8 characters.' / 'That password is too common. Pick something harder to guess.' / "Don't use your email address in your password." (server repeats the same strings with field=password, code=weak_password)
+- terms: 'Please agree to the Terms & Conditions and Privacy Policy.' (also produced by clicking a provider button with the box unticked)
+- Page-level banner <p className=acct-error role=alert id=account-error> for anything no field owns
+- Network failure copy from api.ts: 'Could not reach the BuildFlow API: <reason>' / 'Could not reach the BuildFlow API.'
+- Generic fallback: 'Something went wrong. Please try again.'
+- Rate limit — signup is capped 10/hour per IP (server/src/app.ts:745): 429 body 'Too many attempts. Try again in <N seconds|N minutes>.' (rateLimit.ts:45 + humanSeconds) shown in the page-level banner
+- Server zod fallback: 'Check the form and try again.'
+- Provider-return errors (?oauth=error&reason=…) land in the page-level banner — see the 'Provider sign-in return' screen
+
+**Animations and transitions** (11)
+
+- @keyframes acct-rise (0.55s cubic-bezier(.22,1,.36,1)) on .acct-form-inner — the whole form column rises + fades in on mount
+- @keyframes acct-dot-pulse (2.6s infinite) on .acct-eyebrow-dot
+- @keyframes acct-viz-rise (0.9s, backwards 0.15s) on .acct-viz-card
+- @keyframes acct-viz-pulse (2.4s infinite) on .acct-viz-live
+- @keyframes acct-viz-job-in (12s infinite) on every .acct-viz-job — scaleX in, hold, fade out; per-block animationDelay from the data
+- @keyframes acct-viz-job-fix + @keyframes acct-viz-job-tone (both 12s infinite) on .acct-viz-job.is-fix — translateX(0) -> translateX(150%) at 50%, amber #f2a63b -> brand blue #4f7bff at 52%
+- @keyframes acct-viz-sweep (12s infinite) on .acct-viz-sweep — a light band crossing the card
+- @keyframes wx-blink (welcome-redesign.css:714) on .acct-aside-type .wx-caret; .wx-caret.done stops it and fades out (opacity transition .5s ease .3s)
+- WxTypewriter JS type-on: 350ms initial delay then 28-58ms per character, keyed on `mode` so switching signup<->login retypes
+- CSS transitions: .acct-input border-color/box-shadow .16s; .acct-primary transform/box-shadow/background (hover translateY(-1px)); .acct-pw-toggle color .16s; .acct-strength-bar span background .25s
+- prefers-reduced-motion: reduce (account-redesign.css:1025) kills acct-rise, the dot pulse, the whole viz + sweep, parks .acct-viz-job.is-fix at translateX(150%), hides the sweep, and freezes the strength-bar transition; WxTypewriter renders the full string instantly
+
+**Pinned by tests** (9)
+
+- App.test.tsx:42 'opens the create account page from the landing nav' — asserts heading 'Create your workspace.', labels 'Your name'/'Company'/'Work email'/'Password', the email placeholder 'name@company.com', button 'Create account', the 'I agree to the' checkbox unchecked, button 'Log in', hash '#create-account', and that Google/Microsoft are ABSENT when unconfigured
+- App.test.tsx:62 'offers Google and Microsoft sign-in only when configured, and needs the terms box to sign up' — terms-gated provider click, alert text, and the start URL's mode/terms/returnTo params
+- App.test.tsx:120 'requires a password of at least 8 characters to create an account' — alert 'Password must be at least 8 characters.' and NO /api/auth/signup call
+- App.test.tsx:~132 'prompts for business type after registering a new workspace'
+- App.test.tsx:~420 it.each 'starts registration from the %s page' — the four plan CTAs land on 'Create your workspace.' with hash '#create-account'
+- client/src/test/appHarness.tsx:146 signUp() — drives this exact form by label text ('Your name', 'Company', 'Work email', 'Password', 'I agree to the') and the 'Create account' button; MANY unrelated tests depend on it
+- server/test/api.test.ts:41 'validates signup per field: company and terms are required, common passwords are refused, duplicates say so' — pins field names company/terms/password/email and code weak_password/email_taken
+- server/test/api.test.ts:184 'locks an email after five wrong passwords and throttles signups per address'
+- server/test/oauth.test.ts:102/110/139 — provider status + signup/login via provider
+
+### Log in (login mode)
+
+**Route:** #create-account (welcomeView "createAccount", mode "login")  
+**Entry:** `App.tsx:6587 (mode === "login"; reached via showLoginPage, App.tsx:3507)`
+
+Sign an existing account back in and resume wherever it left off (dashboard, or unfinished onboarding).
+
+**Information displayed** (14)
+
+- [ ] '← Back to BuildFlow' back control
+- [ ] Brand lockup: BuildFlowLogoMark + 'BuildFlow'
+- [ ] Eyebrow chip: 'Launching September 21st'
+- [ ] H1: 'Welcome back.'
+- [ ] Sub-headline: 'Sign in to your production workspace.'
+- [ ] Field label: 'Email' (NOT 'Work email' — the label text switches on mode)
+- [ ] Field label: 'Password', with 'Forgot password?' as a right-aligned link in the same .acct-label-row
+- [ ] Remember checkbox copy: 'Keep me signed in for 30 days'
+- [ ] Divider 'or continue with' + provider buttons (only when configured)
+- [ ] Mode-switch copy: 'New to BuildFlow? ' + button 'Create an account'
+- [ ] Login-only legal footnote (.acct-legal): 'By continuing, you agree to the Terms & Conditions and Privacy Policy.'
+- [ ] Submit copy: 'Sign in' (idle) / 'Signing in…' (busy)
+- [ ] Aside: same schedule visual; typewriter line 'Welcome back to your ' + emphasised 'command center.'; cite 'Run the whole jobsite from one place.'
+- [ ] NOT rendered in login mode: name field, company field, company hint, personal-email hint, password hint, password strength meter, terms checkbox
+
+**Actions supported** (9)
+
+- [ ] '← Back to BuildFlow' -> onBack (welcome home)
+- [ ] Submit 'Sign in' -> apiLogin({email trimmed, password, remember}) -> POST /api/auth/login; success -> track(EVENTS.login) -> enterAfterAuth()
+- [ ] Enter key submits the form
+- [ ] Show/hide password toggle (Eye / EyeOff, aria-label 'Show password' / 'Hide password')
+- [ ] 'Forgot password?' link button (.acct-link-btn) -> setMode('forgot'), setResetSent(false), clears fieldErrors and error
+- [ ] 'Keep me signed in for 30 days' checkbox -> remember (default true; false = browser-session cookie so closing the browser signs out)
+- [ ] 'Google' / 'Microsoft' provider buttons -> startWithProvider(...) with mode=login; NO terms gate in login mode (the legal footnote covers it)
+- [ ] 'Create an account' mode-switch -> setMode('signup') and clears errors
+- [ ] 'Terms & Conditions' / 'Privacy Policy' anchors in the footnote -> #terms / #privacy
+
+**Charts** (1)
+
+- [ ] AcctScheduleViz (same decorative board)
+
+**Form inputs** (3)
+
+- [ ] id=account-email | label 'Email' | type=email | required | empty -> 'Enter your email address.'; bad shape -> 'Enter a valid email address.' | placeholder 'name@company.com' | autoComplete=email | no maxLength attribute (server caps 320)
+- [ ] id=account-password | label 'Password' | type=password/text | required, presence only (NO strength policy on login) -> 'Enter your password.' | placeholder 'Your password' | autoComplete=current-password | no maxLength attribute (server caps 200)
+- [ ] remember checkbox | type=checkbox | checked by default
+
+**Loading states** (3)
+
+- Submit disabled with copy 'Signing in…' while busy
+- Provider buttons absent until /api/auth/oauth/status resolves
+- On success App flips isLoading and swaps in the app loading screen
+
+**Error states** (9)
+
+- Wrong credentials — page-level banner: 'Incorrect email or password.' (server 401, no field, so it is deliberately NOT attributed to email or password)
+- Rate limit / lockout — five wrong passwords lock that email for 15 minutes: 'Too many sign-in attempts. Try again in <N seconds|N minutes>, or reset your password.' (429 + Retry-After header, server/src/app.ts:806)
+- IP cap on login is 30 per 15 minutes -> 'Too many attempts. Try again in ….'
+- Server 400 when the body fails the login schema: 'Enter your email and password.'
+- Server 500 when the org row is missing: 'Account workspace is missing.'
+- Network: 'Could not reach the BuildFlow API…'
+- Workspace load failure after a valid login: enterAfterAuth() rethrows, submit() catches it and shows the reason inline; the person stays on the login form (deliberate — App.tsx:2524 comment)
+- Per-field errors 'Enter your email address.' / 'Enter a valid email address.' / 'Enter your password.'
+- Provider-return errors (?oauth=error) — see the 'Provider sign-in return' screen
+
+**Animations and transitions** (3)
+
+- Same set as signup: acct-rise on .acct-form-inner, acct-dot-pulse, the whole acct-viz-* family, wx-blink caret
+- WxTypewriter re-keyed on `mode`, so switching to login retypes 'Welcome back to your command center.'
+- No strength-bar transition in this mode (meter not rendered)
+
+**Pinned by tests** (4)
+
+- App.test.tsx:101 'switches between the signup and login forms' — asserts heading 'Welcome back.', button 'Sign in', and that 'Your name' is ABSENT in login mode, then back to 'Create your workspace.'
+- App.test.tsx:62 — the login half asserts the provider start URL carries mode=login with no terms gate
+- client/src/test/appHarness.tsx:103 openCreateAccount() — reaches signup THROUGH login: clicks nav 'Login from welcome navigation', waits for 'Welcome back.', then clicks 'Create an account'. Every test that signs up depends on this login heading and that button label.
+- server/test/api.test.ts:184 — 'Too many sign-in attempts' copy and Retry-After
+
+### Forgot password — request form (forgot mode)
+
+**Route:** #create-account (welcomeView "createAccount", mode "forgot")  
+**Entry:** `App.tsx:6587 (mode === "forgot"; entered only from the login mode's 'Forgot password?' button, App.tsx ~6870)`
+
+Email a one-hour reset link without revealing whether the address has an account.
+
+**Information displayed** (10)
+
+- [ ] '← Back to BuildFlow' back control
+- [ ] Brand lockup + eyebrow chip 'Launching September 21st' (unchanged in this mode)
+- [ ] H1: 'Reset your password.'
+- [ ] Sub-headline: "Enter your email and we'll send a link to choose a new one."
+- [ ] Field label: 'Work email' (isSignup is false here, so the label renders 'Email')
+- [ ] Submit copy: 'Send reset link' (idle) / 'Sending…' (busy)
+- [ ] Mode-switch copy: 'Remembered it? ' + button 'Back to sign in'
+- [ ] NOT rendered in forgot mode: password field, password toggle, strength meter, terms checkbox, 'Keep me signed in' checkbox, the OAuth divider and provider buttons, the login legal footnote
+- [ ] Aside still shows the signup-mode typewriter line ('Where crews, projects, and schedules run as one.') because the copy branches on isSignup only — a known copy mismatch in forgot mode
+- [ ] The email hint for personal domains is gated on isSignup, so it never shows here
+
+**Actions supported** (5)
+
+- [ ] '← Back to BuildFlow' -> onBack
+- [ ] Submit 'Send reset link' -> apiRequestPasswordReset(email.trim()) -> POST /api/auth/reset/request; on resolve setResetSent(true)
+- [ ] Enter key submits
+- [ ] 'Back to sign in' mode-switch button -> setMode('login') (the toggle reads `mode === "login" ? "signup" : "login"`, so from forgot it always goes to login), setResetSent(false), clears errors
+- [ ] Typing in email calls clearField('email')
+
+**Charts** (1)
+
+- [ ] AcctScheduleViz (same decorative board)
+
+**Form inputs** (1)
+
+- [ ] id=account-email | label 'Email' | type=email | required | empty -> 'Enter the email you signed up with.'; bad shape -> 'Enter a valid email address.' (validated inline in submit(), not by validate()) | placeholder 'name@company.com' | autoComplete=email | no maxLength attribute
+
+**Loading states** (1)
+
+- Submit disabled with copy 'Sending…' while busy
+
+**Error states** (5)
+
+- email: 'Enter the email you signed up with.' (empty) / 'Enter a valid email address.' (malformed)
+- Page-level banner for a thrown request: the error message, else 'Something went wrong. Please try again.'
+- Rate limit: 5 requests per 15 minutes per IP -> 'Too many attempts. Try again in ….'; additionally 3 per hour per EMAIL, but that per-email cap is silent — the server still answers 200 so the UI shows the success line either way (server/src/app.ts:1054)
+- Server 400 on a bad body: 'Enter the email you signed up with.' with field=email
+- By design there is NO 'no such account' error — the route always answers ok so account existence is never revealed
+
+**Animations and transitions** (3)
+
+- acct-rise on .acct-form-inner (replays only on mount, not on the mode switch — the mode change re-renders the same node)
+- acct-dot-pulse, the acct-viz-* family and the wx-blink caret continue
+- WxTypewriter re-keys on mode='forgot' and retypes the signup line
+
+**Pinned by tests** (2)
+
+- No client test currently covers forgot mode (no App.test.tsx / tests/*.test.tsx hit for 'Forgot password' or 'Send reset link') — behaviour is pinned only server-side
+- server/test/api.test.ts:135 'confirms an email from the emailed link and resets a password from another' — covers /api/auth/reset/request + /api/auth/reset
+
+### Forgot password — link sent (forgot mode, resetSent)
+
+**Route:** #create-account (welcomeView "createAccount", mode "forgot", resetSent === true)  
+**Entry:** `App.tsx ~6863 (the .acct-success block) + App.tsx ~6957 (submit button suppressed)`
+
+Confirm the send without confirming the account exists, and stop offering the button again.
+
+**Information displayed** (4)
+
+- [ ] Success panel <p className=acct-success role=status>: "If there's a BuildFlow account for <b>{email}</b>, a reset link is on its way. It works for one hour." — the typed email is bolded inside the sentence
+- [ ] H1 stays 'Reset your password.' and the sub-headline stays "Enter your email and we'll send a link to choose a new one."
+- [ ] The email input REMAINS visible and editable above the success panel
+- [ ] Mode-switch copy: 'Remembered it? ' + 'Back to sign in'
+
+**Actions supported** (4)
+
+- [ ] The submit button is REMOVED entirely in this state (`!(mode === "forgot" && resetSent)` gates it) — there is no 'resend' affordance; editing the email does not bring the button back because resetSent is only cleared by a mode switch
+- [ ] 'Back to sign in' -> setMode('login') + setResetSent(false)
+- [ ] '← Back to BuildFlow' -> onBack
+- [ ] The emailed link itself lands on '#reset-password?token=…' which is a DIFFERENT component (WelcomeResetPasswordPage, App.tsx:7442) — out of this stage
+
+**Charts** (1)
+
+- [ ] AcctScheduleViz
+
+**Form inputs** (1)
+
+- [ ] id=account-email | still rendered, still editable, but with no submit control while resetSent is true
+
+**Error states** (1)
+
+- None reachable from this state — the only submit path is gone; clearField('email') on typing would clear an error but cannot trigger a new request
+
+**Animations and transitions** (1)
+
+- .acct-success has no entry animation (it simply appears); the aside animations continue
+
+**Pinned by tests** (1)
+
+- None (no client test asserts the reset-sent copy)
+
+### Provider sign-in return — error banner (?oauth=error)
+
+**Route:** any URL carrying ?oauth=error&reason=… while welcomeView is "createAccount"  
+**Entry:** `App.tsx:6614-6633 (the URLSearchParams effect inside WelcomeCreateAccountPage)`
+
+Explain a failed Google/Microsoft round trip and put the person back on the right mode, then scrub the query string.
+
+**Information displayed** (9)
+
+- [ ] reason=cancelled -> 'Sign-in was cancelled. You can try again or use your email.'
+- [ ] reason=no_account -> "There's no BuildFlow account for that email yet. Create one below, or sign in with a different address." (also forces setMode('signup'))
+- [ ] reason=email_unverified -> "That provider hasn't confirmed the email on the account. Use an address they have verified, or sign up with your email."
+- [ ] reason=terms_required -> 'Please agree to the Terms & Conditions and Privacy Policy before continuing with a provider.'
+- [ ] reason=not_configured -> "That sign-in option isn't set up yet. Use your email for now."
+- [ ] reason=state_missing / state_mismatch -> 'That sign-in took too long or the browser lost track of it. Please try again.'
+- [ ] reason=exchange_failed -> "The provider didn't complete sign-in. Please try again or use your email."
+- [ ] unknown reason -> "Sign-in with that provider didn't complete. Please try again or use your email."
+- [ ] All of these render in the page-level .acct-error banner (role=alert) above the submit button
+
+**Actions supported** (4)
+
+- [ ] The effect calls window.history.replaceState(null, '', pathname + hash) so the ?oauth=error query is scrubbed and a reload does not re-show the banner
+- [ ] reason=no_account additionally switches the form to signup mode
+- [ ] Any keystroke in a field calls clearField -> the banner is dismissed
+- [ ] The person can retry the provider button or fall back to the email form
+
+**Error states** (1)
+
+- This screen IS the error surface; see information for the nine exact strings
+
+**Animations and transitions** (1)
+
+- No dedicated animation — the banner appears in place; the form column's acct-rise has already played
+
+**Pinned by tests** (2)
+
+- server/test/oauth.test.ts:139 'refuses to create an account from a login attempt, a bad state, or an unverified address' — produces the reasons this banner translates
+- No client test asserts the banner copy
+
+### Cross-cutting notes for this area
+
+- ONE component, THREE modes: mode state is local, so switching signup<->login<->forgot never changes the URL — the hash stays #create-account. A redesign that splits these into separate routes changes deep-linking and breaks the appHarness path (nav 'Log in' -> 'Create an account').
+- Shared field state across modes: name/company/email/password/remember are one set of useState, so the email survives every mode switch (intentional — 'Log in instead' and 'Forgot password?' both depend on it). Only fieldErrors, error and resetSent are reset on a switch.
+- Layout: <main className="acct-split" id="create-account" aria-labelledby="create-account-title"> — one column below 900px, `grid-template-columns: 1.04fr 1fr` at >=900px; .acct-aside is display:none below 900px so the illustration and the typewriter quote vanish on phones. min-height:100vh/100dvh.
+- Two competing style layers in ONE file: the original white/#2f6bff identity (account-redesign.css:1-1024) and a later 'landing-page parity' override block (from :1067) that re-declares --wx-* tokens on .acct-split and restyles ONLY the form column (paper #f5f6fa background, Inter, 48px fields with 13px radius, ink pill CTA with 999px radius, outline pill provider buttons). The block is declared last to win at equal specificity; the aside is deliberately untouched. Editing only the earlier rules will appear to do nothing.
+- .welcome-rx tokens do NOT apply here: these views are excluded from isReskinView, which is why the --wx-* values are copied onto .acct-split rather than inherited. Two WxTypewriter internals (.wx-type-ghost/.wx-type-real/.wx-caret) are also re-declared inside account-redesign.css for the same reason; @keyframes wx-blink itself still lives in welcome-redesign.css:714.
+- Welcome nav and footer are suppressed for this view (App.tsx:3717-3724), together with resetPassword, verifyEmail, acceptInvite, inviteTeam, businessType, additionalProducts and waitlist — all of which share .acct-split. A redesign of the split layout hits SEVEN other screens.
+- The same .acct-* vocabulary is reused by WelcomeBusinessTypePage (7066), WelcomeAdditionalProductsPage (7232), WelcomeResetPasswordPage (7442), WelcomeVerifyEmailPage (7585), WelcomeInviteTeamPage (7789), WelcomeAcceptInvitePage (7915) AND by Settings panels (.settings-inline-form, account-redesign.css:1724+). Renaming or restyling .acct-input / .acct-primary / .acct-field-error / .acct-hint / .acct-success changes Settings too.
+- AcctScheduleViz is shared by every step of the auth/onboarding flow so the branded panel reads as one continuous surface while the form column advances (comment at App.tsx:6515).
+- Validation is per-field by contract, end to end: SignupField names ('name','company','email','password','terms') are what the server answers with (signupFieldFor maps orgName->company and acceptTerms->terms, server/src/app.ts:724). isSignupField() guards the mapping; an unrecognised field falls back to the page-level banner. Renaming an input id is safe; renaming the field KEYS is not.
+- One password policy for the meter and the server (shared/src/passwordPolicy.ts) — the client shows the message before a round trip and the server repeats the identical string with code weak_password.
+- 'Keep me signed in for 30 days' applies to BOTH signup and login (remember=false -> browser-session cookie, server/src/auth.ts sessionCookieOptions(null)); it is also forwarded on the OAuth start URL as remember=0/1.
+- Provider buttons are conditional on GET /api/auth/oauth/status and the container class flips to .acct-providers-single (one full-width pill) when only one is configured. Both false hides the divider AND the buttons; today's tests assert they are absent.
+- Analytics funnel: EVENTS.signupStarted fires on entering signup mode, accountCreated / login fire in App after the API resolves; props carry only { remember }, never PII (analytics.ts:33-35).
+- Where signup goes next: enterAfterAuth() (App.tsx:2524) branches on `payload.onboardingCompletedAt` — NOT on a user count. Falsy => hash '#business-type'; truthy => openAppPage('dashboard'). Logging back in after abandoning onboarding therefore resumes onboarding instead of dead-ending. Anyone who lands on #business-type / #additional-products / #invite-team without a real (non-demo) session is bounced back to showCreateAccountPage() by the guard effect at App.tsx:3548.
+- Entry points into this screen: nav 'Log in' button (aria-label 'Login from welcome navigation') -> login mode; the four plan pages' 'Start <plan> demo' CTAs -> signup mode; every product/solution page's 'Get BuildFlow'/onGetStarted -> signup mode; the mega-menu 'See overview' fallback; the onboarding guard effect; direct #create-account. The landing hero's own CTA currently goes to #waitlist instead (pre-launch), per the comment at App.tsx:3811.
+- Accessibility conventions to preserve: role=alert on every error paragraph, role=status on the reset-sent panel, aria-live=polite on the strength label, aria-invalid + aria-describedby wiring per input, aria-labelledby on <main>, the entire aside marked aria-hidden=true, and the terms links placed OUTSIDE the <label> so opening them does not tick the box.
+- prefers-reduced-motion is honoured in both CSS (account-redesign.css:1025 and :1511) and JS (WxTypewriter checks matchMedia and renders the full string).
+
+### Omission check
+
+**Verdict:** incomplete
+
+**Screens the first pass missed** (7)
+
+- [ ] PROVIDER SIGN-IN RETURN - SUCCESS (?oauth=login and ?oauth=signup#business-type). Handled in App.runBootstrap (App.tsx:2385-2397), NOT in WelcomeCreateAccountPage, which is why an inventory scoped to the component missed it. oauth=login -> history.replaceState scrubs the query, then enterAfterAuth() (dashboard or #business-type). oauth=signup -> the query is scrubbed and the '#business-type' hash the server appended drives onboarding directly, bypassing the onboardingCompletedAt branch entirely. Exact redirects pinned by server/test/oauth.test.ts:110: 'http://localhost:5432/?oauth=signup#business-type' and 'http://localhost:5432/?oauth=login'.
+- [ ] POST-AUTH WORKSPACE LOAD (in-flight). page state starts 'welcome' (App.tsx:2240) and `if (page === "welcome")` returns at App.tsx:2748, BEFORE the `if (isLoading)` gate at App.tsx:2766 - and enterAfterAuth's `finally` sets isLoading(false) before it routes. So the auth form STAYS on screen, with the disabled 'Creating your workspace...' / 'Signing in...' button as the ONLY feedback, for the whole loadWorkspace() round trip - which is retryTransient(loadBootstrap) with delays [400, 900, 1600]ms (App.tsx:39130), so several seconds and up to 4 requests. Same page also renders during the first load after a provider return.
+- [ ] SIGNUP -> DEMO-FALLBACK BOUNCE. If the post-signup bootstrap answers 401, loadWorkspace (App.tsx:2308-2322) silently calls apiDemoLogin and retries, so the new owner lands in the SHARED DEMO org with demoFallback.current = true. The onboarding guard (App.tsx:3548-3560) then sees session.demo and calls showCreateAccountPage() - the person is dumped back on the signup form with NO error and no explanation. A silent loop with no inventoried surface.
+- [ ] PROVIDER ROW PERMUTATIONS. Four distinct layouts, not one: neither configured (no divider, no buttons - what the tests assert), google only and microsoft only (.acct-providers-single, ONE full-width pill, account-redesign.css:1791), both (2-up grid). Only mentioned in passing in crossCutting; never inventoried as a visual state.
+- [ ] PASSWORD STRENGTH METER - FIVE STATES, not one item. data-score=0 renders four GREY bars with the label 'Too weak' (reachable: any policy problem with password.length < 4); 1 = one red bar; 2 = two amber; 3 = three green; 4 = all four deep green. The label's <b> recolors with the score. The inventory records 'data-score=0..4' and the label strings but no visual state.
+- [ ] RESET-LINK TERMINAL SCREENS (#reset-password?token=...). Declared out of stage, yet it is the ONLY success path out of the forgot flow, and no other artifact in this inventory records its strings: 'This reset link is invalid or has already been used. Request a new one.' (code token_invalid, server app.ts:1080); a weak new password answers 400 with the SAME policy strings, code weak_password, AND A FRESH TOKEN in the body so the person can retry (app.ts:1085-1090); success sets the password, calls loginGuard.clear(), marks the email verified and issues a 30-day session. TTL is RESET_TTL_MS = HOUR (app.ts:546), which is what 'It works for one hour.' encodes.
+- [ ] UNVERIFIED-EMAIL BADGE AFTER SIGNUP. /api/auth/signup fires sendVerificationEmail in the background (never awaited - 'signup never waits on SMTP', app.ts:786) and the session lands with emailVerifiedAt null, so the app chrome renders <VerifyEmailBadge> (App.tsx:21082) immediately after signup. Provider signups arrive with emailVerifiedAt set and never see it. The inventory's successRouting stops at the hash.
+
+**Information the first pass missed** (30)
+
+- [ ] ASIDE DECORATION, treated as skippable: three .acct-aurora blobs (420px #4f7bff opacity .55 top-right; 360px #9b6ecb .42 bottom-left; 300px #d96570 .26 at 42%/34%; all border-radius 50%, blur(50px), pointer-events none - account-redesign.css:713-740) sitting on a radial-gradient(125% 120% at 18% 12%, #2a4bff, #1b2a6b 46%, #0b1030) panel. Also .acct-aside-quote { max-width: 15ch } (so the typewriter line wraps to a narrow measure) and .acct-aside-type em { color: #bcd0ff }.
+- [ ] STRENGTH METER COLOR SEMANTICS - the only non-textual strength signal: unfilled #e6e8ec, score1 #d96570, score2 #e0a23c, score3 #2f9e6b, score4 #1f8a58 (all four), with the label <b> at #b4404b / #a8721b / #1f8a58 (account-redesign.css:1455-1480). Bars are 5px tall, radius 999px, 4-col grid, gap 4px, background transition .25s.
+- [ ] .acct-strength-bar carries aria-hidden="true" - the bars are decorative and the aria-live label is the only announced signal.
+- [ ] ORPHAN HINT ID: the email input's aria-describedby is `fieldErrors.email ? 'account-email-error' : undefined` (App.tsx:6851) - it NEVER points at 'account-email-hint'. Unlike the company and password hints, the personal-email nudge is unreachable by screen readers. The inventory presents all three hints as if wired alike.
+- [ ] NO `required` ATTRIBUTE ON ANY INPUT. The inventory says 'required' for name/company/email/password/terms; the DOM has none. Validation is JS-only, which is why an empty email reaches the app's 'Enter your email address.'
+- [ ] NO noValidate ON THE FORM + type="email" ON THE INPUT. In a real browser native constraint validation intercepts submit for a malformed (non-empty) email and shows the browser's own bubble, so the app's 'Enter a valid email address.' is largely unreachable there; jsdom does no interactive validation, which is why the tests never notice. Compare the waitlist form, which DOES set noValidate + inputMode="email" (App.tsx:13673-13678).
+- [ ] NO inputMode, NO maxLength, NO spellCheck/autoCapitalize/autoCorrect anywhere in the component (verified by grep over 6587-7060). The contact-sales form uses `required` (App.tsx:13936-13964) and the waitlist uses inputMode - this form deliberately or accidentally has neither.
+- [ ] NO autoFocus and NO focus management: nothing is focused on mount, nothing moves focus to the first invalid field or to the page-level banner after a failed submit, nothing refocuses on a mode switch (the toggle button stays mounted and keeps focus while the whole form around it changes), and there is no aria-busy while submitting. Sibling .acct-* pages DO autofocus (App.tsx:7521 and 8014), so this is an inconsistency a redesign will be blamed for either way.
+- [ ] FIVE SIMULTANEOUS role=alert PARAGRAPHS: client validate() (App.tsx:6678-6691) returns every problem at once, so a bare signup submit renders up to five live-region alerts in one tick with no summary and no ordering aid.
+- [ ] SERVER ANSWERS ONE FIELD AT A TIME: /api/auth/signup returns only parsed.error.issues[0] (app.ts:747-752), and the client's catch does setFieldErrors({ [err.field]: message }) - a REPLACE that wipes any other field error. Client-side = all five; server-side = exactly one. Not stated anywhere.
+- [ ] THREE OAUTH REASONS THE CLIENT NEVER MAPS, all silently collapsing to the generic fallback string: 'unknown_provider' (app.ts:862), 'provider_error' (any provider ?error other than access_denied, app.ts:913), 'workspace_missing' (app.ts:948). The inventory enumerates the 8 mapped reasons and 'unknown reason' but never names the real reasons that hit the fallback.
+- [ ] FORGOT MODE IGNORES ApiError.field: its catch is `setError(err.message)` (App.tsx:6714) with no isSignupField branch, so even the server's 400 { error: 'Enter the email you signed up with.', field: 'email' } (app.ts:1050) renders in the PAGE-LEVEL banner, not under the input. Reachable because the client's loose EMAIL_PATTERN accepts strings zod's .email() rejects.
+- [ ] RESET-REQUEST CAPS: 5 per 15min per IP (visible 429) AND 3 per hour per EMAIL via limiter.hit('reset-email', ...) which is SILENT - the route still answers 200 and the UI shows the same success line, so a throttled person is told a link is on its way when none was sent (app.ts:1056-1058). The inventory notes the per-email cap but not that the success copy actively lies in that state.
+- [ ] EMAIL MATCHING IS CASE-INSENSITIVE SERVER-SIDE while the client sends the trimmed-but-not-lowercased value: server/test/api.test.ts:82 signs up 'DANA@asphaltco.com' against an existing 'dana@asphaltco.com' and expects 409 email_taken. Login lockout keys are normalized the same way (rateLimit.ts norm()).
+- [ ] PROVIDER SIGNUP NEVER ASKS FOR A COMPANY. The org name is derived from the email domain ('asphaltco.com' -> 'Asphaltco', with [-_] -> space and title-case) or, for a personal domain, "<First>'s Company" (app.ts:963-972). This directly contradicts the company field's promise ('This becomes your workspace name') for the Google/Microsoft buttons sitting immediately below it - a redesign that groups them tighter makes the contradiction louder.
+- [ ] PROVIDER SIGN-IN IS A LOCKOUT ESCAPE HATCH: the callback calls markEmailVerified() and loginGuard.clear() for an existing account (app.ts:952-955), so a person locked out of the password form can still get in via Google/Microsoft - and the lockout copy's 'or reset your password' is not the only way out.
+- [ ] OAUTH-CREATED ACCOUNTS HAVE AN UNUSABLE RANDOM PASSWORD (app.ts:976, 'Forgot password?' sets a real one) - pinned by oauth.test.ts:135, which asserts a password login still 401s afterward. That is the functional reason the forgot flow must stay reachable from login.
+- [ ] TERMS ACCEPTANCE IS VERSIONED: the checkbox writes acceptedTermsAt + acceptedTermsVersion = TERMS_VERSION = '2026-09' (app.ts:498, 779-781), asserted by api.test.ts:76. Not shown in the UI, but it is what the checkbox is FOR.
+- [ ] FULL RATE-LIMIT TABLE (only 3 of these are in the inventory): signup 10/HOUR per IP, login 30/15min per IP, reset-request 5/15min per IP, oauth-start 30/15min per IP, oauth-callback 30/15min per IP, verify 20/15min, reset 20/15min. Lockout = 5 failures inside a 15min window -> 15min lock, cleared by a successful sign-in (createLoginGuard defaults, rateLimit.ts:58). api.test.ts:196 notes the signup IP cap 'answers before validation does' - a 429 pre-empts every field message.
+- [ ] BOTH 429s CARRY retryAfterSec IN THE BODY AND Retry-After IN THE HEADER (rateLimit.ts:41-46, app.ts:806) AND THE UI READS NEITHER - no countdown, no auto-retry, no disabled-until state; the only signal is the humanSeconds() sentence inside the banner.
+- [ ] THE zod min(8) PASSWORD PATH RETURNS field=password WITH NO `code`, unlike passwordProblem's code:'weak_password' (app.ts:713 vs 757) - a client keying off code alone would miss it.
+- [ ] initialMode IS READ ONCE: useState(initialMode) (App.tsx:6598) never re-syncs, so showCreateAccountPage()/showLoginPage() on an ALREADY-MOUNTED component - exactly what the onboarding guard bounce does - does not change the mode. The person can be bounced 'to create-account' and land on the login form.
+- [ ] THE MODE SWITCH NEVER TOUCHES THE HASH, so the browser Back button from login mode leaves the auth view entirely (back to the previous welcome view) rather than returning to signup. Deep-linking a mode is impossible; the inventory notes the single hash but not the Back-button consequence.
+- [ ] THE LANDING BOOTSTRAP AUTO-CREATES A SHARED DEMO SESSION: loadWorkspace's 401 branch calls apiDemoLogin (App.tsx:2318-2320), so a bf_session cookie for the demo org already exists before anyone signs up. That is what sessionPayload's `demo` flag (app.ts:738) and the guard's session.demo check exist for.
+- [ ] ENTRY POINT NOT LISTED: the landing's 'Preview the live demo' button (asserted App.test.tsx:39) enters the app with NO auth at all - the funnel's competing door.
+- [ ] PROVIDER MARKS: .acct-google-mark = 'G', #4285f4, weight 800, 15px; .acct-ms-mark = four 7px squares #f25022 / #7fba00 / #00a4ef / #ffb900 in a 2x2 grid, gap 2px. Both wrapped in aria-hidden="true" spans.
+- [ ] BANNER/PANEL VISUAL SPECS: .acct-error = #b42318 on #fef3f2 with 1px #fecdc9, radius 9, 8px/12px padding, 13px/600 (account-redesign.css:202-211). .acct-success = #1f5f41 on rgba(47,158,107,.1) with 1px rgba(47,158,107,.28), radius 12, 12px/14px padding, and its <b> at #143f2b (1571-1583).
+- [ ] THE TERMS ERROR PARAGRAPH IS A SIBLING OF THE TERMS ROW, not inside it: {fieldError('terms', ...)} renders inside .acct-checks AFTER the .acct-terms div, i.e. between the terms line and 'Keep me signed in' (App.tsx:6957). The invalid outline (2px #d96570 on the checkbox itself, offset 1px) is the in-row signal.
+- [ ] NO ANALYTICS ON: provider button clicks, the forgot-password request, failed logins, or the OAuth return. The funnel is only signup_started / account_created / login (analytics.ts:33-35), and signup_started RE-FIRES every time the mode returns to signup (effect deps [mode]), so login->signup->login->signup inflates it.
+- [ ] WxTypewriter's sr-only .wx-type-a11y node carries the full string but sits inside the aria-hidden aside, so it is doubly hidden - the aside's words reach nobody using a screen reader, by design.
+
+**Actions the first pass missed** (5)
+
+- [ ] runBootstrap's provider-return handling (App.tsx:2385-2397): history.replaceState(pathname + hash) to scrub ?oauth=login|signup, then `void enterAfterAuth().catch(() => undefined)` for oauth=login - a SECOND, App-level scrub-and-route action distinct from the component's error-path scrub.
+- [ ] retryTransient's automatic retry inside the post-auth load: loadWorkspace retries loadBootstrap up to 3 times with [400, 900, 1600]ms backoff, and on a 401 additionally calls apiDemoLogin and retries again - all while the submit button is the only visible state.
+- [ ] Native browser constraint validation blocking submit (no noValidate + type=email) - a browser-chrome action in the middle of the app's own submit path.
+- [ ] safeReturnTo allowlisting on the OAuth start URL (app.ts:858-860): a returnTo that is not clientUrl or BUILDFLOW_PUBLIC_URL is SILENTLY replaced, so a provider round trip begun on an unexpected origin returns the person to the configured client URL instead. oauth.test.ts:152 pins that 'https://evil.example' never reaches the cookie.
+- [ ] Keyboard: Enter-to-submit is inventoried, but not the absence of everything else - no Escape to go back, no shortcut to the mode switch, and the aside is aria-hidden so it is entirely outside the tab order (the only tab stops are back, the fields, the toggle, the two legal links, the checkboxes, submit, the provider buttons, the mode-switch button, and the footnote links).
+
+**Corrections** (5)
+
+- WRONG (both signup and login screens, loadingStates): 'After a successful signup the parent runs enterAfterAuth() which flips App-level isLoading, so the whole auth page is replaced by the app's loading screen.' The render order disproves it - `if (page === "welcome")` returns at App.tsx:2748, before `if (isLoading)` at App.tsx:2766, and enterAfterAuth's finally clears isLoading before it routes. The auth form stays on screen with its disabled busy button for the entire workspace load. The 'Loading BuildFlow HUD' screen never appears on this path.
+- WRONG (forgot screen, information): '.acct-legal login legal footnote' is listed under 'NOT rendered in forgot mode'. It is gated on `!isSignup` (App.tsx:7030), which is TRUE in forgot mode - so 'By continuing, you agree to the Terms & Conditions and Privacy Policy.' DOES render there, with both links.
+- WRONG (all screens, formInputs): every field is annotated 'required'. No input in the component carries the `required` attribute; the word describes JS validation only. A redesigner reading this would preserve an attribute that does not exist and could inadvertently change behaviour by adding it (native bubbles for empty fields).
+- MISLEADING (forgot screen, information): "Field label: 'Work email' (isSignup is false here, so the label renders 'Email')" - the item's own leading text contradicts its parenthetical. The rendered label in forgot mode is 'Email'.
+- IMPRECISE (screen 5, route): '?oauth=error' is reachable on 'any URL ... while welcomeView is createAccount' - in practice oauthFail always appends '#create-account' (app.ts:849-850), so the view is forced by the redirect; and the effect's deps are [] so it fires only on mount, never on a later query change.
+
+### Redesign risks in this area
+
+- appHarness.openCreateAccount() (client/src/test/appHarness.tsx:103) reaches signup only via nav 'Login from welcome navigation' -> heading 'Welcome back.' -> button 'Create an account'. Changing any of those three strings, or making signup a separate route, breaks openCreateAccount() and therefore signUp(), completeOnboarding(), enterDashboard() and the majority of the client test suite.
+- The headings 'Create your workspace.' and 'Welcome back.' and the buttons 'Create account' / 'Sign in' / 'Log in' / 'Create an account' are asserted verbatim in App.test.tsx:42/62/101/120/~432. Copy changes are test-breaking, not cosmetic.
+- Field labels are the test selectors: getByLabelText('Your name' | 'Company' | 'Work email' | 'Password' | 'I agree to the'). Note 'I agree to the' works only because the <label> wraps just those four words with the links outside it — moving the links inside the label changes the accessible name and breaks the harness.
+- The email placeholder 'name@company.com' is asserted by attribute in App.test.tsx:48.
+- Field NAMES are a client/server contract ('company' not 'orgName', 'terms' not 'acceptTerms'). A redesign that renames form state must keep isSignupField()/signupFieldFor() in sync or server messages silently fall back to the generic banner.
+- account-redesign.css is a two-layer file (base + landing-parity override from :1067). Restyling the base rules alone has no visible effect; deleting the override block reverts the form column to the old blue identity. Any rewrite must decide which layer is canonical.
+- The .acct-split shell is shared by seven other views (businessType, additionalProducts, resetPassword, verifyEmail, acceptInvite, inviteTeam, waitlist-adjacent) plus Settings panels. Restructuring the split grid, .acct-form-inner width (min(100%,400px)) or the field/button classes cascades into all of them.
+- Forgot mode inherits the signup aside copy ('Where crews, projects, and schedules run as one.') because the typewriter branches on isSignup only — either fix it deliberately or the redesign will look like it introduced the mismatch.
+- Forgot mode still shows the 'Launching September 21st' eyebrow and, after sending, keeps the editable email input with NO submit button and no resend path. A redesign should decide the intended terminal state rather than reproduce this by accident.
+- The reset-sent state cannot be re-entered: resetSent is cleared only by a mode switch, so there is no way to re-send from the same screen.
+- None of the OAuth error strings, the forgot-password flow, the strength meter, the personal-email hint, the company hint or the 'Log in instead' link has a client test. They are easy to drop silently in a redesign — the copy in this inventory is the only record.
+- Provider buttons must stay absent (not disabled) when unconfigured: App.test.tsx:48-53 asserts absence and the code comment says a disabled sign-in button costs trust.
+- AcctScheduleViz depends on every animation sharing one 12s period so the per-block animationDelay stagger stays locked across repeats (comment at App.tsx:6484 and account-redesign.css:810). Changing one duration desynchronises the double-book/fix story.
+- The reduced-motion block must keep parking .acct-viz-job.is-fix at translateX(150%), otherwise the static board reads as an overlap bug.
+- Errors are placed by ownership: 'Incorrect email or password.' is deliberately NOT attributed to a field (it would reveal which half was wrong). A redesign that forces every error under an input would leak that.
+- Rate-limit copy is generated server-side via humanSeconds() ('N seconds' under 90s, else 'N minutes'), so the banner must tolerate variable-length sentences; login lockout copy also carries the 'or reset your password' call to action that pairs with the Forgot password link.
+- The password toggle is absolutely positioned over the input (.acct-pw-toggle, 44px wide, inset-block:0 right:0) and depends on .acct-input.has-toggle reserving padding — a new input shape must keep both in sync.
+- welcomeView routing is hash-based and createAccount has exactly one hash; adding #login would need getWelcomeViewFromHash, showLoginPage and the initialMode prop all updated together.
+
+<a id="auth-onboarding"></a>
+
+## Auth: business type and additional products
+
+`auth-onboarding` — 6 screens, 95 information items, 27 actions.
+
+**Source:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx (WelcomeBusinessTypePage at :7066, WelcomeAdditionalProductsPage at :7232, AcctScheduleViz at :6519, ACCT_VIZ_LANES at :6485, WxTypewriter at :4308, TRADE_ICONS at :518, storage keys/guards at :497-566, programRegistry at :744, ADD_ON_CATALOG at ~:820-874, ProductPlan type + productPlans at :1148-1387, planById :1388, getWelcomeViewFromHash :583 (#business-type :596, #additional-products :597), WelcomePage :3241, pendingBusinessType :3277, isReskinView :3283, welcome nav/footer suppression gate :3714-3724, render switch :3918-3925, showBusinessTypePage/showAdditionalProductsPage/handleBusinessTypeSelected :3511-3516, finishOnboarding :3527, onboardingViews session guard :3546-3560, showOnboarding :2505, enterAfterAuth onboardingCompletedAt branch :2536-2542, completeOnboarding :2632-2695, changeBusinessType :2628)`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/index.ts (businessTypeOptions :3-18, BusinessTypeId :20, onboardingProductOptions + OnboardingProductId, planOptions/PlanId)`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/tradeProfiles.ts (14 TradeProfile records: label, tagline, description, icon, tone, crewTypes, phases, readinessChecks, delayIQCategories, materialUnits, weather, aiStarters, aiContext; TradeIcon + TradeTone unions)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/api.ts (applyBusinessProfile :340 -> POST /api/business-profile; apiFetchSession; apiStartCheckout)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/analytics.ts (EVENTS.tradeChosen 'trade_chosen' :36, EVENTS.planChosen 'plan_chosen' :37, EVENTS.onboardingCompleted 'onboarding_completed' :39, EVENTS.checkoutStarted)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/main.tsx (:8 welcome-redesign.css, :35 account-redesign.css)`, `/Users/liamsantos/Documents/Production Scheduling/server/src/app.ts (businessProfileSchema :248-258, PLAN_LABELS :259, OPS_PREFIXES auth gate incl. /api/business-profile :605, POST /api/business-profile :1471-1482)`, `/Users/liamsantos/Documents/Production Scheduling/server/src/database.ts (applyBusinessProfile :3034-3075 — seeds ONLY an empty workspace, always records the trade, stamps onboardingCompletedAt; recordWorkspaceSetup — selectedPlan/selectedProducts/seats workspace settings + 14-day trialEndsAt for pro/business, deletes trialEndsAt for free/enterprise)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/test/appHarness.tsx (signUp :145, chooseBusinessType :159, chooseProductsAndPlan :167, completeOnboarding :181, openMapFieldOps :204)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/App.test.tsx (:135, :153, :180, :228)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/tests/tutorial.test.tsx (:109 describe 'BuildFlow onboarding tutorial')`
+
+**Styles:** `/Users/liamsantos/Documents/Production Scheduling/client/src/account-redesign.css — THE stylesheet for both steps (1,839 lines). Blocks that matter: :11-26 .acct-split (min-height 100dvh, grid 1fr, >=900px 1.04fr/1fr, white base); :29-50 .acct-form-col + .acct-form-inner (width min(100%,400px), gap 16px, animation acct-rise .55s); :42 @keyframes acct-rise; :52-65 .acct-back; :69-105 .acct-brand/.acct-head; :105-120 .acct-form/.acct-field; :119-145 .acct-input(+has-toggle); :203-211 .acct-error (red #b42318 on #fef3f2, 1px #fecdc9, radius 9); :239-270 .acct-primary (46px, radius 11, #2f6bff, disabled opacity .65) ; :374-399 .acct-split-wide (>=900px grid 1.32fr/1fr, height 100dvh + overflow hidden so the SPLIT is the scroll container and only .acct-form-col scrolls; .acct-form-inner widens to 640px); :402-431 .acct-eyebrow + .acct-eyebrow-dot + @keyframes acct-dot-pulse; :434-456 .acct-sec/.acct-sec-head; :458-560 .acct-pick-grid (2 cols) / .acct-pick (1.5px #d7dbe2, radius 13, hover translateY(-2px)+shadow, focus-within blue ring, .selected #2f6bff on #f5f9ff, staggered acct-rise delay calc(0.26s + var(--i)*0.045s)), visually-hidden .acct-pick input, .acct-pick-ico, .acct-pick-copy strong/em, .acct-pick-check spring reveal; :561-582 tone-blue/violet/purple/green/teal/orange icon tones; :584-665 .acct-plan-grid (4 cols) / .acct-plan (stagger calc(0.4s + var(--i)*0.05s)) / .acct-plan-price (19px 800 #2f6bff tabular-nums) / .acct-plan em / .acct-plan-check absolute top-right spring; :666-672 .acct-primary svg translateX(3px) on hover; :675-693 responsive collapses (900-1180px: picks 1 col, plans 2 cols; <=620px: picks 1 col, plans 2 cols); :695-710 .acct-aside (display none <900px; radial-gradient #2a4bff -> #1b2a6b -> #0b1030); :711-740 .acct-aurora-1/2/3 (blur 50px blobs); :742-756 .acct-aside-brand; :757-805 .acct-aside-quote/.acct-aside-type (clamp(28px,3vw,40px)) + replicated WxTypewriter internals (.wx-type-ghost/.wx-type-real/.wx-caret/@keyframes wx-blink) + cite; :810-1010 the whole .acct-viz 'Live schedule' visual (card, head, live dot, week label, lanes, crew, track with 5 gridlines, .acct-viz-job tones blue/cyan/violet, .is-fix double-booked block) + @keyframes acct-viz-rise/acct-viz-pulse/acct-viz-job-in/acct-viz-job-fix/acct-viz-job-tone/acct-viz-sweep, all on one locked 12s period; :1025-1055 @media (prefers-reduced-motion: reduce) killing every animation and parking .is-fix at translateX(150%); :1058-1255 'Landing-page parity' block that re-tokens the LEFT column only — .acct-split declares --wx-bg/--wx-bg-2/--wx-ink/--wx-mut/--wx-faint/--wx-line/--wx-line-soft/--wx-card/--wx-blue/--wx-sans locally (comment says: these views are NOT in isReskinView so no .welcome-rx ancestor supplies them), paper #f5f6fa form column, Inter display h1 clamp(30px,4vw,40px) weight 500, hairline 48px radius-13 inputs, ink pill .acct-primary (999px radius, var(--wx-ink) fill); :1247-1254 .acct-split .acct-sec-head h2/span on the same tokens; :1257-1275 .acct-trade-grid (2 cols, centre-aligned cards, tagline nowrap+ellipsis, selected trade icon tile flips to ink #1c1c1a on #fdfcf9); :1277-1342 .acct-preview / -title / -row (stagger calc(0.06s + var(--i)*0.06s)) / -row dt / -row dd / -chip / -empty / -desc (glass panel, blur 14px, on the dark aside); :1343-1357 trade-grid responsive (<=1180px 2 cols, <=560px 1 col) + reduced-motion; :1359-1395 business-type aside overflow fix (aside top-aligns, quote margin-top auto, .acct-preview becomes its own scroll area with a thin white scrollbar); :1397-1420 .acct-input.is-invalid / .acct-field-error; :1517-1546 .acct-seats (grid 140px 1fr, align-items end) / .acct-seats-field .acct-input tabular-nums / .acct-seats-total / .acct-hint-center / <=560px single column; :1434 .acct-hint`, `/Users/liamsantos/Documents/Production Scheduling/client/src/welcome-redesign.css — imported globally (main.tsx:8) and it owns the .welcome-rx --wx-* token set and wx-blink, BUT isReskinView (App.tsx:3283-3314) does NOT include businessType/additionalProducts, so these two screens have NO .welcome-rx ancestor; account-redesign.css re-declares the tokens on .acct-split instead`, `/Users/liamsantos/Documents/Production Scheduling/client/src/styles.css — legacy .account-* rules (deliberately NOT used here; the .acct-* namespace exists to avoid them) plus the global .buildflow-logo-mark used by .acct-brand and .acct-aside-brand`
+
+### Business type — step 1 of onboarding, no trade chosen yet (initial state)
+
+**Route:** #business-type (welcomeView 'businessType'; hash-driven, NOT part of the Page union)  
+**Entry:** `client/src/App.tsx:7066 (WelcomeBusinessTypePage); rendered from App.tsx:3918; hash mapped at App.tsx:596; reached from App.tsx:2505 showOnboarding() and App.tsx:2536 enterAfterAuth() when !payload.onboardingCompletedAt`
+
+First onboarding question after signup: pick the trade the workspace is shaped around. The answer drives the seeded workspace (server createBusinessProfile), the crew types, production phases, readiness checks, DelayIQ categories, material units, weather rule and BuildFlow AI context everywhere in the product.
+
+**Information displayed** (30)
+
+- [ ] Layout: full-bleed two-column <main className="acct-split acct-split-wide" id="business-type" aria-labelledby="business-type-title">. The marketing nav AND the footer are suppressed for this view (App.tsx:3714-3724 gate; the footer lives inside WelcomeExperience which is not rendered) — no global nav, no footer, no breadcrumbs.
+- [ ] Back link (top-left of the form column): "← Back to account details" (literal arrow glyph inside the string)
+- [ ] Brand lockup: BuildFlowLogoMark svg + bold wordmark "BuildFlow"
+- [ ] H1 (id=business-type-title): "What type of Business do you own" — no question mark; App.test.tsx matches this string exactly
+- [ ] Sub-headline: "Pick your trade — BuildFlow sets up crews, phases, readiness checks and its AI around it."
+- [ ] NO eyebrow chip on this step (the next step has one) and NO step indicator / progress bar / "Step 1 of 3" anywhere in the flow
+- [ ] Trade picker: a div role="radiogroup" aria-label="Business type", 14 cards in a 2-column grid (.acct-pick-grid .acct-trade-grid)
+- [ ] Trade card 1/14 — radio value "Asphalt": bold label "Asphalt", italic-slot tagline "Paving, milling and overlays" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "road" in a 36x36 tile with tone-orange colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 2/14 — radio value "Concrete": bold label "Concrete", italic-slot tagline "Foundations, slabs and structure" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "concrete" in a 36x36 tile with tone-blue colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 3/14 — radio value "Roofing": bold label "Roofing", italic-slot tagline "Tear-off, dry-in and membrane" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "roof" in a 36x36 tile with tone-teal colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 4/14 — radio value "General Contractor": bold label "General Contractor", italic-slot tagline "Coordinating every trade on site" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "gc" in a 36x36 tile with tone-blue colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 5/14 — radio value "Excavation": bold label "Excavation", italic-slot tagline "Mass earthwork, trenching and haul-off" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "excavation" in a 36x36 tile with tone-orange colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 6/14 — radio value "Utilities": bold label "Utilities", italic-slot tagline "Water, storm, sewer and ductbank" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "utilities" in a 36x36 tile with tone-teal colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 7/14 — radio value "Framing": bold label "Framing", italic-slot tagline "Walls, floors, shear and hardware" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "framing" in a 36x36 tile with tone-orange colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 8/14 — radio value "Electrical": bold label "Electrical", italic-slot tagline "Rough-in, gear and energize" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "electrical" in a 36x36 tile with tone-violet colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 9/14 — radio value "Plumbing": bold label "Plumbing", italic-slot tagline "Underground, top-out and fixtures" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "plumbing" in a 36x36 tile with tone-blue colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 10/14 — radio value "HVAC": bold label "HVAC", italic-slot tagline "Duct, equipment set and startup" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "hvac" in a 36x36 tile with tone-teal colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 11/14 — radio value "Masonry": bold label "Masonry", italic-slot tagline "Block, brick, grout and scaffold" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "masonry" in a 36x36 tile with tone-orange colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 12/14 — radio value "Drywall": bold label "Drywall", italic-slot tagline "Stud, hang, tape and finish" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "drywall" in a 36x36 tile with tone-violet colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 13/14 — radio value "Landscaping": bold label "Landscaping", italic-slot tagline "Grading, irrigation and planting" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "landscaping" in a 36x36 tile with tone-green colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Trade card 14/14 — radio value "Painting": bold label "Painting", italic-slot tagline "Prep, prime and coats" (rendered by <em>, non-italic, one line, white-space:nowrap + text-overflow:ellipsis so longer taglines clip), 18px lucide icon "painting" in a 36x36 tile with tone-violet colours, trailing 20px circular check bubble (empty until selected)
+- [ ] Full option order (businessTypeOptions, shared/src/index.ts:3): Asphalt, Concrete, Roofing, General Contractor, Excavation, Utilities, Framing, Electrical, Plumbing, HVAC, Masonry, Drywall, Landscaping, Painting
+- [ ] Icon mapping (TRADE_ICONS, App.tsx:518): road=Construction, concrete=Layers, roof=Warehouse, gc=HardHat, excavation=Shovel, utilities=Droplets, framing=Hammer, electrical=Zap, plumbing=Wrench, hvac=Fan, masonry=BrickWall, drywall=Building2, landscaping=Trees, painting=Paintbrush
+- [ ] Submit button label: "Get BuildFlow" (.acct-primary, no trailing icon on this step)
+- [ ] Right panel (aside, aria-hidden="true" in full — decorative to assistive tech): 3 aurora blobs, brand lockup "BuildFlow", the AcctScheduleViz "Live schedule" card, a typewriter quote and the workspace preview panel
+- [ ] AcctScheduleViz card content (App.tsx:6519): green pulsing live dot, label "Live schedule", right-aligned "Mon — Fri"; 4 lanes labelled Framing / Concrete / Electrical / Roofing; 8 job blocks positioned by left/width % with per-block animationDelay (0.2s .. 2.65s); the second Electrical block carries fix:true = the double-booked block that goes amber then slides into the next free slot
+- [ ] Typewriter quote, unselected state (WxTypewriter, key="empty"): normal "Production scheduling for " + em "every trade."
+- [ ] Quote cite: "Run the whole jobsite from one place."
+- [ ] Preview panel title (hasWork=false): "Your workspace will include" (uppercase, letter-spacing .12em)
+- [ ] Preview empty copy (no trade chosen): "Choose a trade and BuildFlow shapes its crews, production phases, readiness checks, delayIQ categories and AI around how that business actually runs."
+
+**Actions supported** (6)
+
+- [ ] "← Back to account details" (button type=button, .acct-back) -> onBack = showCreateAccountPage() -> sets accountMode 'signup' and navigates to #create-account. NOTE: it does NOT log the new account out, so pressing it lands a signed-in owner back on the signup form.
+- [ ] Click / tap any of the 14 trade cards (the whole <label> is the hit area) -> setBusinessType(type) and clears any standing error; re-keys the aside typewriter and the preview panel
+- [ ] Keyboard: native radiogroup semantics — Tab reaches the checked radio (or the first when none is checked), Arrow Up/Down/Left/Right moves AND selects the next trade, Space selects. The inputs are visually hidden (position:absolute; opacity:0; 1px; pointer-events:none) but focusable; the visible focus ring is .acct-pick:focus-within (blue border + 4px rgba ring). No custom onKeyDown handlers.
+- [ ] Submit "Get BuildFlow" (type=submit) -> submitBusinessType(): preventDefault, isBusinessTypeId guard, then onContinue(businessType) = handleBusinessTypeSelected (App.tsx:3513) -> track(EVENTS.tradeChosen,{trade}) -> setPendingBusinessType(businessType) -> showAdditionalProductsPage() (hash #additional-products). Pressing Enter anywhere in the form does the same.
+- [ ] NOTHING is persisted or POSTed on this step — the trade only lands in App state (pendingBusinessType); the POST /api/business-profile happens at the END of step 2.
+- [ ] No Skip, no 'do this later', no logout, no help link, no OAuth on this step.
+
+**Charts** (1)
+
+- [ ] Decorative CSS-only 'Live schedule' gantt-ish board in the aside (.acct-viz): 4 crew lanes x 5 day gridlines (background-size 20%), 8 coloured job bars, animated white sweep. No real data, aria-hidden.
+
+**Form inputs** (5)
+
+- [ ] 14 x <input type="radio" name="business-type"> — one per trade, value = the BusinessTypeId string ("Asphalt" … "Painting"). Not marked required (no HTML required attribute); no maxlength; no autocomplete; no placeholder. Accessible name comes from aria-labelledby="business-type-<slug>-label" (the TRADE NAME ALONE — deliberate, see the code comment: otherwise the whole card incl. the tagline would be read out) and aria-describedby="business-type-<slug>-desc" (the tagline). Slug = type.toLowerCase().replace(/[^a-z0-9]+/g,'-') so General Contractor -> business-type-general-contractor-label/-desc.
+- [ ] Validation rule: exactly one of the 14 must be checked. Validated only in JS on submit via isBusinessTypeId(businessType).
+- [ ] Exact validation message produced: "Choose your trade to continue." (rendered in <p className="acct-error" id="business-type-error" role="alert">; the radiogroup then points aria-describedby at business-type-error)
+- [ ] The error is cleared the moment any radio changes (onChange clears businessTypeError).
+- [ ] No other inputs on this screen — no text fields, no select, no checkbox, no search/filter over the 14 trades.
+
+**Opens (modals, drawers, popovers)** (1)
+
+- None on this screen.
+
+**Empty states** (1)
+
+- Aside preview, no trade chosen: dt "Your workspace will include" + "Choose a trade and BuildFlow shapes its crews, production phases, readiness checks, delayIQ categories and AI around how that business actually runs." (.acct-preview-empty)
+
+**Loading states** (2)
+
+- None visible. The step renders synchronously; the only async work is the background session check (see the 'Onboarding session guard' screen) which shows NO spinner — the page paints fully and may then be replaced by #create-account.
+- No submitting state: "Get BuildFlow" is never disabled and never changes label (the transition to step 2 is local state, not a request).
+
+**Error states** (2)
+
+- Submitting with no trade chosen: red .acct-error alert "Choose your trade to continue." between the grid and the submit button.
+- No network error state exists on this step (nothing is requested). Bootstrap-level failures are handled upstream in App (setError -> the 'Unable to load BuildFlow data' screen with 'Try again' + a route back to the welcome page).
+
+**Animations and transitions** (10)
+
+- @keyframes acct-rise (opacity 0 + translateY(14px) -> none, .55s cubic-bezier(0.22,1,0.36,1)) on .acct-form-inner
+- .acct-pick staggered entrance: same acct-rise, .5s, animation-delay: calc(0.26s + var(--i)*0.045s) — the React code sets style={{'--i': i}} per card, so the 14 trades fan in
+- .acct-pick hover: transform translateY(-2px) + border #c3c9d4 + shadow 0 14px 30px -12px, transition .24s cubic-bezier(0.22,1,0.36,1)
+- .acct-pick:focus-within blue ring; .acct-pick.selected border/bg/ring swap; .acct-trade-grid .acct-pick.selected .acct-pick-ico flips to ink (#1c1c1a on #fdfcf9)
+- .acct-pick-check svg spring reveal: opacity 0 -> 1, scale(0.4) -> none, cubic-bezier(0.34,1.56,0.64,1)
+- WxTypewriter in the aside (App.tsx:4308): 350ms lead-in then char-by-char at 28 + random*30 ms; ghost/real/caret markup; .wx-caret animates @keyframes wx-blink 1.05s steps(1) infinite and fades out .5s when done. Re-keyed on the trade (key={businessType || 'empty'}) so it REPLAYS on every trade change.
+- .acct-preview + .acct-preview-row acct-rise, rows staggered by calc(0.06s + var(--i)*0.06s); the whole <dl> is re-keyed on the trade so the rows replay on every change
+- Aside .acct-viz loop: acct-viz-rise (.9s card entrance), acct-viz-pulse (2.4s live dot), acct-viz-job-in (12s), acct-viz-job-fix + acct-viz-job-tone (12s, the double-book resolving amber -> blue and translateX(150%)), acct-viz-sweep (12s light sweep). All share a 12s period on purpose so per-block animation-delay stagger stays locked across repeats.
+- prefers-reduced-motion: reduce (account-redesign.css:1025 and :1352) kills acct-rise on .acct-form-inner/.acct-pick/.acct-preview/.acct-preview-row, kills the viz animations, removes hover translate, parks .is-fix at translateX(150%), hides the sweep. WxTypewriter also snaps to the full string when reduced motion matches.
+- No framer-motion and no data-reveal scroll-reveal on either onboarding step (those conventions are landing-page only).
+
+**Pinned by tests** (4)
+
+- client/src/App.test.tsx:135 it("prompts for business type after registering a new workspace") — asserts heading name "What type of Business do you own", getByRole('radiogroup',{name:'Business type'}), and that EVERY businessTypeOptions entry exists as getByRole('radio',{name: businessType}) (accessible name = trade label alone), window.location.hash === '#business-type', then clicking radio 'Roofing' + button 'Get BuildFlow' moves to the products heading and hash '#additional-products'
+- client/src/test/appHarness.tsx:145 signUp() ends with findByRole('heading',{name:'What type of Business do you own'})
+- client/src/test/appHarness.tsx:159 chooseBusinessType() clicks findByRole('radio',{name:businessType}) then getByRole('button',{name:'Get BuildFlow'})
+- Every test that reaches the app (App.test.tsx, tests/tutorial.test.tsx and the whole tests/*.test.tsx suite via completeOnboarding) walks through this screen — the radio accessible names and the 'Get BuildFlow' label are load-bearing for the entire client test suite.
+
+### Business type — a trade is selected (live workspace preview mode)
+
+**Route:** #business-type (same screen, selected state)  
+**Entry:** `client/src/App.tsx:7078 (profile = tradeProfileFor(businessType)) and the aside at App.tsx:7166-7228`
+
+Answer the selection immediately: the card locks in, the typewriter re-types with the trade name, and the aside lists what the seeded workspace will actually contain for that trade.
+
+**Information displayed** (20)
+
+- [ ] Selected card: blue border #2f6bff on #f5f9ff with a 3px ring, filled blue check bubble, and (trade grid only) the icon tile flipped to ink
+- [ ] Typewriter, selected state: normal "Production scheduling tuned for " + em "<trade lowercased> crews." — e.g. "Production scheduling tuned for roofing crews." / "…for general contractor crews." (raw lowercase of the id, so 'General Contractor' -> 'general contractor', 'HVAC' -> 'hvac')
+- [ ] Preview panel title (hasWork=false): "Your workspace will include"
+- [ ] Preview description = TradeProfile.description for the chosen trade
+- [ ] Preview rows, in this fixed order: "Crews" (all crewTypes), "Phases" (all phases), "Readiness checks" (readinessChecks.slice(0,4) — the remaining 2 are NOT shown), "DelayIQ categories" (delayIQCategories.slice(0,4) — the remaining 2 are NOT shown). Each value is a pill list of .acct-preview-chip.
+- [ ] Aside preview for "Asphalt": description line "Plan around plant slots, trucking cycles and the temperature window every lift depends on."; Crews chips [Milling, Asphalt Paving, Compaction, Lane Closures, Pavement Markings]; Phases chips [Traffic Control, Milling, Base Prep, Tack Coat, Binder Course, Surface Course, Compaction, Striping]; Readiness checks chips (first 4 only) [Lane closure permit, Plant slot confirmed, Trucking plan set, Traffic control plan]; DelayIQ categories chips (first 4 only) [Plant / trucking, Temperature window, Rain on pavement, Lane closure permit]
+- [ ] Aside preview for "Concrete": description line "Sequence forms, rebar, inspections and pours so the truck line never waits on a signature."; Crews chips [Formwork, Rebar, Pour, Finishing, Pump Support]; Phases chips [Layout, Formwork, Rebar, Embed Checks, Pour, Cure and Strip]; Readiness checks chips (first 4 only) [Mix design approved, Pump booked, Rebar released, Embeds checked]; DelayIQ categories chips (first 4 only) [Ready-mix supply, Pre-pour inspection, Rebar / embed release, Pump availability]
+- [ ] Aside preview for "Roofing": description line "Never open a roof you can't close — every tear-off is planned against the dry-in window."; Crews chips [Tear-Off, Dry-In, Membrane, Sheet Metal, Service]; Phases chips [Tear-Off, Dry-In, Insulation, Membrane, Flashing, Punch]; Readiness checks chips (first 4 only) [Fall protection staged, Material loaded, Tear-off dumpster set, Deck scan complete]; DelayIQ categories chips (first 4 only) [Rain / dry-in window, Wind above lift limit, Deck repair found, Material loading]
+- [ ] Aside preview for "General Contractor": description line "Keep subcontractors sequenced, inspections booked and the owner walk on the calendar."; Crews chips [Supervision, Carpentry, Punch, Logistics, Safety]; Phases chips [Mobilization, Rough-In, Inspections, Finishes, Punch, Closeout]; Readiness checks chips (first 4 only) [Submittals released, Subcontractors confirmed, Inspection calendar, Access plan]; DelayIQ categories chips (first 4 only) [Trade coordination, Inspection sequence, Submittal / RFI, Owner decision]
+- [ ] Aside preview for "Excavation": description line "Run cut-and-haul cycles against locates, erosion controls and whatever the ground turns out to be."; Crews chips [Mass Earthwork, Trenching, Haul-Off, Grade Check, Backfill]; Phases chips [Survey, Clearing, Mass Cut, Haul-Off, Trench, Backfill]; Readiness checks chips (first 4 only) [Locates complete, Spoils route approved, Erosion controls set, Survey stakes checked]; DelayIQ categories chips (first 4 only) [Wet subgrade, Utility locate / strike, Haul-road conditions, Unsuitable soils]
+- [ ] Aside preview for "Utilities": description line "Open trench, lay pipe, tie in and test — with 811 locates and shutdown notices done first."; Crews chips [Pipe, Conduit, Tie-In, Testing, Patch]; Phases chips [Locates, Trench, Pipe / Conduit, Tie-In, Test, Backfill]; Readiness checks chips (first 4 only) [811 locates clear, Shutdown notice sent, Pipe delivered, Testing kit staged]; DelayIQ categories chips (first 4 only) [Unmarked crossing, Shutdown window, Pressure test failure, Trench water]
+- [ ] Aside preview for "Framing": description line "Stand walls, deck floors and nail off shear on a lumber drop and inspection rhythm."; Crews chips [Wall Framing, Decking, Shear Wall, Hardware, Punch]; Phases chips [Layout, Wall Panels, Decking, Shear, Hardware, Inspection]; Readiness checks chips (first 4 only) [Lumber drop complete, Layout approved, Hardware released, Lift reserved]; DelayIQ categories chips (first 4 only) [Lumber / panel delivery, Hardware release, Framing inspection, Wind on lifts]
+- [ ] Aside preview for "Electrical": description line "Pull rough-in behind the framers and land the gear before the energize date slips."; Crews chips [Underground, Rough-In, Panel, Lighting, Trim]; Phases chips [Underground, Rough-In, Panel Set, Trim, Testing, Energize]; Readiness checks chips (first 4 only) [Sleeves laid out, Panel release confirmed, Lift reserved, Fixture package checked]; DelayIQ categories chips (first 4 only) [Switchgear lead time, Rough inspection, Area not released, Utility / energize date]
+- [ ] Aside preview for "Plumbing": description line "Get underground in before the slab and top-out passed before the walls close."; Crews chips [Underground, Top-Out, Fixture, Testing, Service]; Phases chips [Underground, Top-Out, Pressure Test, Fixtures, Trim, Final]; Readiness checks chips (first 4 only) [Sleeves approved, Pipe delivered, Test pump staged, Fixture release checked]; DelayIQ categories chips (first 4 only) [Pressure test retake, Slab / area release, Fixture delivery, Inspection]
+- [ ] Aside preview for "HVAC": description line "Hang duct behind the framers, set the units by crane and land startup before turnover."; Crews chips [Duct, Equipment Set, Piping, Controls, TAB Support]; Phases chips [Layout, Duct, Equipment Set, Piping, Controls, Startup]; Readiness checks chips (first 4 only) [Roof curb ready, Crane booked, Equipment released, Duct sections staged]; DelayIQ categories chips (first 4 only) [Equipment delivery, Crane pick / wind, Roof curb not ready, Controls drawings]
+- [ ] Aside preview for "Masonry": description line "Lay block and brick off tagged scaffold with mortar, grout lifts and cold-weather protection planned."; Crews chips [CMU, Brick, Scaffold, Grout, Cleanup]; Phases chips [Layout, Scaffold, Block, Brick, Grout, Clean Down]; Readiness checks chips (first 4 only) [Scaffold tagged, Block delivered, Mortar silo set, Lintels released]; DelayIQ categories chips (first 4 only) [Brick / block delivery, Scaffold inspection, Grout lift inspection, Cold weather protection]
+- [ ] Aside preview for "Drywall": description line "Hang and finish behind rough-in, coat by coat, with humidity and area releases driving the pace."; Crews chips [Metal Stud, Board Hang, Tape, Texture, Punch]; Phases chips [Framing, Board Hang, Tape, Texture, Sand, Punch]; Readiness checks chips (first 4 only) [Board stocked, Framing signed off, Lift reserved, Humidity checked]; DelayIQ categories chips (first 4 only) [Predecessor trade release, Above-ceiling inspection, Board delivery, Humidity / dry time]
+- [ ] Aside preview for "Landscaping": description line "Grade, run irrigation and plant on nursery deliveries and a watering plan the heat can't beat."; Crews chips [Irrigation, Planting, Hardscape, Fine Grade, Maintenance]; Phases chips [Grading, Irrigation, Hardscape, Planting, Mulch, Punch]; Readiness checks chips (first 4 only) [Plant delivery confirmed, Irrigation layout marked, Soil amendment staged, Water source checked]; DelayIQ categories chips (first 4 only) [Nursery substitution, Irrigation pressure test, Heat / watering, Hardscape base]
+- [ ] Aside preview for "Painting": description line "Prep and coat the areas other trades release, with color approvals and cure time built in."; Crews chips [Prep, Spray, Roller, Touch-Up, Final Punch]; Phases chips [Prep, Prime, First Coat, Second Coat, Touch-Up, Final Walk]; Readiness checks chips (first 4 only) [Color schedule approved, Areas released, Material tinted, Ventilation set]; DelayIQ categories chips (first 4 only) [Area not released, Color / mockup approval, Drywall punch open, Humidity / cure]
+- [ ] Not surfaced anywhere in the UI even though the profile carries them: materialUnits, weather.title/weather.rule, aiStarters, aiContext, and readiness/delay items 5-6.
+
+**Actions supported** (3)
+
+- [ ] Re-click another trade card -> switches the selection, re-keys the typewriter (replays typing) and re-keys the preview <dl> (rows replay their stagger)
+- [ ] "Get BuildFlow" -> advances to #additional-products (see screen 1)
+- [ ] "← Back to account details" -> #create-account. WARNING: the selection lives in this component's local useState, so returning to #business-type from step 2 remounts the page with businessType = "" — the previously chosen trade is NOT re-selected (App keeps it in pendingBusinessType, the page does not read it).
+
+**Form inputs** (1)
+
+- [ ] Same 14 radios; the checked one now has checked=true.
+
+**Error states** (1)
+
+- Error text is cleared on selection, so this mode never shows .acct-error.
+
+**Animations and transitions** (2)
+
+- Typewriter replay on key change; .acct-preview / .acct-preview-row acct-rise replay on key change; check-bubble spring; icon-tile colour transition (background/border .16s)
+- On a tall trade the aside preview becomes its own scroll container (>=900px: .acct-split-wide .acct-preview overflow-y auto, overscroll-behavior contain, thin white scrollbar) — see account-redesign.css:1359-1395
+
+**Pinned by tests** (2)
+
+- App.test.tsx:146 fireEvent.click(screen.getByRole('radio',{name:'Roofing'})) — the selected state must remain reachable by the radio's accessible name
+- No test asserts on the aside preview copy (it is aria-hidden), so the preview panel is the freest part of this screen to redesign.
+
+### Business type — hasWork variant (re-tuning a workspace that already has projects)
+
+**Route:** #business-type with hasWork=true  
+**Entry:** `client/src/App.tsx:3920-3923 — hasWork={Boolean(data && data.projects.length > 0)}; consumed at App.tsx:7073 and :7190-7197`
+
+Same question for someone who already has real work in the workspace (abandoned onboarding then signed back in, or an org whose workspace was seeded). Promises that nothing will be destroyed — the server only seeds an EMPTY workspace (database.ts:3055 hasWork check).
+
+**Information displayed** (4)
+
+- [ ] Preview panel title changes to: "What changes for your workspace" (instead of "Your workspace will include")
+- [ ] An extra reassurance paragraph (.acct-preview-desc.acct-preview-note) appears under the description: "Your existing projects, crews and schedule stay exactly as they are. BuildFlow re-tunes its phases, readiness checks, DelayIQ categories and AI around <trade lowercased> work."
+- [ ] Everything else (H1, sub-headline, the 14 cards, 'Get BuildFlow', the aside) is identical
+- [ ] NOTE: the note only renders when a trade is selected AND hasWork is true; the empty-state copy is unchanged, so before a selection the promise is not visible
+
+**Actions supported** (1)
+
+- [ ] Identical to the default state.
+
+**Form inputs** (1)
+
+- [ ] Identical 14 radios.
+
+**Animations and transitions** (1)
+
+- Identical.
+
+**Pinned by tests** (1)
+
+- No client test covers hasWork=true on this page; the server-side guarantee is exercised by the store (database.ts applyBusinessProfile 'only ever seed an EMPTY workspace').
+
+### Additional products — step 2 of onboarding (add-ons + plan + seats), initial state
+
+**Route:** #additional-products (welcomeView 'additionalProducts')  
+**Entry:** `client/src/App.tsx:7232 (WelcomeAdditionalProductsPage); rendered from App.tsx:3925; hash mapped at App.tsx:597`
+
+Collect the three purchase answers (optional add-ons, required plan, seat count) and then actually provision the workspace: POST /api/business-profile with {businessType, selectedPlan, selectedProducts, seats}.
+
+**Information displayed** (26)
+
+- [ ] Layout: <main className="acct-split acct-split-wide" id="additional-products" aria-labelledby="additional-products-title">, same suppressed nav/footer as step 1. On >=900px the split is pinned to 100dvh and ONLY the form column scrolls (this form is taller than the viewport).
+- [ ] Back link: "← Back to business type"
+- [ ] Brand lockup: BuildFlowLogoMark + "BuildFlow"
+- [ ] Eyebrow chip (this step only): pulsing dot + "Set up your workspace"
+- [ ] H1 (id=additional-products-title): "What additional products do you want to use?"
+- [ ] Sub-headline is trade-aware: `BuildFlow for ${businessType}` (e.g. "BuildFlow for Asphalt") when a trade came through, else the fallback "Choose your BuildFlow setup"
+- [ ] Section 1 head: h2 "Additional products" with right-aligned hint "Choose one or more"
+- [ ] Product card 1 — checkbox, id 'map-field-ops': strong "Map & Field Ops", em "Track vehicles, equipment, and design traffic routes.", lucide Map icon in a tone-green tile, check bubble
+- [ ] Product card 2 — checkbox, id 'equipment-tracking': strong "Equipment Tracking", em "See equipment assignment, usage, and maintenance status.", lucide Wrench icon, tone-teal
+- [ ] Product card 3 — checkbox, id 'time-cards': strong "Time Cards", em "Log crew hours against jobs, then approve them for payroll and job costing.", lucide Clock icon, tone-blue
+- [ ] Product card 4 — checkbox, id 'schedule-ai' (id kept for back-compat; presented as the whole AI capability): strong "AI", em "Spot conflicts, answer questions, and turn blockers into recovery suggestions.", lucide Sparkles icon, tone-violet
+- [ ] Only 4 add-ons exist here on purpose — shared/src/index.ts comments that crew scheduling, projects, materials readiness, field updates & delayIQs and production reports ship in the base product and are therefore NOT choices on this step
+- [ ] Prices are NOT shown for the add-ons on this step even though ADD_ON_CATALOG (App.tsx ~:820) carries them: map-field-ops, equipment-tracking, time-cards "$8 per user / month", schedule-ai "$15 per user / month", plus includedIn plan lists — that pricing only surfaces later in nav flyouts and Settings > Billing
+- [ ] Section 2 head: h2 "What type of plan?" with hint "Choose one"
+- [ ] Plan card 1 — Free: name "Free", price "$0", priceNote "Per User / Month" (plan.detail "Demo of BuildFlow" is NOT shown here)
+- [ ] Plan card 2 — Pro: "Pro", "$20", "Per User / Month"
+- [ ] Plan card 3 — Business: "Business", "$48", "Per User / Month" (productPlans marks Business recommended:true, but this step renders NO recommended badge)
+- [ ] Plan card 4 — Enterprise: "Enterprise", "Custom", "Per User / Month"
+- [ ] No feature lists, no yearly/monthly toggle and no 20% yearly discount on this step (planPricing/BillingPeriod exist in App.tsx but are only used on the marketing plan pages)
+- [ ] Section 3 head: h2 "How many people will use BuildFlow?" with hint "Every plan is priced per seat"
+- [ ] Seats field label: "Seats"; default value 5 (DEFAULT_SEATS, App.tsx:551 — "a typical small crew office")
+- [ ] Seat total line (aria-live="polite"), no plan chosen yet: "Pick a plan to see your monthly total."
+- [ ] Submit button, no add-ons selected: "Continue without add-ons" + ArrowRight icon; disabled until a plan is chosen
+- [ ] Footer hint under the button (.acct-hint.acct-hint-center): "Add-ons are optional. You can turn any of them on later in Settings."
+- [ ] Aside (aria-hidden="true"): the same 3 auroras + "BuildFlow" lockup + AcctScheduleViz "Live schedule" card, then the typewriter quote — normal "Pick the tools your " + em "crews run on." — and cite "Run the whole jobsite from one place." There is NO .acct-preview panel on this step (the aside is shorter and NOT keyed, so its typewriter types once).
+- [ ] No step indicator / progress. No legal line, no price-total-with-tax, no currency selector, no coupon field, no 'talk to sales' link (even for Enterprise).
+
+**Actions supported** (11)
+
+- [ ] "← Back to business type" -> onBack = showBusinessTypePage() -> hash #business-type. Plan/add-on picks survive only because their initial state is re-read from localStorage on the NEXT mount (readStoredPlan/readStoredProducts) — which is empty during first-run onboarding, so on a first run going back and forward loses both the trade selection and the plan/add-on selection.
+- [ ] Toggle any of the 4 product cards (click anywhere on the <label>) -> toggleProduct(id): adds/removes from selectedProducts and clears any standing error. Multi-select, order = click order (that order is what gets POSTed and stored).
+- [ ] Click a plan card (<button type="button" aria-pressed aria-label="Select <Name> plan">) -> setSelectedPlan(id) + clears error. Single-select; there is no way to unselect a plan once chosen.
+- [ ] Change the seats number input -> setSeats(Math.min(1000, Math.max(1, Math.round(Number(value) || 1)))) — clamped and rounded on every keystroke, so clearing the field snaps to 1 and a non-numeric entry snaps to 1
+- [ ] Submit ("Continue without add-ons" / "Continue to BuildFlow") -> submitProducts(): preventDefault; if !isProductPlanId(selectedPlan) show "Choose a BuildFlow plan to continue." and stop; else clear error, setIsSubmitting(true), await onContinue(plan, products, seats)
+- [ ] onContinue = finishOnboarding (App.tsx:3527): track(EVENTS.planChosen,{plan, addOns: n, seats}) -> setPendingSetup(...) -> onCompleteOnboarding({businessType: pendingBusinessType || 'General Contractor' (fallbackBusinessType, App.tsx:504), selectedPlan, selectedProducts, seats, destinationPage:'inviteTeam'})
+- [ ] completeOnboarding (App.tsx:2632) then: POST /api/business-profile via applyBusinessProfile -> syncUserSettings -> track(EVENTS.onboardingCompleted,{trade, plan, addOns, seats}) -> createTutorialSetupKey -> setData/setActiveUserId/setSelectedProjectId/setSelectedBusinessType/setSelectedPlanId/setSelectedProductIds -> localStorage writes buildflow.businessType, buildflow.selectedPlan, buildflow.selectedProducts (JSON array)
+- [ ] Then, for plan 'pro' or 'business' only: apiFetchSession + apiStartCheckout({plan, period:'monthly', seats, email, returnTo:'onboarding'}); if checkout.configured && checkout.url -> track(EVENTS.checkoutStarted) and window.location.assign(checkout.url) (leaves the SPA for Stripe). If Stripe is unconfigured or throws, it console.warns '[billing] checkout unavailable, continuing on trial' and falls through — the server has already started the 14-day trial.
+- [ ] Otherwise (free/enterprise, or checkout unavailable): window.location.hash = '#invite-team', page stays 'welcome', and the tutorial is armed (setTutorialStatus('active')) unless readStoredTutorialStatus(setupKey) already says skipped/completed. The invite step's 'Skip for now'/'Done' then calls onEnterDashboard.
+- [ ] Enter key inside the seats input submits the form (it is a real <form onSubmit>). The plan cards are type=button so Enter/Space on them only selects.
+- [ ] No Skip on this step (the only skip in the funnel is 'Skip for now' on the following invite-team step). No logout, no 'contact sales', no help link.
+
+**Charts** (1)
+
+- [ ] Same decorative .acct-viz 'Live schedule' board in the aside.
+
+**Form inputs** (5)
+
+- [ ] 4 x <input type="checkbox"> for the add-ons — NO name attribute, NO id, NO value attribute; state is React-only (selectedProducts array of OnboardingProductId). Not required. No maxlength/autocomplete. Accessible name is the whole wrapping <label>'s text content, i.e. label + description concatenated (that is why tests use getByLabelText(/Map & Field Ops/) with a regex). Produces no validation message — add-ons are always optional.
+- [ ] 4 x plan <button type="button"> inside a div role="radiogroup" aria-label="BuildFlow plan" — each has aria-pressed={selected} and aria-label=`Select ${plan.name} plan`. Not real radios (no role=radio / aria-checked), so arrow-key radiogroup navigation does NOT work; each is a separate tab stop.
+- [ ] Plan validation rule: a plan is REQUIRED — canContinue = Boolean(selectedPlan) disables the submit button, and submitProducts re-checks with isProductPlanId. Exact message: "Choose a BuildFlow plan to continue."
+- [ ] 1 x <input id="additional-products-seats" class="acct-input" type="number" inputMode="numeric" min={1} max={1000} step={1}> labelled by <label htmlFor="additional-products-seats">Seats</label>. No name, no autocomplete, no placeholder, no maxlength. Not marked required (it always holds a value). Validation is by clamping in onChange, not by message — it can never produce an error string. Server-side bound: z.number().int().min(1).max(1000) (server/src/app.ts:257).
+- [ ] Server-side schema for the whole submit (businessProfileSchema, server/src/app.ts:248): businessType z.enum(businessTypeOptions) REQUIRED; selectedPlan z.enum(['free','pro','business','enterprise']) optional; selectedProducts array of the 4 ids, .max(4), optional; seats int 1..1000 optional. A schema miss answers 400 with z.flatten() — which the client would surface through the generic catch as its message.
+
+**Opens (modals, drawers, popovers)** (1)
+
+- None on this screen. (The tutorial dialog 'Your BuildFlow workspace is ready' opens AFTER the invite step, on the Dashboard.)
+
+**Empty states** (2)
+
+- Seat total before a plan is picked: "Pick a plan to see your monthly total."
+- No add-on selected is a legitimate end state, signalled by the button label "Continue without add-ons" plus the hint "Add-ons are optional. You can turn any of them on later in Settings."
+
+**Loading states** (4)
+
+- Submitting: isSubmitting=true -> button label becomes "Building workspace..." (literal three dots, not an ellipsis character), the ArrowRight icon is removed, and the button is disabled (disabled={!canContinue || isSubmitting}). No spinner, no skeleton, no overlay — the rest of the form stays interactive.
+- Disabled-until-valid state: the submit button is disabled whenever no plan is selected (.acct-primary:disabled = opacity .65, cursor not-allowed).
+- isSubmitting is only reset on FAILURE; on success the component is navigated away from (hash -> #invite-team or a Stripe redirect), so 'Building workspace...' is the last thing shown.
+- Stripe hop: on pro/business the page can sit in 'Building workspace...' through apiFetchSession + apiStartCheckout before window.location.assign — a full-page navigation with no interstitial copy.
+
+**Error states** (5)
+
+- No plan chosen on submit: .acct-error role=alert id="additional-products-error" — "Choose a BuildFlow plan to continue." (rendered between the seats section and the submit button; note the id is not wired to any aria-describedby)
+- Provisioning failure: the catch around onContinue sets productError to error.message when it is an Error, else the literal fallback "Unable to finish onboarding. Try again." — so the same red alert shows server text such as an ApiError message from POST /api/business-profile (400 validation, 401 when the session died, 500) and isSubmitting is reset so the user can retry.
+- Rate limiting / duplicate account are NOT surfaced here — they belong to the signup step; this step's only rate-limit exposure is whatever /api/business-profile or /api/billing/checkout returns, which lands in the same generic alert.
+- Stripe checkout failure is deliberately NOT an error state: it is swallowed with a console.warn and the user continues on the server-started 14-day trial.
+- Session lost mid-step: the onboardingViews guard effect (App.tsx:3546) only runs on welcomeView change, so a session that expires while the user is choosing surfaces as a POST failure in the red alert rather than a redirect.
+
+**Animations and transitions** (9)
+
+- .acct-form-inner acct-rise .55s entrance (form column widened to 640px on this step)
+- .acct-eyebrow-dot @keyframes acct-dot-pulse 2.6s infinite
+- 4 product cards: acct-rise .5s staggered by calc(0.26s + var(--i)*0.045s)
+- 4 plan cards: acct-rise .5s staggered by calc(0.4s + var(--i)*0.05s) — plans land after the products
+- Card hover translateY(-2px) + shadow (both .acct-pick and .acct-plan); .acct-plan:focus-visible 2px blue outline
+- .acct-pick-check and .acct-plan-check spring in with cubic-bezier(0.34,1.56,0.64,1)
+- .acct-primary svg (ArrowRight) slides translateX(3px) on hover
+- Aside: acct-viz-rise / acct-viz-pulse / acct-viz-job-in / acct-viz-job-fix / acct-viz-job-tone / acct-viz-sweep (all 12s, locked period) + WxTypewriter typing with a blinking .wx-caret (typed once — this aside is not re-keyed)
+- prefers-reduced-motion: reduce disables all of the above (account-redesign.css:1025-1055) and WxTypewriter snaps to the full string
+
+**Pinned by tests** (6)
+
+- App.test.tsx:150/151 — findByRole('heading',{name:'What additional products do you want to use?'}) and hash '#additional-products'
+- App.test.tsx:153 it("requires a plan but not an add-on before entering BuildFlow") — asserts getByText('Map & Field Ops'), getByText('Track vehicles, equipment, and design traffic routes.'), the four getByRole('button',{name:'Select Free|Pro|Business|Enterprise plan'}), that getByRole('button',{name:'Continue without add-ons'}) is DISABLED, getByLabelText('Seats') toHaveValue(5), that selecting Business ENABLES the same button node, getByText(/\$240 \/ month/), and that after ticking getByLabelText(/Map & Field Ops/) the button is now named 'Continue to BuildFlow' and enabled
+- App.test.tsx:180 it("opens a blank workspace after the selected onboarding setup") — clicks getByLabelText(/Map & Field Ops/), getByLabelText(/Equipment Tracking/), 'Select Business plan', 'Continue to BuildFlow', then 'Skip for now'; asserts localStorage buildflow.businessType='Asphalt', buildflow.selectedPlan='business', buildflow.selectedProducts=['map-field-ops','equipment-tracking'], and an exact fetch to '/api/business-profile' with method POST and body JSON.stringify({businessType:'Asphalt',selectedPlan:'business',selectedProducts:['map-field-ops','equipment-tracking'],seats:5}) — KEY ORDER AND SEAT DEFAULT ARE PINNED BY THIS ASSERTION
+- App.test.tsx:228 it("starts a personalized tutorial after onboarding with selected-product lessons") — the dialog copy 'BuildFlow is set up for Asphalt on the Business plan with Map & Field Ops, Equipment Tracking' and 'Map & Field Ops lesson' / 'Equipment Tracking lesson' derive from the picks made on this screen
+- client/src/test/appHarness.tsx:167 chooseProductsAndPlan() — findByLabelText(new RegExp(product)) for each product (so the checkbox's accessible name must keep containing the product label), getByRole('button',{name:`Select ${plan} plan`}), getByRole('button',{name:'Continue to BuildFlow'}), then findByRole('button',{name:'Skip for now'})
+- client/src/tests/tutorial.test.tsx:112/136/155/183 — all four onboarding-tutorial tests run through completeOnboarding(), i.e. through this screen; the tutorial setup key is built from {businessType, selectedPlan, selectedProducts} chosen here (createTutorialSetupKey, App.tsx:1625-1635)
+
+### Additional products — plan selected (the four seat-total copy modes)
+
+**Route:** #additional-products (selected state)  
+**Entry:** `client/src/App.tsx:7378-7398 (the aria-live seat total) and :7248-7249 (plan/monthlyTotal derivation)`
+
+Show what the choice costs. monthlyTotal = plan.priceMonthly * seats when priceMonthly is a number, else null.
+
+**Information displayed** (8)
+
+- [ ] Mode A — no plan: "Pick a plan to see your monthly total."
+- [ ] Mode B — Free (priceMonthly 0, monthlyTotal === 0): "<b>$0 / month</b> — Free for the whole team." (an em dash; the b tag is inside the aria-live region)
+- [ ] Mode C — Pro/Business (numeric total): "<b>${monthlyTotal.toLocaleString('en-US')} / month</b> for {seats} {seat|seats} on {plan.name}. Starts with a 14-day trial; nothing is charged today." — e.g. Business x 5 = "$240 / month for 5 seats on Business. Starts with a 14-day trial; nothing is charged today." (App.test.tsx asserts /\$240 \/ month/); Pro x 5 = "$100 / month"; large counts get thousands separators (Business x 1000 = "$48,000 / month")
+- [ ] Mode D — Enterprise (priceMonthly null): "<b>Custom pricing</b> — sales will size Enterprise for {seats} {seat|seats}." — note the plan NAME is hardcoded as 'Enterprise' in this branch
+- [ ] Singular/plural handled: seats === 1 -> "seat"
+- [ ] Selected plan card: blue border/bg + ring, filled check bubble top-right
+- [ ] Selected product cards: blue border/bg + ring, filled check bubble; submit label flips to "Continue to BuildFlow"
+- [ ] The '14-day trial' promise in mode C is honoured server-side by recordWorkspaceSetup (TRIAL_DAYS, server/src/database.ts) which stamps trialEndsAt for pro/business and DELETES trialEndsAt for free/enterprise
+
+**Actions supported** (3)
+
+- [ ] Changing seats live-updates the total inside an aria-live="polite" paragraph (screen readers announce each change — the clamping onChange means every keystroke announces)
+- [ ] Switching plans live-updates the total copy mode
+- [ ] Untick every add-on -> submit label reverts to "Continue without add-ons" (still enabled while a plan is selected)
+
+**Form inputs** (1)
+
+- [ ] Same as screen 4.
+
+**Animations and transitions** (1)
+
+- No transition on the total (text swap); .acct-seats-total b renders in ink #1c1c1a
+
+**Pinned by tests** (2)
+
+- App.test.tsx:175 expect(screen.getByText(/\$240 \/ month/)).toBeInTheDocument() — the Business x 5 seat math string is pinned
+- App.test.tsx:170 getByLabelText('Seats') toHaveValue(5)
+
+### Onboarding session guard + resume/redirect behaviour (applies to both steps)
+
+**Route:** #business-type / #additional-products / #invite-team  
+**Entry:** `client/src/App.tsx:3546-3561 (onboardingViews effect) and App.tsx:2536-2542 (enterAfterAuth) and App.tsx:2505 (showOnboarding)`
+
+Keep the onboarding steps behind a real signup, and resume onboarding rather than dead-ending when someone abandons it.
+
+**Information displayed** (7)
+
+- [ ] onboardingViews = ['businessType','additionalProducts','inviteTeam']. On entering any of them an effect calls apiFetchSession(); if there is no session, or session.demo is true, it calls showCreateAccountPage() — the code comment: signed out, the API's self-heal would hand the trade/plan to the shared DEMO org.
+- [ ] There is NO loading/skeleton during that check: the onboarding page renders in full and can then be swapped for #create-account.
+- [ ] Resume path: onboarding is 'done' only when the org has onboardingCompletedAt (stamped by store.applyBusinessProfile, database.ts:3068). enterAfterAuth (used by signup, login, password reset and accept-invite) sends any account WITHOUT that stamp to showOnboarding() -> hash #business-type, so abandoning onboarding and logging back in resumes it instead of landing on an empty dashboard.
+- [ ] Direct hash entry works: pasting /#business-type or /#additional-products routes there via getWelcomeViewFromHash (App.tsx:596-597) and WelcomePage's hashchange listener — the session guard is the only thing standing between an anonymous visitor and the step.
+- [ ] OAuth return: a brand-new Google/Microsoft signup comes back with ?oauth=signup and the hash '#business-type' already on the URL (App.tsx:2390-2400 comment), i.e. social signups land on step 1 the same way.
+- [ ] Deep-link suppression: the schedule-deep-link auto-open at App.tsx:2536 is gated on payload.onboardingCompletedAt, so a half-onboarded account is never yanked to a schedule page.
+- [ ] browser Back/Forward: WelcomePage syncs welcomeView on 'hashchange', so browser back from #additional-products returns to #business-type — remounting WelcomeBusinessTypePage with an EMPTY selection.
+
+**Actions supported** (3)
+
+- [ ] Automatic redirect to #create-account when no/demo session
+- [ ] Automatic redirect to #business-type on any sign-in without onboardingCompletedAt
+- [ ] Automatic hash change to #invite-team once step 2 succeeds (or a full-page Stripe redirect for pro/business)
+
+**Opens (modals, drawers, popovers)** (1)
+
+- After the invite step: role=dialog named "Your BuildFlow workspace is ready" (the personalised tutorial) with a 'Skip Tutorial' button — the first thing a finished onboarding shows on the Dashboard.
+
+**Empty states** (1)
+
+- A newly provisioned workspace is intentionally blank: the Dashboard shows 'No approvals waiting on you', 'No inspections scheduled yet', 'No equipment conflicts yet', 'No materials added yet' (asserted in App.test.tsx:180).
+
+**Loading states** (1)
+
+- App-level isLoading during loadWorkspace() between the two steps and the dashboard (the generic app loading screen, not an onboarding-specific one).
+
+**Error states** (1)
+
+- A failed loadWorkspace after auth surfaces App's 'Unable to load BuildFlow data' screen, which always keeps a route back to the welcome page (returnToWelcome, App.tsx:2582).
+
+**Pinned by tests** (3)
+
+- App.test.tsx:135 (hash assertions '#business-type' / '#additional-products')
+- appHarness.tsx:181 completeOnboarding() sets state.bootstrapPayload = state.businessProfilePayload between the two steps, mirroring the real provisioning hand-off
+- tutorial.test.tsx:112/136 — the tutorial setup key and its per-user server setting (PUT /api/me/settings/tutorial:<key>) are derived from the two onboarding answers
+
+### Cross-cutting notes for this area
+
+- Both steps are welcomeView states inside WelcomePage (App.tsx:3241), driven by window.location.hash — not by the Page union and not by a router. Any redesign must keep getWelcomeViewFromHash (App.tsx:596-597), the hashchange sync, and the nav/footer suppression list at App.tsx:3714-3724.
+- Design system: account-redesign.css .acct-* two-column split, shared with #create-account, #reset-password, #verify-email, #accept-invite and #invite-team. Restyling any shared .acct-* class (.acct-split, .acct-form-col, .acct-form-inner, .acct-back, .acct-brand, .acct-head, .acct-form, .acct-field, .acct-input, .acct-error, .acct-primary, .acct-hint, .acct-aside, .acct-aurora, .acct-viz*) changes all six auth/onboarding screens at once.
+- .acct-split declares the --wx-* landing tokens LOCALLY (account-redesign.css:1066-1078) precisely because these views are excluded from isReskinView (App.tsx:3283-3314) and therefore have no .welcome-rx ancestor. Moving those tokens out, or adding a .welcome-rx dependency, silently blanks colours and type.
+- The wide variant (.acct-split-wide) is used by BOTH onboarding steps and deliberately makes the split its own scroll container (height 100dvh + overflow hidden, only .acct-form-col scrolls) because the .welcome-page ancestor sets overflow: hidden auto and is the real scroll container — position: sticky does not work here (documented in the CSS at :374-392).
+- The right-hand aside is aria-hidden="true" on both steps, so the AcctScheduleViz board, the typewriter line AND the whole trade preview panel (crews/phases/readiness/DelayIQ chips) are invisible to assistive tech. The WxTypewriter's own sr-only .wx-type-a11y node is inside that aria-hidden subtree, so it does nothing here.
+- The aside disappears entirely below 900px (display: none) — on phones both steps are just the form column on paper #f5f6fa, and the trade preview (the only place the seeded workspace is explained) is never seen.
+- Data flow: step 1 -> App state pendingBusinessType only; step 2 -> one POST /api/business-profile with {businessType, selectedPlan, selectedProducts, seats} (client/src/api.ts:340). Server: businessProfileSchema (app.ts:248) -> store.applyBusinessProfile (database.ts:3034) records the trade, seeds a trade-specific starter workspace ONLY when the workspace is empty, recordWorkspaceSetup stores selectedPlan/selectedProducts/seats and a 14-day trialEndsAt for pro/business, then stamps onboardingCompletedAt; mainStore.updateOrgPlan writes the PLAN_LABELS label for admin tools.
+- Local mirrors written on success: localStorage buildflow.businessType, buildflow.selectedPlan, buildflow.selectedProducts (JSON). Those same keys seed the initial state of step 2 (readStoredPlan / readStoredProducts, App.tsx:553-566) and of pendingBusinessType (readStoredBusinessType, App.tsx:3277) — so a returning user sees their previous plan/add-ons pre-selected, while seats always resets to DEFAULT_SEATS = 5 (seats are not read back from storage).
+- Analytics: trade_chosen on step 1 submit, plan_chosen on step 2 submit, onboarding_completed after the POST, checkout_started when Stripe opens (client/src/analytics.ts:36-39).
+- The funnel is actually THREE steps: #business-type -> #additional-products -> #invite-team (WelcomeInviteTeamPage, App.tsx:7789, 3 prefilled invite rows Superintendent/Crew Lead/Crew Lead, 'Skip for now'), and only the invite step's Done/Skip calls onEnterDashboard. finishOnboarding hardcodes destinationPage:'inviteTeam' (App.tsx:3533).
+- 'Finishing routes to the Dashboard' is true but indirect: completeOnboarding sets hash '#invite-team' and stays on the welcome shell; a pro/business plan may instead leave the app for Stripe Checkout (returnTo:'onboarding'); the Dashboard arrival is where the tutorial dialog 'Your BuildFlow workspace is ready' fires (keyed by createTutorialSetupKey(businessType, plan, products)).
+- The same 14 businessTypeOptions are also rendered as a plain <select> in Settings > Workspace (App.tsx:21937) with changeBusinessType -> applyBusinessProfile({businessType}) alone; and Settings > Billing re-posts {businessType, selectedPlan, seats} (App.tsx:21999, :22188). A redesign of the trade picker should stay consistent with that Settings control, which is the only way to change the answer later.
+- The 4 add-ons are the same OnboardingProductId union used by programRegistry (App.tsx:744), ADD_ON_CATALOG (App.tsx ~:820) and the tutorial's productSteps; shared/src/index.ts warns that adding/removing one breaks all three maps at compile time.
+- No framer-motion, no data-reveal on these two screens: every animation is a CSS @keyframe in account-redesign.css plus the JS-timed WxTypewriter. There is one prefers-reduced-motion block covering all of it.
+
+### Omission check
+
+**Verdict:** INCOMPLETE — the rendered surface of both steps (copy, cards, taglines, tones, icons, CSS, animations, test anchors) is unusually accurate and near-complete, but the inventory under-covers the funnel's EXITS and FAILURE surface (Stripe hand-off + return, re-entry with no guard on onboardingCompletedAt, deep-link-without-a-trade, the exact server error strings incl. a 400 that renders '[object Object]'), and it carries 8 factual errors — the add-on prices, the .welcome-page scroll-container claim, and 'a newly provisioned workspace is intentionally blank' (production actually seeds a populated trade workspace).
+
+**Screens the first pass missed** (7)
+
+- [ ] Additional products entered with NO trade (businessType === ""): reachable by bookmark, browser Back/Forward or a reload of #additional-products, because the onboardingViews guard only checks the session. The sub-headline falls back to 'Choose your BuildFlow setup' and submitting silently POSTs fallbackBusinessType = 'General Contractor' (App.tsx:504, :3535) — the person never sees which trade their workspace is being seeded as. Inventoried only as a footnote inside an action chain, not as a state.
+- [ ] Onboarding re-entered by an org that ALREADY finished it. The guard (App.tsx:3546-3560) checks session presence and session.demo only — it never looks at data.onboardingCompletedAt — so a signed-in, fully onboarded owner can reopen #business-type / #additional-products and re-run the entire flow: re-POST the profile, overwrite the org's plan/products/seats, re-open Stripe Checkout, and arm the tutorial again under a new setup key. On this pass step 2 paints PRE-FILLED (readStoredPlan/readStoredProducts): the submit is already enabled and already reads 'Continue to BuildFlow' on first paint, while seats has silently reset to 5.
+- [ ] The Stripe hand-off AND its return leg for pro/business. successUrl = '<origin>/?checkout=success&plan=<plan>&from=onboarding' and cancelUrl = '<origin>/?checkout=cancelled&from=onboarding' (server/src/app.ts:2509-2517); runBootstrap's from=onboarding branch (App.tsx:2374-2378) replaceStates the query away and calls openAppPage('dashboard'). Consequences the inventory never states: a paid plan with Stripe configured SKIPS #invite-team and the tutorial entirely, and an ABANDONED (cancelled) checkout still lands in the workspace on the server-started 14-day trial.
+- [ ] The anonymous / demo deep-link state as it actually renders. loadWorkspace() self-heals a 401 by performing a DEMO LOGIN and retrying (App.tsx:2313-2320), so an anonymous visitor to #business-type gets a demo session cookie and `data` = the populated demo workspace — which makes hasWork TRUE, i.e. the page paints the 'What changes for your workspace' variant for a frame before the guard bounces them to #create-account. The inventory frames hasWork as an abandoned-onboarding/seeded-org case only.
+- [ ] Malformed hash → the marketing home. getWelcomeViewFromHash matches these two views by EXACT string equality (App.tsx:596-597), unlike #reset-password/#verify-email/#accept-invite which use startsWith. '#business-type?utm=x', '#business-type/' or a trailing token silently renders the LANDING PAGE (welcomeView 'home') with the full marketing nav — there is no 404/fallback state for the onboarding routes.
+- [ ] Phone (<900px) as its own layout state for step 2. The .acct-split-wide pin (height:100dvh + overflow:hidden with .acct-form-col as the only scroller) lives inside @media (min-width:900px), so below 900px the split grows and the WINDOW scrolls instead — a completely different scroll model from the desktop one the risks section describes, on the same screen that loses the aside (and with it the only explanation of what the workspace will contain).
+- [ ] Step 2 immediately after a FAILED submit: the red alert is showing, isSubmitting is back to false, and the button label has been recomputed from selectedProducts ('Continue to BuildFlow' / 'Continue without add-ons') — i.e. the failure state is visually identical to the initial state plus one alert, with nothing marking which fields were sent.
+
+**Information the first pass missed** (17)
+
+- [ ] ADD_ON_CATALOG prices are wrong in the inventory. Actual (App.tsx:829-853): map-field-ops $12, equipment-tracking $9, time-cards $8, schedule-ai $15 — all 'per user / month' — each with a `pitch` line and an `includedIn` list: map/equipment/time-cards are included in Business + Enterprise, AI in Pro + Business + Enterprise.
+- [ ] What the add-on checkboxes actually DECIDE downstream: ADD_ON_PAGE_LOCKS (App.tsx:822-826) locks page 'map' behind map-field-ops, 'equipment' behind equipment-tracking and 'timecard' behind time-cards, and isAddOnUnlocked() (:855) opens a page only if the add-on was ticked HERE or the chosen plan includes it. AI never locks a page. Not ticking a box on this screen is therefore a real feature gate later (nav up-arrow + 'Purchase in Billing' prompt), which the inventory never states.
+- [ ] Every distinct error string reachable from these two steps, verbatim, none of which the inventory quotes: (a) GET /api/auth/me 401 {"error":"Not authenticated"} (server app.ts:1230); (b) ops-gate 401 'Please sign in to continue.' (app.ts:648) and 500 'Workspace unavailable.' (app.ts:657) — both land in step 2's red alert as-is; (c) POST /api/business-profile 400 answers { error: parsed.error.flatten() } — an OBJECT — and client request() does new ApiError(body.error ?? …) (api.ts:105), so an Error message coercion makes the alert read literally '[object Object]' for any schema miss (unknown trade, >4 products, unknown product id, seats outside 1..1000); (d) network/CORS failure: 'Could not reach the BuildFlow API.' or 'Could not reach the BuildFlow API: <reason>' (api.ts:93-97).
+- [ ] Billing error strings that exist but are DELIBERATELY never shown (swallowed by the console.warn at App.tsx:2678): POST /api/billing/checkout 400 'Choose a plan (pro or business), a billing period, and an optional seat count.' (app.ts:2502), 502 'Could not start checkout. Please try again.' (app.ts:2528), and the 200 {configured:false, reason, message} 'billing not connected' notice (app.ts:2522) which other surfaces render as copy.
+- [ ] Rate limiting: neither /api/business-profile nor /api/bootstrap nor /api/auth/me carries a limiter (server/src/app.ts — limiter.byIp is only on signup/login/oauth/verify/reset/account/invite), so no 429 can reach these two steps. The generic limiter string is 'Too many attempts. Try again in <n>.' (rateLimit.ts:45) and the login lockout is 'Too many sign-in attempts. Try again in <n>, or reset your password.' (app.ts:814) — both belong to the create-account step the guard can bounce you back to.
+- [ ] document.title never changes for either step — it stays 'BuildFlow — Construction Scheduling & Field Command Center' (App.tsx:2428; only page 'map' overrides it at :2425). Combined with no focus move and no live region, a step advance is completely unannounced to assistive tech. There is also no aria-current, no <progress>, no visually-hidden 'Step N of M' anywhere.
+- [ ] Analytics is bigger than the four track() calls: trackPageView(welcomeView) fires on EVERY welcomeView change (App.tsx:3361-3364), so 'businessType' and 'additionalProducts' each emit a funnel pageview. And plan_chosen is fired BEFORE the POST (finishOnboarding, App.tsx:3528), so a provisioning failure still counts as a plan choice while onboarding_completed never fires.
+- [ ] Wrapper classes on the shell: these two views render inside <div class="welcome-page updates-open"> (App.tsx:3713). The inventory notes the absence of .welcome-rx but not that `updates-open` IS applied and paints background:#fff (styles.css:2654), and that .welcome-page itself is now { min-height:100vh; overflow-x: clip } (styles.css:54).
+- [ ] The POST's RESPONSE shape and what it changes. /api/business-profile returns withBilling(bootstrap) — a full BootstrapPayload that also carries selectedPlan, selectedProducts, seats, billingStatus ('trial' for pro/business, 'free' after a downgrade, per server/test/api.test.ts:103-126) and trialEndsAt. Two App effects then push data.businessType / data.selectedPlan / data.selectedProducts back over the three localStorage keys (App.tsx:2345-2366) — which is how step 2's 'pre-selected' plan can come from the ORG record and not just this browser.
+- [ ] seats is persisted on the org (workspace_settings 'seats', database.ts:2837) and returned on bootstrap, but step 2 never reads it back (useState(DEFAULT_SEATS)) — so re-running onboarding on an 8-seat org silently rewrites it to 5. The inventory only says seats are 'not read back from storage'.
+- [ ] Server-side test coverage is missing from files[] and every testAnchors list: server/test/api.test.ts asserts unknown trade → 400 (:38), unknown add-on id → 400 (:128-133), plan/products/seats echoed back with billingStatus 'trial' and a 13–14 day trialEndsAt (:99-110), /api/auth/me org.plan === 'Business' (:117-118), downgrade to Free → billingStatus 'free' + trialEndsAt null (:122-126), and (:479-527) that picking a trade SEEDS a populated starter workspace (projects/jobs/crews > 0, seeded teammates isSample:true, onboardingCompletedAt stamped, survives a reload) while a SECOND apply with a different trade preserves the existing work.
+- [ ] The code's own funnel numbering, which a step indicator has to reconcile with: account-redesign.css labels the plan/add-ons step 'registration step 3' (:1517), forgot/verify 'step 4' (:1547) and team invites 'step 5' (:1626) — i.e. create-account is step 1 and business type is step 2, not the 'step 1 / step 2' the inventory uses.
+- [ ] Per-field error styling exists but is unused on both steps: .acct-input.is-invalid and .acct-field-error (account-redesign.css:1397-1420, built for the signup form) are never applied here — both onboarding steps are form-level-only, one .acct-error paragraph each, and the seats input can never be marked invalid.
+- [ ] The seats <input> has no aria-describedby pointing at the aria-live total, no name and no autoComplete; and because the clamp re-renders on every keystroke, the aria-live='polite' total re-announces on every character typed.
+- [ ] OAuth entry details: a Google/Microsoft signup is created server-side with a random UNUSABLE password and an org auto-named from the email domain (or "<First>'s Company" for a personal domain), then redirected to '<returnTo>/?oauth=signup#business-type' (app.ts:983-1010) — those owners hit step 1 having never seen the account form, so '← Back to account details' sends them to a form they never filled. oauthFail instead redirects to '?oauth=error&reason=<reason>#create-account' (app.ts:862).
+- [ ] Step 1's only visible focus indicator is .acct-pick:focus-within (blue border + 4px rgba ring), which is nearly identical to .acct-pick.selected — and because clicking the label focuses the visually hidden radio, that ring persists after a mouse click (there is no :focus-visible variant).
+- [ ] setPendingSetup (App.tsx:3524) writes to state whose value is discarded — `const [, setPendingSetup]` — so the 'pending setup' the plan step records is dead state; only finishInviteStep clears it.
+
+**Actions the first pass missed** (6)
+
+- [ ] Native number-input interactions on Seats: Up/Down arrow keys and the spinner buttons step by 1 (step={1}), and min/max make the field a native constraint-validation target on implicit submit — it can never fail because onChange clamps first. None of this is in the inventory's keyboard notes.
+- [ ] No in-flight guard inside submitProducts: unlike WelcomeResetPasswordPage (`if (busy) return`), step 2's only double-submit protection is disabled={!canContinue || isSubmitting} on the button (which also blocks Enter-key implicit submission, since the default button is disabled). A redesign that keeps a custom/undisabled control loses the guard entirely.
+- [ ] Step transitions use window.history.pushState(null, '', hash) inside showWelcomeSubpage (App.tsx:3444-3451) — NOT window.location.hash — plus a requestAnimationFrame(window.scrollTo({top:0, behavior:'smooth'})) that is skipped under jsdom and is a NO-OP on ≥900px because .acct-form-col, not the window, is the scroller. By contrast showOnboarding() (:2508) and the finish step (:2683) DO assign window.location.hash.
+- [ ] History depth: step 1 and step 2 each push a history entry, so pressing Back twice from step 2 lands on #create-account while still signed in; App's popstate listener (:2489) reads event.state?.page, which pushState(null) leaves undefined, so it is a no-op here.
+- [ ] Re-submitting step 1 with the same trade fires trade_chosen again — there is no dedupe on the analytics event or on setPendingBusinessType.
+- [ ] There is no logout, no 'finish later', no Enterprise contact-sales hand-off, and no beforeunload guard while 'Building workspace...' (or the Stripe hop) is in flight.
+
+**States or motion the first pass missed** (5)
+
+- [ ] WxTypewriter decides reduced-motion ONCE per mount (window.matchMedia('(prefers-reduced-motion: reduce)').matches read during render, no change listener, App.tsx:4310), so toggling the OS setting mid-session has no effect until the component re-keys.
+- [ ] Every WxTypewriter re-key on step 1 replays a 350 ms EMPTY lead-in before the first character (App.tsx:4325); the .wx-type-ghost layer holds the box so the panel does not reflow — worth preserving if the aside is redesigned.
+- [ ] There are THREE @media (prefers-reduced-motion: reduce) blocks in account-redesign.css (1025, 1353, 1511), not two. The third only kills .acct-strength-bar transitions (signup), but the 1353 block is the one carrying .acct-preview / .acct-preview-row — easy to lose when consolidating.
+- [ ] .acct-split sets position:relative + z-index:1 and .acct-preview sets position:relative + z-index:1 over the aurora blobs — a redesign that adds a page-level background or reorders the aside must respect that stacking.
+- [ ] Step 2's aside is NOT re-keyed on the plan/add-on choice, so after its entrance the only motion is the 12 s viz loop and the one-time typewriter — the panel never answers the user's selections the way step 1's does.
+
+**Corrections** (9)
+
+- Add-on pricing is wrong: $12 (Map & Field Ops) / $9 (Equipment Tracking) / $8 (Time Cards) / $15 (AI), not '$8/$8/$8/$15'. The derived risk is also wrong: for Business and Enterprise 3 of the 4 add-ons are INCLUDED (ADD_ON_CATALOG.includedIn), so the seat total only understates the bill on Free/Pro.
+- '.acct-split-wide … because the .welcome-page ancestor sets overflow: hidden auto and is the real scroll container' is STALE. styles.css:54 now reads { min-height:100vh; overflow-x: clip } (changed for the landing hero's sticky glyph portal), so the CSS comment at account-redesign.css:380-386 that the inventory repeats as fact no longer holds — the reason 'position: sticky is not an option' has to be re-tested, not inherited.
+- 'A newly provisioned workspace is intentionally blank' (screen 6) is a TEST-FIXTURE artifact. In production applyBusinessProfile seeds a populated starter workspace for the chosen trade — projects, jobs, crews, a week of schedule, sample teammates flagged isSample:true (database.ts:3053-3068 + businessProfiles.ts, asserted in server/test/api.test.ts:505-517). The blank empty-states in App.test.tsx:180 come from appHarness's blankWorkspaceFixture. Step 1's 'Your workspace will include …' promise is therefore literal, which raises the stakes on that panel's copy.
+- Screen 6's guard description is mechanically wrong: /api/auth/me answers 401 {"error":"Not authenticated"} for a signed-out visitor, so apiFetchSession() REJECTS and the redirect always comes from the .catch() branch; the `!session` test in .then() is unreachable. The omitted consequence: because the catch cannot tell 'signed out' from 'API unreachable', one flaky request during either step throws a legitimately signed-in owner back to #create-account and loses the trade choice.
+- Screen 4 errorStates overstates what the user sees: a 400 from POST /api/business-profile does not surface 'server text' — the server sends { error: <zod flatten object> }, which ApiError stringifies, so the red alert reads '[object Object]'. Only 401/500 (and the network error) produce readable sentences.
+- 'Finishing routes to the Dashboard (indirectly, via #invite-team)' is only the free/enterprise or Stripe-unconfigured path. With Stripe configured, a pro/business finish leaves the SPA for Checkout and returns to '/?checkout=…&from=onboarding', which opens the Dashboard directly — #invite-team AND the tutorial are skipped, and completeOnboarding's early return means setTutorialStatus is never called on that path.
+- crossCutting attributes step 2's pre-selected plan/add-ons to localStorage alone; the bootstrap sync effects (App.tsx:2354-2366) WRITE those same localStorage keys from data.selectedPlan / data.selectedProducts, so the pre-selection can equally come from the org record on a device that has never onboarded.
+- Two small factual drifts: the inventory says there are two prefers-reduced-motion blocks (there are three: 1025, 1353, 1511), and it repeats the step-2 CSS section comment's '7 product cards' (account-redesign.css:374-376) which is stale — there are 4.
+- Test-contract detail that changes what the redesign may do to the add-on cards: appHarness.chooseProductsAndPlan (:169-172) reads (productCheckbox as HTMLInputElement).checked before clicking, so findByLabelText(/<product>/) must resolve to a real <input type=checkbox> element — not a button/role=switch/aria-pressed card. The inventory's risk only mentions the accessible name.
+
+### Redesign risks in this area
+
+- Accessible names are the test contract. The trade radios MUST keep the trade label ALONE as their accessible name (aria-labelledby -> the strong element; the tagline must stay on aria-describedby) or App.test.tsx:142 (getByRole('radio',{name: businessType}) for all 14) and appHarness.chooseBusinessType break — which breaks essentially the whole client suite, since every area test calls completeOnboarding().
+- Exact button labels are pinned: 'Get BuildFlow', 'Continue without add-ons', 'Continue to BuildFlow', and the plan buttons' aria-label pattern 'Select <Name> plan'. Renaming any of them breaks App.test.tsx:148/168/177/188 and appHarness.
+- Exact headings are pinned: 'What type of Business do you own' (NO question mark, mid-sentence capital B) and 'What additional products do you want to use?'. Copy polish here breaks findByRole('heading') in App.test.tsx and appHarness.signUp/chooseBusinessType.
+- The add-on checkboxes are found by getByLabelText(/Map & Field Ops/) — the accessible name is the whole <label>'s text (label + description). Moving the description out of the <label>, or replacing the label wrapper with a card + separate control, breaks appHarness.chooseProductsAndPlan and App.test.tsx:184-185.
+- The seats field must stay labelled exactly 'Seats' and default to 5 (App.test.tsx:170 toHaveValue(5)), and the POST body must keep the exact key order {businessType, selectedPlan, selectedProducts, seats} because App.test.tsx:203 compares JSON.stringify output byte-for-byte.
+- The seat-total string is asserted by regex /\$240 \/ month/ — keep the '$240 / month' spacing (spaces around the slash) for the Business x 5 case.
+- The plan cards are <button aria-pressed> inside role="radiogroup" — semantically wrong (a radiogroup should contain role=radio/aria-checked children) and it means no arrow-key navigation. Fixing it is desirable but the tests query by aria-label, not role, so the redesign must keep the 'Select <Name> plan' accessible name whichever role it lands on.
+- The entire aside is aria-hidden, so the trade preview is decorative-only. If the redesign wants the workspace preview to be real information (it is the only explanation of what the seeded workspace contains), it must move out of the aria-hidden subtree — and remember the aside is display:none below 900px.
+- No step indicator anywhere in a three-step funnel, and the eyebrow chip ('Set up your workspace') appears ONLY on step 2 — the two steps look like different products. Adding an indicator is a real improvement but must not become a new heading that shadows the h1 in findByRole('heading') queries.
+- Going back loses the answer: WelcomeBusinessTypePage initialises useState<BusinessTypeId|''>('') and never reads pendingBusinessType, so '← Back to business type' from step 2 lands on step 1 with nothing selected even though App still holds the trade. Same class of bug in reverse: on a FIRST run, step 2's readStoredPlan/readStoredProducts are empty, so bouncing back and forward also loses the plan/add-on picks.
+- '← Back to account details' returns a signed-in new owner to the signup form (it does not sign out and does not resume), which is a confusing dead-end already present today.
+- 14 trade cards in a 2-column grid is a long first screen (and 1 column below 560px = 14 stacked cards) with no search, filter, grouping or 'other/not listed' option — and the taglines are clipped by white-space:nowrap + text-overflow:ellipsis (.acct-trade-grid .acct-pick-copy em), so longer copy silently truncates. Any type-size change makes more taglines vanish.
+- The wide split's scroll model is fragile: .acct-split-wide sets height:100dvh + overflow:hidden and relies on .acct-form-col being the only scroller (because .welcome-page owns the page scroll). A redesign that switches to position:sticky, or drops the fixed height, produces either a dead panel or unreachable content above the scrollport (documented in the CSS).
+- The trade preview panel has its own nested scroll area on >=900px (.acct-split-wide .acct-preview) that only appears for tall trades — easy to break, easy to leave content clipped for e.g. General Contractor / Concrete.
+- Reduced motion is currently handled in TWO separate @media blocks (account-redesign.css:1025 and :1352) plus WxTypewriter's own matchMedia check. New animations must be added to those blocks or they will keep running for reduced-motion users.
+- The 12s locked-period contract on the .acct-viz keyframes is load-bearing: the per-block animationDelay values (0.2s..2.65s, set inline in App.tsx:6485) only stay staggered because every keyframe shares the 12s period. Changing one duration desynchronises the whole board on the second loop.
+- Prices on this step come from productPlans (App.tsx:1182) — the marketing plan pages, the compare table, Settings > Billing and this step all read the same records, so a 'quick' price/label edit for the onboarding design ripples across the marketing site.
+- Enterprise is selectable and completes onboarding with 'Custom pricing — sales will size Enterprise…' and NO handoff (no contact-sales link, no lead capture) — worth fixing as part of a visual redesign, but it changes the flow, not just the paint.
+- Free plan copy conflicts with itself on the same screen: the plan card says '$0 / Per User / Month' while the total says '$0 / month — Free for the whole team.'
+- Add-on prices exist (ADD_ON_CATALOG: $8/$8/$8/$15 per user/month, plus includedIn plan lists) but are hidden on the step where people choose them, so the seat total understates the real bill. Surfacing them is a copy/IA change with billing implications.
+- The 'Building workspace...' state is the last thing the user sees on success and can also cover a silent Stripe hop (apiFetchSession + apiStartCheckout, then window.location.assign). Any redesign of the submitting state must survive a full-page navigation and must not reset isSubmitting on success (the code deliberately leaves it true).
+- The session guard shows no loading state: the step paints fully and can then be replaced by #create-account. Adding a gate/spinner is an improvement but must not delay the render the tests await (findByRole('heading', …)).
+- The error paragraph on step 2 has id="additional-products-error" but nothing references it via aria-describedby (step 1 does wire its radiogroup to business-type-error) — fix the inconsistency while keeping role="alert" so the tests' findByRole('alert') pattern keeps working.
+- Memory pitfalls that apply to this CSS/JS: a stray '*/' inside a CSS comment silently drops the next rule and makes tokens resolve empty; an author `display` rule beats [hidden]; dynamic className on a [data-reveal] element wipes the imperative .in class; App.tsx's lucide `Map`/`Building2` imports shadow globals, and an unimported TRADE_ICONS glyph renders <undefined/> and blanks #root with no console error (comment at App.tsx:517).
+
+<a id="auth-recovery"></a>
+
+## Auth: reset password and verify email
+
+`auth-recovery` — 6 screens, 50 information items, 24 actions.
+
+**Source:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx`, `/Users/liamsantos/Documents/Production Scheduling/client/src/api.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/main.tsx`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/passwordPolicy.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/app.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/auth.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/rateLimit.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/email.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/test/api.test.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/App.test.tsx`
+
+**Styles:** `/Users/liamsantos/Documents/Production Scheduling/client/src/account-redesign.css`, `/Users/liamsantos/Documents/Production Scheduling/client/src/styles.css`, `/Users/liamsantos/Documents/Production Scheduling/client/src/welcome-redesign.css`, `/Users/liamsantos/Documents/Production Scheduling/client/src/hs-home.css`
+
+### Reset password — valid token (the primary path from the emailed link)
+
+**Route:** #reset-password?token=<one-time token> (hash matched with startsWith at App.tsx:592, so the ?token= query rides inside the hash; token read by tokenFromHash() App.tsx:7434-7439 via new URLSearchParams(hash.split("?")[1]).get("token"))  
+**Entry:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx:7442`
+
+Set one new password from the emailed reset link. On success the server issues a session, so the person is signed in and dropped into the workspace (or into onboarding) without ever seeing the login form again.
+
+**Information displayed** (16)
+
+- [ ] Back affordance label: "← Back to sign in" (literal left-arrow character in the string, .acct-back).
+- [ ] Brand lockup: <BuildFlowLogoMark /> + "BuildFlow" (.acct-brand strong).
+- [ ] H1 (id="reset-password-title", labels the <main>): "Choose a new password."
+- [ ] Sub-line (valid-token wording): "You'll be signed in as soon as it's saved. Other devices are signed out." — this is a factual promise: server/src/app.ts:1093-1096 does setAccountPassword + loginGuard.clear and every older session is invalidated (asserted in server/test/api.test.ts:180).
+- [ ] Field label: "New password" (htmlFor="reset-password-input").
+- [ ] Placeholder: "At least 8 characters".
+- [ ] Default helper line (id="reset-password-hint", .acct-hint, shown whenever there is no error): "At least 8 characters. A longer phrase with a number or symbol is strongest. Avoid common words and your email."
+- [ ] Password-strength meter, rendered ONLY while password.length > 0: a 4-segment bar (aria-hidden) plus a label row "Password strength" + the bold score word, in a <p aria-live="polite">.
+- [ ] Strength words (shared/src/passwordPolicy.ts:69-81, index by score): 0/1 "Too weak", 2 "Weak"→ actually the label array is ["Too weak","Weak","Fair","Strong","Very strong"] indexed by the bounded score, and any policy problem forces the label "Too weak" with score 1 (length>=4) or 0.
+- [ ] Scoring rule the visual must keep honest: score starts at 1, +1 if length>=12, +1 if >=3 of [lowercase, uppercase, digit, symbol], +1 if length>=16 or (length>=14 and all 4 classes); capped at 4.
+- [ ] NOTE — this page calls passwordStrength(password) and passwordProblem(password) with NO email argument (App.tsx:7454, 7460), so the client meter cannot check the "don't use your email" rule; only the server can (it peeks the account first, server/src/app.ts:1082).
+- [ ] Primary button rest label: "Save password and sign in".
+- [ ] No step indicator, no eyebrow chip, no legal/terms line, no OAuth buttons, no "keep me signed in" checkbox on this screen (unlike #create-account).
+- [ ] Right panel (aside, aria-hidden="true", so all of the following is decorative and invisible to screen readers): brand lockup "BuildFlow"; the AcctScheduleViz card headed by a pulsing dot + "Live schedule" + "Mon — Fri" (em dash); five crew lanes labelled "Framing", "Concrete", "Electrical", "Roofing" (ACCT_VIZ_LANES; the 5th lane is the second Roofing/Concrete entry — see App.tsx ACCT_VIZ_LANES) each with two colored job blocks (tones blue/cyan/violet) and one block flagged is-fix that animates out of an overlap; a light sweep bar.
+- [ ] Aside pull-quote, typed character-by-character by WxTypewriter: normal "Back on the " + em "schedule in a minute." (the em half renders in #bcd0ff).
+- [ ] Aside cite line: "Run the whole jobsite from one place." (the same cite on every step of the flow).
+
+**Actions supported** (9)
+
+- [ ] "← Back to sign in" (type=button, .acct-back) → onBack → showLoginPage() (App.tsx:3507) → setAccountMode("login") + showWelcomeSubpage("createAccount", "#create-account"). It lands on the LOGIN form, not on the forgot-password form.
+- [ ] Show/hide password toggle (.acct-pw-toggle, type=button) → setShowPassword(v => !v); flips the input between type="password" and type="text"; icon swaps lucide <Eye size={18}/> ⇄ <EyeOff size={18}/>; aria-label swaps "Show password" ⇄ "Hide password".
+- [ ] Typing in the field clears any standing error (onChange: setPassword(...) and `if (error) setError("")`), which also swaps the .acct-field-error back to the .acct-hint helper line and removes aria-invalid.
+- [ ] Form submit (Enter in the field or clicking the primary button) → submit(): event.preventDefault(); early-returns while busy (double-submit guard); runs passwordProblem(password) CLIENT-SIDE first and, if it returns a string, sets that as the error and never calls the API; otherwise setError(""), setBusy(true), await onReset(token, password).
+- [ ] onReset = handleResetPassword (App.tsx:2554) → apiResetPassword(token, password) → POST /api/auth/reset {token, password} → then enterAfterAuth().
+- [ ] enterAfterAuth (App.tsx:2525): setError(null), setIsLoading(true), loadWorkspace(); if !payload.onboardingCompletedAt → showOnboarding() (hash becomes "#business-type") else openAppPage("dashboard") — which also pushState-clears the hash so the one-time token leaves the address bar.
+- [ ] Invalid-link inline recovery button "request a new one" (see the no-token screen) → the same onBack.
+- [ ] Keyboard: autoFocus is on the password input, so the field owns focus on arrival. No explicit Escape/keydown handler on this page.
+- [ ] No resend / no "send me a new link" action exists on the valid-token screen — the only way to get a fresh link is Back to sign in → Forgot password? → Send reset link.
+
+**Charts** (1)
+
+- [ ] Decorative only: the AcctScheduleViz crew×week Gantt-ish board in the aside (aria-hidden), plus the 4-segment password-strength bar (aria-hidden, data-score driven).
+
+**Form inputs** (1)
+
+- [ ] New password — id="reset-password-input"; type toggles password↔text via showPassword; NOT marked `required` (validation is JS-only, so an empty submit produces "Password must be at least 8 characters."); placeholder "At least 8 characters"; autoComplete="new-password"; autoFocus; NO maxLength attribute on the input (the server caps at 200 via z.string().max(200) — a >200-char password is silently a 400 with the min-length message, see risks); className "acct-input has-toggle" plus " is-invalid" while error is set; aria-invalid={true|undefined}; aria-describedby switches between "reset-password-error" (when error) and "reset-password-hint" (otherwise). Validation messages it can produce, verbatim: "Password must be at least 8 characters." | "That password is too common. Pick something harder to guess." (COMMON_PASSWORDS blocklist of 41 entries incl. "password123", "buildflow", "asphalt1", "concrete1", "contractor", matched on the lowercased value and on the lowercased value with non-alphanumerics stripped) | "Don't use your email address in your password." (server-side only here, since the client call omits the email).
+
+**Empty states** (1)
+
+- Password field empty → no strength meter at all (the whole .acct-strength block is gated on password.length > 0), only the .acct-hint helper line.
+
+**Loading states** (2)
+
+- Submitting: busy=true → primary button label becomes "Saving…" (with the U+2026 ellipsis) and the button is disabled (.acct-primary:disabled → opacity .65, cursor not-allowed). The input is NOT disabled while busy.
+- After a successful POST the button stays in "Saving…"/disabled (setBusy(false) is only reached in the catch), then the whole screen is replaced by the app's own loading state — enterAfterAuth sets isLoading(true) around loadWorkspace().
+
+**Error states** (9)
+
+- Client-side policy failure → .acct-field-error (id="reset-password-error", role="alert") replaces the hint, input gets .is-invalid + aria-invalid, and NO request is made. Text is whichever passwordProblem string applies.
+- Server weak_password (400, {error, field:"password", code:"weak_password", token:<fresh>}) → the catch block reads err.token and setToken(fresh), so the SAME screen stays usable for a second attempt; the error text shown is the server's message (one of the passwordProblem strings, and this is the only path that can surface "Don't use your email address in your password.").
+- Server token_invalid (400, {error:"This reset link is invalid or has already been used. Request a new one.", code:"token_invalid"}) → shown in the same .acct-field-error under the input; busy resets to false; the page offers NO way to request a new link from here (only "← Back to sign in"). This is the expired-token / already-used-token state.
+- Rate limit on POST /api/auth/reset — limiter.byIp("reset", 20 per 15 min) → 429 with "Too many attempts. Try again in <human seconds>." (server/src/rateLimit.ts:44-45) rendered in the same field error.
+- Missing workspace (500, "Account workspace is missing.") → same field error.
+- Zod parse failure (missing token or password shorter than 8 server-side) → 400 "Password must be at least 8 characters." with field:"password".
+- Network failure → api.ts's request() throws a plain Error "Could not reach the BuildFlow API: <cause>" (or "Could not reach the BuildFlow API.") which lands in the same field error.
+- Unknown throw shape → fallback string "Something went wrong. Please try again."
+- Note: the reset error always renders as the small per-field .acct-field-error, never as the bordered .acct-error panel — so a rate-limit or expired-link message reads visually as a field hint. Worth changing in the redesign.
+
+**Animations and transitions** (6)
+
+- Entry: .acct-form-inner runs `acct-rise 0.55s cubic-bezier(0.22,1,0.36,1) both` (opacity 0→1, translateY(14px)→0).
+- Aside: static blurred auroras (.acct-aurora-1/2/3, blur(50px)); .acct-viz-card `acct-viz-rise 0.9s … backwards 0.15s`; .acct-viz-live `acct-viz-pulse 2.4s ease-out infinite`; each .acct-viz-job `acct-viz-job-in 12s cubic-bezier(0.22,1,0.36,1) infinite` with a per-block inline animationDelay (0.2s…2.65s); the one .is-fix block runs `acct-viz-job-fix 12s` + `acct-viz-job-tone 12s` together; .acct-viz-sweep `acct-viz-sweep 12s ease-in-out infinite`.
+- Typewriter: WxTypewriter types the aside quote one char at a time (first char after 350ms, then 28 + random·30 ms per char) and the caret blinks via `wx-blink 1.05s steps(1) infinite` until done, then .wx-caret.done fades out (opacity 0, transition .5s ease .3s). Reduced-motion short-circuits it to the full string immediately.
+- Strength bar segments transition `background 0.25s ease` between scores (removed under prefers-reduced-motion).
+- Button micro-interactions: .acct-primary transition transform .14s / box-shadow .16s / background .16s; hover translateY(-1px) in the base rules; the parity block's ink pill keeps only the background+shadow change.
+- No framer-motion and no data-reveal scroll-reveal on either recovery screen — these are 100vh single-viewport pages.
+
+**Pinned by tests** (3)
+
+- server/test/api.test.ts:135 — it("confirms an email from the emailed link and resets a password from another") pins: unknown email still 200 with no token; a weak new password is a 400 with {field:"password", code:"weak_password"} AND a fresh token in the body (the exact behaviour the catch block at App.tsx:7469-7474 depends on); the original token is consumed and cannot be reused; the reset issues a session (fresh agent /api/auth/me → 200) while every older session is signed out (old agent → 401); the old password no longer logs in and the new one does.
+- client/src/App.test.tsx:120 — it("requires a password of at least 8 characters to create an account") pins the shared string "Password must be at least 8 characters." surfaced through role="alert". Same helper backs this page.
+- NO client-side test renders #reset-password. There is no coverage of the invalid-link screen, the strength meter, or the show/hide toggle.
+
+### Reset password — no token / malformed link (invalid-link state)
+
+**Route:** #reset-password (bare, or with a ?token= that has no value)  
+**Entry:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx:7492-7501`
+
+Dead-end guard when someone lands on the reset route without a usable token (typed the hash, copied a truncated link, or the token param is empty). Renders instead of the form — `invalidLink = !token`.
+
+**Information displayed** (5)
+
+- [ ] Same chrome: "← Back to sign in", brand lockup, and the same H1 "Choose a new password."
+- [ ] Sub-line swaps to: "This link is missing its token."
+- [ ] Bordered error panel (.acct-error, role="alert"): "Open the link from the email we sent, or request a new one." — rendered as the sentence fragment "Open the link from the email we sent, or " + an inline button "request a new one" + a trailing "." node.
+- [ ] The whole <form> (field, meter, hint, primary button) is NOT rendered in this state.
+- [ ] The aside panel is identical to the valid-token screen (same "Back on the schedule in a minute." typewriter quote).
+
+**Actions supported** (3)
+
+- [ ] Inline text button "request a new one" (type=button, className="acct-inline-link") → onBack → showLoginPage() → #create-account in LOGIN mode. It does NOT open the forgot-password form, so the person still has to find "Forgot password?" themselves.
+- [ ] "← Back to sign in" → the same onBack.
+- [ ] No form, no submit, no keyboard entry point (nothing is autofocused in this branch since the input does not exist).
+
+**Empty states** (1)
+
+- This IS the empty/dead-end state for the route: no token → no form, only the .acct-error panel and two ways back to sign in.
+
+**Error states** (1)
+
+- The whole screen is the error state. It cannot distinguish 'missing token' from 'expired token' — an expired or already-used token still LOOKS valid to tokenFromHash(), so it renders the full form and only fails after the person types a password (see the token_invalid path on the previous screen).
+
+**Animations and transitions** (1)
+
+- Same acct-rise entry on .acct-form-inner; same aside animation set; the .acct-error panel has no animation of its own.
+
+**Pinned by tests** (1)
+
+- None. No test covers this branch.
+
+### Verify email — checking (auto-confirms on arrival)
+
+**Route:** #verify-email?token=<one-time token> (App.tsx:593 startsWith match)  
+**Entry:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx:7585`
+
+The landing page of the emailed confirmation link. It fires the confirmation itself on mount (no button to press) and then offers the way in. Initial state is "checking" only when tokenFromHash() is non-empty, otherwise it starts already "failed".
+
+**Information displayed** (7)
+
+- [ ] H1 (id="verify-email-title"): "Confirming your email…" (U+2026).
+- [ ] Sub-line: "One moment."
+- [ ] Brand lockup: <BuildFlowLogoMark /> + "BuildFlow".
+- [ ] NO back link on this page at all (unlike the reset page) — there is no .acct-back button in WelcomeVerifyEmailPage.
+- [ ] No button is rendered while state === "checking" (`{state !== "checking" && …}`), so the checking screen has literally zero controls.
+- [ ] No spinner, no progress bar, no skeleton — the loading state is carried entirely by the H1 text and "One moment."
+- [ ] Aside (aria-hidden="true"): brand lockup, the same AcctScheduleViz "Live schedule / Mon — Fri" board with the Framing/Concrete/Electrical/Roofing lanes, and the typewriter quote normal "One address, " + em "one workspace.", cite "Run the whole jobsite from one place."
+
+**Actions supported** (2)
+
+- [ ] Automatic on mount (useEffect, App.tsx:7590-7607): tokenFromHash(); if empty, return (state was already "failed"); otherwise apiVerifyEmail(token) → POST /api/auth/verify {token}. A `cancelled` flag in the cleanup prevents a state write after unmount.
+- [ ] No user action is possible in this state.
+
+**Charts** (1)
+
+- [ ] Decorative AcctScheduleViz board only.
+
+**Loading states** (1)
+
+- The whole screen is the loading state: title "Confirming your email…", body "One moment.", zero controls. It is text-only — no spinner or skeleton.
+
+**Error states** (1)
+
+- Any rejection transitions to the failed screen below.
+
+**Animations and transitions** (2)
+
+- acct-rise on .acct-form-inner; the aside's aurora/viz/typewriter set (same as the reset page).
+- There is NO transition between the checking → verified/failed headings: the H1 text swaps in place with no crossfade, and the primary button pops in unanimated.
+
+**Pinned by tests** (1)
+
+- server/test/api.test.ts:135 covers the endpoint (POST /api/auth/verify with a bogus token → 400; with the real token → 200 and emailVerifiedAt set; reusing the same token → 400). No client test renders this page.
+
+### Verify email — confirmed (success)
+
+**Route:** #verify-email?token=… after POST /api/auth/verify resolves  
+**Entry:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx:7627-7641`
+
+Tell the person the address is confirmed, name what it unlocked, and hand them one button into the workspace.
+
+**Information displayed** (6)
+
+- [ ] H1: "Email confirmed."
+- [ ] Sub-line: "Inviting your team and managing billing are unlocked for this workspace." — factually backed: server/src/app.ts:1032-1042 releases every held invite for the org on confirmation and re-sends it with a refreshed 7-day token.
+- [ ] Primary button label: "Continue to BuildFlow".
+- [ ] No success icon, no checkmark, no badge — the success is carried by the H1 text alone.
+- [ ] No "what happens next" list, no email address echoed back on the page (the confirmed address is not displayed).
+- [ ] Same aside as the checking state ("One address, one workspace.").
+
+**Actions supported** (4)
+
+- [ ] "Continue to BuildFlow" (type=button, .acct-primary) → proceed(): setBusy(true); await onContinue().catch(() => false); if the result is falsey → setBusy(false) and onLogin().
+- [ ] onContinue = handleAfterVerify (App.tsx:2565): apiFetchSession() (GET /api/auth/me, caught → null); if a session exists → enterAfterAuth() and return true; else return false.
+- [ ] So the success button has TWO destinations: (a) an existing session → enterAfterAuth → showOnboarding() ("#business-type") when the org has no onboardingCompletedAt, otherwise openAppPage("dashboard") with the hash+token cleared by pushState; (b) no session (link opened in a different browser or on a phone) → falls through to onLogin() → showLoginPage() → #create-account in login mode. The button says "Continue to BuildFlow" in both cases — the person can be silently dropped on the sign-in form.
+- [ ] No secondary action, no "skip", no back.
+
+**Loading states** (1)
+
+- While proceeding: busy=true → button label "Opening…" and disabled (.acct-primary:disabled opacity .65). If it then falls through to onLogin(), busy is reset to false first.
+
+**Error states** (1)
+
+- A throw from onContinue is swallowed by `.catch(() => false)` — the person is routed to the login form with no message explaining why. There is no error UI on the success screen.
+
+**Animations and transitions** (1)
+
+- acct-rise on .acct-form-inner (runs once on mount, not re-run when the state flips to verified); the aside set.
+
+**Pinned by tests** (4)
+
+- server/test/api.test.ts:135 (emailVerifiedAt set, token single-use, /api/auth/me and /api/bootstrap both report the confirmed account).
+- server/test/api.test.ts:220 — it("invites teammates: held until the owner confirms their email, then accepted into the workspace") pins the copy claim that confirmation unlocks invites.
+- server/test/api.test.ts:334 — it("renames the company and changes the account email with re-verification") pins that changing the account email restarts verification, i.e. this screen is reachable more than once per account.
+- No client test renders this page. "Continue to BuildFlow" IS asserted in App.test.tsx:177/188 and test/appHarness.tsx:176, but that is the ADDITIONAL-PRODUCTS onboarding button (App.tsx:7407) with the identical label — a getByRole("button", {name: "Continue to BuildFlow"}) collision risk if the redesign ever renders both.
+
+### Verify email — failed (invalid, expired, already-used, or no token)
+
+**Route:** #verify-email (no token) or #verify-email?token=<bad|expired|consumed>  
+**Entry:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx:7586, 7599-7604, 7627-7641`
+
+The one failure screen for every bad-link case. Reached immediately (no token → initial state is "failed", the effect returns early and never calls the API) or after the POST rejects.
+
+**Information displayed** (8)
+
+- [ ] H1: "That link didn't work."
+- [ ] Sub-line = the server's message when there is one, else the fallback. The three concrete texts: (a) server token_invalid — "This confirmation link is invalid or has expired. Request a new one from your workspace." (server/src/app.ts:1026-1029, 400 with code:"token_invalid"); (b) client-side catch fallback for a non-Error throw — "This confirmation link is invalid or has expired."; (c) the no-token / no-message case — "Open the newest confirmation email, or request another one from your workspace."
+- [ ] Rate-limit text that can also appear here: "Too many attempts. Try again in <human seconds>." (limiter.byIp("verify", 20 per 15 min), server/src/rateLimit.ts:44-45).
+- [ ] Network text that can appear here: "Could not reach the BuildFlow API: <reason>" / "Could not reach the BuildFlow API." (client/src/api.ts:96-102).
+- [ ] Primary button label: "Sign in".
+- [ ] The copy tells the person to "request another one from your workspace" but this signed-out page has NO resend control — the resend lives only in the signed-in top bar (VerifyEmailBadge), so the instruction is: sign in first, then click the top-bar pill.
+- [ ] Verification links live 24 hours (VERIFY_TTL_MS, server/src/app.ts:545) and the email itself says so ("This link works for 24 hours…", server/src/email.ts:305) — but the page never states the window.
+- [ ] Same aside as the other verify states ("One address, one workspace.").
+
+**Actions supported** (2)
+
+- [ ] "Sign in" (type=button, .acct-primary) → the SAME proceed() handler as the success button: it first calls onContinue() → apiFetchSession(). If a session actually exists (common: the link opened in the same browser where the person is already signed in) the failed screen silently enters the workspace via enterAfterAuth() instead of showing a sign-in form. Only when there is no session does it call onLogin() → showLoginPage().
+- [ ] No resend action, no "send me a new link", no back link, no support link on this screen.
+
+**Empty states** (1)
+
+- No-token arrival is folded into this same failed screen (useState initializer: tokenFromHash() ? "checking" : "failed"), with no message set, so it shows the generic "Open the newest confirmation email, or request another one from your workspace."
+
+**Loading states** (1)
+
+- "Opening…" on the button while proceed() is in flight (same as the success screen).
+
+**Error states** (1)
+
+- This screen IS the error state; it merges invalid / expired / already-consumed / missing-token / rate-limited / network-down into one heading. The server message is the only differentiator and it is rendered as plain body copy, not in an .acct-error panel.
+
+**Animations and transitions** (1)
+
+- acct-rise on .acct-form-inner (mount only); the aside set. The heading swap from "Confirming your email…" to "That link didn't work." is unanimated.
+
+**Pinned by tests** (3)
+
+- server/test/api.test.ts:152 — POST /api/auth/verify with "not-a-real-token" → 400 (the invalid path).
+- server/test/api.test.ts:155 — replaying a consumed token → 400 (the already-used path this screen renders).
+- No client test renders this page.
+
+### VerifyEmailBadge — the in-app resend pill (inventoried only because it is the ONLY resend for this area)
+
+**Route:** app shell top bar, on every signed-in page; rendered when data.account && !data.account.emailVerifiedAt (App.tsx:21082)  
+**Entry:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx:7664`
+
+The one and only resend-verification control in the product. It mails a fresh 24-hour link that lands on #verify-email, which is why it belongs in this inventory even though the pill itself is app-shell furniture.
+
+**Information displayed** (8)
+
+- [ ] Rest label: "Confirm email" with a lucide <MailCheck size={14} aria-hidden> icon.
+- [ ] In-flight label: "Sending…" (U+2026).
+- [ ] Success label: "Sent" (and the pill gains .is-sent → green rgba(111,207,142,.25) fill, transparent border).
+- [ ] Failure label: "Try again".
+- [ ] Native tooltip (title attr, always present): `Confirm <email> to unlock team invites and billing`.
+- [ ] aria-label: "Confirmation email sent" once sent, otherwise `Confirm <email>: resend the confirmation email`.
+- [ ] Below 720px the label collapses to font-size:0 and the pill becomes icon-only (hs-home.css:2121) — the copy is invisible on phones.
+- [ ] Related but separate surface (Settings › Team, App.tsx:21696-21701): a .business-context-verify status line "Invites go out once you confirm your own email. New ones are held until then." with the same MailCheck icon. It is informational only — it carries no resend button.
+
+**Actions supported** (4)
+
+- [ ] Click → resend(): setState("sending"); await apiRequestEmailVerification() → POST /api/auth/verify/request (session-cookie authenticated, no body); success → setState("sent"); any throw → setState("failed").
+- [ ] The button is disabled while state is "sending" OR "sent" — so "Sent" is a permanent terminal state for the life of that mount. There is NO countdown, no timer, no cooldown copy, and no way to send a second link without a reload/navigation that remounts the badge.
+- [ ] The only real cooldown is server-side and INVISIBLE to the UI: limiter.byIp("verify-request", 5 per 15 minutes) (server/src/app.ts:1002). Its 429 body "Too many attempts. Try again in <human seconds>." is thrown away by the bare `catch {}` and surfaces only as the word "Try again" — which invites exactly the retry the limiter just refused.
+- [ ] Other invisible server outcomes, all collapsed into "Sent" or "Try again": 401 "Please sign in to continue." → "Try again"; already-confirmed → 200 {ok:true, alreadyVerified:true} → "Sent" (no mail was sent); mail-transport failure → 502 "We couldn't send the email just now. Please try again." → "Try again" (message discarded).
+
+**Empty states** (1)
+
+- The badge is absent entirely once account.emailVerifiedAt is set.
+
+**Loading states** (1)
+
+- "Sending…" + disabled (.topbar-verify:disabled → cursor default, opacity .85).
+
+**Error states** (1)
+
+- "Try again" — one label for 401, 429 and 502. Every server message is dropped by the empty catch.
+
+**Animations and transitions** (1)
+
+- .topbar-verify transition: background .18s ease, border-color .18s ease (hover and the flip to .is-sent). No keyframes.
+
+**Pinned by tests** (2)
+
+- client/src/App.test.tsx:1263 — it("moves the email confirmation to the top bar and shows at most one notice above the board"): with account.emailVerifiedAt = null it asserts screen.getByRole("button", {name: /Confirm liam@example.com/}) is in the document, that document.querySelector(".business-context-verify") is null on the dashboard, and that at most one of .hs-home-promo / .business-context-verify / .business-context-banner renders. THE aria-label PATTERN `Confirm <email>` IS LOAD-BEARING — a redesign that changes the aria-label breaks this test.
+- server/test/api.test.ts:150, 254, 342, 421 — POST /api/auth/verify/request returns 200 with a debugToken under NODE_ENV=test (exposeTokens, server/src/app.ts:571), which is how four different suites obtain a verification link.
+
+### Cross-cutting notes for this area
+
+- Both screens are gated by `welcomeView` state, NOT by the Page union: WelcomeView members "resetPassword" / "verifyEmail" (App.tsx:394-395), WelcomeHash members "#reset-password" / "#verify-email" (App.tsx:449-450), matched with startsWith at App.tsx:592-593 precisely so the ?token= query can ride inside the hash.
+- Both are rendered from the ternary chain at App.tsx:3910-3913, inside the `.welcome-page … updates-open` wrapper (isReskinView at App.tsx:3283-3313 excludes both, so NO .welcome-rx class and no inherited --wx-* tokens).
+- Both are listed in the nav/footer suppression condition at App.tsx:3718-3719 — the marketing header, mega-menus, mobile hamburger and footer are all withheld because these are full-bleed 100vh/100dvh .acct-split screens. Any redesign that reintroduces chrome must revisit that condition.
+- tokenFromHash() (App.tsx:7434-7439) is shared by both pages and by WelcomeAcceptInvitePage — it parses window.location.hash.split("?")[1] with URLSearchParams and returns "" when absent. It reads the hash ONCE at mount via useState initializer / useEffect; neither page listens for hashchange, so pasting a new link into the address bar of an already-open page does nothing.
+- The aside is byte-identical across all of #create-account, #reset-password, #verify-email, #accept-invite, #business-type and #additional-products except for the two WxTypewriter strings — the AcctScheduleViz comment (App.tsx:6529-6530) states this is deliberate: "so the branded panel reads as one continuous surface while the form column advances". Redesigning one screen's aside breaks that continuity for six screens.
+- Aside typewriter strings across the flow: create-account "Pick the tools your crews run on."; reset "Back on the schedule in a minute."; verify "One address, one workspace."; the shared cite is always "Run the whole jobsite from one place."
+- The whole aside is aria-hidden="true", so all of its content (brand, board, quote, cite) is invisible to assistive tech on every one of these screens. Below 900px it is display:none, so on a phone these pages are the form column alone on paper (#f5f6fa).
+- One password policy for meter + server: shared/src/passwordPolicy.ts (PASSWORD_MIN_LENGTH 8, a 41-entry COMMON_PASSWORDS blocklist matched with and without non-alphanumerics, and a 'not your email local-part' rule requiring local.length >= 3). The file's own comment says the point is that the meter and the server can never disagree — but the reset page calls both helpers WITHOUT the email argument, so the client meter is blind to the email rule.
+- Emailed link shapes (server/src/app.ts:554, 1058): `<origin>/#verify-email?token=<urlencoded>` and `<origin>/#reset-password?token=<urlencoded>`. Origin is the request's Origin header in dev, the configured clientUrl otherwise, trailing slashes stripped.
+- Token lifetimes and one-time semantics: verify = 24h (VERIFY_TTL_MS), reset = 1h (RESET_TTL_MS); both are consumed by mainStore.consumeAuthToken() so replaying either yields the 'invalid' 400. Tokens are stored hashed (server/src/auth.ts:55) so a DB copy cannot reset passwords.
+- Rate limits touching this area: verify-request 5/15min per IP; verify 20/15min; reset-request 5/15min per IP PLUS 3/hour per email address (limiter.hit("reset-email", email, 3, HOUR)); reset 20/15min. Every one of them answers with the same generic "Too many attempts. Try again in <human seconds>." and none of them has bespoke copy in the UI.
+- reset/request always answers 200 with no token for unknown addresses (an anti-enumeration decision, asserted in server/test/api.test.ts:163-165); the corresponding UI copy lives on the forgot-password step, not here: "If there's a BuildFlow account for <email>, a reset link is on its way. It works for one hour." (App.tsx:6864-6867, .acct-success role=status).
+- Upstream forgot-password step (App.tsx:6700-6720, 6778-6786, 6864-6890, 6968-6981) is the ONLY producer of reset links: H1 "Reset your password.", body "Enter your email and we'll send a link to choose a new one.", CTA "Send reset link" / busy "Sending…", entered from the login form's "Forgot password?" link, exited via "Remembered it? Back to sign in". Its email-field messages are "Enter the email you signed up with." (empty) and "Enter a valid email address." (fails EMAIL_PATTERN). After success the submit button is REMOVED from the DOM, leaving only the green confirmation.
+- Success routing is shared with login/signup: enterAfterAuth (App.tsx:2525-2542) → loadWorkspace() → showOnboarding() ("#business-type") when the org has no onboardingCompletedAt, else openAppPage("dashboard"), which pushState-rewrites the URL to pathname+search and thereby strips the one-time token from the address bar and from history.
+- A successful reset also marks the address verified (server/src/app.ts:1092: 'Following the emailed link proves the address, so count it as verified') and clears the login lockout guard — so the reset path can silently satisfy the verify path, and a person who resets never needs the confirm-email pill.
+- Confirming the email releases every held invite for the org and re-mails it on a refreshed 7-day token (server/src/app.ts:1032-1042) — the concrete work behind the success copy 'Inviting your team and managing billing are unlocked for this workspace.'
+- Icons: lucide <Eye>/<EyeOff> at size 18 for the password toggle, <MailCheck> at 14 (badge) / 15 (settings banner). Reminder from memory (hud-app-tsx-lucide-shadows-globals): lucide names shadow globals in App.tsx — verify any new icon is imported.
+- Neither screen uses framer-motion, and neither uses the data-reveal scroll-reveal convention (correctly — they are single-viewport pages with nothing to scroll). Every animation here is a CSS @keyframe or a JS setTimeout inside WxTypewriter.
+
+### Omission check
+
+**Verdict:** incomplete
+
+**Screens the first pass missed** (5)
+
+- [ ] THE TWO TRANSACTIONAL EMAILS (server/src/email.ts:282-321) - accountEmailShell + verifyEmailMessage + resetPasswordMessage. These are rendered HTML surfaces and are literally step 1 of both flows; the inventory lists email.ts under files/keyLineNumbers but inventories none of the layout or copy. Design system: Inter/ui-sans-serif, max-width 520px, padding 32px 24px, ink #1c1c1a, line-height 1.5; a 13px/700 uppercase letter-spacing .08em '#8a877e' eyebrow reading 'BuildFlow'; h1 22px/600 letter-spacing -.01em; intro 15px #4a4944; CTA is an inline-block pill (padding 12px 18px, radius 999px, background #2f6bff, #fff, weight 600); then 12.5px #8a877e 'If the button does not work, paste this into your browser:' + the raw link (word-break:break-all, #2f6bff); then a 12.5px #8a877e footer. Every message also ships a plaintext `text` variant ('<title>\n\n<intro>\n\n<buttonLabel>: <link>\n\n<footer>'). VERBATIM COPY - verify: subject 'Confirm your email for BuildFlow', title "Confirm it's you, <FirstName>." (falls back to 'there' when name.split(' ')[0] is empty), intro 'Tap the button to confirm this is your address. That unlocks inviting your team and managing billing.', CTA 'Confirm my email', footer 'This link works for 24 hours. If you did not create a BuildFlow account, ignore this email.' | reset: subject 'Reset your BuildFlow password', title 'Reset your password, <FirstName>.', intro 'Someone asked to reset the password for this BuildFlow account. If that was you, set a new one below.', CTA 'Choose a new password', footer 'This link works for one hour and can be used once. If you did not ask for this, your password is unchanged - you can ignore this email.' REDESIGN CONSEQUENCE: the email CTA is still the OLD #2f6bff blue that the account-redesign parity block already replaced with the ink pill, so the email and the page it opens no longer match.
+- [ ] SETTINGS > 'Your login' / 'Name and email' (App.tsx ~22242-22305, section aria-labelledby=settings-account-title, kicker <Users size=18/> 'Your login', h2 'Name and email') - the SECOND producer of #verify-email links and a verification-status surface the inventory misses entirely (it inventories only the Settings > Team held-invite line). Status paragraph: `${email} is confirmed.` / `${email} is not confirmed yet.` / 'Signed in to the demo workspace.' (no account). Email-field hint: 'Changing it sends a confirmation link to the new address.' Success notice in .acct-success role=status: `Saved. We sent a confirmation link to <email> - open it to confirm the new address.` (else plain 'Saved.'); 'Nothing to save.' when neither field changed. Server: PATCH /api/auth/account (server/src/app.ts:1149) fires sendVerificationEmail() fire-and-forget on an email change and answers {account, verificationSent}. Two of those strings are pinned VERBATIM by client/src/tests/settings.test.tsx:376 and :398 - the redesign cannot reword them without updating that test. This also falsifies the inventory's claim that VerifyEmailBadge is 'the ONLY resend in the product'.
+- [ ] THE LOGIN LOCKOUT STATE, which is this stage's own advertised entry point (server/src/app.ts:801-820). Five wrong passwords for one email (createLoginGuard(threshold 5, window 15min, lock 15min), rateLimit.ts:57) answer 429 with a Retry-After header and the body `Too many sign-in attempts. Try again in <humanSeconds>, or reset your password.` - the product's only copy that tells a locked-out person to use the reset flow, and POST /api/auth/reset is what calls loginGuard.clear() to release the lock. Pinned by server/test/api.test.ts:183-217 ('locks an email after five wrong passwords and throttles signups per address', asserts 429 + retry-after header + /Too many sign-in attempts/), a test the inventory's testAnchors never cite.
+- [ ] RESET INVALID-LINK STATE, AS IT ACTUALLY RENDERS: the 'request a new one' control is an UNSTYLED NATIVE BUTTON. `.acct-inline-link` has exactly two rules in the codebase (account-redesign.css:1419 and :1429) and both are scoped `.acct-field-error .acct-inline-link`. On the reset page that button lives inside `.acct-error` (App.tsx:7500), and `.acct-error` has one rule (:202-211) with no descendant button styling - so today it paints as the browser's default grey chrome button, in the browser's default font, inside the red panel. The inventory's cssNotes describe it as a bare underlined blue link, which is only true of the signup form's 'Log in instead' (App.tsx:6752).
+- [ ] WelcomeInviteTeamPage held-invite hint (App.tsx:7866), the third in-product pointer at #verify-email: 'We emailed you a confirmation link at signup. Open it and the held invites go out automatically.'
+
+**Information the first pass missed** (17)
+
+- [ ] SUPERSEDED LINKS - the single most common real-world failure in this stage, and it is nowhere in the inventory. database.ts createAuthToken() runs `UPDATE auth_tokens SET usedAt=? WHERE accountId=? AND kind=? AND usedAt IS NULL` before inserting, so issuing ANY new token of that kind silently kills every earlier unused one. Consequences: clicking 'Send reset link' twice invalidates the first email; the resend pill invalidates the previous confirmation link; a Settings email change invalidates the outstanding one. The person then opens the older email and gets 'This reset link is invalid or has already been used.' with no explanation. Only the verify-failed copy hints at it ('Open the NEWEST confirmation email'); the reset page never says only the newest link works.
+- [ ] The reset grants a PERSISTENT 30-DAY SESSION with no checkbox and no copy: POST /api/auth/reset ends in issueSession(res, verified, org, true) (server/src/app.ts:1106) -> bf_session cookie with maxAge SESSION_TTL_MS = 30 days, httpOnly, sameSite lax, path /, secure in production (server/src/auth.ts:69-88). Login and signup both expose the '.acct-remember' "Keep me signed in" checkbox; the reset screen silently behaves as if it were ticked. The sub-line 'You'll be signed in as soon as it's saved. Other devices are signed out.' is honest about the second half (database.ts setAccountPassword DELETEs every session row for the account) but says nothing about this device staying signed in for 30 days.
+- [ ] The reset screen never names the account it is resetting - no email echo, no avatar, no 'for <email>' - so a person with two BuildFlow logins cannot tell which one the link belongs to. There is also NO confirm-password field and NO hidden username input with autocomplete="username", so most password managers cannot associate the autoComplete="new-password" value with an account and will not offer to update the saved credential.
+- [ ] A fourth client error-string shape the inventory misses: api.ts request() throws `Request failed: <status>` when the error response has no JSON `error` key (body.error ?? `Request failed: ${response.status}`, client/src/api.ts:107-114). Both screens can surface it (e.g. an HTML 502 from a proxy).
+- [ ] Exact rate-limit copy shape: humanSeconds() (rateLimit.ts:95-99) prints '<n> seconds' below 90s, otherwise '<n> minutes' with a singular '1 minute' - so the live strings are e.g. 'Too many attempts. Try again in 47 seconds.' / '... in 15 minutes.' / '... in 1 minute.'. Every 429 also sets a Retry-After header AND returns retryAfterSec in the body; the UI throws both away.
+- [ ] Token lifetimes are never stated on either screen. Reset = 1 hour, verify = 24 hours; both windows appear only in the emails. The reset page has no 'this link expires in an hour' line at all.
+- [ ] Browser tab title on both screens stays the generic marketing title 'BuildFlow - Construction Scheduling & Field Command Center' (App.tsx:2422-2429, keyed on `page`, which is 'welcome' for every welcome view; only page==='map' overrides). Neither recovery page names itself in the tab or in history entries.
+- [ ] Analytics: trackPageView(welcomeView) fires for every welcomeView change (App.tsx ~3360-3364), so 'resetPassword' and 'verifyEmail' are live funnel pageview names a redesign must not rename. Conversely handleResetPassword (App.tsx:2554) fires NO conversion event while handleLoginSubmit/handleSignup fire EVENTS.login / EVENTS.accountCreated - a completed reset and a completed confirmation are invisible in the funnel today.
+- [ ] enterAfterAuth is not a single request: loadWorkspace wraps loadBootstrap in retryTransient (App.tsx:39130, delays 400/900/1600ms, retrying only on 5xx or 'could not reach'), so the 'Saving…'/'Opening…' state can legitimately hold for ~3s and four attempts. It ALSO has a demo fallback - on a 401/'sign in' error it calls apiDemoLogin and retries bootstrap, setting demoFallback.current = true - so a recovery flow whose session is rejected can silently land the person in the DEMO workspace instead of theirs.
+- [ ] Post-reset failure asymmetry: the password is changed and the token consumed BEFORE enterAfterAuth runs, so any loadWorkspace failure (5xx after retries, 'Could not reach the BuildFlow API', 'Account workspace is missing.') propagates into submit()'s catch and renders in the 12.5px per-field error slot under the password input - a person whose password DID change reads what looks like a validation failure, and the token behind them is spent.
+- [ ] Verify page accessibility, fully absent: the ONLY aria in WelcomeVerifyEmailPage is aria-labelledby on <main> and aria-hidden on the aside. There is no aria-live, no role=status, no role=alert, no aria-busy, and no focus move - so the auto-confirm outcome (success OR failure) is never announced to a screen reader, and the button that appears on completion does not receive focus. The reset page by contrast has role=alert on both error nodes and aria-live=polite on the strength label.
+- [ ] The 'checking' state has no timeout and no retry: if POST /api/auth/verify never settles, the screen stays 'Confirming your email…' / 'One moment.' forever with zero controls and nothing to press.
+- [ ] The password eye toggle exposes no toggle state - it swaps aria-label ('Show password'/'Hide password') but never sets aria-pressed, so it announces as a plain button.
+- [ ] Missing input attributes not covered: the reset input has no `name` and no `inputMode` (in addition to the noted absent required/maxLength). The <form> has no noValidate and no id.
+- [ ] `.acct-sr-only` exists as a utility (account-redesign.css:1622-1632) and is used by the invite rows, but NEITHER recovery screen carries any screen-reader-only copy.
+- [ ] Settings email change is optimistic and its mail is fire-and-forget: server/src/app.ts:1149 calls sendVerificationEmail(...).catch(console.error) AFTER updateAccount has already written the new address, so an SMTP failure is invisible while the UI still claims 'We sent a confirmation link to <email>'. Duplicate addresses answer 409 'An account with this email already exists.' {field:'email', code:'email_taken'}.
+- [ ] Aside board copy detail: the header renders `Mon &mdash; Fri` (an HTML entity, not a literal em dash) next to the pulsing dot and 'Live schedule'.
+
+**Actions the first pass missed** (5)
+
+- [ ] Settings > 'Your login' > Save with a changed email = a real, in-product action that issues a NEW verification link (PATCH /api/auth/account -> sendVerificationEmail) and, per createAuthToken, invalidates the previous one. This is the second resend path in the product and the inventory says there is only one.
+- [ ] Pressing 'Send reset link' a second time on the forgot-password step is a DESTRUCTIVE action on this stage: it supersedes the outstanding emailed link, so any earlier email now dead-ends on 'This reset link is invalid or has already been used. Request a new one.' The action exists today with no warning copy.
+- [ ] The plaintext fallback link inside both emails ('If the button does not work, paste this into your browser:' + the raw URL) is a second, equally supported way to reach both screens - a redesign of the emails must keep it, and it is the path most likely to produce a truncated/malformed token, i.e. the invalid-link state.
+- [ ] Acting on the login lockout: the 429 copy instructs 'or reset your password', which is the sanctioned route into this stage; POST /api/auth/reset then calls loginGuard.clear(email) to release the 15-minute lock. Neither the instruction nor the unlock side effect is inventoried as an action.
+- [ ] On the verify page there is no keyboard-reachable default action at any point: nothing is autofocused, the button is absent during 'checking', and when it appears focus is left on <body>, so Enter does nothing until the person tabs to it.
+
+**States or motion the first pass missed** (5)
+
+- [ ] Reset page, 'expired/already-used token' is a THIRD visual state the screens list collapses into the valid-token screen's error list: because invalidLink is only !token, an expired, consumed or superseded token renders the full form, the strength meter and the primary button, and the failure only lands as a 12.5px field error after the person has typed a password. The inventory names this under risks but never as a state to design.
+- [ ] Reset page: the strength meter and hint node both unmount when an error appears (the hint is the else-branch of the error), so the state is 'error + no policy guidance + no meter' whenever password.length is 0, and 'error + meter, no guidance' otherwise.
+- [ ] Verify page: the entry animation acct-rise runs ONCE on mount, so the checking->verified and checking->failed transitions have no motion at all - the h1 and body text swap in place and the button pops in unanimated. (The inventory notes this for checking->verified; it is equally true of the failed path and of the button's appearance.)
+- [ ] The recovery screens have exactly ONE breakpoint of their own - 900px, where .acct-split goes 1fr -> 1.04fr/1fr and .acct-aside flips display:none -> flex. Every other breakpoint in account-redesign.css (1180px, 720px, 620px, 560px) belongs to other steps (.acct-pick-grid, .acct-plan-grid, .acct-trade-grid, .acct-seats, .acct-invite-row) or to the badge in hs-home.css, so there is NO tablet or small-phone treatment for either screen between 900px and 0.
+- [ ] hs-home.css:2121 targets `.topbar-verify span` as well as the button, but VerifyEmailBadge renders its label as a bare text node with no <span> - that selector is dead; only the font-size:0 on the button itself collapses the label.
+
+**Corrections** (7)
+
+- ACCT_VIZ_LANES has FOUR lanes, not five: Framing, Concrete, Electrical, Roofing, each with exactly two job blocks (8 blocks total). The single is-fix block is the SECOND job in the Electrical lane. Inline animationDelays are 0.2 / 0.55 / 0.9 / 1.25 / 1.6 / 1.95 / 2.3 / 2.65s (the field is named delayIQ in AcctVizJob). The inventory's 'five crew lanes … the 5th lane is the second Roofing/Concrete entry' is wrong.
+- COMMON_PASSWORDS holds 40 entries, not 41 (shared/src/passwordPolicy.ts:8-42, counted).
+- risks[11] / crossCutting[11] are wrong about the per-email reset throttle: limiter.hit('reset-email', email, 3, HOUR) does NOT answer 429 and shows no 'Too many attempts' copy. When it trips, the route simply skips the lookup and the send and still returns 200 {ok:true} (server/src/app.ts:1073-1082), so the 4th request in an hour renders the same green 'If there's a BuildFlow account for <email>, a reset link is on its way. It works for one hour.' and no email ever arrives. Only the four byIp limiters (verify-request 5/15m, verify 20/15m, reset-request 5/15m, reset 20/15m) produce the generic 429 copy.
+- exposeTokens is `process.env.NODE_ENV === 'test' || process.env.BUILDFLOW_EXPOSE_AUTH_TOKENS === '1'` (server/src/app.ts:571-ish) - the inventory's badge testAnchor says NODE_ENV=test only. The env-var half matters because it is how a developer gets a real link locally, which is exactly the flow that hits the StrictMode double-fire noted in risks[9].
+- SERVER LINE NUMBERS HAVE DRIFTED and will keep drifting - server/src/app.ts was modified at 2026-09-10 13:23 by concurrent (schedule/zod) work while this check ran. Current: POST /api/auth/verify/request 1015, POST /api/auth/verify 1035, POST /api/auth/reset/request 1060, POST /api/auth/reset 1084, TTLs 557-559, login lockout copy 820, signup's sendVerificationEmail 795, PATCH /api/auth/account 1111-1153. The route bodies are unchanged; only the offsets moved. Anchor on route strings, not line numbers.
+- crossCutting[4] overstates the hashchange claim: App.tsx:3352-3358 DOES add a window 'hashchange' listener that re-runs getWelcomeViewFromHash. The user-visible conclusion still holds (pasting a second #verify-email?token=… while already on that view yields the same welcomeView, so React keeps the mounted component and tokenFromHash is never re-read), but the reason is 'no remount', not 'no listener' - and navigating between #reset-password and #verify-email DOES mount fresh and re-read the token.
+- risks[7]'s test-gap claim is confirmed: grepping 'reset-password|verify-email|resetPassword|verifyEmail' across client/src/App.test.tsx, client/src/tests/*.test.tsx and client/src/test/appHarness.tsx returns ZERO hits. The only client-side coverage anywhere in this stage is the badge (App.test.tsx:1263) and the Settings verification copy (settings.test.tsx:376, :398).
+
+### Redesign risks in this area
+
+- REDESIGN RISK — the blue in account-redesign.css is dead code you can be fooled by. .acct-primary at :239-269 is #2f6bff, but the parity block at :1191-1205 (declared last, equal specificity) repaints it as the landing's ink pill (#1c1c1a, radius 999px). Same for the h1 (weight 800 → 500 Inter) and the form background (#ffffff → #f5f6fa). Read the file bottom-up or you will 'restore' a look that was already replaced.
+- REDESIGN RISK — the --wx-* tokens are hand-copied into .acct-split because these views are outside isReskinView. If you move #reset-password / #verify-email into isReskinView (or into a .welcome-rx wrapper) the tokens get defined twice and any future landing-token change silently diverges. If you instead retune the copies, they drift from welcome-redesign.css.
+- REDESIGN RISK — the aside is one shared surface across six auth/onboarding screens (comment at App.tsx:6529-6530). Changing AcctScheduleViz, .acct-aside or .acct-aurora* for these two pages changes #create-account, #accept-invite, #business-type and #additional-products too.
+- BEHAVIOUR THAT MUST SURVIVE — the weak_password token handoff. server/src/app.ts:1082-1090 consumes the reset token, and on a weak password mints a FRESH one and returns it as `token` in the 400 body; App.tsx:7469-7474 reads `(err as ApiError & {token?: string}).token` and calls setToken(fresh) so the second attempt works. Drop that catch branch and every user who first types a weak password is dead-ended on a consumed token. Pinned by server/test/api.test.ts:169-175.
+- BEHAVIOUR THAT MUST SURVIVE — a reset signs out every other session and marks the email verified (server/src/app.ts:1092-1098, asserted at server/test/api.test.ts:178-180). The sub-line 'Other devices are signed out.' is a true statement; do not soften it into marketing copy that no longer matches.
+- BEHAVIOUR THAT MUST SURVIVE — App.test.tsx:1263 matches the VerifyEmailBadge by aria-label regex /Confirm liam@example.com/. Changing the badge's aria-label from `Confirm <email>: resend the confirmation email` breaks that test. The same test also asserts .business-context-verify is absent on the dashboard and that at most one notice renders above the board.
+- TEST GAP — zero client tests render #reset-password or #verify-email. Nothing catches a broken invalid-link branch, a broken strength meter, a lost show/hide toggle, or a verify page that stops calling apiVerifyEmail. All coverage is server-side (server/test/api.test.ts:135). Budget for new tests as part of the redesign.
+- LABEL COLLISION — the verify success button and the additional-products onboarding button (App.tsx:7407) both read "Continue to BuildFlow", and the latter is fetched by exact name in App.test.tsx:177/188 and test/appHarness.tsx:176. If a redesign ever renders them in the same tree, getByRole throws on multiple matches.
+- STRICTMODE DOUBLE-FIRE — main.tsx wraps <App /> in <StrictMode>, so in dev the verify useEffect runs twice and apiVerifyEmail is called twice with the same ONE-TIME token. The `cancelled` guard blocks the first pass's state write but not its network call, so the second call gets the 400 and the dev screen shows "That link didn't work." on a link that actually worked. Anyone redesigning this page from a local link will chase a phantom bug. A ref-based once-guard would fix it.
+- NO RESEND ON THE FAILED VERIFY SCREEN — the copy says 'request another one from your workspace' but the page's only control is "Sign in", and the resend pill lives in the signed-in top bar. An expired-link user must sign in, spot the pill, and click it. Worth designing a real resend into the page (POST /api/auth/verify/request needs a session, so a signed-out resend would need a new endpoint).
+- NO COOLDOWN UI ANYWHERE — VerifyEmailBadge disables itself permanently on "Sent" with no countdown, and its bare `catch {}` throws away the 429's "Too many attempts. Try again in <n>." so a rate-limited user reads only "Try again". Any redesign that adds a visible cooldown must plumb retryAfterSec (present in the 429 body, rateLimit.ts:45) through to the UI — it is currently discarded.
+- EXPIRED ≠ MISSING on the reset page — invalidLink is only `!token`, so an expired or already-used token renders the FULL form and the failure only lands after the person types and submits a password, appearing as a small field error under the input. A redesign should either verify the token on arrival or promote token_invalid out of .acct-field-error into the bordered .acct-error panel.
+- ERROR HIERARCHY IS WRONG on the reset page — rate-limit, expired-link, workspace-missing and network-down all render in the 12.5px .acct-field-error slot under the password input, visually indistinguishable from 'password too short'. The bordered .acct-error and the green .acct-success components both exist in the CSS and are unused by this screen.
+- SUCCESS-STATE ROUTING IS SILENT — proceed() is the SAME handler for both the verified and failed buttons; when apiFetchSession() finds no session it drops the person on the login form with no explanation, and when it DOES find one the 'failed' screen enters the workspace instead. Both outcomes are unlabelled. Preserve the two code paths but give them honest copy.
+- STUCK BUSY STATE — on the reset page setBusy(false) lives only in the catch, so after a successful POST the button stays disabled reading "Saving…" until enterAfterAuth swaps the page. Fine today because navigation always follows; a redesign that adds an interstitial or an animated success step will expose a permanently-disabled button.
+- MISSING maxLength — the reset password input has no maxLength while the server caps at z.string().max(200). A >200-char password fails the zod parse and returns the misleading "Password must be at least 8 characters." Add maxLength={200} or a real message.
+- NO required ATTRIBUTE — the password input is not marked required, so validation is JS-only; an empty submit produces "Password must be at least 8 characters." rather than a native prompt. Intentional (it keeps the message identical to the server's), so do not 'fix' it by adding required without checking the message stays the same.
+- aria-describedby FLIPS between #reset-password-hint and #reset-password-error, and the hint node is REMOVED when an error shows — so the policy guidance disappears exactly when it is most needed. Consider keeping both nodes and describing the input with both ids.
+- MOBILE — .acct-aside is display:none below 900px, so on a phone both screens are the form column on #f5f6fa with no illustration and (on verify) no controls at all during 'checking'. .acct-split uses min-height:100vh AND 100dvh; keep the dvh fallback or iOS Safari re-introduces the clipped-viewport bug.
+- The .acct-split rules and the older .account-* rules in styles.css are deliberately separate namespaces (see the header comment at account-redesign.css:1-9). Do not merge them; the old classes still style other surfaces.
+- CSS COMMENT HAZARD (from memory css-comment-star-slash-pitfall) — account-redesign.css is comment-heavy with ASCII-art dividers. A stray `*/` inside one of those banners closes the comment early and silently drops the next rule, after which the --wx-* tokens resolve empty and the whole split turns unstyled.
+
+<a id="auth-invites"></a>
+
+## Auth: invite team and accept invite
+
+`auth-invites` — 5 screens, 51 information items, 27 actions.
+
+**Source:** `/Users/liamsantos/Documents/Production Scheduling/client/src/App.tsx`, `/Users/liamsantos/Documents/Production Scheduling/client/src/api.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/analytics.ts`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/index.ts`, `/Users/liamsantos/Documents/Production Scheduling/shared/src/passwordPolicy.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/app.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/email.ts`, `/Users/liamsantos/Documents/Production Scheduling/server/src/rateLimit.ts`, `/Users/liamsantos/Documents/Production Scheduling/client/src/App.test.tsx`, `/Users/liamsantos/Documents/Production Scheduling/client/src/test/appHarness.tsx`, `/Users/liamsantos/Documents/Production Scheduling/client/src/tests/settings.test.tsx`, `/Users/liamsantos/Documents/Production Scheduling/server/test/api.test.ts`
+
+**Styles:** `/Users/liamsantos/Documents/Production Scheduling/client/src/account-redesign.css (PRIMARY — 1839 lines; `.acct-*`. Relevant blocks: :1-82 split + `.acct-form-col` / `.acct-form-inner` + `@keyframes acct-rise`; :84-275 `.acct-head` / `.acct-form` / `.acct-field` / `.acct-input` / `.acct-input.has-toggle` / `.acct-pw-toggle` / `.acct-error` / `.acct-remember` / `.acct-primary`; :373-400 `.acct-split-wide` (pinned 100dvh, only the form column scrolls; form-inner max 640px); :402-431 `.acct-eyebrow` + `.acct-eyebrow-dot` + `@keyframes acct-dot-pulse`; :693-806 `.acct-aside` (display:none under 900px!) + `.acct-aurora-1/2/3` + `.acct-aside-brand` + `.acct-aside-quote` + `.acct-aside-type` + WxTypewriter internals (`.wx-type-ghost`, `.wx-type-real`, `.wx-caret`); :808-1010 `.acct-viz*` schedule visual + `@keyframes acct-viz-rise|pulse|job-in|job-fix|job-tone|sweep`; :1024-1045 prefers-reduced-motion block; :1055-1300 the `--wx-*` re-skin overrides declared last (ink pill CTA, 48px hairline fields, Inter display type); :1353-1397 `.acct-split-wide .acct-aside` pinning; :1401-1441 `.acct-input.is-invalid` + `.acct-field-error` + `.acct-hint`; :1441-1516 `.acct-strength` / `.acct-strength-bar` / `.acct-strength-label` (data-score 1-4 colours); :1486-1516 `.acct-terms` / `.acct-terms.is-invalid input` / `.acct-checks`; :1537 `.acct-hint-center`; :1554-1570 `.acct-link-btn`; :1626-1725 the invite block itself — `.acct-sr-only`, `.acct-select`, `.acct-invite-rows`, `.acct-invite-row` (grid 1.6fr / minmax(150px,1fr) / auto), `.acct-invite-remove` (40x44 outline button), `.acct-invite-add`, `.acct-invite-results` + li[data-status=sent|held] colours, `button.acct-hint-center`, and the max-width:560px stack)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/welcome-redesign.css (`.wx-type-a11y` sr-only node at :657 and `@keyframes wx-blink` at :714 — used by the aside typewriter. NOTE: the `.welcome-rx` token scope does NOT apply to these two views; account-redesign.css re-declares the `--wx-*` values on `.acct-split` itself)`, `/Users/liamsantos/Documents/Production Scheduling/client/src/styles.css (`.welcome-page` wrapper at :54 — min-height:100vh, overflow-x:clip, white bg; `.updates-open` at :2654 — applied because neither view is in `isReskinView`)`
+
+### Invite team — editor (default state, last onboarding step)
+
+**Route:** #invite-team (welcomeView "inviteTeam", set by getWelcomeViewFromHash App.tsx:595; reached programmatically at App.tsx:2682 which sets window.location.hash = "#invite-team" after the additional-products step, and rendered at App.tsx:3917)  
+**Entry:** `App.tsx:7789 (function WelcomeInviteTeamPage); shared row editor at App.tsx:7692 (function InviteRows); validator at App.tsx:7767 (checkInviteRows)`
+
+Final onboarding step after plan/products: bulk-invite supers and crew leads into the new workspace, or skip. Fully skippable — the same InviteRows editor also lives in Settings → Team, so nothing is lost by skipping.
+
+**Information displayed** (17)
+
+- [ ] Brand lockup: <BuildFlowLogoMark /> + bold wordmark "BuildFlow" (.acct-brand)
+- [ ] Step indicator / eyebrow pill: a pulsing dot (.acct-eyebrow-dot) + the text "Last step" — this is the ONLY progress signal on the page (no 1-of-N counter, no stepper)
+- [ ] H1 (id="invite-team-title", the <main>'s aria-labelledby): "Who runs the work with you?"
+- [ ] Sub-paragraph: "Invite your supers and crew leads now, or later from Settings. They get an email with a link that puts them straight into this workspace."
+- [ ] Three prefilled-but-empty invite rows on mount; roles preset to Superintendent, Crew Lead, Crew Lead (App.tsx:7790-7794)
+- [ ] Per-row email placeholder: "teammate@company.com"
+- [ ] Per-row role dropdown showing the chosen role; option list is exactly TEAM_ROLE_OPTIONS = ["Project Manager", "Superintendent", "Crew Lead"] (App.tsx:7689). NOTE: no "Owner"/"Admin" option — the org owner is only the signup account.
+- [ ] Screen-reader-only field labels (visually absent, .acct-sr-only): "Email 1", "Role 1", "Email 2", "Role 2", … numbered by index+1
+- [ ] Remove-row control's accessible name: "Remove row 1" / "Remove row 2" / … (icon-only X, no visible text)
+- [ ] Add-row link text: "+ Add another"
+- [ ] Per-row inline validation copy (see errorStates): "Enter a valid email address." and "Already in the list."
+- [ ] Submit button copy is state-dependent: "Skip for now" when every email box is blank, "Send invites" once any email box has text, "Sending…" while the POST is in flight
+- [ ] No legal line, no OAuth, no back link, no marketing nav and no footer on this screen (the welcome nav is explicitly suppressed for welcomeView === "inviteTeam" at App.tsx:3721-3725)
+- [ ] MARKETING ASIDE (right column, aria-hidden="true", so none of it is announced): brand row "BuildFlow" with the logo mark; the AcctScheduleViz card (App.tsx:6519) titled "Live schedule" with a green pulsing live dot and the right-aligned range label "Mon — Fri"; four crew lanes labelled "Framing", "Concrete", "Electrical", "Roofing", each with two coloured job bars (blue #4f7bff / cyan #35c8f0 / violet #9b6ecb) on a 5-column day grid, where the Electrical lane's second bar is the `is-fix` bar that lands overlapping (amber #f2a63b), holds, then slides to the next free slot and settles blue; a light sweep across the card
+- [ ] ASIDE quote (typewritten): "The whole crew, " + emphasised (light blue #bcd0ff) "one schedule." — via <WxTypewriter normal=… em=… /> (App.tsx:4308)
+- [ ] ASIDE cite line: "Run the whole jobsite from one place." (same cite is used on every step of the flow)
+- [ ] IMPORTANT: the entire aside is `display:none` below 900px (account-redesign.css:693-709) — on phones this screen is form-only
+
+**Actions supported** (10)
+
+- [ ] Email input (per row): typing calls update(index, {email}) → onChange of the whole rows array (App.tsx:7702)
+- [ ] Role <select> (per row): change casts the value to UserRole and patches that row
+- [ ] Remove-row button (per row, type=button, rendered ONLY while rows.length > 1): filters that index out of rows. Its aria-label is `Remove row ${index + 1}`. Note it does NOT clear the matching entry in `errors`, so the index-keyed error map can shift onto a different row until the next submit re-validates.
+- [ ] "+ Add another" (.acct-link-btn.acct-invite-add, type=button, rendered ONLY while rows.length < 20): appends { email: "", role: "Crew Lead" }
+- [ ] Form submit (type=submit .acct-primary): checkInviteRows(rows) → sets per-row errors; returns early if any error; if zero valid rows calls onDone() (i.e. blank submit == skip); otherwise POSTs apiSendInvites(valid) and swaps the form for the results list
+- [ ] Keyboard: Enter inside any email input triggers implicit form submission (the same path as the primary button); the role select is keyboard-operable; the remove/add buttons are real <button>s in tab order; no explicit key handlers, no Escape handler, no focus management after add/remove (a newly added row is NOT focused)
+- [ ] "Skip for now" secondary link-button (.acct-link-btn.acct-hint-center, type=button) — rendered ONLY when at least one email box has text; calls onDone() and discards whatever was typed with no confirmation
+- [ ] onDone === finishInviteStep (App.tsx:3538): setPendingSetup(null) then onEnterDashboard() → openAppPage("dashboard"); the post-onboarding tutorial dialog ("Your BuildFlow workspace is ready") was already armed in completeOnboarding
+- [ ] Analytics side effect on a successful POST: track(EVENTS.invitesSent /* "invites_sent" */, { count: valid.length, held: <number held>, source: "onboarding" }) — App.tsx:7814. Also trackPageView(welcomeView) fires on entering the view (App.tsx:3363).
+- [ ] SIGNED-OUT GUARD (App.tsx:3546-3560): "inviteTeam" is in onboardingViews, so on mount apiFetchSession() runs and any missing OR demo session redirects to showCreateAccountPage() (#create-account) — this screen cannot be reached by pasting the hash while signed out
+
+**Table columns** (1)
+
+- [ ] The invite editor is a CSS grid, not a table: column 1 = email (minmax(0,1.6fr)), column 2 = role select (minmax(150px,1fr)), column 3 = remove button (auto). It collapses to a single stacked column at max-width 560px with the remove button justified to the end.
+
+**Charts** (1)
+
+- [ ] Decorative only: the aside's AcctScheduleViz "Live schedule" crew × weekday board (4 lanes × 5 day columns, 8 animated job bars, one amber double-book that self-resolves). Pure CSS, no data, aria-hidden.
+
+**Form inputs** (3)
+
+- [ ] invite-email-{index} — <input type="email">, class .acct-input (+ .is-invalid on error), sr-only label "Email {index+1}", placeholder "teammate@company.com", autoComplete="off", NO required attribute, NO maxLength attribute, aria-invalid={true} only when that row has an error. Client validation (checkInviteRows, App.tsx:7767): value is trimmed + lowercased; a blank row is silently dropped (not an error); must match EMAIL_PATTERN /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/ else "Enter a valid email address."; a repeat of an earlier row's address yields "Already in the list.". Server (server/src/app.ts:1330-1340, zod) additionally trims, requires a valid email ("Enter a valid email address.") and caps length at 320 chars.
+- [ ] invite-role-{index} — <select> with classes .acct-input.acct-select, sr-only label "Role {index+1}", three options: "Project Manager", "Superintendent", "Crew Lead"; never blank (defaults Superintendent for row 1, Crew Lead for rows 2+ and for every added row); server enum refuses anything else (400)
+- [ ] No other inputs: no personal-message field, no CSV/bulk-paste field, no "invite by link" field, no seat counter on this step (seats were chosen on the previous plan step)
+
+**Opens (modals, drawers, popovers)** (1)
+
+- None on this screen. The next thing the user sees after "Open BuildFlow"/"Skip for now" is the post-onboarding tutorial dialog (role=dialog, accessible name "Your BuildFlow workspace is ready") which belongs to the dashboard/tutorial area, not here.
+
+**Empty states** (3)
+
+- The default state IS the empty state: three blank rows with no emails. There is no separate zero-state illustration.
+- Submitting with every row blank is a legitimate no-op: checkInviteRows returns zero valid rows and onDone() runs immediately (no request, no results list) — the button already reads "Skip for now" in that state.
+- Removing rows down to one hides every remove button (rows.length > 1 gate); reaching 20 rows hides "+ Add another".
+
+**Loading states** (3)
+
+- Submitting: `busy` true → the primary button is disabled and reads "Sending…" with the ArrowRight icon suppressed. Nothing else is disabled — the email/role inputs, remove buttons and "+ Add another" stay live during the request, and a second submit is guarded only by the `if (busy) return;` at the top of submit().
+- No skeleton or spinner; no progress indication per email even though the POST loops over the addresses server-side.
+- The signed-out session check (apiFetchSession) runs unannounced with no loading UI — the form renders immediately and may be replaced by #create-account a beat later.
+
+**Error states** (8)
+
+- Per-row: "Enter a valid email address." (bad format) — rendered as <p class="acct-field-error"> under the email input, with .acct-input.is-invalid + aria-invalid on the input. NOTE this row error has NO role="alert" (unlike the accept-invite field errors), so it is not announced.
+- Per-row: "Already in the list." (duplicate address after trim+lowercase within the same submit)
+- Whole-form: <p class="acct-error" role="alert"> with err.message, falling back to "Something went wrong. Please try again." — this is where every server failure lands.
+- Server 400 (zod): "Add at least one email." (empty array), "Invite up to 20 people at a time." (>20 — reachable only if the client's 20-row cap is bypassed), "Enter a valid email address.", or the generic "Check the emails and try again."
+- Server 429 RATE LIMIT: bucket "invite", 60 requests per hour per IP (server/src/app.ts:1341) → "Too many attempts. Try again in {N seconds|minutes}." plus a Retry-After header (rateLimit.ts:39-46). Surfaces in the same .acct-error paragraph with no special treatment and no retry timer UI.
+- Network failure: api.ts request() throws "Could not reach the BuildFlow API: {message}" / "Could not reach the BuildFlow API." → same .acct-error paragraph.
+- PER-EMAIL soft failures are NOT errors, they are results (201): status "skipped" with reason "Already has a BuildFlow account." (the duplicate-account path — also covers inviting yourself, since the server compares against account.email), or status "held" with reason "Goes out when you confirm your email." (inviter's own address unverified) or "Email could not be sent; resend from Settings." (SMTP threw).
+- Errors are cleared only on the next submit — typing in a row does not clear its message.
+
+**Animations and transitions** (9)
+
+- `.acct-form-inner` — `acct-rise` 0.55s cubic-bezier(0.22,1,0.36,1) both (opacity 0 → 1, translateY(14px) → 0) on mount. It does NOT replay when the form swaps to the results list (same element).
+- `.acct-eyebrow-dot` — `acct-dot-pulse` 2.6s ease-in-out infinite (opacity 1 → 0.35)
+- `.acct-primary` — transform/box-shadow/background transitions 0.14-0.16s; hover lifts translateY(-1px); `.acct-primary svg` has its own transform transition (account-redesign.css:668-673)
+- `.acct-input` — border-color + box-shadow 0.16s ease on focus (focus ring: 4px rgba(28,28,26,0.08) in the re-skin block)
+- `.acct-invite-remove:hover` — colour/border swap to red (#b4404b / #e8b4b9), no transition declared
+- ASIDE: `.acct-viz-card` `acct-viz-rise` 0.9s backwards 0.15s; `.acct-viz-live` `acct-viz-pulse` 2.4s infinite; every `.acct-viz-job` `acct-viz-job-in` 12s infinite with per-bar animationDelay 0.2s-2.65s injected inline; the `is-fix` bar additionally runs `acct-viz-job-fix` + `acct-viz-job-tone` 12s infinite (amber → translateX(150%) → blue); `.acct-viz-sweep` `acct-viz-sweep` 12s. All periods are deliberately 12s so the stagger stays locked on repeat.
+- ASIDE typewriter: JS-driven per-character reveal in WxTypewriter (setTimeout 28-58ms per char, 350ms initial delay), with `.wx-caret` running `wx-blink` 1.05s steps(1) infinite and fading out via a 0.5s opacity transition once done
+- prefers-reduced-motion: reduce (account-redesign.css:1024-1045) kills acct-rise, the eyebrow dot, and every viz animation, and parks the double-book bar at translateX(150%); WxTypewriter snaps to full text via matchMedia; `.acct-strength-bar span` transition is also disabled (:1511-1515)
+- NO framer-motion and NO data-reveal/IntersectionObserver on this screen — everything is CSS keyframes plus the one JS typewriter
+
+**Pinned by tests** (4)
+
+- client/src/App.test.tsx:189-190 — "opens a blank workspace after the selected onboarding setup": comment "// last step: invite the team — skippable" then fireEvent.click(await screen.findByRole("button", { name: "Skip for now" })). PROOF the primary button's accessible name is exactly "Skip for now" while all rows are blank, and that skipping lands on the tutorial dialog "Your BuildFlow workspace is ready" → Dashboard.
+- client/src/test/appHarness.tsx:177-178 — chooseProductsAndPlan() ends with the same "Skip for now" click; EVERY test that calls completeOnboarding()/chooseProductsAndPlan() (schedule, map, landing-menus, dashboard, settings suites…) passes through this screen. Renaming or hiding that button breaks the whole client suite.
+- client/src/tests/settings.test.tsx:220-284 — "sends invites from the Team panel, reports held ones, and refuses bad emails": exercises the SHARED InviteRows + checkInviteRows from the Settings Team panel (button name "Send invites", asserts no POST when an email is invalid, asserts the POST body shape { invites: [{email, role}] }, and that the form resets to one blank row). Settings panel itself is out of scope here, but any change to InviteRows/checkInviteRows must keep these green.
+- server/test/api.test.ts:220-331 — "invites teammates: held until the owner confirms their email, then accepted into the workspace": pins the exact result payloads this screen renders, i.e. { email, status: "held", reason: "Goes out when you confirm your email." } and { email, status: "skipped", reason: "Already has a BuildFlow account." }
+
+### Invite team — results / sent state
+
+**Route:** #invite-team (same view; `results !== null` swaps the <form> for the results panel)  
+**Entry:** `App.tsx:7846-7873 (the `results ? … : …` branch inside WelcomeInviteTeamPage)`
+
+Per-address outcome of the bulk invite, and the single exit into the workspace.
+
+**Information displayed** (8)
+
+- [ ] Same brand lockup, "Last step" eyebrow, H1 "Who runs the work with you?" and the same sub-paragraph stay on screen — the head does NOT change to a success headline
+- [ ] A <ul class="acct-invite-results"> with one <li data-status="sent|held|skipped"> per address: <strong>{email}</strong> on the left, the outcome <span> on the right (flex, space-between, wraps)
+- [ ] Outcome copy, exactly: status "sent" → "Invite sent" (green #1f8a58, 600 weight); status "held" → "Will send once you confirm your email" (amber #a8721b, 600 weight); anything else → result.reason if the server sent one, else the literal fallback "Skipped"
+- [ ] Server-authored reasons that can appear verbatim in that slot: "Already has a BuildFlow account." (skipped — includes inviting your own address), "Goes out when you confirm your email." (held), "Email could not be sent; resend from Settings." (held after an SMTP throw)
+- [ ] Conditional held hint (<p class="acct-hint">, shown when ANY result is held): "We emailed you a confirmation link at signup. Open it and the held invites go out automatically."
+- [ ] No count summary, no "3 invites sent" roll-up (that phrasing exists only in the Settings panel's notice line), no per-row resend/undo, no way back to the editor
+- [ ] The invite email the recipient will get (server/src/email.ts:323): subject "{Inviter} invited you to {Org} on BuildFlow", headline "Join {Org} on BuildFlow.", body "{Inviter} invited you to their workspace as a {role}. Set a password and you're in — crews, schedule and field updates included.", CTA "Accept the invite", footer "This invite works for seven days. If you weren't expecting it, you can ignore this email." — the link is `{origin}/#accept-invite?token=…` (server/src/app.ts:567)
+- [ ] Aside is unchanged (same auroras, Live schedule viz, "The whole crew, one schedule." quote)
+
+**Actions supported** (3)
+
+- [ ] "Open BuildFlow" (type=button, .acct-primary, with ArrowRight 18) → onDone() → finishInviteStep → setPendingSetup(null) + openAppPage("dashboard") → the tutorial dialog
+- [ ] No other controls: the editor, the remove buttons, "+ Add another" and "Skip for now" are all gone; there is no "Invite more people" affordance and no link to Settings → Team
+- [ ] Results are terminal for the session — the only way back to the editor is to re-enter #invite-team (which the signed-in-session guard allows, remounting a fresh 3-row form)
+
+**Table columns** (1)
+
+- [ ] Two-slot flex row per result (email / outcome), not a real table; wraps at narrow widths (gap 6px 14px)
+
+**Empty states** (1)
+
+- Unreachable with zero rows: a submit with no valid addresses calls onDone() instead of setting results, so the list is never empty.
+
+**Loading states** (1)
+
+- None — this state only exists after the request resolved. Clicking "Open BuildFlow" gives no pending feedback; the workspace bootstrap happens on the dashboard side.
+
+**Error states** (2)
+
+- No error UI in this branch (the .acct-error paragraph lives in the form branch only). A whole-request failure keeps the user on the editor instead of arriving here.
+- Mixed outcomes are shown as data, not errors — a run where every address was skipped still renders as a 'success' panel with three grey "Already has a BuildFlow account." lines and no corrective advice.
+
+**Animations and transitions** (2)
+
+- None of its own. `.acct-form-inner`'s acct-rise already played on mount and does not re-run, so the results list appears with no transition. The aside keeps looping acct-viz-* and the caret.
+- `.acct-invite-results li` has static styling only (12px radius, 1px #d7dbe2 border, white)
+
+**Pinned by tests** (2)
+
+- server/test/api.test.ts:243-247 pins the two result payloads this panel formats ("held"/"Goes out when you confirm your email." and "skipped"/"Already has a BuildFlow account.")
+- client/src/tests/settings.test.tsx:234-238 stubs the same { results, invites, emailVerified } response shape
+
+### Accept invite — checking (preview in flight)
+
+**Route:** #accept-invite?token=… (welcomeView "acceptInvite" — getWelcomeViewFromHash uses startsWith("#accept-invite") at App.tsx:594 so the ?token= query inside the hash is tolerated; rendered at App.tsx:3915)  
+**Entry:** `App.tsx:7915 (function WelcomeAcceptInvitePage); token read by tokenFromHash() at App.tsx:7435; preview fetched in the useEffect at App.tsx:7936-7950`
+
+The first paint of an emailed invite link, while GET /api/auth/invite/{token} decides whether the invite is real.
+
+**Information displayed** (7)
+
+- [ ] Brand lockup: logo mark + "BuildFlow"
+- [ ] H1 (id="accept-invite-title"): "Checking your invite…"
+- [ ] Sub-paragraph: "One moment."
+- [ ] No eyebrow/step pill on this page at all (unlike the invite-team step)
+- [ ] No form, no buttons — the body below the head renders `null` while preview and previewError are both empty
+- [ ] Aside (aria-hidden): same auroras + brand + AcctScheduleViz "Live schedule" board, but the quote is "Your crew is " + em "already on the board." with the same cite "Run the whole jobsite from one place."
+- [ ] This page uses `.acct-split` (NOT the wide variant), so at ≥900px the columns are 1.04fr / 1fr and the form column is vertically centred; below 900px the aside is display:none
+
+**Actions supported** (3)
+
+- [ ] None. There is no cancel, no "resend me a new invite", and no fallback link out of this state — if the request hangs the page stays here indefinitely.
+- [ ] The effect is cancel-guarded (a `cancelled` flag in the cleanup) so a hash change mid-flight cannot write into an unmounted view
+- [ ] trackPageView("acceptInvite") fires on entry (App.tsx:3363)
+
+**Charts** (1)
+
+- [ ] Decorative aside board only (same as the invite-team screen)
+
+**Empty states** (1)
+
+- This IS the null-body state: head-only, no skeleton rows, no spinner.
+
+**Loading states** (2)
+
+- Head-text-as-loader ("Checking your invite…" / "One moment."). No Loader2 spinner, no aria-busy, no aria-live region, so a screen reader gets no announcement when it resolves.
+- If the token is missing from the hash the effect short-circuits synchronously (setPreviewError) so this state is skipped entirely.
+
+**Error states** (1)
+
+- Resolves into either the preview form or the invalid-token screen (next two entries).
+
+**Animations and transitions** (2)
+
+- `.acct-form-inner` acct-rise 0.55s on mount; eyebrow dot absent here; the aside's viz + typewriter animations run as on the invite step
+- Because acct-rise is `both` on the same element, the head does NOT re-animate when the body fills in — content pops in under a settled heading
+
+**Pinned by tests** (1)
+
+- No client test renders this view. server/test/api.test.ts:268 (`GET /api/auth/invite/not-a-token` → 404) covers the endpoint this state waits on.
+
+### Accept invite — set password and join (valid invite)
+
+**Route:** #accept-invite?token=…  
+**Entry:** `App.tsx:7975-8126 (the `preview ? <form> : null` branch of WelcomeAcceptInvitePage)`
+
+Turn a valid invite token into a real teammate account: confirm who invited you and into what, name yourself, set a password, accept the terms, and land signed in.
+
+**Information displayed** (13)
+
+- [ ] Brand lockup: logo mark + "BuildFlow"
+- [ ] H1: `Join ${preview.orgName}.` — e.g. "Join Asphalt Co." (the company name the owner typed at signup)
+- [ ] Sub-paragraph: `${preview.inviterName} invited you as a ${preview.role}. Set a password for ${preview.email} and you're in.` — e.g. "Dana Brooks invited you as a Superintendent. Set a password for sam@asphaltco.com and you're in." (inviterName falls back to "A teammate" server-side when the inviting account is gone; role is one of Project Manager / Superintendent / Crew Lead)
+- [ ] InvitePreview payload = { email, role, orgName, inviterName, expiresAt } (shared/src/index.ts:76). NOTE: `expiresAt` is fetched but NEVER shown — there is no "expires in 6 days" line anywhere in the UI, even though the invite email promises "This invite works for seven days."
+- [ ] Field label: "Your name" (for #invite-name), placeholder "Sam Ortiz"
+- [ ] Field label: "Email" (for #invite-email) — read-only, prefilled with preview.email
+- [ ] Read-only email helper line (<p class="acct-hint">): "This is the address the invite was sent to. It's already confirmed."
+- [ ] Field label: "Password" (for #invite-password), placeholder "At least 8 characters"
+- [ ] Password strength meter, shown only once password.length > 0: a 4-segment bar (.acct-strength-bar with four <span>s, aria-hidden) filled by [data-score] (1 amber-ish, 2, 3-4 green per :1456-1466) plus a label row (aria-live="polite") reading "Password strength" and a bold verdict from passwordStrength(): "Too weak" | "Weak" | "Fair" | "Strong" | "Very strong" (shared/src/passwordPolicy.ts:69-83; score 0 renders an empty label). Scoring: any policy problem pins score to 0/1; otherwise +1 for ≥12 chars, +1 for ≥3 character classes, +1 for ≥16 chars (or ≥14 with all 4 classes).
+- [ ] Terms checkbox copy (id="invite-terms", in .acct-checks > .acct-remember.acct-terms): the <label> text is exactly "I agree to the", followed by the link "Terms & Conditions" (href="#terms") then the word "and" then "Privacy Policy" (href="#privacy") then a period — i.e. only "I agree to the" is inside the label, which is what the test suite clicks by label text
+- [ ] Submit button copy: `Join ${preview.orgName}` ("Join Asphalt Co" — no trailing period), or "Joining…" while busy
+- [ ] No eyebrow/step pill, no "already have an account?" toggle, no OAuth/social buttons, no "remember me" checkbox (remember: true is hard-coded in the submit call), no back link, no marketing nav and no footer (welcomeView "acceptInvite" is suppressed at App.tsx:3720)
+- [ ] Aside (aria-hidden): auroras + brand + AcctScheduleViz + typewriter "Your crew is " + em "already on the board." + cite "Run the whole jobsite from one place."
+
+**Actions supported** (8)
+
+- [ ] Type in "Your name" → setName + clears the name field error immediately (optimistic clear on change)
+- [ ] Type in "Password" → setPassword + clears the password field error; also re-renders the strength meter on every keystroke (strength is computed against preview.email so the 'email in password' rule is live)
+- [ ] Show/hide password toggle (<button type="button" class="acct-pw-toggle">, inside .acct-input-wrap, input carries .has-toggle for the 44px right pad): flips input type between "password" and "text"; icon Eye ↔ EyeOff (lucide, 18px); aria-label flips between "Show password" and "Hide password"
+- [ ] Terms checkbox → setAcceptTerms + clears the terms error
+- [ ] Form submit: validates name (non-blank), password (shared passwordProblem against preview.email) and the terms box; on any problem sets fieldErrors and returns without a request; otherwise POSTs onAccept({ token, name: name.trim(), password, acceptTerms: true, remember: true })
+- [ ] Keyboard: Enter in the name or password input submits (implicit submission); autoFocus is on #invite-name so the caret starts there on load; the read-only email input is still focusable/tabbable (readOnly, not disabled); "Terms & Conditions" / "Privacy Policy" are plain anchors so Enter on them navigates the hash and LEAVES the half-filled form (no confirm, no state preservation) — a real redesign risk
+- [ ] onAccept === handleAcceptInvite (App.tsx:2560): apiAcceptInvite(input) → POST /api/auth/invite/accept (sets the bf_session cookie) → enterAfterAuth() → loadWorkspace() → openAppPage("dashboard") (or showOnboarding() if the org somehow has no onboardingCompletedAt; server-side an accepted teammate always lands past onboarding)
+- [ ] NOTE: `busy` is set false only in the catch block, so on success the button stays disabled reading "Joining…" until the page unmounts — deliberate double-submit protection during navigation
+
+**Charts** (2)
+
+- [ ] Decorative aside board only
+- [ ] The 4-segment password strength bar is the only meter-style graphic in the form
+
+**Form inputs** (5)
+
+- [ ] invite-name — <input type="text">, .acct-input (+ .is-invalid), visible label "Your name", placeholder "Sam Ortiz", autoComplete="name", autoFocus, NO required attribute, NO maxLength on the client, aria-invalid when errored. Client rule: !name.trim() → "Enter your name." Server (app.ts:1171) trims, min 1 → "Enter your name.", max 120 chars.
+- [ ] invite-email — <input type="email">, .acct-input, visible label "Email", value = preview.email, readOnly + aria-readonly="true", no placeholder, no autocomplete attribute, never validated client-side (the token owns the address). The email is NOT submitted — the server re-derives it from the token.
+- [ ] invite-password — <input type={showPassword ? "text" : "password"}>, .acct-input.has-toggle (+ .is-invalid), visible label "Password", placeholder "At least 8 characters", autoComplete="new-password", NO required, NO minLength/maxLength attribute on the client, aria-invalid when errored. Client rule = shared passwordProblem(password, preview.email): <8 chars → "Password must be at least 8 characters."; in the 40-entry COMMON_PASSWORDS blocklist (raw or stripped of non-alphanumerics — includes "password123", "buildflow", "construction", "contractor", "asphalt1", "concrete1", "1q2w3e4r" …) → "That password is too common. Pick something harder to guess."; contains the email local-part (when that part is ≥3 chars) → "Don't use your email address in your password." The SERVER enforces the identical strings plus a zod max of 200 chars, and answers { field: "password", code: "weak_password" } so the message lands back under this input.
+- [ ] invite-terms — <input type="checkbox">, unchecked by default, no name attribute, label text "I agree to the". Client rule: !acceptTerms → "Please agree to the Terms & Conditions and Privacy Policy." Server requires z.literal(true) with the same message. On error the wrapper gets .acct-terms.is-invalid which paints a 2px #d96570 outline around the box itself.
+- [ ] The token is NOT an input on this page (unlike WelcomeResetPasswordPage, which exposes a paste-a-token field) — a link without ?token= dead-ends in the invalid state with no way to type one in.
+
+**Empty states** (1)
+
+- No empty state — the form only renders once a preview exists.
+
+**Loading states** (3)
+
+- Submitting: `busy` → the primary button is disabled and reads "Joining…"; every input stays enabled and editable during the request.
+- After a successful accept the app is still on page==="welcome" while loadWorkspace() runs, so this screen (with its locked "Joining…" button) is what the user looks at during the bootstrap — the DashboardSkeleton/loading-screen at App.tsx:2766 only appears after openAppPage switches the page.
+- No spinner glyph anywhere in the auth flow's submit buttons (text-only busy states).
+
+**Error states** (8)
+
+- Field errors as <p class="acct-field-error" role="alert"> under the offending input (these DO carry role=alert, unlike the invite-row errors): "Enter your name.", the three password messages above, and "Please agree to the Terms & Conditions and Privacy Policy." (rendered under the .acct-checks group)
+- Whole-form error as <p class="acct-error" role="alert">: any ApiError whose `field` is not "password" (App.tsx:7966-7971), else "Something went wrong. Please try again."
+- Server 400 invite_invalid: "This invite is invalid, was withdrawn, or has expired. Ask for a new one." — happens when the token expires or is revoked BETWEEN the preview and the submit; it lands in the top .acct-error paragraph while the form stays on screen, so the user can keep retyping a password against a dead token with no "request a new invite" affordance.
+- Server 400 weak_password: routed to the password field error via ApiError.field === "password".
+- Server 409 DUPLICATE ACCOUNT: "An account with this email already exists. Sign in instead." with field "email", code "email_taken" — because field !== "password" it surfaces as the generic top-of-form .acct-error, and there is NO "Sign in" button in this branch (the only "Sign in instead" button lives in the invalid-invite branch), so the copy tells the user to do something the screen doesn't offer.
+- Server 429 RATE LIMIT: bucket "invite-accept", 10 per hour per IP (app.ts:1168) → "Too many attempts. Try again in {N}." in the top .acct-error. The preview endpoint has its own limit: bucket "invite-peek", 30 per 15 minutes per IP (app.ts:1150).
+- Network failure → "Could not reach the BuildFlow API…" in the top .acct-error.
+- Errored fields clear on the next keystroke/toggle, but the top-level .acct-error persists until the next submit.
+
+**Animations and transitions** (7)
+
+- `.acct-form-inner` — acct-rise 0.55s on mount (plays with the "Checking your invite…" head, so the form itself fades in with no motion of its own)
+- `.acct-input` focus transition 0.16s (border-color + 4px focus ring); `.acct-input.is-invalid` swaps the ring to rgba(217,101,112,0.16)
+- `.acct-pw-toggle` colour transition 0.16s on hover
+- `.acct-strength-bar span` background transition 0.25s ease (the meter fills smoothly as the score changes); disabled under prefers-reduced-motion
+- `.acct-primary` hover lift + shadow transitions (0.14-0.16s)
+- ASIDE: identical acct-viz-rise / acct-viz-pulse / acct-viz-job-in / acct-viz-job-fix / acct-viz-job-tone / acct-viz-sweep 12s loops and the WxTypewriter + wx-blink caret
+- No framer-motion, no data-reveal, no IntersectionObserver on this page
+
+**Pinned by tests** (5)
+
+- server/test/api.test.ts:274-282 — asserts the preview payload this screen renders: { email: "sam@asphaltco.com", role: "Superintendent", orgName: "Asphalt Co", inviterName: "Dana Brooks" } (the exact three values interpolated into the H1 and sub-paragraph)
+- server/test/api.test.ts:286-297 — accept with password "password123" → 400 (the common-password rule the meter mirrors), accept with "Paver-Screed-2026" → 201 with account { email, orgId, role: "member", emailVerifiedAt truthy }, and the token then 404s (single use)
+- server/test/api.test.ts:300-305 — after accepting, bootstrap gives activeUser { name: "Sam Ortiz", role: "Superintendent", isSample: false } and a truthy onboardingCompletedAt, i.e. an accepted teammate must land straight in the app and never in onboarding
+- server/test/api.test.ts:436-440 — a second accept flow asserting a fresh teammate inherits no userSettings
+- NO client-side test renders WelcomeAcceptInvitePage — the labels, placeholders and button copy on this screen are currently unpinned by the client suite (a redesign risk: nothing will fail if the copy drifts)
+
+### Accept invite — invalid / expired / already-used / missing token
+
+**Route:** #accept-invite (with a bad, spent, revoked or absent token)  
+**Entry:** `App.tsx:7982-7996 (the previewError branch: head copy + the single "Sign in instead" button)`
+
+The dead-end for a link that cannot be honoured, with one way out.
+
+**Information displayed** (6)
+
+- [ ] Brand lockup: logo mark + "BuildFlow"
+- [ ] H1: "This invite didn't work."
+- [ ] Sub-paragraph: the previewError string itself — one of: "This invite link is missing its token." (no ?token= in the hash, set locally at App.tsx:7938); the server's 404 body "This invite is invalid, was withdrawn, or has expired. Ask for a new one." (covers expired > 7 days, revoked by the owner, AND already-accepted — the same message for all three, no distinction); the rate-limit body "Too many attempts. Try again in {N}." from the invite-peek bucket; a transport failure "Could not reach the BuildFlow API: {message}"; or the local fallback "This invite is invalid or has expired." when the thrown value is not an Error
+- [ ] No eyebrow, no form, no field, no explanation of what to do next beyond the sentence itself, no owner/org name (the preview never resolved so there is nothing to show), no "email the person who invited you" hint, no support link
+- [ ] Aside is unchanged (auroras, Live schedule board, "Your crew is already on the board.") — the celebratory panel still runs behind a failure message
+- [ ] The invite email's own footer already told the recipient "This invite works for seven days.", so expiry is only ever explained in the email, never in the UI
+
+**Actions supported** (3)
+
+- [ ] "Sign in instead" (<button type="button" class="acct-primary">, no icon) → onLogin → showLoginPage() (App.tsx:3507) → setAccountMode("login") + showWelcomeSubpage("createAccount", "#create-account"), i.e. the login form with a smooth scroll-to-top
+- [ ] No "request a new invite" action, no retry button (a transient network failure or a 429 needs a manual reload — the effect only runs on token change), no back-to-marketing-home link
+- [ ] The whole page has exactly one interactive element in this state
+
+**Charts** (1)
+
+- [ ] Decorative aside board only
+
+**Empty states** (1)
+
+- This screen IS the failure/empty state for the accept flow: head + one button, no illustration and no diagnostic detail.
+
+**Loading states** (1)
+
+- None (terminal state). Reached from "Checking your invite…", or immediately without it when the hash carries no token.
+
+**Error states** (7)
+
+- Expired invite (>7 days, INVITE_TTL_MS = 7 * 24h at server/src/app.ts:559) → 404 invite_invalid
+- Already-accepted invite → 404 invite_invalid (server/test/api.test.ts:295-297 asserts the token 404s after a successful accept)
+- Withdrawn/revoked invite (owner deleted it in Settings → Team) → 404 invite_invalid
+- Garbage token → 404 invite_invalid (server/test/api.test.ts:268)
+- Missing token → local "This invite link is missing its token."
+- Peek rate limit exceeded (30 per 15 min per IP) → the 429 text is shown as if the invite itself were broken, which is misleading copy
+- Once previewError is set nothing clears it — the state is permanent for that mount
+
+**Animations and transitions** (2)
+
+- `.acct-form-inner` acct-rise 0.55s on mount; `.acct-primary` hover/active transitions; the aside's full acct-viz-* + typewriter loop continues
+- Nothing signals the transition from "Checking your invite…" to the failure head — the text simply swaps in place under a settled container
+
+**Pinned by tests** (3)
+
+- server/test/api.test.ts:268 — `await request(app).get("/api/auth/invite/not-a-token").expect(404)`
+- server/test/api.test.ts:295-297 — the accepted token 404s (this screen's already-used path)
+- No client test covers this branch — the H1 "This invite didn't work." and the "Sign in instead" button name are unpinned
+
+### Cross-cutting notes for this area
+
+- ROUTING: both screens are welcomeView states under WelcomePage (App.tsx:3241), NOT Page-union routes. getWelcomeViewFromHash (App.tsx:583) maps `#invite-team` exactly (App.tsx:595) and `#accept-invite*` by prefix (App.tsx:594) so the emailed `?token=` inside the hash survives. A hashchange listener re-syncs the view (App.tsx:3352-3358); trackPageView(welcomeView) fires on every change (App.tsx:3362-3364).
+- CHROME SUPPRESSION: the marketing nav, mobile hamburger and page footer are all inside the `welcomeView !== …` gate at App.tsx:3718-3729, which lists both "acceptInvite" and "inviteTeam" — these are full-bleed 100dvh `.acct-split` mains with their own brand mark and no site chrome. A redesign that adds a shared auth header must edit that gate.
+- TOKENS/THEME: neither view is in `isReskinView` (App.tsx:3283-3315), so the `.welcome-rx` class is absent; account-redesign.css:1066-1078 re-declares the `--wx-bg/-ink/-mut/-faint/-line/-card/-blue/-sans` tokens directly on `.acct-split` and that late block overrides the older blue/white `.acct-*` rules at equal specificity (paper #f5f6fa form column, 48px hairline white fields, radius-999 ink pill CTA, Inter 500 display type). Editing only the early rules changes nothing visible.
+- SHARED COMPONENTS: InviteRows (App.tsx:7692) and checkInviteRows (App.tsx:7767) are used by BOTH this onboarding step AND Settings → Team (App.tsx:21632 + 21815, inside `<form class="settings-invite-form">` with heading "Invite people" and the copy "Each person gets an email with a link that drops them straight into this workspace with the role you pick."). Any markup/class change to the row editor lands in Settings too and is covered by client/src/tests/settings.test.tsx:220-284. TEAM_ROLE_OPTIONS (App.tsx:7689) is the single source of the three roles.
+- SHARED CHROME across the whole auth/onboarding flow: `.acct-brand` lockup, `.acct-head`, `.acct-form`, `.acct-field`, `.acct-input`, `.acct-primary`, `.acct-error`, `.acct-field-error`, `.acct-hint`, `.acct-link-btn`, `.acct-sr-only`, and the right-hand `.acct-aside` (three auroras + `AcctScheduleViz` at App.tsx:6519 + a `WxTypewriter` quote + the constant cite "Run the whole jobsite from one place."). Signup, business-type, additional-products, reset-password, verify-email, invite-team and accept-invite all share them, so restyling one screen restyles seven.
+- The `.acct-split-wide` variant (used by invite-team but NOT by accept-invite) turns the split into its own 100dvh scroll container with only the form column scrolling, because the `.welcome-page` ancestor's overflow makes `position: sticky` useless (comment at account-redesign.css:378-388). Also widens form-inner 400px → 640px, and above 900px pins/flex-starts the aside.
+- RESPONSIVE: `.acct-aside` is `display: none` below 900px (account-redesign.css:693-709) — on phones both screens are form-only and every piece of marketing/illustration content disappears. `.acct-invite-row` collapses to one column at ≤560px with the remove button right-aligned.
+- PASSWORD POLICY is shared code (shared/src/passwordPolicy.ts): passwordProblem/passwordStrength are imported by App.tsx and by the server, so the meter the teammate watches and the check the server enforces cannot disagree. Same three message strings on both sides; PASSWORD_MIN_LENGTH = 8.
+- ERROR CONTRACT: api.ts request() throws ApiError { message, status, field, code, details } (api.ts:68-83); the accept form routes field==="password" to the field error and everything else to the top-of-form .acct-error. Codes in play: invite_invalid, weak_password, email_taken, email_unverified.
+- RATE LIMITS (in-memory, per IP, server/src/rateLimit.ts): invite-peek 30 / 15 min (GET preview), invite-accept 10 / hour (POST accept), invite 60 / hour (POST /api/team/invites and resend). All surface as the same generic "Too many attempts. Try again in {N}." paragraph with no countdown UI.
+- HELD-INVITE MECHANIC: invites are always persisted but only SENT once the inviter's own address is verified (canSend = Boolean(account.emailVerifiedAt), app.ts:1352). Confirming the email later releases held invites automatically with a fresh token (app.ts:1030-1040). The onboarding results panel and its hint exist purely to explain this; the same fact is echoed by the top-bar VerifyEmailBadge (App.tsx:7664, copy "Confirm email"/"Sending…"/"Sent"/"Try again", title "Confirm {email} to unlock team invites and billing").
+- INVITE TTL = 7 days (INVITE_TTL_MS, app.ts:559) and the email says "This invite works for seven days.", but `expiresAt` is fetched into the client and never rendered.
+- ANALYTICS: EVENTS.invitesSent = "invites_sent" with props { count, held, source: "onboarding" | "settings" } (analytics.ts:40, App.tsx:7814 / 21639). Props deliberately carry no PII.
+- MOTION SYSTEM here is CSS-only: `acct-rise` entrance, `acct-dot-pulse` eyebrow, the six `acct-viz-*` keyframes on a locked 12s period, and `wx-blink` for the typewriter caret — plus the one JS timer inside WxTypewriter (App.tsx:4308, 28-58ms per char). No framer-motion and no `data-reveal`/IntersectionObserver on either screen, unlike the marketing pages.
+- prefers-reduced-motion is handled in three places (account-redesign.css:1024-1045, :1511-1515, and WxTypewriter's matchMedia snap) — a redesign must keep all three or the reduced-motion path regresses.
+- ACCESSIBILITY as built: both mains use aria-labelledby pointing at their H1; the aside is aria-hidden="true" wholesale; invite rows rely entirely on `.acct-sr-only` labels ("Email 1"/"Role 1"); the strength label is aria-live="polite"; accept-invite field errors carry role="alert" but the invite-row errors do NOT; there is no live region for the invite results list, so the sent/held outcomes are silent to a screen reader.
+
+### Omission check
+
+**Verdict:** incomplete — the inventory is unusually strong on copy, CSS and per-email result semantics, but it misses a whole validation layer (native constraint validation), four server error strings, the raw-zod message leak, the analytics token leak, the Stripe bypass that can skip the invite step entirely, the background demo-login behind the accept screen, three focus-visible gaps, and its server line anchors have gone stale. 12 screen-level states/behaviours, 20 information items, 8 actions and 5 motion/state facts are added below, plus 7 corrections.
+
+**Screens the first pass missed** (12)
+
+- [ ] Invite team — NATIVE BROWSER VALIDATION state. The editor's <form> has no noValidate and every email box is type="email", so a real browser runs constraint validation BEFORE onSubmit: submitting with "not-an-email" focuses the first invalid input and shows the UA's own bubble ("Please include an '@' in the email address"), and checkInviteRows never runs — no .is-invalid class, no "Enter a valid email address." paragraph, no aria-invalid. The app's own message is only reachable for values that PASS native email validation but fail EMAIL_PATTERN /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/ — i.e. a missing/short TLD like "sam@company". This is a distinct visual state on the screen and the inventory does not mention it at all. client/src/tests/settings.test.tsx:253-255 documents it in a comment and works around it with fireEvent.submit on the <form> instead of clicking the button.
+- [ ] Invite team — BYPASSED ENTIRELY (the step's real reachability). completeOnboarding (client/src/App.tsx) returns early for selectedPlan "pro" or "business" when Stripe is configured: it calls apiStartCheckout and does window.location.assign(checkout.url), so #invite-team is never rendered; the return trip lands on "/?checkout=…&from=onboarding" and runBootstrap sends it straight to openAppPage("dashboard"). The invite step therefore only appears on Free/Enterprise, or when Stripe is unconfigured/unreachable (the catch logs "[billing] checkout unavailable, continuing on trial"). The inventory presents it flatly as "the last onboarding step".
+- [ ] Invite team — IN-FLIGHT RACE state: while busy the primary reads "Sending…" and is disabled, but the secondary "Skip for now" link-button is rendered purely on `rows.some(row => row.email.trim())` and stays ENABLED, so it can be clicked mid-POST. onDone() then leaves for the dashboard while the request completes: the invites are still created/sent server-side but the results panel (and the held hint) are never shown. The inventory lists what stays live during busy but omits the skip button, which is the one that loses information.
+- [ ] Accept invite — RE-ENTRY WITH A SPENT TOKEN WHILE SIGNED IN. openAppPage strips the hash with history.pushState (not replaceState), so after joining the previous history entry is still "#accept-invite?token=…". Back changes the URL and welcomeView without changing the rendered page (page is already "dashboard"); a reload on that entry re-mounts WelcomeAcceptInvitePage, the token now 404s, and the invalid-invite dead end renders — offering "Sign in instead" to somebody who already has a live session. Same shape for #invite-team (Back then reload re-opens a fresh 3-row editor post-onboarding).
+- [ ] Accept invite — the screen is never covered by the app's loading or error chrome. App.tsx returns at `if (page === "welcome")` BEFORE the `if (isLoading)` and `if (error || !data || !activeUser)` gates, so neither invite screen can ever show the "Loading BuildFlow HUD" spinner or the error screen (AlertTriangle + "Try again" + "Back to log in"). A bootstrap failure behind the accept screen is completely invisible there and only surfaces after the user leaves welcome.
+- [ ] Accept invite — the silent DEMO SESSION behind the screen. runBootstrap() runs on mount for every visitor; loadWorkspace() catches a 401 matching /sign in|not authenticated|401/i, sets demoFallback.current = true, POSTs apiDemoLogin() and retries loadBootstrap. So a brand-new invitee opening the emailed link is quietly signed into the shared demo org while reading the accept form (and keeps that cookie if they abandon). Accepting replaces it; enterAfterAuth() resets demoFallback and re-bootstraps. This is also exactly why the invite-team step needs its `!session || session.demo` guard.
+- [ ] Invite team — the transition INTO the step is a state with side effects the inventory does not describe: completeOnboarding awaits applyBusinessProfile (trade/plan/products/seats), syncs userSettings, fires EVENTS.onboardingCompleted { trade, plan, addOns, seats }, writes buildflow.businessType / buildflow.selectedPlan / buildflow.selectedProducts to localStorage, arms the tutorial (setActiveTutorialSetupKey + setTutorialStatus("active")) BEFORE the invite screen, then sets window.location.hash = "#invite-team" and setPage("welcome"). The plan step's button therefore holds a network round trip with no invite-screen loading state.
+- [ ] Accept invite — the checking→resolved transition also moves FOCUS: autoFocus on #invite-name only takes effect when the form first mounts, i.e. asynchronously after the preview resolves, so the caret jumps into the name field a beat after the head text swaps. On the FAILURE path nothing is focused and nothing is announced. Inventory notes the missing live region but not the async focus jump (the only de-facto announcement) nor its absence on failure.
+- [ ] Invite team — signed-out/demo guard produces a real redirect state (already noted as an action) whose destination is #create-account in accountMode "signup" (showCreateAccountPage sets setAccountMode("signup")), not the login form — worth pinning because the sibling "Sign in instead" path uses showLoginPage (accountMode "login") at the same hash.
+- [ ] Accept invite — the 409 duplicate-account state is a screen state in its own right: the form stays fully editable with "An account with this email already exists. Sign in instead." at the top and no sign-in control (the inventory flags this in risks but does not enumerate it as a state alongside the invite_invalid mid-form death).
+- [ ] Invite team — the >1 row / <20 row chrome changes are enumerated, but not the 20-row CEILING state itself: at exactly 20 rows "+ Add another" is unmounted with no message, counter or explanation of the cap (the server's "Invite up to 20 people at a time." is unreachable from the UI).
+- [ ] Both screens — the mobile (<900px) layout is a genuinely different screen, not just "aside hidden": .acct-aside is display:none by DEFAULT and only becomes flex at min-width 900px (mobile-first), .acct-split drops to a single 1fr column, and .acct-form-col keeps fluid padding clamp(28px,5vh,56px)/clamp(20px,5vw,48px) — so on a phone the invite step is a bare 400px-max form on white with no illustration, no aurora and no quote.
+
+**Information the first pass missed** (20)
+
+- [ ] SERVER 401 STRING — "Please sign in to continue." POST /api/team/invites sits behind the OPS_PREFIXES auth gate (server/src/app.ts ~:643-660: "/api/team" is in the list); with no/expired session cookie it answers 401 { error: "Please sign in to continue." }, which lands verbatim in the invite step's .acct-error paragraph. This is the single most likely server failure on that screen and the inventory's error list does not contain it.
+- [ ] SERVER 500 STRING — "Workspace unavailable." Same middleware: if manager.getOrgStore(orgId) throws, the request 500s with that message, which also lands in .acct-error.
+- [ ] ACCEPT ROUTE ZOD FALLBACK — "Check the form and try again." (server/src/app.ts, POST /api/auth/invite/accept). The inventory only lists the invites route's "Check the emails and try again." fallback.
+- [ ] RAW ZOD DEFAULT MESSAGES LEAK TO THE USER. In the accept schema, password `.max(200)`, name `.max(120)` and `token: z.string().min(1)` carry NO custom message, so zod 4 (server/package.json: zod ^4.1.5) supplies its own unlocalised English (of the "Too big: expected string to have <=200 characters" shape) and the route returns it as `error`, which the client renders verbatim in .acct-error. Only the min-length, name-min, and acceptTerms messages are authored.
+- [ ] SERVER FIELD ROUTING IS IGNORED FOR EVERYTHING BUT PASSWORD. The accept 400 sends `field: signupFieldFor(issue.path)` → "name", "password", "terms" or "token"; WelcomeAcceptInvitePage only checks `err.field === "password"`, so a server "Enter your name." or a terms/token message appears at the TOP of the form, not under its input. The signup page's SIGNUP_FIELDS/isSignupField routing helper exists in the same file and is deliberately NOT used here.
+- [ ] 429 BODY CARRIES A MACHINE-READABLE COUNTDOWN. rateLimit.ts byIp returns { error, retryAfterSec } plus the Retry-After header, and api.ts keeps the whole body on ApiError.details — so a countdown UI is already possible. humanSeconds(): under 90s → "N seconds", otherwise "N minute"/"N minutes" (ceil). server/test/api.test.ts asserts retryAfterSec > 0. The inventory mentions the header but not the numeric field or the exact 90-second wording boundary.
+- [ ] BROWSER TAB TITLE. The document.title effect is keyed on `page`, not welcomeView, so both invite screens sit under the generic marketing title "BuildFlow — Construction Scheduling & Field Command Center" (the only special case is page === "map"). No per-screen title anywhere in this stage.
+- [ ] THE TWO ASIDES ARE NOT VISUALLY IDENTICAL, contrary to "Aside is unchanged": .acct-aside-type is clamp(28px, 3vw, 40px) by default (accept-invite) but clamp(24px, 2.4vw, 32px) under `.acct-split-wide` at ≥900px (invite-team) — and the split ratio differs too: .acct-split is 1.04fr/1fr, .acct-split-wide is 1.32fr/1fr. The wide variant also sets the aside to justify-content:flex-start with min-height:0 and pushes the quote down with margin-top:auto.
+- [ ] ANALYTICS LEAKS THE INVITE TOKEN. trackPageView("acceptInvite") fires on entering the view and dispatchPageView sends the full URL: Plausible `u: window.location.href`, PostHog `$current_url: window.location.href`, GA `page_path: window.location.pathname + window.location.hash` — all of which include "?token=<the one-time invite credential>". The inventory's "Props deliberately carry no PII" applies only to the invites_sent event.
+- [ ] MISSING ARIA ASSOCIATIONS. Nothing on either screen uses aria-describedby: the read-only email's .acct-hint ("This is the address the invite was sent to…"), the held hint on the results panel, every .acct-field-error and the strength meter are visually adjacent but not programmatically tied to their inputs. There is also no fieldset/legend/heading grouping the invite rows (AT users get only "Email 1"/"Role 1"), and no aria-busy on either form while submitting.
+- [ ] THE SETTINGS SIBLING ANNOUNCES, THIS ONE DOESN'T. settings.test.tsx asserts `findByRole("status", { name: "" })` for the Team panel's invite notice, i.e. the same shared editor gets a live region in Settings while the onboarding results <ul class="acct-invite-results"> has none. Worth recording as the parity gap a redesign should close.
+- [ ] FOCUS-INDICATOR GAPS (verified by grep over account-redesign.css: the only focus rules are .acct-input:focus, .acct-select:focus + chevron, .acct-remember input:focus-visible, .acct-pick:focus-within, .acct-plan:focus-visible, .acct-field-error .acct-inline-link:focus-visible, .acct-link-btn:focus-visible). So `.acct-primary` (every CTA on both screens: Send invites / Skip for now / Open BuildFlow / Join {org} / Sign in instead), `.acct-invite-remove` (icon-only) and `.acct-pw-toggle` (icon-only) have NO authored :focus-visible style and fall back to the UA outline on a pill button with a custom background.
+- [ ] NO inputMode ANYWHERE in this stage; the mobile keyboard comes only from type="email". No spellCheck, autoCapitalize or `name` attribute on any input here (including #invite-name and #invite-password), so autofill/password managers key off id + autocomplete alone.
+- [ ] autoComplete="off" on the row email inputs actively suppresses address-book/email suggestions for someone typing three teammate addresses — an attribute-level product decision the inventory records but does not flag as a cost.
+- [ ] NO OWNER GATE ON THE INVITE ROUTE. POST /api/team/invites has only the session gate; `canManage: req.account?.role === "owner"` is reported by GET /api/team for the UI's benefit only. Role checks exist on PATCH/DELETE /api/team/users (403 for a teammate, asserted in server/test/api.test.ts) but not on inviting. The onboarding caller is always the owner, so this matters for the shared Settings surface.
+- [ ] LOCKOUT SCOPE. createLoginGuard(5, 15min, 15min) — five wrong passwords locks an EMAIL for 15 minutes — is wired to the login route only. Neither invite route has a per-email lock: preview is invite-peek 30/15min per IP, accept is invite-accept 10/hour per IP, both IP-only, so a token can be brute-checked from many IPs and a shared-NAT office can throttle itself. The "Sign in instead" button hands the user to the screen where the email lock lives.
+- [ ] THE INVITE EMAIL IS NOT BESPOKE: inviteMessage (server/src/email.ts) wraps accountEmailShell(headline, body, cta, link, footer) — the same shell as verify/reset — so restyling the invite mail restyles the account mails. Subject/headline/body/CTA/footer strings in the inventory are correct.
+- [ ] TYPE SOURCES: InviteDraft = { email, role } and InviteResult = { email, status: "sent"|"held"|"skipped", reason? } are exported from client/src/api.ts:147-148, not shared/src/index.ts (which holds InvitePreview at :76 and TeamInvite at :64). The WelcomeHash union at App.tsx:451-452 pins "#accept-invite" and "#invite-team", so any new sub-route must extend it.
+- [ ] SERVER TEST FACTS NOT IN THE testAnchors: resend while the owner is unverified → 403 "Confirm your own email first — then invites can go out."; revoke → 204 with "That invite is no longer open." for a stale id; GET /api/team returns invites[0].sentAt === null while held and truthy after verification; after Sam accepts, ownerTeam.body.invites is empty (the accepted invite disappears from the pending list).
+- [ ] SMALL LAYOUT NUMBERS omitted: .acct-form-inner is width min(100%,400px) with gap 16px (640px under .acct-split-wide); .acct-invite-row uses align-items:start (so a row error does not push the role select down); .acct-invite-row .acct-field gap drops to 4px; .acct-invite-remove carries margin-top:2px to sit level with the 44px field; .acct-invite-results li span defaults to grey #6f7785 (the "skipped" colour, since only [data-status=sent|held] are re-coloured).
+
+**Actions the first pass missed** (8)
+
+- [ ] Submit with a malformed email is not the action the inventory describes: native constraint validation intercepts it first (no noValidate on either <form>), so the browser blocks submission and shows its own bubble; checkInviteRows only gets to speak for near-miss addresses that pass type="email" but fail EMAIL_PATTERN. Any redesign choosing between noValidate + app messages vs. native bubbles is choosing between two different error UIs, and settings.test.tsx:253-255 encodes the current one.
+- [ ] Clicking the secondary "Skip for now" WHILE the POST is in flight is an unguarded action (it has no disabled={busy}); it abandons the results panel although the invites are created and sent.
+- [ ] Browser Back after leaving either screen: openAppPage clears the hash with history.pushState, so Back returns to #invite-team / #accept-invite?token=… — the URL and welcomeView change but the rendered page does not (page is already "dashboard"); a reload from there re-mounts the step (fresh editor) or the dead invite.
+- [ ] "Sign in instead" also DESTROYS the invite URL: showLoginPage → showWelcomeSubpage("createAccount", "#create-account") pushes the new hash, so the token is gone from the address bar (and the smooth scroll-to-top is skipped under jsdom). The only way back to the invite is the email.
+- [ ] On mount both screens fire a background POST/GET pair the inventory does not list: runBootstrap → loadBootstrap (/api/bootstrap), and on 401 an automatic apiDemoLogin() + retry. Plus retryTransient's backoff around both. The accept screen therefore performs a write (a demo session) before the user does anything.
+- [ ] enterAfterAuth() after a successful accept: setError(null), setIsLoading(true), demoFallback.current = false, loadWorkspace(), then `if (!payload.onboardingCompletedAt) showOnboarding()` else openAppPage("dashboard") — and openAppPage fires EVENTS.enterApp { destination } on the way out of welcome. The inventory names loadWorkspace/openAppPage but not the enterApp event or the demoFallback reset.
+- [ ] InviteRows uses key={index}. Removing a row therefore re-uses the same DOM inputs by position (values shift up into them) rather than unmounting the removed one — the root cause of the index-keyed error mismatch the inventory flags, and the reason focus/IME state can land on the wrong row.
+- [ ] Tab order on the editor interleaves the remove buttons: email 1 → role 1 → remove 1 → email 2 → role 2 → remove 2 → … → "+ Add another" → primary submit → secondary skip. Combined with the missing :focus-visible on .acct-invite-remove, a keyboard user lands on an unlabelled-looking icon button between every row.
+
+**States or motion the first pass missed** (5)
+
+- [ ] STRENGTH METER data-score="0" IS REACHABLE AND UNSTYLED. passwordStrength returns { score: 0, label: "Too weak" } for 1-3 characters (score 0 with an EMPTY label happens only at length 0, when the meter is not rendered). There is no .acct-strength[data-score="0"] rule, so all four segments stay #e6e8ec while the label reads "Too weak" in the default grey — the only state where the bar and the verdict disagree.
+- [ ] The primary CTA's arrow motion is state-gated twice: `.acct-primary:hover:not(:disabled) svg { transform: translateX(3px) }` dies while busy, and the icon is removed from the DOM entirely ({!busy && <ArrowRight size={18} />}), so the button re-flows (loses ~18px + gap) the moment it becomes "Sending…" and again when it returns.
+- [ ] No authored :focus-visible state for .acct-primary, .acct-invite-remove or .acct-pw-toggle (see missingInformation) — a redesign that removes the UA outline without adding one silently regresses keyboard use on every button on these two screens.
+- [ ] The results panel appears inside <div className="acct-form">, i.e. it inherits the form's grid/gap rather than being its own container — which is why no entrance motion is possible without re-keying (the inventory reaches the same conclusion from acct-rise but not from the shared wrapper).
+- [ ] `.acct-invite-remove` hover swap to red is instant (no transition declared) while every neighbouring control animates at 0.14-0.25s — a visible inconsistency in the current motion system worth fixing rather than reproducing.
+
+**Corrections** (7)
+
+- STALE SERVER LINE ANCHORS: server/src/app.ts was modified today at 13:24 and every server reference in the inventory is ~13 lines early. Current: INVITE_TTL_MS :572 (inventory says 559), the accept link template :580 (says 567), GET /api/auth/invite/:token + invite-peek limiter :1163 (says 1150), POST /api/auth/invite/accept + invite-accept limiter :1181 (says 1168), inviteSchema :1343-1352 (says 1330-1340), POST /api/team/invites + invite limiter :1354 (says 1341), the 401 auth gate ~:643-660 (not referenced at all).
+- "score 0 renders an empty label" is wrong: score 0 with an empty label is unreachable because the meter only renders when password.length > 0; 1-3 characters give score 0 with the label "Too weak".
+- The files list attributes the invite types to shared/src/index.ts; InviteDraft and InviteResult are in client/src/api.ts:147-148. shared/src/index.ts contributes InvitePreview (:76), TeamInvite (:64) and UserRole.
+- "Aside is unchanged" / "the entire aside is identical" is not accurate: the quote type size and the split column ratio differ between .acct-split (accept-invite) and .acct-split-wide (invite-team), and the wide variant re-lays the aside out (flex-start, min-height 0, quote margin-top auto).
+- The inventory lists the zod 400 "Add at least one email." as a server error the UI can surface; it is unreachable through this screen because valid.length === 0 short-circuits to onDone() with no request — same class of unreachable as "Invite up to 20 people at a time." Both are only reachable outside the UI.
+- formInputs for the invite rows omit the wrapper structure: each email input is inside a <div class="acct-input-wrap"> while the role <select> sits bare in its .acct-field — an asymmetry a re-implementation has to reproduce or deliberately normalise (the wrap is what .has-toggle/44px padding hangs off elsewhere).
+- The inventory describes .acct-aside as "display:none below 900px"; the mechanism is the reverse (display:none in the base rule, promoted to flex inside @media (min-width: 900px)), which matters because a redesign that adds a mobile treatment must add rules to the base, not remove a max-width query.
+
+### Redesign risks in this area
+
+- The literal button name "Skip for now" is load-bearing for the ENTIRE client test suite: client/src/test/appHarness.tsx:177-178 (chooseProductsAndPlan) and client/src/App.test.tsx:190 click `getByRole("button", { name: "Skip for now" })`. Every suite that calls completeOnboarding() walks through this screen. Renaming it, turning it into an icon/link, or making the primary button read something else while all rows are blank breaks dozens of unrelated tests.
+- The primary button's dual identity (same element is "Skip for now" with empty rows and "Send invites" once text exists) is subtle and easy to lose in a redesign — and the tests depend on the empty-row wording specifically. If the redesign separates skip from submit, appHarness must be updated in lockstep.
+- InviteRows is SHARED with Settings → Team. Restyling or restructuring it changes the Settings panel and can break client/src/tests/settings.test.tsx:220-284 ("Send invites" button name, no-POST-on-invalid-email, POST body shape, reset to one blank row). Either keep the component generic or fork it deliberately.
+- Accept-invite has NO client test coverage at all — its H1s ("Join {org}.", "This invite didn't work.", "Checking your invite…"), labels, placeholders, hint copy and the "Sign in instead" button are unpinned, so a redesign can silently drop behaviour that server/test/api.test.ts still assumes (e.g. the accepted teammate landing straight in the Dashboard).
+- Duplicate-account path is already inconsistent: the 409 says "An account with this email already exists. Sign in instead." but the form branch has no sign-in control (the "Sign in instead" button only exists in the invalid-token branch). A redesign should add that action rather than reproduce the dead end.
+- An invite that dies between preview and submit (expired/revoked mid-form) shows invite_invalid in the top error while leaving the whole form usable, inviting the user to keep retrying a dead token. There is no "ask for a new invite" affordance anywhere in the flow.
+- `expiresAt` is fetched but never displayed — a redesign that adds an "expires in N days" line is free information, but must handle the already-expired case where no preview exists to read it from.
+- The rate-limit message ("Too many attempts. Try again in 12 minutes.") is rendered as the invite's own failure sentence on the invalid-invite screen, so a throttled-but-valid link reads as a broken invite. Worth distinguishing 429 from 404 in any new error design.
+- The remove-row button filters the rows array but leaves the index-keyed `errors` map untouched, so after a removal an error message can sit under the wrong row until the next submit. Any re-implementation should key errors by a stable row id instead of the array index.
+- Focus is never moved: adding a row does not focus its email input, removing a row drops focus to <body>, and the results panel and every error paragraph appear without focus or (for the invite rows and the results list) any live region. Keyboard/AT users get no feedback on the most important events on the page.
+- The terms links are plain hash anchors (#terms, #privacy) that navigate away from a half-filled accept form with no state preservation and no way back — the user must re-open the emailed link and retype everything.
+- `.acct-aside` is display:none under 900px, so ALL of the marketing/illustration content (the Live schedule board and the typewritten quote) is mobile-invisible today. If the redesign moves substance into that panel it must add a mobile treatment.
+- The `.acct-split-wide` scroll-container hack on invite-team exists specifically because `.welcome-page`'s overflow breaks position:sticky (comment at account-redesign.css:378-388, and the memory note that overflow-x:clip vs hidden matters). Reworking this layout with sticky/position tricks is a known trap.
+- Late-cascade fragility: the `--wx-*` re-skin block (account-redesign.css:1055-1300) wins only because it is declared LAST at equal specificity. Appending new `.acct-*` rules after it, or reordering the file, silently reverts these screens to the old blue/white look. Also note the repo's CSS pitfall that a stray `*/` inside a comment drops the following rule.
+- acct-rise is `both` on `.acct-form-inner`, which is the SAME element across the checking → form → error and editor → results swaps, so no state change animates. Adding per-state motion means keying/wrapping the inner content rather than restyling the existing container.
+- The three animation-disabling blocks for prefers-reduced-motion (two in CSS, one in WxTypewriter's matchMedia) are easy to miss; the aside's six 12s keyframes are also a known paint cost (see the HUD paint-perf note) — adding blur/filter work to the auroras risks regressing it.
+- The 20-row client cap (`rows.length < 20` hides "+ Add another") mirrors the server's max of 20 with the message "Invite up to 20 people at a time.", but there is no visible "18 of 20" counter — a redesign that changes the cap must change both sides.
+- The signed-out guard silently swaps #invite-team for #create-account with no explanatory copy or loading state; a redesign with a slower first paint will make that swap look like a flash of the wrong screen.
 
 <a id="app-shell"></a>
 
@@ -13675,12 +15476,12 @@ The `welcome` page is one route in the `Page` union but 53 views in the `Welcome
 (`client/src/App.tsx:385`). They are listed here so the map is complete, and split by whether
 the redesign should touch them.
 
-### A.1 Auth and onboarding funnel — needs a scope decision
+### A.1 Auth and onboarding funnel — IN SCOPE, inventoried in full
 
 These 7 are not marketing pages. They are the signed-out half of the product and the path into
-the dashboard, so a dashboard that changes visually while these do not will read as two products.
-They were not inventoried in detail, because the brief scoped the work to the dashboard.
-**Tell me whether to include them and I will inventory them before Phase 4.**
+the dashboard, so a dashboard that changed visually while these did not would read as two
+products. They are **in scope** and are inventoried to the same depth as the dashboard areas,
+in the four `Auth:` sections in the main body above.
 
 | View | Hash | Component |
 |---|---|---|

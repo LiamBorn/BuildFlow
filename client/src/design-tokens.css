@@ -1,0 +1,145 @@
+/* ============================================================================
+   design-tokens.css — the one place the redesign reads its scale from.
+   ----------------------------------------------------------------------------
+   Measured from the Welcome Page (welcome-redesign.css) and documented with the
+   evidence in DESIGN_TOKENS.md at the repo root.
+
+   SCOPE OF THIS FILE, deliberately narrow: it declares ONLY tokens that did not
+   already exist, under a `--bf-` prefix that was unused before this file. It
+   therefore changes no rendered pixel — every existing rule resolves exactly as
+   it did. It is imported first so anything can read it and everything can still
+   override it.
+
+   What it does NOT do, and why:
+   The colour palette already exists as `--wx-*`, but re-declared per page scope
+   rather than once, so the same token name carries two values in two places
+   (`--wx-blue` is #1a73e8 on the Welcome Page and #2f6bff in eleven app scopes).
+   Promoting `--wx-*` to :root is not an inert change, because rules outside any
+   scope use fallbacks like var(--wx-ink, #14203a) that differ from the canonical
+   value. Reconciling those 24 namespaces is Phase 4 work and needs three product
+   decisions first — see "Three token conflicts" in DESIGN_TOKENS.md.
+   ============================================================================ */
+
+:root {
+  /* ---- spacing scale -----------------------------------------------------
+     A 4px base. The Welcome Page's own spacing lands on these steps. */
+  --bf-space-1: 4px;
+  --bf-space-2: 8px;
+  --bf-space-3: 12px;
+  --bf-space-4: 16px;
+  --bf-space-5: 22px;
+  --bf-space-6: 30px;
+  --bf-space-7: 40px;
+  --bf-space-8: 54px;
+  --bf-space-9: 72px;
+
+  /* ---- vertical rhythm ---------------------------------------------------
+     The page's beat. `section` is the base, `band` the loud one, `dense` the
+     app-side equivalent for panel interiors where 108px would be absurd. */
+  --bf-rhythm-section: clamp(76px, 12vh, 130px);
+  --bf-rhythm-band: clamp(80px, 13vh, 140px);
+  --bf-rhythm-product: clamp(64px, 9vw, 120px);
+  --bf-rhythm-stack: clamp(70px, 10vh, 110px);
+  --bf-rhythm-head: 54px;
+  --bf-rhythm-dense: clamp(20px, 3vh, 34px);
+
+  /* ---- measures ----------------------------------------------------------
+     Copy measures are in ch on purpose: they hold at every font size. */
+  --bf-measure-page: 1140px;
+  --bf-measure-wide: 1180px;
+  --bf-measure-hero: 1040px;
+  --bf-measure-head: 640px;
+  --bf-measure-product: 680px;
+  --bf-measure-lede: 52ch;
+  --bf-measure-body: 44ch;
+  --bf-measure-caption: 26ch;
+
+  /* ---- type scale --------------------------------------------------------
+     Every display size is clamped. Tracking tightens as size grows. */
+  --bf-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --bf-type-hero: clamp(46px, 6.8vw, 96px);
+  --bf-type-hero-track: -0.025em;
+  --bf-type-display: clamp(38px, 5vw, 78px);
+  --bf-type-display-track: -0.03em;
+  --bf-type-h2: clamp(32px, 4.4vw, 54px);
+  --bf-type-h2-track: -0.01em;
+  --bf-type-h3: clamp(26px, 3vw, 38px);
+  --bf-type-figure: clamp(42px, 5.4vw, 72px);
+  --bf-type-figure-track: -0.02em;
+  --bf-type-lede: clamp(16px, 1.35vw, 19px);
+  --bf-type-body: 15px;
+  --bf-type-small: 13.5px;
+  --bf-type-micro: 12px;
+
+  --bf-leading-display: 1.02;
+  --bf-leading-h2: 1.08;
+  --bf-leading-h3: 1.12;
+  --bf-leading-body: 1.5;
+
+  --bf-weight-body: 500;
+  --bf-weight-medium: 600;
+  --bf-weight-bold: 700;
+  --bf-weight-heavy: 800;
+
+  /* ---- radius ladder ----------------------------------------------------- */
+  --bf-radius-pill: 999px;
+  --bf-radius-stage: 26px;
+  --bf-radius-card: 20px;
+  --bf-radius-panel: 18px;
+  --bf-radius-control: 12px;
+  --bf-radius-chip: 8px;
+
+  /* ---- shadow ladder -----------------------------------------------------
+     One ink, one set of steps. Depth is the only variable. */
+  --bf-shadow-card: 0 10px 30px rgba(28, 28, 26, 0.05);
+  --bf-shadow-raised: 0 4px 12px rgba(28, 28, 26, 0.08);
+  --bf-shadow-pill: 0 8px 22px rgba(28, 28, 26, 0.2);
+  --bf-shadow-card-hover: 0 26px 60px rgba(28, 28, 26, 0.12);
+  --bf-shadow-pill-hover: 0 14px 34px rgba(28, 28, 26, 0.28);
+  --bf-shadow-float: 0 24px 70px rgba(28, 28, 26, 0.14);
+  --bf-shadow-stage: 0 34px 64px rgba(28, 28, 26, 0.13);
+
+  /* ---- motion ------------------------------------------------------------
+     One curve carries the product. The second is only for height and grid
+     transitions, where the overshoot of the first reads as a glitch. */
+  --bf-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --bf-ease-size: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --bf-dur-press: 0.18s;
+  --bf-dur-hover: 0.25s;
+  --bf-dur-move: 0.28s;
+  --bf-dur-panel: 0.3s;
+  --bf-dur-enter: 0.7s;
+  --bf-dur-reveal: 1s;
+
+  /* the scroll-reveal contract, so a new surface can join it without guessing */
+  --bf-reveal-shift: 30px;
+  --bf-reveal-stagger: 90ms;
+
+  /* ---- hover grammar -----------------------------------------------------
+     Four moves, no fifth. Lift for cards, invert for pills, slide for
+     directional links, tilt for product mocks. */
+  --bf-lift: -6px;
+  --bf-lift-small: -5px;
+  --bf-slide: 3px;
+  --bf-press-scale: 0.94;
+
+  /* ---- focus ------------------------------------------------------------- */
+  --bf-focus-ring: 0 0 0 4px rgba(26, 115, 232, 0.12);
+}
+
+/* The reveal contract's reduced-motion half, matching what the Welcome Page
+   already does: shorten rather than remove, so layout still settles. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --bf-dur-enter: 0.4s;
+    --bf-dur-reveal: 0.4s;
+    --bf-reveal-shift: 0px;
+    --bf-reveal-stagger: 0ms;
+    --bf-lift: 0px;
+    --bf-lift-small: 0px;
+    --bf-slide: 0px;
+    --bf-press-scale: 1;
+  }
+}
