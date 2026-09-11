@@ -2794,6 +2794,8 @@ function App() {
 
   const shellClassName = [
     "app-shell",
+    // Phase 4 step 2: scopes app-shell-daylight.css. Delete this one word to revert the re-skin.
+    "bf-shell",
     page === "schedule" ? "schedule-shell" : "",
     page === "reports" ? "reports-shell" : "",
     page === "settings" ? "settings-shell" : "",

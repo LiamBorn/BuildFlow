@@ -59,6 +59,7 @@ import "./quantum-cloud-loader.css"; // BuildFlow AI "thinking" particles (porte
 import "./interactive-hover-links.css"; // landing side-menu section heads (ported 21st.dev interactive hover links)
 import "./command-palette.css"; // the ⌘K palette (components/CommandPalette.tsx)
 import "./app-shell-hubspot.css"; // HubSpot-style app shell (top bar + icon rail + flyouts) — loads last so it wins
+import "./app-shell-daylight.css"; // the Welcome Page's language over that shell — must load after it
 
 initAnalytics();
 

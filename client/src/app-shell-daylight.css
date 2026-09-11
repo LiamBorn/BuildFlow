@@ -1,0 +1,637 @@
+/* ============================================================================
+   app-shell-daylight.css — the Welcome Page's language over the HubSpot shell
+   ----------------------------------------------------------------------------
+   Phase 4 step 2 of the redesign. Design: redesign-plan/concept-preserve.md
+   ("Daylight Rail"). Measured language: DESIGN_TOKENS.md. Scale: design-tokens.css.
+
+   HOW THIS FILE WORKS, and why it is safe:
+   - It loads AFTER app-shell-hubspot.css, which is the sheet that currently wins.
+     Nothing above it in main.tsx is reordered.
+   - Every rule takes an existing selector VERBATIM and adds `.bf-shell` to the
+     shell element's compound. That makes each rule exactly one class more
+     specific than the rule it replaces, and later in the cascade, so it wins
+     without !important and without editing the file it overrides.
+   - `bf-shell` is one word in shellClassName (App.tsx). Delete it and every rule
+     in this file stops matching. That is the kill switch.
+   - No :where() anywhere. It is a documented jsdom breaker in this repo
+     (a `:where(#id)` block once made every test read visibility:hidden on <html>).
+   - No !important. If a rule here does not win, the selector is wrong, not the
+     specificity — fix the selector.
+
+   GEOMETRY IS FROZEN. This file changes no width, height, padding, gap, position,
+   z-index or DOM order in the chrome. --hs-topbar-h stays 56px and --hs-rail-w
+   stays 56px, because hs-breeze.css hard-codes both as literals, the flyout's
+   setFlyoutTop(anchor.offsetTop) arithmetic depends on the rail's box, and the
+   test harness navigates by hub-then-flyout. Surface only: colour, radius,
+   shadow, type, and the four hover moves.
+
+   KEYFRAME NAMES ARE FROZEN TOO. hs-rail-pop, hs-rail-draw, hs-rail-ring,
+   hs-tag-ping, hs-flyout-in and hs-pop keep their names and are re-timed by
+   re-declaring `animation` only. Four prefers-reduced-motion blocks in
+   app-shell-hubspot.css null them BY NAME; renaming would silently un-null them.
+   ============================================================================ */
+
+/* ============================ 1. top bar ================================= */
+/* The Welcome Page's nav recipe verbatim — rgba(245,246,250,0.82) over a blur —
+   at 56px instead of 64px. A hairline, never a shadow. */
+.hs-shell.bf-shell .topbar.hs-topbar {
+  background: rgba(245, 246, 250, 0.82);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom: 1px solid rgba(28, 28, 26, 0.07);
+  box-shadow: none;
+  color: var(--bf-ink, #1c1c1a);
+}
+
+/* ---- brand --------------------------------------------------------------- */
+.hs-shell.bf-shell .hs-topbar-brand {
+  color: #1c1c1a;
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.hs-shell.bf-shell .hs-topbar-brand:hover {
+  background: rgba(28, 28, 26, 0.05);
+}
+
+/* ---- search: the one search-shaped grammar on the Welcome Page is a pill --
+   STRUCTURE FROZEN. This stays a read-only <input aria-label="Search BuildFlow">
+   inside its <label> with both onClick and onFocus. appHarness.enterDashboard()
+   gates on findByLabelText("Search BuildFlow"), so this is the single most
+   dangerous element in the shell to restructure. Restyled only. */
+.hs-shell.bf-shell .topbar .search-box {
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  box-shadow: none;
+  transition:
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.hs-shell.bf-shell .topbar .search-box:focus-within {
+  border-color: #2f6bff;
+  box-shadow: var(--bf-focus-ring);
+  background: #ffffff;
+}
+.hs-shell.bf-shell .topbar .search-box input {
+  font-size: var(--bf-app-row-strong);
+  font-weight: 500;
+  color: #1c1c1a;
+}
+.hs-shell.bf-shell .topbar .search-box input::placeholder {
+  color: #8a877e;
+}
+.hs-shell.bf-shell .topbar .search-box svg {
+  color: #8a877e;
+}
+.hs-shell.bf-shell .topbar .search-box kbd {
+  background: rgba(28, 28, 26, 0.05);
+  border: 0;
+  border-radius: 6px;
+  color: #575550;
+  font-size: var(--bf-app-micro);
+  font-weight: 600;
+}
+
+/* ---- icon buttons: 36px, onto the radius ladder ------------------------- */
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button {
+  border-radius: var(--bf-radius-control);
+  border-color: transparent;
+  background: transparent;
+  color: #575550;
+  box-shadow: none;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    transform var(--bf-dur-press) var(--bf-ease);
+}
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:hover,
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button[aria-expanded="true"] {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+  border-color: transparent;
+  transform: none;
+}
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:active {
+  transform: scale(var(--bf-press-scale));
+}
+/* the old ring was built at 0.45 alpha to read on navy */
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- AI sparkle: the app's ONE licensed use of the gradient trio -------- */
+.hs-shell.bf-shell .topbar .hs-ai-button {
+  background: linear-gradient(96deg, #4285f4 0%, #9b72cb 54%, #d96570 100%);
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  box-shadow: none;
+}
+.hs-shell.bf-shell .topbar .hs-ai-button:hover {
+  filter: brightness(1.04);
+  transform: none;
+}
+
+/* ---- bookmarks star ------------------------------------------------------
+   DECLARED VISIBLE CHANGE: the gold #f0b354 becomes the accent, in service of
+   "one accent". The filled-vs-outline distinction that carries the information
+   is untouched — only the hue moves. */
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button.hs-bookmarks-btn.has-items,
+.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button.hs-bookmarks-btn.has-items svg {
+  color: #2f6bff;
+  fill: currentColor;
+}
+/* the notification count badge is .bubble; .hs-bookmarks-count only exists once
+   a bookmark has been starred, so both are covered */
+.hs-shell.bf-shell .topbar.hs-topbar .bubble,
+.hs-shell.bf-shell .topbar.hs-topbar .hs-bookmarks-count {
+  background: #2f6bff;
+  color: #ffffff;
+  border-radius: 999px;
+  font-size: var(--bf-app-micro);
+  font-weight: 700;
+}
+
+/* ---- verify-email pill: hover INVERTS (hover move 2) ------------------- */
+.hs-shell.bf-shell .topbar .topbar-verify {
+  border-radius: 999px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #575550;
+  font-size: var(--bf-app-meta);
+  font-weight: 600;
+  box-shadow: none;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease;
+}
+.hs-shell.bf-shell .topbar .topbar-verify:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+
+/* ---- divider + account -------------------------------------------------- */
+.hs-shell.bf-shell .hs-topbar-divider {
+  background: rgba(28, 28, 26, 0.13);
+}
+.hs-shell.bf-shell .topbar.hs-topbar .reports-avatar {
+  background: #2f6bff;
+  color: #ffffff;
+  border-radius: 50%;
+  box-shadow: none;
+}
+.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button {
+  color: #1c1c1a;
+  border-radius: var(--bf-radius-control);
+}
+.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button:hover {
+  background: rgba(28, 28, 26, 0.05);
+}
+.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button svg {
+  color: #575550;
+}
+
+/* ============================ 2. the rail ================================
+   Opaque, not translucent: the flyout needs solid ground under it. */
+.hs-shell.bf-shell .sidebar.hs-rail {
+  background: #f5f6fa;
+  border-right: 1px solid rgba(28, 28, 26, 0.07);
+  box-shadow: none;
+  color: #575550;
+}
+.hs-shell.bf-shell .sidebar.hs-rail::after,
+.hs-shell.bf-shell .sidebar.hs-rail::before {
+  background: rgba(28, 28, 26, 0.07);
+}
+
+.hs-shell.bf-shell .hs-rail-btn {
+  border-radius: var(--bf-radius-control);
+  background: transparent;
+  color: #575550;
+  box-shadow: none;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.hs-shell.bf-shell .hs-rail-btn:hover,
+.hs-shell.bf-shell .hs-rail-slot.open .hs-rail-btn {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+}
+/* the rail's focus affordance was `outline: 0` and nothing else — a recorded
+   weakness. It now matches the top bar. */
+.hs-shell.bf-shell .hs-rail-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+}
+.hs-shell.bf-shell .hs-rail-btn.active {
+  background: #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+}
+.hs-shell.bf-shell .hs-rail-btn.active:hover {
+  background: #2f6bff;
+  color: #ffffff;
+}
+/* the recommended dot's 2px cutout was punched against the navy ground */
+.hs-shell.bf-shell .hs-rail-btn.recommended::after {
+  background: #2f6bff;
+  box-shadow: 0 0 0 2px #f5f6fa;
+}
+/* NEW keeps the accent; BETA's light-on-navy violet vanishes on paper */
+.hs-shell.bf-shell .hs-rail-tag {
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(47, 107, 255, 0.1);
+  color: #2f6bff;
+}
+.hs-shell.bf-shell .hs-rail-tag.beta {
+  background: rgba(109, 40, 217, 0.1);
+  color: #6d28d9;
+}
+
+/* Short-viewport fix, pure CSS, no scroll. Nine hubs at 46px plus the gear at
+   48px plus 20px padding is 482px of rail, so below ~540px of viewport height
+   the rail overflows today with no scroll and no affordance. Shrinking the
+   buttons brings it to 428px.
+
+   The list is deliberately NOT made scrollable: setFlyoutTop(anchor.offsetTop)
+   is not scroll-adjusted, so a scrolled list would mis-place every flyout. If a
+   tenth hub ever lands, the fix is offsetTop - list.scrollTop plus overflow-y on
+   .hs-rail-list ONLY — never on the <aside>, which must stay overflow: visible
+   so flyouts can escape it. */
+@media (max-height: 620px) {
+  .hs-shell.bf-shell .hs-rail-list {
+    gap: 4px;
+  }
+  .hs-shell.bf-shell .hs-rail-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* ============================ 3. the rail flyout ========================= */
+.hs-shell.bf-shell .hs-flyout {
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-float);
+  animation: hs-flyout-in var(--bf-dur-panel) var(--bf-ease) both;
+}
+.hs-shell.bf-shell .hs-flyout-head {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.hs-shell.bf-shell .hs-flyout-item {
+  border-radius: 10px;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row-strong);
+  font-weight: 500;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    transform var(--bf-dur-hover) var(--bf-ease);
+}
+.hs-shell.bf-shell .hs-flyout-item svg {
+  color: #8a877e;
+}
+/* hover move 3: the menu-row nudge */
+.hs-shell.bf-shell .hs-flyout-item:hover {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+  transform: translateX(var(--bf-slide));
+}
+.hs-shell.bf-shell .hs-flyout-item:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+.hs-shell.bf-shell .hs-flyout-item.active {
+  background: rgba(47, 107, 255, 0.08);
+  color: #2f6bff;
+  font-weight: 650;
+}
+.hs-shell.bf-shell .hs-flyout-item.active svg {
+  color: #2f6bff;
+}
+.hs-shell.bf-shell .hs-flyout-tag {
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(47, 107, 255, 0.1);
+  color: #2f6bff;
+}
+.hs-shell.bf-shell .hs-flyout-tag.beta {
+  background: rgba(109, 40, 217, 0.1);
+  color: #6d28d9;
+}
+.hs-shell.bf-shell .hs-flyout-star {
+  color: #8a877e;
+  transition:
+    opacity var(--bf-dur-press) var(--bf-ease),
+    color var(--bf-dur-press) var(--bf-ease);
+}
+.hs-shell.bf-shell .hs-flyout-star[aria-pressed="true"] {
+  color: #2f6bff;
+}
+.hs-shell.bf-shell .hs-flyout-star[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+/* The hover-reveal control layer, rescued for touch (grafted from the Editorial
+   concept). Below 1024px a pointer never rests, so a star that only appears on
+   hover is unreachable. Pinned semi-visible instead of hidden. */
+@media (max-width: 1024px) {
+  .hs-shell.bf-shell .hs-flyout-star {
+    opacity: 0.55;
+  }
+}
+/* the add-on tooltip: navy bubble becomes an ink pill */
+.hs-shell.bf-shell .hs-flyout-tip {
+  background: #1c1c1a;
+  color: #fdfcf9;
+  border: 0;
+  border-radius: var(--bf-radius-control);
+  box-shadow: var(--bf-shadow-pill);
+}
+.hs-shell.bf-shell .hs-flyout-tip p {
+  max-width: var(--bf-app-prose);
+  color: #fdfcf9;
+}
+.hs-shell.bf-shell .hs-flyout-tip::before {
+  background: #1c1c1a;
+}
+.hs-shell.bf-shell .hs-flyout-upgrade {
+  color: #2f6bff;
+}
+
+/* The Schedule hub's saved-views block lives in schedule.css:1945, NOT in the
+   shell sheet — the trap the inventory's completeness check flagged. Without
+   these three rules the Schedule flyout would show a navy-era block sitting
+   inside a white card. */
+.hs-shell.bf-shell .hs-flyout .hs-flyout-views {
+  border-top: 1px solid rgba(28, 28, 26, 0.07);
+}
+.hs-shell.bf-shell .hs-flyout .hs-flyout-view {
+  border-radius: 10px;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row-strong);
+  font-weight: 500;
+  transition:
+    background var(--bf-dur-hover) ease,
+    transform var(--bf-dur-hover) var(--bf-ease);
+}
+.hs-shell.bf-shell .hs-flyout .hs-flyout-view:hover {
+  background: rgba(28, 28, 26, 0.05);
+  transform: translateX(var(--bf-slide));
+}
+.hs-shell.bf-shell .hs-flyout .hs-flyout-view em {
+  color: #8a877e;
+  font-size: var(--bf-app-eyebrow);
+  font-style: normal;
+}
+
+/* ============================ 4. the four top-bar menus ==================
+   Markup, roles, ids, item labels, titles, ordering, Escape handling and the
+   outside-mousedown closers are all untouched. Surface only. */
+.hs-shell.bf-shell .hs-menu,
+.hs-shell.bf-shell .hs-bookmarks-menu,
+.hs-shell.bf-shell .notifications-panel,
+.hs-shell.bf-shell .reports-account-menu {
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-float);
+}
+.hs-shell.bf-shell .hs-menu,
+.hs-shell.bf-shell .hs-bookmarks-menu,
+.hs-shell.bf-shell .notifications-panel {
+  animation: hs-pop 0.22s var(--bf-ease) both;
+}
+/* the account menu never carried .hs-menu, so it never animated at all — a
+   recorded inconsistency. It joins the others. */
+.hs-shell.bf-shell .reports-account-menu {
+  animation: hs-pop 0.22s var(--bf-ease) both;
+}
+.hs-shell.bf-shell .hs-menu-head,
+.hs-shell.bf-shell .notifications-panel > header,
+.hs-shell.bf-shell .notifications-panel h3 {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.hs-shell.bf-shell .hs-menu-item,
+.hs-shell.bf-shell .hs-bookmark-item,
+.hs-shell.bf-shell .reports-account-menu button,
+.hs-shell.bf-shell .notifications-panel li > button {
+  border-radius: 10px;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row-strong);
+  font-weight: 500;
+  transition:
+    background var(--bf-dur-hover) ease,
+    transform var(--bf-dur-hover) var(--bf-ease);
+}
+.hs-shell.bf-shell .hs-menu-item:hover,
+.hs-shell.bf-shell .hs-bookmark-item:hover,
+.hs-shell.bf-shell .reports-account-menu button:hover,
+.hs-shell.bf-shell .notifications-panel li > button:hover {
+  background: rgba(28, 28, 26, 0.05);
+  transform: translateX(var(--bf-slide));
+}
+.hs-shell.bf-shell .hs-menu-item svg,
+.hs-shell.bf-shell .reports-account-menu button svg {
+  color: #8a877e;
+}
+.hs-shell.bf-shell .hs-menu-tag {
+  border-radius: 999px;
+  background: rgba(47, 107, 255, 0.1);
+  color: #2f6bff;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.hs-shell.bf-shell .hs-menu-tag.beta {
+  background: rgba(109, 40, 217, 0.1);
+  color: #6d28d9;
+}
+.hs-shell.bf-shell .hs-bookmarks-empty,
+.hs-shell.bf-shell .hs-bookmarks-empty p {
+  max-width: var(--bf-app-prose);
+  color: #575550;
+  font-size: var(--bf-app-meta);
+}
+.hs-shell.bf-shell .hs-bookmark-hub,
+.hs-shell.bf-shell .hs-bookmark-item em {
+  color: #8a877e;
+  font-size: var(--bf-app-eyebrow);
+  font-style: normal;
+}
+/* hover move 3 on the footer link's icon */
+.hs-shell.bf-shell .hs-bookmarks-add {
+  color: #2f6bff;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+}
+.hs-shell.bf-shell .hs-bookmarks-add svg {
+  transition: transform var(--bf-dur-hover) var(--bf-ease);
+}
+.hs-shell.bf-shell .hs-bookmarks-add:hover svg {
+  transform: translateX(var(--bf-slide));
+}
+
+/* ---- notification rows -------------------------------------------------- */
+.hs-shell.bf-shell .notifications-panel li strong {
+  color: #1c1c1a;
+  font-size: var(--bf-app-row-strong);
+  font-weight: 600;
+}
+.hs-shell.bf-shell .notifications-panel li p {
+  color: #575550;
+  font-size: var(--bf-app-meta);
+  font-weight: 500;
+  max-width: var(--bf-app-prose);
+}
+.hs-shell.bf-shell .notifications-panel li time {
+  color: #8a877e;
+  font-size: var(--bf-app-eyebrow);
+}
+.hs-shell.bf-shell .notifications-panel li .notification-icon,
+.hs-shell.bf-shell .notifications-panel li i {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ============================ 5. command palette =========================
+   command-palette.css has zero keyframes and zero transitions today. The two
+   below are the only new animation in this file.
+
+   NOTE the class is `.cmdk`, not `.cmdk-dialog` — the concept named it wrongly
+   and a `.cmdk-dialog` rule would have matched nothing. Verified against
+   components/CommandPalette.tsx.
+
+   Mounting stays synchronous. The palette resets its query and focuses the input
+   inside a requestAnimationFrame, and anything that delays mount races that
+   focus. So this is CSS on an already-mounted node, never a JS transition. */
+@keyframes bf-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes bf-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hs-shell.bf-shell .cmdk-backdrop {
+  animation: bf-fade var(--bf-dur-press) var(--bf-ease) both;
+}
+.hs-shell.bf-shell .cmdk {
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-card);
+  /* the stage step: the palette is the one full-page modal object in the shell */
+  box-shadow: var(--bf-shadow-stage);
+  animation: bf-pop 0.22s var(--bf-ease) both;
+}
+.hs-shell.bf-shell .cmdk-input {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1c1c1a;
+}
+.hs-shell.bf-shell .cmdk-input::placeholder {
+  color: #8a877e;
+}
+.hs-shell.bf-shell .cmdk-group {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.hs-shell.bf-shell .cmdk-item {
+  border-radius: 10px;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row-strong);
+  transition:
+    background var(--bf-dur-hover) ease,
+    transform var(--bf-dur-hover) var(--bf-ease);
+}
+.hs-shell.bf-shell .cmdk-item[aria-selected="true"] {
+  background: rgba(47, 107, 255, 0.08);
+  color: #2f6bff;
+  transform: translateX(var(--bf-slide));
+}
+/* .cmdk-label is rendered by CommandPalette.tsx but has no rule in
+   command-palette.css — it has been unstyled all along. */
+.hs-shell.bf-shell .cmdk-label {
+  font-size: var(--bf-app-row-strong);
+  font-weight: 600;
+  color: inherit;
+}
+.hs-shell.bf-shell .cmdk-empty {
+  color: #575550;
+  font-size: var(--bf-app-row);
+  max-width: var(--bf-app-prose);
+}
+.hs-shell.bf-shell .cmdk-hint kbd,
+.hs-shell.bf-shell .cmdk-foot kbd {
+  background: rgba(28, 28, 26, 0.05);
+  border: 0;
+  border-radius: 6px;
+  color: #575550;
+  font-size: var(--bf-app-micro);
+}
+.hs-shell.bf-shell .cmdk-foot {
+  color: #8a877e;
+  font-size: var(--bf-app-eyebrow);
+  border-top: 1px solid rgba(28, 28, 26, 0.07);
+}
+
+/* ============================ 6. reduced motion ==========================
+   Extends what already exists rather than replacing it. The four blocks in
+   app-shell-hubspot.css null the shell's keyframes by name and still apply;
+   these null only what this file introduced. */
+@media (prefers-reduced-motion: reduce) {
+  .hs-shell.bf-shell .cmdk,
+  .hs-shell.bf-shell .cmdk-backdrop,
+  .hs-shell.bf-shell .hs-flyout,
+  .hs-shell.bf-shell .hs-menu,
+  .hs-shell.bf-shell .hs-bookmarks-menu,
+  .hs-shell.bf-shell .notifications-panel,
+  .hs-shell.bf-shell .reports-account-menu {
+    animation: none;
+  }
+  .hs-shell.bf-shell .hs-flyout-item:hover,
+  .hs-shell.bf-shell .hs-flyout .hs-flyout-view:hover,
+  .hs-shell.bf-shell .hs-menu-item:hover,
+  .hs-shell.bf-shell .hs-bookmark-item:hover,
+  .hs-shell.bf-shell .reports-account-menu button:hover,
+  .hs-shell.bf-shell .notifications-panel li > button:hover,
+  .hs-shell.bf-shell .cmdk-item[aria-selected="true"],
+  .hs-shell.bf-shell .hs-bookmarks-add:hover svg {
+    transform: none;
+  }
+}
