@@ -1624,3 +1624,105 @@
      the cluster where its two values (#0032b0 in proj/equip/mat, #b45309 in
      crew) sit side by side.
    ============================================================================ */
+
+/* ============================================================================
+   13. FIELD UPDATES, DELAYIQS AND REPORTS (Phase 4 step 8)
+   ----------------------------------------------------------------------------
+   All three are hs-index pages, so section 7 already did their index chrome.
+   What was left, found by measuring each page, was a stratum of colour from
+   BuildFlow's ORIGINAL navy-and-orange identity that the redesign never
+   reached — and it is still rendering.
+
+   TIMECARD AND MAP ARE DEFERRED, on purpose. Both are add-on gated in this
+   workspace: clicking either opens the add-on prompt instead of the page, so I
+   could not see them, and their --tc-* tokens never even load. Writing rules
+   against selectors I cannot test is exactly the mistake this phase kept
+   catching — roughly half the concept's guessed selectors were wrong. They need
+   an unlocked add-on or a seeded workspace, and then one more pass.
+   ============================================================================ */
+
+/* ---- 13a. the orange stratum ------------------------------------------
+   redesign.css still carries the pre-redesign accent as :root tokens, and they
+   are live. Measured on Field Updates:
+     --focus:         rgba(251, 133, 0, 0.3)    <- the GLOBAL focus ring is orange
+     --shadow-accent: 0 10px 24px rgba(251, 133, 0, 0.26)
+   and .primary-button really does render an orange glow under a blue fill.
+   Custom properties inherit, so redeclaring them on the scope re-points every
+   consumer at once without editing the file that owns them. */
+.bf-shell {
+  --focus: rgba(47, 107, 255, 0.3);
+  --shadow-accent: 0 4px 12px rgba(47, 107, 255, 0.2);
+}
+.bf-shell ::selection {
+  background: rgba(47, 107, 255, 0.18);
+  color: inherit;
+}
+/* the primary button is global but its radius drifted per scope: 999px on Field
+   Updates, 11px on DelayIQs. One grammar, one radius. */
+.bf-shell .primary-button {
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+}
+.bf-shell .primary-button:hover {
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+}
+
+/* ---- 13b. Reports ------------------------------------------------------
+   Its cards carried rgba(15, 35, 58, 0.04) — a navy-tinted shadow from the old
+   identity. The shadow is not pinned, so it moves onto the ink ladder.
+
+   The RADIUS is pinned at 12px by redesign.css's one !important, and I am
+   accepting that rather than escalating: 12px is a real rung on the ladder, and
+   firing a counter-!important across a dozen classes to buy 6px of corner is
+   not worth making this sheet the thing that fights the cascade.
+
+   NOT TOUCHED: .reports-kpi-basis. It overrides a base rule that is green at
+   weight 900 (it used to hold a fake "+3% vs Q1"), and it currently renders
+   rgb(107,114,128) at 500, which is correct. Any re-derivation of these card
+   rules silently turns every provenance line green. Also untouched: the six KPI
+   values render "—" rather than a confident 0 when there is no data, and that em
+   dash is load-bearing. */
+.bf-shell .reports-card,
+.bf-shell .reports-kpi-card,
+.bf-shell .reports-chart-card,
+.bf-shell .reports-efficiency-card {
+  border-color: rgba(28, 28, 26, 0.07);
+  box-shadow: var(--bf-shadow-card);
+}
+
+/* ---- 13c. DelayIQs ----------------------------------------------------- */
+/* .diq-panel carried rgba(11, 14, 20, 0.35) — a near-black shadow at 35% alpha,
+   about seven times the ladder's card step. */
+.bf-shell .delayIQ-rx .diq-panel {
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+}
+/* an orange-red ring, from the same stratum as 13a */
+.bf-shell .delayIQ-rx .diq-kicker-dot {
+  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
+}
+.bf-shell .delayIQ-rx .diq-risk,
+.bf-shell .delayIQ-rx .diq-notify {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 13d. Field Updates ------------------------------------------------ */
+/* rgba(66, 92, 244, 0.28) is a purple-blue, not the accent */
+.bf-shell .field-rx .crew-card-icon {
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+}
+.bf-shell .field-rx .field-dropzone {
+  border-radius: var(--bf-radius-panel);
+}
+
+/* ---- 13e. the status band, wherever it appears -------------------------
+   .ss-band / .ss-strip is shared by the Dashboard, Projects, Reports and the
+   Schedule pages and is deliberately unscoped in its own sheet. Step 6 only
+   brought the .sched-rx copy onto the ladder, which left it at 14px on Reports.
+   Scoped to the shell instead of to a page, so all four agree. */
+.bf-shell .ss-strip,
+.bf-shell .ss-band {
+  border-color: rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+}
