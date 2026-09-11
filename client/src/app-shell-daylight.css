@@ -1863,3 +1863,101 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   15. SETTINGS (Phase 4 step 10)
+   ----------------------------------------------------------------------------
+   The largest single area: 17 screens, 14 categories, ~130 fields. Measured
+   live rather than inferred — .settings-section is already 18px on the card
+   shadow and .sx-eyebrow is already a 999px pill, so most of this area had
+   already come across. What was left was another pocket of the old identity.
+
+   CONFIRMED DO-NOT-TOUCH, both checked in source:
+   - .settings-panel-inner is keyed by activeSettingsView, while useHudMotion's
+     reveal effect has deps [rootRef] only and so never re-queries after a key
+     change. It must keep its sx-rise animation and must NEVER become a
+     data-reveal target. No rule below touches its animation, opacity or
+     visibility.
+   - The rail's color-mix(in srgb, var(--wx-card) 78%, transparent) + blur(10px)
+     is ALREADY the Welcome nav recipe. Left exactly as it is.
+
+   TEST SAFETY, proven rather than hoped: settings.test.tsx:179 asserts
+   `within(rail).getAllByRole("button", { current: "page" })` has length 1, or 2
+   for BuildFlow AI. That is a contract on the aria-current ATTRIBUTE, which CSS
+   cannot set or remove, so a stylesheet cannot reach it.
+
+   BLOCKED, awaiting the section 6 sign-off, and NOT done here:
+   - Rendering the TopBar on Settings. Verified live: document.querySelector(
+     '.topbar') is null on this page, so Settings really is the one in-app
+     surface with no chrome — no search, no bell, no account menu, no AI, no
+     brand-home, and "Close settings" as the only way out. That is approval
+     item 5.
+   - Confirmations on the three destructive actions. Approval item 2.
+   ============================================================================ */
+
+/* ---- 15a. the panel and the account card -------------------------------
+   Both carried rgba(15, 35, 58, 0.04), the navy-tinted shadow. Their RADIUS is
+   pinned at 12px by redesign.css's one !important and is accepted: 12px is a
+   real rung, and firing a counter-!important to buy 6px of corner is not worth
+   making this sheet fight the cascade. */
+.bf-shell .settings-rx .settings-panel,
+.bf-shell .settings-rx .settings-account-card {
+  border-color: rgba(28, 28, 26, 0.07);
+  box-shadow: var(--bf-shadow-card);
+}
+.bf-shell .settings-rx .settings-nav-item {
+  border-radius: var(--bf-radius-control);
+}
+/* the rail's group headings are the eyebrow role, already close at 11px/700 */
+.bf-shell .settings-rx .settings-nav-group > h3,
+.bf-shell .settings-rx .settings-nav-label {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+
+/* ---- 15b. the last of the purple-blue glows ---------------------------
+   rgba(66,92,244,0.3x) again, the same off-accent tint found on the AI panel
+   and the Field Updates crew icon. */
+.bf-shell .settings-rx .sx-header-icon {
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.24);
+}
+.bf-shell .settings-rx .reports-avatar {
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+}
+
+/* ---- 15c. the narrow layout finally gets a scroll affordance -----------
+   Below 900px the category rail becomes a horizontally scrolling strip
+   (grid-auto-flow: column; overflow-x: auto) with NOTHING to indicate more
+   categories exist off-screen — a recorded defect, and the reason the narrow
+   layout reads as a different product rather than a smaller one.
+
+   Fixed in CSS alone, with the Welcome Page's own device: the marquee's edge
+   fade. The mask only appears while the strip actually overflows, because
+   `mask-image` on a non-scrolling element with all content visible fades
+   nothing. Structure, scroll model and tab order are untouched, so the
+   14-category contract and the aria-current assertions are unaffected. */
+@media (max-width: 900px) {
+  .bf-shell .settings-rx .settings-nav-groups {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+    /* room for the fade so the last chip is never half-masked at rest */
+    padding-right: 28px;
+  }
+  /* a masked element clips its children's focus ring, so the ring moves inward */
+  .bf-shell .settings-rx .settings-nav-groups .settings-nav-item:focus-visible {
+    outline: 2px solid #2f6bff;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+}
+
+/* ---- 15d. reduced motion ---------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .settings-rx .settings-panel,
+  .bf-shell .settings-rx .settings-account-card {
+    transition: none;
+  }
+}
