@@ -3279,3 +3279,245 @@
     transition: none;
   }
 }
+
+/* ============================================================================
+   24. THE DASHBOARD'S SECTIONS, IN THE REFERENCE CARD LANGUAGE
+   ============================================================================
+   The brief: every section of the Dashboard should read like the two reference
+   cards -- a large rounded card on a faint vertical gradient with a hairline
+   border and a soft shadow; a tinted rounded-square icon chip; a small label
+   over a big numeral with a rounded delta pill beside it; a caption line; and
+   for a panel, its title inside the card with pill-shaped outlined controls on
+   the right.
+
+   TWO CONSTRAINTS, BOTH HONOURED LITERALLY. The information does not change:
+   not one rule here hides, truncates or replaces content. The colours and the
+   font do not change: every value below is already in the product -- the ink
+   ladder (#1c1c1a / #575550), the paper pair (#ffffff / #fdfcf9), the existing
+   hairline alphas, the tone-* and cc-*-soft tints, and Inter. The reference is
+   set in a monospace face and that is deliberately NOT adopted; the ask was to
+   keep the font for now, so what changes here is geometry, surface and
+   hierarchy only.
+
+   WHAT WAS ALREADY RIGHT, and is therefore left alone rather than rewritten:
+   .cc-stat is already the reference tile, down to a real `.cc-trend` delta pill
+   with up/down/flag tones; .cc-stat-ico and .kpi-icon are already tinted
+   rounded squares; .cc-link is already an outlined pill. The gap was never the
+   tiles -- it was that the PANEL around them is not a card at all. Every one of
+   the twelve board panels paints no background, no border, no radius and no
+   shadow today, and its title sits above the content rather than inside a card
+   with it. That is what 24a fixes, and it is the change that carries the look.
+
+   THE ONE COST, stated plainly. A card needs interior padding, and a panel's
+   height is set by the board in 40px rows, so padding comes out of the content
+   area. There is no slack to take it from: of the twelve panels the most any
+   has is 10px, and five are already over their height (three already scroll).
+   So panels scroll a little sooner than they did. Nothing is lost -- the body
+   is `overflow: auto` and the board already marks a scrolling body as a
+   labelled, focusable region -- but it is a real trade, and the alternative
+   (raising the default row spans so the padding is absorbed) is a change to
+   dashGrid's defaults rather than to this sheet.
+
+   NO NEW MOTION. Nothing here transforms, transitions or animates, so RULE R
+   has nothing to pair. Every type size goes through a --bf-* token and every
+   state an earlier sheet wrote one class above its rest state is re-declared
+   below, both because the guards require it and because the state-twin tie is
+   how this sheet has silently killed a hover before.
+   ------------------------------------------------------------------------- */
+
+/* ---- 24a. the panel becomes one card, with its title inside it -------------
+   Written at (0,4,0) to match the prefix this sheet already uses on the board,
+   which keeps it BELOW the (0,5,0) drag / resize / land rules in hs-home.css so
+   those still win. It does outrank hs-home's (0,4,0) `.dash-block.is-dragging`
+   placeholder, so 24b re-declares what that rule said. */
+.bf-shell .dash-rx.hs-home .dash-block {
+  /* 12px vertical, not the 16-20px the reference's proportions would suggest.
+     Every vertical pixel here comes out of the panel's content area (see the
+     note above), so the padding is the least that still reads as a card rather
+     than the most that looks like the reference. */
+  padding: 12px 16px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: var(--bf-radius-card);
+  /* The reference's surface: white falling to the paper tone this sheet already
+     uses for the app's own ground, so the gradient introduces no new colour. */
+  background-color: #ffffff;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  box-shadow: var(--bf-shadow-card);
+}
+
+/* ---- 24b. the interaction states 24a now outranks -------------------------
+   hs-home.css:1284 dresses a lifted panel's empty slot as a dashed placeholder
+   with no shadow and a transparent border, at (0,4,0). 24a ties that and loads
+   later, so the placeholder would keep this card's border and shadow and stop
+   reading as a hole. Re-declared one class up. The (0,5,0) rules at
+   hs-home.css:1801/1817/1824 already outrank 24a and are left untouched. */
+.bf-shell .dash-rx.hs-home .dash-board .dash-block.is-dragging {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* The resize and land states carry their own radius; keep them on this card's
+   radius so a panel does not change shape at the moment it is grabbed. */
+.bf-shell .dash-rx.hs-home .dash-board .dash-block.is-resizing,
+.bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing,
+.bf-shell .dash-rx.hs-home.is-customizing .dash-block {
+  border-radius: var(--bf-radius-card);
+}
+
+/* ---- 24c. the title row, now inside the card ------------------------------
+   It used to be a header ABOVE the card ("header above the card, not in it",
+   hs-home.css:1495). Inside one, its 10px bottom margin is too tight against
+   the content and its hairline reads as a divider rather than an edge, so the
+   margin opens up and the rule comes off. The SIZE of the h2 is untouched on
+   purpose: --bf-app-panel is frozen because the board's skeleton measures
+   against it, and a guard asserts that. */
+.bf-shell .dash-rx.hs-home .dash-block > .hs-widget-head,
+.bf-shell .dash-rx.hs-home .dash-block .cc-panel-head,
+.bf-shell .dash-rx.hs-home .dash-block .cc-sec-head {
+  margin: 0 0 10px;
+  padding: 0;
+  border-bottom: 0;
+}
+
+/* The reference's title block is title-then-caption. There is no subtitle node
+   on a board panel, so this only sets the title's own measure and colour; the
+   caption is markup this sheet cannot add. */
+.bf-shell .dash-rx.hs-home .dash-block > .hs-widget-head h2,
+.bf-shell .dash-rx.hs-home .dash-block .cc-panel-head h2,
+.bf-shell .dash-rx.hs-home .dash-block .cc-sec-head h2 {
+  letter-spacing: -0.01em;
+  color: #1c1c1a;
+}
+
+/* The head's icon becomes the reference's chip rather than a loose glyph. */
+.bf-shell .dash-rx.hs-home .dash-block > .hs-widget-head h2 svg,
+.bf-shell .dash-rx.hs-home .dash-block .cc-sec-head h2 svg {
+  color: #575550;
+}
+
+/* ---- 24d. the tiles, brought onto the card's radius -----------------------
+   These already had the reference's anatomy; what they did not have was its
+   geometry. 12px radius inside a 20px card reads as a different family, so both
+   tile shapes move onto the card ladder one rung down, take the same gradient,
+   and drop their own border weight so a tile inside a card is not two hairlines
+   deep. */
+.bf-shell .dash-rx.hs-home .cc-stat,
+.bf-shell .dash-rx.hs-home .kpi-card,
+.bf-shell .dash-rx.hs-home .tc-dash-card,
+.bf-shell .dash-rx.hs-home .cc-quick {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+  background-color: #ffffff;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  box-shadow: none;
+}
+
+/* The hover feedback these four tiles had. hs-home.css:1039 sets it at (0,4,0)
+   and 24d ties it from a later sheet, so without this the raised shadow and the
+   border move would both go. Values are hs-home's own, kept verbatim. */
+.bf-shell .dash-rx.hs-home .cc-stat:hover,
+.bf-shell .dash-rx.hs-home .kpi-card-button:hover,
+.bf-shell .dash-rx.hs-home .tc-dash-card:hover {
+  border-color: #d6dae4;
+  box-shadow: var(--bf-shadow-raised);
+}
+
+/* The KPI tile's selected state, same tie, same reason (hs-home.css:1050). */
+.bf-shell .dash-rx.hs-home .kpi-card-button.active {
+  border-color: rgba(47, 107, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12);
+}
+
+/* ---- 24e. the icon chip -----------------------------------------------------
+   A rounded SQUARE, which is what separates the reference's chip from a round
+   avatar: the radius is a third of the box, not half of it. The tints are the
+   existing tone-* and kpi colour classes and are not touched. */
+.bf-shell .dash-rx.hs-home .cc-stat-ico,
+.bf-shell .dash-rx.hs-home .kpi-icon {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 24f. the numeral, the label and the caption --------------------------
+   The reference's hierarchy is a quiet label, a numeral that dominates, and a
+   caption that recedes. All three sizes go through the app's own type tokens,
+   so no fifth scale appears and the guard stays true. The inks are the ladder
+   already in use. */
+/* The reference's label is TITLE CASE at normal tracking -- "New Customers",
+   not "NEW CUSTOMERS". .cc-stat-label was uppercase with the eyebrow's 0.045em,
+   which is the right treatment for a column head and the wrong one here, and it
+   also made the two tile families read as two different components. Both now
+   read the reference's way. Only the case and the tracking move; the words are
+   untouched, and text-transform never changed what the label says. */
+.bf-shell .dash-rx.hs-home .cc-stat-label,
+.bf-shell .dash-rx.hs-home .kpi-card p,
+.bf-shell .dash-rx.hs-home .tc-dash-card p {
+  font-size: var(--bf-app-eyebrow);
+  letter-spacing: 0.005em;
+  text-transform: none;
+  color: #575550;
+}
+
+/* The numeral's SIZE is deliberately not set here. --bf-app-figure is the app's
+   KPI token and it clamps to its 20px floor below about a 1600px viewport, so
+   routing these through it SHRANK the figure from 26px and 28px to 20px -- the
+   exact opposite of the reference, whose numeral is the loudest thing on the
+   card. They were already dominant; what they lacked was the tracking and the
+   tabular figures that make a column of them line up. */
+.bf-shell .dash-rx.hs-home .cc-stat-value,
+.bf-shell .dash-rx.hs-home .kpi-card strong,
+.bf-shell .dash-rx.hs-home .tc-dash-card strong {
+  letter-spacing: var(--bf-app-figure-track);
+  color: #1c1c1a;
+  font-variant-numeric: tabular-nums;
+}
+
+.bf-shell .dash-rx.hs-home .cc-stat-note,
+.bf-shell .dash-rx.hs-home .kpi-card > div > span,
+.bf-shell .dash-rx.hs-home .tc-dash-card em {
+  font-size: var(--bf-app-meta);
+  color: #575550;
+}
+
+/* ---- 24g. the delta pill ---------------------------------------------------
+   .cc-trend is already the reference pill. It only needed the reference's
+   proportions: a touch more air around the glyph and the figure on tabular
+   numerals so a column of deltas lines up. Its up / down / flag tints are the
+   existing cc-*-soft pairs and are untouched. */
+.bf-shell .dash-rx.hs-home .cc-trend {
+  padding: 3px 9px 3px 7px;
+  border-radius: var(--bf-radius-pill);
+  font-size: var(--bf-app-micro);
+}
+
+/* ---- 24h. the outlined controls -------------------------------------------
+   The reference's header controls are outlined pills. .cc-link already is one;
+   the panel-head action row and the TimeCard's open button are brought onto the
+   same shape so a control reads the same wherever it sits. */
+.bf-shell .dash-rx.hs-home .cc-panel-head-actions button,
+.bf-shell .dash-rx.hs-home .tc-dash-open {
+  border-radius: var(--bf-radius-pill);
+}
+
+/* ---- 24i. the legend row ---------------------------------------------------
+   The reference's legend is a row of small SQUARES with a label -- the square
+   is what distinguishes a series key from a status dot. Only the readiness
+   panel renders a legend today. */
+.bf-shell .dash-rx.hs-home .legend-list span i,
+.bf-shell .dash-rx.hs-home .legend-list span em,
+.bf-shell .dash-rx.hs-home .legend-list span b {
+  border-radius: 3px;
+}
+
+/* ---- 24j. the status band, on the same card ------------------------------- */
+.bf-shell .dash-rx.hs-home .ss-band {
+  border-radius: var(--bf-radius-card);
+  background-color: #ffffff;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+}
+
+/* .ss-band navigates, so it keeps the lift section 17d gave it; re-declared
+   here because 24j ties the rest state that rule sits above. */
+.bf-shell .dash-rx.hs-home .ss-band:hover {
+  border-color: rgba(28, 28, 26, 0.13);
+  box-shadow: var(--bf-shadow-card-hover);
+}
