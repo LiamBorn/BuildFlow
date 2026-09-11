@@ -3521,3 +3521,84 @@
   border-color: rgba(28, 28, 26, 0.13);
   box-shadow: var(--bf-shadow-card-hover);
 }
+
+/* ============================================================================
+   25. THE DASHBOARD SECTIONS 24 DID NOT REACH, AND ONE THING IT BROKE
+   ============================================================================
+   Section 24 gave the card to `.dash-block`, which is every panel on the board.
+   An adversarial read of the page found three things wrong with stopping there.
+
+   FIRST, AND IT IS A REGRESSION 24 CAUSED. 24d sets `box-shadow: none` on the
+   tile shapes at (0,4,0). The board's drag ghost is a CLONE of a tile, and the
+   lift shadow that makes it read as picked up is written on
+   `.dash-rx.hs-home .dash-ghost > *` at (0,3,0) -- so 24d outranks it and a
+   dragged Performance or KPI tile lost its shadow entirely. 25a puts it back.
+   This is the state-twin tie again, in the one direction the earlier audit of
+   it missed: the twin was not a :hover or an .active but a descendant rule on a
+   clone, which no state-selector search would have surfaced.
+
+   SECOND, TWO WHOLE SECTIONS ARE NOT ON THE BOARD. `.dx-inner` has seven
+   children, and only one of them is the panel grid. Recent activity and the
+   TimeCard add-on are bare `<section data-reveal>` elements in normal flow, so
+   24 never touched them and they sat flat beside eleven cards. 25b cards them.
+   They are NOT height-constrained the way a board panel is -- nothing lays them
+   out in 40px rows -- so here the padding is the reference's own, and it costs
+   no content: neither section can be pushed into scrolling by it.
+
+   THIRD, THE STATUS BAND WAS HALF-DRESSED. 24j gave it the radius and the
+   gradient but not the edge, because its hairline and its absent shadow come
+   from a (0,3,0) rule that 24j never spoke to. It read as a different component
+   from the cards below it. 25c finishes it.
+   ------------------------------------------------------------------------- */
+
+/* ---- 25a. the drag ghost's lift, restored -------------------------------- */
+.bf-shell .dash-rx.hs-home .dash-ghost > * {
+  box-shadow:
+    0 26px 60px rgba(20, 32, 58, 0.26),
+    0 6px 16px rgba(20, 32, 58, 0.14);
+}
+
+/* ---- 25b. the two sections in normal flow ------------------------------- */
+.bf-shell .dash-rx.hs-home > .dx-inner > section[data-reveal] {
+  padding: 18px 20px 16px;
+  border: 1px solid rgba(28, 28, 26, 0.08);
+  border-radius: var(--bf-radius-card);
+  background-color: #ffffff;
+  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  box-shadow: var(--bf-shadow-card);
+}
+
+/* The status band is also a `section[data-reveal]` child of .dx-inner and it
+   already has its own padding, which is wider than a panel's because it carries
+   the hero figure. Keep it. */
+.bf-shell .dash-rx.hs-home > .dx-inner > section.ss-band {
+  padding: 22px 24px 20px;
+}
+
+/* Recent activity's inner `.hs-split` was its own 8px card. Inside the new one
+   that is a card in a card, so it flattens to what it actually is: a two-column
+   layout. Nothing is hidden -- only its surface comes off. */
+.bf-shell .dash-rx.hs-home > .dx-inner > section[data-reveal] .hs-split {
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* The TimeCard block's own head now sits inside the card, so it loses the rule
+   that used to separate it from the page. */
+.bf-shell .dash-rx.hs-home > .dx-inner > section[data-reveal] .tc-dash-head {
+  margin: 0 0 10px;
+  border-bottom: 0;
+}
+
+/* Its icon joins the chip ladder 24e set, so a chip is the same shape whether it
+   sits on a stat, a KPI or a TimeCard tile. */
+.bf-shell .dash-rx.hs-home .tc-dash-icon {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 25c. the status band's edge --------------------------------------- */
+.bf-shell .dash-rx.hs-home .ss-band {
+  border-color: rgba(28, 28, 26, 0.08);
+  box-shadow: var(--bf-shadow-card);
+}
