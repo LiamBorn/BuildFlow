@@ -1444,3 +1444,145 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   11. THE SEVEN SCHEDULE PAGES (Phase 4 step 6)
+   ----------------------------------------------------------------------------
+   The densest surface in the product: landing, month, week, list, kanban,
+   matrix, gantt. Existing rules are `.sched-rx X` at two classes, so
+   `.bf-shell .sched-rx X` at three wins.
+
+   FROZEN, and none of it is touched below. This block sets NO height,
+   min-height, vertical padding, overflow, touch-action, grid-template or
+   position anywhere:
+   - schedule-phone.css:235-305 names 21 selectors at a 40px minimum tap target
+     and loads BEFORE this sheet, so any height or vertical padding here would
+     silently shrink a phone tap target.
+   - touch-action on .schedule-job and .sched-act is owned by schedule-phone.css;
+     re-declaring it changes whether a swipe scrolls or lifts a card.
+   - the Matrix's doubled `.sched-matrix.sched-matrix { overflow: visible }`:
+     re-introducing overflow:hidden for rounded corners kills every Matrix
+     tooltip and fails pages.test.tsx's Matrix case.
+   - the four grid templates (the Week header and rows, declared three times
+     across styles.css, schedule.css and schedule-phone.css with a sticky crew
+     column, and the Month's four cell min-heights).
+   - .gantt-frame's height clamp. Step 0 measured it: the 336px is not a chrome
+     sum, the frame is not viewport-pinned, and nothing clips it.
+   - the landing h1 string, which appHarness.openSchedule() awaits, so it is
+     load-bearing for every test in every area that opens Schedule.
+
+   ALREADY ON THE LANGUAGE and deliberately left: .schedule-board at 20px on the
+   soft shadow, .kpi-card at 20px, .schedule-job at 14px (its border is the job's
+   STATUS colour, which is data, not decoration), and every 999px control -
+   .week-stepper, .select-box, .outline-button, .sched-views-add, .sched-book.
+   ============================================================================ */
+
+/* ---- 11a. the page header, unified with the index pages ----------------- */
+.bf-shell .sched-rx .dx-title {
+  font-size: var(--bf-app-title);
+  font-weight: 600;
+  letter-spacing: var(--bf-app-title-track);
+  line-height: var(--bf-app-title-lead);
+  color: #1c1c1a;
+}
+.bf-shell .sched-rx .dx-sub {
+  font-size: var(--bf-app-lede);
+  color: #575550;
+  max-width: var(--bf-app-prose);
+}
+/* The pulsing dot's ring is still rgba(26,115,232,0.12) - the Google blue,
+   left behind on both the landing and every view page. Decision 2 makes the
+   accent #2f6bff, so the ring follows it. */
+.bf-shell .sched-rx .dx-dot,
+.bf-shell .dash-rx .dx-dot {
+  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
+}
+
+/* ---- 11b. panels onto the ladder: 18px and the card shadow ------------- */
+.bf-shell .sched-rx .sched-home-section,
+.bf-shell .sched-rx .sched-rail-panel {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+}
+.bf-shell .sched-rx .sched-cpm,
+.bf-shell .sched-rx .ss-strip {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+}
+/* the six view cards are the one thing on the landing that navigates, so they
+   are the one thing licensed to lift */
+.bf-shell .sched-rx .sched-view-card {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+  transition:
+    transform var(--bf-dur-move) var(--bf-ease),
+    box-shadow var(--bf-dur-move) var(--bf-ease),
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .sched-rx .sched-view-card:hover {
+  transform: translateY(var(--bf-lift-dense));
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.bf-shell .sched-rx .schedule-side-panel,
+.bf-shell .sched-rx .unassigned-card,
+.bf-shell .sched-rx .sched-queue-row {
+  border-color: rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 11c. controls onto the button grammar ----------------------------- */
+/* the one blue button on the page was an 11px rectangle; it becomes the pill
+   every other primary in the product now is */
+.bf-shell .sched-rx .sched-new-activity {
+  border-radius: 999px;
+  border: 1px solid #2f6bff;
+  background: #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  transition:
+    background var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.bf-shell .sched-rx .sched-new-activity:hover {
+  background: #1f57e0;
+  border-color: #1f57e0;
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+}
+.bf-shell .sched-rx .sched-rail-foot-btn,
+.bf-shell .sched-rx .schedule-add-job-button {
+  border-radius: var(--bf-radius-control);
+  /* rgb(203,216,232) was a navy-era line colour */
+  border-color: rgba(28, 28, 26, 0.13);
+}
+.bf-shell .sched-rx .sched-cpm-baseline {
+  border-radius: var(--bf-radius-control);
+  border-color: rgba(28, 28, 26, 0.13);
+}
+.bf-shell .sched-rx .sched-views-label {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+
+/* ---- 11d. the board's day heads are deliberately NOT made eyebrows -----
+   My first pass tried to give them the eyebrow, against `.day-label` and
+   `.sched-matrix thead th`. Both match nothing: the Week board's day heads are
+   `.schedule-header > strong` and the Matrix is not a table. Having found the
+   real selectors I am choosing not to use them. Those heads are already 13px
+   uppercase, and they are the board's primary date axis rather than a repeated
+   secondary label - shrinking a date to 11.5px #8a877e on the densest surface
+   in the product would cost readability to buy consistency. The eyebrow earns
+   its place on table column heads, which repeat and are secondary. Left as is.
+
+/* ---- 11e. reduced motion ---------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .sched-rx .sched-view-card:hover {
+    transform: none;
+  }
+}
