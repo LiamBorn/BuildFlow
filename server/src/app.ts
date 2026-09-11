@@ -53,6 +53,7 @@ import {
   signState,
   type OAuthProvider
 } from "./oauth.js";
+import { assertRoutePolicyCovers, installRoutePolicy } from "./permissions.js";
 import crypto from "node:crypto";
 import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
@@ -617,6 +618,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * other. Either would close it; both mean neither has to be right on its own.
    */
   app.set("case sensitive routing", true);
+  /* Every route registered from here on gets its permission check prepended, and any route
+     with no entry in ROUTE_POLICY throws as it is registered. See server/src/permissions.ts. */
+  installRoutePolicy(app);
   // Expose the store manager to the server entrypoint (backup scheduler/boot snapshot) + ops routes.
   app.locals.storeManager = manager;
   const clientUrl = process.env.BUILDFLOW_CLIENT_URL ?? "http://localhost:5175/";
@@ -3145,6 +3149,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   /* ─────────────────── end Sales & Customer-Service Desk ───────────────────── */
 
   registerScheduleToolRoutes(app, store);
+
+  /* Last thing before the app is handed back: prove the policy and the router still agree. */
+  assertRoutePolicyCovers(app);
 
   return app;
 }
