@@ -173,19 +173,21 @@ export const outranks = (actor: PermissionLevel, subject: PermissionLevel): bool
    One route, two callers, two right answers. Spelling it in the table keeps that visible
    instead of burying it in a handler.
 
-   THIS TABLE SHIPS AT TODAY'S BEHAVIOUR ON PURPOSE. Every entry below is what the route
-   already does: "public" where it sat outside the session gate, "signed-in" where it sat
-   inside it. Not one request that succeeds today starts failing because of this file.
+   THIS TABLE FIRST SHIPPED AT TODAY'S BEHAVIOUR ON PURPOSE -- every entry was what the
+   route already did, so the mechanism could be reviewed with no behaviour to argue about.
+   That is history now: the rows were turned on in two later passes, the Owner-only ones and
+   then the Admin ones, and each of those was a diff of this table rather than a diff of the
+   server, which was the whole point of landing it empty-handed first.
 
-   That includes the single role check the codebase already had -- owner-only job-title
-   changes, an inline conditional in app.ts. It stays exactly where it is, and its route
-   is marked "signed-in" here so the middleware adds nothing on top of it. Moving that
-   decision into the table is a later step, because doing it now would widen the route to
-   Admins in the same commit that introduces the mechanism.
+   The one inline role check the codebase used to have, owner-only job-title changes, is now
+   the "team.title" row below and the conditional is gone from its handler.
 
-   So this is reviewable as a mechanism with no behaviour to argue about. Turning on the
-   Owner-only rows and then the Admin rows is a diff of this table rather than a diff of
-   the server.
+   Two checks are still deliberately NOT here, because a route-level capability cannot express
+   either. The commercial fields of POST /api/business-profile: one route carrying two
+   permissions, since naming the trade is a workspace setting and the plan is the commercial
+   relationship. And the rank rule on DELETE /api/team/users/:id, where the answer depends on
+   the subject as well as the caller. Both are can()/outranks() calls that say so where they
+   are.
 
    The keys are "METHOD <the path as Express registered it>". The boot assertion compares
    them against the live router, so a typo here is a startup failure rather than a hole. */
@@ -256,11 +258,6 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "PATCH /api/field-updates/:id": "field.report",
   "PATCH /api/jobs/:id": "jobs.write",
   "PATCH /api/org": "org.settings",
-  /* Leaving is granted to an Admin and a Member and NOT to an Owner -- the one row in GRANTS
-     where a lower level holds something the Owner does not. A workspace nobody owns cannot be
-     billed, transferred or closed, so an Owner transfers first. */
-  "POST /api/org/leave": "org.leave",
-  "POST /api/org/transfer": "org.transfer",
   "PATCH /api/projects/:id": "projects.write",
   "PATCH /api/sales/companies/:id": "public",
   "PATCH /api/sales/deals/:id": "public",
@@ -301,6 +298,11 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "POST /api/jobs": "jobs.write",
   "POST /api/materials": "resources.write",
   "POST /api/ops/backup": "public",
+  /* Leaving is granted to an Admin and a Member and NOT to an Owner -- the one row in GRANTS
+     where a lower level holds something the Owner does not. A workspace nobody owns cannot be
+     billed, transferred or closed, so an Owner transfers first. */
+  "POST /api/org/leave": "org.leave",
+  "POST /api/org/transfer": "org.transfer",
   "POST /api/projects": "projects.write",
   "POST /api/sales/activities": "public",
   "POST /api/sales/companies": "public",

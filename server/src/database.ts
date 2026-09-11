@@ -2333,8 +2333,12 @@ export class BuildFlowStore {
       "phases",
       "projects"
     ].forEach((table) => this.run(`DELETE FROM ${table}`));
-    // Seeded/sample people go; anyone linked to a login account stays.
-    this.run("DELETE FROM users WHERE accountId IS NULL");
+    /* Seeded/sample people go; anyone linked to a login account stays -- and so does anyone whose
+       login was REMOVED. `accountId IS NULL` alone could not tell those two apart, so reseeding a
+       workspace silently deleted the roster rows that migration 22 exists to preserve, taking the
+       named author of every field report and variance with them. Reachable from
+       POST /api/business-profile whenever the workspace has no projects. */
+    this.run("DELETE FROM users WHERE accountId IS NULL AND removedAt IS NULL");
   }
 
   private insertBootstrapPayload(payload: BootstrapPayload) {
@@ -2846,7 +2850,14 @@ export class BuildFlowStore {
     this.save();
   }
 
-  /** A workspace person for an invited teammate, with the role the inviter chose. */
+  /**
+   * A workspace person for an invited teammate, with the role the inviter chose.
+   *
+   * Dedupes on accountId, which a removed teammate no longer has -- so re-inviting someone who was
+   * removed gives them a second roster row rather than reviving the first. That is deliberate: the
+   * old row is the record of their previous tenure and every field report and variance they filed
+   * still points at it. Reviving it would re-attach that history to a new login.
+   */
   createTeammateUser(account: { id: string; name: string; email: string }, role: UserRole): User {
     const existing = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE accountId = ?", [account.id]);
     if (existing) return userRow(existing);
@@ -3484,6 +3495,26 @@ export class BuildFlowStore {
       this.run("DELETE FROM job_dependencies WHERE predecessorId = ?", [id]);
       this.run("DELETE FROM job_dependencies WHERE successorId = ?", [id]);
       this.run("DELETE FROM schedule_variances WHERE jobId = ?", [id]);
+      /* The variances ON this job are gone. The ones that NAME it are the subtler half: a pending
+         variance raised against job B carries a CPM-computed ripple of the successors it would push,
+         and one of those can be this job. acceptVariance's applyDates returns silently when a job is
+         missing, so accepting such a variance would skip that leg, move the rest, and still stamp
+         itself accepted -- a plan half-applied and recorded as agreed.
+         The leg cannot simply be dropped: the remaining shifts and projectSlipDays were derived
+         together, so a ripple with a hole in it is not a smaller true answer, it is a wrong one. The
+         pending variance is therefore discarded; the field report that raised it is untouched and
+         can raise a fresh one against the plan as it now stands. Resolved variances are history and
+         are left alone. */
+      const stale = this.all<{ id: string; proposal: string }>("SELECT id, proposal FROM schedule_variances WHERE status = 'pending'")
+        .filter((row) => {
+          try {
+            return (JSON.parse(row.proposal) as VarianceProposal).ripple?.some((item) => item.jobId === id) ?? false;
+          } catch {
+            return false;
+          }
+        })
+        .map((row) => row.id);
+      for (const varianceId of stale) this.run("DELETE FROM schedule_variances WHERE id = ?", [varianceId]);
       // field_updates.jobId is nullable, but percentComplete is only meaningful against a job --
       // POST /api/field-updates refuses one without the other -- so the two move together. The
       // report itself is kept: it is what a crew actually observed on a date, and that stays true

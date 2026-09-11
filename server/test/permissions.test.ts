@@ -680,3 +680,91 @@ describe("the routes the permissions were waiting for", () => {
     expect(after.body.users.find((user: { name: string }) => user.name === "member person").removedAt).toBeTruthy();
   });
 });
+
+describe("the two ways the record could still have been lost", () => {
+  it("keeps a removed teammate on the roster when the workspace is reseeded", async () => {
+    /* clearWorkspace() ended with `DELETE FROM users WHERE accountId IS NULL`, which cannot tell a
+       removed teammate from a seeded sample -- both have no login. So reseeding a workspace deleted
+       exactly the rows migration 22 exists to preserve, taking the named author of every field
+       report and variance with them. It is reachable: applyBusinessProfile clears and reseeds
+       whenever the workspace has no projects, and the client's "Launch Dashboard" path can run
+       more than once. */
+    const { owner, join } = await workspace();
+    await join("member", "crew@asphaltco.com");
+    const roster = await owner.get("/api/team").expect(200);
+    const person = roster.body.users.find((user: { name: string }) => user.name === "member person");
+    await owner.delete(`/api/team/users/${person.id}`).expect(200);
+
+    // Empty the workspace, which is what arms the reseed.
+    for (const project of (await owner.get("/api/bootstrap").expect(200)).body.projects) {
+      await owner.delete(`/api/projects/${project.id}`).expect(204);
+    }
+    await owner.post("/api/business-profile").send({ businessType: "Asphalt", selectedProducts: [] }).expect(200);
+
+    const after = await owner.get("/api/team").expect(200);
+    const survivor = after.body.users.find((user: { name: string }) => user.name === "member person");
+    expect(survivor).toBeTruthy();
+    expect(survivor.removedAt).toBeTruthy();
+    // The seeded sample people DID go, which is what that statement is for.
+    expect(after.body.users.some((user: { isSample: boolean; accountId: string | null }) => user.isSample && !user.accountId)).toBe(true);
+  });
+
+  it("discards a pending variance whose ripple named the deleted job", async () => {
+    /* Deleting the variances ON a job is the easy half. The subtle half is a pending variance
+       raised against ANOTHER job whose CPM ripple pushes this one: acceptVariance skips a leg whose
+       job is missing, moves the rest, and still stamps itself accepted -- a plan half-applied and
+       recorded as agreed. The ripple cannot just have the leg removed, because its shifts and
+       projectSlipDays were derived together, so the pending variance is discarded instead. */
+    const { app, owner, orgId } = await workspace();
+    const boot = await owner.get("/api/bootstrap").expect(200);
+    const [doomed, other] = boot.body.jobs as Array<{ id: string; projectId: string; name: string }>;
+    expect(doomed && other).toBeTruthy();
+
+    const manager = app.locals.storeManager as { getOrgStore: (id: string) => Promise<OrgStore> };
+    const orgStore = await manager.getOrgStore(orgId);
+    const proposal = {
+      currentStart: "2026-07-06",
+      currentEnd: "2026-07-08",
+      proposedStart: "2026-07-09",
+      proposedEnd: "2026-07-11",
+      // The leg that names the job about to be deleted.
+      ripple: [
+        {
+          jobId: doomed.id,
+          jobName: doomed.name,
+          currentStart: "2026-07-09",
+          currentEnd: "2026-07-10",
+          proposedStart: "2026-07-13",
+          proposedEnd: "2026-07-14",
+          shiftDays: 2,
+          critical: true
+        }
+      ],
+      projectSlipDays: 2,
+      criticalPath: true,
+      totalFloatDays: 0
+    };
+    orgStore.run(
+      "INSERT INTO schedule_variances (id, projectId, jobId, fieldUpdateId, kind, severity, status, reportedPercent, plannedPercent, varianceDays, detectedAt, proposal) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ["var-ripple", other.projectId, other.id, "fu-test", "behind", "High", "pending", 20, 60, 2, new Date("2026-06-16").toISOString(), JSON.stringify(proposal)]
+    );
+    // A resolved one naming the same job, which is history and must be left alone.
+    orgStore.run(
+      "INSERT INTO schedule_variances (id, projectId, jobId, fieldUpdateId, kind, severity, status, reportedPercent, plannedPercent, varianceDays, detectedAt, proposal, resolvedAt) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      ["var-history", other.projectId, other.id, "fu-test", "behind", "Low", "accepted", 20, 60, 2, new Date("2026-06-16").toISOString(), JSON.stringify(proposal), new Date("2026-06-16").toISOString()]
+    );
+
+    await owner.delete(`/api/jobs/${doomed.id}`).expect(204);
+
+    const ids = orgStore.all<{ id: string }>("SELECT id FROM schedule_variances").map((row) => row.id);
+    expect(ids).not.toContain("var-ripple");
+    expect(ids).toContain("var-history");
+  });
+});
+
+type OrgStore = {
+  run: (sql: string, params: unknown[]) => void;
+  all: <T>(sql: string) => T[];
+};

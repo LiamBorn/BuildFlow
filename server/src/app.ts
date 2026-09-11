@@ -1630,10 +1630,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
        outranks() written this way no request can reach it, and a guard no request can reach reads
        as protection while providing none. An Owner's way out is to transfer and then leave. */
     if (!outranks(req.account!.role, target.role)) {
+      /* Deliberately no `need`. Every other 403 in this server names the capability the guard
+         checked, and holding it is what would let the caller through -- but this refusal is about
+         RANK, and no capability grants it. Naming one would tell the client to ask for a permission
+         that would not help. */
       res.status(403).json({
         error: `You cannot remove ${permissionLevelLabels[target.role]}. Only someone above them can.`,
-        code: "outranked",
-        need: "team.permission"
+        code: "outranked"
       });
       return;
     }
@@ -1951,6 +1954,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     res.status(204).send();
+    /* This takes every job in the project and every booking on them, and until now it was the one
+       destructive schedule write that told nobody -- so deleting forty jobs left another planner's
+       tab showing all forty, while deleting one of them announced itself. */
+    announce(req, { kind: "jobs", op: "delete", ids: [] });
   });
 
   app.delete("/api/jobs/:id", (req, res) => {
@@ -1959,10 +1966,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(404).json({ error: "Job not found" });
       return;
     }
-    // Jobs are the one thing whose every write announces itself, and a deletion is the change most
-    // worth telling another planner's open tab about.
-    announce(req, { kind: "jobs", op: "delete", ids: [id] });
     res.status(204).send();
+    // Jobs are the one thing whose every write announces itself, and a deletion is the change most
+    // worth telling another planner's open tab about. After the response, like all twelve other
+    // announce sites: the caller should not wait on a broadcast to other people's tabs.
+    announce(req, { kind: "jobs", op: "delete", ids: [id] });
   });
 
   app.get("/api/jobs", (_req, res) => {
