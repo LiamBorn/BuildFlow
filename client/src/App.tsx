@@ -20384,14 +20384,6 @@ function Sidebar({
                 }}
               >
                 <Icon size={20} />
-                {/* The Welcome Page navigates with WORDED links; this rail was
-                    icon-only, which was the largest remaining difference between the
-                    two. aria-hidden because the button's accessible name already
-                    comes from aria-label, so the label is purely visual and no
-                    query that navigates by name changes. */}
-                <span className="hs-rail-label" aria-hidden="true">
-                  {hub.label}
-                </span>
                 {hubTag && <span className={`hs-rail-tag ${hubTag.toLowerCase()}`} aria-hidden="true" />}
               </button>
             </div>
@@ -20407,9 +20399,6 @@ function Sidebar({
           onClick={onOpenSettings}
         >
           <Settings size={20} />
-          <span className="hs-rail-label" aria-hidden="true">
-            Settings
-          </span>
         </button>
       </div>
       {flyoutHub && (
