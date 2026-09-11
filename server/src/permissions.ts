@@ -25,50 +25,71 @@ import { permissionRank, type PermissionLevel } from "@buildflow/shared";
 /* ── capabilities ─────────────────────────────────────────────────────────────
    Named after what a person does, not after a route, so one capability can cover
    several routes and a route can be re-pathed without touching the policy. */
-export type Capability =
+/**
+ * The vocabulary, as a VALUE with the type derived from it rather than a hand-written union.
+ *
+ * It was a union first, and that made one thing impossible: there was no way to ask at runtime
+ * "does every capability have a holder". GRANTS is a hand-written ladder, so a capability added to
+ * the union and to none of the three lists is silently denied to everyone, including the Owner --
+ * and nothing notices, because the boot assertion compares routes to the table and never
+ * capabilities to the grants. Deriving the type from the list makes the two impossible to disagree
+ * and lets a test walk them.
+ */
+export const capabilities = [
   // schedule and field
-  | "schedule.read"
-  | "field.report"
-  | "jobs.write"
-  | "jobs.delete"
-  | "assignments.write"
-  | "dependencies.write"
-  | "variance.resolve"
-  | "schedule.baseline"
-  | "scheduletool.write"
-  | "calendar.write"
-  | "delayiq.log"
+  "schedule.read",
+  "field.report",
+  "jobs.write",
+  "jobs.delete",
+  "assignments.write",
+  "dependencies.write",
+  "variance.resolve",
+  "schedule.baseline",
+  "scheduletool.write",
+  "calendar.write",
+  "delayiq.log",
   // projects, resources, data
-  | "projects.write"
-  | "projects.delete"
-  | "resources.write"
-  | "resources.delete"
-  | "materials.delete"
-  | "sampledata.write"
-  | "import.preview"
-  | "import.commit"
-  | "export.data"
+  "projects.write",
+  "projects.delete",
+  "resources.write",
+  "resources.delete",
+  "materials.delete",
+  "sampledata.write",
+  "import.preview",
+  "import.commit",
+  "export.data",
   // reporting and time
-  | "reports.read"
-  | "timecard.read"
-  | "timecard.approve"
-  | "feeds.read"
-  | "notify.send"
+  "reports.read",
+  "timecard.read",
+  "timecard.approve",
+  "feeds.read",
+  "notify.send",
   // team
-  | "team.read"
-  | "team.invite"
-  | "team.invite.revoke"
-  | "team.title"
-  | "team.permission"
-  | "team.remove"
+  "team.read",
+  "team.invite",
+  "team.invite.revoke",
+  "team.title",
+  "team.permission",
+  "team.remove",
   // workspace and commercial
-  | "org.settings"
-  | "billing.plan"
-  | "billing.pay"
-  | "integrations.connect"
-  | "org.danger"
-  | "org.transfer"
-  | "org.leave";
+  "org.settings",
+  "billing.plan",
+  "billing.pay",
+  /* Declared and granted, with no route on purpose. Connecting an integration has no backend to
+     connect to, and nothing in the product deletes a workspace. They are named here so the Owner's
+     reserved set is complete and so the day either is built, the permission is already decided --
+     which is also why the boot assertion checks routes against the table and not capabilities
+     against routes: a capability ahead of its route is a plan, not a hole. */
+  "integrations.connect",
+  "org.danger",
+  "org.transfer",
+  "org.leave"
+] as const;
+
+export type Capability = (typeof capabilities)[number];
+
+/** Every capability the product declares, for checks that have to walk them all. */
+export const allCapabilities = (): Capability[] => [...capabilities];
 
 /* ── what each level may do ───────────────────────────────────────────────────
    Straight from the approved matrix. Member is spelled out rather than derived,
@@ -176,6 +197,8 @@ export type Policy = Capability | "public" | "signed-in" | AnonymousOrCapability
 export const ROUTE_POLICY: Record<string, Policy> = {
   "DELETE /api/crews/:id": "resources.delete",
   "DELETE /api/equipment/:id": "resources.delete",
+  "DELETE /api/jobs/:id": "jobs.delete",
+  "DELETE /api/materials/:id": "materials.delete",
   "DELETE /api/projects/:id": "projects.delete",
   "DELETE /api/sales/companies/:id": "public",
   "DELETE /api/sales/deals/:id": "public",
@@ -233,6 +256,11 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "PATCH /api/field-updates/:id": "field.report",
   "PATCH /api/jobs/:id": "jobs.write",
   "PATCH /api/org": "org.settings",
+  /* Leaving is granted to an Admin and a Member and NOT to an Owner -- the one row in GRANTS
+     where a lower level holds something the Owner does not. A workspace nobody owns cannot be
+     billed, transferred or closed, so an Owner transfers first. */
+  "POST /api/org/leave": "org.leave",
+  "POST /api/org/transfer": "org.transfer",
   "PATCH /api/projects/:id": "projects.write",
   "PATCH /api/sales/companies/:id": "public",
   "PATCH /api/sales/deals/:id": "public",
@@ -388,7 +416,17 @@ export function installRoutePolicy(app: express.Application): void {
     // this server, but passing a single argument straight through costs nothing and makes
     // the wrapper safe for anyone who does.
     const wrapped = (...args: unknown[]) => {
-      if (args.length < 2 || typeof args[0] !== "string") return original(...args);
+      // `app.get("setting")` is Express's settings reader, not a route. One argument means that.
+      if (args.length < 2) return original(...args);
+      if (typeof args[0] !== "string") {
+        // A RegExp or array path would fall straight through this wrapper and be registered with no
+        // guard at all. assertRoutePolicyCovers would catch it at boot, but only via how the key
+        // happens to stringify, so refuse it here where the reason is legible.
+        throw new Error(
+          "[permissions] routes must be registered with a string path so they have a policy key. " +
+            `Received ${typeof args[0]} for ${verb.toUpperCase()}.`
+        );
+      }
       const path = args[0];
       const key = policyKeyFor(verb, path);
       if (!(key in ROUTE_POLICY)) {
@@ -401,7 +439,10 @@ export function installRoutePolicy(app: express.Application): void {
     };
     (app as unknown as Record<RouteVerb, unknown>)[verb] = wrapped;
   }
-  guardedKeysFor(app).clear();
+  /* Deliberately NOT clearing the guarded set here. It is stored per app and a fresh app has none,
+     so clearing achieves nothing on the first call -- and on a second call, after routes exist, it
+     would erase the record of every guard already attached and turn all of them into a false
+     "never got a guard" at boot. */
 }
 
 function guard(app: express.Application, key: string): express.RequestHandler {

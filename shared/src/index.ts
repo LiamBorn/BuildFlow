@@ -140,6 +140,12 @@ export type User = {
   accountId?: string | null;
   /** Seeded teammate from the starter workspace — shown as an example, safe to remove. */
   isSample?: boolean;
+  /**
+   * When this person's access was revoked. The row stays on the roster after a removal so that
+   * every field report, variance and project they are named on still resolves to a real person —
+   * only the login goes. Null for everyone who is still here.
+   */
+  removedAt?: string | null;
 };
 
 /** The one status list every job, booking, filter, lane, badge and drawer shares — in workflow order. */
@@ -723,8 +729,8 @@ export function isWorkingDay(iso: string, calendar: WorkCalendarSetting): boolea
 export type ScheduleLiveEvent = {
   /** What changed: bookings, jobs, or the work calendar. */
   kind: "assignments" | "jobs" | "calendar";
-  /** How: a drop's move / book / unbook, a job's fields, dates an accepted variance moved, the calendar. */
-  op: "move" | "book" | "unbook" | "job" | "dates" | "calendar";
+  /** How: a drop's move / book / unbook, a job's fields, dates an accepted variance moved, the calendar, a deletion. */
+  op: "move" | "book" | "unbook" | "job" | "dates" | "calendar" | "delete";
   /** The bookings and jobs it touched. */
   ids: string[];
   /** Who did it. */

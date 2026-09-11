@@ -8,6 +8,7 @@ import { permissionLevels, type PermissionLevel } from "@buildflow/shared";
 import { createApp } from "../src/app.js";
 import {
   assertRoutePolicyCovers,
+  allCapabilities,
   can,
   capabilitiesFor,
   decide,
@@ -52,6 +53,20 @@ describe("the permission ladder", () => {
 
     expect(admin.size).toBeGreaterThan(member.size);
     expect(owner.size).toBeGreaterThan(admin.size);
+  });
+
+  it("grants every capability it declares to somebody", () => {
+    /* GRANTS is a hand-written ladder, so a capability added to the union but to none of the three
+       lists is silently denied to everyone -- including the Owner. Nothing in the type system
+       notices, and neither does the boot assertion, which compares routes to the table and never
+       capabilities to the grants. This is that missing check. A capability may legitimately have no
+       ROUTE yet (org.danger and integrations.connect are declared ahead of the features), but it
+       must never have no HOLDER, because that is not a plan, it is a typo. */
+    const granted = new Set([...capabilitiesFor("owner"), ...capabilitiesFor("admin"), ...capabilitiesFor("member")]);
+    const declared = allCapabilities();
+    expect(declared.filter((capability) => !granted.has(capability))).toEqual([]);
+    // And nothing is granted that is not declared.
+    expect([...granted].filter((capability) => !declared.includes(capability))).toEqual([]);
   });
 
   it("keeps billing, permission changes and ownership to the Owner alone", () => {
@@ -484,5 +499,184 @@ describe("the invite's permission field", () => {
       .send({ invites: [{ email: "usurper@asphaltco.com", role: "Crew Lead", permission: "owner" }] })
       .expect(400);
     expect(refused.body.error).toBeTruthy();
+  });
+});
+
+describe("the routes the permissions were waiting for", () => {
+  it("deletes a job and takes its bookings, links and variances with it", async () => {
+    const { owner } = await workspace();
+    const boot = await owner.get("/api/bootstrap").expect(200);
+    const project = boot.body.projects[0];
+    const manager = (boot.body.users as Array<{ id: string; role: string }>).find(
+      (user) => user.role === "Project Manager" || user.role === "Superintendent"
+    )!;
+    const crew = boot.body.crews[0];
+
+    const job = await owner
+      .post("/api/jobs")
+      .send({
+        projectId: project.id,
+        name: "Mill and fill, station 12+00",
+        phase: "Milling",
+        location: "Station 12+00",
+        startDate: "2026-07-06",
+        endDate: "2026-07-07",
+        startTime: "07:00",
+        endTime: "15:30",
+        requiredLabor: 6,
+        requiredEquipment: "Milling machine, skid steer",
+        materialsStatus: "Delivered",
+        status: "Not Started",
+        priority: "Normal",
+        notes: ""
+      })
+      .expect(201);
+    const jobId = job.body.id as string;
+    await owner.post("/api/schedule/assign").send({ jobId, crewId: crew.id, date: "2026-07-06" }).expect(201);
+
+    const booked = await owner.get("/api/bootstrap").expect(200);
+    expect(booked.body.assignments.some((a: { jobId: string }) => a.jobId === jobId)).toBe(true);
+
+    await owner.delete(`/api/jobs/${jobId}`).expect(204);
+
+    // The job is gone AND so is every row that pointed at it. An orphan booking is not merely
+    // untidy: assignments.jobId is NOT NULL and bootstrap ships assignments unfiltered, so one
+    // left behind would reach every client as a booking for a job that does not exist.
+    const after = await owner.get("/api/bootstrap").expect(200);
+    expect(after.body.jobs.some((j: { id: string }) => j.id === jobId)).toBe(false);
+    expect(after.body.assignments.some((a: { jobId: string }) => a.jobId === jobId)).toBe(false);
+    expect(after.body.variances.some((v: { jobId: string }) => v.jobId === jobId)).toBe(false);
+
+    await owner.delete(`/api/jobs/${jobId}`).expect(404);
+    expect(manager.id).toBeTruthy();
+  });
+
+  it("refuses a job delete to a Member and allows it to an Admin", async () => {
+    const { join } = await workspace();
+    const member = await join("member");
+    const admin = await join("admin");
+    expect((await member.delete("/api/jobs/anything").expect(403)).body.need).toBe("jobs.delete");
+    // An Admin is admitted to the route and then meets the handler's own 404.
+    await admin.delete("/api/jobs/anything").expect(404);
+  });
+
+  it("deletes a material line, which is a leaf with nothing to cascade", async () => {
+    const { owner } = await workspace();
+    const project = (await owner.get("/api/bootstrap").expect(200)).body.projects[0];
+    const created = await owner
+      .post("/api/materials")
+      .send({ projectId: project.id, name: "Tack coat", supplier: "Regional Asphalt", deliveryDate: "2026-07-02", status: "Ordered", quantity: "400 gal" })
+      .expect(201);
+    const id = created.body.id as string;
+    await owner.delete(`/api/materials/${id}`).expect(204);
+    expect((await owner.get("/api/bootstrap").expect(200)).body.materials.some((m: { id: string }) => m.id === id)).toBe(false);
+    await owner.delete(`/api/materials/${id}`).expect(404);
+  });
+
+  it("removes a teammate's access without removing what they did", async () => {
+    const { owner, join } = await workspace();
+    await join("member", "crew@asphaltco.com");
+    const roster = await owner.get("/api/team").expect(200);
+    const person = roster.body.users.find((user: { name: string }) => user.name === "member person");
+    expect(person.accountId).toBeTruthy();
+    // GET /api/team now reports each login's level, which is what makes a transfer target
+    // pickable and a refusal explainable on the client.
+    expect(roster.body.permissions[person.accountId]).toBe("member");
+
+    const removed = await owner.delete(`/api/team/users/${person.id}`).expect(200);
+    expect(removed.body.removed).toMatchObject({ id: person.id, name: "member person" });
+
+    const after = await owner.get("/api/team").expect(200);
+    const stillThere = after.body.users.find((user: { name: string }) => user.name === "member person");
+    expect(stillThere.accountId).toBeNull();
+    expect(stillThere.removedAt).toBeTruthy();
+    expect(after.body.permissions[person.accountId]).toBeUndefined();
+  });
+
+  it("lets a level remove only below itself, which is also what keeps a workspace owned", async () => {
+    const { owner, join } = await workspace();
+    const adminA = await join("admin", "admin-a@asphaltco.com");
+    await join("admin", "admin-b@asphaltco.com");
+    await join("member", "crew@asphaltco.com");
+
+    // Two people here are both displayed as "admin person", so rows are addressed by account id.
+    const mine = (await adminA.get("/api/auth/me").expect(200)).body.account.id as string;
+    const roster = await owner.get("/api/team").expect(200);
+    const rows = roster.body.users as Array<{ id: string; accountId: string | null }>;
+    const levelOf = (row: { accountId: string | null }) => roster.body.permissions[row.accountId!];
+    const ownerRow = rows.find((row) => levelOf(row) === "owner")!;
+    const otherAdmin = rows.find((row) => levelOf(row) === "admin" && row.accountId !== mine)!;
+    const memberRow = rows.find((row) => levelOf(row) === "member")!;
+
+    // An Admin may not remove another Admin. Equal ranks cannot act on each other, and that single
+    // rule is the whole difference between an Admin and an Owner.
+    const peer = await adminA.delete(`/api/team/users/${otherAdmin.id}`);
+    expect({ status: peer.status, code: peer.body.code }).toEqual({ status: 403, code: "outranked" });
+    // …nor the Owner.
+    expect((await adminA.delete(`/api/team/users/${ownerRow.id}`).expect(403)).body.code).toBe("outranked");
+    // …but may remove a Member.
+    await adminA.delete(`/api/team/users/${memberRow.id}`).expect(200);
+
+    /* And nobody at all removes an Owner -- not an Admin (outranked), and not the Owner themselves
+       (that is leaving, which an Owner is also refused). So "the workspace always has an owner" is
+       not a separate check that could be forgotten; it falls out of the rank rule. */
+    const self = await owner.delete(`/api/team/users/${ownerRow.id}`);
+    expect({ status: self.status, code: self.body.code }).toEqual({ status: 409, code: "self_remove" });
+  });
+
+  it("transfers ownership, demotes the outgoing Owner, and says billing did not follow", async () => {
+    const { owner, join } = await workspace();
+    const admin = await join("admin");
+    const roster = await owner.get("/api/team").expect(200);
+    const adminRow = roster.body.users.find((user: { name: string }) => user.name === "admin person");
+
+    // Owner only.
+    expect((await admin.post("/api/org/transfer").send({ accountId: adminRow.accountId }).expect(403)).body.need).toBe("org.transfer");
+
+    const done = await owner.post("/api/org/transfer").send({ accountId: adminRow.accountId }).expect(200);
+    expect(done.body.owner).toMatchObject({ id: adminRow.accountId, role: "owner" });
+    expect(done.body.former.role).toBe("admin");
+    // Stated in the response rather than left to be discovered: the Stripe subscription is matched
+    // by email and has no workspace column, so it does not move with ownership.
+    expect(done.body.billingFollowsOwner).toBe(false);
+
+    /* The new levels are real on the very next request, because a session re-reads its account
+       every time rather than caching what it was issued with. So the Owner-only routes swap sides
+       with no re-login: the new Owner reaches billing, and the former one is refused it. */
+    expect((await admin.post("/api/billing/portal").send({ email: "dana@asphaltco.com" }).expect(200)).body.configured).toBe(false);
+    expect((await owner.post("/api/business-profile").send({ businessType: "Asphalt", selectedPlan: "pro" }).expect(403)).body.need).toBe(
+      "billing.plan"
+    );
+
+    // And the roster's display copy of "Owner" moved with it.
+    const after = await admin.get("/api/team").expect(200);
+    expect(after.body.users.find((user: { name: string }) => user.name === "admin person").title).toBe("Owner");
+    expect(after.body.permissions[adminRow.accountId]).toBe("owner");
+  });
+
+  it("refuses a transfer to someone outside the workspace, or to yourself", async () => {
+    const { owner } = await workspace();
+    await owner.post("/api/org/transfer").send({ accountId: "acct-nobody" }).expect(404);
+    await owner.post("/api/org/transfer").send({}).expect(400);
+    const me = (await owner.get("/api/auth/me").expect(200)).body.account.id as string;
+    expect((await owner.post("/api/org/transfer").send({ accountId: me }).expect(409)).body.code).toBe("already_owner");
+  });
+
+  it("lets a Member leave and refuses the Owner, who must transfer first", async () => {
+    const { app, owner, join } = await workspace();
+    const member = await join("member");
+
+    // The Owner is refused by the policy table itself: org.leave is the one capability a lower
+    // level holds and the Owner does not.
+    expect((await owner.post("/api/org/leave").send({}).expect(403)).body.need).toBe("org.leave");
+
+    await member.post("/api/org/leave").send({}).expect(200);
+    // The login is gone, so the same agent is signed out…
+    await member.get("/api/bootstrap").expect(401);
+    // …and cannot sign back in.
+    await request(app).post("/api/auth/login").send({ email: "member@asphaltco.com", password: "Paver-Screed-2026" }).expect(401);
+    // …while the workspace keeps the record of them.
+    const after = await owner.get("/api/team").expect(200);
+    expect(after.body.users.find((user: { name: string }) => user.name === "member person").removedAt).toBeTruthy();
   });
 });

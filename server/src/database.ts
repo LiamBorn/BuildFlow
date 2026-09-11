@@ -103,8 +103,14 @@ export const DEMO_ACCOUNT_PASSWORD = "buildflow-demo";
 
 /** Strip the password hash so an account is safe to return to the client. */
 /** SQLite stores the sample flag as 0/1; the API speaks booleans. */
-function userRow(row: Omit<User, "isSample" | "accountId"> & { isSample?: number | boolean | null; accountId?: string | null }): User {
-  return { ...row, accountId: row.accountId ?? null, isSample: Boolean(row.isSample) };
+function userRow(
+  row: Omit<User, "isSample" | "accountId" | "removedAt"> & {
+    isSample?: number | boolean | null;
+    accountId?: string | null;
+    removedAt?: string | null;
+  }
+): User {
+  return { ...row, accountId: row.accountId ?? null, isSample: Boolean(row.isSample), removedAt: row.removedAt ?? null };
 }
 
 /** "Jordan Reyes" → "JR"; single names take their first two letters. */
@@ -1045,6 +1051,36 @@ SCHEMA_MIGRATIONS.push({
     db.exec(`ALTER TABLE invites ADD COLUMN permission TEXT NOT NULL DEFAULT 'member'`);
     // Belt and braces: a default only applies to rows inserted without the column.
     db.exec(`UPDATE invites SET permission = 'member' WHERE permission NOT IN ('admin', 'member')`);
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 22,
+  name: "a roster row outlives the login that owned it",
+  up: (db) => {
+    // Removing a teammate must not delete what they did.
+    //
+    // A tenant `users` row is the person on the crew roster, and four other tables point at it:
+    // field_updates.userId and projects.managerId are both NOT NULL, and a field update is the
+    // evidence behind every priced variance. Deleting the row to remove someone's access would
+    // therefore delete a construction record and leave two NOT NULL columns pointing at nothing --
+    // and the client resolves an unknown userId with `?? data.activeUser`, so a dangling id makes
+    // the *viewer* appear to be the person who filed the report.
+    //
+    // So access and history are separated. Removing a teammate deletes their LOGIN (the control
+    // db's accounts row, its sessions and its auth tokens) and unlinks the roster row by nulling
+    // users.accountId, stamping removedAt. Every name, report and variance still resolves; the
+    // person simply cannot sign in and is no longer someone you can book.
+    //
+    // Nullable, additive, no backfill: every existing row is someone who has not been removed.
+    // Numbered 22 -- the runner sorts by version and SILENTLY skips anything at or below the
+    // stored user_version (:1170), and SCHEMA_MIGRATIONS already carries two 15s and two 16s from
+    // before that was understood. Never renumber, never reuse.
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
+    if (!tables[0]) return;
+    const columns = db.exec("PRAGMA table_info(users)")[0];
+    const names = new Set((columns?.values ?? []).map((row) => String(row[1])));
+    if (!names.has("removedAt")) db.exec("ALTER TABLE users ADD COLUMN removedAt TEXT");
   }
 });
 
@@ -2549,6 +2585,37 @@ export class BuildFlowStore {
     return this.getAccountById(accountId);
   }
 
+  /**
+   * Every login in one workspace. `accounts` had only ever been queried by email and by id, so
+   * before this there was no way to ask "who is in this workspace" or "is this the last owner" --
+   * which are the two questions ownership transfer and teammate removal are made of.
+   */
+  accountsForOrg(orgId: string): Account[] {
+    return this.all<AccountRow>("SELECT * FROM accounts WHERE orgId = ? ORDER BY createdAt", [orgId]).map(toAccount);
+  }
+
+  /**
+   * Deletes a login and everything that could still be used to act as it.
+   *
+   * Order matters and runs from the most dangerous leftover to the least. Sessions first: a session
+   * row whose account has gone is never pruned anywhere -- getSession returns undefined but leaves
+   * the row -- so it has to go while the account is still there to find. Then auth tokens, because
+   * consumeAuthToken never re-checks that the account exists, which would let an outstanding
+   * password-reset link be redeemed against a deleted login and report success. The account row
+   * last, so a failure part-way leaves a usable login rather than an unreachable orphan.
+   *
+   * The email is UNIQUE, so deleting the row is also what makes the address invitable again.
+   */
+  purgeAccount(accountId: string): boolean {
+    if (!this.getAccountById(accountId)) return false;
+    this.transaction(() => {
+      this.run("DELETE FROM sessions WHERE accountId = ?", [accountId]);
+      this.run("DELETE FROM auth_tokens WHERE accountId = ?", [accountId]);
+      this.run("DELETE FROM accounts WHERE id = ?", [accountId]);
+    });
+    return true;
+  }
+
   /** Full row incl. passwordHash — for login verification only, never returned to a client. */
   getAccountRowByEmail(email: string): AccountRow | undefined {
     return this.get<AccountRow>("SELECT * FROM accounts WHERE email = ?", [email.trim().toLowerCase()]);
@@ -2728,6 +2795,49 @@ export class BuildFlowStore {
     this.run("DELETE FROM users WHERE id = ?", [userId]);
     this.save();
     return true;
+  }
+
+  /** The roster row behind a teammate, including the login it is linked to. */
+  teammateRow(userId: string): { id: string; name: string; accountId: string | null; isSample: boolean; removedAt: string | null } | undefined {
+    const row = this.get<{ id: string; name: string; accountId: string | null; isSample: number; removedAt: string | null }>(
+      "SELECT id, name, accountId, isSample, removedAt FROM users WHERE id = ?",
+      [userId]
+    );
+    return row ? { ...row, isSample: Boolean(row.isSample) } : undefined;
+  }
+
+  /**
+   * Takes a person off the roster WITHOUT deleting what they did. See migration 22: the row stays,
+   * its link to a login is cut, and removedAt records when. Every field update, variance and project
+   * that names them still resolves to a real person.
+   *
+   * Returns the projects they were still managing. projects.managerId is NOT NULL, so those keep
+   * pointing here and keep rendering correctly -- but somebody has to be given the work, and the
+   * caller is the only one who can say who, so this reports rather than guesses.
+   */
+  revokeTeammateAccess(userId: string): { name: string; managing: Array<{ id: string; name: string }> } | undefined {
+    const row = this.teammateRow(userId);
+    if (!row) return undefined;
+    const managing = this.all<{ id: string; name: string }>("SELECT id, name FROM projects WHERE managerId = ? ORDER BY name", [userId]);
+    this.transaction(() => {
+      this.run("UPDATE users SET accountId = NULL, removedAt = ? WHERE id = ?", [new Date().toISOString(), userId]);
+      // Their saved board and tutorial progress belonged to the login, not to the record of them.
+      this.run("DELETE FROM user_settings WHERE userId = ?", [userId]);
+    });
+    return { name: row.name, managing };
+  }
+
+  /**
+   * The tenant db's display copy of who owns the workspace. `users.title` is set to "Owner" by
+   * ensureAccountUser and is deliberately sticky, so a transfer has to move it by hand or the
+   * roster keeps showing the previous owner as the owner.
+   */
+  moveOwnerTitle(fromAccountId: string, toAccountId: string) {
+    this.transaction(() => {
+      // The outgoing owner falls back to their job title, which is what everyone else displays.
+      this.run("UPDATE users SET title = role WHERE accountId = ? AND title = 'Owner'", [fromAccountId]);
+      this.run("UPDATE users SET title = 'Owner' WHERE accountId = ?", [toAccountId]);
+    });
   }
 
   /** Keep the workspace person in step with a renamed login. */
@@ -3352,6 +3462,40 @@ export class BuildFlowStore {
     return true;
   }
 
+  /* Deleting a job takes its own subtree with it, for the same reason deleteProject does: five
+     tables point at a job id and none of them is protected by a foreign key, so a row left behind
+     is a row the bootstrap payload still ships to every client.
+
+     A left-behind variance is the worst of them, and not merely untidy. acceptVariance's applyDates
+     does `const job = this.job(jobId); if (!job) return;`, so a PM can accept a variance for a job
+     that no longer exists: the ripple silently applies nothing and the variance is still stamped
+     accepted. */
+  deleteJob(id: string) {
+    const current = this.get<{ id: string }>("SELECT id FROM jobs WHERE id = ?", [id]);
+    if (!current) return false;
+
+    this.transaction(() => {
+      // The days these bookings sat on are shared with crews that stay. A clash belongs to the day,
+      // so emptying one side of it leaves the other saying "Double-booked crew" for ever unless the
+      // day is re-noted once the rows are gone.
+      const emptied = this.all<{ crewId: string; date: string }>("SELECT crewId, date FROM assignments WHERE jobId = ?", [id]);
+      this.run("DELETE FROM assignments WHERE jobId = ?", [id]);
+      this.renoteDaysOf(emptied);
+      this.run("DELETE FROM job_dependencies WHERE predecessorId = ?", [id]);
+      this.run("DELETE FROM job_dependencies WHERE successorId = ?", [id]);
+      this.run("DELETE FROM schedule_variances WHERE jobId = ?", [id]);
+      // field_updates.jobId is nullable, but percentComplete is only meaningful against a job --
+      // POST /api/field-updates refuses one without the other -- so the two move together. The
+      // report itself is kept: it is what a crew actually observed on a date, and that stays true
+      // after the job is gone.
+      this.run("UPDATE field_updates SET jobId = NULL, percentComplete = NULL WHERE jobId = ?", [id]);
+      // The Schedule Creation Tool's activity is its own row and outlives the job it was built from.
+      this.run("UPDATE schedule_activities SET sourceJobId = NULL WHERE sourceJobId = ?", [id]);
+      this.run("DELETE FROM jobs WHERE id = ?", [id]);
+    });
+    return true;
+  }
+
   jobs(projectId?: string): Job[] {
     if (projectId) return this.all<Job>(`SELECT ${jobColumns} FROM jobs WHERE projectId = ? ORDER BY startDate`, [projectId]);
     return this.all<Job>(`SELECT ${jobColumns} FROM jobs ORDER BY startDate, startTime`);
@@ -3628,6 +3772,18 @@ export class BuildFlowStore {
     this.insert("materials", material);
     this.save();
     return material;
+  }
+
+  /* A material line is a leaf: no table carries a materialId, and the "Missing materials" booking
+     note is derived from jobs.materialsStatus rather than from this table, so nothing needs
+     re-noting and no conflict can go stale. save() explicitly, because run() only touches the
+     in-memory database -- a bare run() would appear to work until the process restarted. */
+  deleteMaterial(id: string) {
+    const current = this.get<{ id: string }>("SELECT id FROM materials WHERE id = ?", [id]);
+    if (!current) return false;
+    this.run("DELETE FROM materials WHERE id = ?", [id]);
+    this.save();
+    return true;
   }
 
   materials(): Material[] {

@@ -73,7 +73,15 @@ export function useLiveChange(...ids: Array<string | undefined>): LiveChange | n
 /** "Moved by Matt Johnson" — the badge a flashed card wears. */
 export function liveChangeLabel(change: LiveChange) {
   const verb =
-    change.op === "move" || change.op === "book" || change.op === "dates" ? "Moved" : change.op === "unbook" ? "Unbooked" : "Updated";
+    change.op === "move" || change.op === "book" || change.op === "dates"
+      ? "Moved"
+      : change.op === "unbook"
+        ? "Unbooked"
+        : // A deletion needs its own word. Everything unrecognised falls through to "Updated", so
+          // without this another planner's tab would announce a job being destroyed as an edit.
+          change.op === "delete"
+          ? "Deleted"
+          : "Updated";
   return `${verb} by ${change.by}`;
 }
 

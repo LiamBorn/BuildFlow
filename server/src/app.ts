@@ -14,6 +14,8 @@ import {
   type InvitePreview,
   invitablePermissionLevels,
   isPermissionLevel,
+  permissionLevelLabels,
+  type PermissionLevel,
   type TeamInvite,
   type OnboardingProductId,
   type PlanId,
@@ -55,7 +57,7 @@ import {
   signState,
   type OAuthProvider
 } from "./oauth.js";
-import { assertRoutePolicyCovers, can, installRoutePolicy } from "./permissions.js";
+import { assertRoutePolicyCovers, can, installRoutePolicy, outranks } from "./permissions.js";
 import crypto from "node:crypto";
 import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
@@ -1433,10 +1435,19 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.get("/api/team", (req, res) => {
+    /**
+     * `permissions` maps an accountId to its level. The roster rows carry an accountId already, but
+     * the level lived only in the control database, so nothing outside the server could tell an
+     * Owner from a Member — which made "who can I transfer ownership to" and "why was I refused"
+     * both unanswerable on the client. Keyed by account rather than folded into the user rows
+     * because a roster row can outlive its login (see migration 22) and would then have no level.
+     */
+    const permissions: Record<string, PermissionLevel> = {};
+    for (const account of mainStore.accountsForOrg(req.org!.id)) permissions[account.id] = account.role;
     res.json({
       users: store.users(),
       invites: mainStore.openInvites(req.org!.id).map(inviteView),
-      // Only the login that created the org changes what people are.
+      permissions,
       // Whether this person may set job titles. It was `role === "owner"` when that was the
       // only check in the server; it now asks the same question the route itself asks, so the
       // button and the endpoint cannot disagree. The full capability mirror is a later step.
@@ -1566,13 +1577,150 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json({ user });
   });
 
-  // Seeded sample teammates can go; real people (linked to a login) cannot be removed here.
-  app.delete("/api/team/users/:id", (req, res) => {
-    if (!store.removeSampleUser(String(req.params.id))) {
-      res.status(400).json({ error: "Only sample teammates can be removed here." });
+  /**
+   * Takes someone off the team. Two kinds of person, one route, because the client has one button.
+   *
+   * A seeded sample teammate is deleted outright: nothing real ever happened to them.
+   *
+   * A real person is different, and the difference is the whole design. Their roster row is what
+   * every field report, variance and project they touched points at, and projects.managerId and
+   * field_updates.userId are both NOT NULL, so deleting the row would delete a construction record
+   * and leave columns pointing at nothing. So removal takes away ACCESS, not history: the login and
+   * its sessions and reset tokens are destroyed, and the roster row is unlinked and stamped
+   * removedAt. They cannot sign in; everything they did still reads correctly.
+   *
+   * Three refusals, in the order a person would think of them:
+   *   - not yourself. Removing yourself is leaving, which is a different route with different rules.
+   *   - only downwards. An Admin may remove a Member, never another Admin and never the Owner --
+   *     this is the first production use of outranks(), and without it Admin and Owner are the same
+   *     role by a longer route.
+   *   - never the last Owner. A workspace nobody owns cannot be billed, transferred or closed.
+   */
+  app.delete("/api/team/users/:id", async (req, res) => {
+    const userId = String(req.params.id);
+    const row = store.teammateRow(userId);
+    if (!row) {
+      res.status(404).json({ error: "That person is not in this workspace." });
       return;
     }
-    res.status(204).end();
+
+    if (!row.accountId) {
+      // A sample row, or someone already removed. removeSampleUser refuses anything that is not
+      // genuinely a seeded sample, so the message stays true for the already-removed case.
+      if (!store.removeSampleUser(userId)) {
+        res.status(400).json({ error: "Only sample teammates can be removed here.", code: "not_removable" });
+        return;
+      }
+      res.status(204).end();
+      return;
+    }
+
+    const target = mainStore.getAccountById(row.accountId);
+    if (!target || target.orgId !== req.org!.id) {
+      res.status(404).json({ error: "That person is not in this workspace." });
+      return;
+    }
+    if (target.id === req.account!.id) {
+      res.status(409).json({ error: "You cannot remove yourself. Leave the workspace instead.", code: "self_remove" });
+      return;
+    }
+    /* Equal ranks cannot act on each other, so this one rule carries three: an Admin cannot remove
+       another Admin, nobody can remove an Owner, and therefore the workspace can never be left
+       without one. There is deliberately no separate "this is the last owner" branch -- with
+       outranks() written this way no request can reach it, and a guard no request can reach reads
+       as protection while providing none. An Owner's way out is to transfer and then leave. */
+    if (!outranks(req.account!.role, target.role)) {
+      res.status(403).json({
+        error: `You cannot remove ${permissionLevelLabels[target.role]}. Only someone above them can.`,
+        code: "outranked",
+        need: "team.permission"
+      });
+      return;
+    }
+
+    /* The tenant half first, deliberately. If the second half fails the person still has a working
+       login and a roster row that ensureAccountUser will re-link, which is recoverable. The other
+       order leaves a live account with nothing on the roster to address it by. There is no
+       transaction spanning the two databases -- they are separate sql.js files. */
+    const revoked = store.revokeTeammateAccess(userId);
+    mainStore.purgeAccount(target.id);
+    res.status(200).json({
+      removed: { id: userId, name: revoked?.name ?? row.name },
+      /* projects.managerId is NOT NULL, so these still point at the removed person's roster row and
+         still render their name. Nobody but the caller can say who should take the work, so this
+         reports it rather than reassigning to whoever happens to be first on the roster. */
+      stillManaging: revoked?.managing ?? []
+    });
+  });
+
+  /**
+   * Hands the workspace to somebody else. Owner only, and the only way an Owner stops being one.
+   *
+   * The outgoing Owner becomes an Admin rather than losing their place: they keep running the work,
+   * which is almost always what a handover means, and a workspace is never left with nobody in it.
+   *
+   * WHAT THIS DOES NOT DO, stated here because it is invisible otherwise: it does not move the Stripe
+   * subscription. `subscriptions` has no orgId column and is resolved by the requester's email, so
+   * after a transfer the new Owner's email will not find the row the old Owner's did. Making billing
+   * follow ownership means a column on subscriptions and a backfill -- a separate change, not a side
+   * effect of a role update. Until then a transferred workspace needs its billing re-attached.
+   */
+  app.post("/api/org/transfer", (req, res) => {
+    const parsed = z.object({ accountId: z.string().trim().min(1, "Choose who should own the workspace.") }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Choose who should own the workspace." });
+      return;
+    }
+    const actor = req.account!;
+    const target = mainStore.getAccountById(parsed.data.accountId);
+    if (!target || target.orgId !== req.org!.id) {
+      res.status(404).json({ error: "That person is not in this workspace." });
+      return;
+    }
+    if (target.id === actor.id) {
+      res.status(409).json({ error: "You already own this workspace.", code: "already_owner" });
+      return;
+    }
+
+    const owner = mainStore.setAccountRole(target.id, "owner");
+    const former = mainStore.setAccountRole(actor.id, "admin");
+    if (!owner || !former) {
+      res.status(500).json({ error: "Ownership could not be transferred. Nothing was changed." });
+      return;
+    }
+    // The tenant database keeps its own display copy of who the owner is, and it is sticky.
+    store.moveOwnerTitle(actor.id, target.id);
+    res.json({ owner, former, billingFollowsOwner: false });
+  });
+
+  /**
+   * Leaves the workspace. Granted to an Admin and a Member and deliberately NOT to an Owner -- the
+   * policy table refuses them before this handler runs, because a workspace with no owner cannot be
+   * billed, transferred or closed. An Owner transfers first.
+   *
+   * `accounts.orgId` is a single NOT NULL column with no membership table, so there is no
+   * representable state for an account that belongs to no workspace: leaving IS deleting the login.
+   * The roster row stays, unlinked, for the same reason a removal keeps it -- the work is a record.
+   */
+  app.post("/api/org/leave", (req, res) => {
+    const actor = req.account!;
+    // Belt and braces behind the policy. An Owner should never reach here; if the table is ever
+    // edited so that they can, this still refuses rather than orphaning a workspace.
+    if (actor.role === "owner") {
+      res.status(403).json({
+        error: "You own this workspace, so you cannot leave it. Transfer ownership first.",
+        code: "owner_cannot_leave"
+      });
+      return;
+    }
+    const row = store.users().find((user) => user.accountId === actor.id);
+    if (row) store.revokeTeammateAccess(row.id);
+    mainStore.purgeAccount(actor.id);
+    // Cleared the same way POST /api/auth/logout clears it. clearCookie has to be given matching
+    // attributes to actually remove the cookie, and sessionCookieOptions() carries a maxAge that
+    // does not belong on a deletion.
+    res.clearCookie(SESSION_COOKIE, { path: "/" });
+    res.status(200).json({ left: true });
   });
 
   /* ── Per-person settings: tutorial progress and the like ─────────────────── */
@@ -1802,6 +1950,18 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(404).json({ error: "Project not found" });
       return;
     }
+    res.status(204).send();
+  });
+
+  app.delete("/api/jobs/:id", (req, res) => {
+    const id = String(req.params.id);
+    if (!store.deleteJob(id)) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
+    // Jobs are the one thing whose every write announces itself, and a deletion is the change most
+    // worth telling another planner's open tab about.
+    announce(req, { kind: "jobs", op: "delete", ids: [id] });
     res.status(204).send();
   });
 
@@ -2547,6 +2707,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     res.status(201).json(store.createMaterial(parsed.data));
+  });
+
+  app.delete("/api/materials/:id", (req, res) => {
+    if (!store.deleteMaterial(String(req.params.id))) {
+      res.status(404).json({ error: "Material not found" });
+      return;
+    }
+    res.status(204).send();
   });
 
   /* ── waitlist (removable feature) ─────────────────────────────────────────

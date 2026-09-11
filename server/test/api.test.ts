@@ -341,10 +341,27 @@ describe("BuildFlow API", () => {
     await sam.patch(`/api/team/users/${samRow.id}`).send({ role: "Crew Lead" }).expect(403);
     expect((await sam.get("/api/bootstrap").expect(200)).body.activeUser.role).toBe("Project Manager");
 
-    // Sample teammates can be removed; real people cannot (from here).
+    // A sample teammate is deleted outright — nothing real ever happened to them.
     const sample = ownerTeam.body.users.find((user: { isSample: boolean }) => user.isSample);
     await owner.delete(`/api/team/users/${sample.id}`).expect(204);
+
+    /* A real person used to be refused here with a 400, because the only code for it deleted a
+       single roster row and that row is what their field reports and projects point at. Removal now
+       takes away ACCESS and keeps the record: the login is destroyed, the roster row is unlinked and
+       stamped, and the response reports the projects still in their name so somebody can be given
+       the work. Sam manages none, hence the empty array. */
     const samUser = ownerTeam.body.users.find((user: { name: string }) => user.name === "Sam Ortiz");
+    const removed = await owner.delete(`/api/team/users/${samUser.id}`).expect(200);
+    expect(removed.body).toEqual({ removed: { id: samUser.id, name: "Sam Ortiz" }, stillManaging: [] });
+
+    // Their login is gone, so their signed-in agent is signed out.
+    await sam.get("/api/bootstrap").expect(401);
+    // …and the workspace still knows who they were.
+    const afterRemoval = await owner.get("/api/team").expect(200);
+    const samAfter = afterRemoval.body.users.find((user: { name: string }) => user.name === "Sam Ortiz");
+    expect(samAfter).toMatchObject({ name: "Sam Ortiz", accountId: null });
+    expect(samAfter.removedAt).toBeTruthy();
+    // Removing them a second time is refused: there is no longer a login to take away.
     await owner.delete(`/api/team/users/${samUser.id}`).expect(400);
 
     // Revoke: a new held invite disappears.
