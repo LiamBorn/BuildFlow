@@ -140,6 +140,32 @@
      rather than a box-shadow on purpose -- a box-shadow focus ring loses to any
      later or more specific rule that sets box-shadow for another reason, which is
      how five of these silently stopped painting. */
+  /* ---- the accent, as a token so a theme can move it ---------------------
+     This was a literal in 88 places in app-shell-daylight.css, which made the
+     product unthemeable: a theme can re-point a token but it cannot reach a
+     hex. The three below are one accent expressed three ways, because the sheet
+     needs all three: the colour, the same colour as a bare RGB triple for the
+     rgba() glows and washes, and the darker rung that accent TEXT uses when it
+     sits on an accent wash (the plain accent measures 4.06 there and fails).
+     Themes override all three together; see section 27 of the daylight sheet. */
+  --bf-accent: #2f6bff;
+  --bf-accent-rgb: 47, 107, 255;
+  /* Where light TEXT sits on the accent -- a primary button's label, the rail's
+     active item, the avatar. #2f6bff measures exactly 4.50 against white, so it
+     passes by a hair and is kept; two of the four themes have an accent that
+     does NOT carry white text (Brutalist 3.90, Tangerine 4.31) and give this
+     token a darker rung instead, so their identity hue survives on borders,
+     washes and charts while their labels stay readable. */
+  --bf-accent-fill: #2f6bff;
+  /* The RAIL's active item, which is its own pair and not the page accent. The
+     reference themes colour the shell and the product differently -- a blue rail
+     over a red product, an orange rail over an indigo one -- so the rail gets its
+     own fill and its own label ink, and the two are chosen together: white on
+     #f2940e is 2.33 and unreadable, ink on it is 7.33. */
+  --bf-rail-fill: #2f6bff;
+  --bf-rail-rgb: 47, 107, 255;
+  --bf-rail-ink: #ffffff;
+  --bf-accent-dark: #1f57e0;
   --bf-focus-ink: #2f6bff;
 
   /* ========================================================================

@@ -104,16 +104,33 @@ describe("the top bar's Preferences panel", () => {
     );
   });
 
-  it("lets a preset move several choices at once, and Restore Defaults put them all back", async () => {
+  it("offers the four themes, and picking one recolours without moving the layout", async () => {
+    const panel = await openPreferences();
+    const picker = within(panel).getByLabelText("Theme Preset") as HTMLSelectElement;
+    expect([...picker.options].map((option) => option.textContent)).toEqual(["Default", "Brutalist", "Soft Pop", "Tangerine"]);
+
+    fireEvent.change(picker, { target: { value: "brutalist" } });
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe("brutalist"));
+    /* A theme is a theme: it must NOT move the four layout choices. That separation is
+       the whole reason the preset stopped being a bundle of them. */
+    expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout);
+    expect(shell().dataset.bfSidebar).toBe(DEFAULT_PREFERENCES.sidebar);
+
+    fireEvent.change(picker, { target: { value: "tangerine" } });
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe("tangerine"));
+  });
+
+  it("puts a theme and the layout back with Restore Defaults", async () => {
     const panel = await openPreferences();
 
-    fireEvent.change(within(panel).getByLabelText("Theme Preset"), { target: { value: "wide" } });
-    await waitFor(() => expect(shell().dataset.bfLayout).toBe("full"));
-    expect(shell().dataset.bfSidebar).toBe("floating");
+    fireEvent.change(within(panel).getByLabelText("Theme Preset"), { target: { value: "soft-pop" } });
+    choose(panel, "Page Layout", "Full Width");
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe("soft-pop"));
+    expect(shell().dataset.bfLayout).toBe("full");
 
     fireEvent.click(within(panel).getByRole("button", { name: "Restore Defaults" }));
-    await waitFor(() => expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout));
-    expect(shell().dataset.bfSidebar).toBe(DEFAULT_PREFERENCES.sidebar);
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe(DEFAULT_PREFERENCES.preset));
+    expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout);
     // Nothing left to restore, so the button says so instead of pretending.
     expect(within(panel).getByRole("button", { name: "Already the defaults" })).toBeDisabled();
   });

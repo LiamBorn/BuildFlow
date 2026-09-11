@@ -84,9 +84,7 @@ describe("the ink ladder holds against every ground the design uses", () => {
     const onText: string[] = [];
     sheet.walkRules((rule) => {
       if (inReduce(rule)) return;
-      const faintInk = rule.nodes.find(
-        (n): n is Declaration => n.type === "decl" && n.prop === "color" && /#8a877e/i.test(n.value)
-      );
+      const faintInk = rule.nodes.find((n): n is Declaration => n.type === "decl" && n.prop === "color" && /#8a877e/i.test(n.value));
       if (!faintInk) return;
       // a rule is allowed to use it only if every selector in the list paints an icon or
       // the star button, whose glyph is its own indicator
@@ -99,22 +97,67 @@ describe("the ink ladder holds against every ground the design uses", () => {
   it("never puts the plain accent on its own wash, where it drops under 4.5:1", () => {
     // #2f6bff on plain white is exactly 4.50 -- it only ever passed by a hair -- and
     // tinting the ground beneath it by 8% pushes it to 4.06. Accent TEXT on an accent
-    // wash therefore uses #1f57e0, which is already this sheet's primary-button hover.
+    // wash therefore uses the darker rung, which is also this sheet's primary-button hover.
     const wash8 = composite(ACCENT, 0.08, CARD);
     const wash10 = composite(ACCENT, 0.1, CARD);
     expect(round(contrast(ACCENT, wash8))).toBeLessThan(4.5);
     expect(round(contrast(ACCENT_DARK, wash8))).toBeGreaterThanOrEqual(4.5);
     expect(round(contrast(ACCENT_DARK, wash10))).toBeGreaterThanOrEqual(4.5);
 
+    /* The accent is a token now, so the scan follows the token. A rule that tints its
+       ground with the accent and then writes the PLAIN accent on it is the offence;
+       --bf-accent-dark is the rung that clears it. */
     const offenders: string[] = [];
     sheet.walkRules((rule) => {
       if (inReduce(rule)) return;
       const decls = rule.nodes.filter((n): n is Declaration => n.type === "decl");
-      const wash = decls.find((d) => /^background(-color)?$/.test(d.prop) && /rgba\(\s*47,\s*107,\s*255,\s*0?\.\d+\)/.test(d.value));
-      const text = decls.find((d) => d.prop === "color" && /#2f6bff/i.test(d.value));
+      const wash = decls.find(
+        (d) => /^background(-color)?$/.test(d.prop) && /rgba\(\s*(47,\s*107,\s*255|var\(--bf-accent-rgb\))\s*,\s*0?\.\d+\)/.test(d.value)
+      );
+      const text = decls.find((d) => d.prop === "color" && /#2f6bff|var\(--bf-accent\)/i.test(d.value));
       if (wash && text) offenders.push(`${text.source?.start?.line}: ${norm(rule.selector).slice(0, 90)}`);
     });
     expect(offenders).toEqual([]);
+  });
+
+  it("gives every theme an accent trio that holds its own contrast", () => {
+    /* The four themes each re-point the accent, so "the accent is safe" stopped being one
+       measurement and became four. Each theme declares three rungs and each has a job:
+         --bf-accent       the identity: borders, washes, charts, glows, non-text fills
+         --bf-accent-fill  the same surface where light TEXT sits on it
+         --bf-accent-dark  accent TEXT sitting on an accent wash
+       Two of the four have an accent that cannot carry white text (Brutalist 3.90,
+       Tangerine 4.31 against a 4.5 floor), which is exactly why the fill rung exists
+       rather than being the accent everywhere. The numbers are recomputed here from the
+       stylesheet's own values, so a theme cannot be added or retuned past this. */
+    const css = read(SHEET);
+    const themes = ["brutalist", "soft-pop", "tangerine"];
+    const missing: string[] = [];
+    for (const theme of themes) {
+      const block = css.match(new RegExp(`\\.bf-shell\\[data-bf-theme="${theme}"\\]\\s*\\{([^}]*)\\}`));
+      if (!block) {
+        missing.push(`${theme}: no token block`);
+        continue;
+      }
+      const pick = (name: string) => block[1].match(new RegExp(`--bf-${name}:\\s*([^;]+)`))?.[1]?.trim();
+      const accent = pick("accent");
+      const fill = pick("accent-fill");
+      const dark = pick("accent-dark");
+      if (!accent || !fill || !dark) {
+        missing.push(`${theme}: accent ${accent} fill ${fill} dark ${dark}`);
+        continue;
+      }
+      // light text on the surface that carries it
+      expect(round(contrast(hex(fill), CARD)), `${theme}: white text on --bf-accent-fill`).toBeGreaterThanOrEqual(4.5);
+      // accent text on its own wash, at both tints this sheet uses
+      const own8 = composite(hex(accent), 0.08, CARD);
+      const own10 = composite(hex(accent), 0.1, CARD);
+      expect(round(contrast(hex(dark), own8)), `${theme}: --bf-accent-dark on its 8% wash`).toBeGreaterThanOrEqual(4.5);
+      expect(round(contrast(hex(dark), own10)), `${theme}: --bf-accent-dark on its 10% wash`).toBeGreaterThanOrEqual(4.5);
+      // the identity hue still has to be visible as a non-text indicator
+      expect(round(contrast(hex(accent), CARD)), `${theme}: --bf-accent as an indicator`).toBeGreaterThanOrEqual(3);
+    }
+    expect(missing).toEqual([]);
   });
 
   it("keeps the destructive red and the beta violet, which were measured and do pass", () => {
@@ -146,7 +189,13 @@ describe("a focused control is visibly focused", () => {
       if (!usesHalo) return;
       // acceptable companions: a real outline, or a border colour change to the accent
       const hasOutline = decls.some((d) => /^outline$/.test(d.prop) && !/^(none|0)$/.test(norm(d.value)));
-      const hasBorder = decls.some((d) => /^border(-\w+)?-color$|^border$/.test(d.prop) && /#2f6bff|--bf-focus-ink/i.test(d.value));
+      /* The accent is a TOKEN now (--bf-accent), because it was a literal in 88 places
+         here and a theme can re-point a token but cannot reach a hex. A border that
+         changes to the accent is the same companion however it is spelled, so all three
+         spellings count. */
+      const hasBorder = decls.some(
+        (d) => /^border(-\w+)?-color$|^border$/.test(d.prop) && /#2f6bff|--bf-focus-ink|--bf-accent/i.test(d.value)
+      );
       if (!hasOutline && !hasBorder) soleIndicator.push(`${rule.source?.start?.line}: ${norm(rule.selector).slice(0, 90)}`);
     });
     expect(soleIndicator).toEqual([]);
@@ -170,7 +219,7 @@ describe("a focused control is visibly focused", () => {
       if (!kills) return;
       const restores = decls.some((d) => d.prop === "outline" && !/^(none|0)$/.test(norm(d.value)));
       const isInput = rule.selectors.every((s) => /input|select|textarea|:focus-within/.test(s));
-      const hasBorder = decls.some((d) => /^border(-\w+)?-color$|^border$/.test(d.prop) && /#2f6bff/i.test(d.value));
+      const hasBorder = decls.some((d) => /^border(-\w+)?-color$|^border$/.test(d.prop) && /#2f6bff|--bf-accent/i.test(d.value));
       if (!restores && !(isInput && hasBorder)) {
         suppressed.push(`${kills.source?.start?.line}: ${norm(rule.selector).slice(0, 90)}`);
       }
@@ -203,9 +252,7 @@ describe("a prefixed rest-state rule never silences the state it sits next to", 
       [".settings-rx .settings-nav-item", ".settings-rx .settings-nav-item.active"],
       [".hs-index .hs-row-action", ".hs-index .hs-row-action.edit:hover"]
     ];
-    const missing = MUST_REDECLARE.filter(([rest, state]) => text.includes(rest) && !text.includes(state)).map(
-      ([, state]) => state
-    );
+    const missing = MUST_REDECLARE.filter(([rest, state]) => text.includes(rest) && !text.includes(state)).map(([, state]) => state);
     expect(missing).toEqual([]);
   });
 

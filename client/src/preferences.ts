@@ -28,7 +28,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type ThemePreset = "default" | "compact" | "wide";
+export type ThemePreset = "default" | "brutalist" | "soft-pop" | "tangerine";
 export type ThemeMode = "light" | "dark" | "system";
 export type PageLayout = "centered" | "full";
 export type NavbarBehavior = "sticky" | "scroll";
@@ -61,15 +61,29 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 };
 
 /**
- * A preset is a named bundle of the four live layout choices, which is the only
- * honest thing a preset can be while the palette and the font are fixed: it
- * cannot preset a theme there is one of.
+ * The four themes, and they are now real themes rather than the layout bundles
+ * that stood here first. A preset recolours the product; it does not move the
+ * layout, which is what the four controls below it are for.
+ *
+ * `dot` is the swatch the picker shows beside each name, and it is the theme's
+ * PAGE accent — the colour a reader will see on buttons, pills and charts.
+ *
+ * Every value in the stylesheet's theme blocks was sampled out of the reference
+ * recording frame by frame rather than guessed, which is how the split below
+ * came to light: each theme colours the SHELL and the PAGE differently.
+ * Brutalist has a blue rail over a red product; Soft Pop an orange rail over an
+ * indigo one; Tangerine a pale rail over terracotta. That maps onto the two
+ * token families this codebase already had.
  */
-export const THEME_PRESETS: Array<{ id: ThemePreset; label: string; patch: Partial<AppPreferences> }> = [
-  { id: "default", label: "Default", patch: { layout: "centered", navbar: "sticky", sidebar: "sidebar", collapse: "icon" } },
-  { id: "compact", label: "Compact", patch: { layout: "centered", navbar: "scroll", sidebar: "inset", collapse: "offcanvas" } },
-  { id: "wide", label: "Wide", patch: { layout: "full", navbar: "sticky", sidebar: "floating", collapse: "icon" } }
+export const THEME_PRESETS: Array<{ id: ThemePreset; label: string; dot: string }> = [
+  { id: "default", label: "Default", dot: "#1c1c1a" },
+  { id: "brutalist", label: "Brutalist", dot: "#f82b30" },
+  { id: "soft-pop", label: "Soft Pop", dot: "#4636df" },
+  { id: "tangerine", label: "Tangerine", dot: "#cc533e" }
 ];
+
+/** The picker's swatch for one theme. */
+export const themeDot = (id: ThemePreset): string => THEME_PRESETS.find((theme) => theme.id === id)?.dot ?? "#1c1c1a";
 
 /** The one font that ships, named for the panel rather than hidden from it. */
 export const FONT_OPTIONS: Array<{ id: AppPreferences["font"]; label: string }> = [{ id: "inter", label: "Inter" }];
@@ -82,7 +96,7 @@ export function parsePreferences(raw: unknown): AppPreferences {
   if (!raw || typeof raw !== "object") return DEFAULT_PREFERENCES;
   const input = raw as Record<string, unknown>;
   return {
-    preset: isOneOf(input.preset, ["default", "compact", "wide"] as const) ? input.preset : DEFAULT_PREFERENCES.preset,
+    preset: isOneOf(input.preset, ["default", "brutalist", "soft-pop", "tangerine"] as const) ? input.preset : DEFAULT_PREFERENCES.preset,
     font: "inter",
     mode: isOneOf(input.mode, ["light", "dark", "system"] as const) ? input.mode : DEFAULT_PREFERENCES.mode,
     layout: isOneOf(input.layout, ["centered", "full"] as const) ? input.layout : DEFAULT_PREFERENCES.layout,
@@ -99,6 +113,7 @@ export function parsePreferences(raw: unknown): AppPreferences {
  */
 export function preferenceAttributes(preferences: AppPreferences): Record<string, string> {
   return {
+    "data-bf-theme": preferences.preset,
     "data-bf-layout": preferences.layout,
     "data-bf-navbar": preferences.navbar,
     "data-bf-sidebar": preferences.sidebar,
@@ -191,11 +206,10 @@ export function usePreferences(remote: string | undefined, storageKey: string, s
     [commit, preferences]
   );
 
-  /** Choosing a preset moves the four live choices with it. */
+  /** A theme recolours; it deliberately leaves the layout choices alone. */
   const applyPreset = useCallback(
     (id: ThemePreset) => {
-      const preset = THEME_PRESETS.find((item) => item.id === id);
-      commit({ ...preferences, ...(preset?.patch ?? {}), preset: id });
+      commit({ ...preferences, preset: id });
     },
     [commit, preferences]
   );

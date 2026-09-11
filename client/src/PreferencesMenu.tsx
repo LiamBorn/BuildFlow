@@ -18,6 +18,7 @@ import { Check, ChevronDown, Lock, RotateCcw, Settings } from "lucide-react";
 import {
   FONT_OPTIONS,
   THEME_PRESETS,
+  themeDot,
   type AppPreferences,
   type NavbarBehavior,
   type PageLayout,
@@ -152,7 +153,9 @@ export function PreferencesMenu({
 
       <Field label="Theme Preset" htmlFor={presetId}>
         <div className="pref-select">
-          <span className="pref-select-dot" aria-hidden="true" />
+          {/* The swatch carries the selected theme's own accent, the way the
+              reference's picker does, so the control shows the colour it sets. */}
+          <span className="pref-select-dot" style={{ background: themeDot(preferences.preset) }} aria-hidden="true" />
           <select id={presetId} value={preferences.preset} onChange={(event) => onApplyPreset(event.target.value as ThemePreset)}>
             {THEME_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>

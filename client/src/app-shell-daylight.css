@@ -69,7 +69,7 @@
     box-shadow var(--bf-dur-hover) ease;
 }
 .hs-shell.bf-shell .topbar .search-box:focus-within {
-  border-color: #2f6bff;
+  border-color: var(--bf-accent);
   box-shadow: var(--bf-focus-ring);
   background: #ffffff;
 }
@@ -140,14 +140,14 @@
    is untouched — only the hue moves. */
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button.hs-bookmarks-btn.has-items,
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button.hs-bookmarks-btn.has-items svg {
-  color: #2f6bff;
+  color: var(--bf-accent);
   fill: currentColor;
 }
 /* the notification count badge is .bubble; .hs-bookmarks-count only exists once
    a bookmark has been starred, so both are covered */
 .hs-shell.bf-shell .topbar.hs-topbar .bubble,
 .hs-shell.bf-shell .topbar.hs-topbar .hs-bookmarks-count {
-  background: #2f6bff;
+  background: var(--bf-accent-fill);
   color: #ffffff;
   border-radius: 999px;
   font-size: var(--bf-app-micro);
@@ -179,7 +179,7 @@
   background: rgba(28, 28, 26, 0.13);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-avatar {
-  background: #2f6bff;
+  background: var(--bf-accent-fill);
   color: #ffffff;
   border-radius: 50%;
   box-shadow: none;
@@ -232,17 +232,17 @@
   color: #1c1c1a;
 }
 .hs-shell.bf-shell .hs-rail-btn.active {
-  background: #2f6bff;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+  background: var(--bf-rail-fill);
+  color: var(--bf-rail-ink);
+  box-shadow: 0 4px 12px rgba(var(--bf-rail-rgb), 0.24);
 }
 .hs-shell.bf-shell .hs-rail-btn.active:hover {
-  background: #2f6bff;
-  color: #ffffff;
+  background: var(--bf-rail-fill);
+  color: var(--bf-rail-ink);
 }
 /* the recommended dot's 2px cutout was punched against the navy ground */
 .hs-shell.bf-shell .hs-rail-btn.recommended::after {
-  background: #2f6bff;
+  background: var(--bf-accent);
   box-shadow: 0 0 0 2px #f5f6fa;
 }
 /* NEW keeps the accent; BETA's light-on-navy violet vanishes on paper */
@@ -252,8 +252,8 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  background: rgba(47, 107, 255, 0.1);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.1);
+  color: var(--bf-accent-dark);
 }
 .hs-shell.bf-shell .hs-rail-tag.beta {
   background: rgba(109, 40, 217, 0.1);
@@ -319,12 +319,12 @@
   outline-offset: 2px;
 }
 .hs-shell.bf-shell .hs-flyout-item.active {
-  background: rgba(47, 107, 255, 0.08);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.08);
+  color: var(--bf-accent-dark);
   font-weight: 650;
 }
 .hs-shell.bf-shell .hs-flyout-item.active svg {
-  color: #2f6bff;
+  color: var(--bf-accent);
 }
 .hs-shell.bf-shell .hs-flyout-tag {
   border-radius: 999px;
@@ -332,8 +332,8 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  background: rgba(47, 107, 255, 0.1);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.1);
+  color: var(--bf-accent-dark);
 }
 .hs-shell.bf-shell .hs-flyout-tag.beta {
   background: rgba(109, 40, 217, 0.1);
@@ -346,7 +346,7 @@
     color var(--bf-dur-press) var(--bf-ease);
 }
 .hs-shell.bf-shell .hs-flyout-star[aria-pressed="true"] {
-  color: #2f6bff;
+  color: var(--bf-accent);
 }
 .hs-shell.bf-shell .hs-flyout-star[aria-pressed="true"] svg {
   fill: currentColor;
@@ -375,7 +375,7 @@
   background: #1c1c1a;
 }
 .hs-shell.bf-shell .hs-flyout-upgrade {
-  color: #2f6bff;
+  color: var(--bf-accent);
 }
 
 /* The Schedule hub's saved-views block lives in schedule.css:1945, NOT in the
@@ -460,8 +460,8 @@
 }
 .hs-shell.bf-shell .hs-menu-tag {
   border-radius: 999px;
-  background: rgba(47, 107, 255, 0.1);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.1);
+  color: var(--bf-accent-dark);
   font-size: var(--bf-app-badge);
   font-weight: 700;
   text-transform: uppercase;
@@ -484,7 +484,7 @@
 }
 /* hover move 3 on the footer link's icon */
 .hs-shell.bf-shell .hs-bookmarks-add {
-  color: #2f6bff;
+  color: var(--bf-accent);
   font-size: var(--bf-app-row);
   font-weight: 600;
 }
@@ -580,8 +580,8 @@
     transform var(--bf-dur-hover) var(--bf-ease);
 }
 .hs-shell.bf-shell .cmdk-item[aria-selected="true"] {
-  background: rgba(47, 107, 255, 0.08);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.08);
+  color: var(--bf-accent-dark);
   transform: translateX(var(--bf-slide));
 }
 /* .cmdk-label is rendered by CommandPalette.tsx but has no rule in
@@ -680,8 +680,8 @@
   align-items: center;
   border-radius: 999px;
   padding: 2px 8px;
-  background: rgba(47, 107, 255, 0.1);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.1);
+  color: var(--bf-accent-dark);
   font-size: var(--bf-app-badge);
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -798,12 +798,12 @@
   transform: translateX(var(--bf-slide));
 }
 .bf-shell .hs-index .hs-table tbody tr.is-selected {
-  background: rgba(47, 107, 255, 0.06);
+  background: rgba(var(--bf-accent-rgb), 0.06);
 }
 
 /* ---- 7e. buttons --------------------------------------------------------
    DECLARED DEVIATION from the Welcome Page: its primary is the ink pill and blue
-   is reserved for accents. In-app the primary stays BLUE, because #2f6bff is
+   is reserved for accents. In-app the primary stays BLUE, because var(--bf-accent) is
    already the action colour in all eleven app scopes and inverting that would
    re-teach the whole product for the sake of doctrine. The ink pill is used
    in-app for exactly one thing, the AI FAB, which is where the marketing page
@@ -834,16 +834,16 @@
   outline-offset: 2px;
 }
 .bf-shell .hs-index .hs-btn.hs-btn-primary {
-  background: #2f6bff;
-  border-color: #2f6bff;
+  background: var(--bf-accent-fill);
+  border-color: var(--bf-accent);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .hs-index .hs-btn.hs-btn-primary:hover {
-  background: #1f57e0;
-  border-color: #1f57e0;
+  background: var(--bf-accent-dark);
+  border-color: var(--bf-accent-dark);
   color: #ffffff;
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
 .bf-shell .hs-index .hs-btn-icon,
 .bf-shell .hs-index .hs-row-action {
@@ -880,7 +880,7 @@
 }
 .bf-shell .hs-index .hs-search:focus-within,
 .bf-shell .hs-index .hs-search:focus {
-  border-color: #2f6bff;
+  border-color: var(--bf-accent);
   box-shadow: var(--bf-focus-ring);
 }
 .bf-shell .hs-index .hs-view,
@@ -904,13 +904,13 @@
 .bf-shell .hs-index .hs-view.active,
 .bf-shell .hs-index .hs-view[aria-current="true"],
 .bf-shell .hs-index .hs-view[aria-pressed="true"] {
-  background: rgba(47, 107, 255, 0.08);
-  border-color: rgba(47, 107, 255, 0.28);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.08);
+  border-color: rgba(var(--bf-accent-rgb), 0.28);
+  color: var(--bf-accent-dark);
 }
 .bf-shell .hs-index .hs-link,
 .bf-shell .hs-index .hs-qf-link {
-  color: #2f6bff;
+  color: var(--bf-accent);
   font-size: var(--bf-app-row);
   font-weight: 600;
 }
@@ -1031,7 +1031,7 @@
 .bf-shell .pdx .pdx-form select:focus,
 .bf-shell .pdx .pdx-form textarea:focus {
   outline: none;
-  border-color: #2f6bff;
+  border-color: var(--bf-accent);
   box-shadow: var(--bf-focus-ring);
 }
 
@@ -1058,15 +1058,15 @@
   color: #fdfcf9;
 }
 .bf-shell .pdx .pdx-actions .pdx-save {
-  border: 1px solid #2f6bff;
-  background: #2f6bff;
+  border: 1px solid var(--bf-accent);
+  background: var(--bf-accent-fill);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .pdx .pdx-actions .pdx-save:hover:not(:disabled) {
-  background: #1f57e0;
-  border-color: #1f57e0;
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+  background: var(--bf-accent-dark);
+  border-color: var(--bf-accent-dark);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
 .bf-shell .pdx .pdx-actions button:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
@@ -1131,15 +1131,15 @@
     box-shadow var(--bf-dur-hover) ease;
 }
 .bf-shell .hs-upd-btn-primary {
-  background: #2f6bff;
-  border: 1px solid #2f6bff;
+  background: var(--bf-accent-fill);
+  border: 1px solid var(--bf-accent);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .hs-upd-btn-primary:hover {
-  background: #1f57e0;
-  border-color: #1f57e0;
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+  background: var(--bf-accent-dark);
+  border-color: var(--bf-accent-dark);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
 .bf-shell .hs-upd-btn-secondary {
   background: transparent;
@@ -1385,7 +1385,7 @@
    GAP 1 — decision 2, made real. `.acct-split` still declares
    `--wx-blue: #1a73e8`. Nothing reads it today (0 var(--wx-blue) uses and 0
    rgba(26,115,232) literals in the whole file, and links already compute to
-   #2f6bff), so this is not a visible change. It is a trap removed: anyone who
+   var(--bf-accent)), so this is not a visible change. It is a trap removed: anyone who
    later writes var(--wx-blue) inside the auth scope would silently get Google
    blue back and re-open the divergence decision 2 settled. Overridden here
    rather than edited in place, so the kill switch still reverts it.
@@ -1405,7 +1405,7 @@
    ============================================================================ */
 
 .bf-shell .acct-split {
-  --wx-blue: #2f6bff;
+  --wx-blue: var(--bf-accent);
 }
 
 /* ---- the four plan cards ----------------------------------------------- */
@@ -1434,8 +1434,8 @@
   outline-offset: 2px;
 }
 .bf-shell .acct-plan.selected {
-  border-color: #2f6bff;
-  background: rgba(47, 107, 255, 0.06);
+  border-color: var(--bf-accent);
+  background: rgba(var(--bf-accent-rgb), 0.06);
   box-shadow: var(--bf-focus-ring);
 }
 /* #141922 was a fourth ink */
@@ -1444,7 +1444,7 @@
   font-weight: 700;
 }
 .bf-shell .acct-plan-price {
-  color: #2f6bff;
+  color: var(--bf-accent);
   letter-spacing: var(--bf-app-figure-track);
   font-variant-numeric: tabular-nums;
 }
@@ -1507,10 +1507,10 @@
 }
 /* The pulsing dot's ring is still rgba(26,115,232,0.12) - the Google blue,
    left behind on both the landing and every view page. Decision 2 makes the
-   accent #2f6bff, so the ring follows it. */
+   accent var(--bf-accent), so the ring follows it. */
 .bf-shell .sched-rx .dx-dot,
 .bf-shell .dash-rx .dx-dot {
-  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--bf-accent-rgb), 0.12);
 }
 
 /* ---- 11b. panels onto the ladder: 18px and the card shadow ------------- */
@@ -1565,19 +1565,19 @@
    every other primary in the product now is */
 .bf-shell .sched-rx .sched-new-activity {
   border-radius: 999px;
-  border: 1px solid #2f6bff;
-  background: #2f6bff;
+  border: 1px solid var(--bf-accent);
+  background: var(--bf-accent-fill);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
   transition:
     background var(--bf-dur-hover) ease,
     border-color var(--bf-dur-hover) ease,
     box-shadow var(--bf-dur-hover) ease;
 }
 .bf-shell .sched-rx .sched-new-activity:hover {
-  background: #1f57e0;
-  border-color: #1f57e0;
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+  background: var(--bf-accent-dark);
+  border-color: var(--bf-accent-dark);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
 .bf-shell .sched-rx .sched-rail-foot-btn,
 .bf-shell .sched-rx .schedule-add-job-button {
@@ -1665,21 +1665,21 @@
    Custom properties inherit, so redeclaring them on the scope re-points every
    consumer at once without editing the file that owns them. */
 .bf-shell {
-  --focus: rgba(47, 107, 255, 0.3);
-  --shadow-accent: 0 4px 12px rgba(47, 107, 255, 0.2);
+  --focus: rgba(var(--bf-accent-rgb), 0.3);
+  --shadow-accent: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell ::selection {
-  background: rgba(47, 107, 255, 0.18);
+  background: rgba(var(--bf-accent-rgb), 0.18);
   color: inherit;
 }
 /* the primary button is global but its radius drifted per scope: 999px on Field
    Updates, 11px on DelayIQs. One grammar, one radius. */
 .bf-shell .primary-button {
   border-radius: 999px;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .primary-button:hover {
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
 
 /* ---- 13b. Reports ------------------------------------------------------
@@ -1714,7 +1714,7 @@
 }
 /* an orange-red ring, from the same stratum as 13a */
 .bf-shell .delayIQ-rx .diq-kicker-dot {
-  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
+  box-shadow: 0 0 0 4px rgba(var(--bf-accent-rgb), 0.12);
 }
 .bf-shell .delayIQ-rx .diq-risk,
 .bf-shell .delayIQ-rx .diq-notify {
@@ -1724,7 +1724,7 @@
 /* ---- 13d. Field Updates ------------------------------------------------ */
 /* rgba(66, 92, 244, 0.28) is a purple-blue, not the accent */
 .bf-shell .field-rx .crew-card-icon {
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.24);
 }
 .bf-shell .field-rx .field-dropzone {
   border-radius: var(--bf-radius-panel);
@@ -1806,14 +1806,14 @@
   color: #fdfcf9;
 }
 .bf-shell .hs-record .hs-btn.hs-btn-primary {
-  background: #2f6bff;
-  border-color: #2f6bff;
+  background: var(--bf-accent-fill);
+  border-color: var(--bf-accent);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .hs-record .hs-btn.hs-btn-primary:hover {
-  background: #1f57e0;
-  border-color: #1f57e0;
+  background: var(--bf-accent-dark);
+  border-color: var(--bf-accent-dark);
 }
 .bf-shell .hs-record .hs-search,
 .bf-shell .hs-record .hs-qf {
@@ -1836,11 +1836,11 @@
   border-color: rgba(28, 28, 26, 0.07);
 }
 .bf-shell .bf-breeze-mark {
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.24);
 }
 .bf-shell .bf-breeze-hero-mark {
   border-radius: var(--bf-radius-panel);
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.24);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.24);
 }
 .bf-shell .bf-breeze-drop,
 .bf-shell .bf-breeze-suggested {
@@ -1960,8 +1960,8 @@
   transform: translateX(var(--bf-slide));
 }
 .bf-shell .settings-rx .settings-nav-item.active {
-  background: rgba(47, 107, 255, 0.08);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.08);
+  color: var(--bf-accent-dark);
   font-weight: 650;
 }
 /* deliberately OUTSIDE the <=900px block below, which swaps this ring for an
@@ -1980,10 +1980,10 @@
 .bf-shell .settings-rx .sx-header-icon {
   /* the shadow was fixed in the first pass; the radius was left at 14px */
   border-radius: var(--bf-radius-control);
-  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.24);
+  box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.24);
 }
 .bf-shell .settings-rx .reports-avatar {
-  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.24);
 }
 /* was 13px, one rung off the ladder. The uploaded-photo case follows for
    free, because .settings-avatar-img takes border-radius: inherit. */
@@ -2011,7 +2011,7 @@
   }
   /* a masked element clips its children's focus ring, so the ring moves inward */
   .bf-shell .settings-rx .settings-nav-groups .settings-nav-item:focus-visible {
-    outline: 2px solid #2f6bff;
+    outline: 2px solid var(--bf-accent);
     outline-offset: -2px;
     box-shadow: none;
   }
@@ -2095,7 +2095,7 @@
    one file, still reversible.
 
    AMPLITUDE CHANGES, DECLARED. The land rings and the live flash were built to
-   read against a navy chrome. At rgba(47,107,255,0.5) on #f5f6fa a ring reads
+   read against a navy chrome. At rgba(var(--bf-accent-rgb),0.5) on #f5f6fa a ring reads
    as an error state rather than a highlight, so they drop to 0.24 and the live
    flash's fill to 0.06. The information is untouched: every ring still fires,
    and the live-edit pill still carries the other planner's name.
@@ -2391,25 +2391,25 @@
    and the Gantt bar keep their squash, halved. */
 @keyframes bf-land-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.24);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb), 0.24);
   }
   45% {
-    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+    box-shadow: 0 0 0 10px rgba(var(--bf-accent-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb), 0);
   }
 }
 @keyframes bf-land-card {
   0% {
     transform: scale(0.985);
-    border-color: #2f6bff;
-    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.24);
+    border-color: var(--bf-accent);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb), 0.24);
   }
   45% {
     transform: scale(1.01);
-    border-color: #2f6bff;
-    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+    border-color: var(--bf-accent);
+    box-shadow: 0 0 0 10px rgba(var(--bf-accent-rgb), 0);
   }
   100% {
     transform: scale(1);
@@ -2418,14 +2418,14 @@
 }
 @keyframes bf-live-flash {
   0% {
-    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.2);
-    background-color: rgba(47, 107, 255, 0.06);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb), 0.2);
+    background-color: rgba(var(--bf-accent-rgb), 0.06);
   }
   60% {
-    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+    box-shadow: 0 0 0 10px rgba(var(--bf-accent-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb), 0);
   }
 }
 .bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing {
@@ -2743,15 +2743,15 @@
 /* ---- 17a. the two active states the grouped rules missed ---------------- */
 .bf-shell .hs-index .hs-chip.active,
 .bf-shell .hs-index .hs-btn-icon.active {
-  background: rgba(47, 107, 255, 0.08);
-  border-color: rgba(47, 107, 255, 0.28);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.08);
+  border-color: rgba(var(--bf-accent-rgb), 0.28);
+  color: var(--bf-accent-dark);
   font-weight: 650;
 }
 /* their icon followed the text colour; keep that so the chip reads as one object */
 .bf-shell .hs-index .hs-chip.active svg,
 .bf-shell .hs-index .hs-btn-icon.active svg {
-  color: #1f57e0;
+  color: var(--bf-accent-dark);
 }
 
 /* ---- 17b. the row actions get their meaning back -----------------------
@@ -2768,9 +2768,9 @@
   color: #c5221f;
 }
 .bf-shell .hs-index .hs-row-action.edit:hover {
-  background: rgba(47, 107, 255, 0.08);
-  border-color: rgba(47, 107, 255, 0.28);
-  color: #1f57e0;
+  background: rgba(var(--bf-accent-rgb), 0.08);
+  border-color: rgba(var(--bf-accent-rgb), 0.28);
+  color: var(--bf-accent-dark);
 }
 
 /* ---- 17c. the dialog close button's hover, made coherent ---------------
@@ -2811,13 +2811,13 @@
 
 /* ---- 17e. the Settings AI button's two states -------------------------- */
 .bf-shell .settings-rx .settings-ai-button:hover {
-  border-color: #2f6bff;
-  color: #2f6bff;
+  border-color: var(--bf-accent);
+  color: var(--bf-accent);
   box-shadow: var(--bf-shadow-card-hover);
 }
 .bf-shell .settings-rx .settings-ai-button.active {
-  border-color: #2f6bff;
-  color: #1f57e0;
+  border-color: var(--bf-accent);
+  color: var(--bf-accent-dark);
   box-shadow: var(--bf-focus-ring);
 }
 /* split out of the rule above: .active is "this mode is on" and :focus-visible is
@@ -2827,8 +2827,8 @@
 .bf-shell .settings-rx .settings-ai-button:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
   outline-offset: 2px;
-  border-color: #2f6bff;
-  color: #1f57e0;
+  border-color: var(--bf-accent);
+  color: var(--bf-accent-dark);
 }
 
 /* ---- 17f. reduced motion for the one move added above ------------------ */
@@ -2897,16 +2897,16 @@
    redesign is the accent at 8% under accent-coloured words, and every "New" or
    hub badge is the accent at 10% under accent-coloured words. Measured:
 
-       #2f6bff on its own  8% wash   over card 4.06   over ground 3.77
-       #2f6bff on its own 10% wash   over card 3.95   over ground 3.67
+       var(--bf-accent) on its own  8% wash   over card 4.06   over ground 3.77
+       var(--bf-accent) on its own 10% wash   over card 3.95   over ground 3.67
 
    All four fail the 4.5:1 that 11-13px text needs. Worth noting how narrow the
-   margin was to begin with: #2f6bff on PLAIN WHITE is exactly 4.50, so the
+   margin was to begin with: var(--bf-accent) on PLAIN WHITE is exactly 4.50, so the
    accent only ever passed by a hair, and tinting the ground beneath it by 8% was
    enough to push it under.
 
-   The ink becomes #1f57e0, which clears it everywhere -- 5.41 and 5.03 at 8%,
-   5.27 and 4.90 at 10%. It is deliberately NOT a new colour: #1f57e0 is already
+   The ink becomes var(--bf-accent-dark), which clears it everywhere -- 5.41 and 5.03 at 8%,
+   5.27 and 4.90 at 10%. It is deliberately NOT a new colour: var(--bf-accent-dark) is already
    the primary button's hover in this sheet, so the palette gains nothing to
    remember, and a darker accent reads as the same accent pressed rather than as
    a different hue.
@@ -2915,7 +2915,7 @@
    - the destructive red, #c5221f on its own 8% wash, is 5.09 and passes;
    - the Beta violet, #6d28d9 on its own 10% wash, is 6.03 and passes;
    - the neutral washes are ink or muted on rgba(28,28,26,0.05), 14.5 and 6.4;
-   - the accent as a BORDER at rgba(47,107,255,0.28) is only 1.46 against a card,
+   - the accent as a BORDER at rgba(var(--bf-accent-rgb),0.28) is only 1.46 against a card,
      which would matter if a boundary were the sole indicator of state. It is
      not: every active state here carries a fill, a darker ink and weight 650, so
      the border is reinforcement. Flagged rather than changed, because widening
@@ -3424,8 +3424,8 @@
 
 /* The KPI tile's selected state, same tie, same reason (hs-home.css:1050). */
 .bf-shell .dash-rx.hs-home .kpi-card-button.active {
-  border-color: rgba(47, 107, 255, 0.5);
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12);
+  border-color: rgba(var(--bf-accent-rgb), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--bf-accent-rgb), 0.12);
 }
 
 /* ---- 24e. the icon chip -----------------------------------------------------
@@ -3898,4 +3898,230 @@
     position: sticky;
     transform: none;
   }
+}
+
+/* ============================================================================
+   27. THE FOUR THEMES
+   ============================================================================
+   Default, Brutalist, Soft Pop and Tangerine, chosen from Theme Preset in the
+   top bar's Preferences panel and carried on `data-bf-theme` on the shell.
+
+   EVERY COLOUR HERE WAS SAMPLED FROM THE REFERENCE RECORDING, not matched by
+   eye: frames were pulled from the .mov and individual pixels read out of them,
+   which is the only way to get a hex rather than an impression. It is also what
+   surfaced the thing that shapes this whole section -- each theme colours the
+   SHELL and the PAGE with DIFFERENT hues. Brutalist is a blue rail over a red
+   product, Soft Pop an orange rail over an indigo one, Tangerine a pale rail
+   over terracotta. A single accent per theme would have got all three wrong.
+
+   HOW A THEME REACHES THE APP. The accent is not one token. It is declared
+   per page scope -- `--cc-blue` and `--wx-blue` on each of a dozen `*-rx`
+   classes -- and a custom property declared on a descendant shadows the same
+   property on an ancestor, so a theme block on the shell alone would never
+   arrive. Each theme therefore re-declares across every app scope, which is why
+   these selector lists are long. The marketing scopes are deliberately absent:
+   a workspace theme must not repaint the public site.
+
+   DEFAULT HAS NO BLOCK. It is the product as it ships, so the absence of an
+   override IS the theme. Writing one out would be three ways to drift.
+
+   NO MOTION, so RULE R has nothing to pair, and no type sizes, so the token
+   rule has nothing to check. What these blocks change is colour and radius.
+   ------------------------------------------------------------------------- */
+
+/* ---- 27a. Brutalist ----------------------------------------------------
+   Hard edges and a heavy hairline: the radius ladder goes to zero and the line
+     token goes to ink, which is what makes this theme read as brutalist rather
+     than merely red. The rail keeps a strong blue over a red product -- sampled
+     from the recording, not invented; this theme does not use one accent. */
+.bf-shell[data-bf-theme="brutalist"] .dash-rx,
+.bf-shell[data-bf-theme="brutalist"] .crew-rx,
+.bf-shell[data-bf-theme="brutalist"] .proj-rx,
+.bf-shell[data-bf-theme="brutalist"] .sched-rx,
+.bf-shell[data-bf-theme="brutalist"] .settings-rx,
+.bf-shell[data-bf-theme="brutalist"] .equip-rx,
+.bf-shell[data-bf-theme="brutalist"] .field-rx,
+.bf-shell[data-bf-theme="brutalist"] .mat-rx,
+.bf-shell[data-bf-theme="brutalist"] .delayIQ-rx,
+.bf-shell[data-bf-theme="brutalist"] .pdx,
+.bf-shell[data-bf-theme="brutalist"] .acct-split,
+.bf-shell[data-bf-theme="brutalist"] .hc-assistant {
+  --cc-blue: #f82b30;
+  --cc-blue-soft: #ffe7e7;
+  --wx-blue: #f82b30;
+  --hsh-blue: #f82b30;
+  --hsh-blue-soft: #ffe7e7;
+  --hsh-line: #1c1c1a;
+  --hsh-radius: 0px;
+}
+
+/* The shell's own family, on the shell element itself. */
+.bf-shell[data-bf-theme="brutalist"] {
+  /* The rail's own pair, sampled from the recording: white on #015afe is 5.39. */
+  --bf-rail-fill: #015afe;
+  --bf-rail-rgb: 1, 90, 254;
+  --bf-rail-ink: #ffffff;
+  /* The accent trio. All three measured, not chosen by eye:
+     white text measures 3.90 on #f82b30, so the fill rung darkens to #c8232a (5.63), and accent text on its own 8% wash uses #c8232a. */
+  --bf-accent: #f82b30;
+  --bf-accent-rgb: 248, 43, 48;
+  --bf-accent-fill: #c8232a;
+  --bf-accent-dark: #c8232a;
+  --hs-blue: #015afe;
+  --hs-line: #1c1c1a;
+  --hs-paper: #ffffff;
+  --bf-focus-ink: #f82b30;
+  --bf-radius-stage: 0px;
+  --bf-radius-card: 0px;
+  --bf-radius-panel: 0px;
+  --bf-radius-control: 0px;
+  --bf-radius-chip: 0px;
+}
+
+/* The rail's active item hardcodes white text and a blue glow, so both move with
+   the theme or the label goes unreadable and the glow disagrees with the fill. */
+.bf-shell[data-bf-theme="brutalist"] .hs-rail-btn.active {
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(1, 90, 254, 0.38);
+}
+
+/* ---- 27b. Soft Pop ----------------------------------------------------
+   Indigo product, orange rail, and the softest corners of the four. The rail's
+     label goes to INK rather than white: white on #f2940e is about 2.3:1, which
+     is unreadable, and a theme is not allowed to cost legibility. */
+.bf-shell[data-bf-theme="soft-pop"] .dash-rx,
+.bf-shell[data-bf-theme="soft-pop"] .crew-rx,
+.bf-shell[data-bf-theme="soft-pop"] .proj-rx,
+.bf-shell[data-bf-theme="soft-pop"] .sched-rx,
+.bf-shell[data-bf-theme="soft-pop"] .settings-rx,
+.bf-shell[data-bf-theme="soft-pop"] .equip-rx,
+.bf-shell[data-bf-theme="soft-pop"] .field-rx,
+.bf-shell[data-bf-theme="soft-pop"] .mat-rx,
+.bf-shell[data-bf-theme="soft-pop"] .delayIQ-rx,
+.bf-shell[data-bf-theme="soft-pop"] .pdx,
+.bf-shell[data-bf-theme="soft-pop"] .acct-split,
+.bf-shell[data-bf-theme="soft-pop"] .hc-assistant {
+  --cc-blue: #4636df;
+  --cc-blue-soft: #ecebfd;
+  --wx-blue: #4636df;
+  --hsh-blue: #4636df;
+  --hsh-blue-soft: #ecebfd;
+  --hsh-line: #e6e8f0;
+  --hsh-radius: 14px;
+}
+
+/* The shell's own family, on the shell element itself. */
+.bf-shell[data-bf-theme="soft-pop"] {
+  /* The rail's own pair, sampled from the recording: white on #f2940e is 2.33 and unreadable; ink is 7.33. */
+  --bf-rail-fill: #f2940e;
+  --bf-rail-rgb: 242, 148, 14;
+  --bf-rail-ink: #1c1c1a;
+  /* The accent trio. All three measured, not chosen by eye:
+     #4636df carries white text at 7.36, so the fill rung is the accent itself, and accent text on its own 8% wash uses #3d2fc4. */
+  --bf-accent: #4636df;
+  --bf-accent-rgb: 70, 54, 223;
+  --bf-accent-fill: #4636df;
+  --bf-accent-dark: #3d2fc4;
+  --hs-blue: #f2940e;
+  --hs-line: #e6e8f0;
+  --hs-paper: #f4f7f0;
+  --bf-focus-ink: #4636df;
+  --bf-radius-stage: 14px;
+  --bf-radius-card: 14px;
+  --bf-radius-panel: 14px;
+  --bf-radius-control: 14px;
+  --bf-radius-chip: 14px;
+}
+
+/* The rail's active item hardcodes white text and a blue glow, so both move with
+   the theme or the label goes unreadable and the glow disagrees with the fill. */
+.bf-shell[data-bf-theme="soft-pop"] .hs-rail-btn.active {
+  color: #1c1c1a;
+  box-shadow: 0 6px 16px rgba(242, 148, 14, 0.34);
+}
+
+/* ---- 27c. Tangerine ----------------------------------------------------
+   Terracotta over a warm grey ground, and the one theme whose rail is a pale
+     wash rather than a colour. Its active label is ink for the same reason as
+     Soft Pop's, and more so: white on #d1dfec is about 1.2:1. */
+.bf-shell[data-bf-theme="tangerine"] .dash-rx,
+.bf-shell[data-bf-theme="tangerine"] .crew-rx,
+.bf-shell[data-bf-theme="tangerine"] .proj-rx,
+.bf-shell[data-bf-theme="tangerine"] .sched-rx,
+.bf-shell[data-bf-theme="tangerine"] .settings-rx,
+.bf-shell[data-bf-theme="tangerine"] .equip-rx,
+.bf-shell[data-bf-theme="tangerine"] .field-rx,
+.bf-shell[data-bf-theme="tangerine"] .mat-rx,
+.bf-shell[data-bf-theme="tangerine"] .delayIQ-rx,
+.bf-shell[data-bf-theme="tangerine"] .pdx,
+.bf-shell[data-bf-theme="tangerine"] .acct-split,
+.bf-shell[data-bf-theme="tangerine"] .hc-assistant {
+  --cc-blue: #cc533e;
+  --cc-blue-soft: #fdece2;
+  --wx-blue: #cc533e;
+  --hsh-blue: #cc533e;
+  --hsh-blue-soft: #fdece2;
+  --hsh-line: #e8e2db;
+  --hsh-radius: 10px;
+}
+
+/* The shell's own family, on the shell element itself. */
+.bf-shell[data-bf-theme="tangerine"] {
+  /* The rail's own pair, sampled from the recording: white on #d1dfec is 1.36; ink is 12.58. */
+  --bf-rail-fill: #d1dfec;
+  --bf-rail-rgb: 209, 223, 236;
+  --bf-rail-ink: #1c1c1a;
+  /* The accent trio. All three measured, not chosen by eye:
+     white text measures 4.31 on #cc533e, so the fill rung darkens to #a83f2c (6.15), and accent text on its own 8% wash uses #a83f2c. */
+  --bf-accent: #cc533e;
+  --bf-accent-rgb: 204, 83, 62;
+  --bf-accent-fill: #a83f2c;
+  --bf-accent-dark: #a83f2c;
+  --hs-blue: #d1dfec;
+  --hs-line: #e8e2db;
+  --hs-paper: #e7e7e7;
+  --bf-focus-ink: #cc533e;
+  --bf-radius-stage: 10px;
+  --bf-radius-card: 10px;
+  --bf-radius-panel: 10px;
+  --bf-radius-control: 10px;
+  --bf-radius-chip: 10px;
+}
+
+/* The rail's active item hardcodes white text and a blue glow, so both move with
+   the theme or the label goes unreadable and the glow disagrees with the fill. */
+.bf-shell[data-bf-theme="tangerine"] .hs-rail-btn.active {
+  color: #1c1c1a;
+  box-shadow: 0 6px 16px rgba(28, 28, 26, 0.1);
+}
+
+/* ---- 27d. what makes Brutalist brutal --------------------------------------
+   A red palette at zero radius is not yet the reference's look: its panels carry
+   a hairline heavy enough to read as a drawn edge. Applied to the surfaces this
+   sheet already owns rather than to every bordered thing in the product, so the
+   theme stays a theme and does not become a rewrite. */
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .dash-block,
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home > .dx-inner > section[data-reveal],
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .ss-band,
+.bf-shell[data-bf-theme="brutalist"] .pref-menu {
+  border-width: 2px;
+  border-color: #1c1c1a;
+  box-shadow: none;
+}
+
+/* Its tiles keep a single hairline: two 2px edges nested read as a table, not a card. */
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .cc-stat,
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .kpi-card,
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .tc-dash-card,
+.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .cc-quick {
+  border-color: #1c1c1a;
+}
+
+/* ---- 27e. the picker's swatch --------------------------------------------
+   The dot's colour is set inline from the theme it names (PreferencesMenu.tsx),
+   because it is data about the theme rather than a rule about the panel. This
+   only keeps its shape when a theme zeroes the radius ladder: a swatch is round
+   in every theme, including the one where nothing else is. */
+.bf-shell .pref-select-dot {
+  border-radius: 999px;
 }
