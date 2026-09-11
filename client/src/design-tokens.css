@@ -129,7 +129,18 @@
   /* ---- focus -------------------------------------------------------------
      On the accent, which is #2f6bff by decision, not the Welcome Page's
      #1a73e8 that this ring was first measured from. */
+  /* The soft accent halo. Measured 1.17:1 against a card and 1.16:1 against the
+     ground, so it is DECORATION and must never be the only sign a control has
+     focus -- WCAG 2.4.11 and 1.4.11 want 3:1 for a focus indicator, and no alpha
+     below 0.78 reaches it. Kept because it reads well behind a border that also
+     changes, and on the selected plan card. */
   --bf-focus-ring: 0 0 0 4px rgba(47, 107, 255, 0.12);
+  /* The real focus indicator: a solid 2px ring, offset so it clears the control's
+     own border. 4.50:1 on a white card and 4.17:1 on the ground. It is an OUTLINE
+     rather than a box-shadow on purpose -- a box-shadow focus ring loses to any
+     later or more specific rule that sets box-shadow for another reason, which is
+     how five of these silently stopped painting. */
+  --bf-focus-ink: #2f6bff;
 
   /* ========================================================================
      The dense companion scale (Phase 4, step 1).
@@ -155,6 +166,9 @@
   --bf-app-eyebrow: 11.5px; /* uppercase label / column head */
   --bf-app-eyebrow-track: 0.045em;
   --bf-app-micro: 11px; /* badge, pill text */
+  --bf-app-badge: 10.5px; /* the nav's New / Beta / page tags: one rung below micro */
+  --bf-app-brand: 16.5px; /* the wordmark in the top bar, an identity size, used once */
+  --bf-app-screen: 18px; /* the two full-viewport states' single line of status copy */
   --bf-app-lead-row: 1.45;
 
   /* ---- dense measures ----------------------------------------------------

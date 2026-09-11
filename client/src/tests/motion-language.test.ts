@@ -163,6 +163,24 @@ describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("writes every type size through a token, so a fifth scale cannot reappear", () => {
+    // Step 12 found eight font-size literals here: a 16.5px wordmark, four 10.5px nav
+    // badges, a 15px palette input, an 18px full-screen status line and a clamp on the
+    // What's-new title. Eight is not yet a fifth scale, but it is how one starts, and
+    // the type ladder is the half of this redesign that a reader feels on every screen.
+    // All eight now resolve through a --bf-* token at their shipped values, except the
+    // What's-new title which was consolidated onto --bf-app-title -- a declared 2px
+    // change to its floor at narrow widths, taken because every other title in the
+    // redesign already reads from that token.
+    const literals: string[] = [];
+    sheet.walkDecls((d) => {
+      if (d.prop !== "font-size") return;
+      if (/var\(--bf-/.test(d.value)) return;
+      literals.push(`${d.source?.start?.line}: ${norm(d.parent && "selector" in d.parent ? (d.parent as Rule).selector : "?")} -> ${norm(d.value)}`);
+    });
+    expect(literals).toEqual([]);
+  });
+
   it("uses no :where() and no !important in live CSS", () => {
     // :where() is a documented jsdom breaker in this repo -- a :where(#id) block once
     // made every test read visibility:hidden on <html>. !important outside a reduce

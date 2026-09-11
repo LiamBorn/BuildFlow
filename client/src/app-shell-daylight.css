@@ -46,7 +46,7 @@
 /* ---- brand --------------------------------------------------------------- */
 .hs-shell.bf-shell .hs-topbar-brand {
   color: #1c1c1a;
-  font-size: 16.5px;
+  font-size: var(--bf-app-brand);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -79,7 +79,7 @@
   color: #1c1c1a;
 }
 .hs-shell.bf-shell .topbar .search-box input::placeholder {
-  color: #8a877e;
+  color: #575550;
 }
 .hs-shell.bf-shell .topbar .search-box svg {
   color: #8a877e;
@@ -117,8 +117,8 @@
 }
 /* the old ring was built at 0.45 alpha to read on navy */
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 
 /* ---- AI sparkle: the app's ONE licensed use of the gradient trio -------- */
@@ -226,8 +226,8 @@
 /* the rail's focus affordance was `outline: 0` and nothing else — a recorded
    weakness. It now matches the top bar. */
 .hs-shell.bf-shell .hs-rail-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
   background: rgba(28, 28, 26, 0.05);
   color: #1c1c1a;
 }
@@ -248,12 +248,12 @@
 /* NEW keeps the accent; BETA's light-on-navy violet vanishes on paper */
 .hs-shell.bf-shell .hs-rail-tag {
   border-radius: 999px;
-  font-size: 10.5px;
+  font-size: var(--bf-app-badge);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: rgba(47, 107, 255, 0.1);
-  color: #2f6bff;
+  color: #1f57e0;
 }
 .hs-shell.bf-shell .hs-rail-tag.beta {
   background: rgba(109, 40, 217, 0.1);
@@ -293,7 +293,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .hs-shell.bf-shell .hs-flyout-item {
   border-radius: 10px;
@@ -315,12 +315,12 @@
   transform: translateX(var(--bf-slide));
 }
 .hs-shell.bf-shell .hs-flyout-item:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 .hs-shell.bf-shell .hs-flyout-item.active {
   background: rgba(47, 107, 255, 0.08);
-  color: #2f6bff;
+  color: #1f57e0;
   font-weight: 650;
 }
 .hs-shell.bf-shell .hs-flyout-item.active svg {
@@ -328,12 +328,12 @@
 }
 .hs-shell.bf-shell .hs-flyout-tag {
   border-radius: 999px;
-  font-size: 10.5px;
+  font-size: var(--bf-app-badge);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: rgba(47, 107, 255, 0.1);
-  color: #2f6bff;
+  color: #1f57e0;
 }
 .hs-shell.bf-shell .hs-flyout-tag.beta {
   background: rgba(109, 40, 217, 0.1);
@@ -399,7 +399,7 @@
   transform: translateX(var(--bf-slide));
 }
 .hs-shell.bf-shell .hs-flyout .hs-flyout-view em {
-  color: #8a877e;
+  color: #575550;
   font-size: var(--bf-app-eyebrow);
   font-style: normal;
 }
@@ -433,7 +433,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .hs-shell.bf-shell .hs-menu-item,
 .hs-shell.bf-shell .hs-bookmark-item,
@@ -461,8 +461,8 @@
 .hs-shell.bf-shell .hs-menu-tag {
   border-radius: 999px;
   background: rgba(47, 107, 255, 0.1);
-  color: #2f6bff;
-  font-size: 10.5px;
+  color: #1f57e0;
+  font-size: var(--bf-app-badge);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -478,7 +478,7 @@
 }
 .hs-shell.bf-shell .hs-bookmark-hub,
 .hs-shell.bf-shell .hs-bookmark-item em {
-  color: #8a877e;
+  color: #575550;
   font-size: var(--bf-app-eyebrow);
   font-style: normal;
 }
@@ -508,7 +508,7 @@
   max-width: var(--bf-app-prose);
 }
 .hs-shell.bf-shell .notifications-panel li time {
-  color: #8a877e;
+  color: #575550;
   font-size: var(--bf-app-eyebrow);
 }
 .hs-shell.bf-shell .notifications-panel li .notification-icon,
@@ -557,19 +557,19 @@
   animation: bf-pop var(--bf-dur-hover) var(--bf-ease) both;
 }
 .hs-shell.bf-shell .cmdk-input {
-  font-size: 15px;
+  font-size: var(--bf-type-body);
   font-weight: 500;
   color: #1c1c1a;
 }
 .hs-shell.bf-shell .cmdk-input::placeholder {
-  color: #8a877e;
+  color: #575550;
 }
 .hs-shell.bf-shell .cmdk-group {
   font-size: var(--bf-app-eyebrow);
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .hs-shell.bf-shell .cmdk-item {
   border-radius: 10px;
@@ -581,7 +581,7 @@
 }
 .hs-shell.bf-shell .cmdk-item[aria-selected="true"] {
   background: rgba(47, 107, 255, 0.08);
-  color: #2f6bff;
+  color: #1f57e0;
   transform: translateX(var(--bf-slide));
 }
 /* .cmdk-label is rendered by CommandPalette.tsx but has no rule in
@@ -605,7 +605,7 @@
   font-size: var(--bf-app-micro);
 }
 .hs-shell.bf-shell .cmdk-foot {
-  color: #8a877e;
+  color: #575550;
   font-size: var(--bf-app-eyebrow);
   border-top: 1px solid rgba(28, 28, 26, 0.07);
 }
@@ -681,8 +681,8 @@
   border-radius: 999px;
   padding: 2px 8px;
   background: rgba(47, 107, 255, 0.1);
-  color: #2f6bff;
-  font-size: 10.5px;
+  color: #1f57e0;
+  font-size: var(--bf-app-badge);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -724,7 +724,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .hs-index .hs-kpi-value {
   font-size: var(--bf-app-figure);
@@ -745,6 +745,21 @@
    The column head is the single highest-yield rule in this file. Column heads
    are the most repeated text in the product, and turning them into the Welcome
    Page's eyebrow does more for the family resemblance than any other change. */
+/* WHICH COLUMN IS SORTED.  (step 12)
+   `.hs-index .hs-table thead th.sorted { color: var(--hsx-ink) }` is (0,3,2). The rest
+   rule below is `.bf-shell .hs-index .hs-table thead th` -- also (0,3,2), because
+   .bf-shell replaces the specificity the `.sorted` class was carrying. A tie goes to
+   whichever loads later, and that is this sheet, so every head rendered the same ink
+   and the sorted column stopped being identifiable by its text. The arrow survived at
+   (0,3,4), so half the two-part indicator still worked, which is exactly why it took an
+   adversarial pass to notice.
+   This is the state-twin trap from section 17 with a DATA state rather than an
+   interaction state. Section 17 enumerated .active / .in / :hover / :focus-visible /
+   .is-* and missed .sorted for that reason. */
+.bf-shell .hs-index .hs-table thead th.sorted {
+  color: #1c1c1a;
+  font-weight: 700;
+}
 .bf-shell .hs-index .hs-table thead th {
   background: transparent;
   border-bottom: 1px solid rgba(28, 28, 26, 0.13);
@@ -752,7 +767,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .hs-index .hs-table tbody td {
   font-size: var(--bf-app-row);
@@ -815,8 +830,8 @@
   color: #fdfcf9;
 }
 .bf-shell .hs-index .hs-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 .bf-shell .hs-index .hs-btn.hs-btn-primary {
   background: #2f6bff;
@@ -891,7 +906,7 @@
 .bf-shell .hs-index .hs-view[aria-pressed="true"] {
   background: rgba(47, 107, 255, 0.08);
   border-color: rgba(47, 107, 255, 0.28);
-  color: #2f6bff;
+  color: #1f57e0;
 }
 .bf-shell .hs-index .hs-link,
 .bf-shell .hs-index .hs-qf-link {
@@ -959,7 +974,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .pdx .pdx-sub {
   font-size: var(--bf-app-lede);
@@ -993,7 +1008,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .pdx .pdx-form input,
 .bf-shell .pdx .pdx-form select,
@@ -1010,7 +1025,7 @@
 }
 .bf-shell .pdx .pdx-form input::placeholder,
 .bf-shell .pdx .pdx-form textarea::placeholder {
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .pdx .pdx-form input:focus,
 .bf-shell .pdx .pdx-form select:focus,
@@ -1054,8 +1069,8 @@
   box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
 }
 .bf-shell .pdx .pdx-actions button:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 
 /* ---- 8d. What's new, and the add-on prompt -----------------------------
@@ -1078,10 +1093,10 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .hs-upd-title {
-  font-size: clamp(20px, 2.2vw, 26px);
+  font-size: var(--bf-app-title);
   font-weight: 600;
   letter-spacing: var(--bf-app-title-track);
   line-height: var(--bf-app-title-lead);
@@ -1137,8 +1152,8 @@
   color: #fdfcf9;
 }
 .bf-shell .hs-upd-actions button:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 /* the add-on prompt's tone art keeps its six tones; only the frame moves */
 .bf-shell .hs-addon-art,
@@ -1162,7 +1177,7 @@
 }
 .bf-shell .loading-screen strong,
 .bf-shell .loading-screen h1 {
-  font-size: 18px;
+  font-size: var(--bf-app-screen);
   font-weight: 600;
   color: #1c1c1a;
 }
@@ -1295,7 +1310,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 .bf-shell .dash-rx.hs-home .cc-stat-value {
   letter-spacing: var(--bf-app-figure-track);
@@ -1327,8 +1342,8 @@
   color: #fdfcf9;
 }
 .bf-shell .dash-rx.hs-home .cc-link:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 
 /* ---- 9d. the app tiles are the one thing on the board that navigates ----
@@ -1415,8 +1430,8 @@
   box-shadow: var(--bf-shadow-card-hover);
 }
 .bf-shell .acct-plan:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 .bf-shell .acct-plan.selected {
   border-color: #2f6bff;
@@ -1579,7 +1594,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 
 /* ---- 11d. the board's day heads are deliberately NOT made eyebrows -----
@@ -1808,8 +1823,8 @@
 .bf-shell .hs-record .hs-btn:focus-visible,
 .bf-shell .hs-record .hs-search:focus-within,
 .bf-shell .hs-record .hs-qf:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 
 /* ---- 14b. the AI panel -------------------------------------------------
@@ -1835,6 +1850,8 @@
 /* the composer's blue rim is already the accent and is left as it is; it only
    gains the shared focus ring */
 .bf-shell .bf-breeze-composer:focus-within {
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
   box-shadow: var(--bf-focus-ring);
 }
 
@@ -1929,7 +1946,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #8a877e;
+  color: #575550;
 }
 
 /* ---- 15a-ii. the category rows, onto the shell's own nav grammar -------
@@ -1944,14 +1961,14 @@
 }
 .bf-shell .settings-rx .settings-nav-item.active {
   background: rgba(47, 107, 255, 0.08);
-  color: #2f6bff;
+  color: #1f57e0;
   font-weight: 650;
 }
 /* deliberately OUTSIDE the <=900px block below, which swaps this ring for an
    inset outline because a masked element clips its children's shadow */
 .bf-shell .settings-rx .settings-nav-item:focus-visible {
-  outline: none;
-  box-shadow: var(--bf-focus-ring);
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
 }
 .bf-shell .settings-rx .settings-ai-button {
   box-shadow: var(--bf-shadow-raised);
@@ -2476,13 +2493,41 @@
    guard: zero transitions, zero animations. The palette gains motion here, so
    it gains coverage here too. */
 
-/* the skeleton's handoff: today the loading board hard-cuts to the real one.
-   0.18s of fade is what makes the bootstrap read as one motion instead of two
-   states. Opacity only, so it cannot become a containing block for the board's
-   absolutely positioned panels. */
-.bf-shell .dash-rx.hs-home .dash-board {
-  animation: bf-fade var(--bf-dur-press) var(--bf-ease) both;
-}
+/* THE SKELETON HANDOFF, WITHDRAWN.  (step 12)
+   The plan asked for `.dash-board { animation: bf-fade 0.18s both }` as the beat
+   that makes the bootstrap read as one motion instead of two states, and step 11
+   shipped exactly that. Step 12's live sweep found the panel board sitting at
+   opacity 0 with the animation reporting playState "running" and currentTime 0.
+
+   The cause is not the rule being wrong, it is what the rule RISKS. An
+   animation only advances while the document timeline does, and a hidden or
+   throttled tab freezes that timeline -- measured: document.hidden true,
+   visibilityState "hidden", and document.timeline.currentTime pinned at 27376ms
+   across 1.6s of real time. With fill-mode `both` the element then stays in the
+   animation's `from` state, so the ENTIRE panel board and every panel inside it
+   render invisible until the tab is focused.
+
+   In practice a reader always recovers: focusing the tab resumes the timeline
+   and the fade plays. So this is not a live bug. It is removed anyway, for three
+   reasons worth writing down rather than re-deriving:
+     1. This is the only rule in the redesign that puts a whole CONTENT SUBTREE
+        behind an opacity animation. Everything else animates chrome, or one
+        panel, or a state.
+     2. The beat it buys already exists: DashboardSkeleton covers the same moment
+        with a geometrically identical board, so the handoff is a second beat on
+        top of a beat that works.
+     3. `fill: forwards` does not fix it. At currentTime 0 the element is AT the
+        start of the active interval, not before it, so the animated value
+        applies whatever the fill mode says. The only safe version of this rule
+        is not animating opacity on that container.
+   This repo already encodes the lesson elsewhere: the reveal system hides
+   nothing until JS adds `.dx-ready`, commented "so content is never stuck
+   invisible".
+
+   ACCEPTED, with the same exposure, and named so it is a choice: bf-shell-in
+   still animates the top bar and the rail with fill `both`. Those are chrome
+   rather than content, 0.7s, and it is the pattern ten existing entrances in
+   this codebase already use. A tab nobody has focused has nobody reading it. */
 
 /* RULE N -- at most one infinite animation running in the chrome at a time.
    hs-tag-ping is 2.4s INFINITE on .hs-rail-tag, and two hubs can carry a tag at
@@ -2620,8 +2665,7 @@
   .bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing,
   .bf-shell .hs-deal-card.is-landing,
   .bf-shell .sched-rx .gantt-feature.is-landing .gantt-bar,
-  .bf-shell .sched-rx .is-live,
-  .bf-shell .dash-rx.hs-home .dash-board {
+  .bf-shell .sched-rx .is-live {
     animation: none;
   }
 
@@ -2701,13 +2745,13 @@
 .bf-shell .hs-index .hs-btn-icon.active {
   background: rgba(47, 107, 255, 0.08);
   border-color: rgba(47, 107, 255, 0.28);
-  color: #2f6bff;
+  color: #1f57e0;
   font-weight: 650;
 }
 /* their icon followed the text colour; keep that so the chip reads as one object */
 .bf-shell .hs-index .hs-chip.active svg,
 .bf-shell .hs-index .hs-btn-icon.active svg {
-  color: #2f6bff;
+  color: #1f57e0;
 }
 
 /* ---- 17b. the row actions get their meaning back -----------------------
@@ -2726,7 +2770,7 @@
 .bf-shell .hs-index .hs-row-action.edit:hover {
   background: rgba(47, 107, 255, 0.08);
   border-color: rgba(47, 107, 255, 0.28);
-  color: #2f6bff;
+  color: #1f57e0;
 }
 
 /* ---- 17c. the dialog close button's hover, made coherent ---------------
@@ -2771,12 +2815,20 @@
   color: #2f6bff;
   box-shadow: var(--bf-shadow-card-hover);
 }
-.bf-shell .settings-rx .settings-ai-button.active,
-.bf-shell .settings-rx .settings-ai-button:focus-visible {
-  outline: 0;
+.bf-shell .settings-rx .settings-ai-button.active {
   border-color: #2f6bff;
-  color: #2f6bff;
+  color: #1f57e0;
   box-shadow: var(--bf-focus-ring);
+}
+/* split out of the rule above: .active is "this mode is on" and :focus-visible is
+   "your keyboard is here". Grouping them gave the selected button a focus ring it had
+   not earned and the focused button a halo measuring 1.17:1, which is not an
+   indicator. They are different facts and now say so differently. */
+.bf-shell .settings-rx .settings-ai-button:focus-visible {
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
+  border-color: #2f6bff;
+  color: #1f57e0;
 }
 
 /* ---- 17f. reduced motion for the one move added above ------------------ */
@@ -2785,3 +2837,161 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   18. THE EYEBROW'S INK, CORRECTED                                 (step 12)
+   ----------------------------------------------------------------------------
+   Found by step 12's verification pass, not by review: a contrast sweep over the
+   live DOM, run with the scope on and then off so every number could be
+   attributed. It is a regression I introduced, and it was on information.
+
+   THE MEASURED LADDER, against every ground this design uses. WCAG AA needs
+   4.5:1 for normal text and 3:1 for text at 24px+ (or 18.66px+ bold):
+
+       ink   #1c1c1a   on #ffffff 17.07   on #f5f6fa 15.80   on #eaedf3 14.55
+       muted #575550   on #ffffff  7.45   on #f5f6fa  6.89   on #eaedf3  6.35
+       faint #8a877e   on #ffffff  3.59   on #f5f6fa  3.33   on #eaedf3  3.06
+
+   The faint ink fails on all three. It is the palette's third ink, measured from
+   the Welcome Page, and carrying it over was defensible there: the marketing
+   page spends it on incidental captions beside 96px display type. In-app the
+   eyebrow role lands at 11.5px on the densest surfaces in the product, where
+   the same colour is a readability problem rather than a quiet caption.
+
+   MEASURED, before and after, on the Projects index:
+       .hs-table thead th   was #575550 12.5px -> 7.45:1     became #8a877e 11.5px -> 3.59:1
+       .hs-kpi-label        was #575550 11.5px -> 7.45:1     became #8a877e 11.5px -> 3.59:1
+   The newly-failing list named every column head on the page -- Name, Status,
+   Schedule health, Progress, Target completion -- and every KPI label. A column
+   head is what tells a reader what the column means, so this was the brief's
+   first rule breaking: information still present but no longer legible.
+
+   THE FIX, and why it costs the design nothing. The eyebrow is a TYPOGRAPHIC
+   role, not a colour: 11.5px, weight 650, 0.045em tracking, uppercase. Those
+   four things are what make a 13px table read as part of the same family as a
+   96px hero, and all four are untouched. Only the ink moves, from faint to
+   muted, which restores 7.45:1 on card and 6.89:1 on ground.
+
+   WHERE THE FAINT INK SURVIVES: the three icon-only rules and the flyout star,
+   because 3.59:1 clears the 3:1 bar that applies to non-text, and each of those
+   controls carries its own accessible name in text.
+
+   DECLARED DEVIATION from DESIGN_TOKENS.md: in-app, the faint ink is reserved
+   for non-text. Any future rule that puts #8a877e on words is wrong, and the
+   reason is the table above, not taste.
+
+   NOT FIXED HERE, and reported rather than changed: the same faint ink is used
+   on text by sheets this redesign does not own -- the Schedule Status band's
+   .ss-asof, .ss-delta.is-muted and .ss-project-finish render it at 12.5px, so
+   3.59:1 on card and 3.06:1 on the wash. Those were failing before this
+   redesign began, and they are a decision about the design language rather than
+   a regression to repair, so they are named in the step report for the owner to
+   rule on instead of being quietly swept in.
+   ============================================================================ */
+
+/* ============================================================================
+   19. THE ACCENT'S INK ON ITS OWN WASH                             (step 12)
+   ----------------------------------------------------------------------------
+   The second contrast finding from step 12's live sweep, and the same shape as
+   section 18: right idea, wrong number. Every "this one is active" state in this
+   redesign is the accent at 8% under accent-coloured words, and every "New" or
+   hub badge is the accent at 10% under accent-coloured words. Measured:
+
+       #2f6bff on its own  8% wash   over card 4.06   over ground 3.77
+       #2f6bff on its own 10% wash   over card 3.95   over ground 3.67
+
+   All four fail the 4.5:1 that 11-13px text needs. Worth noting how narrow the
+   margin was to begin with: #2f6bff on PLAIN WHITE is exactly 4.50, so the
+   accent only ever passed by a hair, and tinting the ground beneath it by 8% was
+   enough to push it under.
+
+   The ink becomes #1f57e0, which clears it everywhere -- 5.41 and 5.03 at 8%,
+   5.27 and 4.90 at 10%. It is deliberately NOT a new colour: #1f57e0 is already
+   the primary button's hover in this sheet, so the palette gains nothing to
+   remember, and a darker accent reads as the same accent pressed rather than as
+   a different hue.
+
+   CHECKED AND LEFT ALONE, because measuring beats assuming:
+   - the destructive red, #c5221f on its own 8% wash, is 5.09 and passes;
+   - the Beta violet, #6d28d9 on its own 10% wash, is 6.03 and passes;
+   - the neutral washes are ink or muted on rgba(28,28,26,0.05), 14.5 and 6.4;
+   - the accent as a BORDER at rgba(47,107,255,0.28) is only 1.46 against a card,
+     which would matter if a boundary were the sole indicator of state. It is
+     not: every active state here carries a fill, a darker ink and weight 650, so
+     the border is reinforcement. Flagged rather than changed, because widening
+     it is a visual decision rather than a correctness one.
+   ============================================================================ */
+
+/* ============================================================================
+   20. WHAT STEP 12 VERIFIED, AND WHAT IT FOUND                     (step 12)
+   ----------------------------------------------------------------------------
+   The acceptance question was the brief's first rule: has any page, route,
+   category, setting, label, data field, table column, chart, form input, button
+   action or piece of copy stopped existing. 4,890 inventory checkboxes is not a
+   thing a person re-reads reliably, so it was answered in two halves instead.
+
+   HALF ONE, THE JSX: a proof rather than a walk. Across all sixteen commits of
+   this redesign the entire TypeScript content delta is TWO removals and TEN
+   additions -- extracted by diffing the full multiset of string literals,
+   template literals and JSX text nodes between the base commit and HEAD, per
+   file. Removed: the import of the dead sidebar-redesign.css, and an
+   IntersectionObserver rootMargin. Added: the class word bf-shell, two CSS
+   imports, the reveal attribute selector, the new rootMargin, and the strings
+   of a prefers-reduced-motion guard. App.tsx went from 20,504 content items to
+   20,505, the one addition being the class name. So not one label, column head,
+   button name, aria string, placeholder or piece of copy moved, and the
+   inventory's 2,112 information items and 1,228 actions all still exist.
+   (Read the COMMITTED blobs for this, never the working tree: a parallel session
+   has around 2,000 uncommitted lines in App.tsx, and reading from disk
+   attributes every one of them to this redesign. The first run of that check did
+   exactly that and reported 376 lost strings.)
+
+   HALF TWO, THE CSS: a stylesheet cannot delete content, only make it
+   unreachable, and the ways are a closed list. Enumerating every declaration in
+   this file capable of hiding anything returns 133, of which 129 are `color`
+   and four are structural. Both structural cases were then verified in a
+   browser rather than reasoned about:
+     - the index card's `overflow: hidden` -- the table wrap inside it scrolls, and
+       all thirteen Projects columns are reachable at 375px (six at rest, seven
+       after scrolling the wrap);
+     - the Settings rail mask below 900px -- every one of the fourteen categories
+       is fully visible at some scroll offset, at 900, 768 and 375px.
+   The 129 colours were swept live across fourteen screens, three widths, the
+   project dialog, the command palette and an open rail flyout, each measured
+   with the scope on and off so every number could be attributed. Deltas for
+   newly hidden, newly clipped and newly low-contrast: zero, after sections
+   18-19 fixed what the first sweep found.
+
+   TWO METHOD TRAPS, WRITTEN DOWN BECAUSE BOTH PRODUCED CONFIDENT WRONG ANSWERS:
+   1. Freeze animation AND transition before reading a computed style. A running
+      transition reports its animated value, and a frozen document timeline -- a
+      hidden or throttled tab, which is the normal state of an automated browser
+      -- leaves every fill-mode `both` entrance stuck in its `from` state. That
+      second one reported the whole dashboard panel board and 130 of its strings
+      as hidden by this redesign. They were not.
+   2. Toggling the scope class off and on RESTARTS every entrance animation, so a
+      second reading taken within 0.7s sees opacity 0 on anything animated. Two
+      "newly hidden" findings came from exactly that window.
+
+   THREE PRE-EXISTING DEFECTS FOUND AND DELIBERATELY NOT FIXED, because they are
+   not regressions and repairing them is a product decision rather than a
+   verification one. Each is measured, so the decision can be made on numbers:
+   1. THE INDEX PAGES ARE BROKEN AT 375px, and were before this work. The card's
+      head, toolbar and footer are `display: flex; flex-wrap: nowrap` with no
+      scroller of their own, so at 375px the primary action ("Add project") is
+      half off-screen, and "Sort by status", the result count ("6 of 6"), the
+      per-page select and part of the pagination are entirely off-screen.
+      Measured identical with and without this redesign to within 2px, and
+      `documentElement.scrollWidth` never exceeds the viewport in either state --
+      so there is no escape by scrolling and there never was. The fix is a
+      `flex-wrap: wrap` or an `overflow-x: auto` on three rows; it is a layout
+      change on nine pages and wants sign-off.
+   2. THE FAINT INK IS STILL ON TEXT IN SHEETS THIS REDESIGN DOES NOT OWN. The
+      Schedule Status band renders .ss-asof, .ss-delta.is-muted and
+      .ss-project-finish in #8a877e at 12.5px: 3.59:1 on a card, 3.06:1 on the
+      wash. Section 18 removed this from every rule here; these are the same
+      failure in a file this work did not touch.
+   3. Two named in the motion plan and still open: a bookmarked schedule view
+      changes the URL and nothing else, and `.hs-page-tag` renders unstyled on
+      six schedule pages.
+   ============================================================================ */
