@@ -3279,3 +3279,143 @@
     transition: none;
   }
 }
+
+/* ============================================================================
+   23. THE WORDED RAIL
+   ----------------------------------------------------------------------------
+   The last real difference between the app and the Welcome Page. The page
+   navigates with worded horizontal links at 14px/650 in pill-shaped hit areas;
+   the app navigated with a 56px column of unlabelled icons and a tooltip. The
+   earlier plan kept the icon rail and listed it under its own honest shortfalls
+   ("the rail still hides its labels"), on the grounds that the 56px literals,
+   the flyout arithmetic and the test harness's navigation path all stand on it.
+
+   Two of those three turn out not to depend on the WIDTH at all:
+   - The flyout is positioned `left: var(--hs-rail-w)` and `top: <offsetTop>`.
+     Only the vertical number is hand-computed, and widening the rail does not
+     touch it.
+   - The harness hovers `.hs-rail-slot` and then clicks a flyout row by
+     accessible name. The label added here is aria-hidden and the button's name
+     still comes from its aria-label, so all 33 navigation call sites see exactly
+     the same accessible tree they saw before.
+   The third, the 56px literal, is a token, and it is the only thing that moves.
+
+   WHY THE LABEL IS aria-hidden. The button already has `aria-label` and `title`
+   carrying the hub name, and on hubs with a release tag the aria-label is
+   `"Sales (New)"` while the visible word is just "Sales". Exposing both would
+   either duplicate the name to a screen reader or, worse, change it and break
+   every query that navigates by it. So the text is decoration over an
+   already-correct accessible name.
+
+   The rail collapses back to icons below 1180px rather than at a phone
+   breakpoint, because that is the width at which a 216px rail starts taking
+   space a dense board needs, not the width at which it stops fitting.
+   ============================================================================ */
+
+/* the one literal that moves. Declared at 56px in app-shell-hubspot.css's token
+   block, read by the body grid, the rail's own width and the flyout's left
+   offset, so all three follow from this. */
+.app-shell.hs-shell.bf-shell {
+  --hs-rail-w: 216px;
+}
+
+/* the rail becomes a column of rows rather than a column of centred squares */
+.hs-shell.bf-shell .hs-rail-list,
+.hs-shell.bf-shell .hs-rail-bottom {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.hs-shell.bf-shell .sidebar.hs-rail {
+  align-items: stretch;
+  padding: 10px 10px;
+}
+.hs-shell.bf-shell .hs-rail-slot {
+  justify-content: stretch;
+}
+.hs-shell.bf-shell .hs-rail-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: var(--bf-radius-control);
+  /* the Welcome nav's own link type: 14px at 650, which is also the one weight
+     the marketing nav uses */
+  font-size: var(--bf-nav-link);
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  text-align: left;
+}
+.hs-shell.bf-shell .hs-rail-btn svg {
+  flex: 0 0 auto;
+}
+.hs-shell.bf-shell .hs-rail-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* deliberately NOT truncated. The nine hub names are short, known and fit 195px at
+     14px with room to spare, so an ellipsis could only ever hide text in a case that
+     cannot arise -- and the design-language guard counts every mechanism capable of
+     hiding content, correctly. Without it a longer name would wrap, which is visible. */
+}
+
+/* the release dot stops being a corner pip on an icon and becomes a marker at
+   the end of the row, which is where a worded nav puts one */
+.hs-shell.bf-shell .hs-rail-tag {
+  position: static;
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  box-shadow: none;
+}
+
+/* the flyout now opens beside a 216px rail. Its own min-width stays, so a hub
+   with long page names is unaffected. */
+.hs-shell.bf-shell .hs-flyout {
+  margin-left: 8px;
+}
+
+/* Below 1180px the rail returns to the icon column it was, because a 216px rail
+   is width a dense board wants back. Everything reverts through the same token
+   the expansion came from. */
+@media (max-width: 1180px) {
+  .app-shell.hs-shell.bf-shell {
+    --hs-rail-w: 56px;
+  }
+  .hs-shell.bf-shell .sidebar.hs-rail {
+    align-items: center;
+    padding: 10px 0;
+  }
+  .hs-shell.bf-shell .hs-rail-list,
+  .hs-shell.bf-shell .hs-rail-bottom {
+    align-items: center;
+    justify-content: center;
+  }
+  .hs-shell.bf-shell .hs-rail-slot {
+    justify-content: center;
+  }
+  .hs-shell.bf-shell .hs-rail-btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    gap: 0;
+  }
+  .hs-shell.bf-shell .hs-rail-label {
+    display: none;
+  }
+  .hs-shell.bf-shell .hs-rail-tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 7px;
+    height: 7px;
+    margin-left: 0;
+  }
+  .hs-shell.bf-shell .hs-flyout {
+    margin-left: 0;
+  }
+}

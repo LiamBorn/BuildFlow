@@ -266,8 +266,18 @@ describe("the stylesheet cannot have hidden anything", () => {
     expect(Object.keys(found).sort()).toEqual(["display:none", "mask", "overflow"]);
     expect(found["overflow"]).toHaveLength(1);
     expect(found["mask"]).toHaveLength(2);
-    expect(found["display:none"]).toHaveLength(1);
-    // the one display:none is decoration, and only under reduced motion
-    expect(found["display:none"][0]).toMatch(/dx-cursor/);
+    // TWO display:none, and the list is closed at two. This guard earned its keep here:
+    // the worded rail's first draft also carried overflow:hidden, text-overflow:ellipsis
+    // and white-space:nowrap on the label, and the test refused them. They were removed
+    // rather than allowed, because the nine hub names fit their 195px row at 14px with
+    // room to spare, so an ellipsis could only ever hide text in a case that cannot
+    // arise. The remaining two are both real:
+    //   .dx-cursor      a decorative 480px pointer glow, and only under reduced motion
+    //   .hs-rail-label  the worded rail's text, when the rail collapses to icons below
+    //                   1180px. The button keeps its aria-label, so the name a screen
+    //                   reader and every test query read is unchanged at every width.
+    expect(found["display:none"]).toHaveLength(2);
+    expect(found["display:none"].join(" ")).toMatch(/dx-cursor/);
+    expect(found["display:none"].join(" ")).toMatch(/hs-rail-label/);
   });
 });

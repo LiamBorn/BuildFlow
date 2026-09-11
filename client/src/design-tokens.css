@@ -169,6 +169,7 @@
   --bf-page-display-weight: 500;
   --bf-page-display-lead: 1.06;
   --bf-page-lede: clamp(16px, 1.35vw, 19px); /* the Welcome Page's lede, verbatim */
+  --bf-nav-link: 14px; /* the Welcome nav's link size, and now the worded rail's */
   /* The Gantt board subtracts this from the viewport. It is the app chrome above
      the board summed by hand -- bar, rail gutter, page header, control row, KPI
      strip -- and it has to grow with the page title, so it lives beside the
