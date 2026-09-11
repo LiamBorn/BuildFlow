@@ -1900,17 +1900,31 @@
    pinned at 12px by redesign.css's one !important and is accepted: 12px is a
    real rung, and firing a counter-!important to buy 6px of corner is not worth
    making this sheet fight the cascade. */
+/* CORRECTED after step 10 shipped. My first pass gave both of these
+   var(--bf-shadow-card), which was a design error, not just a wrong value.
+   Measured: .settings-panel computes background rgba(0,0,0,0) with
+   border-top-width 0px and style none — it is the TRANSPARENT full-height right
+   pane, so a card shadow on it is a floating dark rim with nothing casting it.
+   .settings-account-card is transparent too; its only frame is a border-bottom
+   hairline, removed entirely below 900px. It is a rail header, not a card.
+   Swapping navy for ink made the tint right and left the shadow wrong.
+   The border-color I also set was a no-op on both: there is no border-width to
+   colour on the panel, and the account card's hairline already resolves to
+   exactly rgba(28,28,26,0.07) through --wx-line-soft. */
 .bf-shell .settings-rx .settings-panel,
 .bf-shell .settings-rx .settings-account-card {
-  border-color: rgba(28, 28, 26, 0.07);
-  box-shadow: var(--bf-shadow-card);
+  box-shadow: none;
 }
 .bf-shell .settings-rx .settings-nav-item {
   border-radius: var(--bf-radius-control);
 }
-/* the rail's group headings are the eyebrow role, already close at 11px/700 */
-.bf-shell .settings-rx .settings-nav-group > h3,
-.bf-shell .settings-rx .settings-nav-label {
+/* CORRECTED: my first pass targeted `.settings-nav-group > h3` and
+   `.settings-nav-label`. Both match NOTHING — verified live, 0 elements each,
+   while `.settings-nav-group h2` matches 4. The markup is
+   `<section className="settings-nav-group"><h2>{group.title}</h2>`, so the
+   rail's four group eyebrows (Account / Workspace / Features / Admin) were
+   still rendering at 11px / 700 / 0.66px after I reported them done. */
+.bf-shell .settings-rx .settings-nav-group h2 {
   font-size: var(--bf-app-eyebrow);
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
@@ -1918,14 +1932,46 @@
   color: #8a877e;
 }
 
+/* ---- 15a-ii. the category rows, onto the shell's own nav grammar -------
+   The rail rows had their own dialect: an opaque #e8f0fe active fill (a
+   Google-blue-derived surface the measured language does not contain), a 2px
+   nudge instead of the shared 3px, and a 3px/0.16 focus ring instead of the
+   shared 4px/0.12. Using --bf-slide also fixes reduced motion for free, since
+   design-tokens.css nulls it there. */
+.bf-shell .settings-rx .settings-nav-item:hover {
+  background: rgba(28, 28, 26, 0.05);
+  transform: translateX(var(--bf-slide));
+}
+.bf-shell .settings-rx .settings-nav-item.active {
+  background: rgba(47, 107, 255, 0.08);
+  color: #2f6bff;
+  font-weight: 650;
+}
+/* deliberately OUTSIDE the <=900px block below, which swaps this ring for an
+   inset outline because a masked element clips its children's shadow */
+.bf-shell .settings-rx .settings-nav-item:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+.bf-shell .settings-rx .settings-ai-button {
+  box-shadow: var(--bf-shadow-raised);
+}
+
 /* ---- 15b. the last of the purple-blue glows ---------------------------
    rgba(66,92,244,0.3x) again, the same off-accent tint found on the AI panel
    and the Field Updates crew icon. */
 .bf-shell .settings-rx .sx-header-icon {
+  /* the shadow was fixed in the first pass; the radius was left at 14px */
+  border-radius: var(--bf-radius-control);
   box-shadow: 0 8px 22px rgba(47, 107, 255, 0.24);
 }
 .bf-shell .settings-rx .reports-avatar {
   box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+}
+/* was 13px, one rung off the ladder. The uploaded-photo case follows for
+   free, because .settings-avatar-img takes border-radius: inherit. */
+.bf-shell .settings-rx .settings-account-card .reports-avatar {
+  border-radius: var(--bf-radius-control);
 }
 
 /* ---- 15c. the narrow layout finally gets a scroll affordance -----------
