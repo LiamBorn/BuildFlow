@@ -12,6 +12,8 @@ import {
   type BillingStatus,
   type BootstrapPayload,
   type InvitePreview,
+  invitablePermissionLevels,
+  isPermissionLevel,
   type TeamInvite,
   type OnboardingProductId,
   type PlanId,
@@ -1264,6 +1266,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const preview: InvitePreview = {
       email: invite.email,
       role: invite.role,
+      permission: invite.permission,
       orgName: org.name,
       inviterName: inviter?.name ?? "A teammate",
       expiresAt: invite.expiresAt
@@ -1306,7 +1309,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       email: invite.email,
       password: parsed.data.password,
       name: parsed.data.name,
-      role: "member",
+      // The invite decides this now. It used to be hardcoded, which is the reason there was
+      // no way to have an Admin in a workspace at all.
+      role: invite.permission,
       acceptedTermsAt: new Date().toISOString(),
       acceptedTermsVersion: TERMS_VERSION
     });
@@ -1409,6 +1414,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     id: string;
     email: string;
     role: string;
+    permission?: string;
     invitedBy: string;
     createdAt: string;
     expiresAt: string;
@@ -1417,6 +1423,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     id: row.id,
     email: row.email,
     role: row.role as TeamInvite["role"],
+    // Optional on the way in and defaulted here, so a row written before migration 21
+    // reads back as what it will actually become.
+    permission: isPermissionLevel(row.permission) ? row.permission : "member",
     invitedBy: mainStore.getAccountById(row.invitedBy)?.name ?? "A teammate",
     createdAt: row.createdAt,
     expiresAt: row.expiresAt,
@@ -1428,7 +1437,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       users: store.users(),
       invites: mainStore.openInvites(req.org!.id).map(inviteView),
       // Only the login that created the org changes what people are.
-      canManage: req.account?.role === "owner",
+      // Whether this person may set job titles. It was `role === "owner"` when that was the
+      // only check in the server; it now asks the same question the route itself asks, so the
+      // button and the endpoint cannot disagree. The full capability mirror is a later step.
+      canManage: can(req.account!.role, "team.title"),
       emailVerified: Boolean(req.account?.emailVerifiedAt)
     });
   });
@@ -1438,7 +1450,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       .array(
         z.object({
           email: z.string().trim().email("Enter a valid email address.").max(320),
-          role: z.enum(["Project Manager", "Superintendent", "Crew Lead"])
+          role: z.enum(["Project Manager", "Superintendent", "Crew Lead"]),
+          /* The permission level, defaulted so every caller that predates this field keeps
+             sending a Member — which is what acceptance used to hardcode. "owner" is not in
+             the enum at all: ownership is transferred, not emailed. */
+          permission: z.enum(invitablePermissionLevels).default("member")
         })
       )
       .min(1, "Add at least one email.")
@@ -1463,10 +1479,23 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         results.push({ email, status: "skipped", reason: "Already has a BuildFlow account." });
         continue;
       }
+      /**
+       * An Admin may invite Members, and only the Owner may invite an Admin. Without this
+       * an Admin can mint another Admin, which makes Admin and Owner the same role by a
+       * slightly longer route.
+       *
+       * Refused per row rather than for the whole request: a batch of twenty where one line
+       * asked for too much should send the other nineteen and say which one it skipped.
+       */
+      if (item.permission !== "member" && !can(account.role, "team.permission")) {
+        results.push({ email, status: "skipped", reason: "Only the workspace owner can invite an admin." });
+        continue;
+      }
       const { invite, token } = mainStore.createInvite({
         orgId: org.id,
         email,
         role: item.role,
+        permission: item.permission,
         invitedBy: account.id,
         ttlMs: INVITE_TTL_MS,
         sent: canSend
@@ -1515,12 +1544,15 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.status(204).end();
   });
 
-  // Owners set what a teammate is in the workspace: Project Manager, Superintendent or Crew Lead.
+  /**
+   * Sets what a teammate is on the crew roster: Project Manager, Superintendent or Crew Lead.
+   *
+   * This used to be the only authorization check in the whole server, and it was an inline
+   * owner-only conditional right here. It is now the "team.title" row of ROUTE_POLICY, which
+   * both moves the decision somewhere it can be read alongside every other one and widens it
+   * to an Admin -- managing people is the Admin tier's job.
+   */
   app.patch("/api/team/users/:id", (req, res) => {
-    if (req.account?.role !== "owner") {
-      res.status(403).json({ error: "Only the workspace owner can change roles." });
-      return;
-    }
     const parsed = z.object({ role: z.enum(["Project Manager", "Superintendent", "Crew Lead"]) }).safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Choose Project Manager, Superintendent or Crew Lead." });

@@ -75,7 +75,10 @@ export type InviteRow = {
   id: string;
   orgId: string;
   email: string;
+  /** The crew roster's job title. */
   role: UserRole;
+  /** The permission level the accepted account is created at. See migration 21. */
+  permission: PermissionLevel;
   invitedBy: string;
   tokenHash: string;
   expiresAt: string;
@@ -1017,6 +1020,31 @@ SCHEMA_MIGRATIONS.push({
     db.exec(`UPDATE accounts SET role = 'member' WHERE role NOT IN ('owner', 'admin', 'member')`);
     // Historic casing, in case any path ever wrote "Owner" or "Member".
     db.exec(`UPDATE accounts SET role = lower(role) WHERE role <> lower(role)`);
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 21,
+  name: "invites carry a permission level",
+  up: (db) => {
+    // An invite already carried a job title. It could not carry a permission level, so
+    // acceptance hardcoded "member" and there was no way to invite an Admin at all --
+    // which is what made the Admin tier unreachable rather than merely unenforced.
+    //
+    // A plain ADD COLUMN with a default, so every invite already in flight becomes exactly
+    // what it would have become anyway: a Member. Nobody's pending invite changes meaning.
+    //
+    // Numbered 21, one past 20. The runner sorts by version and skips anything at or below
+    // the stored user_version SILENTLY (:1170), and SCHEMA_MIGRATIONS already carries two
+    // 15s and two 16s from before that was understood. Never renumber, never reuse.
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='invites'");
+    if (!tables[0]) return;
+    const columns = db.exec("PRAGMA table_info(invites)")[0];
+    const names = new Set((columns?.values ?? []).map((row) => String(row[1])));
+    if (names.has("permission")) return;
+    db.exec(`ALTER TABLE invites ADD COLUMN permission TEXT NOT NULL DEFAULT 'member'`);
+    // Belt and braces: a default only applies to rows inserted without the column.
+    db.exec(`UPDATE invites SET permission = 'member' WHERE permission NOT IN ('admin', 'member')`);
   }
 });
 
@@ -2587,7 +2615,15 @@ export class BuildFlowStore {
   /* ── team invites (org records) ─────────────────────────────────────────── */
 
   /** Mint an invite; an open invite to the same address on this org is replaced. Returns the raw token for the link. */
-  createInvite(input: { orgId: string; email: string; role: UserRole; invitedBy: string; ttlMs: number; sent: boolean }): {
+  createInvite(input: {
+    orgId: string;
+    email: string;
+    role: UserRole;
+    permission: PermissionLevel;
+    invitedBy: string;
+    ttlMs: number;
+    sent: boolean;
+  }): {
     invite: InviteRow;
     token: string;
   } {
@@ -2600,6 +2636,9 @@ export class BuildFlowStore {
       orgId: input.orgId,
       email,
       role: input.role,
+      // Never an owner: ownership is transferred, not handed out with an email. Anything
+      // unrecognised fails closed to the least privilege, as it does on accounts.
+      permission: input.permission === "admin" ? "admin" : "member",
       invitedBy: input.invitedBy,
       tokenHash: hashToken(token),
       expiresAt: new Date(now.getTime() + input.ttlMs).toISOString(),

@@ -37,6 +37,9 @@ const pendingInvite: TeamInvite = {
   id: "inv-1",
   email: "sam.rivera@buildflow.test",
   role: "Crew Lead",
+  // The job title and the permission level are two different fields on purpose: what this
+  // person does on the crew, and what their login may do in the workspace.
+  permission: "member",
   invitedBy: "acct-liam",
   createdAt: "2026-06-10T09:00:00.000Z",
   expiresAt: "2026-06-24T09:00:00.000Z",

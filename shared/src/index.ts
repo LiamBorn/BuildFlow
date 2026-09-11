@@ -96,7 +96,14 @@ export type PlanId = (typeof planOptions)[number];
 export type TeamInvite = {
   id: string;
   email: string;
+  /** The crew roster's job title — what this person does, not what they may do. */
   role: UserRole;
+  /**
+   * The permission level the account will be created at. Separate from `role` because the
+   * two answer different questions, and an invite has to carry both: acceptance is the one
+   * moment a workspace decides what a new login may do.
+   */
+  permission: PermissionLevel;
   invitedBy: string;
   createdAt: string;
   expiresAt: string;
@@ -104,8 +111,18 @@ export type TeamInvite = {
   sentAt: string | null;
 };
 
+/** Who may be invited at which level. An Owner is never invited; ownership is transferred. */
+export const invitablePermissionLevels = ["admin", "member"] as const satisfies readonly PermissionLevel[];
+
 /** What the invited person sees before accepting. */
-export type InvitePreview = { email: string; role: UserRole; orgName: string; inviterName: string; expiresAt: string };
+export type InvitePreview = {
+  email: string;
+  role: UserRole;
+  permission: PermissionLevel;
+  orgName: string;
+  inviterName: string;
+  expiresAt: string;
+};
 
 /**
  * Where the org stands with money. Derived on the server from the trial the

@@ -233,22 +233,29 @@ describe("the Owner-only rows, once they are on", () => {
     const admin = await join("admin");
 
     // This is the escalation the plan called the clearest one in the codebase: before this
-    // step, any signed-in person in the workspace could change the plan and the seat count.
-    for (const [level, agent] of [
-      ["member", member],
-      ["admin", admin]
-    ] as const) {
-      const refused = await agent
-        .post("/api/business-profile")
-        .send({ businessType: "Asphalt", selectedPlan: "business", seats: 40 })
-        .expect(403);
-      expect(refused.body).toMatchObject({ code: "forbidden", need: "billing.plan" });
-      expect(refused.body.error).toContain("owner");
-      expect(level).toBeTruthy();
-    }
+    // work, any signed-in person in the workspace could change the plan and the seat count.
+    //
+    // The two levels are refused at DIFFERENT points, and that is the interesting part. A
+    // Member never reaches the handler: the whole route is org.settings now, so the policy
+    // stops them. An Admin is admitted to the route -- naming the trade is their job -- and
+    // is then refused the commercial fields by the check inside it.
+    const admins = await admin
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "business", seats: 40 })
+      .expect(403);
+    expect(admins.body).toMatchObject({ code: "forbidden", need: "billing.plan" });
+    expect(admins.body.error).toContain("owner");
+
+    const members = await member
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "business", seats: 40 })
+      .expect(403);
+    expect(members.body).toMatchObject({ code: "forbidden", need: "org.settings" });
 
     // Seats alone, with no plan, is the same commercial change and is refused the same way.
-    await member.post("/api/business-profile").send({ businessType: "Asphalt", seats: 40 }).expect(403);
+    expect((await admin.post("/api/business-profile").send({ businessType: "Asphalt", seats: 40 }).expect(403)).body.need).toBe(
+      "billing.plan"
+    );
 
     // The Owner still can, and the change takes effect.
     const applied = await owner
@@ -258,13 +265,17 @@ describe("the Owner-only rows, once they are on", () => {
     expect(applied.body).toMatchObject({ selectedPlan: "business", seats: 12 });
   });
 
-  it("still lets a Member name the trade, which is the row the NEXT step narrows", async () => {
-    // Stated outright rather than left implicit: this step turned on the Owner rows only.
-    // The Admin rows -- org settings among them -- are the next step, and this assertion
-    // is expected to flip to 403 there.
+  it("lets an Admin name the trade and refuses a Member, which is the row that just changed", async () => {
+    // This assertion is the previous step's, flipped. It read 200 when only the Owner rows
+    // were on, because org.settings had not been turned on yet; the comment said it was
+    // expected to become a 403 here, and it did.
     const { join } = await workspace();
     const member = await join("member");
-    await member.post("/api/business-profile").send({ businessType: "Asphalt", selectedProducts: [] }).expect(200);
+    const admin = await join("admin");
+    await admin.post("/api/business-profile").send({ businessType: "Asphalt", selectedProducts: [] }).expect(200);
+    expect((await member.post("/api/business-profile").send({ businessType: "Asphalt", selectedProducts: [] }).expect(403)).body.need).toBe(
+      "org.settings"
+    );
   });
 
   it("keeps Stripe's customer portal to the Owner", async () => {
@@ -299,5 +310,179 @@ describe("the Owner-only rows, once they are on", () => {
     expect(main.setAccountRole(account.id, "superuser")).toBeUndefined();
     expect(main.setAccountRole("acct-nobody", "admin")).toBeUndefined();
     expect(main.setAccountRole(account.id, "admin")?.role).toBe("admin");
+  });
+});
+
+describe("the Admin rows, once they are on", () => {
+  it("lets a Member read the whole plan of record and change none of it", async () => {
+    const { join } = await workspace();
+    const member = await join("member");
+
+    // The read floor. A Member sees the schedule, because a crew that cannot see the
+    // schedule cannot work to it.
+    await member.get("/api/bootstrap").expect(200);
+    await member.get("/api/schedule").expect(200);
+    await member.get("/api/jobs").expect(200);
+    await member.get("/api/projects").expect(200);
+    await member.get("/api/schedule/status").expect(200);
+    await member.get("/api/schedule/variances").expect(200);
+    await member.get("/api/team").expect(200);
+
+    // And the writes that move dates, money or people. Each names the capability it wanted,
+    // which is what lets the client explain a refusal rather than just failing.
+    //
+    // Bodies are deliberately empty. The guard runs before the handler's schema, so a 403
+    // here proves the refusal happened on the permission and not on a validation error --
+    // if any of these ever returns 400, the gate stopped running.
+    const refusals = [
+      ["post", "/api/jobs", "jobs.write"],
+      ["post", "/api/schedule/assign", "assignments.write"],
+      ["post", "/api/schedule/dependencies", "dependencies.write"],
+      ["post", "/api/schedule/baseline", "schedule.baseline"],
+      ["put", "/api/schedule/work-calendar", "calendar.write"],
+      ["post", "/api/projects", "projects.write"],
+      ["post", "/api/crews", "resources.write"],
+      ["post", "/api/import/schedule/commit", "import.commit"],
+      ["post", "/api/schedule/digest/send", "notify.send"],
+      ["post", "/api/team/invites", "team.invite"],
+      ["patch", "/api/org", "org.settings"],
+      ["post", "/api/schedule/sample-data", "sampledata.write"],
+      ["get", "/api/schedule/feeds", "feeds.read"],
+      ["post", "/api/delayIQs", "delayiq.log"],
+      ["delete", "/api/projects/anything", "projects.delete"],
+      ["delete", "/api/crews/anything", "resources.delete"]
+    ] as const;
+    for (const [verb, path, need] of refusals) {
+      const response = await member[verb](path).send({});
+      expect({ path, status: response.status, need: response.body.need }).toEqual({ path, status: 403, need });
+    }
+
+    // Filing field progress is the one write a Member must keep: it is the crew's own job,
+    // and gating it would break the loop the whole product is built on.
+    await member.get("/api/field-updates").expect(200);
+    const filed = await member.post("/api/field-updates").send({});
+    expect(filed.status).not.toBe(403);
+  });
+
+  it("lets an Admin run the work but not own the workspace", async () => {
+    const { join } = await workspace();
+    const admin = await join("admin");
+
+    // Runs the work: a real write that lands.
+    // The manager has to be a Project Manager or a Superintendent -- a rule of the schedule,
+    // not of permissions -- so pick one off the roster rather than assuming a position.
+    const roster = (await admin.get("/api/bootstrap").expect(200)).body.users as Array<{ id: string; role: string }>;
+    const managerId = roster.find((user) => user.role === "Project Manager" || user.role === "Superintendent")!.id;
+    const project = await admin
+      .post("/api/projects")
+      .send({
+        name: "Route 12 Overlay",
+        location: "Bristol",
+        address: "Route 12, Bristol",
+        type: "Resurfacing",
+        contractType: "Unit price",
+        managerId,
+        targetCompletion: "2026-11-30",
+        percentComplete: 0,
+        status: "Not Started",
+        scheduleHealth: "On Track"
+      })
+      .expect(201);
+    expect(project.body).toMatchObject({ name: "Route 12 Overlay" });
+    await admin.patch("/api/org").send({ name: "Asphalt Company" }).expect(200);
+    await admin.get("/api/schedule/feeds").expect(200);
+
+    // Does not own it: the three Owner reserves.
+    expect((await admin.post("/api/billing/portal").send({ email: "dana@asphaltco.com" }).expect(403)).body.need).toBe("billing.pay");
+    expect(
+      (await admin.post("/api/business-profile").send({ businessType: "Asphalt", selectedPlan: "pro" }).expect(403)).body.need
+    ).toBe("billing.plan");
+  });
+
+  it("lets an Admin set a job title, which used to be the Owner's alone", async () => {
+    // The one authorization check that existed before this work was an inline owner-only
+    // conditional on this route. It is now a row in the table, and the row says Admin.
+    const { owner, join } = await workspace();
+    const admin = await join("admin");
+    const member = await join("member");
+    const roster = await admin.get("/api/team").expect(200);
+    expect(roster.body.canManage).toBe(true);
+    const someone = roster.body.users.find((user: { name: string }) => user.name === "member person");
+    const retitled = await admin.patch(`/api/team/users/${someone.id}`).send({ role: "Superintendent" }).expect(200);
+    expect(retitled.body.user).toMatchObject({ id: someone.id, role: "Superintendent" });
+
+    // A Member still cannot, and is told which permission it needed.
+    const mine = await member.get("/api/team").expect(200);
+    expect(mine.body.canManage).toBe(false);
+    expect((await member.patch(`/api/team/users/${someone.id}`).send({ role: "Crew Lead" }).expect(403)).body.need).toBe("team.title");
+    await owner.patch(`/api/team/users/${someone.id}`).send({ role: "Crew Lead" }).expect(200);
+  });
+});
+
+describe("the invite's permission field", () => {
+  it("creates the account at the level the invite carried, not at Member always", async () => {
+    // Acceptance hardcoded "member", which is why the Admin tier was unreachable rather
+    // than merely unenforced: there was no way to get an Admin into a workspace at all.
+    const { app, owner, orgId } = await workspace();
+    await owner.post("/api/team/invites").send({ invites: [{ email: "kit@asphaltco.com", role: "Superintendent", permission: "admin" }] }).expect(201);
+    const open = await owner.get("/api/team").expect(200);
+    expect(open.body.invites[0]).toMatchObject({ email: "kit@asphaltco.com", role: "Superintendent", permission: "admin" });
+
+    const main = (app.locals.storeManager as { main: MainStore }).main;
+    const [row] = main.all<{ id: string }>("SELECT id FROM invites WHERE acceptedAt IS NULL");
+    const fresh = main.refreshInvite(row.id, orgId, 60_000)!;
+
+    // The invited person sees the level before they commit to it.
+    const preview = await request(app).get(`/api/auth/invite/${encodeURIComponent(fresh.token)}`).expect(200);
+    expect(preview.body).toMatchObject({ email: "kit@asphaltco.com", role: "Superintendent", permission: "admin" });
+
+    const kit = request.agent(app);
+    const joined = await kit
+      .post("/api/auth/invite/accept")
+      .send({ token: fresh.token, name: "Kit Alvarez", password: "Paver-Screed-2026", acceptTerms: true })
+      .expect(201);
+    expect(joined.body.account.role).toBe("admin");
+    // And the level is real, not just recorded: Kit can do an Admin's job immediately.
+    await kit.patch("/api/org").send({ name: "Asphalt Co." }).expect(200);
+  });
+
+  it("defaults to Member when no level is asked for, so an old caller means what it always did", async () => {
+    const { owner } = await workspace();
+    await owner.post("/api/team/invites").send({ invites: [{ email: "plain@asphaltco.com", role: "Crew Lead" }] }).expect(201);
+    expect((await owner.get("/api/team").expect(200)).body.invites[0].permission).toBe("member");
+  });
+
+  it("lets only the Owner invite an Admin, and sends the rest of the batch anyway", async () => {
+    // An Admin who can mint Admins is an Owner with extra steps. Refused per row rather
+    // than per request: nineteen good lines should not fail because of the twentieth.
+    const { join } = await workspace();
+    const admin = await join("admin");
+    const batch = await admin
+      .post("/api/team/invites")
+      .send({
+        invites: [
+          { email: "ok@asphaltco.com", role: "Crew Lead", permission: "member" },
+          { email: "nope@asphaltco.com", role: "Crew Lead", permission: "admin" }
+        ]
+      })
+      .expect(201);
+    // The Admin's own address was proved by following their invite link, so theirs go out
+    // at once -- which is also why the good row reads "sent" rather than "held".
+    expect(batch.body.results).toEqual([
+      { email: "ok@asphaltco.com", status: "sent" },
+      { email: "nope@asphaltco.com", status: "skipped", reason: "Only the workspace owner can invite an admin." }
+    ]);
+    expect(batch.body.invites.map((i: { email: string }) => i.email)).toEqual(["ok@asphaltco.com"]);
+  });
+
+  it("has no way to invite an Owner at all", async () => {
+    // Not a permission check -- "owner" is not in the enum. Ownership is transferred, and
+    // a workspace with two Owners has no answer to who gets billed.
+    const { owner } = await workspace();
+    const refused = await owner
+      .post("/api/team/invites")
+      .send({ invites: [{ email: "usurper@asphaltco.com", role: "Crew Lead", permission: "owner" }] })
+      .expect(400);
+    expect(refused.body.error).toBeTruthy();
   });
 });
