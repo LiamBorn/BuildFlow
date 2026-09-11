@@ -1726,3 +1726,140 @@
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
 }
+
+/* ============================================================================
+   14. SALES HUB, BOOKMARKS AND THE AI SURFACES (Phase 4 step 9)
+   ----------------------------------------------------------------------------
+   Contacts, Companies, Deals and Bookmarks are all hs-index pages, so section 7
+   already did their index chrome — measured on Contacts and Bookmarks: cards
+   18px on the card shadow, KPIs 18px, controls 999px, row actions 12px.
+
+   What was left is what sits OUTSIDE .hs-index: the record drawer and the AI
+   panel both portal to document.body, which is why section 7's `.bf-shell
+   .hs-index X` rules never reached them and why the same .hs-btn class renders
+   as a 999px pill on the page and an 8px rectangle in the drawer. The body
+   scope added in step 3b is what makes them addressable at all.
+
+   THE REVEAL TRAP, checked not assumed: hs-contacts.css gives .hs-kpis and
+   .hs-index-main `opacity: 0` as their REST state, with useHudMotion adding
+   `.in` imperatively. A stray opacity or a computed className there renders the
+   entire Contacts and Companies page invisible. Verified live: both carry .in
+   and compute to opacity 1, and nothing below sets opacity or visibility.
+
+   THE AI PANEL'S MOUNTING MODEL IS UNTOUCHED. It must stay always-mounted and
+   hidden by `display: none` on .bf-breeze:not(.is-open); switching to opacity or
+   visibility, or mounting it conditionally, breaks schedule/viewKeys.ts
+   dialogIsOpen() and with it the 1-6 schedule view shortcuts. No rule below
+   mentions display, opacity or visibility. Its top:56px/left:56px literals stay
+   valid because the chrome never moved.
+   ============================================================================ */
+
+/* ---- 14a. the record drawer -------------------------------------------- */
+/* .hs-record carried rgba(20, 32, 58, 0.22) — a navy-tinted side shadow. Kept
+   directional, since it is a drawer, but on the ink ladder's float alpha. */
+.bf-shell .hs-record {
+  box-shadow: -24px 0 70px rgba(28, 28, 26, 0.14);
+}
+.bf-shell .hs-record-backdrop {
+  background: rgba(28, 28, 26, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.bf-shell .hs-record-card,
+.bf-shell .hs-timeline-body {
+  border-color: rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+}
+/* The drawer's controls were the one place in the product still shipping 8px
+   rectangles, because section 7 is scoped to .hs-index and the drawer is not
+   inside it. Same grammar as everywhere else now. */
+.bf-shell .hs-record .hs-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .hs-record .hs-btn:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+.bf-shell .hs-record .hs-btn.hs-btn-primary {
+  background: #2f6bff;
+  border-color: #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+}
+.bf-shell .hs-record .hs-btn.hs-btn-primary:hover {
+  background: #1f57e0;
+  border-color: #1f57e0;
+}
+.bf-shell .hs-record .hs-search,
+.bf-shell .hs-record .hs-qf {
+  border-radius: 999px;
+  border-color: rgba(28, 28, 26, 0.13);
+}
+.bf-shell .hs-record .hs-btn:focus-visible,
+.bf-shell .hs-record .hs-search:focus-within,
+.bf-shell .hs-record .hs-qf:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- 14b. the AI panel -------------------------------------------------
+   Surface only. rgba(20,32,58,0.26) was navy; the two marks were
+   rgba(66,92,244,0.3x), a purple-blue that is not the accent. */
+.bf-shell .bf-breeze-main {
+  border-radius: var(--bf-radius-card);
+  box-shadow: var(--bf-shadow-float);
+  border-color: rgba(28, 28, 26, 0.07);
+}
+.bf-shell .bf-breeze-mark {
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.24);
+}
+.bf-shell .bf-breeze-hero-mark {
+  border-radius: var(--bf-radius-panel);
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.24);
+}
+.bf-shell .bf-breeze-drop,
+.bf-shell .bf-breeze-suggested {
+  border-color: rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+}
+/* the composer's blue rim is already the accent and is left as it is; it only
+   gains the shared focus ring */
+.bf-shell .bf-breeze-composer:focus-within {
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- 14c. Bookmarks tiles ----------------------------------------------
+   These navigate, which is what licenses a lift under the card rule. */
+.bf-shell .bm-tile {
+  border-color: rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+  transition:
+    transform var(--bf-dur-move) var(--bf-ease),
+    box-shadow var(--bf-dur-move) var(--bf-ease),
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .bm-tile:hover {
+  transform: translateY(var(--bf-lift-dense));
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.bf-shell .bm-empty {
+  border-color: rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+  max-width: var(--bf-app-prose);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .bm-tile:hover {
+    transform: none;
+  }
+}
