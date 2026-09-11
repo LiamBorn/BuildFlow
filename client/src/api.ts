@@ -2,6 +2,7 @@ import type {
   BootstrapPayload,
   BusinessTypeId,
   CreateCrewInput,
+  PermissionLevel,
   CreateEquipmentInput,
   CreateJobInput,
   CreateMaterialInput,
@@ -133,7 +134,8 @@ export type Account = {
   orgId: string;
   email: string;
   name: string;
-  role: string;
+  /** The workspace permission level, not a job title. See PermissionLevel in @buildflow/shared. */
+  role: PermissionLevel;
   createdAt: string;
   /** Set once the person followed the confirmation link we emailed. */
   emailVerifiedAt?: string | null;

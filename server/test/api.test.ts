@@ -489,12 +489,20 @@ describe("BuildFlow API", () => {
     expect(ended.body.billingStatus).toBe("trial_expired");
 
     // Settings → "Add a payment method": checkout knows to come back to Settings (Stripe is not configured here, so it says so).
-    const checkout = await request(app)
+    // Uses the signed-in `agent`, not a bare request. This changed with step 1 of the
+    // workspace-permissions work: /api/billing moved behind the session gate, because a
+    // checkout session is created FOR a specific org and at a specific seat count, so a
+    // caller with no account is not a caller this route can serve. The previous bare
+    // request passed only because the route was public, which is the defect rather than
+    // the contract.
+    const checkout = await agent
       .post("/api/billing/checkout")
       .send({ plan: "pro", period: "monthly", seats: 4, returnTo: "settings", origin: "http://localhost:5432" })
       .expect(200);
     expect(checkout.body.configured).toBe(false);
-    await request(app).post("/api/billing/checkout").send({ plan: "pro", period: "monthly", returnTo: "elsewhere" }).expect(400);
+    await agent.post("/api/billing/checkout").send({ plan: "pro", period: "monthly", returnTo: "elsewhere" }).expect(400);
+    // and the gate itself: no session, no checkout
+    await request(app).post("/api/billing/checkout").send({ plan: "pro", period: "monthly", returnTo: "settings" }).expect(401);
 
     // Settings → "Switch to Free": the trial ends with the plan.
     const free = await agent.post("/api/business-profile").send({ businessType: "Asphalt", selectedPlan: "free", seats: 4 }).expect(200);

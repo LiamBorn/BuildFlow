@@ -669,8 +669,28 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     // Team (invites, sample teammates) and org (name) live behind the session too.
     "/api/team",
     "/api/org",
-    "/api/me"
+    "/api/me",
+    /* Step 1 of the workspace-permissions plan. These were public, and being public was
+       not merely a missing permission check — it was a live defect. `store` (:551) is a
+       Proxy that resolves to `orgStoreALS.getStore() ?? mainStore`, so a route outside
+       this gate never binds a tenant and silently reads the SHARED main store. So
+       /api/ai/ask has always shipped mainStore's bootstrap to Claude instead of the
+       caller's own workspace: wrong answers for the customer, and the wrong data
+       leaving the building. `req.account` was also always undefined there, so the
+       bootstrap was built for nobody.
+       Billing is here because the plan makes it Owner-only, and a permission cannot be
+       checked on a request that has no account attached. */
+    "/api/ai",
+    "/api/billing"
   ];
+  /**
+   * Paths that sit UNDER a gated prefix but must stay public, checked before the prefix
+   * match so the prefix list can stay coarse.
+   * - The Stripe webhook is called by Stripe, which has no session cookie. It is
+   *   authenticated instead by verifying the signature header (:2629), which is the
+   *   stronger check for that caller.
+   */
+  const PUBLIC_EXCEPTIONS = new Set(["/api/billing/webhook"]);
   /**
    * Whether this path needs a session, compared in one case so no spelling of it can disagree
    * with the router about which route it is. `/api/delayIQs` is the one prefix with capitals of
@@ -679,6 +699,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const OPS_PREFIXES_LOWER = OPS_PREFIXES.map((prefix) => prefix.toLowerCase());
   const isOpsPath = (path: string) => {
     const p = path.toLowerCase();
+    if (PUBLIC_EXCEPTIONS.has(p)) return false;
     return OPS_PREFIXES_LOWER.some((pre) => p === pre || p.startsWith(`${pre}/`));
   };
   // The schedule's live feed: every schedule write announces itself to the org's other open tabs.

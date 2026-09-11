@@ -1,4 +1,36 @@
+/**
+ * A person's JOB TITLE on the crew roster. Stored on the per-org tenant table `users`.
+ * This is who you schedule, and it decides nothing about what they may do.
+ * Not to be confused with PermissionLevel below — the two live in different databases
+ * and both columns are called `role`, which is exactly why this comment exists.
+ */
 export type UserRole = "Project Manager" | "Superintendent" | "Crew Lead";
+
+/**
+ * A login's PERMISSION LEVEL in its workspace. Stored on the control table `accounts`.
+ * This is what the person may do, and it says nothing about their trade.
+ *
+ * Two of the three were already live before the permissions work began: signup writes
+ * "owner" and invite acceptance writes "member". "admin" is the value being added.
+ *
+ * Ordered deliberately, weakest last, so a rank comparison reads the way it sounds.
+ */
+export type PermissionLevel = "owner" | "admin" | "member";
+
+export const permissionLevels = ["owner", "admin", "member"] as const satisfies readonly PermissionLevel[];
+
+/** Higher outranks lower. Used for "an Admin may not act on an Owner" style rules. */
+export const permissionRank: Record<PermissionLevel, number> = { owner: 3, admin: 2, member: 1 };
+
+export const isPermissionLevel = (value: unknown): value is PermissionLevel =>
+  typeof value === "string" && (permissionLevels as readonly string[]).includes(value);
+
+/** The label a person sees. The stored value stays lowercase. */
+export const permissionLevelLabels: Record<PermissionLevel, string> = {
+  owner: "Workspace Owner",
+  admin: "Admin",
+  member: "Member"
+};
 
 export const businessTypeOptions = [
   "Asphalt",

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import { hashPassword, hashToken, newAuthToken, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
 import { createBusinessProfile } from "./businessProfiles.js";
+import { isPermissionLevel, type PermissionLevel } from "@buildflow/shared";
 import type {
   CrewClash,
   RebookMove,
@@ -55,7 +56,8 @@ export type Account = {
   orgId: string;
   email: string;
   name: string;
-  role: string;
+  /** The workspace permission level. See PermissionLevel in @buildflow/shared. */
+  role: PermissionLevel;
   createdAt: string;
   /** When the person ticked the terms box at signup, and which terms they saw. Null for accounts that predate the box. */
   acceptedTermsAt?: string | null;
@@ -984,6 +986,37 @@ SCHEMA_MIGRATIONS.push({
         db.exec(`ALTER TABLE ${table} ADD COLUMN version INTEGER NOT NULL DEFAULT 1`);
       }
     }
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 20,
+  name: "workspace permission levels on accounts",
+  up: (db) => {
+    // `accounts.role` has been the permission axis since the first commit that wrote it:
+    // signup writes "owner" and invite acceptance writes "member". This migration adds
+    // nothing structural. It normalises the column so the narrowed PermissionLevel type
+    // is true of the data as well as of the code, and it is the release that introduces
+    // "admin" as a legal third value.
+    //
+    // WHY NO CHECK CONSTRAINT. SQLite cannot add one to an existing table; it needs the
+    // table rebuilt and every row copied. `accounts` holds live logins and password
+    // hashes, so a rebuild is a far larger risk than the constraint removes. The value is
+    // guarded instead at the only place it is ever written — createAccount and
+    // setAccountRole both reject anything outside the union — and asserted by a test.
+    //
+    // THE VERSION NUMBER MATTERS MORE THAN IT LOOKS. The runner sorts by version and
+    // skips anything at or below the stored user_version, silently, with no error
+    // (:1170). SCHEMA_MIGRATIONS already contains two 15s and two 16s, so one of each
+    // pair has never run on a database that had already passed that number. Never
+    // renumber this below 20, and never reuse a number.
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'");
+    if (!tables[0]) return;
+    // Anything that is not one of the three becomes a member: the least privilege that
+    // still lets the person sign in and work. An unreadable value must never fail open.
+    db.exec(`UPDATE accounts SET role = 'member' WHERE role NOT IN ('owner', 'admin', 'member')`);
+    // Historic casing, in case any path ever wrote "Owner" or "Member".
+    db.exec(`UPDATE accounts SET role = lower(role) WHERE role <> lower(role)`);
   }
 });
 
@@ -2453,7 +2486,11 @@ export class BuildFlowStore {
       email: input.email.trim().toLowerCase(),
       passwordHash: hashPassword(input.password),
       name: input.name.trim() || input.email.split("@")[0],
-      role: input.role ?? "owner",
+      // The permission level is guarded HERE because migration 20 deliberately adds no
+      // CHECK constraint (rebuilding a table of live logins is the larger risk). This is
+      // the only place an account's role is first written, so this is where the union has
+      // to be true of the data. An unrecognised value fails CLOSED, to member.
+      role: isPermissionLevel(input.role) ? input.role : input.role === undefined ? "owner" : "member",
       createdAt: new Date().toISOString(),
       acceptedTermsAt: input.acceptedTermsAt ?? null,
       acceptedTermsVersion: input.acceptedTermsVersion ?? null,
