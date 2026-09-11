@@ -635,3 +635,286 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   7. THE SHARED INDEX PRIMITIVES (Phase 4 step 3a)
+   ----------------------------------------------------------------------------
+   The shell is 16 screens; these rules are what make the other 210 belong. The
+   .hs-index family is the most reused chrome in the product: Projects, Crews,
+   Equipment, Materials, Field Updates, DelayIQs, Bookmarks, Contacts, Companies,
+   Deals and Gantt all render through it.
+
+   Every existing rule here is `.hs-index X` at two classes, so `.bf-shell
+   .hs-index X` at three wins. Verified against the live cascade, not assumed —
+   the shell pass shipped two invisible defects by assuming.
+
+   FROZEN, because they set how much fits on a screen and how the sticky header
+   offsets read: table row height 46px, thead height 42px, .hs-table min-width
+   720px and .hs-table-wrap's overflow. None is touched below.
+   ============================================================================ */
+
+/* ---- 7a. page header ---------------------------------------------------- */
+.bf-shell .hs-index .hs-index-title {
+  font-size: var(--bf-app-title);
+  font-weight: 600;
+  letter-spacing: var(--bf-app-title-track);
+  line-height: var(--bf-app-title-lead);
+  /* was #14203a — the third ink the language does not have */
+  color: #1c1c1a;
+}
+.bf-shell .hs-index .hs-index-sub,
+.bf-shell .hs-index .hs-index-lede {
+  font-size: var(--bf-app-lede);
+  color: #575550;
+  max-width: var(--bf-app-prose);
+}
+
+/* The release pill is styled ONLY by `.hs-index .hs-index-title .hs-page-tag`,
+   but the six schedule view pages render it inside h1.dx-title, which that
+   selector does not match — so month/week/list/kanban/matrix/gantt show the bare
+   word "New" as unstyled inline text. The low-specificity rule below catches
+   them; the higher one keeps the index pages correct. */
+.bf-shell .hs-page-tag,
+.bf-shell .hs-index .hs-index-title .hs-page-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: rgba(47, 107, 255, 0.1);
+  color: #2f6bff;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* ---- 7b. cards ----------------------------------------------------------
+   The rhythm story on a dense page is this one gap. Everything else about
+   spacing stays where it is. */
+.bf-shell .hs-index .hs-index-card {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+  padding: 20px 22px 18px;
+}
+/* a card wrapping a table clips its first and last row to the corners */
+.bf-shell .hs-index .hs-index-card:has(.hs-table-wrap) {
+  overflow: hidden;
+}
+.bf-shell .hs-index .hs-index-card > h2,
+.bf-shell .hs-index .hs-index-head h2,
+.bf-shell .hs-index .hs-index-card > header h2 {
+  font-size: var(--bf-app-section);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #1c1c1a;
+  margin: 0 0 12px;
+}
+
+/* ---- 7c. KPI strip ------------------------------------------------------
+   The label becomes the Welcome Page's stat label, at the same size it uses. */
+.bf-shell .hs-index .hs-kpi {
+  border-radius: var(--bf-radius-panel);
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  box-shadow: var(--bf-shadow-card);
+}
+.bf-shell .hs-index .hs-kpi-label {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.bf-shell .hs-index .hs-kpi-value {
+  font-size: var(--bf-app-figure);
+  font-weight: 700;
+  letter-spacing: var(--bf-app-figure-track);
+  font-variant-numeric: tabular-nums;
+  color: #1c1c1a;
+}
+.bf-shell .hs-index .hs-kpi-note {
+  font-size: var(--bf-app-meta);
+  color: #575550;
+}
+.bf-shell .hs-index .hs-kpi-ico {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 7d. tables ---------------------------------------------------------
+   The column head is the single highest-yield rule in this file. Column heads
+   are the most repeated text in the product, and turning them into the Welcome
+   Page's eyebrow does more for the family resemblance than any other change. */
+.bf-shell .hs-index .hs-table thead th {
+  background: transparent;
+  border-bottom: 1px solid rgba(28, 28, 26, 0.13);
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.bf-shell .hs-index .hs-table tbody td {
+  font-size: var(--bf-app-row);
+  font-weight: 500;
+  line-height: var(--bf-app-lead-row);
+  color: #575550;
+  border-bottom: 1px solid rgba(28, 28, 26, 0.07);
+}
+/* the primary cell carries the row's identity */
+.bf-shell .hs-index .hs-table tbody td:first-of-type,
+.bf-shell .hs-index .hs-table tbody td .hs-cell-strong,
+.bf-shell .hs-index .hs-table tbody td .hs-link-plain {
+  font-size: var(--bf-app-row-strong);
+  font-weight: 600;
+  color: #1c1c1a;
+}
+.bf-shell .hs-index .hs-table tbody tr {
+  transition: background var(--bf-dur-press) var(--bf-ease);
+}
+.bf-shell .hs-index .hs-table tbody tr:hover {
+  background: rgba(28, 28, 26, 0.035);
+}
+/* hover move 3: the row's trailing action slides */
+.bf-shell .hs-index .hs-table tbody tr .hs-row-action {
+  transition: transform var(--bf-dur-hover) var(--bf-ease);
+}
+.bf-shell .hs-index .hs-table tbody tr:hover .hs-row-action {
+  transform: translateX(var(--bf-slide));
+}
+.bf-shell .hs-index .hs-table tbody tr.is-selected {
+  background: rgba(47, 107, 255, 0.06);
+}
+
+/* ---- 7e. buttons --------------------------------------------------------
+   DECLARED DEVIATION from the Welcome Page: its primary is the ink pill and blue
+   is reserved for accents. In-app the primary stays BLUE, because #2f6bff is
+   already the action colour in all eleven app scopes and inverting that would
+   re-teach the whole product for the sake of doctrine. The ink pill is used
+   in-app for exactly one thing, the AI FAB, which is where the marketing page
+   uses it too. */
+.bf-shell .hs-index .hs-btn {
+  border-radius: 999px;
+  padding: 8px 16px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  box-shadow: none;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+/* hover move 2: the outline pill inverts */
+.bf-shell .hs-index .hs-btn:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+.bf-shell .hs-index .hs-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+.bf-shell .hs-index .hs-btn.hs-btn-primary {
+  background: #2f6bff;
+  border-color: #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+}
+.bf-shell .hs-index .hs-btn.hs-btn-primary:hover {
+  background: #1f57e0;
+  border-color: #1f57e0;
+  color: #ffffff;
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+}
+.bf-shell .hs-index .hs-btn-icon,
+.bf-shell .hs-index .hs-row-action {
+  border-radius: var(--bf-radius-control);
+  background: transparent;
+  border-color: transparent;
+  color: #575550;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    transform var(--bf-dur-press) var(--bf-ease);
+}
+.bf-shell .hs-index .hs-btn-icon:hover,
+.bf-shell .hs-index .hs-row-action:hover {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+}
+.bf-shell .hs-index .hs-btn-icon:active,
+.bf-shell .hs-index .hs-row-action:active {
+  transform: scale(var(--bf-press-scale));
+}
+
+/* ---- 7f. index controls: search, saved views, chips, links -------------- */
+.bf-shell .hs-index .hs-search {
+  border-radius: 999px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: #ffffff;
+  font-size: var(--bf-app-row);
+  color: #1c1c1a;
+  box-shadow: none;
+  transition:
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.bf-shell .hs-index .hs-search:focus-within,
+.bf-shell .hs-index .hs-search:focus {
+  border-color: #2f6bff;
+  box-shadow: var(--bf-focus-ring);
+}
+.bf-shell .hs-index .hs-view,
+.bf-shell .hs-index .hs-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #575550;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .hs-index .hs-view:hover,
+.bf-shell .hs-index .hs-chip:hover {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+}
+.bf-shell .hs-index .hs-view.active,
+.bf-shell .hs-index .hs-view[aria-current="true"],
+.bf-shell .hs-index .hs-view[aria-pressed="true"] {
+  background: rgba(47, 107, 255, 0.08);
+  border-color: rgba(47, 107, 255, 0.28);
+  color: #2f6bff;
+}
+.bf-shell .hs-index .hs-link,
+.bf-shell .hs-index .hs-qf-link {
+  color: #2f6bff;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+}
+.bf-shell .hs-index .hs-link svg,
+.bf-shell .hs-index .hs-qf-link svg {
+  transition: transform var(--bf-dur-hover) var(--bf-ease);
+}
+.bf-shell .hs-index .hs-link:hover svg,
+.bf-shell .hs-index .hs-qf-link:hover svg {
+  transform: translateX(var(--bf-slide));
+}
+
+/* ---- 7g. reduced motion for everything above --------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .hs-index .hs-table tbody tr:hover .hs-row-action,
+  .bf-shell .hs-index .hs-link:hover svg,
+  .bf-shell .hs-index .hs-qf-link:hover svg,
+  .bf-shell .hs-index .hs-btn-icon:active,
+  .bf-shell .hs-index .hs-row-action:active {
+    transform: none;
+  }
+}
