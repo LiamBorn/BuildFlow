@@ -6568,11 +6568,11 @@ function WelcomeProductOverviewPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-              <a href="#production-reports">Production Reports</a>
+              {CREW_SHEET_PRODUCTS.map((product) => (
+                <a href={product.hash} key={product.hash}>
+                  {product.label}
+                </a>
+              ))}
             </div>
             <div>
               <h3>Resources</h3>
@@ -12800,11 +12800,11 @@ function WelcomeCrewSchedulingPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a href={content.hash}>{content.name}</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-              <a href="#production-reports">Production Reports</a>
+              {CREW_SHEET_PRODUCTS.map((product) => (
+                <a href={product.hash} key={product.hash}>
+                  {product.label}
+                </a>
+              ))}
             </div>
             <div>
               <h3>Resources</h3>
