@@ -1228,3 +1228,126 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   9. THE DASHBOARD AND ITS PANEL BOARD (Phase 4 step 4)
+   ----------------------------------------------------------------------------
+   FROZEN, all of it: DASH_COLS 6, DASH_ROW_UNIT 40, DASH_GAP 16,
+   grid-auto-rows 40px, the absolutely positioned .dash-block and its four
+   0.26s cubic-bezier(0.22,1,0.36,1) transitions (already the right curve),
+   .dash-block-body { overflow: auto }, the drag handle, the resize grip, the
+   twelve panels and dash:layout persistence.
+
+   THREE CORRECTIONS to the concept, all found by measuring the live board:
+   1. `.dash-block` is NOT the card. It has no border, no radius and no shadow.
+      The visible card is `.cc-panel > .cc-list` for list panels, `.cc-stat` for
+      the Performance tiles and `.cc-app` for the app buttons, all at 8px with a
+      #e6e8f0 hairline. Those are what get the paper treatment below.
+   2. The panel h2 is 15px/700, not the 14.5px/650 the concept assumed. Either
+      way the SIZE MUST NOT MOVE: hs-home.css calibrates
+      `.dash-block > .dash-drag-handle:has(+ .hs-widget-head) { top: -3px }`
+      against the head row that size produces, so changing it drifts every drag
+      handle on the board. Only tracking and colour move.
+   3. Two panel bodies (recommendations, inspections) already scroll on a stored
+      layout, so "0 of 12 scroll" no longer held before this change either.
+
+   WHY STORED LAYOUTS ARE SAFE: nothing here changes a box's height. The frames
+   already exist and stay 1px; only radius, border colour and shadow move, none
+   of which affect layout. No panel gains chrome it did not already have, so a
+   saved x/y/w/h keeps fitting exactly what it fitted before.
+   ============================================================================ */
+
+/* ---- 9a. the panel card ------------------------------------------------- */
+.bf-shell .dash-rx.hs-home .cc-panel > .cc-list {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-panel);
+  box-shadow: var(--bf-shadow-card);
+}
+/* The panel title: SIZE FROZEN, only tracking and ink move.
+   The board has THREE heading containers, not one — .hs-widget-head on eight
+   panels, .cc-panel-head on the three rail panels (approvals, alerts,
+   recommendations) and .cc-sec-head on BuildFlow Apps. Measuring found the last
+   four still rendering the #14203a third ink after the first pass covered only
+   .hs-widget-head. */
+.bf-shell .dash-rx.hs-home .hs-widget-head h2,
+.bf-shell .dash-rx.hs-home .cc-panel-head h2,
+.bf-shell .dash-rx.hs-home .cc-sec-head h2 {
+  letter-spacing: -0.01em;
+  color: #1c1c1a;
+}
+.bf-shell .dash-rx.hs-home .hs-widget-head {
+  border-bottom-color: rgba(28, 28, 26, 0.07);
+}
+
+/* ---- 9b. tiles inside a panel sit one rung down the ladder -------------
+   Outer card 18px, inner tile 12px. Inner tiles take the hairline but NOT a
+   shadow: nesting shadows inside a shadowed card reads as noise. */
+.bf-shell .dash-rx.hs-home .cc-stat,
+.bf-shell .dash-rx.hs-home .kpi-card,
+.bf-shell .dash-rx.hs-home .cc-app {
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-control);
+  box-shadow: none;
+}
+/* the Performance tile's label is the same eyebrow as every other label */
+.bf-shell .dash-rx .cc-stat-label {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.bf-shell .dash-rx.hs-home .cc-stat-value {
+  letter-spacing: var(--bf-app-figure-track);
+  font-variant-numeric: tabular-nums;
+  color: #1c1c1a;
+}
+.bf-shell .dash-rx .cc-stat-note {
+  font-size: var(--bf-app-meta);
+  color: #575550;
+}
+
+/* ---- 9c. panel actions become the same pill as everywhere else ---------- */
+.bf-shell .dash-rx.hs-home .cc-link {
+  border-radius: 999px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #1c1c1a;
+  font-size: var(--bf-app-meta);
+  font-weight: 600;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease;
+}
+/* hover move 2 */
+.bf-shell .dash-rx.hs-home .cc-link:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+.bf-shell .dash-rx.hs-home .cc-link:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- 9d. the app tiles are the one thing on the board that navigates ----
+   So they are the one thing licensed to lift. Panels themselves never lift:
+   they are draggable, and a lift fights the grip. */
+.bf-shell .dash-rx.hs-home .cc-app {
+  transition:
+    transform var(--bf-dur-move) var(--bf-ease),
+    box-shadow var(--bf-dur-move) var(--bf-ease),
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .dash-rx.hs-home .cc-app:hover {
+  transform: translateY(var(--bf-lift-dense));
+  box-shadow: var(--bf-shadow-card-hover);
+}
+
+/* ---- 9e. reduced motion ------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .cc-app:hover {
+    transform: none;
+  }
+}
