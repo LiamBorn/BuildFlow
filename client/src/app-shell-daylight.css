@@ -3602,3 +3602,300 @@
   border-color: rgba(28, 28, 26, 0.08);
   box-shadow: var(--bf-shadow-card);
 }
+
+/* ============================================================================
+   26. THE TOP BAR'S PREFERENCES PANEL, AND THE FOUR CHOICES IT ACTUALLY MAKES
+   ============================================================================
+   The gear in the top bar used to jump to the Settings page. It now opens a
+   dropdown carrying the eight topics from the reference, in its order:
+   Theme Preset, Fonts, Theme Mode, Page Layout, Navbar Behavior, Sidebar Style,
+   Sidebar Collapse Mode, Restore Defaults.
+
+   THE COLOURS ARE THE APP'S, NOT THE REFERENCE'S. Every value below is already
+   in this product: the ink ladder (#1c1c1a / #575550), white over the paper
+   tone, the existing hairline alphas, the focus ink, and the float shadow the
+   other dropdowns use. The reference is set in a monospace face on its own
+   greys; neither is adopted.
+
+   26a-26e dress the panel. 26f-26i are the part that matters: the four
+   preferences that DO something, each reading one data attribute the shell
+   stamps from the saved value. Page Layout moves the dashboard's measure — and
+   that is the right scope, because the reference's own subtitle says dashboard
+   layout. Navbar Behavior releases the top bar from sticky. Sidebar Style and
+   Sidebar Collapse Mode re-present the icon rail.
+
+   Theme Mode and Fonts are rendered disabled with the reason in the panel. They
+   are not styled as live controls here because they are not live: there is no
+   dark palette in this product and one font family ships. A control with no
+   handler is the thing this shell has already had to go back and remove.
+
+   NO MOTION except the one place offcanvas needs it, and that one degrades
+   under reduce to the icon rail rather than merely holding still -- a nav you
+   have to hover out of hiding is a trap, not an animation.
+   ------------------------------------------------------------------------- */
+
+/* ---- 26a. the panel ------------------------------------------------------ */
+.bf-shell .hs-prefs-anchor {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.bf-shell .pref-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  gap: 14px;
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(78vh, 760px);
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid rgba(28, 28, 26, 0.1);
+  border-radius: var(--bf-radius-panel);
+  background: #ffffff;
+  box-shadow: var(--bf-shadow-float);
+}
+
+/* ---- 26b. its heading --------------------------------------------------- */
+.bf-shell .pref-head {
+  display: grid;
+  gap: 4px;
+}
+.bf-shell .pref-head h2 {
+  margin: 0;
+  font-size: var(--bf-app-section);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #1c1c1a;
+}
+.bf-shell .pref-head p {
+  margin: 0;
+  font-size: var(--bf-app-meta);
+  line-height: 1.45;
+  color: #575550;
+}
+
+/* ---- 26c. one topic ----------------------------------------------------- */
+.bf-shell .pref-field {
+  display: grid;
+  gap: 7px;
+}
+.bf-shell .pref-label {
+  font-size: var(--bf-app-row);
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: #1c1c1a;
+}
+/* The reason a disabled topic gives for being disabled. */
+.bf-shell .pref-note {
+  margin: 0;
+  font-size: var(--bf-app-micro);
+  line-height: 1.45;
+  color: #575550;
+}
+
+/* ---- 26d. the two selects ---------------------------------------------- */
+.bf-shell .pref-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  border-radius: var(--bf-radius-control);
+  background: #ffffff;
+  color: #575550;
+}
+.bf-shell .pref-select select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--bf-app-row);
+  color: #1c1c1a;
+  appearance: none;
+}
+.bf-shell .pref-select select:focus-visible {
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
+}
+/* The reference's filled dot beside the preset's name. */
+.bf-shell .pref-select-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--bf-radius-pill);
+  background: #1c1c1a;
+  flex: none;
+}
+.bf-shell .pref-select[data-disabled="true"] {
+  border-color: rgba(28, 28, 26, 0.08);
+  background: #fdfcf9;
+}
+.bf-shell .pref-select[data-disabled="true"] select {
+  color: #575550;
+}
+
+/* ---- 26e. the segmented controls --------------------------------------- */
+.bf-shell .pref-segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  border-radius: var(--bf-radius-control);
+  background: #ffffff;
+}
+/* The end segments carry the container's corners themselves. The obvious way to
+   do this is `overflow: hidden` on the group, and the sheet's guard is right to
+   refuse it: this file is allowed exactly one overflow clip, the documented one,
+   because every clip is a way for content to become unreachable and each has to
+   be argued for. Rounding two children instead needs no clip at all. */
+.bf-shell .pref-seg:first-child {
+  border-top-left-radius: calc(var(--bf-radius-control) - 1px);
+  border-bottom-left-radius: calc(var(--bf-radius-control) - 1px);
+}
+.bf-shell .pref-seg:last-child {
+  border-top-right-radius: calc(var(--bf-radius-control) - 1px);
+  border-bottom-right-radius: calc(var(--bf-radius-control) - 1px);
+}
+.bf-shell .pref-seg {
+  padding: 9px 6px;
+  border: 0;
+  border-left: 1px solid rgba(28, 28, 26, 0.09);
+  background: none;
+  font: inherit;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  color: #575550;
+  cursor: pointer;
+}
+.bf-shell .pref-seg:first-child {
+  border-left: 0;
+}
+.bf-shell .pref-seg[aria-checked="true"] {
+  background: #f4f3f0;
+  color: #1c1c1a;
+}
+.bf-shell .pref-seg:hover:not([aria-checked="true"]):not(:disabled) {
+  background: #fbfaf7;
+  color: #1c1c1a;
+}
+.bf-shell .pref-seg:focus-visible {
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: -2px;
+}
+.bf-shell .pref-segmented[data-disabled="true"] {
+  border-color: rgba(28, 28, 26, 0.08);
+  background: #fdfcf9;
+}
+.bf-shell .pref-seg:disabled {
+  cursor: default;
+  color: #575550;
+}
+
+/* ---- the two footer buttons ------------------------------------------- */
+.bf-shell .pref-restore,
+.bf-shell .pref-full {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  border-radius: var(--bf-radius-control);
+  background: #ffffff;
+  font: inherit;
+  font-size: var(--bf-app-row);
+  font-weight: 650;
+  color: #1c1c1a;
+  cursor: pointer;
+}
+.bf-shell .pref-full {
+  border-color: transparent;
+  background: none;
+  font-weight: 600;
+  color: #575550;
+}
+.bf-shell .pref-restore:hover:not(:disabled),
+.bf-shell .pref-full:hover {
+  border-color: rgba(28, 28, 26, 0.2);
+  background: #fbfaf7;
+}
+.bf-shell .pref-restore:focus-visible,
+.bf-shell .pref-full:focus-visible {
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
+}
+.bf-shell .pref-restore:disabled {
+  cursor: default;
+  border-color: rgba(28, 28, 26, 0.08);
+  background: #fdfcf9;
+  color: #575550;
+}
+
+/* ---- 26f. Page Layout -------------------------------------------------- */
+/* The dashboard's measure is 880px, which is what "Centered" means here. Full
+   Width releases it. Scoped to the dashboard on purpose: the index pages are
+   already `max-width: 100%`, so there is nothing for this to release there. */
+.bf-shell[data-bf-layout="full"] .dash-rx .dx-inner {
+  max-width: none;
+}
+
+/* ---- 26g. Navbar Behavior --------------------------------------------- */
+.bf-shell[data-bf-navbar="scroll"] .topbar.hs-topbar {
+  position: static;
+}
+
+/* ---- 26h. Sidebar Style ----------------------------------------------- */
+/* Inset: the rail sits inside the body's edge instead of being flush to it. */
+.bf-shell[data-bf-sidebar="inset"] .sidebar.hs-rail {
+  height: calc(100vh - var(--hs-topbar-h) - 20px);
+  margin: 10px 0 10px 10px;
+  border-right: 0;
+  border-radius: var(--bf-radius-control);
+}
+/* Floating: detached, only as tall as it needs to be, and lifted off the page. */
+.bf-shell[data-bf-sidebar="floating"] .sidebar.hs-rail {
+  height: auto;
+  max-height: calc(100vh - var(--hs-topbar-h) - 28px);
+  margin: 14px 0 14px 12px;
+  border-right: 0;
+  border-radius: var(--bf-radius-card);
+  box-shadow: var(--bf-shadow-float);
+}
+
+/* ---- 26i. Sidebar Collapse Mode --------------------------------------- */
+/* Icon is the rail as it ships: 56px of glyphs, always there. OffCanvas gives
+   that width back to the page and leaves a sliver to bring the rail out, which
+   `:focus-within` also does, so it is reachable by keyboard and not only by
+   pointer. */
+.bf-shell[data-bf-collapse="offcanvas"] .hs-body {
+  grid-template-columns: 12px minmax(0, 1fr);
+}
+.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
+  position: fixed;
+  top: var(--hs-topbar-h);
+  left: 0;
+  z-index: 45;
+  transform: translateX(calc(-100% + 12px));
+}
+.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail:hover,
+.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail:focus-within {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* OffCanvas degrades to the icon rail rather than to a rail that merely does
+     not slide. Under reduce the honest answer is not "hide it without the
+     animation" -- a navigation you have to hover out of hiding is a trap for
+     anyone who cannot hover, and holding it still does not fix that. */
+  .bf-shell[data-bf-collapse="offcanvas"] .hs-body {
+    grid-template-columns: var(--hs-rail-w) minmax(0, 1fr);
+  }
+  .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
+    position: sticky;
+    transform: none;
+  }
+}

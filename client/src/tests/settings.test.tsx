@@ -121,8 +121,13 @@ describe("Settings", () => {
     for (const hub of ["Schedule", "Operations", "Resources", "Field", "Reporting", "Home"]) {
       fireEvent.click(await screen.findByRole("button", { name: new RegExp(`^${hub}( \\(.*\\))?$`) }));
 
-      // the rail's gear and the top bar's gear are both labelled Settings
-      expect((await screen.findAllByRole("button", { name: "Settings" })).length).toBeGreaterThanOrEqual(2);
+      /* The two gears used to be both labelled "Settings" and this counted them.
+         They now do different things -- the top bar's opens the layout
+         Preferences panel, the rail's opens the Settings page -- so the useful
+         assertion is that they are distinguishable by name, not that there are
+         two of the same name. */
+      expect(await screen.findByRole("button", { name: "Settings" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Layout preferences" })).toBeInTheDocument();
 
       const accountButton = screen.getByRole("button", { name: "Liam Santos account" });
       fireEvent.click(accountButton);

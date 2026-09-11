@@ -359,6 +359,8 @@ import DisplayCards from "./components/ui/display-cards";
 import { animate } from "framer-motion";
 import { track, trackPageView, EVENTS } from "./analytics";
 import { startPlanCheckout, readCheckoutReturn, type CheckoutPlanId } from "./billing";
+import { PreferencesMenu } from "./PreferencesMenu";
+import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
 
 type Page =
   | "welcome"
@@ -2453,6 +2455,17 @@ function App() {
   }, [activeUserId, data]);
 
   const { bookmarks, toggle: toggleBookmark } = useBookmarks(activeUser?.id ?? "anon");
+
+  /* The shell's layout preferences (the top bar's gear). Keyed on the signed-in
+     person like the bookmarks above it, and called HERE rather than beside the
+     shell's className because App has three early returns below this point --
+     a hook after one of them changes the hook order between renders, which is
+     exactly the error it produced the first time. */
+  const appPreferences = usePreferences(
+    serverUserSettings[PREFERENCES_SETTING],
+    `bf:prefs:${activeUser?.id ?? "anon"}`,
+    apiSetUserSetting
+  );
   // bookmarked schedule views: a page as it is (week, month, filters), kept as its link
   const { links: linkBookmarks, toggle: toggleLinkBookmark } = useLinkBookmarks(activeUser?.id ?? "anon");
 
@@ -2831,7 +2844,7 @@ function App() {
     .join(" ");
 
   return (
-    <div className={`${shellClassName} hs-shell`}>
+    <div className={`${shellClassName} hs-shell`} {...preferenceAttributes(appPreferences.preferences)}>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={paletteCommands()} />
       {/* HubSpot layout: full-width top bar, then an icon rail + content row.
           APPROVED: Settings renders the top bar again. It had no bar and no rail,
@@ -2845,6 +2858,7 @@ function App() {
           data={data}
           reportsMode={page === "reports"}
           onOpenSettings={openSettingsPage}
+          preferences={appPreferences}
           onStartTutorial={startTutorial}
           onLogout={handleLogout}
           setPage={setPage}
@@ -20577,6 +20591,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
 function TopBar({
   data,
   onOpenSettings,
+  preferences,
   onStartTutorial,
   onLogout,
   reportsMode = false,
@@ -20593,6 +20608,8 @@ function TopBar({
 }: {
   data: BootstrapPayload;
   onOpenSettings: () => void;
+  /** The shell's layout preferences, rendered by the gear's Preferences panel. */
+  preferences: ReturnType<typeof usePreferences>;
   onStartTutorial: () => void;
   onLogout: () => void;
   reportsMode?: boolean;
@@ -20618,6 +20635,7 @@ function TopBar({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
   const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
@@ -20930,25 +20948,48 @@ function TopBar({
           onClick={() => {
             setIsNotificationsOpen(false);
             setIsAccountMenuOpen(false);
+            setIsPreferencesOpen(false);
             onStartTutorial();
           }}
         >
           <HelpCircle size={20} />
         </button>
-        <button
-          className="icon-button hs-settings-button"
-          type="button"
-          aria-label="Settings"
-          title="Settings"
-          onClick={() => {
-            setIsNotificationsOpen(false);
-            setIsAccountMenuOpen(false);
-            setIsCreateOpen(false);
-            onOpenSettings();
-          }}
-        >
-          <Settings size={20} />
-        </button>
+        {/* The gear opens the Preferences panel. It used to jump straight to the
+            Settings page, which is still one click away at the foot of the panel. */}
+        <div className="hs-prefs-anchor">
+          <button
+            className="icon-button hs-settings-button"
+            type="button"
+            /* "Layout preferences", not "Preferences". The Settings page's rail
+               already has a Preferences item, and two controls announced by the
+               same name that go to different places is a real ambiguity for
+               anyone navigating by name. The panel's own heading stays
+               "Preferences", which is what the reference calls it. */
+            aria-label="Layout preferences"
+            title="Layout preferences"
+            aria-haspopup="dialog"
+            aria-expanded={isPreferencesOpen}
+            onClick={() => {
+              setIsNotificationsOpen(false);
+              setIsAccountMenuOpen(false);
+              setIsCreateOpen(false);
+              setIsPreferencesOpen((isOpen) => !isOpen);
+            }}
+          >
+            <Settings size={20} />
+          </button>
+          {isPreferencesOpen && (
+            <PreferencesMenu
+              preferences={preferences.preferences}
+              onUpdate={preferences.update}
+              onApplyPreset={preferences.applyPreset}
+              onRestoreDefaults={preferences.restoreDefaults}
+              isDefault={preferences.isDefault}
+              onOpenSettings={onOpenSettings}
+              onClose={() => setIsPreferencesOpen(false)}
+            />
+          )}
+        </div>
         <span className="hs-topbar-divider" aria-hidden="true" />
         <div className="reports-account-menu" ref={accountMenuRef}>
           <button
@@ -20960,6 +21001,7 @@ function TopBar({
             aria-controls={accountMenuId}
             onClick={() => {
               setIsNotificationsOpen(false);
+              setIsPreferencesOpen(false);
               setIsAccountMenuOpen((isOpen) => !isOpen);
             }}
             onKeyDown={(event) => {
