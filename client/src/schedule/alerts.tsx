@@ -6,6 +6,7 @@
 import { AlertTriangle, CloudSun, Truck } from "lucide-react";
 import type { BootstrapPayload, Job, ScheduleAssignment } from "@buildflow/shared";
 import { parseIsoDate, toIsoDate } from "../components/ui/gantt";
+import { bookingsWithoutCrew } from "./filters";
 import { formatScheduleDate, mondayOf } from "./week";
 
 /** Where an alert takes you: the Week board on that week, or the page that owns the problem. */
@@ -18,7 +19,8 @@ export type ScheduleAlert = {
   icon: typeof AlertTriangle;
   title: string;
   detail: string;
-  ago: string;
+  /** How old the alert is, or how far off the weather is — null when its source carries no time. */
+  when: string | null;
   jobId: string | null;
   date: string | null;
   link: ScheduleAlertLink;
@@ -28,13 +30,77 @@ const projectName = (data: BootstrapPayload, projectId: string | null | undefine
   data.projects.find((project) => project.id === projectId)?.name ?? "Project";
 const weekOf = (date: string) => toIsoDate(mondayOf(parseIsoDate(date)));
 
-/** The alerts the schedule raises for what is in view. */
-export function deriveScheduleAlerts(data: BootstrapPayload, jobs: Job[], assignments: ScheduleAssignment[]): ScheduleAlert[] {
+const MINUTE = 60;
+const HOUR = 3600;
+const DAY = 86_400;
+
+/**
+ * How long ago something happened, or how far off it still is.
+ *
+ * Every row here used to carry a literal — "10m ago", "22m ago", "45m ago", "2h ago" — so the
+ * panel whose job is to say how fresh a warning is read the same on every load, in every
+ * workspace, for ever. Each row now counts from its own timestamp, and a source that carries
+ * no time says nothing rather than something invented.
+ *
+ * Counts down, never up: "1h ago" means at least an hour, not nearly two.
+ */
+export function relativeTime(iso: string | null | undefined, now: Date): string | null {
+  if (!iso) return null;
+  // A date with no clock is that day where the workspace is, not in UTC.
+  const at = Date.parse(iso.length <= 10 ? `${iso}T00:00:00` : iso);
+  if (Number.isNaN(at)) return null;
+  const seconds = Math.round((now.getTime() - at) / 1000);
+  const size = Math.abs(seconds);
+  const span =
+    size < 90 * MINUTE
+      ? `${Math.max(1, Math.floor(size / MINUTE))}m`
+      : size < 36 * HOUR
+        ? `${Math.floor(size / HOUR)}h`
+        : `${Math.floor(size / DAY)}d`;
+  return seconds >= 0 ? `${span} ago` : `in ${span}`;
+}
+
+/**
+ * The alerts the schedule raises for what is in view.
+ *
+ * The conflict and the materials warning already come from the page's own bookings and jobs.
+ * The DelayIQ and the weather warning used to be read straight off the payload, so a board
+ * filtered to one project kept listing other projects' problems beside a chip saying it was
+ * showing one project. They are held to the same scope now: in view when a job of their project
+ * is. A weather warning with no project is about every site, so it stays whatever the filters say.
+ */
+export function deriveScheduleAlerts(
+  data: BootstrapPayload,
+  jobs: Job[],
+  assignments: ScheduleAssignment[],
+  now: Date = new Date()
+): ScheduleAlert[] {
+  const visibleProjects = new Set(jobs.map((job) => job.projectId));
+  // Not scoped, on purpose: this is work the page cannot draw at all, whatever the filters say.
+  const orphans = bookingsWithoutCrew(data);
   const conflict = assignments.find((assignment) => assignment.conflicts.length > 0);
-  const openDelayIQ = data.delayIQs.find((delayIQ) => delayIQ.status !== "Resolved");
-  const weather = data.weatherAlerts[0];
+  const openDelayIQ = data.delayIQs.find((delayIQ) => delayIQ.status !== "Resolved" && visibleProjects.has(delayIQ.projectId));
+  const weather = data.weatherAlerts.find((alert) => !alert.projectId || visibleProjects.has(alert.projectId));
   const missingMaterials = jobs.find((job) => job.materialsStatus === "Missing");
   const alerts: ScheduleAlert[] = [];
+  if (orphans.length > 0) {
+    const first = orphans[0];
+    const job = data.jobs.find((item) => item.id === first.jobId);
+    const rest = orphans.length - 1;
+    alerts.push({
+      id: `orphan-${first.id}`,
+      tone: "danger",
+      icon: AlertTriangle,
+      title: orphans.length === 1 ? "A booking has no crew" : `${orphans.length} bookings have no crew`,
+      detail: `${job?.name ?? "A job"} on ${formatScheduleDate(first.date)} is booked to a crew this workspace no longer has${
+        rest > 0 ? `, and ${rest} more like it` : ""
+      } — no board can show it.`,
+      when: null,
+      jobId: first.jobId,
+      date: first.date,
+      link: { page: "week", weekStart: weekOf(first.date) }
+    });
+  }
   if (conflict) {
     alerts.push({
       id: `conflict-${conflict.id}`,
@@ -42,7 +108,8 @@ export function deriveScheduleAlerts(data: BootstrapPayload, jobs: Job[], assign
       icon: AlertTriangle,
       title: "Double-booked crew",
       detail: `${data.crews.find((crew) => crew.id === conflict.crewId)?.name ?? "Crew"} conflicts on ${formatScheduleDate(conflict.date)}.`,
-      ago: "10m ago",
+      // a booking carries no timestamp, and the day it clashes on is already in the line above
+      when: null,
       jobId: conflict.jobId,
       date: conflict.date,
       link: { page: "week", weekStart: weekOf(conflict.date) }
@@ -55,7 +122,7 @@ export function deriveScheduleAlerts(data: BootstrapPayload, jobs: Job[], assign
       icon: AlertTriangle,
       title: openDelayIQ.title,
       detail: `${projectName(data, openDelayIQ.projectId)} · ${openDelayIQ.impactDays} day impact`,
-      ago: "22m ago",
+      when: relativeTime(openDelayIQ.reportedAt, now),
       jobId: null,
       date: null,
       link: { page: "delayIQs" }
@@ -68,7 +135,8 @@ export function deriveScheduleAlerts(data: BootstrapPayload, jobs: Job[], assign
       icon: CloudSun,
       title: "Weather delayIQ expected",
       detail: `${weather.projectId ? projectName(data, weather.projectId) : "All sites"} · ${weather.title}`,
-      ago: "45m ago",
+      // the useful fact about weather is when it arrives, which may still be ahead
+      when: relativeTime(weather.startsAt, now),
       jobId: null,
       date: null,
       link: { page: "map" }
@@ -81,7 +149,8 @@ export function deriveScheduleAlerts(data: BootstrapPayload, jobs: Job[], assign
       icon: Truck,
       title: "Missing materials",
       detail: `${missingMaterials.name} · ${missingMaterials.phase} not confirmed`,
-      ago: "2h ago",
+      // a job records no time for the moment its materials went missing
+      when: null,
       jobId: missingMaterials.id,
       date: missingMaterials.startDate,
       link: { page: "materials" }
@@ -129,7 +198,7 @@ export function ScheduleAlertsPanel({
                   <strong>{alert.title}</strong>
                   <span>{alert.detail}</span>
                 </span>
-                <span className="sched-alert2-time">{alert.ago}</span>
+                {alert.when && <span className="sched-alert2-time">{alert.when}</span>}
               </button>
             );
           })}

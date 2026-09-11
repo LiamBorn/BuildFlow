@@ -5,6 +5,7 @@
  * kept as it was, so Monday's email always compares Monday with Monday.
  */
 import type { WeeklyDigest, WeeklyDigestConflict } from "@buildflow/shared";
+import { localIsoDate } from "@buildflow/shared";
 import type { BuildFlowStore } from "../database.js";
 import { sendOpsNotice, type OpsNotice, type OpsRecipients } from "../notify.js";
 import type { StoreManager } from "../stores.js";
@@ -28,7 +29,8 @@ export function mondayOf(iso: string) {
   return shiftDays(iso, weekday === 0 ? -6 : 1 - weekday);
 }
 
-export const todayIso = () => new Date().toISOString().slice(0, 10);
+/** Today where the workspace is. The UTC day picks the wrong Monday for part of every day. */
+export const todayIso = () => localIsoDate();
 
 const daysBetween = (from: string, to: string) =>
   Math.round((new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) / 86_400_000);

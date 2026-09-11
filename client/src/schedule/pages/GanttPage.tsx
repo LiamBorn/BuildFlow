@@ -45,7 +45,7 @@ import {
 import type { ScheduleTarget } from "../links";
 import { SavedViewsBar } from "../SavedViewsBar";
 import { useSchedulePage } from "../page";
-import { useNarrowViewport } from "../hooks";
+import { narrowViewport, useNarrowViewport } from "../hooks";
 
 /** The chart's own ranges plus "week": a fitted seven-day window on the shared schedule week. */
 type PageRange = Range | "week";
@@ -159,7 +159,8 @@ export type GanttPageProps = {
 export const GANTT_ROW_CAP = 300;
 
 export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, releaseTag }: GanttPageProps) {
-  const [range, setRange] = useState<PageRange>(() => readPreference<PageRange>("gantt:range", "monthly"));
+  // a phone opens on the fitted week: seven days across the screen read better than a month of 150 px columns
+  const [range, setRange] = useState<PageRange>(() => readPreference<PageRange>("gantt:range", narrowViewport() ? "week" : "monthly"));
   const [zoom, setZoom] = useState<number>(() => readPreference<number>("gantt:zoom", 100));
   // a moved bar shows at once; fresh server data — or a refused save — settles it
   const [overrides, setOverrides] = useState<Record<string, Partial<Job>>>({});
@@ -184,6 +185,7 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
     projectsById,
     crewNamesForJob,
     notice,
+    news,
     say,
     conflictDialog,
     patchJob: saveJob,
@@ -205,8 +207,31 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
 
   useEffect(() => writePreference("gantt:range", range), [range]);
   useEffect(() => writePreference("gantt:zoom", zoom), [zoom]);
-  // fresh server data is the truth again
-  useEffect(() => setOverrides({}), [liveData.jobs]);
+  /**
+   * Fresh server data settles a bar that was moved by hand — but only that bar, and only once the
+   * server's copy says what the move said.
+   *
+   * Clearing every override whenever the jobs array changed identity meant any refresh cleared
+   * them, including one caused by an unrelated change in another tab: a bar mid-save snapped back
+   * to its old dates and then jumped forward again when its own write landed, which is an
+   * invitation to drag it a second time. A refused save still clears its own override, in
+   * `patchJob` below, so nothing lingers on a write that did not happen.
+   */
+  useEffect(() => {
+    setOverrides((current) => {
+      const ids = Object.keys(current);
+      if (ids.length === 0) return current;
+      const settled = ids.filter((id) => {
+        const job = liveData.jobs.find((candidate) => candidate.id === id);
+        if (!job) return true; // the job is gone; there is nothing left to hold
+        return Object.entries(current[id]).every(([key, value]) => job[key as keyof Job] === value);
+      });
+      if (settled.length === 0) return current;
+      const next = { ...current };
+      for (const id of settled) delete next[id];
+      return next;
+    });
+  }, [liveData.jobs]);
   // the plan with the page's own moves on it, and the part of it the shared filters show
   const jobs = data.jobs;
   const visibleJobs = useMemo(() => scope.jobs.filter((job) => job.startDate && job.endDate), [scope.jobs]);
@@ -338,14 +363,14 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
     async (job: Job, patch: Partial<Job>, done: string) => {
       // the bar moves at once; fresh server data — or a refused save — settles it
       setOverrides((current) => ({ ...current, [job.id]: { ...current[job.id], ...patch } }));
-      const ok = await saveJob(job, patch, done);
-      if (!ok)
+      const result = await saveJob(job, patch, done);
+      if (!result.saved)
         setOverrides((current) => {
           const next = { ...current };
           delete next[job.id];
           return next;
         });
-      return ok;
+      return result;
     },
     [saveJob]
   );
@@ -493,7 +518,7 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
             )}
           </div>
 
-          <ScheduleNotice notice={notice} />
+          <ScheduleNotice notice={notice} news={news} />
 
           {cpm && <ScheduleCpmSummary cpm={cpm} busy={busy} onSetBaseline={() => void saveBaseline()} />}
           {hiddenRows > 0 && (
@@ -518,7 +543,7 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                 span={span}
                 initialDate={initialDate}
                 scrollRequest={scrollRequest}
-                sidebarWidth={phone ? 160 : 300}
+                sidebarWidth={phone ? 104 : 300}
                 rowHeight={phone ? 46 : 36}
                 fit={fit}
               >
@@ -637,8 +662,9 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
           onClose={closeDrawer}
           onOpenSchedule={onOpenSchedule}
           onSave={async (patch) => {
-            const ok = await patchJob(selectedJob, patch, `${selectedJob.name} saved`);
-            if (ok) closeDrawer();
+            const result = await patchJob(selectedJob, patch, `${selectedJob.name} saved`);
+            if (result.saved) closeDrawer();
+            return result;
           }}
         />
       )}

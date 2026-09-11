@@ -30,7 +30,15 @@ import { withConflictAsk } from "./conflicts";
 import { GanttLinkDialog } from "./GanttLinkDialog";
 import { buildScheduleCpm } from "./cpm";
 import { applyScheduleFilters, resolveScheduleFilters } from "./filters";
-import { ScheduleNotice, scheduleCollision, useConflictAsk, useJobSave, useScheduleNotice, useScheduleSensors } from "./hooks";
+import {
+  ScheduleNotice,
+  scheduleCollision,
+  useConflictAsk,
+  useJobSave,
+  useScheduleNotice,
+  useScheduleSensors,
+  useSettleWrite
+} from "./hooks";
 import { computeScheduleKpis, workCalendarOf } from "./kpis";
 import type { ScheduleTarget } from "./links";
 import { useScheduleLive } from "./live";
@@ -43,7 +51,7 @@ import { SavedViewsBar } from "./SavedViewsBar";
 import { ScheduleFilters } from "./ScheduleFilters";
 import { useScheduleContext, type SchedulePage as SchedulePageId } from "./useScheduleContext";
 import { useScheduleViewKeys } from "./viewKeys";
-import { WEEK_DAYS, dayOf, formatScheduleDate, initialWeekStart, mondayOf, scheduleWeekDays } from "./week";
+import { WEEK_DAYS, dayOf, formatScheduleDate, formatScheduleWeekRange, initialWeekStart, mondayOf, scheduleWeekDays } from "./week";
 
 export type SchedulePageInput = {
   data: BootstrapPayload;
@@ -73,8 +81,12 @@ export type ScheduleChange<T> = {
   done: string;
   /** The notice when the planner chose not to double-book. */
   stays?: string;
-  /** Reverses the change; without it the notice offers no Undo. */
-  undo?: ((result: T) => Promise<unknown>) | null;
+  /**
+   * Reverses the change; without it the notice offers no Undo. Takes `force` for the same reason
+   * the write does: the way back can clash with something that arrived while the notice was up,
+   * and that clash is one the planner has not seen.
+   */
+  undo?: ((result: T, force: boolean) => Promise<unknown>) | null;
   /** The notice after the Undo. */
   undone?: string;
   /** The card the board shows as pending while the Undo runs (the moved booking, by default the same card). */
@@ -102,8 +114,6 @@ export function useSchedulePage({
   );
   // the week, month, crew type, crew, project, region and status set follow you across the Schedule pages (and survive a reload)
   const [context, updateContext] = useScheduleContext(data.activeUser.id);
-  // other tabs' changes arrive here: reload, and flash the cards they touched
-  useScheduleLive(reload);
   // keys 1–6 switch views
   useScheduleViewKeys(onOpenPage, page);
 
@@ -122,8 +132,9 @@ export function useSchedulePage({
   const weekStartIso = weekDays[0].date;
   const weekEndIso = weekDays[WEEK_DAYS - 1].date;
   const isThisWeek = weekStartIso === toIsoDate(mondayOf(new Date()));
-  // the same words for the same week on every schedule page
-  const weekRange = `${weekDays[0].label} - ${weekDays[WEEK_DAYS - 1].label}, ${weekStartIso.slice(0, 4)}`;
+  // the same words for the same week on every schedule page — from the one function that
+  // knows them, rather than a second copy of the sentence that had to be fixed twice
+  const weekRange = formatScheduleWeekRange(weekDays);
   // today, and the shared month: the context's, or the one we are in
   const today = toIsoDate(new Date());
   const monthAnchor = context.monthAnchor ?? firstOfScheduleMonth(today);
@@ -165,8 +176,18 @@ export function useSchedulePage({
   );
   // the same KPI maths as every schedule page, for this week and these filters
   const kpis = useMemo(
-    () => computeScheduleKpis({ crews, jobs, weekAssignments, weekDays: weekIso, phases: data.phases, projects: data.projects, calendar }),
-    [crews, jobs, weekAssignments, weekIso, data.phases, data.projects, calendar]
+    () =>
+      computeScheduleKpis({
+        crews,
+        jobs,
+        weekAssignments,
+        weekDays: weekIso,
+        month: monthAnchor.slice(0, 7),
+        phases: data.phases,
+        projects: data.projects,
+        calendar
+      }),
+    [crews, jobs, weekAssignments, weekIso, monthAnchor, data.phases, data.projects, calendar]
   );
   // the same alerts every schedule page raises, for what the filters show
   const alerts = useMemo(() => deriveScheduleAlerts(data, jobs, scope.assignments), [data, jobs, scope.assignments]);
@@ -197,7 +218,14 @@ export function useSchedulePage({
   }, [data.assignments, crewsById]);
   const crewNamesForJob = useCallback((jobId: string) => crewNamesByJob.get(jobId) ?? "", [crewNamesByJob]);
 
-  const { notice, say } = useScheduleNotice();
+  const { notice, news, say, report } = useScheduleNotice();
+  // the refresh every write ends with: it reports itself, so a board that could not reload says
+  // that it may be behind instead of the write claiming it failed
+  const settle = useSettleWrite(reload, say);
+  // Other tabs' changes arrive here: reload, flash the cards they touched, and say so once —
+  // through `report`, which announces beside this tab's own notice instead of replacing it, so a
+  // change elsewhere cannot take away an Undo the person is still deciding about.
+  useScheduleLive(reload, report);
   // the server asks before it double-books a crew; this is how the page answers
   const { ask, dialog: conflictDialog } = useConflictAsk();
   // the one way a schedule page saves a job: a move carries its bookings along and asks before a double-booking
@@ -241,23 +269,31 @@ export function useSchedulePage({
           say(stays ?? `${name} stays where it was.`);
           return null;
         }
-        await reload();
-        say(done, {
+        // The write has landed. From here a failure is a stale board, not a failed change,
+        // so the refresh reports itself rather than borrowing the write's "could not" wording.
+        await settle({
+          done,
           // the way back is the state before, so Undo needs no asking
           undo: undo
             ? async () => {
                 setBusy(true);
                 setPendingId(undoId?.(result) ?? id);
+                let back;
                 try {
-                  await undo(result);
-                  await reload();
-                  say(undone ?? `${name} as it was`);
+                  back = await withConflictAsk((force) => undo(result, force), ask);
                 } catch (error) {
                   failed("move back", error);
+                  return;
                 } finally {
                   setBusy(false);
                   setPendingId(null);
                 }
+                // the planner was asked about a clash on the way back, and said no
+                if (back === null) {
+                  say(`${name} stays where it is.`);
+                  return;
+                }
+                await settle({ done: undone ?? `${name} as it was` });
               }
             : undefined
         });
@@ -270,7 +306,7 @@ export function useSchedulePage({
         setPendingId(null);
       }
     },
-    [ask, reload, say]
+    [ask, settle, say]
   );
   // "Add job" in a cell, or "New Activity": the one job form, on a crew and a day
   const [picker, setPicker] = useState<{ crewId: string; date: string } | null>(null);
@@ -297,12 +333,11 @@ export function useSchedulePage({
         // a "no" leaves the new job unbooked, in the Week board's queue
         const booked = (await withConflictAsk((force) => assignJob({ jobId: job.id, crewId, date }, { force }), ask)) !== null;
         setPicker(null);
-        await reload();
-        say(
-          booked
+        await settle({
+          done: booked
             ? `${job.name} scheduled for ${crewsById.get(crewId)?.name ?? "crew"} on ${formatScheduleDate(date)}`
             : `${job.name} created but not booked — find it in the Week board's queue.`
-        );
+        });
         return { job, booked, date };
       } catch (error) {
         say(`Could not schedule the job: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
@@ -311,7 +346,7 @@ export function useSchedulePage({
         setBusy(false);
       }
     },
-    [picker, ask, reload, say, crewsById]
+    [picker, ask, settle, say, crewsById]
   );
   // dependencies: the links a job has, and the one way a link is drawn or taken away — from the drawer on
   // every page, from the bar's menu on the Gantt; each notice carries its Undo
@@ -334,19 +369,18 @@ export function useSchedulePage({
     async (predecessor: Job, successor: Job, type: DependencyType, lagDays: number) => {
       try {
         const link = await createDependency({ predecessorId: predecessor.id, successorId: successor.id, type, lagDays });
-        await reload();
-        say(`${predecessor.name} → ${successor.name} linked (${type}${lagDays ? `, ${lagDays}d lag` : ""})`, {
+        await settle({
+          done: `${predecessor.name} → ${successor.name} linked (${type}${lagDays ? `, ${lagDays}d lag` : ""})`,
           undo: async () => {
             await deleteDependency(link.id);
-            await reload();
-            say(`${predecessor.name} and ${successor.name} unlinked again`);
+            await settle({ done: `${predecessor.name} and ${successor.name} unlinked again` });
           }
         });
       } catch (error) {
         say(`Could not link the jobs: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
       }
     },
-    [reload, say]
+    [settle, say]
   );
   const unlinkJobs = useCallback(
     async (link: JobDependency) => {
@@ -354,8 +388,8 @@ export function useSchedulePage({
       const label = `${name(link.predecessorId)} and ${name(link.successorId)}`;
       try {
         await deleteDependency(link.id);
-        await reload();
-        say(`${label} unlinked`, {
+        await settle({
+          done: `${label} unlinked`,
           undo: async () => {
             await createDependency({
               predecessorId: link.predecessorId,
@@ -363,29 +397,27 @@ export function useSchedulePage({
               type: link.type,
               lagDays: link.lagDays
             });
-            await reload();
-            say(`${label} linked again`);
+            await settle({ done: `${label} linked again` });
           }
         });
       } catch (error) {
         say(`Could not unlink ${label}: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
       }
     },
-    [reload, say, jobsById]
+    [settle, say, jobsById]
   );
   // "Set baseline": snapshot the current plan as what slip is measured against (the CPM readout's button)
   const saveBaseline = useCallback(async () => {
     setBusy(true);
     try {
       await setScheduleBaseline();
-      await reload();
-      say("Baseline saved — slip is now measured against today's plan.");
+      await settle({ done: "Baseline saved — slip is now measured against today's plan." });
     } catch (error) {
       say(`Could not save the baseline: ${error instanceof Error ? error.message : "request failed"}`, { error: true });
     } finally {
       setBusy(false);
     }
-  }, [reload, say]);
+  }, [settle, say]);
 
   return {
     page,
@@ -423,6 +455,7 @@ export function useSchedulePage({
     crewNamesByJob,
     crewNamesForJob,
     notice,
+    news,
     say,
     ask,
     conflictDialog,
@@ -563,6 +596,7 @@ export function SchedulePageFrame({
     updateContext,
     kpis,
     notice,
+    news,
     alerts,
     openAlert,
     conflictDialog,
@@ -626,7 +660,7 @@ export function SchedulePageFrame({
 
       {board ? (
         <section className="schedule-board" aria-label={boardLabel} data-tutorial-id={boardTutorialId}>
-          <ScheduleNotice notice={notice} />
+          <ScheduleNotice notice={notice} news={news} />
           {children}
         </section>
       ) : (
@@ -674,8 +708,10 @@ export function SchedulePageFrame({
           onClose={closeDrawer}
           onOpenSchedule={onOpenSchedule ?? closeDrawer}
           onSave={async (patch) => {
-            const ok = await patchJob(selectedJob, patch, `${selectedJob.name} saved`);
-            if (ok) closeDrawer();
+            // the drawer stays open on a failure and says so in place; it closes when the change is in
+            const result = await patchJob(selectedJob, patch, `${selectedJob.name} saved`);
+            if (result.saved) closeDrawer();
+            return result;
           }}
         />
       )}

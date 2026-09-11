@@ -86,7 +86,7 @@ describe("Schedule pages", () => {
     expect(screen.getByText("Drag a job onto a crew's day to book it.")).toBeInTheDocument();
     // the booked job sits in its crew's cell, not in the queue
     const board = screen.getByRole("region", { name: "Crew schedule for the week" });
-    expect(within(board).getByRole("button", { name: "Open Riverside Office Building project" })).toBeInTheDocument();
+    expect(within(board).getByRole("button", { name: "Open Riverside Office Building" })).toBeInTheDocument();
     expect(within(board).getByText("Concrete Crew 1")).toBeInTheDocument();
   });
 
@@ -149,7 +149,7 @@ describe("Schedule pages", () => {
     await enterDashboard();
     await openWeekBoard();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open Riverside Office Building project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Riverside Office Building" }));
 
     const drawer = screen.getByRole("dialog", { name: "Riverside Office Building" });
     expect(within(drawer).getByText(/Concrete - Level 3 Slab/)).toBeInTheDocument();
@@ -185,7 +185,7 @@ describe("Schedule pages", () => {
     await enterDashboard();
     await openWeekBoard();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open Riverside Office Building project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Riverside Office Building" }));
     const drawer = screen.getByRole("dialog", { name: "Riverside Office Building" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "In Progress" } });
     fireEvent.change(within(drawer).getByLabelText("Notes"), { target: { value: "Pump on site at 6." } });
@@ -215,7 +215,7 @@ describe("Schedule pages", () => {
     expect(screen.queryByRole("dialog", { name: "Add job to schedule" })).not.toBeInTheDocument();
 
     // a cell with a card in it keeps a compact "Add job" of its own
-    expect(screen.getByRole("button", { name: "Open Riverside Office Building project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Riverside Office Building" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Add job to Concrete Crew 1 on Jun 15" }));
     dialog = screen.getByRole("dialog", { name: "Add job to schedule" });
     expect(within(dialog).getByText("Concrete Crew 1 · Jun 15")).toBeInTheDocument();
@@ -316,7 +316,7 @@ describe("Schedule pages", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add job to schedule" })).not.toBeInTheDocument());
     expect(await screen.findByText("Custom Concrete Pour scheduled for Concrete Crew 1 on Jun 16")).toBeInTheDocument();
     // the new booking lands in Tuesday's cell
-    expect(await screen.findByRole("button", { name: "Open Custom Concrete Pour project" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Open Custom Concrete Pour" })).toBeInTheDocument();
   });
 });
 

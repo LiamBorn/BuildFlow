@@ -407,6 +407,7 @@ export function SchedulePage({
     alerts,
     openAlert,
     notice,
+    news,
     say,
     busy,
     saveBaseline
@@ -517,7 +518,7 @@ export function SchedulePage({
         </>
       }
     >
-      <ScheduleNotice notice={notice} />
+      <ScheduleNotice notice={notice} news={news} />
       <div className="schedule-layout" data-reveal>
         <div className="sched-home-main">
           <FirstRunPanel

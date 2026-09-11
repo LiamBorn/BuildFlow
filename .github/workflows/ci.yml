@@ -27,3 +27,5 @@ jobs:
         run: npm test
       - name: Tests in far time zones
         run: npm run test:tz
+      - name: Stylesheet answers
+        run: npm run check:css

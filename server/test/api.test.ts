@@ -32,6 +32,31 @@ describe("BuildFlow API", () => {
     expect(response.body.activeUser.role).toBe("Project Manager");
   });
 
+  it("asks for a session whatever case the path is written in", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-case-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+
+    // Express matches routes case-insensitively unless told otherwise, and the gate compares
+    // against lowercase literals — so `/API/bootstrap` was one route to the router and a
+    // different string to the gate. It answered 200 with the whole workspace and no cookie.
+    for (const path of ["/api/bootstrap", "/API/bootstrap", "/Api/Bootstrap", "/api/BOOTSTRAP"]) {
+      await request(app).get(path).expect(401);
+    }
+    // and the writes behind the same door
+    for (const path of ["/api/schedule/assign", "/API/schedule/assign", "/Api/Schedule/Assign"]) {
+      await request(app).post(path).send({}).expect(401);
+    }
+    // the one gated prefix with capitals of its own still works both ways round
+    await request(app).get("/api/delayIQs").expect(401);
+    await request(app).get("/api/delayiqs").expect(401);
+
+    // and a signed-in caller still reaches the route it was registered as
+    const agent = request.agent(app);
+    await agent.post("/api/auth/demo").expect(200);
+    await agent.get("/api/bootstrap").expect(200);
+    await agent.get("/api/delayIQs").expect(200);
+  });
+
   it("rejects unknown business profiles", async () => {
     const agent = await testApp();
 
@@ -956,6 +981,33 @@ describe("BuildFlow API", () => {
       })
       .expect(200);
     expect(updated.body.rate).toBe(90);
+
+    // Zero is not a price. It used to be stored and then read as one, putting a whole week of
+    // booked work on the board at $0; an empty field is how you ask for the default.
+    const free = await agent
+      .post("/api/crews")
+      .send({
+        name: "Free Crew",
+        specialty: "Concrete",
+        foreman: "Dana Brooks",
+        laborMix: [{ category: "Labor", role: "Laborers", count: 2 }],
+        rate: 0
+      })
+      .expect(400);
+    expect(JSON.stringify(free.body)).toContain("more than $0");
+    await agent
+      .patch(`/api/crews/${defaulted.body.id}`)
+      .send({
+        name: "Default Crew",
+        specialty: "Concrete",
+        foreman: "Dana Brooks",
+        laborMix: [{ category: "Labor", role: "Laborers", count: 2 }],
+        rate: 0
+      })
+      .expect(400);
+    const after = await agent.get("/api/bootstrap").expect(200);
+    expect(after.body.crews.find((crew: { id: string }) => crew.id === defaulted.body.id).rate).toBe(90);
+    expect(after.body.crews.some((crew: { name: string }) => crew.name === "Free Crew")).toBe(false);
   });
 
   it("keeps the working week and holidays as org data", async () => {

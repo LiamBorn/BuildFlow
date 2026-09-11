@@ -319,6 +319,8 @@ import { MatrixPage } from "./schedule/pages/MatrixPage";
 import { MonthPage } from "./schedule/pages/MonthPage";
 import { SchedulePage } from "./schedule/pages/SchedulePage";
 import { ScheduleStatusBand } from "./schedule/ScheduleStatusBand";
+// aliased: App has its own older relativeTime, which rounds up and returns "" for a bad date
+import { relativeTime as relativeAlertTime } from "./schedule/alerts";
 import { useHudMotion } from "./useHudMotion";
 import { formatDate } from "./formatDate";
 import {
@@ -2311,7 +2313,14 @@ function App() {
   // enterAfterAuth). reload() below is the void-returning form used as a prop.
   // whether a workspace load fell back to a demo session (nobody was signed in); a real sign-in clears it
   const demoFallback = useRef(false);
+  /**
+   * Which refresh is the newest. Two are in flight whenever a save's own refresh overlaps one the
+   * live feed started, and they can answer out of order — so the older reply used to paint last
+   * and wipe a change that had just been saved, while its notice still said it landed.
+   */
+  const newestLoad = useRef(0);
   const loadWorkspace = async (): Promise<BootstrapPayload> => {
+    const ticket = (newestLoad.current += 1);
     let payload;
     try {
       payload = await retryTransient(loadBootstrap);
@@ -2328,16 +2337,20 @@ function App() {
         throw err;
       }
     }
-    setData(payload);
-    syncUserSettings(payload.userSettings);
-    // The signed-in owner is always the active user. Otherwise (demo store,
-    // older data) keep whoever is current if they still exist.
-    setActiveUserId((current) => {
-      const me = payload.activeUser;
-      if (me?.accountId) return me.id;
-      if (current && payload.users.some((user) => user.id === current)) return current;
-      return me?.id ?? current;
-    });
+    // Only the newest refresh paints. An older one still returns its payload to whoever asked
+    // for it — that caller wanted that answer — but it does not get to be the board.
+    if (ticket === newestLoad.current) {
+      setData(payload);
+      syncUserSettings(payload.userSettings);
+      // The signed-in owner is always the active user. Otherwise (demo store,
+      // older data) keep whoever is current if they still exist.
+      setActiveUserId((current) => {
+        const me = payload.activeUser;
+        if (me?.accountId) return me.id;
+        if (current && payload.users.some((user) => user.id === current)) return current;
+        return me?.id ?? current;
+      });
+    }
     return payload;
   };
 
@@ -2820,9 +2833,14 @@ function App() {
   return (
     <div className={`${shellClassName} hs-shell`}>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={paletteCommands()} />
-      {/* HubSpot layout: full-width top bar, then an icon rail + content row */}
-      {page !== "settings" && (
-        <TopBar
+      {/* HubSpot layout: full-width top bar, then an icon rail + content row.
+          APPROVED: Settings renders the top bar again. It had no bar and no rail,
+          which made it the one page in the product with no search, no create menu,
+          no notifications, no account menu and no way back except its own Close
+          control. The RAIL stays gated below, deliberately: Settings uses the full
+          width for its own 14-category rail and two nav rails side by side is what
+          the original gate was avoiding. */}
+      <TopBar
           onOpenSearch={() => setPaletteOpen(true)}
           data={data}
           reportsMode={page === "reports"}
@@ -2839,7 +2857,6 @@ function App() {
           onToggleLink={toggleLinkBookmark}
           scheduleLink={() => (isSchedulePage(page) ? scheduleLinkFor(page, readScheduleContext(data.activeUser.id), data) : null)}
         />
-      )}
       <div className="hs-body">
         {page !== "settings" && (
           <Sidebar
@@ -4049,6 +4066,17 @@ function WelcomePage({
           onShowUpdates={showUpdatesPage}
           onShowHelp={showHelpCenterPage}
         />
+      ) : welcomeView === "overview" ? (
+        <WelcomeProductOverviewPage
+          onBack={showWelcomeHome}
+          onGetStarted={showCreateAccountPage}
+          onOpenSchedule={onOpenSchedule}
+          onOpenHash={(hash) => {
+            if (typeof window !== "undefined") window.location.hash = hash;
+          }}
+          onShowUpdates={showUpdatesPage}
+          onShowHelp={showHelpCenterPage}
+        />
       ) : activeOverviewVariant ? (
         <WelcomeOverviewPage
           variant={activeOverviewVariant}
@@ -4760,7 +4788,12 @@ function WelcomeExperience({
             annotations={false}
             enterLabel="Scroll to enter BuildFlow"
             className="wx-portal"
-            style={{ "--gp-paper": "var(--wx-bg)", "--gp-ink": "var(--wx-ink)", "--gp-field": "#faf8ee", "--gp-foreground": "var(--wx-ink)" }}
+            style={{
+              "--gp-paper": "var(--wx-bg)",
+              "--gp-ink": "var(--wx-ink)",
+              "--gp-field": "#faf8ee",
+              "--gp-foreground": "var(--wx-ink)"
+            }}
             background={
               <div style={{ position: "absolute", inset: 0, isolation: "isolate" }}>
                 <WxBloomField seed={7} />
@@ -4777,7 +4810,9 @@ function WelcomeExperience({
                   </h1>
                 </div>
                 <div className="wx-portal-bottom">
-                  <p className="wx-sub">Coordinate crews, project phases, materials, field updates, and delayIQs from one clean command center.</p>
+                  <p className="wx-sub">
+                    Coordinate crews, project phases, materials, field updates, and delayIQs from one clean command center.
+                  </p>
                   <div className="wx-cta-row">
                     {/* Secondary sits first and primary second, so the pair reads
                         quiet-then-dark left to right. */}
@@ -4805,8 +4840,8 @@ function WelcomeExperience({
                     </WxMagnetic>
                   </div>
                   <p className="wx-platform">
-                    Early access &amp; founding-member pricing for waitlist members &middot; built for general contractors, concrete, roofing,
-                    utilities, and more.
+                    Early access &amp; founding-member pricing for waitlist members &middot; built for general contractors, concrete,
+                    roofing, utilities, and more.
                   </p>
                 </div>
               </>
@@ -4858,7 +4893,9 @@ function WelcomeExperience({
             <section className="wx-feature-hero" data-reveal aria-labelledby="wx-crew-title">
               <div className="wx-feature-hero-head">
                 <span className="wx-row-kicker">Crew scheduling</span>
-                <h3 id="wx-crew-title" className="wx-feature-hero-title">Assign the week in minutes, not meetings.</h3>
+                <h3 id="wx-crew-title" className="wx-feature-hero-title">
+                  Assign the week in minutes, not meetings.
+                </h3>
                 <WxTypeIn text="Drag jobs onto crews by day, capacity, and readiness. Double-bookings and capacity limits surface before dispatch — not after." />
                 <button type="button" className="wx-explore" onClick={() => onExplore("schedule")}>
                   Explore scheduling <ArrowRight size={16} />
@@ -5929,6 +5966,658 @@ const overviewMenuRoutes: Record<string, { view: Exclude<WelcomeView, "home">; h
   company: { view: "companyOverview", hash: "#company-overview" },
   ai: { view: "aiOverview", hash: "#ai-overview" }
 };
+
+/** The six most recent product updates, newest first, for the overview page. */
+const OVERVIEW_LATEST_COUNT = 6;
+
+/** Which product each release belongs to — drives its shot and its pricing link. */
+const OVERVIEW_RELEASE_PRODUCT: Partial<Record<Page, { label: string; imageKey?: string; addOn?: OnboardingProductId }>> = {
+  week: { label: "Crew Scheduling" },
+  gantt: { label: "Crew Scheduling" },
+  crews: { label: "Crew Scheduling" },
+  contacts: { label: "Sales hub", imageKey: "Production Reports" },
+  dashboard: { label: "Dashboard", imageKey: "Production Reports" },
+  reports: { label: "Production Reports" },
+  materials: { label: "Materials Readiness" },
+  field: { label: "Field Updates & DelayIQs" },
+  map: { label: "Map & Field Ops", addOn: "map-field-ops" },
+  equipment: { label: "Equipment Tracking", addOn: "equipment-tracking" }
+};
+
+/** Per-release shot overrides, so two releases on the same product don't repeat a photo. */
+const OVERVIEW_RELEASE_SHOTS: Record<string, string> = {
+  "2026-09-06": "Schedule Suggestions", // Gantt Chart
+  "2026-06-16": "Materials Readiness", // Readiness rules
+  "2026-03-03": "Crew Suggestions" // Crew utilization
+};
+
+/** A release card: the entry's own information, plus what it is and what it costs. */
+function overviewRelease(entry: UpdateEntryData) {
+  const product = (entry.page && OVERVIEW_RELEASE_PRODUCT[entry.page]) || { label: "Crew Scheduling" };
+  const addOn = product.addOn ? ADD_ON_CATALOG[product.addOn] : null;
+  return {
+    entry,
+    label: product.label,
+    image: WELCOME_ITEM_IMAGES[OVERVIEW_RELEASE_SHOTS[entry.dateTime] ?? product.imageKey ?? product.label],
+    /** An update that introduces pages is a new product; everything else is an improvement. */
+    kind: entry.introduces && entry.introduces.length > 0 ? ("New" as const) : ("Update" as const),
+    /** Only paid add-ons get a pricing link. */
+    price: addOn ? `${addOn.price} ${addOn.unit}` : null
+  };
+}
+
+/* ── Product overview (#overview) ────────────────────────────────────────
+   The Product menu's "See overview". Apple's iphone page structure: the whole
+   lineup first, then the newest product, then what shipped lately, then why
+   you would choose it, then how to learn more, then what else works with it. */
+/** The product overview's FAQ, above the footer. Answers stay grounded in what BuildFlow does. */
+const OVERVIEW_FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "Which product should we start with?",
+    a: "Crew Scheduling. It is the schedule everything else hangs off — the map, the field log, materials, equipment and reporting all read from it. Add the rest once the week is running."
+  },
+  {
+    q: "Do we have to buy every product?",
+    a: "No. The core schedule is one product, and Map & Field Ops, Equipment Tracking, Time Cards and Schedule AI are add-ons you turn on when you need them. Each one is priced per user per month, and some are included with Business."
+  },
+  {
+    q: "How long does it take to get running?",
+    a: "Most teams have a week on the board the first day. Import a Primavera P6 or Microsoft Project file, start from a template, or let BuildFlow AI read a photo of last week's whiteboard — you check the mapping before anything is created."
+  },
+  {
+    q: "Will the schedule change on its own?",
+    a: "Never. Field progress raises a priced variance that a planner accepts or rejects, and dates only move when a person decides. That is what makes the published plan worth trusting."
+  },
+  {
+    q: "Does it work in the field, not just the office?",
+    a: "Yes. The boards, crew sheets, photos and site notes are built for a phone at 6am, and changes reach everyone on the schedule live. Crews can subscribe to a calendar feed or print a week sheet."
+  },
+  {
+    q: "What happens to our data?",
+    a: "Every company gets its own database, its own roles and invites, and nightly backups you can restore from. You can export the schedule to CSV at any time."
+  }
+];
+
+function WelcomeProductOverviewPage({
+  onBack,
+  onGetStarted,
+  onOpenSchedule,
+  onOpenHash,
+  onShowUpdates,
+  onShowHelp
+}: {
+  onBack: () => void;
+  onGetStarted: () => void;
+  onOpenSchedule: () => void;
+  onOpenHash: (hash: WelcomeHash) => void;
+  onShowUpdates: () => void;
+  onShowHelp: () => void;
+}) {
+  const rootRef = useRef<HTMLElement>(null);
+
+  // Pointer-reactive auroras / cursor — the same tween the other welcome pages use.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let raf = 0;
+    const handleMove = (event: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const nx = event.clientX / window.innerWidth;
+        const ny = event.clientY / window.innerHeight;
+        root.style.setProperty("--mx", `${event.clientX}px`);
+        root.style.setProperty("--my", `${event.clientY}px`);
+        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
+        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
+      });
+    };
+    window.addEventListener("pointermove", handleMove);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // Reveal-on-scroll tweens.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
+    );
+    root.querySelectorAll("[data-reveal]").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // "More that works with BuildFlow" — the Crew Scheduling page's tabbed viewer:
+  // a vertical tab list whose selected row expands, and the visual beside it.
+  const [alsoTab, setAlsoTab] = useState(0);
+  const [alsoFrameOn, setAlsoFrameOn] = useState(true);
+  const alsoTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectAlsoTab = (index: number, focus = false) => {
+    if (index === alsoTab) return;
+    setAlsoFrameOn(false);
+    setAlsoTab(index);
+    if (focus) alsoTabRefs.current[index]?.focus();
+  };
+  useEffect(() => {
+    if (alsoFrameOn) return;
+    const raf = requestAnimationFrame(() => setAlsoFrameOn(true));
+    return () => cancelAnimationFrame(raf);
+  }, [alsoFrameOn]);
+  const onAlsoTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number, count: number) => {
+    const map: Record<string, number> = {
+      ArrowDown: (index + 1) % count,
+      ArrowRight: (index + 1) % count,
+      ArrowUp: (index - 1 + count) % count,
+      ArrowLeft: (index - 1 + count) % count,
+      Home: 0,
+      End: count - 1
+    };
+    const next = map[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    selectAlsoTab(next, true);
+  };
+
+  const latest = UPDATE_ENTRIES.slice(0, OVERVIEW_LATEST_COUNT);
+
+  /** The featured product board — the same suggested week Schedule AI leads with. */
+  const featuredBoard: CsRow[] = SCHEDULE_AI_PAGE_CONTENT.hero.board;
+
+  const reasons: Array<{ subtitle: string; title: string; text: string; image: string }> = [
+    {
+      subtitle: "Production scheduling",
+      title: "Built for production, not tasks",
+      text: "Most construction software manages documents or to-do lists. BuildFlow schedules crews, equipment and materials against real production rates — the work that actually fills the week.",
+      image: WELCOME_ITEM_IMAGES["Crew Scheduling"]
+    },
+    {
+      subtitle: "One workspace",
+      title: "One system, not seven",
+      text: "Scheduling, the field log, materials, the map and reporting are one product on one schedule, so there is nothing to reconcile between tools at the end of the month.",
+      image: WELCOME_ITEM_IMAGES["Production Reports"]
+    },
+    {
+      subtitle: "You stay in control",
+      title: "The schedule never moves on its own",
+      text: "Field progress raises a priced variance a planner accepts or rejects. Dates change when a person decides, which is what makes the plan worth trusting.",
+      image: WELCOME_ITEM_IMAGES["Field Updates & DelayIQs"]
+    },
+    {
+      subtitle: "BuildFlow AI",
+      title: "AI that reads your jobs",
+      text: "Schedule AI drafts the week, flags the slips and prices the recovery options from your live schedule — not from a generic model that has never seen your yard.",
+      image: WELCOME_ITEM_IMAGES["Schedule AI"]
+    },
+    {
+      subtitle: "Built for the field",
+      title: "It works in the truck",
+      text: "Boards, crew sheets, photos and site notes are built for a phone at 6am, so the plan reaches the people running it instead of staying at the office.",
+      image: WELCOME_ITEM_IMAGES["Map & Field Ops"]
+    },
+    {
+      subtitle: "Switch in minutes",
+      title: "Switching takes minutes",
+      text: "Import Primavera P6 and Microsoft Project files, or let BuildFlow AI read a photo of last week's whiteboard, and check the mapping before anything is created.",
+      image: WELCOME_ITEM_IMAGES["Equipment Tracking"]
+    }
+  ];
+
+  const learnCards: Array<{ goodFor: string; title: string; image: string; cta: string; action: () => void }> = [
+    {
+      goodFor: "Planning",
+      title: "Lay the week out before it starts.",
+      image: WELCOME_ITEM_IMAGES["Crew Scheduling"],
+      cta: "Open the live demo",
+      action: onOpenSchedule
+    },
+    {
+      goodFor: "Productivity",
+      title: "More of the day on site, less on the phone.",
+      image: WELCOME_ITEM_IMAGES["Map & Field Ops"],
+      cta: "See Map & Field Ops",
+      action: () => onOpenHash("#map-field-ops")
+    },
+    {
+      goodFor: "Visibility",
+      title: "See the job without driving to it.",
+      image: WELCOME_ITEM_IMAGES["Field Updates & DelayIQs"],
+      cta: "See Field Updates",
+      action: () => onOpenHash("#field-updates-delayIQs")
+    },
+    {
+      goodFor: "Accountability",
+      title: "Proof of what happened, and when.",
+      image: WELCOME_ITEM_IMAGES["Production Reports"],
+      cta: "See Production Reports",
+      action: () => onOpenHash("#production-reports")
+    },
+    {
+      goodFor: "Learning",
+      title: "Get the crew running it in a day.",
+      image: WELCOME_ITEM_IMAGES["Customer Reviews"],
+      cta: "Browse the help center",
+      action: onShowHelp
+    },
+    {
+      goodFor: "Getting started",
+      title: "Start from a schedule that already fits.",
+      image: WELCOME_ITEM_IMAGES["Materials Readiness"],
+      cta: "See templates",
+      action: () => onOpenHash("#templates")
+    }
+  ];
+
+  const alsoCards: Array<{ title: string; text: string; cta: string; action: () => void; mock: CsMockSpec }> = [
+    {
+      title: "BuildFlow AI",
+      text: "Ask the schedule a question in plain language, and get an answer drawn from your live jobs.",
+      cta: "Explore BuildFlow AI",
+      action: () => onOpenHash("#buildflow-ai"),
+      mock: {
+        kind: "list",
+        title: "Ask BuildFlow AI",
+        items: [
+          { icon: Sparkles, title: "\u201cWhat is at risk this week?\u201d", sub: "3 jobs trending late \u00b7 1 blocked on locates", badge: "ANSWER", tone: "ready" },
+          { icon: Users, title: "\u201cWho is free Thursday?\u201d", sub: "Utility 1 and Finish 3 \u00b7 both under 70%", badge: "ANSWER", tone: "ready" },
+          { icon: Clock, title: "\u201cWhat if the deck pour slips?\u201d", sub: "Handover moves to the 24th", badge: "WHAT-IF", tone: "wait" }
+        ]
+      }
+    },
+    {
+      title: "Integrations",
+      text: "QuickBooks, Procore, calendars and weather, connected to the same schedule your crews run.",
+      cta: "See integrations",
+      action: () => onOpenHash("#integrations"),
+      mock: {
+        kind: "list",
+        title: "Connections",
+        items: [
+          { icon: CheckCircle2, title: "QuickBooks", sub: "Job costing \u00b7 synced hourly", badge: "ON", tone: "ready" },
+          { icon: CheckCircle2, title: "Procore", sub: "Projects and documents", badge: "ON", tone: "ready" },
+          { icon: CloudSun, title: "Weather \u00b7 calendars", sub: "Forecast on the plan \u00b7 crew feeds", badge: "ON", tone: "ready" }
+        ]
+      }
+    },
+    {
+      title: "Partner programs",
+      text: "Build with BuildFlow, refer your clients, or resell it alongside the work you already do.",
+      cta: "See partner programs",
+      action: () => onOpenHash("#partners"),
+      mock: {
+        kind: "list",
+        title: "Partner programs",
+        items: [
+          { icon: Building2, title: "Build with BuildFlow", sub: "APIs and integrations", badge: "BUILD", tone: "ready" },
+          { icon: Users, title: "Refer your clients", sub: "Revenue share on every referral", badge: "REFER", tone: "ready" },
+          { icon: PackageCheck, title: "Resell BuildFlow", sub: "Alongside the work you already do", badge: "RESELL", tone: "wait" }
+        ]
+      }
+    },
+    {
+      title: "Product updates",
+      text: "Everything that shipped, release by release, with what changed and where to find it.",
+      cta: "Read the updates",
+      action: onShowUpdates,
+      mock: {
+        kind: "list",
+        title: "Recent releases",
+        items: [
+          { icon: TrendingUp, title: "v3.9 \u00b7 Schedule views", sub: "Month, Week, List, Kanban, Matrix", badge: "NEW", tone: "ready" },
+          { icon: TrendingUp, title: "v3.8 \u00b7 Gantt Chart", sub: "The whole schedule on one wall", badge: "NEW", tone: "ready" },
+          { icon: Clock, title: "v3.7 \u00b7 Sales hub", sub: "Contacts, Companies and Deals", badge: "NEW", tone: "wait" }
+        ]
+      }
+    }
+  ];
+  const activeAlso = alsoCards[alsoTab];
+
+  return (
+    <main className="cs-page cpx-page pov-page" id="overview" ref={rootRef}>
+      <div className="wx-bg" aria-hidden="true">
+        <div className="wx-aurora wx-aurora-1" />
+        <div className="wx-aurora wx-aurora-2" />
+        <div className="wx-aurora wx-aurora-3" />
+      </div>
+      <div className="wx-cursor" aria-hidden="true" />
+
+      {/* 1 · Products — the whole lineup, every one a link to its page */}
+      <section
+        className="cpx-section pov-lineup cpx-light"
+        id="pov-products"
+        tabIndex={-1}
+        aria-labelledby="pov-products-title"
+        data-reveal
+      >
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow">
+              <span className="wx-dot" /> Product overview
+            </span>
+            <h1 className="pov-title" id="pov-products-title">
+              Products
+            </h1>
+            <p className="cpx-body">
+              Every part of BuildFlow, built to run one schedule. Pick the piece you want to see &mdash; each one opens its own page.
+            </p>
+          </div>
+          <div className="pov-lineup-grid">
+            {CREW_SHEET_PRODUCTS.map((product, index) => (
+              <button
+                type="button"
+                className="pov-product"
+                key={product.hash}
+                data-reveal
+                style={{ "--i": index } as CSSProperties}
+                onClick={() => onOpenHash(product.hash as WelcomeHash)}
+              >
+                <span className="pov-product-shot">
+                  <img src={WELCOME_ITEM_IMAGES[product.label]} alt="" loading="lazy" />
+                </span>
+                <strong>{product.label}</strong>
+                <span className="pov-product-blurb">{WELCOME_ITEM_BLURBS[product.label]}</span>
+                <span className="pov-product-link">
+                  Learn more <ChevronRight size={15} aria-hidden="true" />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 2 · The newest product */}
+      <section className="cpx-section pov-featured" id="pov-featured" tabIndex={-1} aria-labelledby="pov-featured-title" data-reveal>
+        <div className="pov-featured-bg" aria-hidden="true">
+          <WxBloomField seed={31} />
+        </div>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="pov-tag">New</span>
+            <h2 className="cpx-statement" id="pov-featured-title">
+              Schedule AI drafts the week for you.
+            </h2>
+            <p className="cpx-body">
+              The newest product in BuildFlow reads capacity, readiness and weather, then hands you the moves that keep the plan intact
+              &mdash; before a slip ever reaches the field.
+            </p>
+            <div className="cpx-hero-actions">
+              <WxMagnetic className="wx-btn wx-btn-ink" onClick={() => onOpenHash("#schedule-ai")} ariaLabel="Explore Schedule AI">
+                Explore Schedule AI <ArrowRight size={18} />
+              </WxMagnetic>
+              <WxMagnetic className="wx-btn wx-btn-line" onClick={onGetStarted} ariaLabel="Get BuildFlow">
+                Get BuildFlow
+              </WxMagnetic>
+            </div>
+          </div>
+          <div className="pov-featured-stage">
+            <div className="cs-panel cs-hero-panel">
+              <CsBoard title="Suggested plan · week of Jun 15" rows={featuredBoard} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3 · The six most recent releases */}
+      <section className="cpx-section pov-latest cpx-light" id="pov-latest" tabIndex={-1} aria-labelledby="pov-latest-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="pov-head">
+            <h2 id="pov-latest-title">The latest releases.</h2>
+            <button type="button" className="pov-head-link" onClick={onShowUpdates}>
+              See all updates <ChevronRight size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="pov-latest-grid">
+            {latest.map(overviewRelease).map((release, index) => (
+              <article className="pov-release" key={release.entry.dateTime} data-reveal style={{ "--i": index } as CSSProperties}>
+                <span className="pov-release-shot">
+                  <img src={release.image} alt="" loading="lazy" />
+                </span>
+                <span className={`pov-release-kind${release.kind === "New" ? " is-new" : ""}`}>{release.kind}</span>
+                <h3>{release.entry.title}</h3>
+                <p className="pov-release-desc">{release.entry.description}</p>
+                <p className="pov-release-meta">
+                  {release.entry.version ? <span className="pov-version">v{release.entry.version}</span> : null}
+                  <time dateTime={release.entry.dateTime}>{release.entry.dateLabel}</time>
+                  <span className="pov-release-product">{release.label}</span>
+                </p>
+                {release.price ? <p className="pov-release-cost">From {release.price}</p> : null}
+                <div className="pov-release-actions">
+                  <button
+                    type="button"
+                    className="pov-release-btn"
+                    onClick={() => onOpenHash(`#updates/update-${release.entry.dateTime}` as WelcomeHash)}
+                  >
+                    Learn more
+                  </button>
+                  {release.price ? (
+                    <button type="button" className="pov-release-price" onClick={() => onOpenHash("#plans-overview")}>
+                      View pricing <ChevronRight size={15} aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4 · Why BuildFlow over other construction software */}
+      <section className="cpx-section pov-why cpx-paper-bg" id="pov-why" tabIndex={-1} aria-labelledby="pov-why-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <h2 className="cpx-statement" id="pov-why-title">
+              Why teams choose BuildFlow.
+            </h2>
+            <p className="cpx-body">
+              Construction software is crowded. Here is what is different about a product built around the schedule the crews actually run.
+            </p>
+          </div>
+          <div className="pov-why-grid">
+            {reasons.map((reason, index) => (
+              <article className="pov-why-card" key={reason.title} data-reveal style={{ "--i": index } as CSSProperties}>
+                <span className="pov-why-sub">{reason.subtitle}</span>
+                <h3>{reason.title}</h3>
+                <p>{reason.text}</p>
+                <span className="pov-why-shot">
+                  <img src={reason.image} alt="" loading="lazy" />
+                </span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5 · Getting to know the products */}
+      <section className="cpx-section pov-learn cpx-light" id="pov-learn" tabIndex={-1} aria-labelledby="pov-learn-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="pov-head">
+            <h2 id="pov-learn-title">Get to know the products.</h2>
+          </div>
+          <p className="pov-learn-lead">
+            Six things teams get out of BuildFlow in the first week &mdash; each one opens the part of the product that does it.
+          </p>
+          <div className="pov-learn-grid">
+            {learnCards.map((card, index) => (
+              <button
+                type="button"
+                className="pov-learn-card"
+                key={card.title}
+                data-reveal
+                style={{ "--i": index } as CSSProperties}
+                onClick={card.action}
+                aria-label={`${card.goodFor}: ${card.cta}`}
+              >
+                <span className="pov-learn-good">{card.goodFor}</span>
+                <span className="pov-learn-title">{card.title}</span>
+                <span className="pov-learn-shot">
+                  <img src={card.image} alt="" loading="lazy" />
+                </span>
+                <span className="pov-learn-plus" aria-hidden="true">
+                  <Plus size={18} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6 · Everything else that works with it */}
+      <section className="cpx-section pov-also cpx-paper-bg" id="pov-more" tabIndex={-1} aria-labelledby="pov-more-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <h2 className="cpx-statement-sm" id="pov-more-title">
+              More that works with BuildFlow.
+            </h2>
+            <p className="cpx-body">The assistants, connections and programs that sit alongside the products.</p>
+          </div>
+          <div className="cpx-viewer pov-also-viewer">
+            <div className="cpx-tabs" role="tablist" aria-orientation="vertical" aria-label="More that works with BuildFlow">
+              {alsoCards.map((card, index) => (
+                <button
+                  type="button"
+                  role="tab"
+                  id={`pov-also-tab-${index}`}
+                  aria-selected={index === alsoTab}
+                  aria-controls="pov-also-panel"
+                  tabIndex={index === alsoTab ? 0 : -1}
+                  className="cpx-tab"
+                  key={card.title}
+                  ref={(el) => {
+                    alsoTabRefs.current[index] = el;
+                  }}
+                  onClick={() => selectAlsoTab(index)}
+                  onKeyDown={(event) => onAlsoTabKey(event, index, alsoCards.length)}
+                >
+                  <h3>{card.title}</h3>
+                  <p>{card.text}</p>
+                </button>
+              ))}
+            </div>
+            <div className="cpx-viewer-panel" role="tabpanel" id="pov-also-panel" aria-labelledby={`pov-also-tab-${alsoTab}`}>
+              <div className={`cpx-viewer-frame${alsoFrameOn ? " is-on" : ""}`} key={activeAlso.title}>
+                <div className="cs-panel">
+                  <CsMock spec={activeAlso.mock} />
+                </div>
+              </div>
+              <button type="button" className="pov-also-cta" onClick={activeAlso.action}>
+                {activeAlso.cta} <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7 · closing advert — the product pages' band, above the footer */}
+      <section className="cpx-section cpx-cta pov-cta-band" id="pov-cta" aria-labelledby="pov-cta-title" data-reveal>
+        <div className="cpx-inner cpx-cta-grid">
+          <div className="cpx-cta-copy">
+            <h2 id="pov-cta-title">Plan the week on Friday. Run it on Monday.</h2>
+            <p>Crews, jobs, materials, and the field on one schedule. Start free, and see your first week planned in minutes.</p>
+            <div className="cpx-cta-actions">
+              <button type="button" className="cpx-cta-btn primary" onClick={onGetStarted}>
+                Get BuildFlow
+              </button>
+              <button type="button" className="cpx-cta-btn secondary" onClick={onOpenSchedule}>
+                14 Day Demo
+              </button>
+            </div>
+          </div>
+          <div className="cpx-cta-visual" aria-hidden="true">
+            <img className="cpx-cta-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
+            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES["Crew Scheduling"]} alt="" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      {/* 8 · FAQ, directly above the footer */}
+      <section className="cpx-section pov-faq" id="pov-faq" aria-labelledby="pov-faq-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="pov-head">
+            <h2 id="pov-faq-title">Frequently asked questions.</h2>
+            <button type="button" className="pov-head-link" onClick={onShowHelp}>
+              Visit the help center <ChevronRight size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <div className="pov-faq-list">
+            {OVERVIEW_FAQS.map((item, index) => (
+              <details className="pov-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <summary>
+                  {item.q}
+                  <ChevronDown className="pov-faq-chevron" size={20} aria-hidden="true" />
+                </summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="wx-footer">
+        <div className="wx-footer-top">
+          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
+          <nav className="wx-footer-links" aria-label="Footer">
+            <div>
+              <h3>Product</h3>
+              <a href="#crew-scheduling">Crew Scheduling</a>
+              <a href="#schedule-ai">Schedule AI</a>
+              <a href="#map-field-ops">Map &amp; Field Ops</a>
+              <a href="#materials-readiness">Materials Readiness</a>
+              <a href="#production-reports">Production Reports</a>
+            </div>
+            <div>
+              <h3>Resources</h3>
+              <a href="#updates">Updates</a>
+              <a href="#help-center">Help center</a>
+              <a href="#templates">Templates</a>
+              <a href="#partners">Partner programs</a>
+              <a href="#integrations">Integrations</a>
+            </div>
+            <div>
+              <h3>Company</h3>
+              <a href="#about">About us</a>
+              <a href="#customers">Customers</a>
+              <a href="#careers">Careers</a>
+              <a href="#contact-sales">Contact sales</a>
+            </div>
+          </nav>
+        </div>
+
+        <div className="wx-footer-word" aria-hidden="true">
+          {"BuildFlow".split("").map((letter, index) => (
+            <span key={index} style={{ "--i": index } as CSSProperties}>
+              {letter}
+            </span>
+          ))}
+        </div>
+
+        <div className="wx-footer-legal">
+          <div className="wx-footer-brand">
+            <BuildFlowLogoMark />
+            <strong>BuildFlow</strong>
+          </div>
+          <div className="wx-footer-legal-links">
+            <a onClick={onBack} role="button" tabIndex={0}>
+              Back to home
+            </a>
+            <a href="#privacy">Privacy</a>
+            <a href="#terms">Terms</a>
+            <a href="#security">Security</a>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
 
 function overviewVariantForView(view: WelcomeView): OverviewVariant | null {
   if (view === "overview") return productOverview;
@@ -9025,7 +9714,24 @@ function CsBoard({ title, rows }: { title: string; rows: CsRow[] }) {
  * its built-in mock instead, so nothing on the page is ever an empty box.
  * Videos play muted/inline/looped and only while on screen.
  */
-type CrewMediaSlot = "hero" | "board" | "capacity" | "conflicts" | "trades" | "ready" | "why-1" | "why-2" | "why-3" | "demo" | "reason-1" | "reason-2" | "reason-3" | "reason-4" | "reason-5" | "reason-6" | "reason-7";
+type CrewMediaSlot =
+  | "hero"
+  | "board"
+  | "capacity"
+  | "conflicts"
+  | "trades"
+  | "ready"
+  | "why-1"
+  | "why-2"
+  | "why-3"
+  | "demo"
+  | "reason-1"
+  | "reason-2"
+  | "reason-3"
+  | "reason-4"
+  | "reason-5"
+  | "reason-6"
+  | "reason-7";
 type CrewMediaEntry = {
   /** Aspect ratio of the file — the slot reserves this box so the page never shifts while it loads. */
   aspect: "16:9" | "4:3" | "1:1";
@@ -9058,93 +9764,31 @@ const CREW_PAGE_MEDIA: Record<CrewMediaSlot, CrewMediaEntry> = {
   "why-3": { aspect: "4:3", note: "Icon tile · optional still image · 800×600", alt: "Protect the promised date" },
   demo: {
     aspect: "16:9",
-    note: "Product demo for the \"Watch the demo\" button · 1920×1080 with sound · /public/crew-demo.mp4 + /public/demo-poster.jpg. Until a file is wired up the button plays a guided tour of the feature cards instead.",
+    note: 'Product demo for the "Watch the demo" button · 1920×1080 with sound · /public/crew-demo.mp4 + /public/demo-poster.jpg. Until a file is wired up the button plays a guided tour of the feature cards instead.',
     alt: "Crew Scheduling demo",
     poster: "/demo-poster.jpg"
   },
   /* "Why you should choose BuildFlow" cards — PLACEHOLDERS until real art is produced. 4:3, ≥1200×900, transparent or light ground. */
-  "reason-1": { aspect: "4:3", note: "Card 1 · Built for the field — crew on site with a phone showing the week board", alt: "Built for the field" },
-  "reason-2": { aspect: "4:3", note: "Card 2 · One source of truth — schedule, field updates and materials side by side", alt: "One source of truth" },
+  "reason-1": {
+    aspect: "4:3",
+    note: "Card 1 · Built for the field — crew on site with a phone showing the week board",
+    alt: "Built for the field"
+  },
+  "reason-2": {
+    aspect: "4:3",
+    note: "Card 2 · One source of truth — schedule, field updates and materials side by side",
+    alt: "One source of truth"
+  },
   "reason-3": { aspect: "4:3", note: "Card 3 · Conflicts caught early — a clash badge on a board", alt: "Conflicts caught early" },
-  "reason-4": { aspect: "4:3", note: "Card 4 · Switch in minutes — a P6 / MS Project file flowing into BuildFlow", alt: "Switch in minutes" },
+  "reason-4": {
+    aspect: "4:3",
+    note: "Card 4 · Switch in minutes — a P6 / MS Project file flowing into BuildFlow",
+    alt: "Switch in minutes"
+  },
   "reason-5": { aspect: "4:3", note: "Card 5 · BuildFlow AI — an early-warning card with a recovery suggestion", alt: "BuildFlow AI" },
   "reason-6": { aspect: "4:3", note: "Card 6 · Your data, your rules — roles, invites and backups", alt: "Your data, your rules" },
   "reason-7": { aspect: "4:3", note: "Card 7 · Start free — the Free plan card", alt: "Start free" }
 };
-
-/** The seven reasons on the crew page's "Why you should choose BuildFlow" rail. `more` shows when the card's + is pressed. */
-const CREW_REASONS: Array<{ slot: CrewMediaSlot; label: string; title: string; text: string; more: string }> = [
-  {
-    slot: "reason-1",
-    label: "Built for the field",
-    title: "Made for crews, not just the office.",
-    text: "The week board, crew sheets, and field updates work on a phone, so the plan is in the truck, not on a printout.",
-    more: "Boards scroll inside the card with crew names pinned, drag works with a long press, and every change reaches the field live."
-  },
-  {
-    slot: "reason-2",
-    label: "One source of truth",
-    title: "Schedule, field, and materials in one place.",
-    text: "Field progress, delays, and material readiness feed the same schedule the crews are booked against.",
-    more: "A percent-complete report from the field raises a priced, CPM-rippled variance the PM accepts or rejects — dates never move on their own."
-  },
-  {
-    slot: "reason-3",
-    label: "Conflicts caught early",
-    title: "Catch the clash before it costs a day.",
-    text: "Every drop is checked for double-bookings and over-capacity crews, with a suggested fix right there.",
-    more: "Capacity is real maths — shift length × crew size against booked days — and a knowing double-book is one confirmation away, not blocked."
-  },
-  {
-    slot: "reason-4",
-    label: "Switch in minutes",
-    title: "Bring your old schedule with you.",
-    text: "Import Primavera P6 and Microsoft Project files, or let BuildFlow AI read a photo of last week's plan.",
-    more: "The import previews projects, jobs, and crews before anything is created, so you can check the mapping first."
-  },
-  {
-    slot: "reason-5",
-    label: "BuildFlow AI",
-    title: "Slips spotted before they spread.",
-    text: "DelayIQ watches for jobs trending behind and shows the downstream chain with a recovery suggestion.",
-    more: "Ask BuildFlow AI about the week in plain language; weather is folded into the forecast so a rain day is planned, not discovered."
-  },
-  {
-    slot: "reason-6",
-    label: "Your data, your rules",
-    title: "Your company gets its own workspace.",
-    text: "Every organization has its own database, roles, and invites, with nightly backups you can restore from.",
-    more: "Owners change roles from the Team panel, invites expire, and sign-in works with Google or Microsoft as well as email."
-  },
-  {
-    slot: "reason-7",
-    label: "Start free",
-    title: "Free for one crew. Grow when you do.",
-    text: "Start with the Free plan, then move to Pro or Business when the team needs more crews and reporting.",
-    more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
-  }
-];
-
-/** Every BuildFlow product, in landing-menu order, for the "Products" sheet on the crew page. */
-const CREW_SHEET_PRODUCTS: Array<{ label: string; hash: string }> = [
-  { label: "Crew Scheduling", hash: "#crew-scheduling" },
-  { label: "Schedule AI", hash: "#schedule-ai" },
-  { label: "Map & Field Ops", hash: "#map-field-ops" },
-  { label: "Field Updates & DelayIQs", hash: "#field-updates-delayIQs" },
-  { label: "Materials Readiness", hash: "#materials-readiness" },
-  { label: "Equipment Tracking", hash: "#equipment-tracking" },
-  { label: "Production Reports", hash: "#production-reports" }
-];
-/** The crew page's own sections, as the sheet lists them (id = the section's DOM id; tab = viewer tab to select). */
-const CREW_SHEET_SECTIONS: Array<{ label: string; id: string; tab?: number }> = [
-  { label: "Highlights", id: "cpx-highlights" },
-  { label: "In detail", id: "cpx-details" },
-  { label: "Why BuildFlow", id: "cpx-reasons" },
-  { label: "Capacity", id: "cpx-viewer", tab: 0 },
-  { label: "Conflicts", id: "cpx-viewer", tab: 1 },
-  { label: "Trades", id: "cpx-viewer", tab: 2 },
-  { label: "Ready work", id: "cpx-viewer", tab: 3 },
-];
 
 /** Renders a manifest slot: the video when a file is wired up, otherwise the in-page mock passed as children. */
 function CsMedia({
@@ -9200,14 +9844,2193 @@ function CsMedia({
   );
 }
 
+/* ── Product page content ────────────────────────────────────────────────
+   Crew Scheduling and Schedule AI are the same page with different words.
+   Everything a page says lives in one ProductPageContent object, so the two
+   share a single implementation and neither can drift from the other. */
+type CsListItem = { icon: typeof Grid2X2; title: string; sub: string; badge: string; tone: "risk" | "wait" | "ready"; alert?: boolean };
+type CsMockSpec =
+  | { kind: "bars"; title: string; rows: Array<{ label: string; pct: number; cls: string }> }
+  | { kind: "list"; title: string; tabs?: string[]; items: CsListItem[] };
+type WxMockSpec =
+  | { kind: "board"; title: string; meta: string; cols: string[]; rows: Array<{ label: string; cells: Array<string | null> }> }
+  | { kind: "bars"; title: string; meta: string; rows: Array<{ label: string; pct: number }> }
+  | { kind: "list"; title: string; meta: string; items: Array<{ icon: typeof Grid2X2; text: string; tag: string; tone?: "warn" }> };
+type ProductPageContent = {
+  /** DOM id of the <main> and the page's own hash, e.g. "crew-scheduling". */
+  id: string;
+  hash: string;
+  /** Product name — sticky bar, sheet title, "Currently viewing". */
+  name: string;
+  /** Key into WELCOME_ITEM_IMAGES for the closing advert photo. */
+  photoKey: string;
+  hero: {
+    eyebrow: string;
+    prefix: string;
+    phrases: string[];
+    sub: ReactNode;
+    liveLabel: string;
+    boardTitle: string;
+    board: CsRow[];
+  };
+  /** The four features: one card in the rail, one tab in the viewer. */
+  features: Array<{ slot: CrewMediaSlot; icon: typeof Grid2X2; short: string; title: string; text: ReactNode; mock: CsMockSpec }>;
+  /** The long-form rows under the rail. `tab` jumps to that viewer tab; without it the button opens the live schedule. */
+  rows: Array<{ kicker: string; title: string; text: string; ctaLabel: string; tab?: number; seed: number; mock: WxMockSpec }>;
+  reasons: Array<{ slot: CrewMediaSlot; label: string; title: string; text: string; more: string }>;
+  cta: { title: string; text: string };
+};
+
+/** Renders a CsMockSpec inside the browser-chrome mock the product pages use. */
+function CsMock({ spec }: { spec: CsMockSpec }) {
+  return (
+    <div className="cs-mock" aria-hidden="true">
+      <div className="cs-mock-bar">
+        <i />
+        <i />
+        <i />
+        <strong>{spec.title}</strong>
+      </div>
+      <div className="cs-mock-body">
+        {spec.kind === "bars" ? (
+          <div className="cs-util">
+            {spec.rows.map((row) => (
+              <div className="cs-util-row" key={row.label}>
+                <div className="cs-util-top">
+                  <span>{row.label}</span>
+                  <span>{row.pct}%</span>
+                </div>
+                <div className="cs-util-track">
+                  <div className={`cs-util-fill ${row.cls}`} style={{ "--v": `${Math.min(row.pct, 100)}%` } as CSSProperties} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {spec.tabs ? (
+              <div className="cs-tabs">
+                {spec.tabs.map((tab, index) => (
+                  <span className={`cs-tab${index === 0 ? " on" : ""}`} key={tab}>
+                    {tab}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="cs-list">
+              {spec.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div className={`cs-item${item.alert ? " alert" : ""}`} key={item.title}>
+                    <span className="cs-ic">
+                      <Icon size={15} />
+                    </span>
+                    <span className="cs-tt">
+                      <strong>{item.title}</strong>
+                      <span>{item.sub}</span>
+                    </span>
+                    <span className={`cs-badge ${item.tone}`}>{item.badge}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Renders a WxMockSpec inside the dark glass card the welcome rows use. */
+function WxMock({ spec }: { spec: WxMockSpec }) {
+  return (
+    <WxTilt className="wx-mock" max={6}>
+      <div className="wx-mock-title">
+        <b>{spec.title}</b>
+        <span>{spec.meta}</span>
+      </div>
+      {spec.kind === "board" ? (
+        <div className="wx-mock-board">
+          <i />
+          {spec.cols.map((col) => (
+            <i key={col}>{col}</i>
+          ))}
+          {spec.rows.map((row) => (
+            <Fragment key={row.label}>
+              <i>{row.label}</i>
+              {row.cells.map((cell, index) => (
+                <u className={cell ?? undefined} key={index} />
+              ))}
+            </Fragment>
+          ))}
+        </div>
+      ) : spec.kind === "bars" ? (
+        <div className="wx-mock-tl">
+          {spec.rows.map((row) => (
+            <div key={row.label}>
+              <i>{row.label}</i>
+              <span style={{ "--o": "0%", "--w": `${row.pct}%` } as CSSProperties} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="wx-mock-list">
+          {spec.items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div className={item.tone === "warn" ? "warn" : undefined} key={item.text}>
+                <Icon size={17} /> {item.text} <em>{item.tag}</em>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </WxTilt>
+  );
+}
+
+/** Every BuildFlow product, in landing-menu order, for the "Products" sheet. */
+const CREW_SHEET_PRODUCTS: Array<{ label: string; hash: string }> = [
+  { label: "Crew Scheduling", hash: "#crew-scheduling" },
+  { label: "Schedule AI", hash: "#schedule-ai" },
+  { label: "Map & Field Ops", hash: "#map-field-ops" },
+  { label: "Field Updates & DelayIQs", hash: "#field-updates-delayIQs" },
+  { label: "Materials Readiness", hash: "#materials-readiness" },
+  { label: "Equipment Tracking", hash: "#equipment-tracking" },
+  { label: "Production Reports", hash: "#production-reports" }
+];
+
+const CREW_PAGE_CONTENT: ProductPageContent = {
+  id: "crew-scheduling",
+  hash: "#crew-scheduling",
+  name: "Crew Scheduling",
+  photoKey: "Crew Scheduling",
+  hero: {
+    eyebrow: "Crew Scheduling",
+    prefix: "Put every crew on the ",
+    phrases: crewJobPhrases,
+    sub: (
+      <>
+        Plan the whole week from one board. Match crews to ready work by <b>capacity, trade, and location</b> &mdash; and catch the
+        conflicts that quietly cost a day in the field <b>before you ever publish the plan</b>.
+      </>
+    ),
+    liveLabel: "See crew scheduling live",
+    boardTitle: "Weekly crew board \u00b7 Austin, TX",
+    board: [
+      {
+        crew: "Concrete 1",
+        dot: "#4285f4",
+        days: [{ t: "Deck pour", c: "blue" }, { t: "Deck pour", c: "blue" }, null, { t: "Slab", c: "blue" }, null]
+      },
+      {
+        crew: "Framing 2",
+        dot: "#9b72cb",
+        days: [null, { t: "Level 3", c: "purple" }, { t: "Level 3", c: "purple" }, { t: "Level 4", c: "purple" }, null]
+      },
+      {
+        crew: "Utility 1",
+        dot: "#4bb17a",
+        days: [{ t: "Trench", c: "green" }, null, { t: "Tie-in", c: "green" }, null, { t: "Backfill", c: "green" }]
+      },
+      {
+        crew: "Finish 3",
+        dot: "#e0808a",
+        days: [null, { t: "Punch", c: "coral" }, null, { t: "Punch", c: "coral" }, { t: "Handover", c: "amber" }]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "Capacity",
+      icon: TrendingUp,
+      title: "See capacity before you commit",
+      text: "Live utilization for every crew, so you spot the overloaded and the underused at a glance and load the week evenly.",
+      mock: {
+        kind: "bars",
+        title: "Crew capacity \u00b7 this week",
+        rows: [
+          { label: "Concrete 1", pct: 82, cls: "" },
+          { label: "Framing 2", pct: 118, cls: "over" },
+          { label: "Utility 1", pct: 64, cls: "" },
+          { label: "Finish 3", pct: 91, cls: "warn" }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "Conflicts",
+      icon: ShieldAlert,
+      title: "Catch conflicts before the field does",
+      text: "Double-bookings, overbooked crews, and clashing jobs get flagged as you plan, with a suggested fix to clear them fast.",
+      mock: {
+        kind: "list",
+        title: "Conflict check",
+        items: [
+          {
+            icon: AlertTriangle,
+            title: "Concrete 1 double-booked",
+            sub: "Deck pour + slab \u00b7 Wed",
+            badge: "CLASH",
+            tone: "risk",
+            alert: true
+          },
+          { icon: Users, title: "Framing 2 over capacity", sub: "3 jobs \u00b7 6 of 4 crew", badge: "OVER", tone: "wait" },
+          { icon: CheckCircle2, title: "Move slab \u2192 Concrete 3", sub: "Suggested fix \u00b7 clears Wed", badge: "FIX", tone: "ready" }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "Trades",
+      icon: HardHat,
+      title: "Balance by trade and skill",
+      text: <>Filter by specialty so the right trade lands on the right job, and no crew is asked to do work it isn&rsquo;t built for.</>,
+      mock: {
+        kind: "list",
+        title: "Crews by trade",
+        tabs: ["All", "Concrete", "Framing", "Utility", "Finish"],
+        items: [
+          { icon: HardHat, title: "Concrete 1 \u00b7 6 crew", sub: "Flatwork \u00b7 foundations", badge: "AVAIL", tone: "ready" },
+          { icon: HardHat, title: "Framing 2 \u00b7 4 crew", sub: "Rough framing", badge: "BOOKED", tone: "wait" },
+          { icon: HardHat, title: "Utility 1 \u00b7 5 crew", sub: "Wet utilities", badge: "AVAIL", tone: "ready" }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Ready work",
+      icon: PackageCheck,
+      title: "Schedule ready work first",
+      text: "Jobs with materials, permits, and locates cleared rise to the top, so crews only roll to work that can actually start.",
+      mock: {
+        kind: "list",
+        title: "Ready to schedule",
+        items: [
+          {
+            icon: PackageCheck,
+            title: "Parking deck pour",
+            sub: "Materials delivered \u00b7 permit cleared",
+            badge: "READY",
+            tone: "ready"
+          },
+          { icon: Clock, title: "Harborview punch", sub: "Waiting on finish materials", badge: "WAIT", tone: "wait" },
+          { icon: AlertTriangle, title: "Tech Ridge utilities", sub: "Locates not returned", badge: "BLOCKED", tone: "risk" }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "The week board",
+      title: "One board for every crew, every day of the week.",
+      text: "Crews down the side, days across the top. Drag a job onto a crew and a day and the assignment is booked \u2014 dates, crew, and status update everywhere at once.",
+      ctaLabel: "Open the week board",
+      seed: 21,
+      mock: {
+        kind: "board",
+        title: "Week of Jun 15",
+        meta: "4 crews \u00b7 11 jobs",
+        cols: ["MON", "TUE", "WED", "THU"],
+        rows: [
+          { label: "Concrete 1", cells: ["f1", "f1", null, "f1"] },
+          { label: "Framing 2", cells: [null, "f3", "f3", "f3"] },
+          { label: "Utility 1", cells: ["f2", null, "f2", null] }
+        ]
+      }
+    },
+    {
+      kicker: "Capacity & utilization",
+      title: "Know how loaded every crew is before Monday.",
+      text: "Utilization is worked out from shift length, crew size, and booked days, so an overloaded crew shows up as a number \u2014 not as overtime on Friday.",
+      ctaLabel: "See capacity",
+      tab: 0,
+      seed: 22,
+      mock: {
+        kind: "bars",
+        title: "Crew load",
+        meta: "This week",
+        rows: [
+          { label: "Concrete 1", pct: 82 },
+          { label: "Framing 2", pct: 100 },
+          { label: "Utility 1", pct: 64 },
+          { label: "Finish 3", pct: 91 }
+        ]
+      }
+    },
+    {
+      kicker: "Conflict checks",
+      title: "Double-bookings stopped at the drop, not on site.",
+      text: "Every drop is checked against the crew's other bookings. A clash is flagged with a suggested fix, and if you need to book it anyway, that stays your call.",
+      ctaLabel: "See conflict checks",
+      tab: 1,
+      seed: 23,
+      mock: {
+        kind: "list",
+        title: "Conflict check",
+        meta: "Wed",
+        items: [
+          { icon: AlertTriangle, text: "Concrete 1 double-booked", tag: "Clash", tone: "warn" },
+          { icon: Users, text: "Framing 2 over capacity", tag: "Over", tone: "warn" },
+          { icon: CheckCircle2, text: "Move slab to Concrete 3", tag: "Fix" }
+        ]
+      }
+    },
+    {
+      kicker: "Work calendar & readiness",
+      title: "Only ready work, only on working days.",
+      text: "Holidays and your own non-working days come from the org calendar, and jobs rise to the top once materials, permits, and locates are cleared \u2014 so nothing gets scheduled that cannot start.",
+      ctaLabel: "See ready work",
+      tab: 3,
+      seed: 24,
+      mock: {
+        kind: "list",
+        title: "Ready to schedule",
+        meta: "Tomorrow",
+        items: [
+          { icon: CheckCircle2, text: "Parking deck pour", tag: "Ready" },
+          { icon: Clock, text: "Harborview punch", tag: "Waiting", tone: "warn" },
+          { icon: AlertTriangle, text: "Tech Ridge utilities", tag: "Blocked", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "Live in the field",
+      title: "The board the field sees is the one you published.",
+      text: "Changes show up live for everyone on the schedule. Print crew week sheets, export CSV, or subscribe a crew's calendar feed so the plan travels with them.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "Crew week sheet",
+        meta: "Concrete 1",
+        items: [
+          { icon: CalendarDays, text: "Mon \u00b7 Deck pour \u00b7 Parking deck", tag: "7:00" },
+          { icon: CalendarDays, text: "Tue \u00b7 Deck pour \u00b7 Parking deck", tag: "7:00" },
+          { icon: CalendarDays, text: "Thu \u00b7 Slab \u00b7 Harborview", tag: "6:30" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "Built for the field",
+      title: "Made for crews, not just the office.",
+      text: "The week board, crew sheets, and field updates work on a phone, so the plan is in the truck, not on a printout.",
+      more: "Boards scroll inside the card with crew names pinned, drag works with a long press, and every change reaches the field live."
+    },
+    {
+      slot: "reason-2",
+      label: "One source of truth",
+      title: "Schedule, field, and materials in one place.",
+      text: "Field progress, delays, and material readiness feed the same schedule the crews are booked against.",
+      more: "A percent-complete report from the field raises a priced, CPM-rippled variance the PM accepts or rejects — dates never move on their own."
+    },
+    {
+      slot: "reason-3",
+      label: "Conflicts caught early",
+      title: "Catch the clash before it costs a day.",
+      text: "Every drop is checked for double-bookings and over-capacity crews, with a suggested fix right there.",
+      more: "Capacity is real maths — shift length × crew size against booked days — and a knowing double-book is one confirmation away, not blocked."
+    },
+    {
+      slot: "reason-4",
+      label: "Switch in minutes",
+      title: "Bring your old schedule with you.",
+      text: "Import Primavera P6 and Microsoft Project files, or let BuildFlow AI read a photo of last week's plan.",
+      more: "The import previews projects, jobs, and crews before anything is created, so you can check the mapping first."
+    },
+    {
+      slot: "reason-5",
+      label: "BuildFlow AI",
+      title: "Slips spotted before they spread.",
+      text: "DelayIQ watches for jobs trending behind and shows the downstream chain with a recovery suggestion.",
+      more: "Ask BuildFlow AI about the week in plain language; weather is folded into the forecast so a rain day is planned, not discovered."
+    },
+    {
+      slot: "reason-6",
+      label: "Your data, your rules",
+      title: "Your company gets its own workspace.",
+      text: "Every organization has its own database, roles, and invites, with nightly backups you can restore from.",
+      more: "Owners change roles from the Team panel, invites expire, and sign-in works with Google or Microsoft as well as email."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start with the Free plan, then move to Pro or Business when the team needs more crews and reporting.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Plan the week on Friday. Run it on Monday.",
+    text: "Crews, jobs, materials, and the field on one schedule. Start free, and see your first week planned in minutes."
+  }
+};
+
+const SCHEDULE_AI_PAGE_CONTENT: ProductPageContent = {
+  id: "schedule-ai",
+  hash: "#schedule-ai",
+  name: "Schedule AI",
+  photoKey: "Schedule AI",
+  hero: {
+    eyebrow: "Schedule AI",
+    prefix: "Scheduling that thinks ",
+    phrases: scheduleAiPhrases,
+    sub: (
+      <>
+        Let BuildFlow draft the week for you. Schedule AI reads <b>capacity, readiness, and weather</b>, then hands you the moves that keep
+        the plan intact &mdash; <b>before a slip ever reaches the field</b>.
+      </>
+    ),
+    liveLabel: "See Schedule AI live",
+    boardTitle: "Suggested plan · week of Jun 15",
+    board: [
+      {
+        crew: "Concrete 1",
+        dot: "#4285f4",
+        days: [
+          { t: "Deck pour", c: "blue" },
+          { t: "Deck pour", c: "blue" },
+          { t: "Slab (moved)", ghost: true },
+          { t: "Slab", c: "blue" },
+          null
+        ]
+      },
+      {
+        crew: "Framing 2",
+        dot: "#9b72cb",
+        days: [null, { t: "Level 3", c: "purple" }, { t: "Level 3", c: "purple" }, { t: "Level 4", c: "purple" }, null]
+      },
+      {
+        crew: "Utility 1",
+        dot: "#4bb17a",
+        days: [{ t: "Trench", c: "green" }, { t: "Rain day", c: "amber" }, { t: "Tie-in", c: "green" }, null, { t: "Backfill", c: "green" }]
+      },
+      {
+        crew: "Finish 3",
+        dot: "#e0808a",
+        days: [null, { t: "Punch", c: "coral" }, null, { t: "Punch", c: "coral" }, { t: "Handover", c: "amber" }]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "Suggestions",
+      icon: Sparkles,
+      title: "Start the week with a plan, not a blank board",
+      text: "Schedule AI drafts next week from the work that is ready, the crews that are free, and the sequence the job actually runs in.",
+      mock: {
+        kind: "list",
+        title: "Suggested moves · this week",
+        items: [
+          {
+            icon: Sparkles,
+            title: "Slab → Concrete 3, Thursday",
+            sub: "Clears Wednesday · keeps the pour date",
+            badge: "APPLY",
+            tone: "ready"
+          },
+          {
+            icon: Users,
+            title: "Split Level 3 across Framing 2 and 4",
+            sub: "Framing 2 is at 118% · evens the week",
+            badge: "APPLY",
+            tone: "ready"
+          },
+          { icon: Clock, title: "Pull Tech Ridge utilities forward", sub: "Locates cleared this morning", badge: "REVIEW", tone: "wait" }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "DelayIQ",
+      icon: TrendingUp,
+      title: "See the slip while there is still time to fix it",
+      text: "DelayIQ watches production rates against the plan and flags the jobs trending late, with the downstream work they are about to take with them.",
+      mock: {
+        kind: "list",
+        title: "DelayIQ · early warning",
+        items: [
+          {
+            icon: AlertTriangle,
+            title: "Parking deck pour trending 2 days late",
+            sub: "Rate is 62% of plan · 3 jobs downstream",
+            badge: "AT RISK",
+            tone: "risk",
+            alert: true
+          },
+          { icon: TrendingUp, title: "Harborview framing holding", sub: "Ahead of plan since Tuesday", badge: "ON TRACK", tone: "ready" },
+          { icon: CheckCircle2, title: "Add a second crew Thursday", sub: "Recovers the promised finish date", badge: "FIX", tone: "ready" }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "Weather",
+      icon: CalendarDays,
+      title: "Plan around the weather, not after it",
+      text: "The forecast is folded into the schedule, so wet-weather work moves before the rain arrives instead of being rediscovered at 6am.",
+      mock: {
+        kind: "list",
+        title: "Forecast · next 5 days",
+        tabs: ["All", "Concrete", "Framing", "Utility", "Finish"],
+        items: [
+          {
+            icon: AlertTriangle,
+            title: "Wednesday · 1.2in rain",
+            sub: "Pours and trenching not advised",
+            badge: "MOVE",
+            tone: "risk",
+            alert: true
+          },
+          { icon: CheckCircle2, title: "Thursday · clear, 71°", sub: "Deck pour window reopens", badge: "GOOD", tone: "ready" },
+          { icon: Clock, title: "Friday · wind 22mph", sub: "Crane picks flagged for review", badge: "WATCH", tone: "wait" }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Ask AI",
+      icon: PackageCheck,
+      title: "Ask the schedule a question in plain language",
+      text: "Ask what is at risk, who is free on Thursday, or what happens if a pour slips, and get an answer drawn from your live schedule.",
+      mock: {
+        kind: "list",
+        title: "Ask BuildFlow AI",
+        items: [
+          {
+            icon: Sparkles,
+            title: "“What is at risk this week?”",
+            sub: "3 jobs trending late · 1 blocked on locates",
+            badge: "ANSWER",
+            tone: "ready"
+          },
+          { icon: Users, title: "“Who is free Thursday?”", sub: "Utility 1 and Finish 3 · both under 70%", badge: "ANSWER", tone: "ready" },
+          { icon: Clock, title: "“What if the deck pour slips a day?”", sub: "Handover moves to the 24th", badge: "WHAT-IF", tone: "wait" }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "Suggested schedules",
+      title: "A first draft of the week, in seconds.",
+      text: "Schedule AI reads ready work, crew capacity and the job sequence, then lays out a week you can accept, edit, or ignore. Nothing is booked until you say so.",
+      ctaLabel: "Open the schedule",
+      seed: 21,
+      mock: {
+        kind: "board",
+        title: "Suggested week",
+        meta: "4 crews · 11 jobs",
+        cols: ["MON", "TUE", "WED", "THU"],
+        rows: [
+          { label: "Concrete 1", cells: ["f1", "f1", null, "f1"] },
+          { label: "Framing 2", cells: [null, "f3", "f3", "f3"] },
+          { label: "Utility 1", cells: ["f2", null, "f2", "f2"] }
+        ]
+      }
+    },
+    {
+      kicker: "DelayIQ",
+      title: "Slips are caught before they spread.",
+      text: "Every job is measured against its planned production rate. When one drifts, DelayIQ names it, shows the work waiting behind it, and tells you how much of the float is gone.",
+      ctaLabel: "See early warnings",
+      tab: 1,
+      seed: 22,
+      mock: {
+        kind: "bars",
+        title: "Progress vs plan",
+        meta: "This week",
+        rows: [
+          { label: "Deck pour", pct: 62 },
+          { label: "Level 3 framing", pct: 104 },
+          { label: "Wet utilities", pct: 88 },
+          { label: "Punch list", pct: 45 }
+        ]
+      }
+    },
+    {
+      kicker: "Weather aware",
+      title: "The forecast is part of the plan.",
+      text: "Pours, trenching and crane picks are matched against the forecast for each site. A rain day becomes a planned move on Monday instead of a scramble on Wednesday.",
+      ctaLabel: "See the forecast",
+      tab: 2,
+      seed: 23,
+      mock: {
+        kind: "list",
+        title: "Weather watch",
+        meta: "Austin, TX",
+        items: [
+          { icon: AlertTriangle, text: "Wed · 1.2in rain · move the pour", tag: "Move", tone: "warn" },
+          { icon: CheckCircle2, text: "Thu · clear · pour window", tag: "Good" },
+          { icon: Clock, text: "Fri · wind 22mph · review picks", tag: "Watch", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "Recovery options",
+      title: "Every delay arrives with a way out.",
+      text: "When the plan slips, Schedule AI prices the options — move the crew, split the task, add a day — and shows what each one does to the promised date before you commit.",
+      ctaLabel: "See recovery options",
+      tab: 0,
+      seed: 24,
+      mock: {
+        kind: "list",
+        title: "Recovery options",
+        meta: "Parking deck",
+        items: [
+          { icon: Users, text: "Add Concrete 3 Thursday", tag: "−2 days" },
+          { icon: CalendarDays, text: "Split the pour over two days", tag: "−1 day" },
+          { icon: AlertTriangle, text: "Do nothing", tag: "+2 days", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "Ask BuildFlow AI",
+      title: "The schedule answers in plain language.",
+      text: "Ask what is at risk, who is free, or what a slip costs, and the answer comes from your live schedule — not a generic model. Switching over is a photo of last week's plan away.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "BuildFlow AI",
+        meta: "Today",
+        items: [
+          { icon: Sparkles, text: "What is at risk this week?", tag: "3 jobs" },
+          { icon: Users, text: "Who is free Thursday?", tag: "2 crews" },
+          { icon: Clock, text: "What if the pour slips?", tag: "Jun 24" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "Built on your schedule",
+      title: "Answers from your jobs, not a generic model.",
+      text: "Schedule AI reads the live plan — your crews, your jobs, your production rates — so every suggestion fits the work you actually have.",
+      more: "Nothing is invented. A suggestion names the job, the crew and the day it came from, so you can check the reasoning before you accept it."
+    },
+    {
+      slot: "reason-2",
+      label: "You stay in charge",
+      title: "It suggests. You decide.",
+      text: "Every move is a proposal. Accept it, edit it, or ignore it — the schedule never changes itself behind your back.",
+      more: "Field progress raises a priced variance a planner accepts or rejects; dates only move when a person says so."
+    },
+    {
+      slot: "reason-3",
+      label: "Early warning",
+      title: "Two days of notice beats a day of overtime.",
+      text: "DelayIQ watches production rates and flags the jobs trending late while there is still float left to spend.",
+      more: "The warning carries the downstream chain with it, so you can see which promised dates are on the line before you choose a fix."
+    },
+    {
+      slot: "reason-4",
+      label: "Weather included",
+      title: "Rain days are planned, not discovered.",
+      text: "Forecasts for each site are folded into the schedule, so weather-sensitive work is moved before the crew rolls out.",
+      more: "Pours, trenching and crane picks each have their own thresholds, so only the work that actually cares about the weather gets moved."
+    },
+    {
+      slot: "reason-5",
+      label: "Switch in minutes",
+      title: "Bring last week's plan with you.",
+      text: "Import Primavera P6 and Microsoft Project files, or let BuildFlow AI read a photo of the whiteboard and build the schedule from it.",
+      more: "The import previews projects, jobs and crews before anything is created, so you can check the mapping first."
+    },
+    {
+      slot: "reason-6",
+      label: "One schedule",
+      title: "The AI and the field see the same plan.",
+      text: "Suggestions, field updates and material readiness all land on the one schedule the crews are booked against.",
+      more: "No second system to reconcile: accept a suggestion and the week board, the crew sheets and the calendar feeds all update at once."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs more crews, more automation and reporting.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Let the schedule watch itself.",
+    text: "Suggestions, early warnings and recovery options on the plan your crews already run. Start free, and see next week drafted in minutes."
+  }
+};
+
+const MAP_FIELD_OPS_PAGE_CONTENT: ProductPageContent = {
+  id: "map-field-ops",
+  hash: "#map-field-ops",
+  name: "Map & Field Ops",
+  photoKey: "Map & Field Ops",
+  hero: {
+    eyebrow: "Map & Field Ops",
+    prefix: "See the whole field, ",
+    phrases: mapFieldOpsPhrases,
+    sub: (
+      <>
+        Route crews, track field movement, and manage dispatch context from <b>one live map</b> &mdash; crew proximity, route timing, site
+        access, and active work, <b>all before the day moves in the field</b>.
+      </>
+    ),
+    liveLabel: "See Map & Field Ops live",
+    boardTitle: "Live map · Austin, TX",
+    board: [
+      {
+        crew: "Concrete 1",
+        dot: "#4285f4",
+        days: [
+          { t: "Yard", c: "blue" },
+          { t: "En route", c: "amber" },
+          { t: "Parking deck", c: "blue" },
+          null,
+          { t: "Parking deck", c: "blue" }
+        ]
+      },
+      {
+        crew: "Framing 2",
+        dot: "#9b72cb",
+        days: [
+          null,
+          { t: "Harborview", c: "purple" },
+          { t: "Harborview", c: "purple" },
+          { t: "En route", c: "amber" },
+          { t: "Tech Ridge", c: "purple" }
+        ]
+      },
+      {
+        crew: "Utility 1",
+        dot: "#4bb17a",
+        days: [
+          { t: "Tech Ridge", c: "green" },
+          { t: "Gate locked", ghost: true },
+          { t: "Tech Ridge", c: "green" },
+          null,
+          { t: "Yard", c: "green" }
+        ]
+      },
+      {
+        crew: "Truck 4",
+        dot: "#e0808a",
+        days: [
+          { t: "Delivery", c: "coral" },
+          null,
+          { t: "Delivery", c: "coral" },
+          { t: "Delivery", c: "coral" },
+          { t: "Return", c: "amber" }
+        ]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "Live tracking",
+      icon: MapPin,
+      title: "Track crews, trucks, and jobs live",
+      text: "Follow every crew and vehicle on the map in real time, with ETAs and status, so you always know where the day actually is.",
+      mock: {
+        kind: "list",
+        title: "Live tracking",
+        tabs: ["Crews", "Trucks", "Jobs"],
+        items: [
+          { icon: HardHat, title: "Concrete 1 · on site", sub: "Parking deck · arrived 7:04", badge: "ON SITE", tone: "ready" },
+          { icon: Truck, title: "Truck 4 · en route", sub: "Harborview · ETA 8:20", badge: "MOVING", tone: "wait" },
+          {
+            icon: AlertTriangle,
+            title: "Utility 1 · held at gate",
+            sub: "Tech Ridge · access code needed",
+            badge: "HELD",
+            tone: "risk",
+            alert: true
+          }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "Routes",
+      icon: Route,
+      title: "Optimize the route by what matters",
+      text: "Solve each run for fastest time, least fuel, or a balance of both — add a trucker destination and BuildFlow re-orders the stops and saves the route.",
+      mock: {
+        kind: "list",
+        title: "Route optimization",
+        tabs: ["Fastest Time", "Least Fuel", "Balanced"],
+        items: [
+          { icon: Route, title: "Yard → Parking deck → Harborview", sub: "38 min · 21 miles · saves 14 min", badge: "BEST", tone: "ready" },
+          { icon: Truck, title: "Add Tech Ridge delivery", sub: "Re-orders the run · +9 min", badge: "ADD", tone: "wait" },
+          {
+            icon: AlertTriangle,
+            title: "I-35 closed at Riverside",
+            sub: "Traffic layer · re-routed around",
+            badge: "AVOID",
+            tone: "risk",
+            alert: true
+          }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "Filters",
+      icon: Grid2X2,
+      title: "Filter the map to what you need",
+      text: "Narrow by territory, crew, vehicle, priority, and status, then switch Production, Traffic, or Satellite layers to see the site the way the run needs it.",
+      mock: {
+        kind: "list",
+        title: "Map filters · layers",
+        tabs: ["Production", "Traffic", "Satellite"],
+        items: [
+          { icon: MapPin, title: "Territory · Austin metro", sub: "3 active sites · 11 jobs", badge: "SET", tone: "ready" },
+          { icon: HardHat, title: "Crew · Concrete only", sub: "2 crews shown · 4 hidden", badge: "SET", tone: "ready" },
+          { icon: Clock, title: "Status · behind schedule", sub: "1 site flagged today", badge: "WATCH", tone: "wait" }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Site conditions",
+      icon: CloudSun,
+      title: "Read the site before you roll out",
+      text: (
+        <>
+          Local weather, forecastIQ risk, and access notes sit on the map for every jobsite, so nobody drives to a rained-out pour or a gate
+          they can&rsquo;t open.
+        </>
+      ),
+      mock: {
+        kind: "list",
+        title: "Site conditions",
+        items: [
+          { icon: CloudSun, title: "Parking deck · 78°", sub: "Precip 10% · Wind SSE 8 · pour window open", badge: "GOOD", tone: "ready" },
+          {
+            icon: AlertTriangle,
+            title: "Harborview · rain by noon",
+            sub: "ForecastIQ risk · move the pour",
+            badge: "RISK",
+            tone: "risk",
+            alert: true
+          },
+          { icon: Clock, title: "Tech Ridge · gate code 4471", sub: "Access note · escort after 3pm", badge: "NOTE", tone: "wait" }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "The live map",
+      title: "Route crews the short way, every morning.",
+      text: "BuildFlow orders the day's stops into the fastest run and shows the drive time before anyone leaves the yard — so crews arrive ahead of the call instead of chasing it across town.",
+      ctaLabel: "Open the live map",
+      seed: 21,
+      mock: {
+        kind: "board",
+        title: "Runs today",
+        meta: "4 crews · 3 sites",
+        cols: ["7AM", "9AM", "11AM", "1PM"],
+        rows: [
+          { label: "Concrete 1", cells: ["f1", "f1", null, "f1"] },
+          { label: "Truck 4", cells: ["f3", null, "f3", "f3"] },
+          { label: "Utility 1", cells: ["f2", "f2", null, "f2"] }
+        ]
+      }
+    },
+    {
+      kicker: "Live tracking",
+      title: "Know where the day actually is.",
+      text: "Crews and vehicles report their position as they move, with arrival times and status against the plan, so dispatch never has to ring around to find out who is where.",
+      ctaLabel: "See live tracking",
+      tab: 0,
+      seed: 22,
+      mock: {
+        kind: "list",
+        title: "On the map now",
+        meta: "Austin, TX",
+        items: [
+          { icon: HardHat, text: "Concrete 1 · Parking deck", tag: "On site" },
+          { icon: Truck, text: "Truck 4 · en route", tag: "ETA 8:20" },
+          { icon: AlertTriangle, text: "Utility 1 · held at gate", tag: "Held", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "Route optimization",
+      title: "Fastest time, least fuel, or a balance.",
+      text: "Every run can be solved three ways, and the map shows what each choice costs in minutes and miles before you send it to the crew.",
+      ctaLabel: "See route options",
+      tab: 1,
+      seed: 23,
+      mock: {
+        kind: "bars",
+        title: "Drive time saved",
+        meta: "This week",
+        rows: [
+          { label: "Mon", pct: 74 },
+          { label: "Tue", pct: 52 },
+          { label: "Wed", pct: 88 },
+          { label: "Thu", pct: 61 }
+        ]
+      }
+    },
+    {
+      kicker: "Site conditions",
+      title: "Weather and access, on the pin.",
+      text: "Each jobsite carries its own forecast, risk flag and access notes, so a rained-out pour or a locked gate is something you plan around rather than discover at 7am.",
+      ctaLabel: "See site conditions",
+      tab: 3,
+      seed: 24,
+      mock: {
+        kind: "list",
+        title: "Site conditions",
+        meta: "Today",
+        items: [
+          { icon: CloudSun, text: "Parking deck · 78° · clear", tag: "Good" },
+          { icon: AlertTriangle, text: "Harborview · rain by noon", tag: "Risk", tone: "warn" },
+          { icon: Clock, text: "Tech Ridge · gate code 4471", tag: "Note" }
+        ]
+      }
+    },
+    {
+      kicker: "Dispatch",
+      title: "Move the day, not just a pin.",
+      text: "When a site slips or a truck runs late, re-route and re-assign in seconds — and the field sees the new plan before they ever roll out.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "Dispatch",
+        meta: "9:04am",
+        items: [
+          { icon: Route, text: "Re-route Truck 4 via Riverside", tag: "−12 min" },
+          { icon: Users, text: "Send Utility 1 to Harborview", tag: "Nearest" },
+          { icon: CheckCircle2, text: "Crews notified", tag: "Sent" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "Less windshield time",
+      title: "Cut the drive between jobs.",
+      text: "Optimized routes and crew-proximity dispatch shrink the drive between jobs — so more of the paid day is spent on site, not behind the wheel.",
+      more: "Each run is solved for fastest time, least fuel or a balance of the two, and the saving is shown in minutes before you commit to it."
+    },
+    {
+      slot: "reason-2",
+      label: "Real context",
+      title: "Dispatch with the field in front of you.",
+      text: "Crews, trucks, jobs, traffic, and weather on one live map — so the person making the call is looking at the field exactly as it is right now.",
+      more: "Layers switch between Production, Traffic and Satellite, so the same map answers a routing question and a site-access question."
+    },
+    {
+      slot: "reason-3",
+      label: "Move the day",
+      title: "Re-route and re-assign in seconds.",
+      text: "When a site slips or a truck runs late, re-route and re-assign in seconds — and the field sees the new plan before they ever roll out.",
+      more: "A change on the map is a change on the schedule: the week board, the crew sheets and the calendar feeds all follow it."
+    },
+    {
+      slot: "reason-4",
+      label: "Weather aware",
+      title: "Nobody drives to a rained-out pour.",
+      text: "Local weather, forecastIQ risk and access notes sit on the map for every jobsite, so the run is planned around the conditions.",
+      more: "Weather-sensitive work carries its own thresholds, so only the jobs that actually care about rain or wind get flagged."
+    },
+    {
+      slot: "reason-5",
+      label: "Built for the field",
+      title: "The map works in the truck.",
+      text: "The live map, the run list and the site notes all work on a phone, so the plan travels with the crew instead of staying at the office.",
+      more: "Crews report progress and photos from the same screen, and those updates land straight on the schedule."
+    },
+    {
+      slot: "reason-6",
+      label: "One schedule",
+      title: "The map and the plan are the same thing.",
+      text: "Sites, crews and jobs on the map are the ones on the schedule — there is no second system to keep in step.",
+      more: "Move a crew on the map and the booking moves with it, checked against capacity and trade just like any other assignment."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs more crews, more vehicles and reporting.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Send the crew the short way.",
+    text: "Routes, live positions and site conditions on the plan your crews already run. Start free, and see today's runs on the map in minutes."
+  }
+};
+
+const FIELD_UPDATES_PAGE_CONTENT: ProductPageContent = {
+  id: "field-updates-delayIQs",
+  hash: "#field-updates-delayIQs",
+  name: "Field Updates & DelayIQs",
+  photoKey: "Field Updates & DelayIQs",
+  hero: {
+    eyebrow: "Field Updates & DelayIQs",
+    prefix: "The whole field, ",
+    phrases: fieldUpdatesPhrases,
+    sub: (
+      <>
+        Capture crew check-ins, jobsite photos, and delayIQ causes <b>the moment they happen</b> &mdash; then turn every slip into a
+        recovery plan <b>while the office still has time to adjust the schedule</b>.
+      </>
+    ),
+    liveLabel: "See Field Updates & DelayIQs live",
+    boardTitle: "Field log · week of Jun 15",
+    board: [
+      {
+        crew: "Concrete 1",
+        dot: "#4285f4",
+        days: [
+          { t: "60% pour", c: "blue" },
+          { t: "80% pour", c: "blue" },
+          { t: "Rain delay", c: "amber" },
+          { t: "Complete", c: "blue" },
+          null
+        ]
+      },
+      {
+        crew: "Framing 2",
+        dot: "#9b72cb",
+        days: [
+          null,
+          { t: "Level 3", c: "purple" },
+          { t: "Level 3", c: "purple" },
+          { t: "Photos ×6", c: "purple" },
+          { t: "Level 4", c: "purple" }
+        ]
+      },
+      {
+        crew: "Utility 1",
+        dot: "#4bb17a",
+        days: [
+          { t: "Trench 40%", c: "green" },
+          { t: "Locates late", ghost: true },
+          { t: "Trench 75%", c: "green" },
+          null,
+          { t: "Tie-in", c: "green" }
+        ]
+      },
+      {
+        crew: "Finish 3",
+        dot: "#e0808a",
+        days: [null, { t: "Punch 20%", c: "coral" }, null, { t: "Punch 55%", c: "coral" }, { t: "Walkthrough", c: "amber" }]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "Field updates",
+      icon: ClipboardList,
+      title: "Check in from the field in seconds",
+      text: "Crews post progress, notes, and status from the jobsite — tied to the right project and job, searchable, and in front of the office the moment they hit send.",
+      mock: {
+        kind: "list",
+        title: "Live field feed",
+        tabs: ["Updates", "On Site", "DelayIQed", "Photos"],
+        items: [
+          { icon: HardHat, title: "Concrete 1 · Parking deck", sub: "Deck pour 80% · posted 9:12am", badge: "ON SITE", tone: "ready" },
+          { icon: ImagePlus, title: "Framing 2 · Harborview", sub: "Level 3 complete · 6 photos", badge: "UPDATE", tone: "ready" },
+          {
+            icon: AlertTriangle,
+            title: "Utility 1 · Tech Ridge",
+            sub: "Locates not returned · held",
+            badge: "DELAYIQ",
+            tone: "risk",
+            alert: true
+          }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "Photos",
+      icon: ImagePlus,
+      title: "Attach the photo that tells the story",
+      text: "Jobsite photos ride along with every update, so progress and problems are proof, not hearsay — and the office reviews real conditions without a site visit.",
+      mock: {
+        kind: "list",
+        title: "Photo evidence",
+        items: [
+          {
+            icon: ImagePlus,
+            title: "Drag & drop — up to 8 photos per update",
+            sub: "Timestamped · geotagged · tied to the job",
+            badge: "READY",
+            tone: "ready"
+          },
+          { icon: CheckCircle2, title: "Deck pour · 4 photos", sub: "Rebar, formwork, finish · 9:12am", badge: "PROOF", tone: "ready" },
+          { icon: Clock, title: "Gate access · 1 photo", sub: "Escort required after 3pm", badge: "NOTE", tone: "wait" }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "DelayIQ log",
+      icon: ShieldAlert,
+      title: "Log every delayIQ with a cause",
+      text: "Weather, materials, labor, equipment, inspections, site conditions — every delayIQ is categorized with a severity and an owner, so patterns surface long before they repeat.",
+      mock: {
+        kind: "list",
+        title: "DelayIQ log",
+        tabs: ["Weather", "Material", "Labor", "Equipment", "Inspection", "Site"],
+        items: [
+          {
+            icon: CloudSun,
+            title: "Rain · Parking deck",
+            sub: "Severity high · 2 days impact",
+            badge: "WEATHER",
+            tone: "risk",
+            alert: true
+          },
+          { icon: PackageCheck, title: "Anchor bolts on order", sub: "Severity medium · 1 day impact", badge: "MATERIAL", tone: "wait" },
+          { icon: Wrench, title: "Pump down · Harborview", sub: "Severity low · recovered same day", badge: "EQUIPMENT", tone: "ready" }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Recovery",
+      icon: TrendingUp,
+      title: "Recover the day with a clear plan",
+      text: "Each delayIQ carries recovery notes and next steps, so a slip becomes an action list — not a surprise on the schedule two weeks later.",
+      mock: {
+        kind: "list",
+        title: "Recovery plan",
+        items: [
+          { icon: Users, title: "Add Concrete 3 Thursday", sub: "Recovers 2 of the 3 lost days", badge: "PLAN", tone: "ready" },
+          { icon: CalendarDays, title: "Shift punch to the 24th", sub: "Protects the handover date", badge: "PLAN", tone: "ready" },
+          { icon: AlertTriangle, title: "Owner notified", sub: "Awaiting sign-off on the change", badge: "OPEN", tone: "wait" }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "The field log",
+      title: "One log for progress, proof, and problems.",
+      text: "Every check-in lands against the right project and job, with the crew, the time, and the photos attached — so the day is on the record instead of scattered across texts and voicemails.",
+      ctaLabel: "Open the field log",
+      seed: 21,
+      mock: {
+        kind: "board",
+        title: "Field log",
+        meta: "4 crews · 18 updates",
+        cols: ["MON", "TUE", "WED", "THU"],
+        rows: [
+          { label: "Concrete 1", cells: ["f1", "f1", "f3", "f1"] },
+          { label: "Framing 2", cells: [null, "f2", "f2", "f2"] },
+          { label: "Utility 1", cells: ["f2", "f3", null, "f2"] }
+        ]
+      }
+    },
+    {
+      kicker: "Photo evidence",
+      title: "Proof the office can see from the desk.",
+      text: "Up to eight timestamped photos ride along with each update, tied to the job they belong to, so conditions, progress and damage are settled with evidence instead of memory.",
+      ctaLabel: "See photo evidence",
+      tab: 1,
+      seed: 22,
+      mock: {
+        kind: "list",
+        title: "Photos today",
+        meta: "18 attached",
+        items: [
+          { icon: ImagePlus, text: "Parking deck · pour 80%", tag: "4 photos" },
+          { icon: ImagePlus, text: "Harborview · Level 3 done", tag: "6 photos" },
+          { icon: AlertTriangle, text: "Tech Ridge · standing water", tag: "2 photos", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "DelayIQ causes",
+      title: "Every slip gets a cause and a number.",
+      text: "Every delayIQ gets a cause, a severity, and a schedule impact in days — so the office sees the slip forming and can re-plan before it ever reaches the completion date.",
+      ctaLabel: "See the delayIQ log",
+      tab: 2,
+      seed: 23,
+      mock: {
+        kind: "bars",
+        title: "DelayIQ impact · this month",
+        meta: "6 days",
+        rows: [
+          { label: "Weather", pct: 100 },
+          { label: "Material", pct: 62 },
+          { label: "Labor", pct: 38 },
+          { label: "Inspection", pct: 24 }
+        ]
+      }
+    },
+    {
+      kicker: "Recovery plans",
+      title: "Turn slips into recovery, not surprises.",
+      text: "Each delayIQ carries recovery notes and next steps, so a slip becomes an action list — not a surprise on the schedule two weeks later.",
+      ctaLabel: "See recovery plans",
+      tab: 3,
+      seed: 24,
+      mock: {
+        kind: "list",
+        title: "Recovery plan",
+        meta: "Parking deck",
+        items: [
+          { icon: Users, text: "Add Concrete 3 Thursday", tag: "−2 days" },
+          { icon: CalendarDays, text: "Shift punch to the 24th", tag: "Protects" },
+          { icon: AlertTriangle, text: "Owner sign-off pending", tag: "Open", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "Office and field",
+      title: "What happens on site reaches the office by lunch.",
+      text: "A percent-complete report raises a priced variance the office accepts or rejects, and the schedule only moves when someone says so — so the plan and the field never drift apart.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "Variance review",
+        meta: "Today",
+        items: [
+          { icon: TrendingUp, text: "Deck pour · 62% of plan", tag: "+2 days", tone: "warn" },
+          { icon: CheckCircle2, text: "Accept and re-plan", tag: "Applied" },
+          { icon: Clock, text: "Downstream work shifted", tag: "3 jobs" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "One source of truth",
+      title: "One source of truth for the day.",
+      text: "Progress, photos, notes, and delayIQs live in a single field log — no more chasing texts, group chats, and voicemails to piece together what happened on site.",
+      more: "Each entry is tied to a project and a job, so the log is searchable months later when someone asks what happened that week."
+    },
+    {
+      slot: "reason-2",
+      label: "Proof, not hearsay",
+      title: "Evidence instead of memory.",
+      text: "Timestamped photos and status from the crew who was there settle disputes, backcharges, and reviews with evidence instead of memory.",
+      more: "Up to eight photos ride along with each update, so a claim about conditions or damage comes with the picture that proves it."
+    },
+    {
+      slot: "reason-3",
+      label: "Early warning",
+      title: "Catch the slip before it spreads.",
+      text: "A cause and a schedule impact on every delayIQ means the office sees the day forming and can re-plan while there is still time to protect the date.",
+      more: "DelayIQ reads the same log to flag work trending late, and shows the downstream jobs the slip is about to take with it."
+    },
+    {
+      slot: "reason-4",
+      label: "Causes add up",
+      title: "Patterns surface before they repeat.",
+      text: "Weather, materials, labor, equipment, inspections and site conditions are each their own category, so a recurring cause is visible in the log.",
+      more: "A month of delayIQs becomes a total in days by cause, which is the number that settles the argument about what is actually costing the job."
+    },
+    {
+      slot: "reason-5",
+      label: "Built for the field",
+      title: "Posting an update takes seconds.",
+      text: "The field log works on a phone in the truck, so a crew can report progress and attach photos without going back to the office.",
+      more: "Status, percent complete, notes and photos are one screen, and the update reaches the office the moment it is sent."
+    },
+    {
+      slot: "reason-6",
+      label: "One schedule",
+      title: "The field feeds the plan directly.",
+      text: "A progress report raises a priced, schedule-rippled variance the office accepts or rejects — the plan never moves on its own.",
+      more: "Accept it and the week board, the crew sheets and the promised dates all update together; reject it and nothing changes."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs more crews, more photo storage and reporting.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Know what happened on site, today.",
+    text: "Check-ins, photos and delayIQ causes on the plan your crews already run. Start free, and see the first day on the record in minutes."
+  }
+};
+
+const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
+  id: "materials-readiness",
+  hash: "#materials-readiness",
+  name: "Materials Readiness",
+  photoKey: "Materials Readiness",
+  hero: {
+    eyebrow: "Materials Readiness",
+    prefix: "Every material, ",
+    phrases: materialsPhrases,
+    sub: (
+      <>
+        Track delivery status, flag missing materials, and keep vendor notes on every order &mdash; so the office knows a job is{" "}
+        <b>truly ready</b> <b>before a crew ever rolls to it</b>.
+      </>
+    ),
+    liveLabel: "See Materials Readiness live",
+    boardTitle: "Delivery schedule · this week",
+    board: [
+      {
+        crew: "Steel",
+        dot: "#4285f4",
+        days: [{ t: "Delivered", c: "blue" }, null, null, { t: "Delivered", c: "blue" }, null]
+      },
+      {
+        crew: "Rebar",
+        dot: "#9b72cb",
+        days: [null, { t: "In transit", c: "amber" }, { t: "In transit", c: "amber" }, null, null]
+      },
+      {
+        crew: "Concrete",
+        dot: "#4bb17a",
+        days: [null, null, { t: "Delivered", c: "green" }, { t: "Delivered", c: "green" }, { t: "Delivered", c: "green" }]
+      },
+      {
+        crew: "HVAC",
+        dot: "#e0808a",
+        days: [null, null, null, { t: "DelayIQed", ghost: true }, { t: "Missing", c: "coral" }]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "Statuses",
+      icon: Boxes,
+      title: "Track every delivery status",
+      text: "Ready, ordered, waiting on delivery, or missing — filter the whole materials list by status, quantity, and delivery date to see exactly where every order stands.",
+      mock: {
+        kind: "list",
+        title: "Materials · by status",
+        tabs: ["Ready now", "Ordered", "Attention"],
+        items: [
+          {
+            icon: PackageCheck,
+            title: "Structural steel beams · 24 ea",
+            sub: "Ready for schedule · on site",
+            badge: "READY",
+            tone: "ready"
+          },
+          { icon: Truck, title: "Rebar #5 · 3.2 tons", sub: "Watch delivery window · Wed", badge: "WAITING", tone: "wait" },
+          { icon: AlertTriangle, title: "HVAC units · 4 ea", sub: "Blocks affected work", badge: "MISSING", tone: "risk", alert: true }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "Readiness gate",
+      icon: ShieldAlert,
+      title: "Flag what's missing before dispatch",
+      text: (
+        <>
+          Needs-attention materials surface the jobs they block, so a crew is never dispatched to work that&rsquo;s waiting on a delivery
+          that hasn&rsquo;t landed.
+        </>
+      ),
+      mock: {
+        kind: "list",
+        title: "Readiness gate",
+        items: [
+          {
+            icon: AlertTriangle,
+            title: "HVAC units not on site",
+            sub: "Blocks Harborview mechanical · Thu",
+            badge: "BLOCKED",
+            tone: "risk",
+            alert: true
+          },
+          { icon: Clock, title: "Rebar in transit", sub: "Parking deck pour · arrives Wed 7am", badge: "WATCH", tone: "wait" },
+          {
+            icon: CheckCircle2,
+            title: "Steel cleared the gate",
+            sub: "Tech Ridge frame · ready to schedule",
+            badge: "CLEAR",
+            tone: "ready"
+          }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "Vendors",
+      icon: FileText,
+      title: "Keep vendor notes on every order",
+      text: "Vendor, purchase order, delivery window, quantity, and a note live on each material — so the whole procurement story is one click from the job that needs it.",
+      mock: {
+        kind: "list",
+        title: "Structural Steel Beams",
+        tabs: ["Vendor", "Purchase order", "Delivery window", "Note"],
+        items: [
+          { icon: Building2, title: "Vendor · Lone Star Steel", sub: "PO 4471 · confirmed 6 Jun", badge: "PO", tone: "ready" },
+          { icon: CalendarDays, title: "Delivery window · Mon 7–10am", sub: "24 ea · crane on site", badge: "SET", tone: "ready" },
+          { icon: FileText, title: "Note · unload at the north gate", sub: "Escort required after 3pm", badge: "NOTE", tone: "wait" }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Ready work",
+      icon: ClipboardList,
+      title: "Only schedule work that's ready",
+      text: "Material readiness rolls up per job, so the jobs with everything on site rise to the top of the plan and blocked work stays off the board until it clears.",
+      mock: {
+        kind: "bars",
+        title: "Ready to schedule",
+        rows: [
+          { label: "Parking deck pour", pct: 100, cls: "" },
+          { label: "Tech Ridge frame", pct: 92, cls: "" },
+          { label: "Harborview mech", pct: 48, cls: "warn" },
+          { label: "Riverside fit-out", pct: 16, cls: "over" }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "The delivery timeline",
+      title: "Know what's landing before you promise the date.",
+      text: "Every order shows its delivery window on one timeline — delivered, in transit, or running late — so the office plans the week around what will actually be on site, not what was supposed to be.",
+      ctaLabel: "Open materials",
+      seed: 21,
+      mock: {
+        kind: "board",
+        title: "Delivery schedule",
+        meta: "4 orders · this week",
+        cols: ["MON", "TUE", "WED", "THU"],
+        rows: [
+          { label: "Steel", cells: ["f1", null, null, "f1"] },
+          { label: "Rebar", cells: [null, "f3", "f3", null] },
+          { label: "Concrete", cells: [null, null, "f2", "f2"] }
+        ]
+      }
+    },
+    {
+      kicker: "Status tracking",
+      title: "Ready, ordered, waiting, or missing.",
+      text: "Filter the whole materials list by status, quantity and delivery date to see exactly where every order stands, without opening a single purchase order.",
+      ctaLabel: "See material statuses",
+      tab: 0,
+      seed: 22,
+      mock: {
+        kind: "list",
+        title: "Materials",
+        meta: "By status",
+        items: [
+          { icon: PackageCheck, text: "Structural steel · on site", tag: "Ready" },
+          { icon: Truck, text: "Rebar #5 · in transit", tag: "Waiting", tone: "warn" },
+          { icon: AlertTriangle, text: "HVAC units · not ordered", tag: "Missing", tone: "warn" }
+        ]
+      }
+    },
+    {
+      kicker: "The readiness gate",
+      title: "No crew rolls to a missing delivery.",
+      text: "Every material carries a live status, so a job only reaches the schedule once the steel, rebar, and units it needs are actually on site — not promised.",
+      ctaLabel: "See the readiness gate",
+      tab: 1,
+      seed: 23,
+      mock: {
+        kind: "list",
+        title: "Readiness gate",
+        meta: "Thursday",
+        items: [
+          { icon: AlertTriangle, text: "Harborview mech · HVAC missing", tag: "Blocked", tone: "warn" },
+          { icon: Clock, text: "Parking deck · rebar Wed 7am", tag: "Watch", tone: "warn" },
+          { icon: CheckCircle2, text: "Tech Ridge frame · steel on site", tag: "Clear" }
+        ]
+      }
+    },
+    {
+      kicker: "Job readiness",
+      title: "One readiness number per job.",
+      text: "Delivery status rolls up into a single readiness percent, so a planner can see at a glance which work can start and which is still waiting on the yard.",
+      ctaLabel: "See ready work",
+      tab: 3,
+      seed: 24,
+      mock: {
+        kind: "bars",
+        title: "Readiness by job",
+        meta: "This week",
+        rows: [
+          { label: "Parking deck", pct: 100 },
+          { label: "Tech Ridge", pct: 92 },
+          { label: "Harborview", pct: 48 },
+          { label: "Riverside", pct: 16 }
+        ]
+      }
+    },
+    {
+      kicker: "Procurement and the plan",
+      title: "Deliveries meet the schedule.",
+      text: "Delivery windows and vendor notes sit next to the plan, so procurement and the field are working from the same dates instead of chasing each other.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "Lone Star Steel",
+        meta: "PO 4471",
+        items: [
+          { icon: CalendarDays, text: "Mon 7–10am · 24 beams", tag: "Confirmed" },
+          { icon: Building2, text: "Unload at the north gate", tag: "Note" },
+          { icon: CheckCircle2, text: "Parking deck pour cleared", tag: "Ready" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "No wasted rolls",
+      title: "No crew rolls to a missing delivery.",
+      text: "Every material carries a live status, so a job only reaches the schedule once the steel, rebar, and units it needs are actually on site — not promised.",
+      more: "Needs-attention materials name the jobs they block, so the gap shows up on the plan instead of on a truck at 7am."
+    },
+    {
+      slot: "reason-2",
+      label: "One number",
+      title: "One readiness number per job.",
+      text: "Delivery status rolls up into a single readiness percent, so a planner can see at a glance which work can start and which is still waiting on the yard.",
+      more: "The same number sorts the ready-work list on the schedule, so the jobs that can start are the ones that rise to the top."
+    },
+    {
+      slot: "reason-3",
+      label: "Dates that match",
+      title: "Deliveries meet the schedule.",
+      text: "Delivery windows and vendor notes sit next to the plan, so procurement and the field are working from the same dates instead of chasing each other.",
+      more: "A window that moves is visible on the timeline immediately, next to the work it was booked to support."
+    },
+    {
+      slot: "reason-4",
+      label: "The whole story",
+      title: "Vendor, PO and note on every order.",
+      text: "Vendor, purchase order, delivery window, quantity, and a note live on each material — so the whole procurement story is one click from the job that needs it.",
+      more: "When a delivery is disputed, the order, the window and the note are already attached to the job rather than in somebody's inbox."
+    },
+    {
+      slot: "reason-5",
+      label: "Built for the field",
+      title: "Check the yard from the truck.",
+      text: "Material statuses and delivery windows work on a phone, so a foreman can confirm what landed without calling the office.",
+      more: "Crews can flag a short or damaged delivery from the same screen, and it lands on the job as a delayIQ with a cause."
+    },
+    {
+      slot: "reason-6",
+      label: "One schedule",
+      title: "Readiness is part of the plan.",
+      text: "Materials feed the same schedule the crews are booked against, so blocked work stays off the board until it clears.",
+      more: "Clear the blocker and the job returns to the ready list on the next plan, checked against capacity and trade like any other assignment."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs readiness rules and reporting.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Ready to start means ready to start.",
+    text: "Deliveries, vendors and readiness on the plan your crews already run. Start free, and see which jobs can actually start this week."
+  }
+};
+
+const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
+  id: "equipment-tracking",
+  hash: "#equipment-tracking",
+  name: "Equipment Tracking",
+  photoKey: "Equipment Tracking",
+  hero: {
+    eyebrow: "Equipment Tracking",
+    prefix: "The whole fleet, ",
+    phrases: equipmentPhrases,
+    sub: (
+      <>
+        Track fleet availability, current assignments, and maintenance risk on <b>one board</b> &mdash; so the schedule only ever commits a
+        machine that&rsquo;s <b>actually free to roll</b>.
+      </>
+    ),
+    liveLabel: "See Equipment Tracking live",
+    boardTitle: "Fleet board · today",
+    board: [
+      {
+        crew: "Tower Crane #2",
+        dot: "#4285f4",
+        days: [
+          { t: "Harborview", c: "blue" },
+          { t: "Harborview", c: "blue" },
+          { t: "Framing", c: "blue" },
+          { t: "Harborview", c: "blue" },
+          null
+        ]
+      },
+      {
+        crew: "Concrete Pump #2",
+        dot: "#9b72cb",
+        days: [null, { t: "Riverside", c: "purple" }, { t: "Deck pour", c: "purple" }, { t: "Riverside", c: "purple" }, null]
+      },
+      {
+        crew: "Utility Truck #8",
+        dot: "#4bb17a",
+        days: [{ t: "In the yard", c: "green" }, null, { t: "Available", c: "green" }, null, { t: "Available", c: "green" }]
+      },
+      {
+        crew: "Excavator 320",
+        dot: "#e0808a",
+        days: [
+          { t: "In the shop", ghost: true },
+          { t: "In the shop", ghost: true },
+          { t: "Service", c: "coral" },
+          { t: "Needed Thu", c: "amber" },
+          null
+        ]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "Availability",
+      icon: Gauge,
+      title: "Track availability in real time",
+      text: (
+        <>
+          Available, in use, or in maintenance &mdash; filter the whole fleet by status and type to see in a second what&rsquo;s free to
+          dispatch and what isn&rsquo;t.
+        </>
+      ),
+      mock: {
+        kind: "list",
+        title: "Equipment · by status",
+        tabs: ["Available", "In Use", "Maintenance"],
+        items: [
+          { icon: Truck, title: "Tower Crane #2", sub: "Crane · Harborview Apts", badge: "IN USE", tone: "wait" },
+          { icon: Truck, title: "Utility Truck #8", sub: "Truck · unassigned", badge: "AVAILABLE", tone: "ready" },
+          { icon: AlertTriangle, title: "Excavator 320", sub: "Excavator · in the shop", badge: "MAINT", tone: "risk", alert: true }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "Assignments",
+      icon: HardHat,
+      title: "Keep machines and crews together",
+      text: (
+        <>Every machine shows the project and job it&rsquo;s on, so a crew and the iron it needs land on the same site on the same day.</>
+      ),
+      mock: {
+        kind: "list",
+        title: "Assignments",
+        items: [
+          { icon: HardHat, title: "Tower Crane #2", sub: "Harborview Apts · framing", badge: "ON JOB", tone: "wait" },
+          { icon: HardHat, title: "Concrete Pump #2", sub: "Riverside · deck pour", badge: "ON JOB", tone: "wait" },
+          { icon: MapPin, title: "Utility Truck #8", sub: "Not assigned · in the yard", badge: "OPEN", tone: "ready" }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "Maintenance",
+      icon: Wrench,
+      title: "Stay ahead of maintenance",
+      text: "Machines in for service or due for inspection are flagged and pulled from the available pool, so nothing gets dispatched that should be in the shop.",
+      mock: {
+        kind: "list",
+        title: "Maintenance",
+        items: [
+          { icon: AlertTriangle, title: "Excavator 320", sub: "Service required · in shop", badge: "SERVICE", tone: "risk", alert: true },
+          { icon: Clock, title: "Boom Lift #4", sub: "Inspection due in 3 days", badge: "DUE", tone: "wait" },
+          { icon: CheckCircle2, title: "Tower Crane #2", sub: "Serviced Aug 1 · cleared", badge: "OK", tone: "ready" }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Committed",
+      icon: CalendarDays,
+      title: "See what's committed to the schedule",
+      text: (
+        <>
+          Equipment already promised to scheduled jobs shows up next to the plan, so a machine is never double-booked or quietly missing on
+          the morning it&rsquo;s needed.
+        </>
+      ),
+      mock: {
+        kind: "list",
+        title: "Committed to the schedule",
+        items: [
+          { icon: CalendarDays, title: "Tower Crane #2", sub: "Harborview framing · Wed", badge: "COMMITTED", tone: "ready" },
+          { icon: CalendarDays, title: "Concrete Pump #2", sub: "Riverside pour · Thu", badge: "COMMITTED", tone: "ready" },
+          { icon: AlertTriangle, title: "Excavator 320", sub: "Needed Thu · still in service", badge: "AT RISK", tone: "risk", alert: true }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "The fleet board",
+      title: "See the whole yard on one board.",
+      text: "Every machine, its status, its utilization, and the job it's on — in a single glance. The crane that's buried, the truck that's free, the excavator in the shop, all in one place.",
+      ctaLabel: "Open the fleet board",
+      seed: 21,
+      mock: {
+        kind: "board",
+        title: "Fleet board",
+        meta: "6 machines · today",
+        cols: ["MON", "TUE", "WED", "THU"],
+        rows: [
+          { label: "Tower Crane #2", cells: ["f1", "f1", "f1", "f1"] },
+          { label: "Utility Truck #8", cells: ["f2", null, "f2", null] },
+          { label: "Excavator 320", cells: [null, null, "f3", "f3"] }
+        ]
+      }
+    },
+    {
+      kicker: "Fleet status",
+      title: "Available, in use, or in the shop.",
+      text: "Filter the whole fleet by status and type to see in a second what's free to dispatch and what isn't — no walking the yard, no phone calls.",
+      ctaLabel: "See fleet status",
+      tab: 0,
+      seed: 22,
+      mock: {
+        kind: "bars",
+        title: "Fleet status",
+        meta: "6 machines",
+        rows: [
+          { label: "In use", pct: 67 },
+          { label: "Available", pct: 17 },
+          { label: "Maintenance", pct: 16 },
+          { label: "Utilized", pct: 84 }
+        ]
+      }
+    },
+    {
+      kicker: "Assignments",
+      title: "The crew and the iron land together.",
+      text: "Every machine shows the project and job it's on, so a crew and the iron it needs land on the same site on the same day — and an unassigned machine is visible before it sits another week.",
+      ctaLabel: "See assignments",
+      tab: 1,
+      seed: 23,
+      mock: {
+        kind: "list",
+        title: "Assignments",
+        meta: "Today",
+        items: [
+          { icon: HardHat, text: "Tower Crane #2 · Harborview", tag: "On job" },
+          { icon: HardHat, text: "Concrete Pump #2 · Riverside", tag: "On job" },
+          { icon: MapPin, text: "Utility Truck #8 · in the yard", tag: "Open" }
+        ]
+      }
+    },
+    {
+      kicker: "Maintenance",
+      title: "Catch maintenance before the breakdown.",
+      text: "Maintenance status rides right beside assignments, so a machine due for service comes off the board before it strands a crew in the middle of a pour.",
+      ctaLabel: "See maintenance",
+      tab: 2,
+      seed: 24,
+      mock: {
+        kind: "list",
+        title: "Maintenance",
+        meta: "This week",
+        items: [
+          { icon: AlertTriangle, text: "Excavator 320 · in the shop", tag: "Service", tone: "warn" },
+          { icon: Clock, text: "Boom Lift #4 · inspection due", tag: "3 days", tone: "warn" },
+          { icon: CheckCircle2, text: "Tower Crane #2 · cleared", tag: "OK" }
+        ]
+      }
+    },
+    {
+      kicker: "Fleet and the plan",
+      title: "The schedule only commits free iron.",
+      text: "Equipment already promised to scheduled jobs shows up next to the plan, so a machine is never double-booked or quietly missing on the morning it's needed.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "Committed",
+        meta: "Next 3 days",
+        items: [
+          { icon: CalendarDays, text: "Crane · Harborview framing", tag: "Wed" },
+          { icon: CalendarDays, text: "Pump · Riverside pour", tag: "Thu" },
+          { icon: AlertTriangle, text: "Excavator needed Thu", tag: "At risk", tone: "warn" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "Nothing waits on iron",
+      title: "No job waits on a missing machine.",
+      text: "Every machine's status and assignment is live, so the schedule only commits equipment that's actually free — not a crane still tied up on another site.",
+      more: "A machine that is in use or in the shop is out of the available pool, so it cannot be promised to a second job by mistake."
+    },
+    {
+      slot: "reason-2",
+      label: "Utilization",
+      title: "Utilization you can actually see.",
+      text: "Idle iron is money parked in the yard. Live utilization shows what's working and what's sitting, so the fleet earns its keep instead of collecting dust.",
+      more: "Utilization is measured from real assignments and booked days, so the number is the yard's, not an estimate."
+    },
+    {
+      slot: "reason-3",
+      label: "Before the breakdown",
+      title: "Catch maintenance before the breakdown.",
+      text: "Maintenance status rides right beside assignments, so a machine due for service comes off the board before it strands a crew in the middle of a pour.",
+      more: "Inspections due inside the week are flagged too, so a certificate never lapses on the morning the machine is needed."
+    },
+    {
+      slot: "reason-4",
+      label: "Crew and iron",
+      title: "The machine meets the crew on site.",
+      text: "Every machine shows the project and job it's on, so a crew and the iron it needs land on the same site on the same day.",
+      more: "Move the job and the equipment commitment moves with it, so the crane does not turn up at last week's address."
+    },
+    {
+      slot: "reason-5",
+      label: "Built for the field",
+      title: "Check the yard from the cab.",
+      text: "Fleet status, assignments and maintenance flags all work on a phone, so a foreman can see what is free without calling the yard.",
+      more: "A breakdown can be reported from the same screen, and it lands on the job as a delayIQ with a cause."
+    },
+    {
+      slot: "reason-6",
+      label: "One schedule",
+      title: "The fleet is part of the plan.",
+      text: "Equipment sits on the same schedule the crews are booked against, so a machine shortage shows up as a scheduling problem, not a surprise.",
+      more: "Commit a machine and the week board, the crew sheets and the promised dates all account for it together."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs more machines, more crews and reporting.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Keep the iron moving.",
+    text: "Availability, assignments and maintenance on the plan your crews already run. Start free, and see the whole yard on one board in minutes."
+  }
+};
+
+const PRODUCTION_REPORTS_PAGE_CONTENT: ProductPageContent = {
+  id: "production-reports",
+  hash: "#production-reports",
+  name: "Production Reports",
+  photoKey: "Production Reports",
+  hero: {
+    eyebrow: "Production Reports",
+    prefix: "The whole job, ",
+    phrases: productionReportsPhrases,
+    sub: (
+      <>
+        Turn schedule movement, field updates, backlog, and utilization into a <b>reporting workspace built for the weekly review</b>{" "}
+        &mdash; every KPI current <b>the moment the field does</b>.
+      </>
+    ),
+    liveLabel: "See Production Reports live",
+    boardTitle: "Production report · last 6 months",
+    board: [
+      {
+        crew: "On-time %",
+        dot: "#4285f4",
+        days: [
+          { t: "81%", c: "blue" },
+          { t: "84%", c: "blue" },
+          { t: "85%", c: "blue" },
+          { t: "87%", c: "blue" },
+          { t: "87%", c: "blue" }
+        ]
+      },
+      {
+        crew: "Crew util.",
+        dot: "#9b72cb",
+        days: [
+          { t: "74%", c: "purple" },
+          { t: "77%", c: "purple" },
+          { t: "80%", c: "purple" },
+          { t: "82%", c: "purple" },
+          { t: "82%", c: "purple" }
+        ]
+      },
+      {
+        crew: "Backlog",
+        dot: "#4bb17a",
+        days: [
+          { t: "$5.2M", c: "green" },
+          { t: "$6.1M", c: "green" },
+          { t: "$5.8M", c: "green" },
+          { t: "$4.9M", c: "amber" },
+          { t: "$4.2M", c: "amber" }
+        ]
+      },
+      {
+        crew: "Variance",
+        dot: "#e0808a",
+        days: [
+          { t: "3.0 d", c: "coral" },
+          { t: "2.9 d", c: "coral" },
+          { t: "2.7 d", ghost: true },
+          { t: "2.5 d", c: "coral" },
+          { t: "2.4 d", c: "coral" }
+        ]
+      }
+    ]
+  },
+  features: [
+    {
+      slot: "capacity",
+      short: "KPIs",
+      icon: Gauge,
+      title: "Every KPI on one dashboard",
+      text: "On-time completion, schedule variance, crew and equipment utilization, labor hours, and active backlog — the numbers that run a construction business, in one glance.",
+      mock: {
+        kind: "bars",
+        title: "Production KPIs",
+        rows: [
+          { label: "On-time completion · 87%", pct: 87, cls: "" },
+          { label: "Crew utilization · 82%", pct: 82, cls: "" },
+          { label: "Equipment utilization · 72%", pct: 72, cls: "warn" },
+          { label: "Schedule variance · 2.4 days", pct: 24, cls: "over" }
+        ]
+      }
+    },
+    {
+      slot: "conflicts",
+      short: "Crew efficiency",
+      icon: Users,
+      title: "Utilization, crew by crew",
+      text: "See which crews are running hot and which have room, week over week, so the plan loads everyone evenly instead of burning out your best.",
+      mock: {
+        kind: "bars",
+        title: "Crew efficiency",
+        rows: [
+          { label: "Concrete Crew 1", pct: 94, cls: "" },
+          { label: "Framing Crew 2", pct: 88, cls: "" },
+          { label: "Utility Crew 3", pct: 81, cls: "" },
+          { label: "Paving Crew 4", pct: 76, cls: "warn" }
+        ]
+      }
+    },
+    {
+      slot: "trades",
+      short: "Schedule health",
+      icon: TrendingUp,
+      title: "Spot the schedule slipping early",
+      text: (
+        <>
+          On-time rate and schedule variance turn the plan-versus-reality gap into a number you can watch &mdash; so a slipping week is
+          caught while there&rsquo;s still room to recover.
+        </>
+      ),
+      mock: {
+        kind: "list",
+        title: "Schedule health",
+        items: [
+          { icon: CheckCircle2, title: "On-time completion", sub: "87% · up 3% vs Q1", badge: "HEALTHY", tone: "ready" },
+          { icon: Clock, title: "Schedule variance", sub: "2.4 days · improving", badge: "WATCH", tone: "wait" },
+          { icon: AlertTriangle, title: "3 jobs slipping", sub: "Behind plan this week", badge: "AT RISK", tone: "risk", alert: true }
+        ]
+      }
+    },
+    {
+      slot: "ready",
+      short: "Export",
+      icon: Download,
+      title: "Export the weekly review in a click",
+      text: "Pick a period — last six months, last quarter, year to date — and export a clean production summary the whole team can read, ready before the meeting starts.",
+      mock: {
+        kind: "list",
+        title: "Weekly review",
+        tabs: ["Last 6 Months", "Last quarter", "Year to date"],
+        items: [
+          { icon: CheckCircle2, title: "On-time completion", sub: "87% across 41 jobs", badge: "87%", tone: "ready" },
+          { icon: Users, title: "Crew utilization", sub: "82% · 4 crews", badge: "82%", tone: "ready" },
+          { icon: Download, title: "Production summary", sub: "PDF · ready before the meeting", badge: "EXPORT", tone: "wait" }
+        ]
+      }
+    }
+  ],
+  rows: [
+    {
+      kicker: "Backlog forecastIQ",
+      title: "See where the work is headed.",
+      text: "Backlog trended six months out, built from the live schedule — so you can see the crunch coming and staff up, or the gap forming and go win more work, while there's still time to act.",
+      ctaLabel: "Open reports",
+      seed: 21,
+      mock: {
+        kind: "bars",
+        title: "Backlog forecastIQ · hours",
+        meta: "6 months",
+        rows: [
+          { label: "Jun", pct: 85 },
+          { label: "Jul", pct: 100 },
+          { label: "Aug", pct: 95 },
+          { label: "Sep", pct: 80 },
+          { label: "Oct", pct: 69 },
+          { label: "Nov", pct: 59 }
+        ]
+      }
+    },
+    {
+      kicker: "The KPI dashboard",
+      title: "The six numbers that run the business.",
+      text: "On-time completion, schedule variance, crew and equipment utilization, labor hours and active backlog sit on one dashboard, each rolled up from the work your team already did.",
+      ctaLabel: "See the KPIs",
+      tab: 0,
+      seed: 22,
+      mock: {
+        kind: "list",
+        title: "Production KPIs",
+        meta: "This month",
+        items: [
+          { icon: CheckCircle2, text: "On-time completion", tag: "87%" },
+          { icon: Users, text: "Crew utilization", tag: "82%" },
+          { icon: Clock, text: "Labor hours · MTD", tag: "24,180" }
+        ]
+      }
+    },
+    {
+      kicker: "Plan versus reality",
+      title: "Spot the schedule slipping early.",
+      text: "On-time rate and schedule variance turn the plan-versus-reality gap into a number you can watch — so a slipping week is caught while there's still room to recover.",
+      ctaLabel: "See schedule health",
+      tab: 2,
+      seed: 23,
+      mock: {
+        kind: "bars",
+        title: "Planned vs actual",
+        meta: "Hours",
+        rows: [
+          { label: "Jan", pct: 92 },
+          { label: "Feb", pct: 96 },
+          { label: "Mar", pct: 98 },
+          { label: "Apr", pct: 93 },
+          { label: "May", pct: 90 }
+        ]
+      }
+    },
+    {
+      kicker: "Crew efficiency",
+      title: "Utilization, crew by crew.",
+      text: "See which crews are running hot and which have room, week over week, so the plan loads everyone evenly instead of burning out your best.",
+      ctaLabel: "See crew efficiency",
+      tab: 1,
+      seed: 24,
+      mock: {
+        kind: "bars",
+        title: "Crew efficiency",
+        meta: "This month",
+        rows: [
+          { label: "Concrete Crew 1", pct: 94 },
+          { label: "Framing Crew 2", pct: 88 },
+          { label: "Utility Crew 3", pct: 81 },
+          { label: "Paving Crew 4", pct: 76 }
+        ]
+      }
+    },
+    {
+      kicker: "The weekly review",
+      title: "Walk into the review ready.",
+      text: "The report is built the moment the field updates — every KPI, chart, and forecastIQ is current, and the export is one click when the meeting starts.",
+      ctaLabel: "See it live",
+      seed: 25,
+      mock: {
+        kind: "list",
+        title: "Weekly review",
+        meta: "Last 6 months",
+        items: [
+          { icon: CheckCircle2, text: "On-time completion", tag: "87%" },
+          { icon: TrendingUp, text: "Backlog trend", tag: "↓ 31%", tone: "warn" },
+          { icon: Download, text: "Export the summary", tag: "1 click" }
+        ]
+      }
+    }
+  ],
+  reasons: [
+    {
+      slot: "reason-1",
+      label: "Data, not gut feel",
+      title: "Decisions from data, not gut feel.",
+      text: "On-time rates, variance, utilization, and backlog all roll up automatically — so the weekly call is about what the numbers say, not who remembers what.",
+      more: "Every figure traces back to real jobs, bookings and field updates, so a number in the review can be opened and checked on the spot."
+    },
+    {
+      slot: "reason-2",
+      label: "Early warning",
+      title: "See utilization slipping early.",
+      text: "Crew and equipment utilization trend week over week, so a crew that's quietly falling behind shows up on a chart long before it shows up on the schedule.",
+      more: "The same trend shows the crews with room, which is usually where the next week's work should go."
+    },
+    {
+      slot: "reason-3",
+      label: "Always current",
+      title: "Walk into the weekly review ready.",
+      text: "The report is built the moment the field updates — every KPI, chart, and forecastIQ is current, and the export is one click when the meeting starts.",
+      more: "Nobody spends Sunday rebuilding a spreadsheet: the report is the live schedule, summarised."
+    },
+    {
+      slot: "reason-4",
+      label: "Look ahead",
+      title: "Backlog trended six months out.",
+      text: "Backlog is built from the live schedule, so you can see the crunch coming and staff up, or the gap forming and go win more work.",
+      more: "The forecast moves as jobs are won and booked, which makes it a hiring and bidding signal rather than a month-end number."
+    },
+    {
+      slot: "reason-5",
+      label: "One click out",
+      title: "The summary the team can read.",
+      text: "Pick a period and export a clean production summary the whole team can read, ready before the meeting starts.",
+      more: "Last six months, last quarter or year to date, all from the same live data, so two exports never disagree."
+    },
+    {
+      slot: "reason-6",
+      label: "One schedule",
+      title: "The report is the schedule, summarised.",
+      text: "Reports read the same schedule the crews are booked against, so there is no second system to reconcile at month end.",
+      more: "Accept a variance from the field and the next report reflects it immediately, with no re-keying."
+    },
+    {
+      slot: "reason-7",
+      label: "Start free",
+      title: "Free for one crew. Grow when you do.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs full reporting and exports.",
+      more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
+    }
+  ],
+  cta: {
+    title: "Run the week on the numbers.",
+    text: "KPIs, utilization and backlog from the plan your crews already run. Start free, and see your first production report in minutes."
+  }
+};
+
 function WelcomeCrewSchedulingPage({
   onBack,
   onOpenSchedule,
-  onGetStarted
+  onGetStarted,
+  content = CREW_PAGE_CONTENT
 }: {
   onBack: () => void;
   onOpenSchedule: () => void;
   onGetStarted: () => void;
+  /** Everything this page says. Crew Scheduling by default; Schedule AI passes its own. */
+  content?: ProductPageContent;
 }) {
   const rootRef = useRef<HTMLElement>(null);
 
@@ -9254,46 +12077,16 @@ function WelcomeCrewSchedulingPage({
     return () => observer.disconnect();
   }, []);
 
-  const heroBoard: CsRow[] = [
-    {
-      crew: "Concrete 1",
-      dot: "#4285f4",
-      days: [{ t: "Deck pour", c: "blue" }, { t: "Deck pour", c: "blue" }, null, { t: "Slab", c: "blue" }, null]
-    },
-    {
-      crew: "Framing 2",
-      dot: "#9b72cb",
-      days: [null, { t: "Level 3", c: "purple" }, { t: "Level 3", c: "purple" }, { t: "Level 4", c: "purple" }, null]
-    },
-    {
-      crew: "Utility 1",
-      dot: "#4bb17a",
-      days: [{ t: "Trench", c: "green" }, null, { t: "Tie-in", c: "green" }, null, { t: "Backfill", c: "green" }]
-    },
-    {
-      crew: "Finish 3",
-      dot: "#e0808a",
-      days: [null, { t: "Punch", c: "coral" }, null, { t: "Punch", c: "coral" }, { t: "Handover", c: "amber" }]
-    }
-  ];
-
-  const utilRows: Array<{ crew: string; pct: number; cls: string }> = [
-    { crew: "Concrete 1", pct: 82, cls: "" },
-    { crew: "Framing 2", pct: 118, cls: "over" },
-    { crew: "Utility 1", pct: 64, cls: "" },
-    { crew: "Finish 3", pct: 91, cls: "warn" }
-  ];
-
   // Sticky secondary nav: appears once the hero has scrolled past.
   const heroRef = useRef<HTMLElement>(null);
   const [pastHero, setPastHero] = useState(false);
   useEffect(() => {
     const hero = heroRef.current;
     if (!hero) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setPastHero(!entry.isIntersecting && entry.boundingClientRect.top < 0),
-      { threshold: 0, rootMargin: "-64px 0px 0px 0px" }
-    );
+    const observer = new IntersectionObserver(([entry]) => setPastHero(!entry.isIntersecting && entry.boundingClientRect.top < 0), {
+      threshold: 0,
+      rootMargin: "-64px 0px 0px 0px"
+    });
     observer.observe(hero);
     return () => observer.disconnect();
   }, []);
@@ -9326,7 +12119,7 @@ function WelcomeCrewSchedulingPage({
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    const ids = Array.from(new Set(CREW_SHEET_SECTIONS.map((section) => section.id)));
+    const ids = Array.from(new Set(sheetSections.map((section) => section.id)));
     const targets = ids.map((id) => root.querySelector<HTMLElement>(`#${id}`)).filter((el): el is HTMLElement => Boolean(el));
     const observer = new IntersectionObserver(
       (entries) => {
@@ -9465,7 +12258,7 @@ function WelcomeCrewSchedulingPage({
   const [reasonsInView, setReasonsInView] = useState(false);
   const [openReason, setOpenReason] = useState<string | null>(null);
   const reasonsRef = useRef<HTMLElement>(null);
-  const reasonCount = CREW_REASONS.length;
+  const reasonCount = content.reasons.length;
   const stepReasons = (delta: number) => {
     setOpenReason(null);
     setReasonIndex((index) => (index + delta + reasonCount) % reasonCount);
@@ -9504,217 +12297,24 @@ function WelcomeCrewSchedulingPage({
     action();
   };
 
-  const highlights: Array<{ icon: typeof Grid2X2; title: string; target: string }> = [
-    { icon: TrendingUp, title: "See capacity before you commit", target: "cpx-viewer" },
-    { icon: ShieldAlert, title: "Catch conflicts before the field does", target: "cpx-viewer" },
-    { icon: HardHat, title: "Balance by trade and skill", target: "cpx-viewer" },
-    { icon: PackageCheck, title: "Schedule ready work first", target: "cpx-viewer" }
-  ];
-
-  const capacityMock = (
-    <div className="cs-mock" aria-hidden="true">
-      <div className="cs-mock-bar">
-        <i />
-        <i />
-        <i />
-        <strong>Crew capacity &middot; this week</strong>
-      </div>
-      <div className="cs-mock-body">
-        <div className="cs-util">
-          {utilRows.map((row) => (
-            <div className="cs-util-row" key={row.crew}>
-              <div className="cs-util-top">
-                <span>{row.crew}</span>
-                <span>{row.pct}%</span>
-              </div>
-              <div className="cs-util-track">
-                <div className={`cs-util-fill ${row.cls}`} style={{ "--v": `${Math.min(row.pct, 100)}%` } as CSSProperties} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+  const highlights = content.features.map((feature) => ({ icon: feature.icon, title: feature.title, target: "cpx-viewer" }));
+  const railVisuals: ReactNode[] = content.features.map((feature) => (
+    <div className="cs-panel" key={feature.slot}>
+      <CsMock spec={feature.mock} />
     </div>
-  );
-  const conflictMock = (
-    <div className="cs-mock" aria-hidden="true">
-      <div className="cs-mock-bar">
-        <i />
-        <i />
-        <i />
-        <strong>Conflict check</strong>
-      </div>
-      <div className="cs-mock-body">
-        <div className="cs-list">
-          <div className="cs-item alert">
-            <span className="cs-ic">
-              <AlertTriangle size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Concrete 1 double-booked</strong>
-              <span>Deck pour + slab &middot; Wed</span>
-            </span>
-            <span className="cs-badge risk">CLASH</span>
-          </div>
-          <div className="cs-item">
-            <span className="cs-ic">
-              <Users size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Framing 2 over capacity</strong>
-              <span>3 jobs &middot; 6 of 4 crew</span>
-            </span>
-            <span className="cs-badge wait">OVER</span>
-          </div>
-          <div className="cs-item">
-            <span className="cs-ic">
-              <CheckCircle2 size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Move slab &rarr; Concrete 3</strong>
-              <span>Suggested fix &middot; clears Wed</span>
-            </span>
-            <span className="cs-badge ready">FIX</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-  const tradesMock = (
-    <div className="cs-mock" aria-hidden="true">
-      <div className="cs-mock-bar">
-        <i />
-        <i />
-        <i />
-        <strong>Crews by trade</strong>
-      </div>
-      <div className="cs-mock-body">
-        <div className="cs-tabs">
-          <span className="cs-tab on">All</span>
-          <span className="cs-tab">Concrete</span>
-          <span className="cs-tab">Framing</span>
-          <span className="cs-tab">Utility</span>
-          <span className="cs-tab">Finish</span>
-        </div>
-        <div className="cs-list">
-          <div className="cs-item">
-            <span className="cs-ic">
-              <HardHat size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Concrete 1 &middot; 6 crew</strong>
-              <span>Flatwork &middot; foundations</span>
-            </span>
-            <span className="cs-badge ready">AVAIL</span>
-          </div>
-          <div className="cs-item">
-            <span className="cs-ic">
-              <HardHat size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Framing 2 &middot; 4 crew</strong>
-              <span>Rough framing</span>
-            </span>
-            <span className="cs-badge wait">BOOKED</span>
-          </div>
-          <div className="cs-item">
-            <span className="cs-ic">
-              <HardHat size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Utility 1 &middot; 5 crew</strong>
-              <span>Wet utilities</span>
-            </span>
-            <span className="cs-badge ready">AVAIL</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-  const readyMock = (
-    <div className="cs-mock" aria-hidden="true">
-      <div className="cs-mock-bar">
-        <i />
-        <i />
-        <i />
-        <strong>Ready to schedule</strong>
-      </div>
-      <div className="cs-mock-body">
-        <div className="cs-list">
-          <div className="cs-item">
-            <span className="cs-ic">
-              <PackageCheck size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Parking deck pour</strong>
-              <span>Materials delivered &middot; permit cleared</span>
-            </span>
-            <span className="cs-badge ready">READY</span>
-          </div>
-          <div className="cs-item">
-            <span className="cs-ic">
-              <Clock size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Harborview punch</strong>
-              <span>Waiting on finish materials</span>
-            </span>
-            <span className="cs-badge wait">WAIT</span>
-          </div>
-          <div className="cs-item">
-            <span className="cs-ic">
-              <AlertTriangle size={15} />
-            </span>
-            <span className="cs-tt">
-              <strong>Tech Ridge utilities</strong>
-              <span>Locates not returned</span>
-            </span>
-            <span className="cs-badge risk">BLOCKED</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-  // Big product visuals for the "See all features" cards (same mocks the page uses).
-  const railVisuals: ReactNode[] = [
-    <div className="cs-panel" key="capacity">{capacityMock}</div>,
-    <div className="cs-panel" key="conflicts">{conflictMock}</div>,
-    <div className="cs-panel" key="trades">{tradesMock}</div>,
-    <div className="cs-panel" key="ready">{readyMock}</div>
-  ];
-
-  const suiteTabs: Array<{ slot: CrewMediaSlot; title: string; text: ReactNode; mock: ReactNode }> = [
-    {
-      slot: "capacity",
-      title: "See capacity before you commit",
-      text: "Live utilization for every crew, so you spot the overloaded and the underused at a glance and load the week evenly.",
-      mock: capacityMock
-    },
-    {
-      slot: "conflicts",
-      title: "Catch conflicts before the field does",
-      text: "Double-bookings, overbooked crews, and clashing jobs get flagged as you plan, with a suggested fix to clear them fast.",
-      mock: conflictMock
-    },
-    {
-      slot: "trades",
-      title: "Balance by trade and skill",
-      text: (
-        <>Filter by specialty so the right trade lands on the right job, and no crew is asked to do work it isn&rsquo;t built for.</>
-      ),
-      mock: tradesMock
-    },
-    {
-      slot: "ready",
-      title: "Schedule ready work first",
-      text: "Jobs with materials, permits, and locates cleared rise to the top, so crews only roll to work that can actually start.",
-      mock: readyMock
-    }
+  ));
+  const suiteTabs = content.features;
+  /** Highlights, the long-form rows, the reasons, then one entry per viewer tab. */
+  const sheetSections: Array<{ label: string; id: string; tab?: number }> = [
+    { label: "Highlights", id: "cpx-highlights" },
+    { label: "In detail", id: "cpx-details" },
+    { label: "Why BuildFlow", id: "cpx-reasons" },
+    ...content.features.map((feature, index) => ({ label: feature.short, id: "cpx-viewer", tab: index }))
   ];
   const activeFeature = suiteTabs[activeTab];
 
   return (
-    <main className="cs-page cpx-page" id="crew-scheduling" ref={rootRef}>
+    <main className="cs-page cpx-page" id={content.id} ref={rootRef}>
       <div className="wx-bg" aria-hidden="true">
         <div className="wx-aurora wx-aurora-1" />
         <div className="wx-aurora wx-aurora-2" />
@@ -9725,27 +12325,27 @@ function WelcomeCrewSchedulingPage({
       {/* Sticky secondary nav — portaled to <body> so it stacks above the site header and covers it once the hero scrolls away */}
       {createPortal(
         <div className="welcome-rx cpx-subnav-portal">
-      <nav className={`cpx-subnav${pastHero ? " is-visible" : ""}`} aria-label="Crew Scheduling" aria-hidden={!pastHero}>
-        <div className="cpx-subnav-inner">
-          <span className="cpx-subnav-title">Crew Scheduling</span>
-          <div className="cpx-subnav-actions" ref={productsRef}>
-            <button
-              type="button"
-              className="cpx-subnav-pill"
-              aria-haspopup="dialog"
-              aria-expanded={productsOpen}
-              aria-controls="cpx-products-sheet"
-              onClick={() => setProductsOpen((open) => !open)}
-              tabIndex={pastHero ? 0 : -1}
-            >
-              Products
-            </button>
-            <button type="button" className="cpx-subnav-cta" onClick={onGetStarted} tabIndex={pastHero ? 0 : -1}>
-              Get BuildFlow
-            </button>
-          </div>
-        </div>
-      </nav>
+          <nav className={`cpx-subnav${pastHero ? " is-visible" : ""}`} aria-label={content.name} aria-hidden={!pastHero}>
+            <div className="cpx-subnav-inner">
+              <span className="cpx-subnav-title">{content.name}</span>
+              <div className="cpx-subnav-actions" ref={productsRef}>
+                <button
+                  type="button"
+                  className="cpx-subnav-pill"
+                  aria-haspopup="dialog"
+                  aria-expanded={productsOpen}
+                  aria-controls="cpx-products-sheet"
+                  onClick={() => setProductsOpen((open) => !open)}
+                  tabIndex={pastHero ? 0 : -1}
+                >
+                  Products
+                </button>
+                <button type="button" className="cpx-subnav-cta" onClick={onGetStarted} tabIndex={pastHero ? 0 : -1}>
+                  Get BuildFlow
+                </button>
+              </div>
+            </div>
+          </nav>
 
           {/* Products sheet — drops from the top like Apple's "Explore" menu */}
           <div className={`cpx-sheet-wrap${productsOpen ? " is-open" : ""}`} aria-hidden={!productsOpen}>
@@ -9763,12 +12363,18 @@ function WelcomeCrewSchedulingPage({
               </button>
 
               <div className="cpx-sheet-rail-wrap">
-                <button type="button" className="cpx-sheet-arrow left" aria-label="Previous products" onClick={() => moveProductRail(-1)} tabIndex={productsOpen ? 0 : -1}>
+                <button
+                  type="button"
+                  className="cpx-sheet-arrow left"
+                  aria-label="Previous products"
+                  onClick={() => moveProductRail(-1)}
+                  tabIndex={productsOpen ? 0 : -1}
+                >
                   <ChevronLeft size={18} />
                 </button>
                 <div className="cpx-sheet-rail" ref={productRailRef}>
                   {CREW_SHEET_PRODUCTS.map((product) => {
-                    const current = product.hash === "#crew-scheduling";
+                    const current = product.hash === content.hash;
                     return (
                       <a
                         key={product.hash}
@@ -9787,13 +12393,19 @@ function WelcomeCrewSchedulingPage({
                     );
                   })}
                 </div>
-                <button type="button" className="cpx-sheet-arrow right" aria-label="Next products" onClick={() => moveProductRail(1)} tabIndex={productsOpen ? 0 : -1}>
+                <button
+                  type="button"
+                  className="cpx-sheet-arrow right"
+                  aria-label="Next products"
+                  onClick={() => moveProductRail(1)}
+                  tabIndex={productsOpen ? 0 : -1}
+                >
                   <ChevronRight size={18} />
                 </button>
               </div>
 
               <div className="cpx-sheet-head">
-                <h2>Crew Scheduling</h2>
+                <h2>{content.name}</h2>
                 <button type="button" className="cpx-subnav-cta" onClick={onGetStarted} tabIndex={productsOpen ? 0 : -1}>
                   Get BuildFlow
                 </button>
@@ -9802,8 +12414,9 @@ function WelcomeCrewSchedulingPage({
               <div className="cpx-sheet-sections">
                 <span className="cpx-sheet-label">Overview</span>
                 <ul>
-                  {CREW_SHEET_SECTIONS.map((section) => {
-                    const on = section.tab !== undefined ? activeSection === section.id && activeTab === section.tab : activeSection === section.id;
+                  {sheetSections.map((section) => {
+                    const on =
+                      section.tab !== undefined ? activeSection === section.id && activeTab === section.tab : activeSection === section.id;
                     return (
                       <li key={section.label}>
                         <button
@@ -9826,10 +12439,24 @@ function WelcomeCrewSchedulingPage({
               </div>
 
               <div className="cpx-sheet-links">
-                <button type="button" onClick={() => { setProductsOpen(false); onOpenSchedule(); }} tabIndex={productsOpen ? 0 : -1}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductsOpen(false);
+                    onOpenSchedule();
+                  }}
+                  tabIndex={productsOpen ? 0 : -1}
+                >
                   See it live <ChevronRight size={16} />
                 </button>
-                <button type="button" onClick={() => { setProductsOpen(false); onBack(); }} tabIndex={productsOpen ? 0 : -1}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductsOpen(false);
+                    onBack();
+                  }}
+                  tabIndex={productsOpen ? 0 : -1}
+                >
                   Back to home <ChevronRight size={16} />
                 </button>
               </div>
@@ -9840,11 +12467,25 @@ function WelcomeCrewSchedulingPage({
           {demoOpen && (
             <div className="cpx-demo-wrap">
               <div className="cpx-sheet-backdrop" onClick={closeDemo} />
-              <div className="cpx-demo" role="dialog" aria-modal="true" aria-label="Crew Scheduling demo" ref={demoDialogRef} tabIndex={-1}>
+              <div
+                className="cpx-demo"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${content.name} demo`}
+                ref={demoDialogRef}
+                tabIndex={-1}
+              >
                 <button type="button" className="cpx-sheet-close" aria-label="Close" onClick={closeDemo}>
                   <X size={18} />
                 </button>
-                <video src={CREW_PAGE_MEDIA.demo.src} poster={CREW_PAGE_MEDIA.demo.poster} controls autoPlay playsInline aria-label={CREW_PAGE_MEDIA.demo.alt} />
+                <video
+                  src={CREW_PAGE_MEDIA.demo.src}
+                  poster={CREW_PAGE_MEDIA.demo.poster}
+                  controls
+                  autoPlay
+                  playsInline
+                  aria-label={CREW_PAGE_MEDIA.demo.alt}
+                />
               </div>
             </div>
           )}
@@ -9856,20 +12497,17 @@ function WelcomeCrewSchedulingPage({
       <section className="cpx-section cpx-hero cpx-light" data-reveal ref={heroRef}>
         <div className="cpx-inner-narrow">
           <span className="wx-eyebrow">
-            <span className="wx-dot" /> Crew Scheduling
+            <span className="wx-dot" /> {content.hero.eyebrow}
           </span>
           <h1 className="cpx-hero-title">
-            <WxRotatingHeadline prefix="Put every crew on the " phrases={crewJobPhrases} />
+            <WxRotatingHeadline prefix={content.hero.prefix} phrases={content.hero.phrases} />
           </h1>
-          <p className="cpx-hero-sub">
-            Plan the whole week from one board. Match crews to ready work by <b>capacity, trade, and location</b> &mdash; and catch the
-            conflicts that quietly cost a day in the field <b>before you ever publish the plan</b>.
-          </p>
+          <p className="cpx-hero-sub">{content.hero.sub}</p>
           <div className="cpx-hero-actions">
             <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
               Get BuildFlow <ArrowRight size={18} />
             </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenSchedule} ariaLabel="See crew scheduling live">
+            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenSchedule} ariaLabel={content.hero.liveLabel}>
               <PlayCircle size={18} /> See it live
             </WxMagnetic>
           </div>
@@ -9877,7 +12515,7 @@ function WelcomeCrewSchedulingPage({
         <div className="cpx-hero-media">
           <CsMedia slot="hero" decorative={false}>
             <div className="cs-panel cs-hero-panel">
-              <CsBoard title="Weekly crew board · Austin, TX" rows={heroBoard} />
+              <CsBoard title={content.hero.boardTitle} rows={content.hero.board} />
             </div>
           </CsMedia>
         </div>
@@ -9888,7 +12526,12 @@ function WelcomeCrewSchedulingPage({
         <div className="cpx-inner">
           <div className="cpx-rail-head">
             <h2>See all features</h2>
-            <button type="button" className="cpx-rail-demo" onClick={watchDemo} aria-pressed={CREW_PAGE_MEDIA.demo.src ? undefined : demoPlaying}>
+            <button
+              type="button"
+              className="cpx-rail-demo"
+              onClick={watchDemo}
+              aria-pressed={CREW_PAGE_MEDIA.demo.src ? undefined : demoPlaying}
+            >
               {demoPlaying ? <PauseCircle size={20} aria-hidden="true" /> : <PlayCircle size={20} aria-hidden="true" />}
               {demoPlaying ? "Pause the demo" : "Watch the demo"}
             </button>
@@ -9912,7 +12555,13 @@ function WelcomeCrewSchedulingPage({
             ))}
           </div>
           <div className="cpx-rail-controls">
-            <button type="button" className="cpx-rail-arrow" aria-label="Previous feature" onClick={() => stopDemoThen(() => moveRail(-1))} disabled={railEdge.start}>
+            <button
+              type="button"
+              className="cpx-rail-arrow"
+              aria-label="Previous feature"
+              onClick={() => stopDemoThen(() => moveRail(-1))}
+              disabled={railEdge.start}
+            >
               <ChevronLeft size={18} />
             </button>
             <div className="cpx-rail-dots" aria-label="Features">
@@ -9936,7 +12585,13 @@ function WelcomeCrewSchedulingPage({
             >
               {demoPlaying ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
             </button>
-            <button type="button" className="cpx-rail-arrow" aria-label="Next feature" onClick={() => stopDemoThen(() => moveRail(1))} disabled={railEdge.end}>
+            <button
+              type="button"
+              className="cpx-rail-arrow"
+              aria-label="Next feature"
+              onClick={() => stopDemoThen(() => moveRail(1))}
+              disabled={railEdge.end}
+            >
               <ChevronRight size={18} />
             </button>
           </div>
@@ -9944,185 +12599,53 @@ function WelcomeCrewSchedulingPage({
       </section>
 
       {/* Chapter 1c · Feature rows (light) — the welcome page's alternating copy + visual sections, sized up */}
-      <section className="cpx-section cpx-rows cpx-light" id="cpx-details" tabIndex={-1} aria-label="Crew Scheduling in detail" data-reveal>
+      <section
+        className="cpx-section cpx-rows cpx-light"
+        id="cpx-details"
+        tabIndex={-1}
+        aria-label={`${content.name} in detail`}
+        data-reveal
+      >
         <div className="cpx-inner wx-rows">
-          <div className="wx-row" data-reveal>
-            <div className="wx-row-copy">
-              <span className="wx-row-kicker">The week board</span>
-              <h3>One board for every crew, every day of the week.</h3>
-              <WxTypeIn text="Crews down the side, days across the top. Drag a job onto a crew and a day and the assignment is booked — dates, crew, and status update everywhere at once." />
-              <button type="button" className="wx-explore" onClick={onOpenSchedule}>
-                Open the week board <ArrowRight size={16} />
-              </button>
+          {content.rows.map((row, index) => (
+            <div className={`wx-row${index % 2 ? " rev" : ""}`} key={row.title} data-reveal>
+              <div className="wx-row-copy">
+                <span className="wx-row-kicker">{row.kicker}</span>
+                <h3>{row.title}</h3>
+                <WxTypeIn text={row.text} />
+                <button
+                  type="button"
+                  className="wx-explore"
+                  onClick={() => {
+                    if (row.tab === undefined) {
+                      onOpenSchedule();
+                      return;
+                    }
+                    selectTab(row.tab);
+                    jumpTo("cpx-viewer");
+                  }}
+                >
+                  {row.ctaLabel} <ArrowRight size={16} />
+                </button>
+              </div>
+              <div className="wx-row-visual">
+                <WxBloomField seed={row.seed} />
+                <WxMock spec={row.mock} />
+              </div>
             </div>
-            <div className="wx-row-visual">
-              <WxBloomField seed={21} />
-              <WxTilt className="wx-mock" max={6}>
-                <div className="wx-mock-title">
-                  <b>Week of Jun 15</b>
-                  <span>4 crews · 11 jobs</span>
-                </div>
-                <div className="wx-mock-board">
-                  <i />
-                  <i>MON</i>
-                  <i>TUE</i>
-                  <i>WED</i>
-                  <i>THU</i>
-                  <i>Concrete 1</i>
-                  <u className="f1" />
-                  <u className="f1" />
-                  <u />
-                  <u className="f1" />
-                  <i>Framing 2</i>
-                  <u />
-                  <u className="f3" />
-                  <u className="f3" />
-                  <u className="f3" />
-                  <i>Utility 1</i>
-                  <u className="f2" />
-                  <u />
-                  <u className="f2" />
-                  <u />
-                </div>
-              </WxTilt>
-            </div>
-          </div>
-
-          <div className="wx-row rev" data-reveal>
-            <div className="wx-row-copy">
-              <span className="wx-row-kicker">Capacity &amp; utilization</span>
-              <h3>Know how loaded every crew is before Monday.</h3>
-              <WxTypeIn text="Utilization is worked out from shift length, crew size, and booked days, so an overloaded crew shows up as a number — not as overtime on Friday." />
-              <button type="button" className="wx-explore" onClick={() => { selectTab(0); jumpTo("cpx-viewer"); }}>
-                See capacity <ArrowRight size={16} />
-              </button>
-            </div>
-            <div className="wx-row-visual">
-              <WxBloomField seed={22} />
-              <WxTilt className="wx-mock" max={6}>
-                <div className="wx-mock-title">
-                  <b>Crew load</b>
-                  <span>This week</span>
-                </div>
-                <div className="wx-mock-tl">
-                  <div>
-                    <i>Concrete 1</i>
-                    <span style={{ "--o": "0%", "--w": "82%" } as CSSProperties} />
-                  </div>
-                  <div>
-                    <i>Framing 2</i>
-                    <span style={{ "--o": "0%", "--w": "100%" } as CSSProperties} />
-                  </div>
-                  <div>
-                    <i>Utility 1</i>
-                    <span style={{ "--o": "0%", "--w": "64%" } as CSSProperties} />
-                  </div>
-                  <div>
-                    <i>Finish 3</i>
-                    <span style={{ "--o": "0%", "--w": "91%" } as CSSProperties} />
-                  </div>
-                </div>
-              </WxTilt>
-            </div>
-          </div>
-
-          <div className="wx-row" data-reveal>
-            <div className="wx-row-copy">
-              <span className="wx-row-kicker">Conflict checks</span>
-              <h3>Double-bookings stopped at the drop, not on site.</h3>
-              <WxTypeIn text="Every drop is checked against the crew's other bookings. A clash is flagged with a suggested fix, and if you need to book it anyway, that stays your call." />
-              <button type="button" className="wx-explore" onClick={() => { selectTab(1); jumpTo("cpx-viewer"); }}>
-                See conflict checks <ArrowRight size={16} />
-              </button>
-            </div>
-            <div className="wx-row-visual">
-              <WxBloomField seed={23} />
-              <WxTilt className="wx-mock" max={6}>
-                <div className="wx-mock-title">
-                  <b>Conflict check</b>
-                  <span>Wed</span>
-                </div>
-                <div className="wx-mock-list">
-                  <div className="warn">
-                    <AlertTriangle size={17} /> Concrete 1 double-booked <em>Clash</em>
-                  </div>
-                  <div className="warn">
-                    <Users size={17} /> Framing 2 over capacity <em>Over</em>
-                  </div>
-                  <div>
-                    <CheckCircle2 size={17} /> Move slab to Concrete 3 <em>Fix</em>
-                  </div>
-                </div>
-              </WxTilt>
-            </div>
-          </div>
-
-          <div className="wx-row rev" data-reveal>
-            <div className="wx-row-copy">
-              <span className="wx-row-kicker">Work calendar &amp; readiness</span>
-              <h3>Only ready work, only on working days.</h3>
-              <WxTypeIn text="Holidays and your own non-working days come from the org calendar, and jobs rise to the top once materials, permits, and locates are cleared — so nothing gets scheduled that cannot start." />
-              <button type="button" className="wx-explore" onClick={() => { selectTab(3); jumpTo("cpx-viewer"); }}>
-                See ready work <ArrowRight size={16} />
-              </button>
-            </div>
-            <div className="wx-row-visual">
-              <WxBloomField seed={24} />
-              <WxTilt className="wx-mock" max={6}>
-                <div className="wx-mock-title">
-                  <b>Ready to schedule</b>
-                  <span>Tomorrow</span>
-                </div>
-                <div className="wx-mock-list">
-                  <div>
-                    <CheckCircle2 size={17} /> Parking deck pour <em>Ready</em>
-                  </div>
-                  <div className="warn">
-                    <Clock size={17} /> Harborview punch <em>Waiting</em>
-                  </div>
-                  <div className="warn">
-                    <AlertTriangle size={17} /> Tech Ridge utilities <em>Blocked</em>
-                  </div>
-                </div>
-              </WxTilt>
-            </div>
-          </div>
-
-          <div className="wx-row" data-reveal>
-            <div className="wx-row-copy">
-              <span className="wx-row-kicker">Live in the field</span>
-              <h3>The board the field sees is the one you published.</h3>
-              <WxTypeIn text="Changes show up live for everyone on the schedule. Print crew week sheets, export CSV, or subscribe a crew's calendar feed so the plan travels with them." />
-              <button type="button" className="wx-explore" onClick={onOpenSchedule}>
-                See it live <ArrowRight size={16} />
-              </button>
-            </div>
-            <div className="wx-row-visual">
-              <WxBloomField seed={25} />
-              <WxTilt className="wx-mock" max={6}>
-                <div className="wx-mock-title">
-                  <b>Crew week sheet</b>
-                  <span>Concrete 1</span>
-                </div>
-                <div className="wx-mock-list">
-                  <div>
-                    <CalendarDays size={17} /> Mon · Deck pour · Parking deck <em>7:00</em>
-                  </div>
-                  <div>
-                    <CalendarDays size={17} /> Tue · Deck pour · Parking deck <em>7:00</em>
-                  </div>
-                  <div>
-                    <CalendarDays size={17} /> Thu · Slab · Harborview <em>6:30</em>
-                  </div>
-                </div>
-              </WxTilt>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* Chapter 2 · The suite + the board (dark) */}
-      <section className="cpx-section cpx-reasons" id="cpx-reasons" tabIndex={-1} aria-labelledby="cpx-reasons-title" data-reveal ref={reasonsRef}>
+      <section
+        className="cpx-section cpx-reasons"
+        id="cpx-reasons"
+        tabIndex={-1}
+        aria-labelledby="cpx-reasons-title"
+        data-reveal
+        ref={reasonsRef}
+      >
         <div className="cpx-reasons-bg" aria-hidden="true">
           <WxBloomField seed={23} />
         </div>
@@ -10134,12 +12657,18 @@ function WelcomeCrewSchedulingPage({
             </button>
           </div>
 
-          <div className="cpx-carousel" role="group" aria-roledescription="carousel" aria-label="Reasons to choose BuildFlow" onKeyDown={onReasonsKey}>
+          <div
+            className="cpx-carousel"
+            role="group"
+            aria-roledescription="carousel"
+            aria-label="Reasons to choose BuildFlow"
+            onKeyDown={onReasonsKey}
+          >
             <button type="button" className="cpx-carousel-arrow left" aria-label="Previous reason" onClick={() => stepReasons(-1)}>
               <ChevronLeft size={22} />
             </button>
             <div className="cpx-carousel-stage">
-              {CREW_REASONS.map((reason, index) => {
+              {content.reasons.map((reason, index) => {
                 const offset = reasonOffset(index);
                 const active = offset === 0;
                 const open = active && openReason === reason.slot;
@@ -10203,12 +12732,11 @@ function WelcomeCrewSchedulingPage({
         </div>
       </section>
 
-
       {/* Chapter 3 · Tabbed viewer (light paper) */}
       <section className="cpx-section cpx-paper-bg" id="cpx-viewer" tabIndex={-1} data-reveal>
         <div className="cpx-inner">
           <div className="cpx-viewer">
-            <div className="cpx-tabs" role="tablist" aria-orientation="vertical" aria-label="The crew scheduling suite">
+            <div className="cpx-tabs" role="tablist" aria-orientation="vertical" aria-label={`${content.name} features`}>
               {suiteTabs.map((tab, index) => (
                 <button
                   type="button"
@@ -10233,7 +12761,9 @@ function WelcomeCrewSchedulingPage({
             <div className="cpx-viewer-panel" role="tabpanel" id="cpx-tabpanel" aria-labelledby={`cpx-tab-${activeFeature.slot}`}>
               <div className={`cpx-viewer-frame${frameOn ? " is-on" : ""}`} key={activeFeature.slot}>
                 <CsMedia slot={activeFeature.slot}>
-                  <div className="cs-panel">{activeFeature.mock}</div>
+                  <div className="cs-panel">
+                    <CsMock spec={activeFeature.mock} />
+                  </div>
                 </CsMedia>
               </div>
             </div>
@@ -10242,11 +12772,11 @@ function WelcomeCrewSchedulingPage({
       </section>
 
       {/* Closing advert — HubSpot-style CTA band above the footer */}
-      <section className="cpx-section cpx-cta cpx-paper-bg" id="cpx-cta" aria-labelledby="cpx-cta-title" data-reveal>
+      <section className="cpx-section cpx-cta cpx-cta-band" id="cpx-cta" aria-labelledby="cpx-cta-title" data-reveal>
         <div className="cpx-inner cpx-cta-grid">
           <div className="cpx-cta-copy">
-            <h2 id="cpx-cta-title">Plan the week on Friday. Run it on Monday.</h2>
-            <p>Crews, jobs, materials, and the field on one schedule. Start free, and see your first week planned in minutes.</p>
+            <h2 id="cpx-cta-title">{content.cta.title}</h2>
+            <p>{content.cta.text}</p>
             <div className="cpx-cta-actions">
               <button type="button" className="cpx-cta-btn primary" onClick={onGetStarted}>
                 Get BuildFlow
@@ -10258,7 +12788,7 @@ function WelcomeCrewSchedulingPage({
           </div>
           <div className="cpx-cta-visual" aria-hidden="true">
             <img className="cpx-cta-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
-            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES["Crew Scheduling"]} alt="" loading="lazy" />
+            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES[content.photoKey]} alt="" loading="lazy" />
           </div>
         </div>
       </section>
@@ -10270,7 +12800,7 @@ function WelcomeCrewSchedulingPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
+              <a href={content.hash}>{content.name}</a>
               <a href="#schedule-ai">Schedule AI</a>
               <a href="#map-field-ops">Map &amp; Field Ops</a>
               <a href="#materials-readiness">Materials Readiness</a>
@@ -10321,6 +12851,8 @@ function WelcomeCrewSchedulingPage({
   );
 }
 
+/* Schedule AI is the Crew Scheduling page with Schedule AI's words: same layout,
+   same motion, its own content object. One implementation, so the two cannot drift. */
 function WelcomeScheduleAiPage({
   onBack,
   onOpenSchedule,
@@ -10330,506 +12862,13 @@ function WelcomeScheduleAiPage({
   onOpenSchedule: () => void;
   onEnterDashboard: () => void;
 }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  // Pointer-reactive auroras / cursor — same tween the welcome home uses.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  // Reveal-on-scroll tweens (IntersectionObserver adds .in).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const readyRows: Array<{ job: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { job: "Parking deck pour", detail: "Concrete 1 · materials in", badge: "READY", tone: "ready", icon: PackageCheck },
-    { job: "Harborview punch", detail: "Finish 2 · rain 80% Thu", badge: "WEATHER", tone: "wait", icon: CloudSun },
-    { job: "Warehouse slab", detail: "Concrete 3 · rebar late", badge: "MATERIAL", tone: "risk", icon: AlertTriangle },
-    { job: "Tech Ridge utilities", detail: "Utility 1 · locates pending", badge: "HOLD", tone: "wait", icon: Clock }
-  ];
-
-  const whyCards: Array<{ icon: typeof Grid2X2; title: string; text: string }> = [
-    {
-      icon: ShieldAlert,
-      title: "Keep humans in control",
-      text: "Schedule AI drafts the moves and explains each one — but nothing high-impact publishes until a planner reviews and approves it."
-    },
-    {
-      icon: CalendarDays,
-      title: "Protect the promised date",
-      text: "When materials slip or weather hits, it re-plans in seconds and shows the downstream impact, so the dates you committed to stay real."
-    },
-    {
-      icon: TrendingUp,
-      title: "Reclaim hours every week",
-      text: "The repetitive schedule review runs in the background, so planners spend their time deciding — not hunting for tomorrow's conflicts."
-    }
-  ];
-
   return (
-    <main className="cs-page" id="schedule-ai" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      {/* Hero */}
-      <section className="cs-hero" data-reveal>
-        <div className="cs-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Schedule AI
-          </span>
-          <h1 className="cs-hero-title">
-            <WxRotatingHeadline prefix="Schedule AI that thinks " phrases={scheduleAiPhrases} />
-          </h1>
-          <p className="cs-hero-sub">
-            An always-on planning assistant that reviews the whole board in the background — ranking ready work, flagging conflicts, and
-            drafting the moves that protect the day, before your first crew call.
-          </p>
-          <div className="cs-hero-actions">
-            <WxMagnetic className="wx-btn wx-btn-ink" onClick={onEnterDashboard} ariaLabel="Get BuildFlow">
-              Get BuildFlow <ArrowRight size={18} />
-            </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenSchedule} ariaLabel="See Schedule AI live">
-              <PlayCircle size={18} /> See it live
-            </WxMagnetic>
-          </div>
-        </div>
-        <WxTilt className="cs-hero-stage" max={6} restRx={3} restRy={-9}>
-          <div className="cs-panel cs-hero-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Schedule AI &middot; Tomorrow</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-ai-prompt">
-                  <Sparkles size={15} /> What&rsquo;s at risk tomorrow?
-                </div>
-                <div className="cs-list">
-                  <div className="cs-item alert">
-                    <span className="cs-ic">
-                      <AlertTriangle size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Concrete 1 double-booked</strong>
-                      <span>Deck pour + slab &middot; Wed</span>
-                    </span>
-                    <span className="cs-badge risk">CLASH</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <CheckCircle2 size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Move slab &rarr; Concrete 3</strong>
-                      <span>Suggested fix &middot; clears Wed</span>
-                    </span>
-                    <span className="cs-badge ready">FIX</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <Clock size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Rebar delivery running late</strong>
-                      <span>2 jobs at risk &middot; Thu</span>
-                    </span>
-                    <span className="cs-badge wait">RISK</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <Sparkles size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Framing 2 has capacity</strong>
-                      <span>Pull Level 4 forward</span>
-                    </span>
-                    <span className="cs-badge ready">READY</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </WxTilt>
-      </section>
-
-      {/* Explore title */}
-      <section className="cs-explore" data-reveal>
-        <span className="wx-eyebrow-2">The AI planning layer</span>
-        <h2 className="cs-explore-title">Everything Schedule AI should do.</h2>
-        <p className="cs-explore-sub">
-          It reads jobs, crews, materials, weather, and routes together, then brings planners the moves most likely to protect the day
-          &mdash; with the reasoning attached.
-        </p>
-      </section>
-
-      {/* Lead feature */}
-      <section className="cs-lead" data-reveal>
-        <div className="cs-panel cs-lead-panel">
-          <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar">
-              <i />
-              <i />
-              <i />
-              <strong>Tomorrow readiness &middot; ranked</strong>
-            </div>
-            <div className="cs-mock-body">
-              <div className="cs-list">
-                {readyRows.map((row) => {
-                  const Icon = row.icon;
-                  return (
-                    <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.job}>
-                      <span className="cs-ic">
-                        <Icon size={15} />
-                      </span>
-                      <span className="cs-tt">
-                        <strong>{row.job}</strong>
-                        <span>{row.detail}</span>
-                      </span>
-                      <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="cs-feature-meta">
-          <h3>An always-on planning assistant.</h3>
-          <p>
-            Ask what&rsquo;s at risk, which jobs can start, or what should move if a delivery slips &mdash; and get an answer built from the
-            same live data your team already uses to run the field.
-          </p>
-        </div>
-      </section>
-
-      {/* Feature grid 1 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Conflict scan</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  <div className="cs-item alert">
-                    <span className="cs-ic">
-                      <AlertTriangle size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Concrete 1 double-booked</strong>
-                      <span>Deck pour + slab &middot; Wed</span>
-                    </span>
-                    <span className="cs-badge risk">CLASH</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <Users size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Framing 2 over capacity</strong>
-                      <span>3 jobs &middot; 6 of 4 crew</span>
-                    </span>
-                    <span className="cs-badge wait">OVER</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <CloudSun size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Weather risk Thursday</strong>
-                      <span>Rain 80% &middot; 2 pours exposed</span>
-                    </span>
-                    <span className="cs-badge wait">WEATHER</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Spot conflicts before they cost a day</h3>
-          <p>
-            Double-bookings, overbooked crews, late materials, and weather get caught in the background &mdash; long before the 6am crew
-            call.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Ready work &middot; ranked</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <PackageCheck size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Parking deck pour</strong>
-                      <span>Materials in &middot; permit cleared</span>
-                    </span>
-                    <span className="cs-badge ready">READY</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <Clock size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Harborview punch</strong>
-                      <span>Waiting on finish materials</span>
-                    </span>
-                    <span className="cs-badge wait">WAIT</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <AlertTriangle size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Tech Ridge utilities</strong>
-                      <span>Locates not returned</span>
-                    </span>
-                    <span className="cs-badge risk">BLOCKED</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Rank ready work automatically</h3>
-          <p>Jobs with materials, permits, and locates cleared rise to the top, so the plan leads with work that can actually start.</p>
-        </article>
-      </section>
-
-      {/* Feature grid 2 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Recovery plan &middot; draft</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <CheckCircle2 size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Move slab &rarr; Concrete 3</strong>
-                      <span>Clears the Wed conflict</span>
-                    </span>
-                    <span className="cs-badge ready">STEP 1</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <CheckCircle2 size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Pull Level 4 forward</strong>
-                      <span>Uses Framing 2 capacity</span>
-                    </span>
-                    <span className="cs-badge ready">STEP 2</span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <CheckCircle2 size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Reschedule utilities &rarr; Fri</strong>
-                      <span>After locates return</span>
-                    </span>
-                    <span className="cs-badge ready">STEP 3</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Draft recovery plans in seconds</h3>
-          <p>
-            When the day slips, Schedule AI proposes an ordered set of moves that gets the week back on track &mdash; ready for you to
-            approve or adjust.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Why this change</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <Sparkles size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Moved slab to Concrete 3</strong>
-                      <span>Concrete 1 was double-booked; C3 is free and nearest the pour</span>
-                    </span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <Sparkles size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Held Tech Ridge to Friday</strong>
-                      <span>Locates not returned; starting Thu risks a stop-work</span>
-                    </span>
-                  </div>
-                  <div className="cs-item">
-                    <span className="cs-ic">
-                      <ShieldAlert size={15} />
-                    </span>
-                    <span className="cs-tt">
-                      <strong>Waiting on your approval</strong>
-                      <span>No high-impact move publishes on its own</span>
-                    </span>
-                    <span className="cs-badge wait">REVIEW</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Explain every change</h3>
-          <p>
-            Each recommendation comes with the trigger, the source data, and the expected field impact &mdash; so your team can trust it or
-            overrule it in seconds.
-          </p>
-        </article>
-      </section>
-
-      {/* Why it matters */}
-      <section className="cs-why" data-reveal>
-        <div className="cs-why-head">
-          <span className="wx-eyebrow-2">Why it matters</span>
-          <h2>AI that protects the day, with humans in charge.</h2>
-          <p>
-            Schedule AI exists to do the repetitive review no one has time for, then hand your planners the best version of tomorrow&rsquo;s
-            plan &mdash; with the reasoning attached and the final call still theirs.
-          </p>
-        </div>
-        <div className="cs-icons three">
-          {whyCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <article className="cs-icon-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
-                <span className="cs-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="wx-footer">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-              <a href="#production-reports">Production Reports</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#updates">Updates</a>
-              <a href="#help-center">Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
-              Back to home
-            </a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <WelcomeCrewSchedulingPage
+      onBack={onBack}
+      onOpenSchedule={onOpenSchedule}
+      onGetStarted={onEnterDashboard}
+      content={SCHEDULE_AI_PAGE_CONTENT}
+    />
   );
 }
 
@@ -10939,6 +12978,8 @@ function MfoMap({ mode }: { mode: "live" | "route" }) {
   );
 }
 
+/* Map & Field Ops is the Crew Scheduling page with the field-ops words: same
+   layout, same motion, its own content object. One implementation for all three. */
 function WelcomeMapFieldOpsPage({
   onBack,
   onOpenMap,
@@ -10948,411 +12989,13 @@ function WelcomeMapFieldOpsPage({
   onOpenMap: () => void;
   onGetStarted: () => void;
 }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  // Pointer-reactive auroras / cursor — same tween the welcome home uses.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  // Reveal-on-scroll tweens (IntersectionObserver adds .in).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const trackRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Concrete 1", detail: "Riverside deck · working", badge: "ON SITE", tone: "ready", icon: HardHat },
-    { strong: "Framing 2", detail: "8 min out · 2.1 mi", badge: "EN ROUTE", tone: "wait", icon: Navigation },
-    { strong: "Truck 4", detail: "Rebar delivery · to Bay 3", badge: "MOVING", tone: "wait", icon: Truck },
-    { strong: "Utility 1", detail: "Central yard · staging", badge: "STAGING", tone: "ready", icon: Users }
-  ];
-
-  const routeSteps: Array<{ strong: string; detail: string; badge: string; icon: typeof Grid2X2 }> = [
-    { strong: "Depart Central Yard", detail: "6:40a · load rebar", badge: "STEP 1", icon: Navigation },
-    { strong: "Riverside → Harborview", detail: "Two stops · 8.7 mi", badge: "STEP 2", icon: Route },
-    { strong: "Arrive deck pour", detail: "7:41a · beats 8:00a call", badge: "STEP 3", icon: MapPin }
-  ];
-
-  const filterRows: Array<{ label: string; value: string; icon: typeof Grid2X2 }> = [
-    { label: "Territory", value: "Austin, TX · 3 sites", icon: MapPin },
-    { label: "Crew", value: "Concrete 1", icon: HardHat },
-    { label: "Vehicle", value: "Trucks", icon: Truck },
-    { label: "Priority", value: "High", icon: AlertTriangle },
-    { label: "Status", value: "On Site", icon: CheckCircle2 }
-  ];
-
-  const siteRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Rain 80% · Thursday", detail: "2 pours exposed", badge: "WEATHER", tone: "wait", icon: CloudSun },
-    { strong: "Locates pending", detail: "Tech Ridge utilities", badge: "BLOCKED", tone: "risk", icon: AlertTriangle },
-    { strong: "Site access clear", detail: "Gate code 4471", badge: "READY", tone: "ready", icon: CheckCircle2 }
-  ];
-
-  const whyCards: Array<{ icon: typeof Grid2X2; title: string; text: string }> = [
-    {
-      icon: Navigation,
-      title: "Cut windshield time",
-      text: "Optimized routes and crew-proximity dispatch shrink the drive between jobs — so more of the paid day is spent on site, not behind the wheel."
-    },
-    {
-      icon: MapPin,
-      title: "Dispatch with real context",
-      text: "Crews, trucks, jobs, traffic, and weather on one live map — so the person making the call is looking at the field exactly as it is right now."
-    },
-    {
-      icon: Timer,
-      title: "Move the day, not just a pin",
-      text: "When a site slips or a truck runs late, re-route and re-assign in seconds — and the field sees the new plan before they ever roll out."
-    }
-  ];
-
   return (
-    <main className="cs-page" id="map-field-ops" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      {/* Hero */}
-      <section className="cs-hero" data-reveal>
-        <div className="cs-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Map &amp; Field Ops
-          </span>
-          <h1 className="cs-hero-title">
-            <WxRotatingHeadline prefix="See the whole field, " phrases={mapFieldOpsPhrases} />
-          </h1>
-          <p className="cs-hero-sub">
-            Route crews, track field movement, and manage dispatch context from one live map — crew proximity, route timing, site access,
-            and active work, all before the day moves in the field.
-          </p>
-          <div className="cs-hero-actions">
-            <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
-              Get BuildFlow <ArrowRight size={18} />
-            </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenMap} ariaLabel="See Map & Field Ops live">
-              <PlayCircle size={18} /> See it live
-            </WxMagnetic>
-          </div>
-        </div>
-        <WxTilt className="cs-hero-stage" max={6} restRx={3} restRy={-9}>
-          <div className="cs-panel cs-hero-panel">
-            <MfoMap mode="live" />
-          </div>
-        </WxTilt>
-      </section>
-
-      {/* Explore title */}
-      <section className="cs-explore" data-reveal>
-        <span className="wx-eyebrow-2">The field operations suite</span>
-        <h2 className="cs-explore-title">Everything dispatch should see.</h2>
-        <p className="cs-explore-sub">
-          From the live map down to a single truck&rsquo;s next stop, BuildFlow keeps crews, routes, and site conditions in one view — so
-          the field moves on the plan you can actually see.
-        </p>
-      </section>
-
-      {/* Lead feature — route optimization */}
-      <section className="cs-lead" data-reveal>
-        <div className="cs-panel cs-lead-panel">
-          <MfoMap mode="route" />
-        </div>
-        <div className="cs-feature-meta">
-          <h3>Route crews the short way, every morning.</h3>
-          <p>
-            BuildFlow orders the day&rsquo;s stops into the fastest run and shows the drive time before anyone leaves the yard &mdash; so
-            crews arrive ahead of the call instead of chasing it across town.
-          </p>
-        </div>
-      </section>
-
-      {/* Feature grid 1 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Live tracking</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-tabs">
-                  <span className="cs-tab on">Crews</span>
-                  <span className="cs-tab">Trucks</span>
-                  <span className="cs-tab">Jobs</span>
-                </div>
-                <div className="cs-list">
-                  {trackRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="cs-item" key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Track crews, trucks, and jobs live</h3>
-          <p>Follow every crew and vehicle on the map in real time, with ETAs and status, so you always know where the day actually is.</p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Route optimization</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-tabs">
-                  <span className="cs-tab on">Fastest Time</span>
-                  <span className="cs-tab">Least Fuel</span>
-                  <span className="cs-tab">Balanced</span>
-                </div>
-                <div className="cs-list">
-                  {routeSteps.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="cs-item" key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className="cs-badge ready">{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Optimize the route by what matters</h3>
-          <p>
-            Solve each run for fastest time, least fuel, or a balance of both — add a trucker destination and BuildFlow re-orders the stops
-            and saves the route.
-          </p>
-        </article>
-      </section>
-
-      {/* Feature grid 2 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Map filters &middot; layers</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-tabs">
-                  <span className="cs-tab on">Production</span>
-                  <span className="cs-tab">Traffic</span>
-                  <span className="cs-tab">Satellite</span>
-                </div>
-                <div className="cs-list">
-                  {filterRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="cs-item" key={row.label}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.label}</strong>
-                          <span>{row.value}</span>
-                        </span>
-                        <span className="cs-badge ready">SET</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Filter the map to what you need</h3>
-          <p>
-            Narrow by territory, crew, vehicle, priority, and status, then switch Production, Traffic, or Satellite layers to see the site
-            the way the run needs it.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Site conditions</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="mfo-weather">
-                  <span className="mfo-temp">78&deg;</span>
-                  <span className="mfo-wx-meta">
-                    <strong>Austin, TX</strong>
-                    <span>Precip 10% &middot; Wind SSE 8 &middot; Humidity 48%</span>
-                  </span>
-                  <CloudSun size={30} />
-                </div>
-                <div className="cs-list">
-                  {siteRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Read the site before you roll out</h3>
-          <p>
-            Local weather, forecastIQ risk, and access notes sit on the map for every jobsite, so nobody drives to a rained-out pour or a
-            gate they can&rsquo;t open.
-          </p>
-        </article>
-      </section>
-
-      {/* Why it matters */}
-      <section className="cs-why" data-reveal>
-        <div className="cs-why-head">
-          <span className="wx-eyebrow-2">Why it matters</span>
-          <h2>The field moves — the plan should move with it.</h2>
-          <p>
-            Map &amp; Field Ops exists to close the gap between the schedule and the street: where crews are, how they get to the next job,
-            and what the site looks like when they arrive &mdash; all in one place.
-          </p>
-        </div>
-        <div className="cs-icons three">
-          {whyCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <article className="cs-icon-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
-                <span className="cs-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="wx-footer">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-              <a href="#production-reports">Production Reports</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#updates">Updates</a>
-              <a href="#help-center">Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
-              Back to home
-            </a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <WelcomeCrewSchedulingPage
+      onBack={onBack}
+      onOpenSchedule={onOpenMap}
+      onGetStarted={onGetStarted}
+      content={MAP_FIELD_OPS_PAGE_CONTENT}
+    />
   );
 }
 
@@ -11397,6 +13040,8 @@ function FudUpdate({ item }: { item: FudUpdateData }) {
   );
 }
 
+/* Field Updates & DelayIQs is the Crew Scheduling page with the field-log words:
+   same layout, same motion, its own content object. */
 function WelcomeFieldUpdatesDelayIQsPage({
   onBack,
   onOpenField,
@@ -11406,517 +13051,13 @@ function WelcomeFieldUpdatesDelayIQsPage({
   onOpenField: () => void;
   onGetStarted: () => void;
 }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  // Pointer-reactive auroras / cursor — same tween the welcome home uses.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  // Reveal-on-scroll tweens (IntersectionObserver adds .in).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const heroFeed: FudUpdateData[] = [
-    {
-      initials: "MJ",
-      avatar: "green",
-      who: "Concrete Crew 1 · Riverside",
-      time: "8:42 AM",
-      msg: "Deck pour complete — stripping forms this afternoon. Slab looks clean.",
-      badge: "ON SITE",
-      tone: "ready",
-      photos: ["a", "b", "c"]
-    },
-    {
-      initials: "TR",
-      avatar: "rose",
-      who: "Framing Crew 2 · Pinecrest",
-      time: "9:15 AM",
-      msg: "Inspection pushed to Friday — holding rough-in until it clears.",
-      badge: "DELAYIQED",
-      tone: "risk",
-      photos: ["d"]
-    }
-  ];
-
-  const feedCards: FudUpdateData[] = [
-    {
-      initials: "MJ",
-      avatar: "green",
-      who: "Concrete Crew 1",
-      time: "On site · staging",
-      msg: "Materials landed, crew staging for the deck pour.",
-      badge: "ON SITE",
-      tone: "ready",
-      photos: ["a", "b"]
-    },
-    {
-      initials: "LS",
-      avatar: "blue",
-      who: "Utility Crew 3",
-      time: "7:58 AM",
-      msg: "Trench inspection passed — backfilling the east run now.",
-      badge: "IN PROGRESS",
-      tone: "wait",
-      photos: []
-    },
-    {
-      initials: "TR",
-      avatar: "rose",
-      who: "Framing Crew 2",
-      time: "9:15 AM",
-      msg: "Access gate locked — superintendent flagged, waiting on code.",
-      badge: "AT RISK",
-      tone: "risk",
-      photos: []
-    }
-  ];
-
-  const impactRows: Array<{ cause: string; detail: string; days: number; w: number; cls: string; icon: typeof Grid2X2 }> = [
-    { cause: "Weather delayIQ", detail: "Rain 80% · 2 pours exposed", days: 3, w: 100, cls: "high", icon: CloudSun },
-    { cause: "Inspection hold", detail: "Pinecrest moved to Friday", days: 2, w: 66, cls: "", icon: ClipboardCheck },
-    { cause: "Material shortage", detail: "Rebar for warehouse slab", days: 1, w: 33, cls: "low", icon: PackageCheck }
-  ];
-
-  const delayIQRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Weather delayIQ", detail: "Rain 80% · 2 pours exposed", badge: "HIGH", tone: "risk", icon: CloudSun },
-    { strong: "Inspection hold", detail: "Pinecrest moved to Friday", badge: "MED", tone: "wait", icon: ClipboardCheck },
-    { strong: "Rebar shortage", detail: "Warehouse slab waiting", badge: "MED", tone: "wait", icon: PackageCheck }
-  ];
-
-  const recoverySteps: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Move slab pour → Friday", detail: "After locates return", badge: "STEP 1", tone: "ready", icon: CheckCircle2 },
-    { strong: "Pull framing forward", detail: "Uses Crew 2 capacity", badge: "STEP 2", tone: "ready", icon: CheckCircle2 },
-    { strong: "Flag milestone risk", detail: "Notify PM · 1 day at stake", badge: "REVIEW", tone: "wait", icon: ShieldAlert }
-  ];
-
-  const whyCards: Array<{ icon: typeof Grid2X2; title: string; text: string }> = [
-    {
-      icon: ClipboardList,
-      title: "One source of truth for the day",
-      text: "Progress, photos, notes, and delayIQs live in a single field log — no more chasing texts, group chats, and voicemails to piece together what happened on site."
-    },
-    {
-      icon: ImagePlus,
-      title: "Proof, not hearsay",
-      text: "Timestamped photos and status from the crew who was there settle disputes, backcharges, and reviews with evidence instead of memory."
-    },
-    {
-      icon: ShieldAlert,
-      title: "Catch the slip before it spreads",
-      text: "A cause and a schedule impact on every delayIQ means the office sees the day forming and can re-plan while there is still time to protect the date."
-    }
-  ];
-
   return (
-    <main className="cs-page" id="field-updates-delayIQs" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      {/* Hero */}
-      <section className="cs-hero" data-reveal>
-        <div className="cs-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Field Updates &amp; DelayIQs
-          </span>
-          <h1 className="cs-hero-title">
-            <WxRotatingHeadline prefix="The whole field, " phrases={fieldUpdatesPhrases} />
-          </h1>
-          <p className="cs-hero-sub">
-            Capture crew check-ins, jobsite photos, and delayIQ causes the moment they happen — then turn every slip into a recovery plan
-            while the office still has time to adjust the schedule.
-          </p>
-          <div className="cs-hero-actions">
-            <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
-              Get BuildFlow <ArrowRight size={18} />
-            </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenField} ariaLabel="See Field Updates & DelayIQs live">
-              <PlayCircle size={18} /> See it live
-            </WxMagnetic>
-          </div>
-        </div>
-        <WxTilt className="cs-hero-stage" max={6} restRx={3} restRy={-9}>
-          <div className="cs-panel cs-hero-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Live field feed</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="fud-stats">
-                  <div className="fud-stat">
-                    <strong>14</strong>
-                    <span>Updates</span>
-                  </div>
-                  <div className="fud-stat green">
-                    <strong>6</strong>
-                    <span>On Site</span>
-                  </div>
-                  <div className="fud-stat rose">
-                    <strong>2</strong>
-                    <span>DelayIQed</span>
-                  </div>
-                  <div className="fud-stat">
-                    <strong>9</strong>
-                    <span>Photos</span>
-                  </div>
-                </div>
-                <div className="fud-feed">
-                  {heroFeed.map((item) => (
-                    <FudUpdate item={item} key={item.who} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </WxTilt>
-      </section>
-
-      {/* Explore title */}
-      <section className="cs-explore" data-reveal>
-        <span className="wx-eyebrow-2">The field reporting suite</span>
-        <h2 className="cs-explore-title">Everything the field should tell the office.</h2>
-        <p className="cs-explore-sub">
-          From a crew&rsquo;s 7 AM photo to the delayIQ that moves a milestone, BuildFlow keeps progress, proof, and problems in one log the
-          whole team can act on.
-        </p>
-      </section>
-
-      {/* Lead feature — delayIQ impact forecastIQ */}
-      <section className="cs-lead" data-reveal>
-        <div className="cs-panel cs-lead-panel">
-          <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar">
-              <i />
-              <i />
-              <i />
-              <strong>DelayIQ impact &middot; this month</strong>
-            </div>
-            <div className="cs-mock-body">
-              <div className="fud-impact">
-                {impactRows.map((row) => {
-                  const Icon = row.icon;
-                  return (
-                    <div className="fud-impact-row" key={row.cause}>
-                      <div className="fud-impact-top">
-                        <span className="fud-cause">
-                          <Icon size={15} /> {row.cause}
-                        </span>
-                        <span className="fud-days">
-                          +{row.days} {row.days === 1 ? "day" : "days"}
-                        </span>
-                      </div>
-                      <div className="fud-impact-track">
-                        <div className={`fud-impact-fill ${row.cls}`} style={{ "--w": `${row.w}%` } as CSSProperties} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="fud-impact-total">
-                <strong>6 days</strong>
-                <span>total schedule impact flagged this month</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="cs-feature-meta">
-          <h3>Turn slips into recovery, not surprises.</h3>
-          <p>
-            Every delayIQ gets a cause, a severity, and a schedule impact in days &mdash; so the office sees the slip forming and can
-            re-plan before it ever reaches the completion date.
-          </p>
-        </div>
-      </section>
-
-      {/* Feature grid 1 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Field updates</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="fud-feed">
-                  {feedCards.map((item) => (
-                    <FudUpdate item={item} key={item.who} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Check in from the field in seconds</h3>
-          <p>
-            Crews post progress, notes, and status from the jobsite — tied to the right project and job, searchable, and in front of the
-            office the moment they hit send.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Photo evidence</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="fud-grid">
-                  <span className="fud-photo a">
-                    <span className="fud-photo-ic">
-                      <ImagePlus size={13} />
-                    </span>
-                  </span>
-                  <span className="fud-photo b">
-                    <span className="fud-photo-ic">
-                      <ImagePlus size={13} />
-                    </span>
-                  </span>
-                  <span className="fud-photo c">
-                    <span className="fud-photo-ic">
-                      <ImagePlus size={13} />
-                    </span>
-                  </span>
-                  <span className="fud-photo d">
-                    <span className="fud-photo-ic">
-                      <ImagePlus size={13} />
-                    </span>
-                  </span>
-                  <span className="fud-photo b">
-                    <span className="fud-photo-ic">
-                      <ImagePlus size={13} />
-                    </span>
-                  </span>
-                  <span className="fud-photo a">
-                    <span className="fud-photo-ic">
-                      <ImagePlus size={13} />
-                    </span>
-                  </span>
-                </div>
-                <div className="fud-attach">
-                  <Paperclip size={15} /> Drag &amp; drop — up to 8 photos per update
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Attach the photo that tells the story</h3>
-          <p>
-            Jobsite photos ride along with every update, so progress and problems are proof, not hearsay — and the office reviews real
-            conditions without a site visit.
-          </p>
-        </article>
-      </section>
-
-      {/* Feature grid 2 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>DelayIQ log</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-tabs">
-                  <span className="cs-tab on">Weather</span>
-                  <span className="cs-tab">Material</span>
-                  <span className="cs-tab">Labor</span>
-                  <span className="cs-tab">Equipment</span>
-                  <span className="cs-tab">Inspection</span>
-                  <span className="cs-tab">Site</span>
-                </div>
-                <div className="cs-list">
-                  {delayIQRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Log every delayIQ with a cause</h3>
-          <p>
-            Weather, materials, labor, equipment, inspections, site conditions — every delayIQ is categorized with a severity and an owner,
-            so patterns surface long before they repeat.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Recovery plan</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {recoverySteps.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="cs-item" key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Recover the day with a clear plan</h3>
-          <p>
-            Each delayIQ carries recovery notes and next steps, so a slip becomes an action list — not a surprise on the schedule two weeks
-            later.
-          </p>
-        </article>
-      </section>
-
-      {/* Why it matters */}
-      <section className="cs-why" data-reveal>
-        <div className="cs-why-head">
-          <span className="wx-eyebrow-2">Why it matters</span>
-          <h2>What happens on site should reach the office by lunch.</h2>
-          <p>
-            Field Updates &amp; DelayIQs exists to close the gap between the jobsite and the schedule &mdash; so progress is proven,
-            problems are named, and the office is never the last to know.
-          </p>
-        </div>
-        <div className="cs-icons three">
-          {whyCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <article className="cs-icon-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
-                <span className="cs-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="wx-footer">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#field-updates-delayIQs">Field Updates &amp; DelayIQs</a>
-              <a href="#production-reports">Production Reports</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#updates">Updates</a>
-              <a href="#help-center">Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
-              Back to home
-            </a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <WelcomeCrewSchedulingPage
+      onBack={onBack}
+      onOpenSchedule={onOpenField}
+      onGetStarted={onGetStarted}
+      content={FIELD_UPDATES_PAGE_CONTENT}
+    />
   );
 }
 
@@ -11947,6 +13088,8 @@ function MatRing({ value }: { value: number }) {
 
 type MatRowData = { name: string; impact: string; status: "ready" | "ordered" | "waiting" | "missing"; label: string; w: number };
 
+/* Materials Readiness is the Crew Scheduling page with the yard's words:
+   same layout, same motion, its own content object. */
 function WelcomeMaterialsReadinessPage({
   onBack,
   onOpenMaterials,
@@ -11956,514 +13099,20 @@ function WelcomeMaterialsReadinessPage({
   onOpenMaterials: () => void;
   onGetStarted: () => void;
 }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  // Pointer-reactive auroras / cursor — same tween the welcome home uses.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  // Reveal-on-scroll tweens (IntersectionObserver adds .in).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const fillClass = (status: MatRowData["status"]) => (status === "waiting" ? "wait" : status === "missing" ? "miss" : "");
-
-  const heroBoard: MatRowData[] = [
-    { name: "Structural Steel Beams", impact: "Ready for schedule", status: "ready", label: "READY", w: 100 },
-    { name: "Rebar #5 · 12 tons", impact: "Watch delivery window", status: "waiting", label: "WAITING", w: 42 },
-    { name: "HVAC Rooftop Units", impact: "Blocks affected work", status: "missing", label: "MISSING", w: 12 }
-  ];
-
-  const statusRows: Array<{ strong: string; detail: string; badge: string; tone: string; status: string }> = [
-    { strong: "Structural Steel Beams", detail: "24 tons · delivers Aug 6", badge: "READY", tone: "ready", status: "ready" },
-    { strong: "Anchor Bolts", detail: "600 units · delivers Aug 8", badge: "ORDERED", tone: "wait", status: "ordered" },
-    { strong: "Rebar #5", detail: "12 tons · delivers Aug 9", badge: "WAITING", tone: "wait", status: "waiting" },
-    { strong: "HVAC Rooftop Units", detail: "4 units · not ordered", badge: "MISSING", tone: "risk", status: "missing" }
-  ];
-
-  const gateRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Parking deck pour", detail: "All materials on site", badge: "READY", tone: "ready", icon: CheckCircle2 },
-    { strong: "Warehouse slab", detail: "Rebar #5 not delivered", badge: "BLOCKED", tone: "risk", icon: AlertTriangle },
-    { strong: "Harborview HVAC", detail: "Units delayIQed to Fri", badge: "WAIT", tone: "wait", icon: Clock }
-  ];
-
-  const vendorRows: Array<{ label: string; value: string; icon: typeof Grid2X2 }> = [
-    { label: "Vendor", value: "Lone Star Steel Co.", icon: Boxes },
-    { label: "Purchase order", value: "PO #4471 · 24 tons", icon: FileText },
-    { label: "Delivery window", value: "Aug 6 · 7:00 AM", icon: CalendarDays },
-    { label: "Note", value: "Crane booked for offload", icon: ClipboardCheck }
-  ];
-
-  const readyWorkRows: Array<{ strong: string; detail: string; badge: string; tone: string; w: number }> = [
-    { strong: "Parking deck pour", detail: "Materials in · permit cleared", badge: "100%", tone: "ready", w: 100 },
-    { strong: "Tech Ridge utilities", detail: "Pipe ordered · pending delivery", badge: "68%", tone: "wait", w: 68 },
-    { strong: "Warehouse slab", detail: "Rebar missing", badge: "12%", tone: "risk", w: 12 }
-  ];
-
-  const whyCards: Array<{ icon: typeof Grid2X2; title: string; text: string }> = [
-    {
-      icon: PackageCheck,
-      title: "No crew rolls to a missing delivery",
-      text: "Every material carries a live status, so a job only reaches the schedule once the steel, rebar, and units it needs are actually on site — not promised."
-    },
-    {
-      icon: Boxes,
-      title: "One readiness number per job",
-      text: "Delivery status rolls up into a single readiness percent, so a planner can see at a glance which work can start and which is still waiting on the yard."
-    },
-    {
-      icon: CalendarDays,
-      title: "Deliveries meet the schedule",
-      text: "Delivery windows and vendor notes sit next to the plan, so procurement and the field are working from the same dates instead of chasing each other."
-    }
-  ];
-
   return (
-    <main className="cs-page" id="materials-readiness" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      {/* Hero */}
-      <section className="cs-hero" data-reveal>
-        <div className="cs-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Materials Readiness
-          </span>
-          <h1 className="cs-hero-title">
-            <WxRotatingHeadline prefix="Every material, " phrases={materialsPhrases} />
-          </h1>
-          <p className="cs-hero-sub">
-            Track delivery status, flag missing materials, and keep vendor notes on every order — so the office knows a job is truly ready
-            before a crew ever rolls to it.
-          </p>
-          <div className="cs-hero-actions">
-            <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
-              Get BuildFlow <ArrowRight size={18} />
-            </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenMaterials} ariaLabel="See Materials Readiness live">
-              <PlayCircle size={18} /> See it live
-            </WxMagnetic>
-          </div>
-        </div>
-        <WxTilt className="cs-hero-stage" max={6} restRx={3} restRy={-9}>
-          <div className="cs-panel cs-hero-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Materials readiness</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="mat-head">
-                  <MatRing value={68} />
-                  <div className="mat-head-stats">
-                    <div className="mat-mini ready">
-                      <strong>18</strong>
-                      <span>Ready now</span>
-                    </div>
-                    <div className="mat-mini">
-                      <strong>5</strong>
-                      <span>Ordered</span>
-                    </div>
-                    <div className="mat-mini miss">
-                      <strong>3</strong>
-                      <span>Attention</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mat-board">
-                  {heroBoard.map((row) => (
-                    <div className="mat-row" key={row.name}>
-                      <span className="mat-ic">
-                        <Boxes size={16} />
-                      </span>
-                      <div className="mat-body">
-                        <div className="mat-row-top">
-                          <strong>{row.name}</strong>
-                          <span className={`mat-status ${row.status}`}>{row.label}</span>
-                        </div>
-                        <div className="mat-sub">{row.impact}</div>
-                        <div className="mat-track-wrap">
-                          <span className="mat-bar">
-                            <span className={`mat-fill ${fillClass(row.status)}`} style={{ "--w": `${row.w}%` } as CSSProperties} />
-                          </span>
-                          <span className="mat-pct">{row.w}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </WxTilt>
-      </section>
-
-      {/* Explore title */}
-      <section className="cs-explore" data-reveal>
-        <span className="wx-eyebrow-2">The materials readiness suite</span>
-        <h2 className="cs-explore-title">Everything a job needs, before it needs it.</h2>
-        <p className="cs-explore-sub">
-          From a single delivery date to a whole job&rsquo;s readiness, BuildFlow keeps materials, vendors, and the schedule lined up — so
-          work only starts when the yard says it can.
-        </p>
-      </section>
-
-      {/* Lead feature — delivery timeline */}
-      <section className="cs-lead" data-reveal>
-        <div className="cs-panel cs-lead-panel">
-          <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar">
-              <i />
-              <i />
-              <i />
-              <strong>Delivery schedule &middot; this week</strong>
-            </div>
-            <div className="cs-mock-body">
-              <div className="mat-timeline">
-                <div className="mat-day">
-                  <span className="mat-day-label">Mon</span>
-                  <div className="mat-delivery done">
-                    <span className="mat-del-head">
-                      <PackageCheck size={13} /> Steel
-                    </span>
-                    <small>Delivered</small>
-                  </div>
-                </div>
-                <div className="mat-day">
-                  <span className="mat-day-label">Tue</span>
-                  <div className="mat-slot-empty" />
-                </div>
-                <div className="mat-day">
-                  <span className="mat-day-label">Wed</span>
-                  <div className="mat-delivery transit">
-                    <span className="mat-del-head">
-                      <Truck size={13} /> Rebar
-                    </span>
-                    <small>In transit</small>
-                  </div>
-                </div>
-                <div className="mat-day">
-                  <span className="mat-day-label">Thu</span>
-                  <div className="mat-delivery done">
-                    <span className="mat-del-head">
-                      <PackageCheck size={13} /> Concrete
-                    </span>
-                    <small>Delivered</small>
-                  </div>
-                </div>
-                <div className="mat-day">
-                  <span className="mat-day-label">Fri</span>
-                  <div className="mat-delivery late">
-                    <span className="mat-del-head">
-                      <AlertTriangle size={13} /> HVAC
-                    </span>
-                    <small>DelayIQed</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="cs-feature-meta">
-          <h3>Know what&rsquo;s landing before you promise the date.</h3>
-          <p>
-            Every order shows its delivery window on one timeline &mdash; delivered, in transit, or running late &mdash; so the office plans
-            the week around what will actually be on site, not what was supposed to be.
-          </p>
-        </div>
-      </section>
-
-      {/* Feature grid 1 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Materials &middot; by status</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-tabs">
-                  <span className="cs-tab on">Ready</span>
-                  <span className="cs-tab">Ordered</span>
-                  <span className="cs-tab">Waiting</span>
-                  <span className="cs-tab">Missing</span>
-                </div>
-                <div className="cs-list">
-                  {statusRows.map((row) => (
-                    <div className={`cs-item${row.status === "missing" ? " alert" : ""}`} key={row.strong}>
-                      <span className="cs-ic">
-                        <Boxes size={15} />
-                      </span>
-                      <span className="cs-tt">
-                        <strong>{row.strong}</strong>
-                        <span>{row.detail}</span>
-                      </span>
-                      <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Track every delivery status</h3>
-          <p>
-            Ready, ordered, waiting on delivery, or missing — filter the whole materials list by status, quantity, and delivery date to see
-            exactly where every order stands.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Readiness gate</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {gateRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Flag what&rsquo;s missing before dispatch</h3>
-          <p>
-            Needs-attention materials surface the jobs they block, so a crew is never dispatched to work that&rsquo;s waiting on a delivery
-            that hasn&rsquo;t landed.
-          </p>
-        </article>
-      </section>
-
-      {/* Feature grid 2 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Structural Steel Beams</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {vendorRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="cs-item" key={row.label}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.label}</strong>
-                          <span>{row.value}</span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Keep vendor notes on every order</h3>
-          <p>
-            Vendor, purchase order, delivery window, quantity, and a note live on each material — so the whole procurement story is one
-            click from the job that needs it.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Ready to schedule</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="mat-board">
-                  {readyWorkRows.map((row) => (
-                    <div className={`mat-row${row.tone === "risk" ? "" : ""}`} key={row.strong}>
-                      <span className="mat-ic">
-                        <HardHat size={16} />
-                      </span>
-                      <div className="mat-body">
-                        <div className="mat-row-top">
-                          <strong>{row.strong}</strong>
-                          <span className={`mat-status ${row.tone === "ready" ? "ready" : row.tone === "risk" ? "missing" : "waiting"}`}>
-                            {row.badge}
-                          </span>
-                        </div>
-                        <div className="mat-sub">{row.detail}</div>
-                        <div className="mat-track-wrap">
-                          <span className="mat-bar">
-                            <span
-                              className={`mat-fill ${row.tone === "risk" ? "miss" : row.tone === "wait" ? "wait" : ""}`}
-                              style={{ "--w": `${row.w}%` } as CSSProperties}
-                            />
-                          </span>
-                          <span className="mat-pct">{row.w}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Only schedule work that&rsquo;s ready</h3>
-          <p>
-            Material readiness rolls up per job, so the jobs with everything on site rise to the top of the plan and blocked work stays off
-            the board until it clears.
-          </p>
-        </article>
-      </section>
-
-      {/* Why it matters */}
-      <section className="cs-why" data-reveal>
-        <div className="cs-why-head">
-          <span className="wx-eyebrow-2">Why it matters</span>
-          <h2>A job is only as ready as the yard behind it.</h2>
-          <p>
-            Materials Readiness exists to keep the schedule honest &mdash; so &ldquo;ready to start&rdquo; means the steel is on site, the
-            rebar cleared the gate, and no crew is sent to work that can&rsquo;t begin.
-          </p>
-        </div>
-        <div className="cs-icons three">
-          {whyCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <article className="cs-icon-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
-                <span className="cs-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="wx-footer">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#field-updates-delayIQs">Field Updates &amp; DelayIQs</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#updates">Updates</a>
-              <a href="#help-center">Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
-              Back to home
-            </a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <WelcomeCrewSchedulingPage
+      onBack={onBack}
+      onOpenSchedule={onOpenMaterials}
+      onGetStarted={onGetStarted}
+      content={MATERIALS_READINESS_PAGE_CONTENT}
+    />
   );
 }
 
 type EqRowData = { name: string; sub: string; status: "avail" | "inuse" | "maint"; label: string; w: number };
 
+/* Equipment Tracking is the Crew Scheduling page with the yard's words:
+   same layout, same motion, its own content object. */
 function WelcomeEquipmentTrackingPage({
   onBack,
   onOpenEquipment,
@@ -12473,492 +13122,13 @@ function WelcomeEquipmentTrackingPage({
   onOpenEquipment: () => void;
   onGetStarted: () => void;
 }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  // Pointer-reactive auroras / cursor — same tween the welcome home uses.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  // Reveal-on-scroll tweens (IntersectionObserver adds .in).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const heroBoard: EqRowData[] = [
-    { name: "Tower Crane #2", sub: "Crane · Committed today", status: "inuse", label: "IN USE", w: 78 },
-    { name: "Excavator 320", sub: "Excavator · Service required", status: "maint", label: "MAINT", w: 38 },
-    { name: "Utility Truck #8", sub: "Truck · Dispatch ready", status: "avail", label: "AVAILABLE", w: 12 }
-  ];
-
-  const statusRows: Array<{ strong: string; detail: string; badge: string; tone: string; alert?: boolean }> = [
-    { strong: "Tower Crane #2", detail: "Crane · Harborview Apts", badge: "IN USE", tone: "wait" },
-    { strong: "Boom Lift #4", detail: "Lift · Harborview Apts", badge: "IN USE", tone: "wait" },
-    { strong: "Utility Truck #8", detail: "Truck · unassigned", badge: "AVAILABLE", tone: "ready" },
-    { strong: "Excavator 320", detail: "Excavator · in the shop", badge: "MAINT", tone: "risk", alert: true }
-  ];
-
-  const assignRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Tower Crane #2", detail: "Harborview Apts · framing", badge: "ON JOB", tone: "wait", icon: HardHat },
-    { strong: "Concrete Pump #2", detail: "Riverside · deck pour", badge: "ON JOB", tone: "wait", icon: HardHat },
-    { strong: "Utility Truck #8", detail: "Not assigned · in the yard", badge: "OPEN", tone: "ready", icon: MapPin }
-  ];
-
-  const maintRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Excavator 320", detail: "Service required · in shop", badge: "SERVICE", tone: "risk", icon: AlertTriangle },
-    { strong: "Boom Lift #4", detail: "Inspection due in 3 days", badge: "DUE", tone: "wait", icon: Clock },
-    { strong: "Tower Crane #2", detail: "Serviced Aug 1 · cleared", badge: "OK", tone: "ready", icon: CheckCircle2 }
-  ];
-
-  const committedRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "Tower Crane #2", detail: "Harborview framing · Wed", badge: "COMMITTED", tone: "ready", icon: CalendarDays },
-    { strong: "Concrete Pump #2", detail: "Riverside pour · Thu", badge: "COMMITTED", tone: "ready", icon: CalendarDays },
-    { strong: "Excavator 320", detail: "Needed Thu · still in service", badge: "AT RISK", tone: "risk", icon: AlertTriangle }
-  ];
-
-  const whyCards: Array<{ icon: typeof Grid2X2; title: string; text: string }> = [
-    {
-      icon: Wrench,
-      title: "No job waits on a missing machine",
-      text: "Every machine&rsquo;s status and assignment is live, so the schedule only commits equipment that&rsquo;s actually free — not a crane still tied up on another site."
-    },
-    {
-      icon: Gauge,
-      title: "Utilization you can actually see",
-      text: "Idle iron is money parked in the yard. Live utilization shows what&rsquo;s working and what&rsquo;s sitting, so the fleet earns its keep instead of collecting dust."
-    },
-    {
-      icon: ShieldAlert,
-      title: "Catch maintenance before the breakdown",
-      text: "Maintenance status rides right beside assignments, so a machine due for service comes off the board before it strands a crew in the middle of a pour."
-    }
-  ];
-
-  const fillClass = (status: EqRowData["status"]) => (status === "avail" ? "avail" : status === "maint" ? "maint" : "");
-
   return (
-    <main className="cs-page" id="equipment-tracking" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      {/* Hero */}
-      <section className="cs-hero" data-reveal>
-        <div className="cs-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Equipment Tracking
-          </span>
-          <h1 className="cs-hero-title">
-            <WxRotatingHeadline prefix="The whole fleet, " phrases={equipmentPhrases} />
-          </h1>
-          <p className="cs-hero-sub">
-            Track fleet availability, current assignments, and maintenance risk on one board — so the schedule only ever commits a machine
-            that&rsquo;s actually free to roll.
-          </p>
-          <div className="cs-hero-actions">
-            <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
-              Get BuildFlow <ArrowRight size={18} />
-            </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenEquipment} ariaLabel="See Equipment Tracking live">
-              <PlayCircle size={18} /> See it live
-            </WxMagnetic>
-          </div>
-        </div>
-        <WxTilt className="cs-hero-stage" max={6} restRx={3} restRy={-9}>
-          <div className="cs-panel cs-hero-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Fleet status</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="eq-mix">
-                  <div className="eq-mix-head">
-                    <strong>
-                      <em>67%</em> utilized
-                    </strong>
-                    <span>6 machines</span>
-                  </div>
-                  <div className="eq-mix-bar">
-                    <span className="eq-mix-seg inuse" style={{ "--w": "67%" } as CSSProperties} />
-                    <span className="eq-mix-seg avail" style={{ "--w": "17%" } as CSSProperties} />
-                    <span className="eq-mix-seg maint" style={{ "--w": "16%" } as CSSProperties} />
-                  </div>
-                  <div className="eq-legend">
-                    <span>
-                      <i className="inuse" /> In use · 4
-                    </span>
-                    <span>
-                      <i className="avail" /> Available · 1
-                    </span>
-                    <span>
-                      <i className="maint" /> Maintenance · 1
-                    </span>
-                  </div>
-                </div>
-                <div className="eq-board">
-                  {heroBoard.map((row) => (
-                    <div className="eq-row" key={row.name}>
-                      <span className="eq-ic">
-                        <Wrench size={16} />
-                      </span>
-                      <div className="eq-body">
-                        <div className="eq-row-top">
-                          <strong>{row.name}</strong>
-                          <span className={`eq-status ${row.status}`}>{row.label}</span>
-                        </div>
-                        <div className="eq-sub">{row.sub}</div>
-                        <div className="eq-track-wrap">
-                          <span className="eq-bar">
-                            <span className={`eq-fill ${fillClass(row.status)}`} style={{ "--w": `${row.w}%` } as CSSProperties} />
-                          </span>
-                          <span className="eq-pct">{row.w}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </WxTilt>
-      </section>
-
-      {/* Explore title */}
-      <section className="cs-explore" data-reveal>
-        <span className="wx-eyebrow-2">The equipment tracking suite</span>
-        <h2 className="cs-explore-title">Every machine, accounted for.</h2>
-        <p className="cs-explore-sub">
-          From a single excavator to the whole yard, BuildFlow keeps availability, assignments, and maintenance in one view &mdash; so the
-          fleet is never the reason a crew stands around.
-        </p>
-      </section>
-
-      {/* Lead feature — full fleet board */}
-      <section className="cs-lead" data-reveal>
-        <div className="cs-panel cs-lead-panel">
-          <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar">
-              <i />
-              <i />
-              <i />
-              <strong>Fleet board &middot; today</strong>
-            </div>
-            <div className="cs-mock-body">
-              <div className="eq-board">
-                {(
-                  [
-                    { name: "Tower Crane #2", sub: "Crane · Harborview Apts", status: "inuse", label: "IN USE", w: 78 },
-                    { name: "Concrete Pump #2", sub: "Pump · Riverside", status: "inuse", label: "IN USE", w: 78 },
-                    { name: "Boom Lift #4", sub: "Lift · Harborview Apts", status: "inuse", label: "IN USE", w: 78 },
-                    { name: "Excavator 320", sub: "Excavator · Service required", status: "maint", label: "MAINT", w: 38 },
-                    { name: "Utility Truck #8", sub: "Truck · Dispatch ready", status: "avail", label: "AVAILABLE", w: 12 }
-                  ] as EqRowData[]
-                ).map((row) => (
-                  <div className="eq-row" key={row.name}>
-                    <span className="eq-ic">
-                      <Wrench size={16} />
-                    </span>
-                    <div className="eq-body">
-                      <div className="eq-row-top">
-                        <strong>{row.name}</strong>
-                        <span className={`eq-status ${row.status}`}>{row.label}</span>
-                      </div>
-                      <div className="eq-sub">{row.sub}</div>
-                      <div className="eq-track-wrap">
-                        <span className="eq-bar">
-                          <span className={`eq-fill ${fillClass(row.status)}`} style={{ "--w": `${row.w}%` } as CSSProperties} />
-                        </span>
-                        <span className="eq-pct">{row.w}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="cs-feature-meta">
-          <h3>See the whole yard on one board.</h3>
-          <p>
-            Every machine, its status, its utilization, and the job it&rsquo;s on &mdash; in a single glance. The crane that&rsquo;s buried,
-            the truck that&rsquo;s free, the excavator in the shop, all in one place.
-          </p>
-        </div>
-      </section>
-
-      {/* Feature grid 1 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Equipment &middot; by status</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-tabs">
-                  <span className="cs-tab on">Available</span>
-                  <span className="cs-tab">In Use</span>
-                  <span className="cs-tab">Maintenance</span>
-                </div>
-                <div className="cs-list">
-                  {statusRows.map((row) => (
-                    <div className={`cs-item${row.alert ? " alert" : ""}`} key={row.strong}>
-                      <span className="cs-ic">
-                        <Wrench size={15} />
-                      </span>
-                      <span className="cs-tt">
-                        <strong>{row.strong}</strong>
-                        <span>{row.detail}</span>
-                      </span>
-                      <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Track availability in real time</h3>
-          <p>
-            Available, in use, or in maintenance — filter the whole fleet by status and type to see in a second what&rsquo;s free to
-            dispatch and what isn&rsquo;t.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Assignments</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {assignRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="cs-item" key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Keep machines and crews together</h3>
-          <p>
-            Every machine shows the project and job it&rsquo;s on, so a crew and the iron it needs land on the same site on the same day.
-          </p>
-        </article>
-      </section>
-
-      {/* Feature grid 2 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Maintenance</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {maintRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Stay ahead of maintenance</h3>
-          <p>
-            Machines in for service or due for inspection are flagged and pulled from the available pool, so nothing gets dispatched that
-            should be in the shop.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Committed to the schedule</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {committedRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>See what&rsquo;s committed to the schedule</h3>
-          <p>
-            Equipment already promised to scheduled jobs shows up next to the plan, so a machine is never double-booked or quietly missing
-            on the morning it&rsquo;s needed.
-          </p>
-        </article>
-      </section>
-
-      {/* Why it matters */}
-      <section className="cs-why" data-reveal>
-        <div className="cs-why-head">
-          <span className="wx-eyebrow-2">Why it matters</span>
-          <h2>The fleet should never be the bottleneck.</h2>
-          <p>
-            Equipment Tracking exists to keep the iron moving &mdash; so the right machine is free when the schedule needs it, idle time is
-            visible, and maintenance never becomes a surprise on the jobsite.
-          </p>
-        </div>
-        <div className="cs-icons three">
-          {whyCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <article className="cs-icon-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
-                <span className="cs-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="wx-footer">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-              <a href="#equipment-tracking">Equipment Tracking</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#updates">Updates</a>
-              <a href="#help-center">Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
-              Back to home
-            </a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <WelcomeCrewSchedulingPage
+      onBack={onBack}
+      onOpenSchedule={onOpenEquipment}
+      onGetStarted={onGetStarted}
+      content={EQUIPMENT_TRACKING_PAGE_CONTENT}
+    />
   );
 }
 
@@ -13035,6 +13205,9 @@ function PrLine({ data, maxY }: { data: Array<{ month: string; v: number }>; max
   );
 }
 
+/* Production Reports is the Crew Scheduling page with the report's words:
+   same layout, same motion, its own content object. All seven product pages
+   now render from one implementation. */
 function WelcomeProductionReportsPage({
   onBack,
   onOpenReports,
@@ -13044,433 +13217,13 @@ function WelcomeProductionReportsPage({
   onOpenReports: () => void;
   onGetStarted: () => void;
 }) {
-  const rootRef = useRef<HTMLElement>(null);
-
-  // Pointer-reactive auroras / cursor — same tween the welcome home uses.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  // Reveal-on-scroll tweens (IntersectionObserver adds .in).
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const kpis: Array<{ label: string; value: string; trend: string; flat?: boolean }> = [
-    { label: "On-Time Completion", value: "87%", trend: "+3% vs Q1" },
-    { label: "Schedule Variance", value: "2.4 days", trend: "−0.6 days" },
-    { label: "Crew Utilization", value: "82%", trend: "+5%" },
-    { label: "Equipment Utilization", value: "72%", trend: "+2%" },
-    { label: "Total Labor Hours", value: "24,180", trend: "MTD", flat: true },
-    { label: "Active Backlog", value: "$4.2M", trend: "6-month", flat: true }
-  ];
-  const heroKpis = [kpis[0], kpis[2], kpis[5]];
-
-  const plannedActual = [
-    { month: "Jan", planned: 4200, actual: 3850 },
-    { month: "Feb", planned: 4450, actual: 4250 },
-    { month: "Mar", planned: 4800, actual: 4700 },
-    { month: "Apr", planned: 5250, actual: 4900 },
-    { month: "May", planned: 5650, actual: 5100 }
-  ];
-
-  const backlog = [
-    { month: "Jun", v: 5200 },
-    { month: "Jul", v: 6100 },
-    { month: "Aug", v: 5800 },
-    { month: "Sep", v: 4900 },
-    { month: "Oct", v: 4200 },
-    { month: "Nov", v: 3600 }
-  ];
-
-  const crewEff = [
-    { name: "Concrete Crew 1", v: 94 },
-    { name: "Framing Crew 2", v: 88 },
-    { name: "Utility Crew 3", v: 81 },
-    { name: "Paving Crew 4", v: 76 }
-  ];
-
-  const healthRows: Array<{ strong: string; detail: string; badge: string; tone: string; icon: typeof Grid2X2 }> = [
-    { strong: "On-time completion", detail: "87% · up 3% vs Q1", badge: "HEALTHY", tone: "ready", icon: CheckCircle2 },
-    { strong: "Schedule variance", detail: "2.4 days · improving", badge: "WATCH", tone: "wait", icon: Clock },
-    { strong: "3 jobs slipping", detail: "Behind plan this week", badge: "AT RISK", tone: "risk", icon: AlertTriangle }
-  ];
-
-  const summaryRows: Array<{ label: string; value: string; icon: typeof Grid2X2 }> = [
-    { label: "On-time completion", value: "87%", icon: CheckCircle2 },
-    { label: "Crew utilization", value: "82%", icon: Users },
-    { label: "Backlog trend", value: "↓ 31%", icon: TrendingUp },
-    { label: "Labor hours · MTD", value: "24,180", icon: Clock }
-  ];
-
-  const whyCards: Array<{ icon: typeof Grid2X2; title: string; text: string }> = [
-    {
-      icon: LineChart,
-      title: "Decisions from data, not gut feel",
-      text: "On-time rates, variance, utilization, and backlog all roll up automatically — so the weekly call is about what the numbers say, not who remembers what."
-    },
-    {
-      icon: Gauge,
-      title: "See utilization slipping early",
-      text: "Crew and equipment utilization trend week over week, so a crew that&rsquo;s quietly falling behind shows up on a chart long before it shows up on the schedule."
-    },
-    {
-      icon: TrendingUp,
-      title: "Walk into the weekly review ready",
-      text: "The report is built the moment the field updates — every KPI, chart, and forecastIQ is current, and the export is one click when the meeting starts."
-    }
-  ];
-
   return (
-    <main className="cs-page" id="production-reports" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      {/* Hero */}
-      <section className="cs-hero" data-reveal>
-        <div className="cs-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Production Reports
-          </span>
-          <h1 className="cs-hero-title">
-            <WxRotatingHeadline prefix="The whole job, " phrases={productionReportsPhrases} />
-          </h1>
-          <p className="cs-hero-sub">
-            Turn schedule movement, field updates, backlog, and utilization into a reporting workspace built for the weekly review — every
-            KPI current the moment the field does.
-          </p>
-          <div className="cs-hero-actions">
-            <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
-              Get BuildFlow <ArrowRight size={18} />
-            </WxMagnetic>
-            <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenReports} ariaLabel="See Production Reports live">
-              <PlayCircle size={18} /> See it live
-            </WxMagnetic>
-          </div>
-        </div>
-        <WxTilt className="cs-hero-stage" max={6} restRx={3} restRy={-9}>
-          <div className="cs-panel cs-hero-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Production report</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="pr-kpi-grid">
-                  {heroKpis.map((kpi) => (
-                    <div className="pr-kpi" key={kpi.label}>
-                      <span>{kpi.label}</span>
-                      <strong>{kpi.value}</strong>
-                      <em className={kpi.flat ? "flat" : ""}>
-                        {!kpi.flat && <TrendingUp size={13} />}
-                        {kpi.trend}
-                      </em>
-                    </div>
-                  ))}
-                </div>
-                <PrBars data={plannedActual} maxY={6000} />
-              </div>
-            </div>
-          </div>
-        </WxTilt>
-      </section>
-
-      {/* Explore title */}
-      <section className="cs-explore" data-reveal>
-        <span className="wx-eyebrow-2">The production reporting suite</span>
-        <h2 className="cs-explore-title">Every number that runs the week.</h2>
-        <p className="cs-explore-sub">
-          From on-time rates to the six-month backlog, BuildFlow turns the work your team is already doing into the report your weekly
-          review actually needs.
-        </p>
-      </section>
-
-      {/* Lead feature — backlog forecastIQ chart */}
-      <section className="cs-lead" data-reveal>
-        <div className="cs-panel cs-lead-panel">
-          <div className="cs-mock" aria-hidden="true">
-            <div className="cs-mock-bar">
-              <i />
-              <i />
-              <i />
-              <strong>Backlog forecastIQ &middot; hours</strong>
-            </div>
-            <div className="cs-mock-body">
-              <PrLine data={backlog} maxY={8000} />
-            </div>
-          </div>
-        </div>
-        <div className="cs-feature-meta">
-          <h3>See where the work is headed.</h3>
-          <p>
-            Backlog trended six months out, built from the live schedule &mdash; so you can see the crunch coming and staff up, or the gap
-            forming and go win more work, while there&rsquo;s still time to act.
-          </p>
-        </div>
-      </section>
-
-      {/* Feature grid 1 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Production KPIs</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="pr-kpi-grid six">
-                  {kpis.map((kpi) => (
-                    <div className="pr-kpi" key={kpi.label}>
-                      <span>{kpi.label}</span>
-                      <strong>{kpi.value}</strong>
-                      <em className={kpi.flat ? "flat" : ""}>
-                        {!kpi.flat && <TrendingUp size={13} />}
-                        {kpi.trend}
-                      </em>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Every KPI on one dashboard</h3>
-          <p>
-            On-time completion, schedule variance, crew and equipment utilization, labor hours, and active backlog — the numbers that run a
-            construction business, in one glance.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Crew efficiency</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="pr-eff">
-                  {crewEff.map((crew) => (
-                    <div className="pr-eff-row" key={crew.name}>
-                      <strong>{crew.name}</strong>
-                      <span className="pr-eff-track">
-                        <span className="pr-eff-fill" style={{ "--w": `${crew.v}%` } as CSSProperties} />
-                      </span>
-                      <em>{crew.v}%</em>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Utilization, crew by crew</h3>
-          <p>
-            See which crews are running hot and which have room, week over week, so the plan loads everyone evenly instead of burning out
-            your best.
-          </p>
-        </article>
-      </section>
-
-      {/* Feature grid 2 */}
-      <section className="cs-grid two" data-reveal>
-        <article className="cs-feature" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Schedule health</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="cs-list">
-                  {healthRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className={`cs-item${row.tone === "risk" ? " alert" : ""}`} key={row.strong}>
-                        <span className="cs-ic">
-                          <Icon size={15} />
-                        </span>
-                        <span className="cs-tt">
-                          <strong>{row.strong}</strong>
-                          <span>{row.detail}</span>
-                        </span>
-                        <span className={`cs-badge ${row.tone}`}>{row.badge}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Spot the schedule slipping early</h3>
-          <p>
-            On-time rate and schedule variance turn the plan-versus-reality gap into a number you can watch — so a slipping week is caught
-            while there&rsquo;s still room to recover.
-          </p>
-        </article>
-        <article className="cs-feature" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <div className="cs-panel">
-            <div className="cs-mock" aria-hidden="true">
-              <div className="cs-mock-bar">
-                <i />
-                <i />
-                <i />
-                <strong>Weekly review</strong>
-              </div>
-              <div className="cs-mock-body">
-                <div className="pr-report-head">
-                  <span className="pr-period">
-                    <CalendarDays size={14} /> Last 6 Months
-                  </span>
-                  <span className="pr-export-btn">
-                    <Download size={14} /> Export
-                  </span>
-                </div>
-                <div className="pr-summary">
-                  {summaryRows.map((row) => {
-                    const Icon = row.icon;
-                    return (
-                      <div className="pr-summary-row" key={row.label}>
-                        <Icon size={15} /> {row.label} <strong>{row.value}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          <h3>Export the weekly review in a click</h3>
-          <p>
-            Pick a period — last six months, last quarter, year to date — and export a clean production summary the whole team can read,
-            ready before the meeting starts.
-          </p>
-        </article>
-      </section>
-
-      {/* Why it matters */}
-      <section className="cs-why" data-reveal>
-        <div className="cs-why-head">
-          <span className="wx-eyebrow-2">Why it matters</span>
-          <h2>You can&rsquo;t improve the number you never see.</h2>
-          <p>
-            Production Reports exists to turn a week of field reality into a picture you can act on &mdash; so the weekly review drives the
-            next week&rsquo;s plan instead of just recapping the last one.
-          </p>
-        </div>
-        <div className="cs-icons three">
-          {whyCards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <article className="cs-icon-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
-                <span className="cs-icon">
-                  <Icon size={22} />
-                </span>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="wx-footer">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a href="#crew-scheduling">Crew Scheduling</a>
-              <a href="#schedule-ai">Schedule AI</a>
-              <a href="#map-field-ops">Map &amp; Field Ops</a>
-              <a href="#materials-readiness">Materials Readiness</a>
-              <a href="#production-reports">Production Reports</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a href="#updates">Updates</a>
-              <a href="#help-center">Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
-              Back to home
-            </a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    <WelcomeCrewSchedulingPage
+      onBack={onBack}
+      onOpenSchedule={onOpenReports}
+      onGetStarted={onGetStarted}
+      content={PRODUCTION_REPORTS_PAGE_CONTENT}
+    />
   );
 }
 
@@ -20496,7 +20249,20 @@ function BookmarksPage({
               </span>
             </div>
           )}
-          <ScheduleLinkTiles links={links} onOpen={openScheduleLink} onRemove={(link) => onToggleLink?.(link)} />
+          {/* APPROVED bug fix: openScheduleLink only rewrote window.location.hash,
+              and the shell's one hashchange listener is scoped to the marketing
+              routes, so opening a bookmarked schedule view changed the URL and
+              nothing else. The link already carries its own target page, so the
+              hash keeps the view shareable and setPage actually performs the
+              navigation. */}
+          <ScheduleLinkTiles
+            links={links}
+            onOpen={(link) => {
+              openScheduleLink(link);
+              setPage(link.page);
+            }}
+            onRemove={(link) => onToggleLink?.(link)}
+          />
         </section>
 
         <section className="hs-index-card" aria-labelledby="bookmarks-all-title">
@@ -20618,6 +20384,14 @@ function Sidebar({
                 }}
               >
                 <Icon size={20} />
+                {/* The Welcome Page navigates with WORDED links; this rail was
+                    icon-only, which was the largest remaining difference between the
+                    two. aria-hidden because the button's accessible name already
+                    comes from aria-label, so the label is purely visual and no
+                    query that navigates by name changes. */}
+                <span className="hs-rail-label" aria-hidden="true">
+                  {hub.label}
+                </span>
                 {hubTag && <span className={`hs-rail-tag ${hubTag.toLowerCase()}`} aria-hidden="true" />}
               </button>
             </div>
@@ -20633,6 +20407,9 @@ function Sidebar({
           onClick={onOpenSettings}
         >
           <Settings size={20} />
+          <span className="hs-rail-label" aria-hidden="true">
+            Settings
+          </span>
         </button>
       </div>
       {flyoutHub && (
@@ -21017,6 +20794,10 @@ function TopBar({
                     onOpen={(link) => {
                       setIsBookmarksOpen(false);
                       openScheduleLink(link);
+                      // the same dead-hash bug as the Bookmarks page had: setting the
+                      // hash alone navigates nowhere, because the shell's only
+                      // hashchange listener is scoped to the marketing routes
+                      setPage?.(link.page);
                     }}
                     onRemove={(link) => onToggleLink?.(link)}
                   />
@@ -21121,6 +20902,16 @@ function TopBar({
                 <span>Notifications</span>
                 <strong>Recent BuildFlow activity</strong>
               </header>
+              {/* APPROVED: the empty state. A fresh workspace showed an empty
+                  420px card with a header and nothing under it. The region and its
+                  accessible name are untouched, because tutorial.test.tsx asserts
+                  this panel by role and name. */}
+              {notificationItems.length === 0 && (
+                <p className="notifications-empty">
+                  No BuildFlow activity yet. Delays, assignments and conflicts will
+                  appear here as your crews start reporting.
+                </p>
+              )}
               <div className="notifications-list">
                 {notificationItems.map((item) => {
                   const Icon = item.icon;
@@ -21629,6 +21420,13 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  /* APPROVED: the two destructive controls in this panel had no confirmation step.
+     A two-step inline confirm rather than a dialog, for three reasons: it needs no
+     new primitive, it cannot be dismissed by a stray click landing on a backdrop,
+     and the destructive button keeps its original accessible name on first render,
+     which settings.test.tsx:216 asserts by exact string. Holds the id of the one
+     control awaiting confirmation, so only ever one is armed. */
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -21764,14 +21562,38 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
                 <span className="settings-role-pill">{user.role}</span>
               )}
               {user.isSample && (
+                confirmingId === `user:${user.id}` ? (
+                  <span className="settings-member-confirm" role="group" aria-label={`Confirm removing ${user.name}`}>
+                    <button
+                      className="settings-member-remove is-confirming"
+                      type="button"
+                      aria-label={`Confirm: remove ${user.name}`}
+                      onClick={() => {
+                        setConfirmingId(null);
+                        void act(() => apiRemoveSampleUser(user.id), `${user.name} removed.`);
+                      }}
+                    >
+                      Remove
+                    </button>
+                    <button
+                      className="settings-member-cancel"
+                      type="button"
+                      aria-label={`Keep ${user.name}`}
+                      onClick={() => setConfirmingId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
                 <button
                   className="settings-member-remove"
                   type="button"
                   aria-label={`Remove ${user.name}`}
-                  onClick={() => act(() => apiRemoveSampleUser(user.id), `${user.name} removed.`)}
+                  onClick={() => setConfirmingId(`user:${user.id}`)}
                 >
                   <Trash2 size={17} />
                 </button>
+                )
               )}
             </div>
           </article>
@@ -21807,14 +21629,38 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
                   >
                     Resend
                   </button>
+                  {confirmingId === `invite:${inv.id}` ? (
+                    <span className="settings-member-confirm" role="group" aria-label={`Confirm withdrawing the invite for ${inv.email}`}>
+                      <button
+                        className="settings-member-remove is-confirming"
+                        type="button"
+                        aria-label={`Confirm: withdraw invite for ${inv.email}`}
+                        onClick={() => {
+                          setConfirmingId(null);
+                          void act(() => apiRevokeInvite(inv.id), `Invite for ${inv.email} withdrawn.`);
+                        }}
+                      >
+                        Withdraw
+                      </button>
+                      <button
+                        className="settings-member-cancel"
+                        type="button"
+                        aria-label={`Keep the invite for ${inv.email}`}
+                        onClick={() => setConfirmingId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
                   <button
                     className="settings-member-remove"
                     type="button"
                     aria-label={`Withdraw invite for ${inv.email}`}
-                    onClick={() => act(() => apiRevokeInvite(inv.id), `Invite for ${inv.email} withdrawn.`)}
+                    onClick={() => setConfirmingId(`invite:${inv.id}`)}
                   >
                     <Trash2 size={17} />
                   </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -26193,7 +26039,10 @@ function Dashboard({
             </button>
           );
         })}
-        <button type="button" className="cc-quick-btn">
+        {/* APPROVED: this control has no handler and never had one. It stays
+            rendered, because removing it would remove the affordance's place in the
+            layout, but it stops promising an action. */}
+        <button type="button" className="cc-quick-btn" disabled aria-disabled="true" title="More quick actions are coming">
           <SlidersHorizontal size={16} />
           More
         </button>
@@ -26251,7 +26100,8 @@ function Dashboard({
               </button>
             );
           })}
-          <button type="button" className="cc-app add">
+          {/* APPROVED: no handler, same treatment as Quick Actions "More". */}
+          <button type="button" className="cc-app add" disabled aria-disabled="true" title="Adding apps is coming">
             <Plus size={22} />
             <span>Add App</span>
           </button>
@@ -27523,7 +27373,11 @@ function ProjectsPage({
 
   const openDelayIQs = data.delayIQs.filter((delayIQ) => delayIQ.status !== "Resolved");
   const shortMaterials = data.materials.filter((material) => material.status === "Missing" || material.status === "Waiting on Delivery");
-  const projAlerts: Array<{ id: string; icon: typeof AlertTriangle; tone: CcTone; title: string; meta: string; ago: string }> = [];
+  // Each row's age comes from its own record. All three used to carry a literal — "10m ago",
+  // "45m ago", "2h ago" — so the column that exists to say how fresh a warning is read the same
+  // on every load in every workspace. A record that carries no time now says nothing instead.
+  const alertsNow = new Date();
+  const projAlerts: Array<{ id: string; icon: typeof AlertTriangle; tone: CcTone; title: string; meta: string; when: string | null }> = [];
   openDelayIQs.slice(0, 2).forEach((delayIQ) =>
     projAlerts.push({
       id: `pa-${delayIQ.id}`,
@@ -27531,7 +27385,7 @@ function ProjectsPage({
       tone: "red",
       title: delayIQ.title,
       meta: `${projectName(data, delayIQ.projectId)} · ${delayIQ.impactDays} day impact`,
-      ago: "10m ago"
+      when: relativeAlertTime(delayIQ.reportedAt, alertsNow)
     })
   );
   data.weatherAlerts.slice(0, 1).forEach((alert) =>
@@ -27541,7 +27395,8 @@ function ProjectsPage({
       tone: "amber",
       title: "Weather delayIQ expected",
       meta: `${alert.projectId ? projectName(data, alert.projectId) : "All sites"} · ${alert.title}`,
-      ago: "45m ago"
+      // the useful fact about weather is when it arrives, which may still be ahead
+      when: relativeAlertTime(alert.startsAt, alertsNow)
     })
   );
   shortMaterials.slice(0, 1).forEach((material) =>
@@ -27551,7 +27406,9 @@ function ProjectsPage({
       tone: "blue",
       title: "Material delivery delayIQed",
       meta: `${material.name} · ${projectName(data, material.projectId)}`,
-      ago: "2h ago"
+      // a material records no moment for going short — only the day its delivery is due,
+      // which is a different fact from how old this warning is
+      when: null
     })
   );
 
@@ -28121,7 +27978,7 @@ function ProjectsPage({
                         <strong>{alert.title}</strong>
                         <span>{alert.meta}</span>
                       </div>
-                      <span className="cc-alert-time">{alert.ago}</span>
+                      {alert.when && <span className="cc-alert-time">{alert.when}</span>}
                     </div>
                   );
                 })

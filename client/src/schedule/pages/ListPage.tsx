@@ -110,7 +110,8 @@ export function ListPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
       write: (force) => rebookSchedule(plan.moves, { force }),
       stays: `${row.job.name} stays on ${formatScheduleDate(row.day)}.`,
       done: `${label} moved to ${formatScheduleDate(date)}`,
-      undo: () => rebookSchedule(plan.inverse, { force: true }),
+      // not forced: the day this row is going back to may have been taken in the meantime
+      undo: (_result, force) => rebookSchedule(plan.inverse, { force }),
       undone: `${label} back on ${formatScheduleDate(row.day)}`
     });
   };

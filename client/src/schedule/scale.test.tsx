@@ -3,9 +3,17 @@
  * browser, so the numbers here are a smoke check and a regression guard on the work each
  * page does per render; the browser measurement is the acceptance test.
  *
- * Each page is rendered RUNS times and the median is reported: a single render on a busy
- * machine reads anywhere from 150 to 350 ms for the same work, which is a lottery, not a
- * measurement. The node count is the steadier number and the one the pages are judged on.
+ * Each page is rendered RUNS times and the median is taken: a single render on a busy machine reads
+ * anywhere from 150 to 350 ms for the same work, which is a lottery, not a measurement.
+ *
+ * The budget is enforced two ways, both of which survive a loaded machine. Node counts are exact, so
+ * each page has a ceiling. Times are compared with each other rather than with the clock: what a page
+ * costs against the cheapest page is the number that moves when one page regresses, and a tenfold
+ * slowdown of any page breaks it.
+ *
+ * The timing round is interleaved — every page once, then again — and each page's best round is its
+ * figure. Measuring a page three times in a row and moving on gives whichever page ran while another
+ * test file was busy a number three times its neighbours'; a best-of over interleaved rounds does not.
  */
 import { render } from "@testing-library/react";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -70,26 +78,57 @@ describe("a 2,000-job workspace", () => {
     ["Matrix", () => <MatrixPage {...props} />, ".sched-matrix"],
     ["Gantt", () => <GanttPage {...props} />, ".gantt-frame"]
   ];
-  /** Renders per page; the middle one is the number, so a warm-up or a busy moment cannot be it. */
-  const RUNS = 3;
+  /** Rounds of every page, interleaved; a page's figure is its best round. */
+  const ROUNDS = 3;
+  /**
+   * What each page may draw with 2,000 jobs. These are ceilings, not targets: they sit a little above
+   * what the page draws today, so a windowing or capping rule that stops working fails here.
+   */
+  const NODE_BUDGET: Record<string, number> = {
+    Schedule: 700,
+    Week: 2700,
+    List: 2800,
+    Kanban: 3800,
+    Month: 1400,
+    Matrix: 1600,
+    Gantt: 1500
+  };
+  /** How much dearer than the cheapest page the dearest one may be. */
+  const SPREAD = 8;
+
   for (const [name, page, root] of pages) {
-    it(`renders the ${name} page`, () => {
-      const runs: number[] = [];
-      let nodes = 0;
-      for (let run = 0; run < RUNS; run++) {
-        const started = performance.now();
-        const { unmount } = render(<>{page()}</>);
-        runs.push(performance.now() - started);
-        expect(document.querySelector(root), `${name} root`).not.toBeNull();
-        nodes = document.querySelectorAll("*").length;
-        unmount();
-      }
-      const sorted = [...runs].sort((a, b) => a - b);
-      const median = Math.round(sorted[Math.floor(sorted.length / 2)]);
-      // eslint-disable-next-line no-console -- the point of the run: the number per page
-      console.log(`[scale] ${name}: ${median} ms (of ${sorted.map((ms) => Math.round(ms)).join("/")}), ${nodes} nodes`);
+    it(`draws the ${name} page within its node budget`, () => {
+      const { unmount } = render(<>{page()}</>);
+      expect(document.querySelector(root), `${name} root`).not.toBeNull();
+      const nodes = document.querySelectorAll("*").length;
+      unmount();
+      expect(nodes, `${name} draws ${nodes} nodes, more than its budget of ${NODE_BUDGET[name]}`).toBeLessThanOrEqual(NODE_BUDGET[name]);
     });
   }
+
+  it("keeps every page within reach of the cheapest one", () => {
+    const best = new Map<string, number>();
+    for (let round = 0; round < ROUNDS; round++) {
+      for (const [name, page] of pages) {
+        const started = performance.now();
+        const { unmount } = render(<>{page()}</>);
+        const took = performance.now() - started;
+        unmount();
+        best.set(name, Math.min(best.get(name) ?? Number.POSITIVE_INFINITY, took));
+      }
+    }
+    const measured = [...best.entries()].map(([name, ms]) => ({ name, ms: Math.round(ms) }));
+    // eslint-disable-next-line no-console -- the point of the run: the number per page
+    console.log(`[scale] best of ${ROUNDS} interleaved rounds — ${measured.map((page) => `${page.name} ${page.ms}`).join(" · ")} ms`);
+    const cheapest = measured.reduce((low, page) => (page.ms < low.ms ? page : low));
+    const dearest = measured.reduce((high, page) => (page.ms > high.ms ? page : high));
+    // a floor, so a machine fast enough to draw the cheapest page in 1 ms cannot make the ratio meaningless
+    const base = Math.max(cheapest.ms, 20);
+    expect(
+      dearest.ms,
+      `${dearest.name} took ${dearest.ms} ms against ${cheapest.name}'s ${cheapest.ms} ms; the budget is ${SPREAD}× the cheapest page`
+    ).toBeLessThanOrEqual(base * SPREAD);
+  });
 });
 
 describe("what the pages draw at scale", () => {

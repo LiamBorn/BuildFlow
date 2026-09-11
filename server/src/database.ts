@@ -309,10 +309,33 @@ const jobColumns = [
   // As-built: what the field reported, vs the planned dates above
   "percentComplete",
   "actualStart",
-  "actualFinish"
+  "actualFinish",
+  // Bumped by every write. A client sends back the one it last saw, so a save
+  // made against a stale copy can be refused instead of quietly overwriting.
+  "version"
 ].join(", ");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+/**
+ * The job columns a patch may write. Named once because two things need it: the write itself,
+ * and the question "is there anything here to write at all", which decides whether a request
+ * is worth a transaction and the file rewrite that follows one.
+ */
+const JOB_COLUMNS = [
+  "status",
+  "startDate",
+  "endDate",
+  "startTime",
+  "endTime",
+  "materialsStatus",
+  "notes",
+  "priority",
+  // As-built progress, written by the field reporting loop
+  "percentComplete",
+  "actualStart",
+  "actualFinish"
+] as const;
+
 const defaultDataFile = path.resolve(__dirname, "../data/buildflow.sqlite");
 
 function parseJsonArray(value: string | null | undefined): string[] {
@@ -944,6 +967,26 @@ SCHEMA_MIGRATIONS.push(
   }
 );
 
+SCHEMA_MIGRATIONS.push({
+  version: 19,
+  name: "a row version on jobs and bookings",
+  up: (db) => {
+    // Two planners on one card used to be last-write-wins, and the one who lost was told
+    // it saved. A counter the client sends back turns that into a question the server can
+    // answer: this is not the row you were looking at.
+    const columnsOf = (table: string) => {
+      const info = db.exec(`PRAGMA table_info(${table})`);
+      return info[0] ? info[0].values.map((col) => String(col[1])) : [];
+    };
+    for (const table of ["jobs", "assignments"]) {
+      const columns = columnsOf(table);
+      if (columns.length > 0 && !columns.includes("version")) {
+        db.exec(`ALTER TABLE ${table} ADD COLUMN version INTEGER NOT NULL DEFAULT 1`);
+      }
+    }
+  }
+});
+
 export const LATEST_SCHEMA_VERSION = SCHEMA_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);
 
 export interface SubscriptionRow {
@@ -963,6 +1006,21 @@ export interface SubscriptionRow {
 
 /** A re-book that would double-book a crew: nothing was written; the clashes say who is already there. */
 /** Why a dependency link was refused: a job pointing at itself, a link that already exists, or one that would close a loop. */
+/**
+ * The row moved under the writer: what they are replacing is not what they read.
+ * Carries the row as it stands now, so the board can say what happened rather than
+ * only that something did.
+ */
+export class StaleWriteError extends Error {
+  code = "stale" as const;
+  current: Record<string, unknown>;
+  constructor(message: string, current: Record<string, unknown>) {
+    super(message);
+    this.name = "StaleWriteError";
+    this.current = current;
+  }
+}
+
 export class DependencyError extends Error {
   code: "self" | "duplicate" | "cycle";
   constructor(message: string, code: "self" | "duplicate" | "cycle") {
@@ -3173,7 +3231,15 @@ export class BuildFlowStore {
       const jobIds = this.all<{ id: string }>("SELECT id FROM jobs WHERE projectId = ?", [id]).map((row) => row.id);
       if (jobIds.length > 0) {
         const placeholders = jobIds.map(() => "?").join(", ");
+        // The days these bookings sat on are shared with crews that stay. A clash belongs to the
+        // day, so emptying one side of it leaves the other saying "Double-booked crew" for ever
+        // unless the day is re-noted once the rows are gone.
+        const emptied = this.all<{ crewId: string; date: string }>(
+          `SELECT crewId, date FROM assignments WHERE jobId IN (${placeholders})`,
+          jobIds
+        );
         this.run(`DELETE FROM assignments WHERE jobId IN (${placeholders})`, jobIds);
+        this.renoteDaysOf(emptied);
         this.run(`DELETE FROM job_dependencies WHERE predecessorId IN (${placeholders})`, jobIds);
         this.run(`DELETE FROM job_dependencies WHERE successorId IN (${placeholders})`, jobIds);
       }
@@ -3281,30 +3347,25 @@ export class BuildFlowStore {
     return this.get<Job>(`SELECT ${jobColumns} FROM jobs WHERE id = ?`, [id]);
   }
 
-  updateJob(id: string, updates: Partial<Job>) {
-    if (this.writeJob(id, updates)) this.save();
+  updateJob(id: string, updates: Partial<Job>, expectedVersion?: number) {
+    // Nothing writable means nothing to write — and nothing to save. Committing anyway costs a
+    // full `db.export()` and a rewrite of the whole SQLite file for a request that changed nothing.
+    if (!JOB_COLUMNS.some((column) => column in updates)) return this.job(id);
+    this.transaction(() => {
+      if (!this.writeJob(id, updates, expectedVersion)) return;
+      // the materials a booking reports are the job's, so its bookings have to be told
+      if (updates.materialsStatus !== undefined) this.renoteJob(id);
+    });
     return this.job(id);
   }
 
   /** The job's editable columns after `updates` — written, not yet saved; true when anything changed. */
-  private writeJob(id: string, updates: Partial<Job>): boolean {
-    const allowed = [
-      "status",
-      "startDate",
-      "endDate",
-      "startTime",
-      "endTime",
-      "materialsStatus",
-      "notes",
-      "priority",
-      // As-built progress, written by the field reporting loop
-      "percentComplete",
-      "actualStart",
-      "actualFinish"
-    ];
-    const entries = Object.entries(updates).filter(([key]) => allowed.includes(key));
+  private writeJob(id: string, updates: Partial<Job>, expectedVersion?: number): boolean {
+    const entries = Object.entries(updates).filter(([key]) => (JOB_COLUMNS as readonly string[]).includes(key));
     if (entries.length === 0) return false;
-    const setClause = entries.map(([key]) => `${key} = ?`).join(", ");
+    this.checkJobVersion(id, expectedVersion);
+    // `version = version + 1` in the same statement: the row cannot be written without saying so
+    const setClause = `${entries.map(([key]) => `${key} = ?`).join(", ")}, version = version + 1`;
     this.run(`UPDATE jobs SET ${setClause} WHERE id = ?`, [
       // `undefined` clears a column (e.g. reopened work drops actualFinish);
       // sql.js only binds primitives, so it has to travel as an explicit NULL.
@@ -3370,17 +3431,24 @@ export class BuildFlowStore {
       count: item.count
     }));
     const size = 1 + laborMix.reduce((total, item) => total + item.count, 0);
-    this.run("UPDATE crews SET name = ?, specialty = ?, lead = ?, size = ?, rate = ? WHERE id = ?", [
-      input.name.trim(),
-      input.specialty.trim(),
-      input.foreman.trim(),
-      size,
-      input.rate ?? current.rate ?? defaultCrewRate(input.specialty),
-      id
-    ]);
-    this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
-    this.insertCrewRoleCounts(id, laborMix);
-    this.save();
+    // Three writes and a re-note: the crew row, its role counts, and every day it is booked on.
+    // Outside a transaction a failure part-way through leaves the role counts deleted and the
+    // days half re-noted — the one state nothing else in this pass can end in.
+    this.transaction(() => {
+      this.run("UPDATE crews SET name = ?, specialty = ?, lead = ?, size = ?, rate = ? WHERE id = ?", [
+        input.name.trim(),
+        input.specialty.trim(),
+        input.foreman.trim(),
+        size,
+        input.rate ?? current.rate ?? defaultCrewRate(input.specialty),
+        id
+      ]);
+      this.run("DELETE FROM crew_role_counts WHERE crewId = ?", [id]);
+      this.insertCrewRoleCounts(id, laborMix);
+      // a crew that grew or shrank changes whether its bookings are short of labour
+      if (size !== current.size)
+        this.renoteDaysOf(this.all<{ crewId: string; date: string }>("SELECT crewId, date FROM assignments WHERE crewId = ?", [id]));
+    });
     return this.crews().find((crew) => crew.id === id);
   }
 
@@ -3424,14 +3492,20 @@ export class BuildFlowStore {
       status: input.status,
       assignedTo: input.assignedTo || undefined
     };
-    this.run("UPDATE equipment SET name = ?, type = ?, status = ?, assignedTo = ? WHERE id = ?", [
-      equipment.name,
-      equipment.type,
-      equipment.status,
-      equipment.assignedTo ?? null,
-      id
-    ]);
-    this.save();
+    // the row and every crew-day its status changes the meaning of, together or not at all
+    this.transaction(() => {
+      this.run("UPDATE equipment SET name = ?, type = ?, status = ?, assignedTo = ? WHERE id = ?", [
+        equipment.name,
+        equipment.type,
+        equipment.status,
+        equipment.assignedTo ?? null,
+        id
+      ]);
+      // a unit in or out of maintenance changes what the bookings of the jobs that need it should say
+      if (equipment.status !== current.status || equipment.name !== current.name || equipment.type !== current.type) {
+        this.renoteDaysNeeding([current.name, current.type, equipment.name, equipment.type]);
+      }
+    });
     return equipment;
   }
 
@@ -3439,8 +3513,12 @@ export class BuildFlowStore {
     const current = this.get<Equipment>("SELECT * FROM equipment WHERE id = ?", [id]);
     if (!current) return false;
 
-    this.run("DELETE FROM equipment WHERE id = ?", [id]);
-    this.save();
+    this.transaction(() => {
+      this.run("DELETE FROM equipment WHERE id = ?", [id]);
+      // A machine that is gone is not a machine in maintenance. The bookings of the jobs that
+      // asked for it were told it was unavailable, and would have gone on saying so.
+      this.renoteDaysNeeding([current.name, current.type]);
+    });
     return true;
   }
 
@@ -3499,22 +3577,30 @@ export class BuildFlowStore {
       conflicts
     };
 
-    this.insert("assignments", { ...assignment, conflicts: JSON.stringify(conflicts) });
-    this.save();
-    return assignment;
+    // the row and the notes its arrival changes go in together, or neither does
+    this.transaction(() => {
+      this.insert("assignments", { ...assignment, conflicts: JSON.stringify(conflicts) });
+      // the bookings already on that crew's day are part of the same clash
+      this.renoteCrewDay(input.crewId, input.date);
+    });
+    return this.assignment(assignment.id) ?? assignment;
   }
 
   updateAssignment(id: string, updates: Partial<ScheduleAssignment>) {
-    const next = this.writeAssignment(id, updates);
-    if (next) this.save();
-    return next;
+    // the move and the notes on both days it touches go in together, or neither does
+    return this.transaction(() => this.writeAssignment(id, updates));
   }
 
   /** The row after `updates`, with its conflict notes recomputed — written, not yet saved to disk. */
-  private writeAssignment(id: string, updates: Partial<ScheduleAssignment>) {
+  private writeAssignment(id: string, updates: Partial<ScheduleAssignment>, expectedVersion?: number) {
     const current = this.get<AssignmentRow>("SELECT * FROM assignments WHERE id = ?", [id]);
     if (!current) return undefined;
+    this.checkBookingVersion(id, current, expectedVersion);
     const jobId = updates.jobId ?? current.jobId;
+    // a booking points at a crew and a job; without these checks a typo writes a row that points at neither
+    const crewId = updates.crewId ?? current.crewId;
+    if (updates.crewId && !this.get("SELECT id FROM crews WHERE id = ?", [crewId])) throw new Error(`Crew ${crewId} not found`);
+    if (updates.jobId && !this.get("SELECT id FROM jobs WHERE id = ?", [jobId])) throw new Error(`Job ${jobId} not found`);
     const next = {
       jobId,
       crewId: updates.crewId ?? current.crewId,
@@ -3523,7 +3609,7 @@ export class BuildFlowStore {
       status: this.get<{ status: Status }>("SELECT status FROM jobs WHERE id = ?", [jobId])?.status ?? current.status
     };
     const conflicts = this.detectConflicts(next.jobId, next.crewId, next.date, id);
-    this.run("UPDATE assignments SET jobId = ?, crewId = ?, date = ?, status = ?, conflicts = ? WHERE id = ?", [
+    this.run("UPDATE assignments SET jobId = ?, crewId = ?, date = ?, status = ?, conflicts = ?, version = version + 1 WHERE id = ?", [
       next.jobId,
       next.crewId,
       next.date,
@@ -3531,12 +3617,22 @@ export class BuildFlowStore {
       JSON.stringify(conflicts),
       id
     ]);
-    return toAssignment({ id, ...next, conflicts: JSON.stringify(conflicts) });
+    // both days change: the one it joined, and the one it left behind
+    this.renoteCrewDay(next.crewId, next.date);
+    if (current.crewId !== next.crewId || current.date !== next.date) this.renoteCrewDay(current.crewId, current.date);
+    return this.assignment(id);
   }
 
+  /** True when a booking was there to remove; false when the id names nothing. */
   deleteAssignment(id: string) {
-    this.run("DELETE FROM assignments WHERE id = ?", [id]);
-    this.save();
+    const row = this.get<{ crewId: string; date: string }>("SELECT crewId, date FROM assignments WHERE id = ?", [id]);
+    if (!row) return false;
+    this.transaction(() => {
+      this.run("DELETE FROM assignments WHERE id = ?", [id]);
+      // what it shared the day with may not be double-booked any more
+      this.renoteCrewDay(row.crewId, row.date);
+    });
+    return true;
   }
 
   assignment(id: string): ScheduleAssignment | undefined {
@@ -3547,6 +3643,80 @@ export class BuildFlowStore {
     if (!row) return undefined;
     const { jobStatus, ...rest } = row;
     return toAssignment({ ...rest, status: jobStatus ?? rest.status });
+  }
+
+  /**
+   * Refuses a write made against a copy of the row that somebody else has since replaced.
+   *
+   * The version travels with the row the client read and comes back with the write. When it does
+   * not match, nothing is written and the caller is told what the row says now — which is the
+   * difference between "your change did not land" and the silence that used to follow it. A write
+   * that sends no version is not checked: the imports, the seed and the older callers do not read
+   * a row before replacing it, and refusing those would be a different change.
+   */
+  private checkJobVersion(id: string, expected?: number) {
+    if (expected == null) return;
+    const row = this.get<{ version: number; name: string; startDate: string }>("SELECT version, name, startDate FROM jobs WHERE id = ?", [
+      id
+    ]);
+    if (!row || row.version === expected) return;
+    throw new StaleWriteError(`${row.name} was changed by someone else while you had it open, so nothing was saved.`, {
+      id,
+      version: row.version,
+      startDate: row.startDate
+    });
+  }
+
+  private checkBookingVersion(id: string, current: AssignmentRow & { version?: number }, expected?: number) {
+    if (expected == null || current.version === undefined || current.version === expected) return;
+    const job = this.get<{ name: string }>("SELECT name FROM jobs WHERE id = ?", [current.jobId]);
+    const crew = this.get<{ name: string }>("SELECT name FROM crews WHERE id = ?", [current.crewId]);
+    throw new StaleWriteError(
+      `${job?.name ?? "That job"} is now with ${crew?.name ?? "another crew"} on ${current.date.slice(0, 10)} — somebody moved it while you had it open, so nothing was saved.`,
+      { id, version: current.version, crewId: current.crewId, date: current.date }
+    );
+  }
+
+  /**
+   * Re-notes every booking on a crew's day. A clash belongs to the day, not to whichever row
+   * arrived last: a booking that joins or leaves changes what the others should say, so both
+   * sides of a double-booking carry it, and removing one clears the note on the rest.
+   */
+  private renoteCrewDay(crewId: string, date: string) {
+    const rows = this.all<{ id: string; jobId: string }>("SELECT id, jobId FROM assignments WHERE crewId = ? AND date = ?", [crewId, date]);
+    for (const row of rows) {
+      this.run("UPDATE assignments SET conflicts = ? WHERE id = ?", [
+        JSON.stringify(this.detectConflicts(row.jobId, crewId, date, row.id)),
+        row.id
+      ]);
+    }
+  }
+
+  /** Re-notes every crew-day whose job asks for one of these machines, by name or by type. */
+  private renoteDaysNeeding(names: Array<string | undefined>) {
+    for (const name of new Set(names.filter((value): value is string => Boolean(value)))) {
+      this.renoteDaysOf(
+        this.all<{ crewId: string; date: string }>(
+          "SELECT a.crewId AS crewId, a.date AS date FROM assignments a JOIN jobs j ON j.id = a.jobId WHERE ? LIKE '%' || j.requiredEquipment || '%' AND j.requiredEquipment <> ''",
+          [name]
+        )
+      );
+    }
+  }
+
+  /** Re-notes each crew-day these bookings sit on, once per day. */
+  private renoteDaysOf(rows: Array<{ crewId: string; date: string }>) {
+    const days = new Map<string, { crewId: string; date: string }>();
+    for (const row of rows) days.set(`${row.crewId}\u0000${row.date}`, row);
+    for (const day of days.values()) this.renoteCrewDay(day.crewId, day.date);
+  }
+
+  /**
+   * Re-notes the bookings of a job. A note is derived from the job's materials, its crew's size and
+   * its equipment's status, so a change to any of those makes what the bookings say untrue until this runs.
+   */
+  private renoteJob(jobId: string) {
+    this.renoteDaysOf(this.all<{ crewId: string; date: string }>("SELECT crewId, date FROM assignments WHERE jobId = ?", [jobId]));
   }
 
   /** The booking this job already has on that crew's day, if any — one job on a crew-day is one booking. */
@@ -3600,6 +3770,8 @@ export class BuildFlowStore {
         { id: row.id, jobId: row.jobId, crewId: row.crewId, date: row.date, status: row.status }
       ])
     );
+    // where each booking started, so the day it leaves is re-noted too
+    const origin = new Map([...rows.values()].map((row) => [row.id, { crewId: row.crewId, date: row.date }]));
     const touched = new Set<string>();
     const removed: string[] = [];
     const jobIds: string[] = [];
@@ -3609,6 +3781,7 @@ export class BuildFlowStore {
       if (move.op === "move") {
         const row = rows.get(move.id);
         if (!row) throw new Error(`Booking ${move.id} not found`);
+        if (move.crewId && !this.get("SELECT id FROM crews WHERE id = ?", [move.crewId])) throw new Error(`Crew ${move.crewId} not found`);
         rows.set(move.id, { ...row, crewId: move.crewId ?? row.crewId, date: move.date ?? row.date });
         touched.add(move.id);
         planned.push({ move, id: move.id });
@@ -3657,7 +3830,7 @@ export class BuildFlowStore {
       for (const { move, id } of planned) {
         const row = rows.get(id);
         if (move.op === "move" && row) {
-          this.writeAssignment(id, { crewId: row.crewId, date: row.date, status: row.status });
+          this.writeAssignment(id, { crewId: row.crewId, date: row.date, status: row.status }, move.version);
         } else if (move.op === "book" && row) {
           const conflicts = this.detectConflicts(row.jobId, row.crewId, row.date, id);
           this.insert("assignments", { ...row, conflicts: JSON.stringify(conflicts) });
@@ -3665,19 +3838,28 @@ export class BuildFlowStore {
           this.run("DELETE FROM assignments WHERE id = ?", [id]);
         } else if (move.op === "job") {
           // the dates, and whatever else the same save changed (a status, a note): one step, one transaction
-          const fields = Object.fromEntries(Object.entries(move).filter(([key]) => key !== "op" && key !== "id")) as Partial<Job>;
-          this.writeJob(id, fields);
+          const fields = Object.fromEntries(
+            Object.entries(move).filter(([key]) => key !== "op" && key !== "id" && key !== "version")
+          ) as Partial<Job>;
+          this.writeJob(id, fields, move.version);
+          // The same change through PATCH /api/jobs/:id re-notes the job's bookings, and a move
+          // may carry a materials change with it. Re-noting only the days this batch touched
+          // would leave the job's other bookings saying what is no longer true.
+          if (fields.materialsStatus !== undefined) this.renoteJob(id);
         }
       }
-      // the notes on every touched booking reflect the whole batch, not the order it was applied in
+      // Every crew-day the batch touched is re-noted once, after the whole batch: the days bookings
+      // arrived on, the days they left, and the neighbours that never moved but now share a day.
+      const days = new Map<string, { crewId: string; date: string }>();
+      const note = (day: { crewId: string; date: string } | undefined) => {
+        if (day) days.set(`${day.crewId}\u0000${day.date}`, day);
+      };
       for (const id of touched) {
-        const row = rows.get(id);
-        if (row)
-          this.run("UPDATE assignments SET conflicts = ? WHERE id = ?", [
-            JSON.stringify(this.detectConflicts(row.jobId, row.crewId, row.date, id)),
-            id
-          ]);
+        note(origin.get(id));
+        note(rows.get(id));
       }
+      for (const id of removed) note(origin.get(id));
+      for (const day of days.values()) this.renoteCrewDay(day.crewId, day.date);
     });
 
     return {

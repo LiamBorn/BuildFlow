@@ -29,6 +29,8 @@ const XER = [
   "%R\t1004\t4821\t902\tM100\tTopping out\tTT_FinMile\tTK_NotStart\t0\t2026-11-20 17:00\t2026-11-20 17:00\t\t\t0",
   "%R\t1005\t4821\t902\tWBS10\tSuperstructure rollup\tTT_WBS\tTK_NotStart\t0\t2026-08-17 08:00\t2026-11-20 17:00\t\t\t0",
   "%R\t1006\t4821\t901\tA1030\tUndated placeholder\tTT_Task\tTK_NotStart\t0\t\t\t\t\t0",
+  // a finish before its start: not a short job, not a job
+  "%R\t1007\t4821\t901\tA1040\tBackwards pour\tTT_Task\tTK_NotStart\t0\t2026-09-20 08:00\t2026-09-10 17:00\t\t\t0",
   "%T\tTASKPRED",
   "%F\ttask_pred_id\ttask_id\tpred_task_id\tpred_type\tlag_hr_cnt",
   "%R\t1\t1002\t1001\tPR_FS\t0",
@@ -92,7 +94,7 @@ describe("XER parser", () => {
     expect(parsed.source).toBe("Primavera P6 (XER 19.12)");
     expect(parsed.projects).toHaveLength(1);
     expect(parsed.projects[0]).toMatchObject({ name: "RIVERSIDE", start: "2026-08-03", finish: "2026-11-20" });
-    expect(parsed.activities).toHaveLength(6);
+    expect(parsed.activities).toHaveLength(7); // six real rows plus the backwards one the mapper refuses
   });
 
   it("drops the project root node from the WBS but keeps real bands", () => {
@@ -237,12 +239,19 @@ describe("mapping to BuildFlow", () => {
     expect(project.phases.map((phase) => phase.name)).toEqual(["Substructure", "Superstructure"]);
   });
 
-  it("skips summary and undated rows, keeping real work", () => {
+  it("skips summary, undated and backwards rows, keeping real work", () => {
     expect(plan.stats.summariesSkipped).toBe(1);
     expect(plan.stats.undatedSkipped).toBe(1);
+    // Every other door refuses a finish before its start; this was the one that did not, and a
+    // job through it reads as one day and reports itself complete the day after it starts.
+    expect(plan.stats.backwardsSkipped).toBe(1);
     expect(plan.stats.jobs).toBe(4);
     expect(plan.projects[0].jobs.map((job) => job.name)).not.toContain("Superstructure rollup");
     expect(plan.projects[0].jobs.map((job) => job.name)).not.toContain("Undated placeholder");
+    expect(plan.projects[0].jobs.map((job) => job.name)).not.toContain("Backwards pour");
+    expect(plan.warnings.join(" ")).toContain("finished before they started");
+    // and nothing that did get in has one
+    for (const job of plan.projects[0].jobs) expect(job.endDate >= job.startDate).toBe(true);
   });
 
   it("maps percent complete onto job status", () => {

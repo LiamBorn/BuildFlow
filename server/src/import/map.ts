@@ -57,6 +57,8 @@ export type ImportPlan = {
     milestones: number;
     summariesSkipped: number;
     undatedSkipped: number;
+    /** Activities whose finish came before their start — not a window, so not importable. */
+    backwardsSkipped: number;
     relationships: number;
   };
   warnings: string[];
@@ -141,6 +143,7 @@ export function buildImportPlan(schedule: ParsedSchedule, options: ImportPlanOpt
     milestones: 0,
     summariesSkipped: 0,
     undatedSkipped: 0,
+    backwardsSkipped: 0,
     relationships: schedule.activities.reduce((total, activity) => total + activity.predecessors.length, 0)
   };
 
@@ -161,6 +164,13 @@ export function buildImportPlan(schedule: ParsedSchedule, options: ImportPlanOpt
       // activity would land on the board as garbage, so skip and report.
       if (!activity.start || !activity.finish) {
         stats.undatedSkipped += 1;
+        continue;
+      }
+      // A finish before its start is not a short job, it is not a job: every date measure in the
+      // schedule reads it as one day and the plan line reports it complete from the day after it
+      // starts. The API refuses one at every other door; this is the last one.
+      if (activity.finish < activity.start) {
+        stats.backwardsSkipped += 1;
         continue;
       }
       if (activity.isMilestone) stats.milestones += 1;
@@ -250,6 +260,9 @@ export function buildImportPlan(schedule: ParsedSchedule, options: ImportPlanOpt
   }
   if (stats.undatedSkipped > 0) {
     warnings.push(`${stats.undatedSkipped} activity(ies) had no start/finish dates and were skipped.`);
+  }
+  if (stats.backwardsSkipped > 0) {
+    warnings.push(`${stats.backwardsSkipped} activity(ies) finished before they started and were skipped.`);
   }
   if (stats.relationships > 0) {
     warnings.push(

@@ -7,7 +7,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import type { ReactElement, ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapPayload, Crew, Job, Project, ScheduleAssignment } from "@buildflow/shared";
 import type * as DndKit from "@dnd-kit/core";
 import type * as Api from "../api";
@@ -91,7 +91,7 @@ import {
   updateJob
 } from "../api";
 import { bootstrapFixture } from "../test/fixture";
-import { EXPORT_COLUMNS, downloadCsv } from "./export";
+import { EXPORT_COLUMNS, downloadCsv, printHtml } from "./export";
 import { WeekPage } from "./pages/WeekPage";
 import { ListPage } from "./pages/ListPage";
 import { KanbanPage } from "./pages/KanbanPage";
@@ -195,9 +195,10 @@ describe("Week page", () => {
     await waitFor(() => expect(reload).toHaveBeenCalled());
     await waitFor(() => expect(notice()).toHaveTextContent("Riverside Office Building moved to Framing Crew 2 on Jun 17"));
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    // not forced: the crew-day it is going home to may have been taken while the notice was up
     await waitFor(() =>
       expect(rebookSchedule).toHaveBeenLastCalledWith([{ op: "move", id: "as-1", crewId: "crew-concrete", date: "2026-06-15" }], {
-        force: true
+        force: false
       })
     );
     await waitFor(() => expect(notice()).toHaveTextContent("Riverside Office Building back with Concrete Crew 1 on Jun 15"));
@@ -218,7 +219,7 @@ describe("Week page", () => {
     );
     await waitFor(() => expect(notice()).toHaveTextContent("Downtown Retail Buildout booked with Framing Crew 2 on Jun 16"));
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    await waitFor(() => expect(rebookSchedule).toHaveBeenLastCalledWith([{ op: "unbook", id: "as-new" }], { force: true }));
+    await waitFor(() => expect(rebookSchedule).toHaveBeenLastCalledWith([{ op: "unbook", id: "as-new" }], { force: false }));
   });
 });
 
@@ -265,7 +266,7 @@ describe("Kanban page", () => {
     await drop({ jobId: "j-riverside-concrete", status: "Confirmed" }, { status: "Ready" });
     expect(updateJob).not.toHaveBeenCalled();
     await drop({ jobId: "j-riverside-concrete", status: "Confirmed" }, { status: "Complete" });
-    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-riverside-concrete", { status: "Complete" }));
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-riverside-concrete", { status: "Complete" }, undefined));
     await waitFor(() => expect(notice()).toHaveTextContent("Riverside Office Building moved to Complete"));
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     await waitFor(() => expect(updateJob).toHaveBeenLastCalledWith("j-riverside-concrete", { status: "Confirmed" }));
@@ -302,7 +303,7 @@ describe("Month page", () => {
           { op: "job", id: "j-riverside-concrete", startDate: "2026-06-15", endDate: "2026-06-17" },
           { op: "move", id: "as-1", date: "2026-06-15" }
         ],
-        { force: true }
+        { force: false }
       )
     );
   });
@@ -568,6 +569,15 @@ describe("First run", () => {
 });
 
 describe("Continuity", () => {
+  it("names a week that crosses New Year with both of its years", () => {
+    // The label is what a planner reads, and it was built inline from the first day's year —
+    // so the helper that knows better had a test, no caller, and the screen kept saying 2026.
+    window.location.hash = "#schedule/week";
+    writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-12-28" });
+    render(<WeekPage {...pageProps} />);
+    expect(screen.getByLabelText("Selected week Dec 28, 2026 - Jan 3, 2027")).toBeInTheDocument();
+  });
+
   it("carries the week, the month and the filters across all seven pages, and survives a reload", () => {
     window.location.hash = "#schedule/week";
     writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22", projectId: "p-pinecrest", crewType: "Framing" });
@@ -670,7 +680,7 @@ describe("Conflicts ask before saving", () => {
   /** Opens Pinecrest's drawer from its Week card and moves the job a week later, the same length. */
   const moveFromDrawer = async () => {
     render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Start"), { target: { value: "2026-06-24" } });
     fireEvent.change(within(drawer).getByLabelText("Finish"), { target: { value: "2026-06-25" } });
@@ -714,14 +724,258 @@ describe("Conflicts ask before saving", () => {
 
   it("edits a job in place when only its status changes, and offers the way back", async () => {
     render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "On Site" }));
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "On Site" }, undefined));
     expect(rebookSchedule).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await waitFor(() => expect(updateJob).toHaveBeenLastCalledWith("j-pinecrest", { status: "In Progress" }));
+  });
+});
+
+describe("News from another tab", () => {
+  /** jsdom has no EventSource, so the live feed's effect returns early without one. */
+  class FakeEventSource {
+    static open: FakeEventSource[] = [];
+    listeners = new Map<string, (event: Event) => void>();
+    withCredentials = true;
+    constructor(public url: string) {
+      FakeEventSource.open.push(this);
+    }
+    addEventListener(type: string, handler: (event: Event) => void) {
+      this.listeners.set(type, handler);
+    }
+    removeEventListener(type: string) {
+      this.listeners.delete(type);
+    }
+    close() {}
+    /** What the server sends when somebody else moves something. */
+    announce(payload: Record<string, unknown>) {
+      this.listeners.get("schedule")?.(new MessageEvent("schedule", { data: JSON.stringify(payload) }));
+    }
+  }
+
+  beforeEach(() => {
+    FakeEventSource.open = [];
+    vi.stubGlobal("EventSource", FakeEventSource);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("announces a change from another tab without taking away the Undo", async () => {
+    render(<WeekPage {...pageProps} />);
+    await drop(
+      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
+      { crewId: "crew-framing", date: "2026-06-17" }
+    );
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    expect(undo).toBeInTheDocument();
+
+    const feed = FakeEventSource.open[0];
+    expect(feed, "the page should be listening to the org's feed").toBeDefined();
+    act(() => {
+      feed.announce({ kind: "assignments", op: "move", ids: ["as-9"], by: { id: "u-2", name: "Dana Brooks" }, client: "another-tab" });
+    });
+
+    // the news lands…
+    expect(await screen.findByText("Dana Brooks changed a booking in another tab.")).toBeInTheDocument();
+    // …beside the way back, not over it. One notice slot meant this click disappeared mid-decision.
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+    expect(screen.getByText(/Riverside Office Building moved to Framing Crew 2/)).toBeInTheDocument();
+
+    // both sit inside the one live region, so a screen reader hears them in order
+    const region = document.querySelector(".gantt-status-live")!;
+    expect(region).toHaveTextContent("Riverside Office Building moved to Framing Crew 2");
+    expect(region).toHaveTextContent("Dana Brooks changed a booking in another tab.");
+  });
+});
+
+describe("What a control says it will do", () => {
+  it("names a board card for the drawer it opens, not the project it does not", () => {
+    render(<WeekPage {...pageProps} />);
+    // the card opened the job drawer while announcing itself as the way to the project record
+    const card = screen.getByRole("button", { name: "Open Pinecrest Foundations" });
+    expect(screen.queryByRole("button", { name: "Open Pinecrest Foundations project" })).toBeNull();
+    fireEvent.click(card);
+    expect(screen.getByRole("dialog", { name: "Pinecrest Foundations" })).toBeInTheDocument();
+  });
+
+  it("leaves no control on the board promising a project it will not open", () => {
+    render(<WeekPage {...pageProps} />);
+    const promisesAProject = screen.queryAllByRole("button", { name: /\bproject$/ });
+    expect(promisesAProject).toHaveLength(0);
+    // the queue's cards are not a way into anything: they say what they are for
+    expect(screen.getByRole("button", { name: "Downtown Retail Buildout — drag onto the board to book it" })).toBeInTheDocument();
+  });
+});
+
+describe("Undoing into a day somebody else took", () => {
+  const clashOnTheWayBack = () =>
+    new ApiError("Concrete Crew 1 is on Slab pour that day", 409, undefined, "conflict", {
+      clashes: [{ crewId: "crew-concrete", crewName: "Concrete Crew 1", date: "2026-06-15", jobId: "j-other", jobName: "Slab pour" }]
+    });
+
+  beforeEach(() => {
+    vi.mocked(rebookSchedule).mockClear();
+    vi.mocked(rebookSchedule).mockResolvedValue({ assignments: [{ id: "as-new" }], removed: [], jobs: [] } as never);
+  });
+
+  it("asks before double-booking on the way back, and leaves the card where it is on a no", async () => {
+    render(<WeekPage {...pageProps} />);
+    await drop(
+      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
+      { crewId: "crew-framing", date: "2026-06-17" }
+    );
+    await waitFor(() => expect(notice()).toHaveTextContent("moved to Framing Crew 2"));
+
+    // while the notice is up, somebody takes the crew-day it came from
+    vi.mocked(rebookSchedule).mockRejectedValueOnce(clashOnTheWayBack());
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    // the way back is a clash the planner has not seen, so it is put to them
+    const ask = await screen.findByRole("alertdialog", { name: "Book anyway?" });
+    expect(ask).toHaveTextContent("Concrete Crew 1 is on Slab pour that day");
+    fireEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
+
+    // a no leaves the move where it is — the card does not go home over somebody else
+    await waitFor(() => expect(notice()).toHaveTextContent("stays where it is"));
+    expect(vi.mocked(rebookSchedule).mock.calls.filter((call) => call[1]?.force === true)).toHaveLength(0);
+  });
+
+  it("goes home on a yes, and only then forces it", async () => {
+    render(<WeekPage {...pageProps} />);
+    await drop(
+      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
+      { crewId: "crew-framing", date: "2026-06-17" }
+    );
+    await waitFor(() => expect(notice()).toHaveTextContent("moved to Framing Crew 2"));
+
+    vi.mocked(rebookSchedule).mockRejectedValueOnce(clashOnTheWayBack());
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    const ask = await screen.findByRole("alertdialog", { name: "Book anyway?" });
+    fireEvent.click(within(ask).getByRole("button", { name: "Book anyway" }));
+
+    // the retry is the forced one, and it is the planner who forced it
+    await waitFor(() => expect(vi.mocked(rebookSchedule).mock.calls.some((call) => call[1]?.force === true)).toBe(true));
+    await waitFor(() => expect(notice()).toHaveTextContent("back with Concrete Crew 1"));
+  });
+});
+
+describe("When somebody else got there first", () => {
+  beforeEach(() => {
+    vi.mocked(updateJob).mockClear();
+    reload.mockClear();
+    reload.mockResolvedValue(undefined);
+  });
+
+  /** What the server answers when the row has moved on since the client read it. */
+  const stale = () =>
+    new ApiError(
+      "Pinecrest Foundations was changed by someone else while you had it open, so nothing was saved.",
+      409,
+      undefined,
+      "stale",
+      {
+        current: { version: 4, startDate: "2026-06-29" }
+      }
+    );
+
+  it("says who moved what, refreshes the board, and does not offer to force it", async () => {
+    vi.mocked(updateJob).mockRejectedValueOnce(stale());
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+
+    // the server's words, not "could not save" — nothing was wrong with the request
+    expect(await within(drawer).findByRole("alert")).toHaveTextContent("was changed by someone else while you had it open");
+    await waitFor(() => expect(notice()).toHaveTextContent("was changed by someone else while you had it open"));
+    // the board is refreshed, so the planner is looking at what really happened
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    // and this is not the double-booking question: there is nothing to force
+    expect(screen.queryByRole("alertdialog", { name: "Book anyway?" })).toBeNull();
+    expect(vi.mocked(updateJob)).toHaveBeenCalledTimes(1);
+    // the drawer stays open with the change still in it, so the planner can decide again
+    expect(screen.getByRole("dialog", { name: "Pinecrest Foundations" })).toBeInTheDocument();
+  });
+
+  it("sends the version it read, so the server can tell", async () => {
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(updateJob).toHaveBeenCalled());
+    // the fixture's jobs carry no version, so this is the shape rather than the number
+    expect(vi.mocked(updateJob).mock.calls[0]).toHaveLength(3);
+  });
+});
+
+describe("When the write lands but the board cannot refresh", () => {
+  beforeEach(() => {
+    vi.mocked(rebookSchedule).mockClear();
+    vi.mocked(updateJob).mockClear();
+    reload.mockClear();
+    reload.mockResolvedValue(undefined);
+  });
+  afterEach(() => {
+    reload.mockResolvedValue(undefined);
+  });
+
+  it("says the board may be out of date instead of claiming the change failed", async () => {
+    reload.mockRejectedValueOnce(new Error("Could not reach the BuildFlow API"));
+    render(<WeekPage {...pageProps} />);
+    await drop(
+      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
+      { crewId: "crew-framing", date: "2026-06-17" }
+    );
+    // the re-book itself went through: the server has the move
+    await waitFor(() => expect(rebookSchedule).toHaveBeenCalled());
+    await waitFor(() => expect(notice()).toHaveTextContent("The board could not refresh, so what you see may be out of date"));
+    expect(notice()).toHaveTextContent("Riverside Office Building moved to Framing Crew 2 on Jun 17");
+    expect(notice()).not.toHaveTextContent("Could not move");
+    expect(notice()).toHaveClass("is-error");
+    // no Undo against a board that is already behind — the way out is to refresh
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(notice()).toHaveTextContent("The board is up to date."));
+  });
+
+  it("offers the refresh again when it still cannot reach the API", async () => {
+    reload.mockRejectedValue(new Error("Could not reach the BuildFlow API"));
+    render(<WeekPage {...pageProps} />);
+    await drop({ jobId: "j-unassigned" }, { crewId: "crew-framing", date: "2026-06-16" });
+    await waitFor(() => expect(notice()).toHaveTextContent("may be out of date"));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(notice()).toHaveTextContent("Still could not reach the API"));
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+  });
+
+  it("closes the drawer on a save that landed, and keeps it open on one that did not", async () => {
+    reload.mockRejectedValueOnce(new Error("Could not reach the BuildFlow API"));
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "On Site" }, undefined));
+    // the save worked, so the drawer closes and the notice carries the news about the board
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Pinecrest Foundations" })).toBeNull());
+    expect(notice()).toHaveTextContent("Pinecrest Foundations saved. The board could not refresh");
+
+    // a write that genuinely fails still says so, in the drawer, which stays open
+    vi.mocked(updateJob).mockRejectedValueOnce(new Error("nope"));
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    const again = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
+    fireEvent.change(within(again).getByLabelText("Status"), { target: { value: "Complete" } });
+    fireEvent.click(within(again).getByRole("button", { name: "Save changes" }));
+    expect(await within(again).findByRole("alert")).toHaveTextContent("Could not save Pinecrest Foundations: nope");
+    expect(screen.getByRole("dialog", { name: "Pinecrest Foundations" })).toBeInTheDocument();
   });
 });
 
@@ -733,7 +987,7 @@ describe("Transactional writes", () => {
 
   it("saves a move with its other changes as one re-book request, and takes it back with one", async () => {
     render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Start"), { target: { value: "2026-06-24" } });
     fireEvent.change(within(drawer).getByLabelText("Finish"), { target: { value: "2026-06-25" } });
@@ -763,7 +1017,7 @@ describe("Transactional writes", () => {
         { op: "job", id: "j-pinecrest", startDate: "2026-06-17", endDate: "2026-06-18", status: "In Progress", notes: "Slab pour." },
         { op: "move", id: "as-2", date: "2026-06-17" }
       ],
-      { force: true }
+      { force: false }
     ]);
     expect(updateJob).not.toHaveBeenCalled();
   });
@@ -891,5 +1145,292 @@ describe("Links from the drawer", () => {
     expect(links).toHaveTextContent("Leads to Pinecrest Foundations (FS)");
     expect(within(links).getByRole("button", { name: "Unlink Pinecrest Foundations" })).toBeInTheDocument();
     expect(within(links).getByRole("button", { name: /Link to another job/ })).toBeInTheDocument();
+  });
+});
+
+describe("Dialogs that behave like dialogs", () => {
+  /** Everything the keyboard can reach inside an element, in order. */
+  const reachable = (root: HTMLElement) => [
+    ...root.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ];
+
+  it("keeps Tab inside the job drawer and gives focus back to the card that opened it", async () => {
+    render(<WeekPage {...pageProps} />);
+    const card = within(cell("crew-concrete", "2026-06-15")).getByText("Riverside Office Building").closest("button") as HTMLElement;
+    card.focus();
+    fireEvent.click(card);
+    const drawer = await screen.findByRole("dialog", { name: "Riverside Office Building" });
+    // focus goes in, and Tab past the last control comes back to the first
+    expect(drawer.contains(document.activeElement)).toBe(true);
+    const inside = reachable(drawer);
+    expect(inside.length).toBeGreaterThan(3);
+    inside[inside.length - 1].focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(inside[0]);
+    // and Shift+Tab off the first wraps to the last, rather than leaving for the page behind
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(inside[inside.length - 1]);
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close job details" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Riverside Office Building" })).toBeNull());
+    expect(document.activeElement).toBe(card);
+  });
+
+  it("says a failed save inside the drawer, where the eye already is", async () => {
+    vi.mocked(updateJob).mockRejectedValueOnce(new Error("Could not reach the BuildFlow API."));
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(within(cell("crew-concrete", "2026-06-15")).getByText("Riverside Office Building"));
+    const drawer = await screen.findByRole("dialog", { name: "Riverside Office Building" });
+    fireEvent.change(within(drawer).getByLabelText("Notes"), { target: { value: "a note that cannot be saved" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    const alert = await within(drawer).findByRole("alert");
+    expect(alert).toHaveTextContent("Could not save Riverside Office Building");
+    expect(screen.getByRole("dialog", { name: "Riverside Office Building" })).toBeInTheDocument(); // it stays open
+  });
+
+  it("keeps a live region on the page before there is anything to announce", async () => {
+    render(<WeekPage {...pageProps} />);
+    const region = screen.getByRole("status");
+    expect(region).toBeEmptyDOMElement();
+    expect(region).toHaveAttribute("aria-live", "polite");
+    // the message lands inside the region that was already there
+    await drop(
+      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
+      { crewId: "crew-concrete", date: "2026-06-17" }
+    );
+    await waitFor(() => expect(region).toHaveTextContent("moved to"));
+  });
+});
+
+describe("An export says what happened", () => {
+  it("tells the planner when the browser would not save the file, instead of claiming it did", async () => {
+    vi.mocked(downloadCsv).mockReturnValueOnce(false);
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /Export/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Download CSV/ }));
+    await waitFor(() => expect(notice()).toHaveTextContent("This browser would not save the file"));
+    expect(notice()).toHaveClass("is-error");
+  });
+
+  it("still says what it wrote when the file goes out", async () => {
+    vi.mocked(downloadCsv).mockReturnValueOnce(true);
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /Export/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Download CSV/ }));
+    await waitFor(() => expect(notice()).toHaveTextContent(/Exported \d+ rows to buildflow-week-/));
+  });
+
+  it("tells the planner when the print view would not open", async () => {
+    vi.mocked(printHtml).mockReturnValueOnce(false);
+    render(<WeekPage {...pageProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /Export/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Print week sheets/ }));
+    await waitFor(() => expect(notice()).toHaveTextContent("This browser would not open the print view"));
+  });
+
+  it("gives the Matrix a legend for the colours it actually uses", () => {
+    render(<MatrixPage {...pageProps} />);
+    const legend = screen.getByLabelText("What the cells mean");
+    for (const band of ["Open", "1 booking", "2 bookings", "3 or more", "Clash to settle"]) {
+      expect(legend).toHaveTextContent(band);
+    }
+    // the status words belong to the boards that colour by status
+    expect(legend).not.toHaveTextContent("DelayIQed");
+    expect(screen.queryByLabelText("Schedule statuses")).toBeNull();
+  });
+});
+
+describe("What a phone gets", () => {
+  /** A viewport of `width` px, the way the page asks about one. */
+  const atWidth = (width: number) => {
+    vi.stubGlobal("matchMedia", (query: string) => {
+      const max = /max-width:\s*(\d+)px/.exec(query);
+      const min = /min-width:\s*(\d+)px/.exec(query);
+      const matches = (!max || width <= Number(max[1])) && (!min || width >= Number(min[1]));
+      return { matches, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn(), onchange: null, dispatchEvent: vi.fn() };
+    });
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.localStorage.clear();
+  });
+
+  it("opens the chart on the fitted week at 375 px", () => {
+    atWidth(375);
+    render(<GanttPage {...pageProps} />);
+    expect(screen.getByRole("button", { name: "Week", pressed: true })).toBeInTheDocument();
+    // the fitted week brings the chart's own stepper with it
+    expect(screen.getByLabelText(/^Selected week/)).toBeInTheDocument();
+  });
+
+  it("opens the chart on the month on a desktop", () => {
+    atWidth(1280);
+    render(<GanttPage {...pageProps} />);
+    expect(screen.getByRole("button", { name: "Month", pressed: true })).toBeInTheDocument();
+  });
+
+  it("keeps a range the planner chose, whatever the screen", () => {
+    window.localStorage.setItem("gantt:range", JSON.stringify("quarterly"));
+    atWidth(375);
+    render(<GanttPage {...pageProps} />);
+    expect(screen.getByRole("button", { name: "Quarter", pressed: true })).toBeInTheDocument();
+  });
+});
+
+describe("Dragging a bar on the chart", () => {
+  /**
+   * What jsdom does not give a drag: the timeline has no size, and there is no pointer capture. The
+   * chart reads dates off the first and takes the pointer with the second, so both are stood in for.
+   */
+  const withADraggableChart = () => {
+    const realRect = Element.prototype.getBoundingClientRect;
+    const captured = new Set<number>();
+    Element.prototype.getBoundingClientRect = function box(this: Element) {
+      if (this.classList.contains("gantt-timeline"))
+        return { left: 0, top: 0, width: 4500, height: 400, right: 4500, bottom: 400, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+      return realRect.call(this);
+    };
+    Element.prototype.setPointerCapture = function capture(id: number) {
+      captured.add(id);
+    };
+    Element.prototype.hasPointerCapture = function has(id: number) {
+      return captured.has(id);
+    };
+    Element.prototype.releasePointerCapture = function release(id: number) {
+      captured.delete(id);
+    };
+    return () => {
+      Element.prototype.getBoundingClientRect = realRect;
+    };
+  };
+
+  it("moves the job's dates through the same save the drawer uses", async () => {
+    vi.mocked(updateJob).mockClear();
+    vi.mocked(rebookSchedule).mockClear();
+    const restore = withADraggableChart();
+    try {
+      render(<GanttPage {...pageProps} />);
+      const bar = document.querySelector(".gantt-bar") as HTMLElement;
+      expect(bar, "the chart drew a bar").not.toBeNull();
+      // jsdom has no PointerEvent; the chart reads clientX and the pointer id, which a MouseEvent carries
+      const pointer = (type: string, clientX: number) =>
+        Object.assign(new MouseEvent(type, { bubbles: true, clientX, clientY: 10, button: 0 }), { pointerId: 1 });
+      bar.dispatchEvent(pointer("pointerdown", 200));
+      bar.dispatchEvent(pointer("pointermove", 560));
+      bar.dispatchEvent(pointer("pointerup", 560));
+      // a job with bookings moves through the re-book, so its bookings travel with it; one without is a plain patch
+      await waitFor(() =>
+        expect(
+          vi.mocked(rebookSchedule).mock.calls.length + vi.mocked(updateJob).mock.calls.length,
+          "the drag saved something"
+        ).toBeGreaterThan(0)
+      );
+      const rebooked = vi.mocked(rebookSchedule).mock.calls.at(-1);
+      const span = rebooked
+        ? (rebooked[0].find((move) => move.op === "job") as { startDate: string; endDate: string })
+        : (vi.mocked(updateJob).mock.calls.at(-1)?.[1] as { startDate: string; endDate: string });
+      expect(span.startDate, "a moved bar sends a real start date").toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(span.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(span.endDate >= span.startDate, "the span stays the right way round").toBe(true);
+      // and the bookings of that job move with it
+      if (rebooked)
+        expect(
+          rebooked[0].some((move) => move.op === "move"),
+          "its bookings travel with it"
+        ).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+
+  it("leaves a bar where the hand put it when an unrelated change reloads the board", async () => {
+    vi.mocked(updateJob).mockClear();
+    vi.mocked(rebookSchedule).mockClear();
+    // the save never answers, so the bar stays mid-flight for the whole test
+    vi.mocked(rebookSchedule).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(updateJob).mockImplementation(() => new Promise(() => {}));
+    const restore = withADraggableChart();
+    try {
+      const view = render(<GanttPage {...pageProps} />);
+      const bar = document.querySelector(".gantt-bar") as HTMLElement;
+      const startedAt = bar.getAttribute("title");
+      const pointer = (type: string, clientX: number) =>
+        Object.assign(new MouseEvent(type, { bubbles: true, clientX, clientY: 10, button: 0 }), { pointerId: 1 });
+      bar.dispatchEvent(pointer("pointerdown", 200));
+      bar.dispatchEvent(pointer("pointermove", 560));
+      bar.dispatchEvent(pointer("pointerup", 560));
+      await waitFor(() => expect(document.querySelector(".gantt-bar")!.getAttribute("title")).not.toBe(startedAt));
+      const movedTo = document.querySelector(".gantt-bar")!.getAttribute("title");
+
+      // somebody changes something else entirely, so the board reloads with a new jobs array
+      const elsewhere = {
+        ...data,
+        jobs: data.jobs.map((job) => (job.id === "j-pinecrest" ? { ...job, notes: "someone else's note" } : { ...job }))
+      };
+      view.rerender(<GanttPage {...pageProps} data={elsewhere} />);
+
+      // the bar stays where the hand put it: clearing every override on any reload snapped it back
+      await waitFor(() => expect(document.querySelector(".gantt-bar")!.getAttribute("title")).toBe(movedTo));
+    } finally {
+      restore();
+      vi.mocked(rebookSchedule).mockReset();
+      vi.mocked(updateJob).mockReset();
+    }
+  });
+
+  it("lets go of the bar once the server's copy says the same thing", async () => {
+    vi.mocked(updateJob).mockClear();
+    vi.mocked(rebookSchedule).mockClear();
+    vi.mocked(rebookSchedule).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(updateJob).mockImplementation(() => new Promise(() => {}));
+    const restore = withADraggableChart();
+    try {
+      const view = render(<GanttPage {...pageProps} />);
+      const bar = document.querySelector(".gantt-bar") as HTMLElement;
+      const pointer = (type: string, clientX: number) =>
+        Object.assign(new MouseEvent(type, { bubbles: true, clientX, clientY: 10, button: 0 }), { pointerId: 1 });
+      const startedAt = bar.getAttribute("title");
+      bar.dispatchEvent(pointer("pointerdown", 200));
+      bar.dispatchEvent(pointer("pointermove", 560));
+      bar.dispatchEvent(pointer("pointerup", 560));
+      await waitFor(() => expect(document.querySelector(".gantt-bar")!.getAttribute("title")).not.toBe(startedAt));
+
+      // what the drag asked the server for
+      const asked = (vi
+        .mocked(rebookSchedule)
+        .mock.calls.at(-1)?.[0]
+        .find((move) => move.op === "job") ?? vi.mocked(updateJob).mock.calls.at(-1)?.[1]) as { startDate: string; endDate: string };
+      const movedId =
+        (
+          vi
+            .mocked(rebookSchedule)
+            .mock.calls.at(-1)?.[0]
+            .find((move) => move.op === "job") as { id: string }
+        )?.id ?? (vi.mocked(updateJob).mock.calls.at(-1)?.[0] as string);
+
+      // the server now says the same thing, so the local copy has nothing left to hold
+      const landed = {
+        ...data,
+        jobs: data.jobs.map((job) => (job.id === movedId ? { ...job, startDate: asked.startDate, endDate: asked.endDate } : { ...job }))
+      };
+      view.rerender(<GanttPage {...pageProps} data={landed} />);
+      const settled = document.querySelector(".gantt-bar")!.getAttribute("title");
+
+      // Proof it let go: somebody else moves the same job again. A bar still holding its own copy
+      // would ignore that and stay where it was; this one follows the server.
+      const movedAgain = {
+        ...data,
+        jobs: data.jobs.map((job) => (job.id === movedId ? { ...job, startDate: "2026-10-05", endDate: "2026-10-07" } : { ...job }))
+      };
+      view.rerender(<GanttPage {...pageProps} data={movedAgain} />);
+      await waitFor(() => expect(document.querySelector(".gantt-bar")!.getAttribute("title")).not.toBe(settled));
+    } finally {
+      restore();
+      vi.mocked(rebookSchedule).mockReset();
+      vi.mocked(updateJob).mockReset();
+    }
   });
 });

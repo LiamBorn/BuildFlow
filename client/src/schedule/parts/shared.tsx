@@ -8,6 +8,7 @@ import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, Users, X } from
 import type { LucideIcon } from "lucide-react";
 import { useRef } from "react";
 import type { ReactNode } from "react";
+import { useModalDialog } from "../hooks";
 import { statusTone } from "../scheduleUtils";
 import type { ScheduleKpis } from "../kpis";
 import { SCHEDULE_STATUSES } from "../useScheduleContext";
@@ -143,9 +144,10 @@ export type ScheduleDialog = {
 };
 
 export function ScheduleDialogPanel({ dialog, onClose }: { dialog: ScheduleDialog; onClose: () => void }) {
+  const panel = useModalDialog<HTMLElement>(onClose);
   return (
     <div className="schedule-dialog-backdrop" role="presentation">
-      <section className="schedule-dialog" role="dialog" aria-modal="true" aria-label={dialog.title}>
+      <section className="schedule-dialog" role="dialog" aria-modal="true" aria-label={dialog.title} ref={panel}>
         <header>
           <div>
             <h2>{dialog.title}</h2>
@@ -220,7 +222,7 @@ export function ScheduleKpiGrid({ kpis }: { kpis: ScheduleKpis }) {
           tone="blue"
           label="Active Crews"
           value={kpis.activeCrews}
-          delta={`of ${plural(kpis.crewsTotal, "crew")} · ${kpis.utilization}% of crew-days`}
+          delta={`of ${plural(kpis.crewsTotal, "crew")} · ${kpis.utilization === null ? "no crew-days to book" : `${kpis.utilization}% of crew-days`}`}
           title={kpis.definitions.crews}
         />
       </DxTilt>

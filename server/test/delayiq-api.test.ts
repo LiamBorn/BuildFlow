@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
+import { localIsoDate } from "@buildflow/shared";
 import { createApp } from "../src/app.js";
 
 async function testApp() {
@@ -21,7 +22,8 @@ async function testApp() {
  */
 async function forceBehindJob(agent: request.Agent) {
   const boot = (await agent.get("/api/bootstrap").expect(200)).body;
-  const today = new Date().toISOString().slice(0, 10);
+  // the day this machine is standing in, which is what the route uses too
+  const today = localIsoDate();
   const target = boot.jobs.find((j: { startDate: string; percentComplete: number }) => j.startDate <= today && j.percentComplete < 100);
   expect(target, "seed should have an in-flight job to push behind").toBeDefined();
   await agent
@@ -76,6 +78,31 @@ describe("DelayIQ early-warning API", () => {
     const after = await agent.get("/api/bootstrap").expect(200);
     expect(after.body.jobs).toHaveLength(before.body.jobs.length);
     expect(after.body.projects).toHaveLength(before.body.projects.length);
+  });
+
+  it("reads today from the clock the workspace keeps, not from UTC", async () => {
+    const { agent } = await testApp();
+    const today = localIsoDate();
+    const response = await agent.get("/api/delayiq/early-warning").expect(200);
+    // The UTC day and the local day differ for part of every day west of Greenwich and east of
+    // it. Under TZ=Pacific/Pago_Pago this assertion is the whole finding: the route used to
+    // answer with tomorrow's date for the last eleven hours of every day.
+    expect(response.body.asOf).toBe(today);
+
+    // A job that starts today has not started late. It was being flagged on its own start date,
+    // because "today" ran a day ahead of the crew.
+    const boot = (await agent.get("/api/bootstrap").expect(200)).body;
+    const starting = boot.jobs.find((job: { id: string }) => job.id === boot.jobs[0].id);
+    await agent
+      .patch(`/api/jobs/${starting.id}`)
+      .send({ startDate: today, endDate: today, percentComplete: 0, status: "Ready" })
+      .expect(200);
+
+    const after = await agent.get("/api/delayiq/early-warning").expect(200);
+    const overdue = after.body.risks.find(
+      (risk: { jobId: string; kind: string }) => risk.jobId === starting.id && risk.kind === "overdue_start"
+    );
+    expect(overdue).toBeUndefined();
   });
 
   it("notifies the affected trades for a real risk", async () => {

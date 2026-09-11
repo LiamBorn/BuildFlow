@@ -171,6 +171,7 @@ export {
   toDayIndex,
   fromDayIndex,
   inclusiveDuration,
+  localIsoDate,
   type DependencyType,
   type ConstraintType,
   type CpmTask,
@@ -250,6 +251,11 @@ export type Job = {
   actualStart?: string;
   /** Date the field reported 100%. */
   actualFinish?: string;
+  /**
+   * Bumped by every write. Send it back with a save and the server refuses one made against a
+   * copy somebody else has already replaced, rather than overwriting them without a word.
+   */
+  version?: number;
 };
 
 /* Progress fields are owned by the field reporting loop, not the planner, so
@@ -339,6 +345,8 @@ export type ScheduleAssignment = {
   /** Always the job's status: a booking wears its job's status and never carries one of its own. */
   status: Status;
   conflicts: string[];
+  /** Bumped by every write, and sent back with a move so a stale one is refused rather than applied. */
+  version?: number;
 };
 
 export type FieldUpdate = {
@@ -533,10 +541,11 @@ export * as scheduleEngine from "./schedule/cpm";
 
 /** One step of a re-book: a booking moved, made or dropped, or a job's dates. */
 export type RebookMove =
-  | { op: "move"; id: string; crewId?: string; date?: string }
+  /** `version` is the row as the client last read it; the server refuses the step if it has moved on. */
+  | { op: "move"; id: string; crewId?: string; date?: string; version?: number }
   | { op: "book"; jobId: string; crewId: string; date: string }
   | { op: "unbook"; id: string }
-  | ({ op: "job"; id: string; startDate: string; endDate: string } & JobEdits);
+  | ({ op: "job"; id: string; startDate: string; endDate: string; version?: number } & JobEdits);
 
 /** What a save may change on a job besides its dates — the drawer's other fields — so a move and its edits are one request. */
 export type JobEdits = Partial<Pick<Job, "status" | "priority" | "notes" | "startTime" | "endTime" | "materialsStatus">>;

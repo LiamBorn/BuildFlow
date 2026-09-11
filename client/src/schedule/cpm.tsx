@@ -27,15 +27,28 @@ export function buildScheduleCpm(jobs: Job[], dependencies: JobDependency[], wor
     holidays: workCalendar.holidays.map((holiday) => holiday.date),
     weekendDays: [0, 1, 2, 3, 4, 5, 6].filter((day) => !workCalendar.workingDays.includes(day))
   });
-  // A job with no constraint of its own stays where it is planned: start no earlier than
-  // its start date. Without that floor every unlinked job would slide back to the epoch and
-  // the "project finish" would be the longest job, not the plan.
-  const tasks: CpmTask[] = jobs.map((job) => ({
-    id: job.id,
-    duration: calendar.duration(job.startDate, job.endDate),
-    constraintType: job.constraintType && job.constraintDate ? job.constraintType : "SNET",
-    constraintDate: calendar.toIndex(job.constraintType && job.constraintDate ? job.constraintDate : job.startDate)
-  }));
+  // Every job stays where it is planned: start no earlier than its start date. Without that
+  // floor an unlinked job slides back to the epoch and the "project finish" becomes the longest
+  // job, not the plan. A job's own constraint is read on top of that floor rather than instead
+  // of it — the two say different things, and only "must start on" is entitled to move a job.
+  const tasks: CpmTask[] = jobs.map((job) => {
+    const planned = calendar.toIndex(job.startDate);
+    const task: CpmTask = {
+      id: job.id,
+      duration: calendar.duration(job.startDate, job.endDate),
+      constraintType: "SNET",
+      constraintDate: planned
+    };
+    const constrained = job.constraintType && job.constraintDate ? calendar.toIndex(job.constraintDate) : null;
+    if (constrained == null) return task;
+    // "Must start on" is a hard pin and overrides the plan; "start no earlier than" is a floor,
+    // so the later of the two wins; "finish no later than" is a deadline for the backward pass,
+    // which leaves the job where it is planned and reports negative float if it cannot make it.
+    if (job.constraintType === "MSO") return { ...task, constraintType: "MSO", constraintDate: constrained };
+    if (job.constraintType === "SNET") return { ...task, constraintDate: Math.max(planned, constrained) };
+    if (job.constraintType === "FNLT") return { ...task, deadline: constrained };
+    return task; // ASAP adds nothing the plan does not already say
+  });
   const links: CpmLink[] = dependencies.map((dependency) => ({
     predecessorId: dependency.predecessorId,
     successorId: dependency.successorId,

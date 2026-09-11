@@ -48,6 +48,20 @@ export const sameScheduleContext = (a: ScheduleContext, b: ScheduleContext) =>
 
 const isStatus = (value: string): value is Status => (SCHEDULE_STATUSES as string[]).includes(value);
 
+/**
+ * The real statuses in a list, each once.
+ *
+ * The de-duplicating matters more than it looks: a filter of every status means no filter, and
+ * that is decided by counting the list. Ten copies of "Ready" is not every status, but it counted
+ * as ten, so the link quietly showed the whole board and dropped its own chip.
+ */
+const uniqueStatuses = (values: unknown): Status[] => {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<Status>();
+  for (const value of values) if (typeof value === "string" && isStatus(value)) seen.add(value);
+  return [...seen];
+};
+
 /* ── deep links ─────────────────────────────────────────────────────────── */
 
 export const SCHEDULE_PAGES = ["schedule", "month", "week", "list", "kanban", "matrix", "gantt"] as const;
@@ -115,7 +129,7 @@ export function parseScheduleHash(hash: string): { page: SchedulePage; patch: Pa
   if (project) patch.projectId = project;
   const region = params.get("region");
   if (region) patch.region = region;
-  const statuses = (params.get("status") ?? "").split(",").filter(isStatus);
+  const statuses = uniqueStatuses((params.get("status") ?? "").split(","));
   if (statuses.length > 0) patch.statuses = statuses;
   return { page, patch };
 }
@@ -157,7 +171,7 @@ function normalise(raw: Partial<ScheduleContext>): ScheduleContext {
   for (const key of CONTEXT_KEYS) {
     const value = raw[key];
     if (key === "statuses") {
-      const statuses = Array.isArray(value) ? value.filter((item): item is Status => typeof item === "string" && isStatus(item)) : [];
+      const statuses = uniqueStatuses(value);
       next.statuses = statuses.length > 0 ? statuses : null;
     } else if (typeof value === "string" && value) next[key] = value;
   }

@@ -9219,10 +9219,13 @@ button:disabled {
   cursor: pointer;
 }
 
-.week-stepper button:hover,
+.week-stepper button:hover {
+  background: #eef4fb;
+}
+/* Focus keeps the hover tint and its ring: grouped with :hover and set to `outline: 0`, the two
+   states looked identical, so tabbing along the stepper showed nothing at all. */
 .week-stepper button:focus-visible {
   background: #eef4fb;
-  outline: 0;
 }
 
 .week-stepper .previous-week {
@@ -9992,10 +9995,13 @@ button:disabled {
   text-decoration: none;
 }
 
-.schedule-page-footer button:hover,
+.schedule-page-footer button:hover {
+  color: #2f6bff;
+}
+/* the same pattern as the week stepper: grouped with :hover and the ring taken away, so the
+   two states were indistinguishable to anyone arriving by keyboard */
 .schedule-page-footer button:focus-visible {
   color: #2f6bff;
-  outline: 0;
 }
 
 .schedule-dialog-backdrop {

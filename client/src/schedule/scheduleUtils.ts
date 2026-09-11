@@ -1,4 +1,5 @@
 import type { Job, ScheduleAssignment } from "@buildflow/shared";
+import { localIsoDate } from "@buildflow/shared";
 
 // The current calendar week (Mon–Sun), computed at load so the schedule always
 // opens on the most up-to-date day & month rather than a hard-coded past week.
@@ -52,10 +53,11 @@ export function statusTone(status: string) {
 /**
  * A Date's local calendar day as YYYY-MM-DD. `toISOString()` reads the UTC day,
  * which is yesterday for any clock ahead of UTC once a local midnight is involved.
+ *
+ * One implementation, shared with the server, which had the same question to answer about
+ * "today" and was answering it in UTC.
  */
-export function toLocalIsoDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
+export const toLocalIsoDate = (date: Date) => localIsoDate(date);
 
 /** Move a YYYY-MM-DD day by whole calendar days, in local time. */
 export function shiftScheduleDate(date: string, days: number) {

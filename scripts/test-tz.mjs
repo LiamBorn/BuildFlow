@@ -6,7 +6,20 @@ import { spawnSync } from "node:child_process";
 const zones = ["Pacific/Kiritimati", "Pacific/Pago_Pago"];
 const suites = [
   ["client", ["run", "src/schedule"]],
-  ["server", ["run", "test/digest.test.ts", "test/api.test.ts", "test/transaction.test.ts", "test/booking-rules.test.ts", "test/variance.test.ts"]]
+  [
+    "server",
+    [
+      "run",
+      "test/digest.test.ts",
+      "test/api.test.ts",
+      "test/transaction.test.ts",
+      "test/booking-rules.test.ts",
+      "test/variance.test.ts",
+      // DelayIQ decides "overdue" from today, one day at a time, so it belongs under both clocks
+      "src/delayiq.test.ts",
+      "test/delayiq-api.test.ts"
+    ]
+  ]
 ];
 
 for (const zone of zones) {

@@ -353,17 +353,6 @@ export function assignJob(input: { jobId: string; crewId: string; date: string }
   });
 }
 
-export function updateScheduleAssignment(
-  id: string,
-  input: Partial<Pick<ScheduleAssignment, "jobId" | "crewId" | "date">>,
-  options: { force?: boolean } = {}
-) {
-  return request<ScheduleAssignment>(`/api/schedule/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ ...input, force: options.force })
-  });
-}
-
 export type { CrewClash, RebookMove, RebookResult };
 
 /** Everything one drop touches, in one request and one transaction; the same 409 as assignJob when a crew would be double-booked. */
@@ -415,10 +404,15 @@ export function fetchCalendarFeeds() {
   return request<{ crews: Array<{ id: string; name: string; url: string }> }>("/api/schedule/feeds");
 }
 
-export function updateJob(id: string, input: Partial<Job>) {
+/**
+ * `version` is the row as the caller last read it. Sending it turns a save made against a copy
+ * somebody else has replaced into a 409 the board can explain, rather than an overwrite nobody
+ * is told about. Omitting it writes unconditionally, which is what the import and the seed do.
+ */
+export function updateJob(id: string, input: Partial<Job>, version?: number) {
   return request<Job>(`/api/jobs/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input)
+    body: JSON.stringify(version == null ? input : { ...input, version })
   });
 }
 

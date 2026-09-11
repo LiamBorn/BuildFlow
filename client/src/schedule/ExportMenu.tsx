@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link2, CalendarClock, ChevronDown, Copy, Download, Printer, X } from "lucide-react";
 import { fetchCalendarFeeds } from "../api";
+import { useModalDialog } from "./hooks";
 import { downloadCsv, printHtml, scheduleExportRows, toCsv, weekSheetHtml, type ExportScope } from "./export";
 
 export function ScheduleExportMenu({
@@ -25,7 +26,7 @@ export function ScheduleExportMenu({
   sheetTitle?: string;
   buttonClassName?: string;
   disabled?: boolean;
-  onNotice?: (text: string) => void;
+  onNotice?: (text: string, options?: { error?: boolean }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [feeds, setFeeds] = useState(false);
@@ -48,13 +49,19 @@ export function ScheduleExportMenu({
 
   const csv = () => {
     const rows = scheduleExportRows(scope);
-    downloadCsv(filename, toCsv(rows));
-    onNotice?.(`Exported ${rows.length} ${rows.length === 1 ? "row" : "rows"} to ${filename}.csv`);
+    // the writer says whether the browser took it; claiming a file that was never written helps nobody
+    const written = downloadCsv(filename, toCsv(rows));
+    onNotice?.(
+      written
+        ? `Exported ${rows.length} ${rows.length === 1 ? "row" : "rows"} to ${filename}.csv`
+        : "This browser would not save the file. Try the print sheets, or copy the link and open it in another browser.",
+      written ? undefined : { error: true }
+    );
     setOpen(false);
   };
   const sheets = () => {
     if (!weekDays) return;
-    printHtml(
+    const printing = printHtml(
       weekSheetHtml({
         title: sheetTitle,
         weekDays,
@@ -64,7 +71,12 @@ export function ScheduleExportMenu({
         projects: scope.projects
       })
     );
-    onNotice?.(`Printing ${scope.crews.length} crew ${scope.crews.length === 1 ? "sheet" : "sheets"} — choose "Save as PDF" to keep them`);
+    onNotice?.(
+      printing
+        ? `Printing ${scope.crews.length} crew ${scope.crews.length === 1 ? "sheet" : "sheets"} — choose "Save as PDF" to keep them`
+        : "This browser would not open the print view. Try the CSV instead.",
+      printing ? undefined : { error: true }
+    );
     setOpen(false);
   };
 
@@ -130,6 +142,7 @@ const EXPORT_HINT = "The same columns on every page";
 function CalendarFeedsDialog({ onClose, onNotice }: { onClose: () => void; onNotice?: (text: string) => void }) {
   const [crews, setCrews] = useState<Array<{ id: string; name: string; url: string }> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const panel = useModalDialog<HTMLElement>(onClose);
   useEffect(() => {
     let live = true;
     fetchCalendarFeeds()
@@ -158,6 +171,7 @@ function CalendarFeedsDialog({ onClose, onNotice }: { onClose: () => void; onNot
         role="dialog"
         aria-modal="true"
         aria-labelledby="sched-feeds-title"
+        ref={panel}
         onClick={(event) => event.stopPropagation()}
       >
         <header>

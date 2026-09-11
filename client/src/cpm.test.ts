@@ -117,6 +117,21 @@ describe("cpm — constraints", () => {
     expect(result.tasks.a.totalFloat).toBe(-2); // the slip pushes back up the chain
   });
 
+  it("a deadline caps the late finish and leaves the early start alone", () => {
+    // The same date as an FNLT constraint, but carried separately, so the task keeps
+    // the SNET floor that holds it where it is planned instead of sliding to day 0.
+    const pinned = calculateCpm([task("a", 3, { constraintType: "SNET", constraintDate: 10, deadline: 11 })], []);
+    expect(pinned.tasks.a.earlyStart).toBe(10);
+    expect(pinned.tasks.a.lateFinish).toBe(11);
+    expect(pinned.tasks.a.totalFloat).toBe(-2); // needs to finish at 13, allowed 11
+
+    // A deadline past the project finish is inert: the backward pass already starts there.
+    const roomy = calculateCpm([task("a", 3, { constraintType: "SNET", constraintDate: 10, deadline: 20 })], []);
+    expect(roomy.tasks.a.earlyStart).toBe(10);
+    expect(roomy.tasks.a.lateFinish).toBe(13);
+    expect(roomy.tasks.a.totalFloat).toBe(0);
+  });
+
   it("MSO pins the start hard", () => {
     const result = calculateCpm([task("a", 2), task("b", 2, { constraintType: "MSO", constraintDate: 7 })], [link("a", "b")]);
     expect(result.tasks.b.earlyStart).toBe(7);
@@ -221,6 +236,17 @@ describe("cpm — working calendar", () => {
     expect(fiveDay.isWorkingDay("2026-07-18")).toBe(false); // Sat off
     expect(fiveDay.duration("2026-07-17", "2026-07-20")).toBe(2); // Fri + Mon
     expect(fiveDay.fromIndex(5)).toBe("2026-07-20"); // after Fri comes Mon
+  });
+
+  it("has no end — the axis grows to whatever the plan needs", () => {
+    // The axis used to stop 1,200 days past its epoch and clamp everything beyond to the
+    // last day it had listed, so a workspace holding one old job reported a finish date
+    // years before the work it described.
+    const fromAnOldJob = createWorkCalendar("2020-01-01");
+    expect(fromAnOldJob.toIndex("2026-06-30")).not.toBe(fromAnOldJob.toIndex("2028-01-01"));
+    expect(fromAnOldJob.duration("2026-01-01", "2026-06-30")).toBe(155);
+    expect(fromAnOldJob.fromIndex(fromAnOldJob.toIndex("2035-06-15"))).toBe("2035-06-15");
+    expect(fromAnOldJob.duration("2020-01-01", "2030-01-01")).toBe(3132);
   });
 
   it("schedules the network on working days — a Saturday finish rolls to Monday", () => {

@@ -1,0 +1,478 @@
+/* ==========================================================================
+   Product overview (#overview) — the Product menu's "See overview".
+   Apple iphone-page structure on the product pages' own design system: the
+   root carries `cpx-page`, so every --cpx-* token, section rhythm and reveal
+   tween comes from crew-scheduling-apple.css. Only the new section layouts
+   live here, prefixed `pov-`.
+   ========================================================================== */
+.welcome-rx .pov-page .cpx-inner-narrow { margin-bottom: clamp(32px, 5vw, 56px); }
+.welcome-rx .pov-title {
+  margin: 18px 0 22px;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 1;
+  letter-spacing: var(--cpx-track-display);
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .pov-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+.welcome-rx .pov-head h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  line-height: 1.06;
+  letter-spacing: var(--cpx-track-tight);
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .pov-head-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--cpx-blue);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.welcome-rx .pov-head-link:hover { text-decoration: underline; }
+.welcome-rx .pov-tag {
+  display: inline-block;
+  margin-bottom: 16px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--cpx-blue);
+  color: var(--cpx-card);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ── 1 · the lineup ─────────────────────────────────────────────────────── */
+.welcome-rx .pov-lineup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+.welcome-rx .pov-product {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px 16px 20px;
+  border-radius: 22px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  color: var(--cpx-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.3s var(--cpx-ease), box-shadow 0.3s ease;
+}
+.welcome-rx .pov-product:hover { transform: translateY(-3px); box-shadow: 0 18px 40px var(--cpx-line-soft); }
+.welcome-rx .pov-product-shot {
+  display: block;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--cpx-ground-2);
+}
+.welcome-rx .pov-product-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.welcome-rx .pov-product strong { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.015em; }
+.welcome-rx .pov-product-blurb { font-size: 14.5px; line-height: 1.45; color: var(--cpx-mut); }
+.welcome-rx .pov-product-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--cpx-blue);
+}
+
+/* ── 2 · the featured product ───────────────────────────────────────────── */
+.welcome-rx .pov-featured { position: relative; isolation: isolate; overflow: hidden; text-align: center; }
+.welcome-rx .pov-featured-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.welcome-rx .pov-featured-bg .wx-bloom { z-index: 0; }
+.welcome-rx .pov-featured > .cpx-inner { position: relative; z-index: 1; }
+.welcome-rx .pov-featured .cpx-hero-actions { margin-top: 26px; }
+.welcome-rx .pov-featured-stage { margin-top: clamp(36px, 5vw, 64px); }
+.welcome-rx .pov-featured-stage .cs-panel { width: min(100%, 1000px); margin: 0 auto; }
+
+/* ── 3 · the latest releases — Apple "Explore the lineup" cards ─────────── */
+.welcome-rx .pov-latest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+}
+.welcome-rx .pov-release {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.welcome-rx .pov-release-shot {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  margin-bottom: 14px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--cpx-ground-2);
+}
+.welcome-rx .pov-release-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s var(--cpx-ease);
+}
+.welcome-rx .pov-release:hover .pov-release-shot img { transform: scale(1.03); }
+.welcome-rx .pov-release-kind {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cpx-mut);
+}
+.welcome-rx .pov-release-kind.is-new { color: var(--cpx-amber); }
+.welcome-rx .pov-release h3 {
+  margin: 0;
+  max-width: 22ch;
+  font-size: clamp(1.4rem, 2.1vw, 1.85rem);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--cpx-ink);
+  text-wrap: balance;
+}
+.welcome-rx .pov-release-desc {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--cpx-mut);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* reserve the three clamped lines so every card's buttons line up */
+  min-height: calc(1.5em * 3);
+}
+.welcome-rx .pov-release-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--cpx-faint);
+}
+.welcome-rx .pov-version {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--cpx-blue-tint);
+  color: var(--cpx-blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+.welcome-rx .pov-release-product { color: var(--cpx-mut); font-weight: 500; }
+.welcome-rx .pov-release-cost { margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--cpx-ink); }
+.welcome-rx .pov-release-actions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding-top: 14px;
+}
+.welcome-rx .pov-release-btn {
+  min-height: 42px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cpx-blue);
+  color: var(--cpx-card);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.welcome-rx .pov-release-btn:hover { background: var(--cpx-blue-2); transform: translateY(-1px); }
+.welcome-rx .pov-release-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--cpx-blue);
+  cursor: pointer;
+}
+.welcome-rx .pov-release-price:hover { text-decoration: underline; }
+
+/* ── 4 · why BuildFlow — Apple "Why Apple is the best place to shop" cards ── */
+.welcome-rx .pov-why-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 16px;
+}
+.welcome-rx .pov-why-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 32px 32px 0;
+  border-radius: 22px;
+  background: var(--cpx-card);
+  border: 1px solid var(--cpx-line-soft);
+  overflow: hidden;
+}
+.welcome-rx .pov-why-sub {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--cpx-mut);
+}
+.welcome-rx .pov-why-card h3 {
+  margin: 0;
+  max-width: 18ch;
+  font-size: clamp(1.4rem, 2vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--cpx-ink);
+  text-wrap: balance;
+}
+.welcome-rx .pov-why-card p {
+  margin: 0 0 16px;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--cpx-mut);
+}
+/* the shot sits at the bottom of the card and bleeds to its edges, like the reference */
+.welcome-rx .pov-why-shot {
+  display: block;
+  /* `auto` on top pushes every shot to the bottom of its card, so they line up
+     across cards whose descriptions run to different lengths. */
+  margin: auto -32px 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--cpx-ground-2);
+}
+.welcome-rx .pov-why-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s var(--cpx-ease);
+}
+.welcome-rx .pov-why-card:hover .pov-why-shot img { transform: scale(1.04); }
+
+/* ── 5 · get to know the products — Apple "Get to know iPad" cards ─────── */
+.welcome-rx .pov-learn-lead {
+  margin: 0 0 clamp(28px, 4vw, 44px);
+  max-width: 58ch;
+  font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+  line-height: 1.55;
+  color: var(--cpx-mut);
+}
+.welcome-rx .pov-learn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+.welcome-rx .pov-learn-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  aspect-ratio: 3 / 4;
+  padding: 30px 30px 0;
+  border: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--cpx-dark);
+  color: var(--cpx-dark-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.35s var(--cpx-ease), box-shadow 0.35s ease;
+}
+.welcome-rx .pov-learn-card:hover { transform: translateY(-3px); box-shadow: 0 22px 50px var(--cpx-line); }
+.welcome-rx .pov-learn-good { font-size: 15px; font-weight: 600; color: var(--cpx-dark-ink); }
+.welcome-rx .pov-learn-title {
+  max-width: 16ch;
+  font-size: clamp(1.35rem, 1.9vw, 1.7rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--cpx-dark-ink);
+  text-wrap: balance;
+}
+/* the shot fills the bottom of the card, bleeding to its edges */
+.welcome-rx .pov-learn-shot {
+  display: block;
+  margin: auto -30px 0;
+  width: calc(100% + 60px);
+  height: 58%;
+  overflow: hidden;
+}
+.welcome-rx .pov-learn-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s var(--cpx-ease);
+}
+.welcome-rx .pov-learn-card:hover .pov-learn-shot img { transform: scale(1.05); }
+.welcome-rx .pov-learn-plus {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(232, 234, 237, 0.92);
+  color: var(--cpx-dark);
+}
+@media (max-width: 640px) {
+  .welcome-rx .pov-learn-card { aspect-ratio: 4 / 5; padding: 24px 24px 0; }
+  .welcome-rx .pov-learn-shot { margin: auto -24px 0; width: calc(100% + 48px); }
+}
+
+/* ── 6 · works with BuildFlow ───────────────────────────────────────────── */
+.welcome-rx .pov-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+.welcome-rx .pov-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 26px;
+  border-radius: 22px;
+  background: var(--cpx-card);
+  border: 1px solid var(--cpx-line-soft);
+}
+.welcome-rx .pov-card h3 { margin: 0; font-size: 1.1rem; line-height: 1.25; letter-spacing: -0.015em; font-weight: 600; }
+.welcome-rx .pov-card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--cpx-mut); }
+.welcome-rx .pov-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--cpx-blue);
+  cursor: pointer;
+}
+.welcome-rx .pov-card-cta:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .welcome-rx .pov-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .welcome-rx .pov-why-card, .welcome-rx .pov-card { padding: 22px; }
+}
+
+/* ── 6 · more that works with BuildFlow — the product pages' tabbed viewer ── */
+.welcome-rx .pov-also-viewer { margin-top: clamp(28px, 4vw, 48px); }
+/* the panel stacks the visual and the selected item's link */
+.welcome-rx .pov-also-viewer .cpx-viewer-panel { display: grid; justify-items: start; gap: 18px; }
+.welcome-rx .pov-also-viewer .cpx-viewer-frame { width: 100%; }
+.welcome-rx .pov-also-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--cpx-blue);
+  cursor: pointer;
+}
+.welcome-rx .pov-also-cta:hover { text-decoration: underline; }
+
+/* ── 7 · the closing advert reads as its own band ───────────────────────── */
+/* Two grounds cannot alternate across `pov-more` → `pov-cta` → footer without
+   one pair matching, so the band takes the deeper paper tone and a hairline on
+   both edges: distinct from the section above it AND from the footer below. */
+.welcome-rx .pov-cta-band {
+  background: var(--cpx-paper-2);
+  border-top: 1px solid var(--cpx-paper-line);
+  border-bottom: 1px solid var(--cpx-paper-line);
+  /* Trimmed so the band reads tight against what follows it (the FAQ). */
+  padding-bottom: clamp(26px, 3vw, 40px);
+}
+/* The visual column was 479px against a 248px copy column, and `align-items: center`
+   split that 230px difference above and below the copy — which is what left the
+   hole under the buttons. Sizing the visual closer to the copy closes it. */
+.welcome-rx .pov-cta-band .cpx-cta-visual { height: clamp(260px, 26vw, 360px); }
+
+/* Only on this page: the band already provides the breathing room above it. */
+.welcome-rx .pov-page .wx-footer { margin-top: 0; }
+.welcome-rx .pov-page .wx-footer-top { padding-top: clamp(30px, 3.5vw, 46px); }
+
+/* ── 8 · FAQ, directly above the footer ─────────────────────────────────── */
+.welcome-rx .pov-faq { background: var(--cpx-ground); padding-bottom: clamp(40px, 5vw, 72px); }
+.welcome-rx .pov-faq-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 12px 24px;
+  align-content: start;
+  align-items: start;
+}
+.welcome-rx .pov-faq-item {
+  border-radius: 18px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  overflow: hidden;
+}
+.welcome-rx .pov-faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--cpx-ink);
+  cursor: pointer;
+  list-style: none;
+}
+.welcome-rx .pov-faq-item summary::-webkit-details-marker { display: none; }
+.welcome-rx .pov-faq-item summary:focus-visible { outline: 2px solid var(--cpx-blue); outline-offset: -3px; }
+.welcome-rx .pov-faq-chevron { flex: 0 0 auto; color: var(--cpx-mut); transition: transform 0.25s var(--cpx-ease); }
+.welcome-rx .pov-faq-item[open] .pov-faq-chevron { transform: rotate(180deg); }
+.welcome-rx .pov-faq-item[open] summary { padding-bottom: 8px; }
+.welcome-rx .pov-faq-item p {
+  margin: 0;
+  padding: 0 22px 22px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--cpx-mut);
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-rx .pov-faq-chevron { transition: none; }
+}

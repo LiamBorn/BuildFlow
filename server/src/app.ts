@@ -15,6 +15,7 @@ import {
   type TeamInvite,
   type OnboardingProductId,
   type PlanId,
+  localIsoDate,
   passwordProblem,
   portfolioScheduleStatus,
   JOB_STATUSES,
@@ -26,6 +27,7 @@ import {
   BuildFlowStore,
   DependencyError,
   RebookConflictError,
+  StaleWriteError,
   clashMessage,
   toAccount,
   DEMO_ACCOUNT_EMAIL,
@@ -105,11 +107,18 @@ const statuses = JOB_STATUSES; // the one status list, shared with the client
 
 const scheduleHealthValues = ["On Track", "Monitor", "At Risk", "Complete"] as const;
 
+/** Every date a schedule route takes is a plain day. "banana", a timestamp or a half-typed date is a 400, not a row. */
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date as YYYY-MM-DD");
+/** A job's span cannot run backwards; the message says which way round it should be. */
+const spanIsForwards = <T extends { startDate?: string; endDate?: string }>(value: T) =>
+  !value.startDate || !value.endDate || value.endDate >= value.startDate;
+const SPAN_MESSAGE = { message: "The finish cannot be before the start", path: ["endDate"] };
+
 /* A booking has no status of its own — it wears its job's — so none of these accept one. */
 const assignSchema = z.object({
   jobId: z.string().min(1),
   crewId: z.string().min(1),
-  date: z.string().min(10),
+  date: isoDate,
   /** The planner has seen the clash and chooses to double-book. */
   force: z.boolean().optional()
 });
@@ -117,7 +126,7 @@ const assignSchema = z.object({
 const assignmentPatchSchema = z.object({
   jobId: z.string().min(1).optional(),
   crewId: z.string().min(1).optional(),
-  date: z.string().min(10).optional(),
+  date: isoDate.optional(),
   force: z.boolean().optional()
 });
 
@@ -131,11 +140,22 @@ const jobEditsSchema = z.object({
   notes: z.string().optional(),
   priority: z.enum(["High", "Medium", "Normal"]).optional()
 });
+/** The row as the caller last read it. Optional: only a client that read one can send it. */
+const rowVersion = z.number().int().positive().optional();
+
 const rebookMoveSchema = z.discriminatedUnion("op", [
-  z.object({ op: z.literal("move"), id: z.string().min(1), crewId: z.string().min(1).optional(), date: z.string().min(10).optional() }),
-  z.object({ op: z.literal("book"), jobId: z.string().min(1), crewId: z.string().min(1), date: z.string().min(10) }),
+  z.object({
+    op: z.literal("move"),
+    id: z.string().min(1),
+    crewId: z.string().min(1).optional(),
+    date: isoDate.optional(),
+    version: rowVersion
+  }),
+  z.object({ op: z.literal("book"), jobId: z.string().min(1), crewId: z.string().min(1), date: isoDate }),
   z.object({ op: z.literal("unbook"), id: z.string().min(1) }),
-  jobEditsSchema.extend({ op: z.literal("job"), id: z.string().min(1), startDate: z.string().min(10), endDate: z.string().min(10) })
+  jobEditsSchema
+    .extend({ op: z.literal("job"), id: z.string().min(1), startDate: isoDate, endDate: isoDate, version: rowVersion })
+    .refine(spanIsForwards, SPAN_MESSAGE)
 ]);
 const rebookSchema = z.object({ moves: z.array(rebookMoveSchema).min(1).max(200), force: z.boolean().optional() });
 
@@ -144,24 +164,28 @@ const workCalendarSchema = z.object({
   holidays: z.array(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), name: z.string().trim().min(1).max(80) })).max(400)
 });
 
-const jobPatchSchema = jobEditsSchema.extend({ startDate: z.string().optional(), endDate: z.string().optional() });
+const jobPatchSchema = jobEditsSchema
+  .extend({ startDate: isoDate.optional(), endDate: isoDate.optional(), version: rowVersion })
+  .refine(spanIsForwards, SPAN_MESSAGE);
 
-const jobSchema = z.object({
-  projectId: z.string().trim().min(1),
-  name: z.string().trim().min(1),
-  phase: z.string().trim().min(1),
-  location: z.string().trim().min(1),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  startTime: z.string().trim().min(1),
-  endTime: z.string().trim().min(1),
-  requiredLabor: z.number().int().positive(),
-  requiredEquipment: z.string().trim().min(1),
-  materialsStatus: z.enum(["Delivered", "Ordered", "Missing", "Waiting on Delivery"]),
-  status: z.enum(statuses),
-  priority: z.enum(["High", "Medium", "Normal"]),
-  notes: z.string()
-});
+const jobSchema = z
+  .object({
+    projectId: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+    phase: z.string().trim().min(1),
+    location: z.string().trim().min(1),
+    startDate: isoDate,
+    endDate: isoDate,
+    startTime: z.string().trim().min(1),
+    endTime: z.string().trim().min(1),
+    requiredLabor: z.number().int().positive(),
+    requiredEquipment: z.string().trim().min(1),
+    materialsStatus: z.enum(["Delivered", "Ordered", "Missing", "Waiting on Delivery"]),
+    status: z.enum(statuses),
+    priority: z.enum(["High", "Medium", "Normal"]),
+    notes: z.string()
+  })
+  .refine(spanIsForwards, SPAN_MESSAGE);
 
 const projectPatchSchema = z.object({
   name: z.string().trim().min(1),
@@ -226,8 +250,16 @@ const crewSchema = z.object({
   specialty: z.string().trim().min(1),
   foreman: z.string().trim().min(1),
   laborMix: z.array(crewRoleCountSchema).min(1),
-  /** Hourly rate per worker, in dollars; omitted = the specialty's default. */
-  rate: z.number().min(0).max(10000).optional()
+  /**
+   * Hourly rate per worker, in dollars; omitted = the specialty's default, which is what the
+   * form's placeholder promises. Zero is refused rather than stored: it used to be accepted and
+   * then read as a real price, putting a whole week of booked work on the board at $0.
+   */
+  rate: z
+    .number()
+    .positive({ message: "An hourly rate must be more than $0 — leave it empty to use the specialty default." })
+    .max(10000)
+    .optional()
 });
 
 const equipmentSchema = z.object({
@@ -571,6 +603,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const exposeTokens = process.env.NODE_ENV === "test" || process.env.BUILDFLOW_EXPOSE_AUTH_TOKENS === "1";
 
   const app = express();
+  /**
+   * A route answers only to the case it was registered with.
+   *
+   * Express matches case-insensitively by default, so `/API/bootstrap` was the same route as
+   * `/api/bootstrap` to the router — and a different string to the session gate below, which
+   * compares against lowercase literals. Changing the case of a path therefore skipped the gate
+   * entirely: no session required, no tenant bound, the handler running against the main store.
+   * `GET /API/bootstrap` returned the whole workspace to a caller with no cookie, and
+   * `POST /API/schedule/assign` reached the write.
+   *
+   * This is one of the two halves of the fix, and the gate lowercasing what it compares is the
+   * other. Either would close it; both mean neither has to be right on its own.
+   */
+  app.set("case sensitive routing", true);
   // Expose the store manager to the server entrypoint (backup scheduler/boot snapshot) + ops routes.
   app.locals.storeManager = manager;
   const clientUrl = process.env.BUILDFLOW_CLIENT_URL ?? "http://localhost:5175/";
@@ -625,7 +671,16 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     "/api/org",
     "/api/me"
   ];
-  const isOpsPath = (p: string) => OPS_PREFIXES.some((pre) => p === pre || p.startsWith(`${pre}/`));
+  /**
+   * Whether this path needs a session, compared in one case so no spelling of it can disagree
+   * with the router about which route it is. `/api/delayIQs` is the one prefix with capitals of
+   * its own, which is why both sides are folded rather than just the incoming path.
+   */
+  const OPS_PREFIXES_LOWER = OPS_PREFIXES.map((prefix) => prefix.toLowerCase());
+  const isOpsPath = (path: string) => {
+    const p = path.toLowerCase();
+    return OPS_PREFIXES_LOWER.some((pre) => p === pre || p.startsWith(`${pre}/`));
+  };
   // The schedule's live feed: every schedule write announces itself to the org's other open tabs.
   const live = new ScheduleLiveHub();
   app.locals.live = live;
@@ -1673,7 +1728,29 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const job = store.updateJob(String(req.params.id), parsed.data);
+    const current = store.job(String(req.params.id));
+    if (!current) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
+    // one date may move on its own; what counts is the span the job ends up with
+    const span = { startDate: parsed.data.startDate ?? current.startDate, endDate: parsed.data.endDate ?? current.endDate };
+    if (!spanIsForwards(span)) {
+      res.status(400).json({ error: "The finish cannot be before the start", field: "endDate" });
+      return;
+    }
+    const { version, ...edits } = parsed.data;
+    let job;
+    try {
+      job = store.updateJob(String(req.params.id), edits, version);
+    } catch (error) {
+      // Somebody else replaced the row between the read and this write: say so and change nothing.
+      if (error instanceof StaleWriteError) {
+        res.status(409).json({ error: error.message, code: error.code, current: error.current });
+        return;
+      }
+      throw error;
+    }
     if (!job) {
       res.status(404).json({ error: "Job not found" });
       return;
@@ -1873,7 +1950,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       answerClash(res, clashes);
       return;
     }
-    const assignment = store.updateAssignment(id, updates);
+    let assignment;
+    try {
+      assignment = store.updateAssignment(id, updates);
+    } catch (error) {
+      // a crew or a job the move names but the workspace does not have
+      res.status(404).json({ error: error instanceof Error ? error.message : "Assignment failed" });
+      return;
+    }
     if (!assignment) {
       res.status(404).json({ error: "Assignment not found" });
       return;
@@ -1884,9 +1968,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   app.delete("/api/schedule/:id", (req, res) => {
-    store.deleteAssignment(String(req.params.id));
+    const id = String(req.params.id);
+    // nothing was there to unbook: say so, and do not tell the other tabs a booking vanished
+    if (!store.deleteAssignment(id)) {
+      res.status(404).json({ error: "Assignment not found" });
+      return;
+    }
     res.status(204).send();
-    announce(req, { kind: "assignments", op: "unbook", ids: [String(req.params.id)] });
+    announce(req, { kind: "assignments", op: "unbook", ids: [id] });
   });
 
   /* Everything one drop touches, in one transaction: a failed re-book changes nothing. */
@@ -1911,6 +2000,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     } catch (error) {
       if (error instanceof RebookConflictError) {
         answerClash(res, error.clashes);
+        return;
+      }
+      // A step written against a row somebody else has replaced: the whole batch is refused.
+      if (error instanceof StaleWriteError) {
+        res.status(409).json({ error: error.message, code: error.code, current: error.current });
         return;
       }
       res.status(404).json({ error: error instanceof Error ? error.message : "Re-book failed" });
@@ -2062,7 +2156,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * whenever someone happened to load the page.
    */
   app.get("/api/schedule/status", (_req, res) => {
-    const asOf = new Date().toISOString().slice(0, 10);
+    const asOf = localIsoDate();
     const jobs = store.jobs();
     const projects = store.projects();
     // the forecast runs on the workspace's own working days and holidays (Settings › Work calendar)
@@ -2229,9 +2323,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // Read-only, proactive — no field report needed. Never mutates the plan;
   // accepting a slip stays the PM's call through the variance drawer.
   app.get("/api/delayiq/early-warning", (_req, res) => {
-    const asOf = new Date().toISOString();
+    // the day where the workspace is, not the UTC day: an overdue call is a day apart otherwise
+    const asOf = localIsoDate();
     const risks = detectDelayRisks(store.jobs(), store.dependencies(), asOf, store.workCalendar());
-    res.json({ asOf: asOf.slice(0, 10), risks });
+    res.json({ asOf, risks });
   });
 
   // Follow-on: notify the affected downstream trades about one warning. A PM
@@ -2243,7 +2338,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: "A jobId is required." });
       return;
     }
-    const risk = detectDelayRisks(store.jobs(), store.dependencies(), new Date().toISOString(), store.workCalendar()).find(
+    const risk = detectDelayRisks(store.jobs(), store.dependencies(), localIsoDate(), store.workCalendar()).find(
       (item) => item.jobId === jobId
     );
     if (!risk) {

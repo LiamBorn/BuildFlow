@@ -4,10 +4,11 @@
  * to draw or remove one — so a dependency needs no mouse. One implementation shared by the
  * Week, List, Kanban, Month, Matrix and Gantt pages; styled by hs-gantt.css.
  */
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ExternalLink, Link2, Unlink, X } from "lucide-react";
 import type { Job, JobDependency, Status } from "@buildflow/shared";
 import { parseIsoDate } from "../../components/ui/gantt";
+import { useModalDialog, type JobSaveResult } from "../hooks";
 import { PRIORITIES, STATUSES } from "../statusPalette";
 
 export function JobDrawer({
@@ -27,7 +28,8 @@ export function JobDrawer({
   crews: string;
   onClose: () => void;
   onOpenSchedule: () => void;
-  onSave: (patch: Partial<Job>) => Promise<void>;
+  /** Saves the change; what comes back says whether it saved and, when it did not, why. */
+  onSave: (patch: Partial<Job>) => Promise<JobSaveResult | void>;
   /** The job's dependencies, either way round. */
   links?: JobDependency[];
   jobsById?: Map<string, Job>;
@@ -42,7 +44,7 @@ export function JobDrawer({
   const [notes, setNotes] = useState(job.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const firstField = useRef<HTMLSelectElement>(null);
+  const panel = useModalDialog<HTMLElement>(onClose);
 
   useEffect(() => {
     setStatus(job.status);
@@ -52,18 +54,6 @@ export function JobDrawer({
     setNotes(job.notes ?? "");
     setError(null);
   }, [job]);
-
-  useEffect(() => {
-    firstField.current?.focus({ preventScroll: true }); // the drawer is fixed; the page behind it must not jump
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      // Escape closes the top layer only: a link dialog, the job picker or the conflict question sits above this drawer
-      if (document.querySelector('.schedule-dialog-backdrop, [role="alertdialog"]')) return;
-      onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -78,7 +68,9 @@ export function JobDrawer({
     setBusy(true);
     setError(null);
     try {
-      await onSave({ status, priority, startDate, endDate, notes });
+      // a save that could not happen is reported here, where the eye already is — the board's notice is behind this panel
+      const result = await onSave({ status, priority, startDate, endDate, notes });
+      if (result && !result.saved && result.problem) setError(result.problem);
     } finally {
       setBusy(false);
     }
@@ -92,7 +84,7 @@ export function JobDrawer({
   return (
     <div className="gantt-drawer-layer" role="presentation">
       <div className="gantt-drawer-backdrop" onClick={onClose} />
-      <aside className="gantt-drawer" role="dialog" aria-modal="true" aria-labelledby="gantt-drawer-title">
+      <aside className="gantt-drawer" role="dialog" aria-modal="true" aria-labelledby="gantt-drawer-title" ref={panel}>
         <div className="gantt-drawer-top">
           <div>
             <h2 id="gantt-drawer-title">{job.name}</h2>
@@ -170,7 +162,7 @@ export function JobDrawer({
           <div className="gantt-drawer-row">
             <label>
               <span>Status</span>
-              <select ref={firstField} value={status} onChange={(event) => setStatus(event.target.value as Status)}>
+              <select autoFocus value={status} onChange={(event) => setStatus(event.target.value as Status)}>
                 {STATUSES.map((option) => (
                   <option key={option} value={option}>
                     {option}

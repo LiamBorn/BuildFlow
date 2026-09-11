@@ -63,21 +63,22 @@ export function MatrixPage({ data: liveData, reload, onOpenSchedule, onOpenPage,
         onOpenJob={(_job, assignment) => openBooking(assignment)}
       />
       <footer className="schedule-board-footer">
-        <div className="schedule-legend" aria-label="Schedule statuses">
+        {/* this board colours a cell by how booked the crew is that day, not by status */}
+        <div className="schedule-legend sched-load-legend" aria-label="What the cells mean">
           <span>
-            <i className="confirmed" /> Confirmed
+            <i className="load-0" /> Open
           </span>
           <span>
-            <i className="ready" /> Ready
+            <i className="load-1" /> 1 booking
           </span>
           <span>
-            <i className="delayIQed" /> DelayIQed
+            <i className="load-2" /> 2 bookings
           </span>
           <span>
-            <i className="in-progress" /> In Progress
+            <i className="load-3" /> 3 or more
           </span>
           <span>
-            <i className="planned" /> Planned
+            <i className="is-conflict" /> Clash to settle
           </span>
         </div>
         <ScheduleExportMenu

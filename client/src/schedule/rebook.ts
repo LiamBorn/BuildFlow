@@ -79,7 +79,7 @@ export type MonthRebook = { delta: number; moves: RebookMove[]; inverse: RebookM
  * has by the same number of days, so the whole job moves together. Null on its own start day.
  */
 export function monthRebook(
-  job: Pick<Job, "id" | "startDate" | "endDate">,
+  job: Pick<Job, "id" | "startDate" | "endDate"> & Pick<Partial<Job>, "version">,
   assignments: ScheduleAssignment[],
   date: string
 ): MonthRebook | null {
@@ -87,13 +87,22 @@ export function monthRebook(
   const delta = daysBetween(job.startDate, date);
   const bookings = assignments
     .filter((assignment) => assignment.jobId === job.id)
-    .map((assignment) => ({ id: assignment.id, date: assignment.date.slice(0, 10) }));
+    .map((assignment) => ({ id: assignment.id, date: assignment.date.slice(0, 10), version: assignment.version }));
   return {
     delta,
+    // Each step says which version of the row it is replacing, so a move made against a copy
+    // somebody else has already changed is refused rather than applied over them.
     moves: [
-      { op: "job", id: job.id, startDate: date, endDate: shiftScheduleDate(job.endDate, delta) },
-      ...bookings.map((booking): RebookMove => ({ op: "move", id: booking.id, date: shiftScheduleDate(booking.date, delta) }))
+      { op: "job", id: job.id, startDate: date, endDate: shiftScheduleDate(job.endDate, delta), version: job.version },
+      ...bookings.map((booking): RebookMove => ({
+        op: "move",
+        id: booking.id,
+        date: shiftScheduleDate(booking.date, delta),
+        version: booking.version
+      }))
     ],
+    // The way back carries no versions on purpose: by the time Undo runs, the rows are one
+    // version further on — this very move made them so.
     inverse: [
       { op: "job", id: job.id, startDate: job.startDate, endDate: job.endDate },
       ...bookings.map((booking): RebookMove => ({ op: "move", id: booking.id, date: booking.date }))

@@ -94,14 +94,20 @@ export function receiveLiveEvent(event: ScheduleLiveEvent, clientId: string): bo
   return true;
 }
 
-/** Listens to the org's change feed while the page is open; reloads on others' changes and flashes their cards. */
-export function useScheduleLive(reload: () => Promise<void>) {
+/**
+ * Listens to the org's change feed while the page is open; reloads on others' changes, flashes their
+ * cards, and — because a flash is silent — says once who changed what.
+ */
+export function useScheduleLive(reload: () => Promise<void>, announce?: (text: string) => void) {
   const reloadRef = useRef(reload);
   reloadRef.current = reload;
+  const announceRef = useRef(announce);
+  announceRef.current = announce;
   useEffect(() => {
     if (typeof EventSource === "undefined") return;
     const source = new EventSource(liveEventsUrl(), { withCredentials: true });
     let timer: ReturnType<typeof setTimeout> | null = null;
+    const pending: ScheduleLiveEvent[] = [];
     const onSchedule = (message: Event) => {
       let event: ScheduleLiveEvent;
       try {
@@ -110,10 +116,18 @@ export function useScheduleLive(reload: () => Promise<void>) {
         return;
       }
       if (!receiveLiveEvent(event, CLIENT_ID)) return;
+      // one sentence for the burst, in the words the flashed cards use
+      pending.push(event);
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         timer = null;
+        const burst = pending.splice(0, pending.length);
         void reloadRef.current().catch(() => undefined);
+        const who = [...new Set(burst.map((item) => item.by.name))];
+        const count = new Set(burst.flatMap((item) => item.ids)).size;
+        announceRef.current?.(
+          `${who.length === 1 ? who[0] : "Someone else"} changed ${count === 1 ? "a booking" : `${count} things`} in another tab.`
+        );
       }, RELOAD_COALESCE_MS);
     };
     source.addEventListener("schedule", onSchedule);

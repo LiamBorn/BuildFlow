@@ -80,4 +80,10 @@ describe("ISO week helpers for the landing", () => {
     expect(days.map((day) => day.date)).toEqual(scheduleWeekDays(mondayOf(at("2026-09-09"))).map((day) => day.date));
     expect(formatScheduleWeekRange(days)).toBe("Sep 7 - Sep 13, 2026");
   });
+
+  it("gives each end of a week its own year when the week crosses New Year", () => {
+    // the year came from the first day alone, so Jan 3 was stamped 2026
+    expect(formatScheduleWeekRange(buildScheduleWeekDays("2026-12-28"))).toBe("Dec 28, 2026 - Jan 3, 2027");
+    expect(formatScheduleWeekRange(buildScheduleWeekDays("2027-01-04"))).toBe("Jan 4 - Jan 10, 2027");
+  });
 });

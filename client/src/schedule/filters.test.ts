@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Crew, Job, Project, ScheduleAssignment } from "@buildflow/shared";
-import { EMPTY_SCHEDULE_CONTEXT } from "./useScheduleContext";
-import { applyScheduleFilters, scheduleFilterChips, scheduleRegions } from "./filters";
+import { EMPTY_SCHEDULE_CONTEXT, SCHEDULE_STATUSES, parseScheduleHash } from "./useScheduleContext";
+import { applyScheduleFilters, bookingsWithoutCrew, scheduleFilterChips, scheduleRegions } from "./filters";
 
 const job = (id: string, extra: Partial<Job> = {}): Job =>
   ({
@@ -78,5 +78,34 @@ describe("schedule filters", () => {
     expect(chips.map((chip) => chip.label)).toEqual(["Pinecrest", "Trenching", "3 of 10 statuses"]);
     expect(chips[0].clear).toEqual({ projectId: null });
     expect(scheduleRegions(data.jobs)).toEqual(["East Austin", "Riverside"]);
+  });
+
+  it("keeps a status filter that a link repeats", () => {
+    // A filter naming every status means no filter, and that is decided by counting the list —
+    // so ten copies of one status counted as ten and quietly showed the whole board.
+    const repeated = Array(SCHEDULE_STATUSES.length).fill("Planned").join(",");
+    const parsed = parseScheduleHash(`#schedule/week?status=${repeated}`);
+    expect(parsed?.patch.statuses).toEqual(["Planned"]);
+
+    const context = { ...EMPTY_SCHEDULE_CONTEXT, statuses: parsed?.patch.statuses ?? null };
+    expect(applyScheduleFilters(data, context).jobs.map((item) => item.id)).toEqual(["j-1"]);
+    expect(scheduleFilterChips(context, data).map((chip) => chip.label)).toEqual(["Planned"]);
+
+    // naming all ten really does mean all ten
+    const everyStatus = parseScheduleHash(`#schedule/week?status=${SCHEDULE_STATUSES.join(",")}`);
+    expect(everyStatus?.patch.statuses).toHaveLength(SCHEDULE_STATUSES.length);
+    expect(
+      applyScheduleFilters(data, { ...EMPTY_SCHEDULE_CONTEXT, statuses: everyStatus?.patch.statuses ?? null }).filters.statuses
+    ).toBeNull();
+  });
+
+  it("finds the bookings whose crew the workspace no longer has", () => {
+    const stray = booking("a-4", "j-1", "c-gone");
+    const withStray = { ...data, assignments: [...data.assignments, stray] };
+    expect(bookingsWithoutCrew(withStray).map((item) => item.id)).toEqual(["a-4"]);
+    // it is still dropped from the board, which is why something has to say it is there
+    expect(applyScheduleFilters(withStray, EMPTY_SCHEDULE_CONTEXT).assignments.map((item) => item.id)).not.toContain("a-4");
+    // a crew filter hides bookings on purpose; those are not strays
+    expect(bookingsWithoutCrew(data)).toEqual([]);
   });
 });

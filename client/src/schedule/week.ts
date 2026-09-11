@@ -70,8 +70,17 @@ export function buildScheduleWeekDays(startDate: string) {
 }
 
 /** "Sep 7 - Sep 13, 2026" for a run of days. */
+/**
+ * "Sep 7 - Sep 13, 2026", and "Dec 28, 2026 - Jan 3, 2027" for a week that crosses New Year.
+ *
+ * The year used to come from the first day alone, which stamped the wrong one on the days the
+ * week ends with: the week of Monday 28 December 2026 read "Dec 28 - Jan 3, 2026".
+ */
 export function formatScheduleWeekRange(days: Array<{ date: string }>) {
   const first = days[0];
   const last = days[days.length - 1];
-  return `${formatScheduleDate(first.date)} - ${formatScheduleDate(last.date)}, ${first.date.slice(0, 4)}`;
+  const firstYear = first.date.slice(0, 4);
+  const lastYear = last.date.slice(0, 4);
+  if (firstYear === lastYear) return `${formatScheduleDate(first.date)} - ${formatScheduleDate(last.date)}, ${firstYear}`;
+  return `${formatScheduleDate(first.date)}, ${firstYear} - ${formatScheduleDate(last.date)}, ${lastYear}`;
 }

@@ -115,9 +115,10 @@ describe("landing category menus", () => {
 
     fireEvent.click(menuItem(await openMenu("AI"), "BuildFlow AI"));
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Schedule AI that thinks a day ahead." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Everything Schedule AI should do." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Spot conflicts before they cost a day" })).toBeInTheDocument();
+    // Schedule AI is the Crew Scheduling page shape with Schedule AI's copy.
+    expect(await screen.findByRole("heading", { name: "See all features" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "A first draft of the week, in seconds." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "The forecast is part of the plan." })).toBeInTheDocument();
     expect(window.location.hash).toBe("#buildflow-ai");
   });
 

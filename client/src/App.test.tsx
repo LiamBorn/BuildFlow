@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { businessTypeOptions } from "@buildflow/shared";
 import { describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -258,10 +258,11 @@ describe("BuildFlow app", () => {
     window.history.pushState(null, "", "/#buildflow-ai");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Schedule AI that thinks a day ahead." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "An always-on planning assistant." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI that protects the day, with humans in charge." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Keep humans in control" })).toBeInTheDocument();
+    // Schedule AI is the Crew Scheduling page shape with Schedule AI's copy.
+    expect(await screen.findByRole("heading", { name: "See all features" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Why you should choose BuildFlow." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Let the schedule watch itself." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Slips are caught before they spread." })).toBeInTheDocument();
   });
 
   it.each([
@@ -466,8 +467,10 @@ describe("BuildFlow app", () => {
   });
 
   // The guided demo player sits on the overview pages now, not the welcome home.
-  it("toggles the guided demo playback on the product overview", async () => {
-    window.history.pushState(null, "", "/#overview");
+  // The guided demo stage lives on the shared overview layout. #overview is now its
+  // own Apple-style product page (2026-09-11), so assert the stage on Plans overview.
+  it("toggles the guided demo playback on the plans overview", async () => {
+    window.history.pushState(null, "", "/#plans-overview");
     render(<App />);
 
     const pauseButton = await screen.findByRole("button", { name: "Pause demo" });
@@ -476,8 +479,8 @@ describe("BuildFlow app", () => {
     expect(screen.getByRole("button", { name: "Play demo" })).toBeInTheDocument();
   });
 
-  it("switches guided demo scenes manually on the product overview", async () => {
-    window.history.pushState(null, "", "/#overview");
+  it("switches guided demo scenes manually on the plans overview", async () => {
+    window.history.pushState(null, "", "/#plans-overview");
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open Schedule demo" }));
@@ -495,6 +498,53 @@ describe("BuildFlow app", () => {
     expect(screen.getByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
     expect(screen.getAllByText("Riverside Office Building")[0]).toBeInTheDocument();
     expect(screen.getByText("No disruptive weather this week")).toBeInTheDocument();
+  });
+
+  it("keeps the workspace the newest refresh fetched when an older one answers last", async () => {
+    // A page load asks for the workspace, and so does the sign-in that follows it. Both are in
+    // flight at once and the first can answer last — in which case what it fetched before anyone
+    // was signed in used to land on the board, over the workspace the sign-in had just painted.
+    const anonymous = {
+      ...bootstrapFixture,
+      users: [{ id: "u-guest", name: "Dana Fox", role: "Project Manager", title: "Project Manager", avatar: "DF" }],
+      activeUser: { id: "u-guest", name: "Dana Fox", role: "Project Manager", title: "Project Manager", avatar: "DF" },
+      projects: [{ ...bootstrapFixture.projects[0], name: "Somebody else's yard" }]
+    };
+    const answer: Array<(payload: unknown) => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (new URL(String(input), "http://buildflow.test").pathname === "/api/bootstrap") {
+          return new Promise((resolve) => {
+            answer.push((payload) => resolve(new Response(JSON.stringify(payload), { status: 200 })));
+          });
+        }
+        return respondToBuildflowApi(input);
+      })
+    );
+
+    render(<App />);
+    // the page load's own request, deliberately left unanswered
+    await waitFor(() => expect(answer).toHaveLength(1));
+
+    // sign in while it is still open
+    fireEvent.click(await screen.findByRole("button", { name: /^Login from welcome navigation$/ }));
+    fireEvent.change(await screen.findByLabelText("Email"), { target: { value: ACCOUNT.email } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: ACCOUNT.password } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => expect(answer).toHaveLength(2));
+
+    // the sign-in's workspace answers first and opens the app
+    await act(async () => answer[1](bootstrapFixture));
+    await screen.findByLabelText("Search BuildFlow");
+    expect(screen.getByRole("button", { name: "Matt Johnson account" })).toBeInTheDocument();
+
+    // the page load's answer arrives after it, and is too old to be the board
+    await act(async () => answer[0](anonymous));
+
+    expect(screen.getByRole("button", { name: "Matt Johnson account" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Dana Fox account" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Somebody else's yard")).not.toBeInTheDocument();
   });
 
   it("shows weather impact alerts only when disruptive weather overlaps an active job", async () => {
@@ -977,7 +1027,15 @@ describe("BuildFlow app", () => {
         onCriticalPath: true,
         projectSlipDays: 3,
         downstream: [
-          { jobId: "j-paint", jobName: "Paint", trade: "Paint", currentEnd: "2026-09-18", pushedEnd: "2026-09-21", shiftDays: 3, critical: true }
+          {
+            jobId: "j-paint",
+            jobName: "Paint",
+            trade: "Paint",
+            currentEnd: "2026-09-18",
+            pushedEnd: "2026-09-21",
+            shiftDays: 3,
+            critical: true
+          }
         ],
         affectedTrades: ["Paint"]
       }
@@ -999,9 +1057,7 @@ describe("BuildFlow app", () => {
     await enterDashboard();
 
     // the variance, from the job's phase, with its real drift and severity
-    const approvals = within(
-      (await screen.findByRole("heading", { name: "Pending Approvals" })).closest("section") as HTMLElement
-    );
+    const approvals = within((await screen.findByRole("heading", { name: "Pending Approvals" })).closest("section") as HTMLElement);
     expect(await approvals.findByText("Concrete - Level 3 Slab")).toBeInTheDocument();
     expect(approvals.getByText("+3 working days")).toBeInTheDocument();
     expect(approvals.getByText(/Riverside Office Building · High severity · critical path/)).toBeInTheDocument();
@@ -1026,7 +1082,6 @@ describe("BuildFlow app", () => {
       const hit = screen.queryByText(invented);
       expect(hit ? `${String(invented)} matched: "${hit.textContent?.slice(0, 80)}"` : null).toBeNull();
     }
-
   });
 
   it("approves a variance on the server and drops it from the open list", async () => {
@@ -1052,10 +1107,10 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Approve the Concrete - Level 3 Slab variance" }));
 
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url) === "/api/schedule/variances/v-1/accept")).toBe(true));
     await waitFor(() =>
-      expect(fetchMock.mock.calls.some(([url]) => String(url) === "/api/schedule/variances/v-1/accept")).toBe(true)
+      expect(screen.queryByRole("button", { name: "Approve the Concrete - Level 3 Slab variance" })).not.toBeInTheDocument()
     );
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Approve the Concrete - Level 3 Slab variance" })).not.toBeInTheDocument());
     expect(screen.getByText("No approvals waiting on you")).toBeInTheDocument();
 
     // and it now sits on the Resolved side with its status
@@ -1091,7 +1146,8 @@ describe("BuildFlow app", () => {
         if (url === "/api/bootstrap") {
           bootstrapCalls += 1;
           // the first two answers are a cold API; the third is the workspace
-          if (bootstrapCalls <= 2) return new Response(JSON.stringify({ error: "BuildFlow API is starting or unavailable." }), { status: 503 });
+          if (bootstrapCalls <= 2)
+            return new Response(JSON.stringify({ error: "BuildFlow API is starting or unavailable." }), { status: 503 });
         }
         if (url === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
         return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
@@ -1172,7 +1228,8 @@ describe("BuildFlow app", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
-        if (String(input) === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
+        if (String(input) === "/api/delayiq/early-warning")
+          return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
         return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
       })
     );
@@ -1192,7 +1249,8 @@ describe("BuildFlow app", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
-        if (String(input) === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
+        if (String(input) === "/api/delayiq/early-warning")
+          return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
         return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
       })
     );
@@ -1209,7 +1267,8 @@ describe("BuildFlow app", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
-        if (String(input) === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
+        if (String(input) === "/api/delayiq/early-warning")
+          return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
         return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
       })
     );
@@ -1236,15 +1295,21 @@ describe("BuildFlow app", () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({
-        matches: /max-width: 900px/.test(query), media: query, onchange: null,
-        addEventListener: () => undefined, removeEventListener: () => undefined,
-        addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false
+        matches: /max-width: 900px/.test(query),
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false
       }))
     );
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
-        if (String(input) === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
+        if (String(input) === "/api/delayiq/early-warning")
+          return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
         return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
       })
     );
@@ -1261,11 +1326,15 @@ describe("BuildFlow app", () => {
   });
 
   it("moves the email confirmation to the top bar and shows at most one notice above the board", async () => {
-    const unverified = { ...bootstrapFixture, account: { ...(bootstrapFixture.account ?? {}), email: "liam@example.com", emailVerifiedAt: null } };
+    const unverified = {
+      ...bootstrapFixture,
+      account: { ...(bootstrapFixture.account ?? {}), email: "liam@example.com", emailVerifiedAt: null }
+    };
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
-        if (String(input) === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
+        if (String(input) === "/api/delayiq/early-warning")
+          return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
         return new Response(JSON.stringify(unverified), { status: 200 });
       })
     );
@@ -1281,7 +1350,8 @@ describe("BuildFlow app", () => {
   // ---- Dashboard, Phase 4: reachable by everyone, guarded by tests ---------
   const dashboardFetch = (overrides: Partial<typeof bootstrapFixture> = {}, risks: unknown[] = []) =>
     vi.fn(async (input: RequestInfo | URL) => {
-      if (String(input) === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-06-16", risks }), { status: 200 });
+      if (String(input) === "/api/delayiq/early-warning")
+        return new Response(JSON.stringify({ asOf: "2026-06-16", risks }), { status: 200 });
       return new Response(JSON.stringify({ ...bootstrapFixture, ...overrides }), { status: 200 });
     });
   const panelOf = (title: string) => within(screen.getByRole("heading", { name: title }).closest(".dash-block") as HTMLElement);
@@ -1343,7 +1413,9 @@ describe("BuildFlow app", () => {
         rejected = true;
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }
-      const variances = rejected ? [{ ...pendingVariance, status: "rejected" as const, resolvedAt: new Date().toISOString() }] : [pendingVariance];
+      const variances = rejected
+        ? [{ ...pendingVariance, status: "rejected" as const, resolvedAt: new Date().toISOString() }]
+        : [pendingVariance];
       return new Response(JSON.stringify({ ...bootstrapFixture, variances }), { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -1362,9 +1434,20 @@ describe("BuildFlow app", () => {
     // jsdom has no layout: give the Project Alerts body more content than height
     const scroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
     const client = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientHeight");
-    const overflowing = (el: HTMLElement) => el.classList.contains("dash-block-body") && !!el.closest(".dash-block")?.querySelector("h2")?.textContent?.includes("Project Alerts");
-    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get() { return overflowing(this as HTMLElement) ? 600 : 0; } });
-    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get() { return overflowing(this as HTMLElement) ? 200 : 0; } });
+    const overflowing = (el: HTMLElement) =>
+      el.classList.contains("dash-block-body") && !!el.closest(".dash-block")?.querySelector("h2")?.textContent?.includes("Project Alerts");
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+      configurable: true,
+      get() {
+        return overflowing(this as HTMLElement) ? 600 : 0;
+      }
+    });
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+      configurable: true,
+      get() {
+        return overflowing(this as HTMLElement) ? 200 : 0;
+      }
+    });
     try {
       vi.stubGlobal("fetch", dashboardFetch());
       render(<App />);
@@ -1389,7 +1472,14 @@ describe("BuildFlow app", () => {
       ...bootstrapFixture,
       assignments: [
         ...bootstrapFixture.assignments,
-        { id: "as-today", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-16", status: "Confirmed" as const, conflicts: [] }
+        {
+          id: "as-today",
+          jobId: "j-riverside-concrete",
+          crewId: "crew-concrete",
+          date: "2026-06-16",
+          status: "Confirmed" as const,
+          conflicts: []
+        }
       ]
     };
     vi.stubGlobal("fetch", dashboardFetch(seeded));
@@ -1425,7 +1515,10 @@ describe("BuildFlow app", () => {
   const settingsWrites = (fetchMock: ReturnType<typeof vi.fn>) =>
     fetchMock.mock.calls
       .filter(([url, init]) => (init as RequestInit | undefined)?.method === "PUT" && String(url).startsWith("/api/me/settings/"))
-      .map(([url, init]) => ({ url: decodeURIComponent(String(url)), value: JSON.parse(String((init as RequestInit).body)).value as string }));
+      .map(([url, init]) => ({
+        url: decodeURIComponent(String(url)),
+        value: JSON.parse(String((init as RequestInit).body)).value as string
+      }));
   const statusFetch = (history: unknown[]) =>
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -1435,7 +1528,16 @@ describe("BuildFlow app", () => {
           JSON.stringify({
             asOf: "2026-06-16",
             weekOf: "2026-06-15",
-            portfolio: { daysAhead: 0, percentComplete: 10, projects: 1, behindProjects: 0, reportingJobs: 1, totalJobs: 2, daysAheadDelta: null, percentDelta: null },
+            portfolio: {
+              daysAhead: 0,
+              percentComplete: 10,
+              projects: 1,
+              behindProjects: 0,
+              reportingJobs: 1,
+              totalJobs: 2,
+              daysAheadDelta: null,
+              percentDelta: null
+            },
             projects: [],
             history
           }),

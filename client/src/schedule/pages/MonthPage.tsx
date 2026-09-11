@@ -111,7 +111,8 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
       write: (force) => rebookSchedule(plan.moves, { force }),
       stays: `${job.name} stays on ${formatScheduleDate(job.startDate)}.`,
       done: `${job.name} moved to ${formatScheduleDate(date)}`,
-      undo: () => rebookSchedule(plan.inverse, { force: true }),
+      // not forced: the day this chip is going back to may have been taken in the meantime
+      undo: (_result, force) => rebookSchedule(plan.inverse, { force }),
       undone: `${job.name} back on ${formatScheduleDate(job.startDate)}`
     });
   };

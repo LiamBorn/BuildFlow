@@ -74,7 +74,8 @@
   border-color: #2f6bff;
   background: #eef0fd;
   color: #1d4ed8;
-  outline: 0;
+  /* No `outline: 0` here. The tint below is the same one hover gives, so removing the ring left
+     a keyboard user unable to tell where they were on a board with 63 of these buttons. */
 }
 
 .schedule-job {
@@ -1198,6 +1199,26 @@
   color: var(--wx-faint);
   font-size: 13px;
 }
+/* the Matrix says how booked a crew's day is, so its legend carries the same bands as its cells */
+.sched-rx .sched-load-legend i {
+  border: 1px solid var(--wx-line-soft);
+}
+.sched-rx .sched-load-legend .load-0 {
+  background: var(--wx-card);
+}
+.sched-rx .sched-load-legend .load-1 {
+  background: color-mix(in srgb, var(--sc-concrete) 8%, var(--wx-card));
+}
+.sched-rx .sched-load-legend .load-2 {
+  background: color-mix(in srgb, var(--sc-concrete) 17%, var(--wx-card));
+}
+.sched-rx .sched-load-legend .load-3 {
+  background: color-mix(in srgb, var(--sc-concrete) 28%, var(--wx-card));
+}
+.sched-rx .sched-load-legend .is-conflict {
+  background: color-mix(in srgb, var(--sc-milestone) 15%, var(--wx-card));
+  border-color: color-mix(in srgb, var(--sc-milestone) 55%, transparent);
+}
 .sched-rx .schedule-legend .confirmed {
   background: var(--wx-green);
 }
@@ -2039,7 +2060,7 @@
 .sched-rx .crew-row.is-lazy .schedule-cell {
   background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(28, 28, 26, 0.03) 10px 20px);
 }
-.gantt-page .gantt-cap-note {
+.gantt-page.hs-index .gantt-cap-note {
   margin-bottom: 8px;
 }
 
@@ -2183,7 +2204,9 @@
     transition: none;
   }
 }
-/* the grid clipped its own tooltips: rounded corners without overflow: hidden (phones keep their own scrolling rule) */
+/* The grid clipped its own tooltips: rounded corners without overflow: hidden. The doubled class beats
+   the card's own `overflow: hidden` further down this file; schedule-phone.css matches the weight to give
+   phones a sideways scroller instead, and hides the tooltip that would be clipped by it (P5.1). */
 .sched-rx .sched-matrix.sched-matrix {
   overflow: visible;
 }
@@ -4239,24 +4262,24 @@
    ======================================================================== */
 
 /* ------------------------------- page ---------------------------------- */
-.gantt-page .hs-index-card.gantt-card {
+.gantt-page.hs-index .hs-index-card.gantt-card {
   padding: 16px 18px 14px;
 }
-.gantt-page .gantt-toolbar {
+.gantt-page.hs-index .gantt-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 14px;
   margin-bottom: 12px;
 }
-.gantt-page .gantt-seg {
+.gantt-page.hs-index .gantt-seg {
   display: inline-flex;
   overflow: hidden;
   border: 1px solid var(--hsx-line);
   border-radius: 10px;
   background: var(--hsx-card);
 }
-.gantt-page .gantt-seg button {
+.gantt-page.hs-index .gantt-seg button {
   min-height: 34px;
   padding: 0 12px;
   border: 0;
@@ -4268,29 +4291,29 @@
     background 0.16s ease,
     color 0.16s ease;
 }
-.gantt-page .gantt-seg button + button {
+.gantt-page.hs-index .gantt-seg button + button {
   border-left: 1px solid var(--hsx-line);
 }
-.gantt-page .gantt-seg button:hover {
+.gantt-page.hs-index .gantt-seg button:hover {
   background: var(--hsx-hover);
 }
-.gantt-page .gantt-seg button.active {
+.gantt-page.hs-index .gantt-seg button.active {
   background: var(--hsx-blue-soft);
   color: var(--hsx-blue);
 }
-.gantt-page .gantt-zoom {
+.gantt-page.hs-index .gantt-zoom {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.gantt-page .gantt-zoom-value {
+.gantt-page.hs-index .gantt-zoom-value {
   min-width: 46px;
   text-align: center;
   color: var(--hsx-mut);
   font: 600 12.5px var(--hsx-sans);
   font-variant-numeric: tabular-nums;
 }
-.gantt-page .gantt-legend {
+.gantt-page.hs-index .gantt-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
@@ -4298,26 +4321,35 @@
   color: var(--hsx-mut);
   font: 600 12px var(--hsx-sans);
 }
-.gantt-page .gantt-legend span {
+.gantt-page.hs-index .gantt-legend span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.gantt-page .gantt-legend i {
+.gantt-page.hs-index .gantt-legend i {
   width: 9px;
   height: 9px;
   border-radius: 999px;
 }
+/* the live region the notice lives in: always in the page, no box of its own until it has something to say */
+/* What another tab changed, under this tab's own notice rather than instead of it: quieter,
+   because it is commentary, and never carrying anything to press. */
+.gantt-status.sched-news {
+  margin-top: 2px;
+  color: var(--hsx-faint, var(--wx-faint));
+  font-weight: 500;
+}
+
 .gantt-page .gantt-status {
   margin: -4px 0 10px;
-  color: var(--hsx-mut);
-  font: 600 12.5px var(--hsx-sans);
-  animation: hsg-rise 0.36s var(--hsx-ease) both;
+  color: var(--hsx-mut, var(--wx-mut));
+  font: 600 12.5px var(--hsx-sans, var(--cc-sans));
+  animation: hsg-rise 0.36s var(--hsx-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 .gantt-page .gantt-status.is-error {
-  color: var(--hsx-red);
+  color: var(--hsx-red, var(--wx-red));
 }
-.gantt-page .gantt-frame {
+.gantt-page.hs-index .gantt-frame {
   height: clamp(420px, calc(100vh - 336px), 900px);
   overflow: hidden;
   border: 1px solid var(--hsx-line);
@@ -4325,7 +4357,7 @@
   background: var(--hsx-paper);
   animation: hsg-rise 0.5s var(--hsx-ease) both;
 }
-.gantt-page .gantt-empty {
+.gantt-page.hs-index .gantt-empty {
   display: grid;
   place-items: center;
   height: 100%;
@@ -4334,29 +4366,16 @@
   color: var(--hsx-mut);
   font: 500 13.5px/1.5 var(--hsx-sans);
 }
-.gantt-page .gantt-empty strong {
+.gantt-page.hs-index .gantt-empty strong {
   display: block;
   margin-bottom: 4px;
   color: var(--hsx-ink);
   font-weight: 700;
 }
-.gantt-page .gantt-note {
+.gantt-page.hs-index .gantt-note {
   margin: 10px 0 0;
   color: var(--hsx-faint);
   font: 500 12.5px var(--hsx-sans);
-}
-.gantt-page .hs-kpi {
-  animation: hsg-rise 0.5s var(--hsx-ease) both;
-  animation-delay: calc(0.05s * var(--i, 0));
-}
-.gantt-page .hs-kpi:nth-child(2) {
-  --i: 1;
-}
-.gantt-page .hs-kpi:nth-child(3) {
-  --i: 2;
-}
-.gantt-page .hs-kpi:nth-child(4) {
-  --i: 3;
 }
 @keyframes hsg-rise {
   from {
@@ -4981,9 +5000,9 @@
   overflow-y: auto;
   padding: 18px 22px 28px;
   background: #fff;
-  color: var(--hsx-ink);
+  color: var(--hsx-ink, var(--wx-ink));
   box-shadow: -24px 0 60px rgba(20, 32, 58, 0.22);
-  animation: hsg-slide-in 0.32s var(--hsx-ease) both;
+  animation: hsg-slide-in 0.32s var(--hsx-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
 @keyframes hsg-fade {
   from {
@@ -5018,7 +5037,7 @@
 }
 .gantt-page .gantt-drawer-sub {
   margin: 4px 0 0;
-  color: var(--hsx-mut);
+  color: var(--hsx-mut, var(--wx-mut));
   font-size: 13px;
 }
 .gantt-page .gantt-drawer-close {
@@ -5027,12 +5046,12 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--hsx-mut);
+  color: var(--hsx-mut, var(--wx-mut));
   cursor: pointer;
   transition: background 0.15s ease;
 }
 .gantt-page .gantt-drawer-close:hover {
-  background: var(--hsx-hover);
+  background: var(--hsx-hover, var(--wx-bg));
 }
 .gantt-page .gantt-drawer-facts {
   display: grid;
@@ -5040,16 +5059,16 @@
   gap: 8px 12px;
   margin: 0 0 14px;
   padding: 12px;
-  border: 1px solid var(--hsx-line);
+  border: 1px solid var(--hsx-line, var(--wx-line));
   border-radius: 10px;
-  background: var(--hsx-paper);
+  background: var(--hsx-paper, var(--wx-bg));
   font-size: 12.5px;
 }
 .gantt-page .gantt-drawer-facts div {
   min-width: 0;
 }
 .gantt-page .gantt-drawer-facts dt {
-  color: var(--hsx-faint);
+  color: var(--hsx-faint, var(--wx-faint));
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -5062,13 +5081,54 @@
   white-space: nowrap;
   font-weight: 600;
 }
+/* The drawer's buttons, on every page that opens it. The index pages' own `.hs-index .hs-btn` cannot
+   reach them: the drawer moved to all seven schedule pages with the shared frame, and only the Gantt
+   Chart is an index page — so on the six boards the Save button was a default HTML button (P5.6). */
+.gantt-drawer .hs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--hsx-line, var(--wx-line-soft));
+  border-radius: 8px;
+  background: var(--hsx-card, var(--wx-card));
+  color: var(--hsx-ink, var(--wx-ink));
+  font-family: var(--hsx-sans, var(--cc-sans, Inter, sans-serif));
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+}
+.gantt-drawer .hs-btn:hover {
+  background: var(--hsx-hover, var(--wx-bg-2));
+  border-color: #d6dae4;
+}
+.gantt-drawer .hs-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.gantt-drawer .hs-btn-primary {
+  border-color: var(--hsx-blue, var(--wx-blue));
+  background: var(--hsx-blue, var(--wx-blue));
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(47, 107, 255, 0.28);
+}
+.gantt-drawer .hs-btn-primary:hover {
+  background: #245ae0;
+  border-color: #245ae0;
+}
+
 /* the job's links, and the way to draw or remove one without a mouse (P4.6) */
 .gantt-page .gantt-drawer-links {
   margin: 0 0 14px;
   padding: 12px;
-  border: 1px solid var(--hsx-line);
+  border: 1px solid var(--hsx-line, var(--wx-line));
   border-radius: 10px;
-  background: var(--hsx-paper);
+  background: var(--hsx-paper, var(--wx-bg));
   font-size: 12.5px;
 }
 .gantt-page .gantt-drawer-links-head {
@@ -5079,7 +5139,7 @@
 }
 .gantt-page .gantt-drawer-links h3 {
   margin: 0;
-  color: var(--hsx-faint);
+  color: var(--hsx-faint, var(--wx-faint));
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -5106,12 +5166,12 @@
   white-space: nowrap;
 }
 .gantt-page .gantt-drawer-links em {
-  color: var(--hsx-mut);
+  color: var(--hsx-mut, var(--wx-mut));
   font-style: normal;
 }
 .gantt-page .gantt-drawer-links-empty {
   margin: 8px 0 0;
-  color: var(--hsx-mut);
+  color: var(--hsx-mut, var(--wx-mut));
 }
 .gantt-page .gantt-drawer-links .hs-btn {
   flex: none;
@@ -5129,7 +5189,7 @@
   font-weight: 600;
 }
 .gantt-page .gantt-drawer-form label > span {
-  color: var(--hsx-mut);
+  color: var(--hsx-mut, var(--wx-mut));
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -5142,11 +5202,11 @@
   width: 100%;
   min-height: 40px;
   padding: 0 12px;
-  border: 1px solid var(--hsx-line);
+  border: 1px solid var(--hsx-line, var(--wx-line));
   border-radius: 10px;
   background: #fff;
-  color: var(--hsx-ink);
-  font: 600 14px var(--hsx-sans);
+  color: var(--hsx-ink, var(--wx-ink));
+  font: 600 14px var(--hsx-sans, var(--cc-sans));
   outline: 0;
   transition:
     border-color 0.18s ease,
@@ -5155,7 +5215,7 @@
 .gantt-page .gantt-drawer-form input:focus,
 .gantt-page .gantt-drawer-form select:focus,
 .gantt-page .gantt-drawer-form textarea:focus {
-  border-color: var(--hsx-blue);
+  border-color: var(--hsx-blue, var(--wx-blue));
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.18);
 }
 .gantt-page .gantt-drawer-form textarea {
@@ -5172,7 +5232,7 @@
 }
 .gantt-page .gantt-drawer-error {
   margin: 0;
-  color: var(--hsx-red);
+  color: var(--hsx-red, var(--wx-red));
   font-size: 12.5px;
   font-weight: 600;
 }
@@ -5187,8 +5247,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gantt-page .gantt-frame,
-  .gantt-page .hs-kpi,
+  .gantt-page.hs-index .gantt-frame,
   .gantt-page .gantt-status,
   .gantt-page .gantt-drawer,
   .gantt-page .gantt-drawer-backdrop,
@@ -5329,7 +5388,7 @@
 }
 
 /* the CPM readout above the chart (the landing's, in this page's tokens) */
-.gantt-page .sched-cpm {
+.gantt-page.hs-index .sched-cpm {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -5340,10 +5399,10 @@
   border-radius: 12px;
   background: var(--hsx-card);
 }
-.gantt-page .sched-cpm-error {
+.gantt-page.hs-index .sched-cpm-error {
   border-color: var(--hsx-red);
 }
-.gantt-page .sched-cpm-ico {
+.gantt-page.hs-index .sched-cpm-ico {
   display: grid;
   place-items: center;
   width: 30px;
@@ -5353,50 +5412,50 @@
   background: var(--hsx-blue-soft);
   color: var(--hsx-blue);
 }
-.gantt-page .sched-cpm-error .sched-cpm-ico {
+.gantt-page.hs-index .sched-cpm-error .sched-cpm-ico {
   background: rgba(197, 34, 31, 0.1);
   color: var(--hsx-red);
 }
-.gantt-page .sched-cpm-stat {
+.gantt-page.hs-index .sched-cpm-stat {
   display: grid;
   gap: 1px;
 }
-.gantt-page .sched-cpm-stat em {
+.gantt-page.hs-index .sched-cpm-stat em {
   font: 700 10.5px var(--hsx-sans);
   font-style: normal;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--hsx-mut);
 }
-.gantt-page .sched-cpm-stat strong {
+.gantt-page.hs-index .sched-cpm-stat strong {
   font: 700 14px var(--hsx-sans);
   color: var(--hsx-ink);
   font-variant-numeric: tabular-nums;
 }
-.gantt-page .sched-cpm-stat strong small {
+.gantt-page.hs-index .sched-cpm-stat strong small {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--hsx-mut);
 }
-.gantt-page .sched-cpm-stat strong.is-late {
+.gantt-page.hs-index .sched-cpm-stat strong.is-late {
   color: var(--hsx-red);
 }
-.gantt-page .sched-cpm-stat strong.is-early {
+.gantt-page.hs-index .sched-cpm-stat strong.is-early {
   color: #188038;
 }
-.gantt-page .sched-cpm-stat strong.is-on {
+.gantt-page.hs-index .sched-cpm-stat strong.is-on {
   color: var(--hsx-mut);
 }
-.gantt-page .sched-cpm-error strong {
+.gantt-page.hs-index .sched-cpm-error strong {
   font: 600 13px var(--hsx-sans);
   color: var(--hsx-ink);
 }
-.gantt-page .sched-cpm-error em {
+.gantt-page.hs-index .sched-cpm-error em {
   display: block;
   font: 500 12px var(--hsx-sans);
   color: var(--hsx-mut);
 }
-.gantt-page .sched-cpm-baseline {
+.gantt-page.hs-index .sched-cpm-baseline {
   min-height: 32px;
   margin-left: auto;
   padding: 0 12px;
@@ -5407,31 +5466,31 @@
   font: 600 12.5px var(--hsx-sans);
   cursor: pointer;
 }
-.gantt-page .sched-cpm-baseline:hover {
+.gantt-page.hs-index .sched-cpm-baseline:hover {
   background: var(--hsx-hover);
 }
-.gantt-page .sched-cpm-baseline:disabled {
+.gantt-page.hs-index .sched-cpm-baseline:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
 /* the shared week stepper, in this page's toolbar */
-.gantt-page .gantt-week {
+.gantt-page.hs-index .gantt-week {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.gantt-page .gantt-week strong {
+.gantt-page.hs-index .gantt-week strong {
   min-width: 160px;
   text-align: center;
   font: 600 12.5px var(--hsx-sans);
   color: var(--hsx-ink);
   font-variant-numeric: tabular-nums;
 }
-.gantt-page .gantt-week .previous-week {
+.gantt-page.hs-index .gantt-week .previous-week {
   transform: rotate(90deg);
 }
-.gantt-page .gantt-week .next-week {
+.gantt-page.hs-index .gantt-week .next-week {
   transform: rotate(-90deg);
 }
 

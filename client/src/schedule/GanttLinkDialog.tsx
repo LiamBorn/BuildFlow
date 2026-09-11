@@ -2,6 +2,7 @@
  * "Link to another job…" from a Gantt bar's menu: the job that follows, the link type
  * and the lag. The server keeps the network a loop-free graph and says why it refuses.
  */
+import { useModalDialog } from "./hooks";
 import { useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import type { DependencyType, Job, JobDependency } from "@buildflow/shared";
@@ -33,6 +34,7 @@ export function GanttLinkDialog({
   const [successorId, setSuccessorId] = useState(candidates[0]?.id ?? "");
   const [type, setType] = useState<DependencyType>("FS");
   const [lag, setLag] = useState("0");
+  const panel = useModalDialog<HTMLFormElement>(onClose);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -48,11 +50,9 @@ export function GanttLinkDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sched-link-title"
+        ref={panel}
         onClick={(event) => event.stopPropagation()}
         onSubmit={submit}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") onClose();
-        }}
       >
         <header>
           <div>

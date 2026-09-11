@@ -4,7 +4,7 @@
  * crew (the browser's print-to-PDF), and the per-crew calendar feeds (server side).
  */
 import type { Crew, Job, Project, ScheduleAssignment } from "@buildflow/shared";
-import { bookingLaborHours, jobShiftHours } from "./kpis";
+import { bookingLaborHours, showHours } from "./kpis";
 
 export type ExportScope = {
   jobs: Job[];
@@ -28,7 +28,10 @@ export const EXPORT_COLUMNS = [
   "Start",
   "End",
   "Labour",
-  "Hours",
+  // Named for what it holds. It was "Hours", and it meant the shift × the labour on a booked row
+  // and the shift alone on an unbooked one, so the same job exported two different numbers and
+  // the column could not be added up.
+  "Labour hours",
   "Location",
   "Equipment",
   "Materials",
@@ -77,12 +80,14 @@ export function scheduleExportRows(scope: ExportScope): string[][] {
         day: weekdayShort(dayOf(assignment)),
         crew: crewsById.get(assignment.crewId)?.name ?? assignment.crewId,
         conflicts: assignment.conflicts.join("; "),
-        hours: String(bookingLaborHours(job))
+        hours: showHours(bookingLaborHours(job))
       });
     });
   if (scope.includeUnbooked) {
     for (const job of [...scope.jobs].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name))) {
-      if (!booked.has(job.id)) rows.push(jobRow(job, { date: "", day: "", crew: "", conflicts: "", hours: String(jobShiftHours(job)) }));
+      // the same measure as a booked row: what the job asks for, whether or not a crew is on it yet
+      if (!booked.has(job.id))
+        rows.push(jobRow(job, { date: "", day: "", crew: "", conflicts: "", hours: showHours(bookingLaborHours(job)) }));
     }
   }
   return rows;

@@ -1,4 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
+import { useModalDialog } from "./hooks";
 import CloudLoader from "../components/ui/quantum-cloud-loader"; // the BuildFlow AI "thinking" particles, reused while a file is read
 import { AlertTriangle, CalendarClock, CheckCircle2, FileUp, TrendingDown, TrendingUp, X } from "lucide-react";
 import {
@@ -53,6 +54,7 @@ export function ScheduleImportDialog({
   const [error, setError] = useState<ImportError | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panel = useModalDialog<HTMLElement>(onClose);
 
   const busy = stage === "reading" || stage === "committing";
 
@@ -129,7 +131,7 @@ export function ScheduleImportDialog({
 
   return (
     <div className="project-dialog-backdrop" role="presentation">
-      <section className="project-dialog sim-dialog" role="dialog" aria-modal="true" aria-labelledby="schedule-import-title">
+      <section className="project-dialog sim-dialog" role="dialog" aria-modal="true" aria-labelledby="schedule-import-title" ref={panel}>
         <header className="project-dialog-header">
           <div>
             <h2 id="schedule-import-title">Import a schedule</h2>

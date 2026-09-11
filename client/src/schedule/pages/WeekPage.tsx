@@ -107,6 +107,7 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
     alerts,
     openAlert,
     notice,
+    news,
     crewsById,
     jobsById,
     selectedJob,
@@ -174,7 +175,8 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
       done: assignmentId
         ? `${name} moved to ${crewName(crewId)} on ${formatScheduleDate(date)}`
         : `${name} booked with ${crewName(crewId)} on ${formatScheduleDate(date)}`,
-      undo: canUndo ? (result) => rebookSchedule(plan.inverse(assignmentId ?? result.assignments[0]?.id), { force: true }) : null,
+      // not forced: the crew-day this card is going back to may have been taken in the meantime
+      undo: canUndo ? (result, force) => rebookSchedule(plan.inverse(assignmentId ?? result.assignments[0]?.id), { force }) : null,
       undone: assignmentId
         ? `${name} back with ${crewName(fromCrewId)} on ${fromDate ? formatScheduleDate(fromDate) : "its day"}`
         : `${name} unbooked again`,
@@ -226,7 +228,7 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
     >
       <div className="schedule-layout">
         <section className="schedule-board" aria-label="Crew schedule for the week" data-tutorial-id="schedule-board">
-          <ScheduleNotice notice={notice} />
+          <ScheduleNotice notice={notice} news={news} />
           <div className="schedule-week-scroll">
             <div className="schedule-header">
               <span>{plural(crews.length, "Crew")}</span>

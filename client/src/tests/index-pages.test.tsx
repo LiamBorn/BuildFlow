@@ -230,6 +230,29 @@ describe("BuildFlow index pages", () => {
     expect(await within(card).findByText("No projects added yet")).toBeInTheDocument();
   });
 
+  // The rail's ages used to be the literals "10m ago", "45m ago" and "2h ago", so the column
+  // that exists to say how fresh a warning is read the same on every load in every workspace.
+  it("ages each project alert from its own record, and shows nothing when the record has no time", async () => {
+    // a short material is the one alert source with no moment of its own to count from
+    state.bootstrapPayload = {
+      ...bootstrapFixture,
+      materials: [{ ...bootstrapFixture.materials[0], status: "Waiting on Delivery" }]
+    };
+    render(<App />);
+    await enterDashboard();
+    await openAppPage("Projects");
+
+    const panel = (await screen.findByRole("heading", { level: 2, name: "Project Alerts" })).closest("section") as HTMLElement;
+    const rowOf = (title: string) => within(panel).getByText(title).closest(".cc-alert") as HTMLElement;
+
+    // the clock is pinned to 2026-06-16 noon and this DelayIQ was reported on the 12th
+    expect(within(rowOf("Heavy Rain DelayIQ")).getByText("4d ago")).toBeInTheDocument();
+    // the weather warning has not arrived yet, so its row counts forward instead
+    expect(within(rowOf("Weather delayIQ expected")).getByText(/^in \d+d$/)).toBeInTheDocument();
+    // the material knows only the day its delivery is due, which is not how old the warning is
+    expect(rowOf("Material delivery delayIQed").querySelector(".cc-alert-time")).toBeNull();
+  });
+
   // ------------------------------------------------------------------- Crews
 
   // replaces "edits crews directly from the crew popup"

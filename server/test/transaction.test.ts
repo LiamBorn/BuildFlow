@@ -74,6 +74,45 @@ describe("transactional writes", () => {
     expect(after.assignments.find((a) => a.id === booking.id)).toMatchObject({ date: shift(booking.date, 30), status: "On Site" });
   });
 
+  it("leaves a crew whole when its update fails half-way through", async () => {
+    const store = await BuildFlowStore.create(path.join(tempDir("buildflow-crew-"), "store.sqlite"), true);
+    const crew = store.crews()[0];
+    const before = { name: crew.name, size: crew.size, mix: JSON.stringify(crew.laborMix) };
+
+    // The update deletes the crew's role counts and re-inserts them. A count that cannot be
+    // bound throws between the two, which outside a transaction left the crew with none at all.
+    expect(() =>
+      store.updateCrew(crew.id, {
+        name: "Renamed mid-flight",
+        specialty: crew.specialty,
+        foreman: "Ana Lopez",
+        laborMix: [{ category: "Labor", role: "Laborers", count: {} as unknown as number }]
+      })
+    ).toThrow();
+
+    const after = store.crews().find((row) => row.id === crew.id)!;
+    expect({ name: after.name, size: after.size, mix: JSON.stringify(after.laborMix) }).toEqual(before);
+  });
+
+  it("does not rewrite the database for a patch that changes nothing", async () => {
+    const agent = await testApp();
+    const boot = await agent.get("/api/bootstrap").expect(200);
+    const job = boot.body.jobs[0] as JobRow;
+
+    const writes = vi.spyOn(fs, "writeFileSync");
+    try {
+      // A patch carrying no writable column is a no-op, and a no-op is not worth exporting the
+      // whole SQLite image and writing it to disk — which committing a transaction always does.
+      await agent.patch(`/api/jobs/${job.id}`).send({}).expect(200);
+      expect(writes).not.toHaveBeenCalled();
+
+      await agent.patch(`/api/jobs/${job.id}`).send({ notes: "a real change" }).expect(200);
+      expect(writes).toHaveBeenCalledTimes(1);
+    } finally {
+      writes.mockRestore();
+    }
+  });
+
   it("rolls a failing transaction back, lets a nested call join, and writes the file once after the commit", async () => {
     const store = await BuildFlowStore.create(path.join(tempDir("buildflow-store-"), "store.sqlite"), true);
     const crews = store.crews().length;

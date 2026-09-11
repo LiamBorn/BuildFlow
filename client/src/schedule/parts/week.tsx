@@ -5,6 +5,7 @@
 import type { CreateJobInput, Crew, Job, Project, ScheduleAssignment, Status } from "@buildflow/shared";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { useModalDialog } from "../hooks";
 import { GripVertical, Plus, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
@@ -124,7 +125,9 @@ export function ScheduleJobCard({
       style={style}
       data-assignment-id={assignment.id}
       data-job-id={job.id}
-      aria-label={`Open ${job.name} project`}
+      // the name has to match the destination: this card opens the job drawer wherever one is
+      // wired up, and only falls back to the project record when it is not
+      aria-label={onOpenJob ? `Open ${job.name}` : `Open ${job.name} project`}
       onClick={() => (onOpenJob ? onOpenJob(job, assignment) : onOpenProject(job.projectId))}
       {...listeners}
       {...attributes}
@@ -164,6 +167,7 @@ export function ScheduleJobPickerDialog({
   onCreateJob: (input: CreateJobInput, crewId: string) => Promise<void>;
 }) {
   const dateLabel = formatScheduleDate(date);
+  const panel = useModalDialog<HTMLElement>(onClose);
   // The crew is fixed when this opens from a Week cell (that cell's row), but a
   // calendar-day add has no row — so the crew is chosen here, pre-set to the one
   // we opened with.
@@ -240,6 +244,7 @@ export function ScheduleJobPickerDialog({
         aria-modal="true"
         aria-label="Add job to schedule"
         data-tutorial-id="schedule-job-dialog"
+        ref={panel}
       >
         <header>
           <div>

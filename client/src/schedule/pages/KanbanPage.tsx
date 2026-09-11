@@ -53,13 +53,16 @@ export function KanbanPage({ data: liveData, reload, onOpenSchedule, onOpenPage,
     const sourceStatus = event.active.data.current?.status as Status | undefined;
     const targetStatus = kanbanMove(sourceStatus, event.over?.data.current?.status as Status | undefined);
     if (!jobId || !targetStatus || busy) return; // no lane under the card, or its own lane
-    const name = data.jobs.find((candidate) => candidate.id === jobId)?.name ?? "Job";
+    const job = data.jobs.find((candidate) => candidate.id === jobId);
+    const name = job?.name ?? "Job";
     await runChange({
       id: jobId,
       name,
-      write: () => updateJob(jobId, { status: targetStatus }),
+      // the version this card was drawn from, so a lane drop cannot overwrite somebody else's move
+      write: () => updateJob(jobId, { status: targetStatus }, job?.version),
       done: `${name} moved to ${kanbanLaneOf(targetStatus)?.label ?? targetStatus}`,
-      // for a few seconds the move can be taken back: the status it had before
+      // for a few seconds the move can be taken back: the status it had before. No version on the
+      // way back — this move has already moved it on by one.
       undo: sourceStatus ? () => updateJob(jobId, { status: sourceStatus }) : null,
       undone: `${name} back to ${sourceStatus}`
     });

@@ -40,7 +40,11 @@ export function scheduleCalendarFor(epoch: string, setting: WorkCalendarSetting)
  */
 export function plannedPercentAt(job: PlannedWindow, asOf: string, calendar: WorkCalendar): number {
   const start = calendar.toIndex(job.startDate);
-  const end = calendar.toIndex(job.endDate);
+  // A finish before the start is corrupt, not a window. Read as it stood, `now >= end` was true
+  // from the day after the start and the plan claimed the job was finished — so the variance
+  // engine measured real field reports against a plan that said the work was already done. Held
+  // to its start instead, it behaves as the single day `duration()` already calls it.
+  const end = Math.max(start, calendar.toIndex(job.endDate));
   const now = calendar.toIndex(asOf);
   if (now <= start) return 0;
   if (now >= end) return 100;

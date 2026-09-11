@@ -37,6 +37,15 @@ describe("plannedPercentAt", () => {
     expect(plannedPercentAt(job(), "2026-06-30", calendar)).toBe(100);
   });
 
+  it("does not call a job finished because its dates are backwards", () => {
+    // A finish before the start is corrupt data, not a short job. Read literally, "now is at or
+    // past the finish" was true from the day after the start, so the plan line said the work was
+    // done and the variance engine measured real field reports against that.
+    const backwards = job({ startDate: "2026-06-22", endDate: "2026-06-15" });
+    expect(plannedPercentAt(backwards, "2026-06-19", calendar)).toBe(0); // before it starts
+    expect(plannedPercentAt(backwards, "2026-06-23", calendar)).toBe(100); // the single day it has
+  });
+
   it("tracks the fraction of working days elapsed", () => {
     // Wed is day 3 of a 5-working-day job → 3/5.
     expect(plannedPercentAt(job(), "2026-06-17", calendar)).toBe(60);

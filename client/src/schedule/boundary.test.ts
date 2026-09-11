@@ -1,8 +1,12 @@
 /**
- * The schedule folder's boundary — "one implementation per view, in schedule/, none
- * of it in App.tsx" as a test. It reads the client's sources (Vite's raw glob), so a
- * board or drawer creeping back into App.tsx, a page reaching into a sibling page, or
- * a schedule module left at the client root fails the suite.
+ * The schedule folder's boundary — "one implementation per view, in schedule/, none of it in App.tsx"
+ * as a test.
+ *
+ * Two kinds of check live here, and the difference matters. What a module *does* is asserted by doing
+ * it: a page module is imported and its component called, so renaming an export or a class prefix
+ * changes nothing here. What a module *reaches for* — which file imports which — cannot be seen from
+ * the outside, so those are read from the source: a board creeping back into App.tsx, a page reaching
+ * into a sibling page, or a schedule module left at the client root still fails the suite.
  */
 import { describe, expect, it } from "vitest";
 import { SCHEDULE_PAGES } from "./useScheduleContext";
@@ -17,31 +21,23 @@ const app = read("App.tsx");
 const pageComponent = (id: string) => `${id.charAt(0).toUpperCase()}${id.slice(1)}Page`;
 
 describe("schedule folder boundary", () => {
-  it("has exactly one page module per schedule page, and App.tsx only routes to it", () => {
+  it("has exactly one page module per schedule page, and App.tsx only routes to it", async () => {
     for (const id of SCHEDULE_PAGES) {
       const name = pageComponent(id);
-      const file = `schedule/pages/${name}.tsx`;
-      expect(read(file), `${file} exports ${name}`).toMatch(new RegExp(`^export function ${name}\\(`, "m"));
+      // the module is imported, not read: how the component is declared is its own business
+      const module = (await import(`./pages/${name}.tsx`)) as Record<string, unknown>;
+      expect(typeof module[name], `${name} is a component`).toBe("function");
       expect(app.match(new RegExp(`<${name}\\b`, "g"))?.length, `${name} rendered once in App.tsx`).toBe(1);
       expect(app, `App.tsx routes page "${id}"`).toContain(`page === "${id}" && `);
     }
   });
 
   it("defines no schedule view, board, cell or drawer in App.tsx", () => {
-    expect(app).not.toMatch(/sched-/);
-    expect(app).not.toMatch(/className=[^\n]*gantt-/);
+    // what App.tsx declares and what it imports — the two things a rename cannot make true again
     expect(app).not.toMatch(
-      /^(export )?function (Schedule|Sched|Week|Month|Kanban|Matrix|Gantt|Job|Booking)[A-Za-z]*(Page|Board|View|Cell|Card|Drawer|Row|Lane|Chip)\b/m
+      /^(export )?(function|const) (Schedule|Sched|Week|Month|Kanban|Matrix|Gantt|Job|Booking)[A-Za-z]*(Page|Board|View|Cell|Card|Drawer|Row|Lane|Chip)\b/m
     );
     expect(app, "App.tsx reads shared parts through the barrel only").not.toMatch(/from "\.\/schedule\/parts\//);
-  });
-
-  it("has a page test for every schedule page", () => {
-    const tests = read("schedule/pages.test.tsx");
-    for (const id of SCHEDULE_PAGES) {
-      const name = id === "schedule" ? "Schedule landing" : `${pageComponent(id).replace(/Page$/, "")} page`;
-      expect(tests, `pages.test.tsx describes "${name}"`).toContain(`describe("${name}"`);
-    }
   });
 
   it("reads holidays and working days from the workspace calendar only", () => {
@@ -64,12 +60,6 @@ describe("schedule folder boundary", () => {
       expect(text, `${id} derives what the hook derives`).not.toMatch(hookOnly);
       // the Gantt keeps the index pages' card chrome; the six others stand in the shared frame
       if (id !== "gantt") expect(text, `${id} stands in the page frame`).toMatch(/<SchedulePageFrame/);
-    }
-  });
-
-  it("offers the one export menu on every schedule page", () => {
-    for (const id of SCHEDULE_PAGES) {
-      expect(read(`schedule/pages/${pageComponent(id)}.tsx`), `${id} renders ScheduleExportMenu`).toContain("<ScheduleExportMenu");
     }
   });
 

@@ -57,7 +57,26 @@
   font-family: var(--cpx-font);
   color: var(--cpx-ink);
 }
-.welcome-rx.cpx-subnav-portal { font-family: var(--cpx-font); color: var(--cpx-ink); }
+/* The portaled bar wrapper carries `welcome-rx` only to inherit the design tokens.
+   Neutralise the page-root box that class also brings (min-height:100vh, the fixed
+   ::before backdrop): as a body child it was adding a blank viewport of scroll
+   below the footer. Its children are position:fixed, so a zero-sized wrapper is
+   enough — they still resolve against the viewport. */
+.welcome-rx.cpx-subnav-portal {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 0;
+  height: 0;
+  min-height: 0;
+  /* Fixed makes this a stacking context, so the bar's own z-index no longer
+     competes with .welcome-nav (50) directly — the wrapper has to outrank it. */
+  z-index: 60;
+  overflow: visible;
+  background: none;
+  font-family: var(--cpx-font);
+  color: var(--cpx-ink);
+}
+.welcome-rx.cpx-subnav-portal::before { content: none; }
 .welcome-rx .cpx-page * { box-sizing: border-box; }
 .welcome-rx .cpx-page [id] { scroll-margin-top: 88px; }
 
@@ -559,6 +578,13 @@
 
 /* ── closing advert band (HubSpot-style CTA above the footer) ──────────── */
 .welcome-rx .cpx-cta { padding-top: clamp(56px, 8vw, 100px); padding-bottom: clamp(56px, 8vw, 100px); }
+/* The closing advert reads as its own band: the tabbed viewer above it is also
+   paper, so this one takes the second paper tone plus a hairline top and bottom. */
+.welcome-rx .cpx-cta-band {
+  background: var(--cpx-paper-2);
+  border-top: 1px solid var(--cpx-paper-line);
+  border-bottom: 1px solid var(--cpx-paper-line);
+}
 .welcome-rx .cpx-cta-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: clamp(32px, 6vw, 96px); align-items: center; }
 .welcome-rx .cpx-cta-copy h2 { margin: 0 0 16px; font-size: clamp(1.9rem, 3.2vw, 2.9rem); line-height: 1.08; letter-spacing: var(--cpx-track-tight); font-weight: 600; color: var(--cpx-ink); text-wrap: balance; }
 .welcome-rx .cpx-cta-copy p { margin: 0 0 28px; max-width: 44ch; font-size: clamp(1.05rem, 1.3vw, 1.25rem); line-height: 1.55; color: var(--cpx-mut); }

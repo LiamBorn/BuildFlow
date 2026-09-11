@@ -59,6 +59,28 @@ describe("the schedule export", () => {
     expect(scheduleExportRows({ ...scope, window: { start: "2026-09-14", end: "2026-09-20" } })).toEqual([]);
   });
 
+  it("means one thing by its hours column, so the column can be added up", () => {
+    const hours = EXPORT_COLUMNS.indexOf("Labour hours");
+    const rows = scheduleExportRows({ ...scope, includeUnbooked: true });
+    // both jobs are a 7:00–3:00 shift for two: the booked row and the unbooked one agree.
+    // The unbooked row used to report the shift alone, so the same job exported 16 and 8.
+    expect(rows[0][hours]).toBe("16");
+    expect(rows[1][hours]).toBe("16");
+    expect(rows.map((row) => Number(row[hours])).reduce((total, value) => total + value, 0)).toBe(32);
+  });
+
+  it("writes a shift that does not divide evenly without pretending it does", () => {
+    const odd = job("Long pour", { startTime: "7:00 AM", endTime: "3:20 PM", requiredLabor: 4 });
+    const rows = scheduleExportRows({
+      ...scope,
+      jobs: [odd],
+      assignments: [
+        { id: "a-2", jobId: "Long pour", crewId: "c-1", date: "2026-09-08", status: "Planned", conflicts: [] } as ScheduleAssignment
+      ]
+    });
+    expect(rows[0][EXPORT_COLUMNS.indexOf("Labour hours")]).toBe("33.33"); // 8⅓ × 4, shown to the cent
+  });
+
   it("quotes CSV cells and prints a sheet per crew", () => {
     const csv = toCsv([["a", 'say "hi"', "1,2"]], ["x", "y", "z"]);
     expect(csv).toBe('"x","y","z"\n"a","say ""hi""","1,2"');

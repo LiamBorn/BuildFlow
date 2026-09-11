@@ -24,6 +24,23 @@ export type ScheduleScope = { jobs: Job[]; assignments: ScheduleAssignment[]; cr
 
 const regionOf = (job: Job) => job.location.trim();
 
+/**
+ * Bookings whose crew the workspace no longer has.
+ *
+ * Every page draws a booking inside its crew's row, so one with no crew is dropped — from the
+ * boards, the KPIs and the export alike, without a word. The hours are worked and the row is in
+ * the database. Deleting a crew takes its bookings with it, so this is not the ordinary path:
+ * it is what an import, or an older partial write, can leave behind. Whatever made it, the one
+ * thing the schedule must not do is pretend it is not there.
+ *
+ * Answers to the workspace, not to the page's filters — a booking hidden by a crew filter is
+ * hidden on purpose, and this is the opposite of on purpose.
+ */
+export function bookingsWithoutCrew(data: Pick<ScheduleFilterData, "assignments" | "crews">): ScheduleAssignment[] {
+  const crewIds = new Set(data.crews.map((crew) => crew.id));
+  return data.assignments.filter((assignment) => !crewIds.has(assignment.crewId));
+}
+
 /** The regions the schedule knows: every job's location, once, sorted. */
 export function scheduleRegions(jobs: Job[]): string[] {
   return [...new Set(jobs.map(regionOf).filter(Boolean))].sort((a, b) => a.localeCompare(b));

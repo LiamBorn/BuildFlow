@@ -36,6 +36,15 @@ export type CpmTask = {
   constraintType?: ConstraintType;
   /** Day index the constraint applies to, on the same axis as the results. */
   constraintDate?: number;
+  /**
+   * A finish-no-later-than date the backward pass caps late finish at, on the same
+   * axis. Separate from `constraintType` so a task can be pinned where it is planned
+   * *and* carry a deadline: `FNLT` is a backward-pass constraint, so expressing it as
+   * the task's only constraint leaves the forward pass with no floor and drops the
+   * task back to the start of the plan. A missed deadline shows as negative float,
+   * which is the whole point of asking for one.
+   */
+  deadline?: number;
 };
 
 export type CpmLink = {
@@ -81,6 +90,19 @@ export function fromDayIndex(index: number, epoch: string): string {
   return new Date(Date.parse(`${epoch.slice(0, 10)}T00:00:00Z`) + index * DAY_MS).toISOString().slice(0, 10);
 }
 
+/**
+ * A moment's calendar day where the clock is, as YYYY-MM-DD.
+ *
+ * `toISOString().slice(0, 10)` reads the *UTC* day, which is a different day from the one the
+ * crew is standing in for part of every day: west of UTC it runs ahead, east of it behind. On a
+ * schedule that is not a rounding detail — "today" decides whether a job is overdue, which week a
+ * digest covers, and where the plan line sits — so a workspace at UTC−11 had jobs called late on
+ * their own start date for the last eleven hours of every day.
+ */
+export function localIsoDate(at: Date = new Date()): string {
+  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
+}
+
 /** Inclusive calendar duration in days between two dates (1 day minimum). */
 export function inclusiveDuration(startIso: string, endIso: string): number {
   return Math.max(1, toDayIndex(endIso, startIso) + 1);
@@ -117,10 +139,27 @@ export type WorkCalendar = {
 };
 
 /**
- * Build a working-day axis starting at (or just after) `epoch`.
- * `horizonDays` bounds the precomputed window; dates outside it clamp.
+ * A hard stop on how far the axis will ever reach: a century of calendar days.
+ * Nothing here needs it in practice — it exists so a runaway index (a forecast
+ * off a near-zero reported rate, say) asks for memory once and stops.
  */
-export function createWorkCalendar(epoch: string, options: WorkCalendarOptions = {}, horizonDays = 1200): WorkCalendar {
+const MAX_CALENDAR_DAYS = 40_000;
+
+/** How much axis to materialise at a time — a year and a bit, so the ordinary case grows once. */
+const GROWTH_CHUNK = 400;
+
+/**
+ * Build a working-day axis starting at (or just after) `epoch`.
+ *
+ * The axis is materialised lazily and has no fixed end. That matters: a fixed
+ * window clamps every date past it to the same index, and because the epoch is
+ * the *earliest* job in the workspace, one old job used to drag the window's end
+ * back in front of the work — a project finishing in 2026 reported a finish date
+ * in 2023, with every float and slip figure derived from the same collapsed axis.
+ * Dates before the epoch still clamp to index 0, which is what "the plan starts
+ * here" means.
+ */
+export function createWorkCalendar(epoch: string, options: WorkCalendarOptions = {}): WorkCalendar {
   const weekend = new Set(options.weekendDays ?? [0]);
   const holidays = new Set(options.holidays ?? []);
   const start = epoch.slice(0, 10);
@@ -130,44 +169,68 @@ export function createWorkCalendar(epoch: string, options: WorkCalendarOptions =
     return !weekend.has(new Date(`${iso}T00:00:00Z`).getUTCDay());
   };
 
-  // One pass forward to list the calendar window and its working days…
+  /** Every calendar day from the epoch, in order, as far as anything has asked. */
   const all: string[] = [];
-  for (let offset = 0; offset < horizonDays; offset += 1) all.push(fromDayIndex(offset, start));
-  const workingDates = all.filter(isWorking);
-  const indexOfWorking = new Map(workingDates.map((iso, index) => [iso, index]));
+  /** Just the working ones — index N on the axis is `workingDates[N]`. */
+  const workingDates: string[] = [];
+  const indexOfWorking = new Map<string, number>();
+  /** Per calendar-day offset: the axis index of the last working day at or before it, −1 if none yet. */
+  const previousWorking: number[] = [];
 
-  // …then one pass back to answer "next/previous working day" in O(1).
-  const nextIndex = new Map<string, number>();
-  const prevIndex = new Map<string, number>();
-  let ahead = workingDates.length; // no working day at/after the horizon end
-  for (let i = all.length - 1; i >= 0; i -= 1) {
-    const iso = all[i];
-    if (indexOfWorking.has(iso)) ahead = indexOfWorking.get(iso)!;
-    nextIndex.set(iso, ahead);
-  }
-  let behind = -1;
-  for (const iso of all) {
-    if (indexOfWorking.has(iso)) behind = indexOfWorking.get(iso)!;
-    prevIndex.set(iso, behind);
-  }
+  /** Materialise the axis out to `days` calendar days from the epoch. */
+  const grow = (days: number) => {
+    const target = Math.min(Math.max(days, all.length + GROWTH_CHUNK), MAX_CALENDAR_DAYS);
+    for (let offset = all.length; offset < target; offset += 1) {
+      const iso = fromDayIndex(offset, start);
+      all.push(iso);
+      if (isWorking(iso)) {
+        indexOfWorking.set(iso, workingDates.length);
+        workingDates.push(iso);
+      }
+      previousWorking.push(workingDates.length - 1);
+    }
+  };
+  grow(GROWTH_CHUNK);
 
-  const clamp = (index: number) => Math.min(Math.max(index, 0), Math.max(workingDates.length - 1, 0));
+  /** The axis index of the first working day at or after `offset` calendar days from the epoch. */
+  const nextWorkingFrom = (offset: number): number => {
+    for (let cursor = Math.max(offset, 0); ; cursor += 1) {
+      if (cursor >= all.length) {
+        if (all.length >= MAX_CALENDAR_DAYS) break;
+        grow(cursor + 1);
+      }
+      const index = indexOfWorking.get(all[cursor]);
+      if (index !== undefined) return index;
+    }
+    // Only reachable past the century cap, or on a calendar with no working day at all.
+    return Math.max(workingDates.length - 1, 0);
+  };
 
   return {
     isWorkingDay: isWorking,
     toIndex(iso) {
       const date = iso.slice(0, 10);
       if (date < start) return 0;
-      return clamp(nextIndex.get(date) ?? workingDates.length - 1);
+      return nextWorkingFrom(toDayIndex(date, start));
     },
     fromIndex(index) {
-      return workingDates[clamp(index)] ?? start;
+      if (index <= 0) return workingDates[0] ?? start;
+      while (workingDates.length <= index && all.length < MAX_CALENDAR_DAYS) {
+        const before = workingDates.length;
+        grow(all.length + Math.max(GROWTH_CHUNK, index - workingDates.length + 1));
+        if (workingDates.length === before && all.length >= MAX_CALENDAR_DAYS) break;
+      }
+      return workingDates[Math.min(index, workingDates.length - 1)] ?? start;
     },
     duration(startIso, endIso) {
       const from = this.toIndex(startIso);
-      const rawTo = prevIndex.get(endIso.slice(0, 10));
-      const to = rawTo == null || rawTo < 0 ? from : clamp(rawTo);
-      return Math.max(1, to - from + 1);
+      const end = endIso.slice(0, 10);
+      if (end < start) return 1;
+      const offset = toDayIndex(end, start);
+      if (offset >= all.length) grow(offset + 1);
+      const to = offset < previousWorking.length ? previousWorking[offset] : workingDates.length - 1;
+      // An end before the start, or before the first working day, is not a span: one day.
+      return to < 0 || to < from ? 1 : to - from + 1;
     },
     nextWorkingDay(iso) {
       return this.fromIndex(this.toIndex(iso));
@@ -322,6 +385,7 @@ export function calculateCpm(tasks: CpmTask[], links: CpmLink[]): CpmResult {
       if (task.constraintType === "FNLT") finish = Math.min(finish, task.constraintDate);
       if (task.constraintType === "MSO") finish = task.constraintDate + task.duration;
     }
+    if (task.deadline != null) finish = Math.min(finish, task.deadline);
     lateFinish.set(id, finish);
     lateStart.set(id, finish - task.duration);
   }
