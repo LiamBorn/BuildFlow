@@ -1351,3 +1351,96 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   10. THE AUTH AND ONBOARDING FUNNEL (Phase 4 step 5)
+   ----------------------------------------------------------------------------
+   MOSTLY ALREADY DONE, and measuring said so before I wrote anything. The auth
+   split has a "Landing-page parity" layer (account-redesign.css:1051-1300) that
+   already put the form column on the Welcome Page's language: the #f5f6fa paper
+   ground, Inter display type at weight 500, the ink pill CTA, hairline fields
+   and the pill eyebrow. Verified live on the signup screen: the primary computes
+   to rgb(28,28,26) at 999px with 0 8px 22px rgba(28,28,26,0.2), which is the
+   Welcome Page's .wx-btn-ink exactly, and NO element anywhere on the screen
+   renders the Google blue. The 14 trade cards and the seats control are in that
+   layer too.
+
+   So there were only two gaps.
+
+   GAP 1 — decision 2, made real. `.acct-split` still declares
+   `--wx-blue: #1a73e8`. Nothing reads it today (0 var(--wx-blue) uses and 0
+   rgba(26,115,232) literals in the whole file, and links already compute to
+   #2f6bff), so this is not a visible change. It is a trap removed: anyone who
+   later writes var(--wx-blue) inside the auth scope would silently get Google
+   blue back and re-open the divergence decision 2 settled. Overridden here
+   rather than edited in place, so the kill switch still reverts it.
+
+   GAP 2 — the four plan cards on the Additional Products step. 13 rules, ALL in
+   the base layer and NONE in the parity layer, so they never came across. They
+   carried a 1.5px #d7dbe2 border, a navy-tinted 0 14px 30px rgba(11,14,20,0.28)
+   hover shadow, a #f5f9ff selected fill, a 2px outline focus ring where the rest
+   of the screen uses the ink ring, and `#141922` on the plan name — a FOURTH ink
+   in a language that has two.
+
+   NOT TOUCHED: the .acct-viz animated schedule illustration (18 rules) and the
+   .acct-aside panel, both deliberately left by the parity layer, whose 12s
+   locked keyframe period is load-bearing for its stagger. And no type size on a
+   trade card moves: the taglines are white-space:nowrap with text-overflow:
+   ellipsis in a ~230px slot, so any increase silently truncates copy.
+   ============================================================================ */
+
+.bf-shell .acct-split {
+  --wx-blue: #2f6bff;
+}
+
+/* ---- the four plan cards ----------------------------------------------- */
+.bf-shell .acct-plan {
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  /* 13px matches the parity layer's own field radius on this screen; using the
+     ladder's 12px would leave a 1px mismatch against every adjacent input */
+  border-radius: 13px;
+  background: #ffffff;
+  box-shadow: none;
+  transition:
+    transform var(--bf-dur-move) var(--bf-ease),
+    box-shadow var(--bf-dur-move) var(--bf-ease),
+    border-color var(--bf-dur-hover) ease,
+    background var(--bf-dur-hover) ease;
+}
+/* these select, so the lift is licensed — at the dense amplitude, on the ink
+   shadow ladder rather than the old navy-tinted one */
+.bf-shell .acct-plan:hover {
+  transform: translateY(var(--bf-lift-dense));
+  border-color: rgba(28, 28, 26, 0.28);
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.bf-shell .acct-plan:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+.bf-shell .acct-plan.selected {
+  border-color: #2f6bff;
+  background: rgba(47, 107, 255, 0.06);
+  box-shadow: var(--bf-focus-ring);
+}
+/* #141922 was a fourth ink */
+.bf-shell .acct-plan strong {
+  color: #1c1c1a;
+  font-weight: 700;
+}
+.bf-shell .acct-plan-price {
+  color: #2f6bff;
+  letter-spacing: var(--bf-app-figure-track);
+  font-variant-numeric: tabular-nums;
+}
+.bf-shell .acct-plan-meta,
+.bf-shell .acct-plan em {
+  color: #575550;
+  font-style: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .acct-plan:hover {
+    transform: none;
+  }
+}
