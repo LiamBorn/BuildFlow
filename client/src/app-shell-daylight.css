@@ -1526,8 +1526,20 @@
   transform: translateY(var(--bf-lift-dense));
   box-shadow: var(--bf-shadow-card-hover);
 }
+/* CORRECTED after step 6 shipped. My first version also set border-radius here,
+   and that declaration was INERT: redesign.css pins .schedule-side-panel and
+   .unassigned-card with `border-radius: var(--r-md) !important`, and !important
+   beats any specificity. It only looked right because --r-md is 12px, the same
+   value I had written — so the rule was a no-op that happened to agree.
+   My cascade audit missed it because it compared specificity and ignored
+   priority; the audit has since been fixed to weigh !important first.
+   12px is on the ladder, so the correct fix is to stop declaring a radius that
+   something else owns rather than to fight it with a counter-!important.
+   .sched-queue-row is not in that pinned list, so it keeps its radius. */
 .bf-shell .sched-rx .schedule-side-panel,
-.bf-shell .sched-rx .unassigned-card,
+.bf-shell .sched-rx .unassigned-card {
+  border-color: rgba(28, 28, 26, 0.07);
+}
 .bf-shell .sched-rx .sched-queue-row {
   border-color: rgba(28, 28, 26, 0.07);
   border-radius: var(--bf-radius-control);
@@ -1586,3 +1598,29 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   12. PROJECTS, CREWS, EQUIPMENT AND MATERIALS (Phase 4 step 7)
+   ----------------------------------------------------------------------------
+   NO RULES NEEDED. All four pages render through the shared index chrome —
+   verified in App.tsx, each one is `page-stack <name>-page <name>-rx hs-index`
+   (lines 27724, 35150, 35967, 36676) — so section 7 above already did the work
+   in step 3a. Measured on Crews and Equipment: cards 18px on the card shadow,
+   KPIs 18px, column heads 11.5px uppercase #8a877e, controls at 999px, row
+   actions at 12px. Adding page-scoped rules on top would be churn.
+
+   Two things worth recording rather than changing:
+
+   - `.equipment-directory-card` and `.material-directory-card` are DEAD. They
+     appear in redesign.css's pinned list but nothing in App.tsx renders them.
+     `.crew-directory-card` survives in exactly one place, and not on the Crews
+     page: the Field Updates entry card at App.tsx:37876 reuses it. So the
+     !important radius pin that was expected to block this step does not touch
+     any of these four pages. It is a dead-CSS cleanup for later, not a
+     redesign task.
+
+   - Badges and health pills keep their per-scope colours. Those encode status,
+     which is data, and `--wx-amber` stays as it renders per decision 4 — this is
+     the cluster where its two values (#0032b0 in proj/equip/mat, #b45309 in
+     crew) sit side by side.
+   ============================================================================ */
