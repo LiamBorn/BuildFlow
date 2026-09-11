@@ -138,9 +138,19 @@ export const outranks = (actor: PermissionLevel, subject: PermissionLevel): bool
   permissionRank[actor] > permissionRank[subject];
 
 /* ── the policy ───────────────────────────────────────────────────────────────
-   "public"    no session needed
-   "signed-in" any member of the workspace
-   a Capability the caller's level must hold
+   Four kinds of entry:
+     "public"                      no session needed
+     "signed-in"                   any member of the workspace
+     a Capability                  the caller's level must hold it
+     { anonymous, signedIn }       open to a caller with no session, but a caller who
+                                   HAS one must hold the capability
+
+   The fourth exists for exactly one situation, and only one route is in it: buying a
+   plan. A visitor on the public pricing page has no workspace yet, so requiring a
+   session there would mean you must sign up before you can pay -- but a caller who is
+   already inside a workspace is buying FOR that workspace, and then only its Owner may.
+   One route, two callers, two right answers. Spelling it in the table keeps that visible
+   instead of burying it in a handler.
 
    THIS TABLE SHIPS AT TODAY'S BEHAVIOUR ON PURPOSE. Every entry below is what the route
    already does: "public" where it sat outside the session gate, "signed-in" where it sat
@@ -158,7 +168,12 @@ export const outranks = (actor: PermissionLevel, subject: PermissionLevel): bool
 
    The keys are "METHOD <the path as Express registered it>". The boot assertion compares
    them against the live router, so a typo here is a startup failure rather than a hole. */
-export const ROUTE_POLICY: Record<string, Capability | "public" | "signed-in"> = {
+/** Open to a signed-out caller; a signed-in one needs the capability. See the note above. */
+export type AnonymousOrCapability = { anonymous: "allow"; signedIn: Capability };
+
+export type Policy = Capability | "public" | "signed-in" | AnonymousOrCapability;
+
+export const ROUTE_POLICY: Record<string, Policy> = {
   "DELETE /api/crews/:id": "signed-in",
   "DELETE /api/equipment/:id": "signed-in",
   "DELETE /api/projects/:id": "signed-in",
@@ -183,7 +198,9 @@ export const ROUTE_POLICY: Record<string, Capability | "public" | "signed-in"> =
   "GET /api/auth/oauth/:provider/callback": "public",
   "GET /api/auth/oauth/:provider/start": "public",
   "GET /api/auth/oauth/status": "public",
-  "GET /api/billing/status": "signed-in",
+  /* The plan catalogue and whether Stripe is wired. No workspace data of any kind, and the
+     public pricing page is its natural caller. */
+  "GET /api/billing/status": "public",
   "GET /api/bootstrap": "signed-in",
   "GET /api/delayIQs": "signed-in",
   "GET /api/delayiq/early-warning": "signed-in",
@@ -237,8 +254,12 @@ export const ROUTE_POLICY: Record<string, Capability | "public" | "signed-in"> =
   "POST /api/auth/signup": "public",
   "POST /api/auth/verify": "public",
   "POST /api/auth/verify/request": "public",
-  "POST /api/billing/checkout": "signed-in",
-  "POST /api/billing/portal": "signed-in",
+  /* Buying a plan: see the note on AnonymousOrCapability above. */
+  "POST /api/billing/checkout": { anonymous: "allow", signedIn: "billing.pay" },
+  /* Stripe's customer portal -- payment methods, invoices, cancellation. Owner only, and a
+     session is required: the route resolves a customer from an email in the request body,
+     so while it was public, anyone who knew a customer's email could open their billing. */
+  "POST /api/billing/portal": "billing.pay",
   "POST /api/billing/webhook": "public",
   "POST /api/business-profile": "signed-in",
   "POST /api/contact-sales": "public",
@@ -301,24 +322,22 @@ export type PermissionDenial = { status: 401 | 403; body: { error: string; code:
  * The decision, kept separate from Express so it can be tested as a function.
  * `level` is null for a request with no session.
  */
-export function decide(
-  policy: Capability | "public" | "signed-in" | undefined,
-  level: PermissionLevel | null
-): PermissionDenial | null {
+export function decide(policy: Policy | undefined, level: PermissionLevel | null): PermissionDenial | null {
   // An unknown route is a closed route. `installRoutePolicy` should make this unreachable,
   // but if it is ever reached the answer is no.
   if (policy === undefined) return { status: 403, body: { error: "This action is not available.", code: "no_policy" } };
   if (policy === "public") return null;
-  if (!level) return { status: 401, body: { error: "Please sign in to continue.", code: "signed_out" } };
+  // A caller with no session either needs one, or is the anonymous caller this route exists to serve.
+  if (!level) {
+    if (typeof policy === "object") return null;
+    return { status: 401, body: { error: "Please sign in to continue.", code: "signed_out" } };
+  }
   if (policy === "signed-in") return null;
-  if (can(level, policy)) return null;
+  const need = typeof policy === "object" ? policy.signedIn : policy;
+  if (can(level, need)) return null;
   return {
     status: 403,
-    body: {
-      error: "Your workspace role does not allow this. Ask an owner or admin.",
-      code: "forbidden",
-      need: policy
-    }
+    body: { error: "Your workspace role does not allow this. Ask an owner or admin.", code: "forbidden", need }
   };
 }
 

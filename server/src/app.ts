@@ -53,7 +53,7 @@ import {
   signState,
   type OAuthProvider
 } from "./oauth.js";
-import { assertRoutePolicyCovers, installRoutePolicy } from "./permissions.js";
+import { assertRoutePolicyCovers, can, installRoutePolicy } from "./permissions.js";
 import crypto from "node:crypto";
 import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
@@ -693,8 +693,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * - The Stripe webhook is called by Stripe, which has no session cookie. It is
    *   authenticated instead by verifying the signature header (:2629), which is the
    *   stronger check for that caller.
+   * - Billing status is the plan catalogue and whether Stripe is wired. It holds no
+   *   workspace data, and the public pricing page is its natural caller.
+   * - Checkout must answer a visitor who has no workspace yet, because requiring a session
+   *   would mean you have to sign up before you can pay. A caller who DOES have a session
+   *   is buying for their workspace, and the route policy requires the Owner for that --
+   *   see AnonymousOrCapability in permissions.ts. This is why the gate below resolves a
+   *   session whenever a cookie is present rather than only on gated paths: without an
+   *   identity on a public path, "open to a visitor, Owner-only inside a workspace" is not
+   *   expressible.
    */
-  const PUBLIC_EXCEPTIONS = new Set(["/api/billing/webhook"]);
+  const PUBLIC_EXCEPTIONS = new Set(["/api/billing/webhook", "/api/billing/status", "/api/billing/checkout"]);
   /**
    * Whether this path needs a session, compared in one case so no spelling of it can disagree
    * with the router about which route it is. `/api/delayIQs` is the one prefix with capitals of
@@ -720,16 +729,33 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     });
   };
 
+  /**
+   * Two separate jobs, in this order, because they are not the same question:
+   *   1. WHO is calling — resolved whenever a session cookie is present, on every path.
+   *   2. Whether this path REQUIRES a caller, and if so, binding their tenant store.
+   *
+   * Splitting them is what lets a public route still know who it is talking to. One route
+   * needs that (starting a checkout: open to a visitor with no workspace, Owner-only for a
+   * caller who has one), and the alternative was a second authorization mechanism living
+   * inside a handler, invisible to the policy table.
+   *
+   * A public path gets identity and nothing else: the ALS is left unset, so `store` still
+   * resolves to mainStore there exactly as before. The extra work on an unauthenticated
+   * request is one short-circuit on a missing cookie.
+   */
   app.use(async (req, res, next) => {
-    if (!isOpsPath(req.path)) return next();
+    const gated = isOpsPath(req.path);
     const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
-    const session = mainStore.getSession(token);
+    const session = token ? mainStore.getSession(token) : undefined;
     if (!session) {
+      if (!gated) return next();
       res.status(401).json({ error: "Please sign in to continue." });
       return;
     }
     req.account = session.account;
     req.org = session.org;
+    // Identity is enough for a public path; only a gated one binds the tenant store.
+    if (!gated) return next();
     try {
       const orgStore = await manager.getOrgStore(session.org.id);
       orgStoreALS.run(orgStore, () => next());
@@ -1555,6 +1581,25 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     const { businessType, selectedPlan, selectedProducts, seats } = parsed.data;
+    /**
+     * This one route carries two different permissions, which is why the check is here and
+     * not in the table. Naming the trade and the products is a workspace setting; the plan
+     * and the seat count are the commercial relationship, and the plan makes those the
+     * Owner's alone. Until now any signed-in person in the workspace could change both --
+     * the clearest live escalation in the codebase.
+     *
+     * Onboarding sends selectedPlan on its first call, and the person completing onboarding
+     * is the Owner of the workspace they just created, so that path is unaffected.
+     */
+    const commercial = selectedPlan !== undefined || seats !== undefined;
+    if (commercial && !can(req.account!.role, "billing.plan")) {
+      res.status(403).json({
+        error: "Only the workspace owner can change the plan or the seat count.",
+        code: "forbidden",
+        need: "billing.plan"
+      });
+      return;
+    }
     const payload = store.applyBusinessProfile(businessType, req.account, { selectedPlan, selectedProducts, seats });
     // The org record (main store) carries the plan label the admin tools read.
     if (selectedPlan && req.org) mainStore.updateOrgPlan(req.org.id, PLAN_LABELS[selectedPlan]);

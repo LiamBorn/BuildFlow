@@ -2503,6 +2503,24 @@ export class BuildFlowStore {
     return toAccount(row);
   }
 
+  /**
+   * Change an account's permission level. The second and last place the column is written,
+   * and the other half of the reason migration 20 needs no CHECK constraint: an unknown
+   * value is refused outright here rather than stored and interpreted later.
+   *
+   * Refusing is deliberate: `createAccount` fails closed to "member" because it must still
+   * produce a usable login, but a *change* that cannot be understood has no safe default --
+   * quietly demoting someone because a caller sent a typo is its own kind of wrong.
+   * Returns the updated account, or undefined if the id or the level is not valid.
+   */
+  setAccountRole(accountId: string, role: string): Account | undefined {
+    if (!isPermissionLevel(role)) return undefined;
+    if (!this.getAccountById(accountId)) return undefined;
+    this.run("UPDATE accounts SET role = ? WHERE id = ?", [role, accountId]);
+    this.save();
+    return this.getAccountById(accountId);
+  }
+
   /** Full row incl. passwordHash — for login verification only, never returned to a client. */
   getAccountRowByEmail(email: string): AccountRow | undefined {
     return this.get<AccountRow>("SELECT * FROM accounts WHERE email = ?", [email.trim().toLowerCase()]);

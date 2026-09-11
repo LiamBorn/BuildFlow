@@ -166,3 +166,138 @@ describe("the route policy", () => {
     expect(() => assertRoutePolicyCovers(app)).toThrow(/never got a guard/);
   });
 });
+
+/* ── a second and third identity ──────────────────────────────────────────────
+   Every existing test in this repo signs in as an Owner, which is why none of them
+   would notice a permission that silently fails open. These build a real Member
+   through the real invite flow, and an Admin by setting the level the invite cannot
+   carry yet, so a refusal can actually be asserted. */
+
+type Harness = {
+  app: Awaited<ReturnType<typeof createApp>>;
+  owner: ReturnType<typeof request.agent>;
+  orgId: string;
+  /** Sign a second person into the same workspace at the given level. */
+  join: (level: PermissionLevel, email?: string) => Promise<ReturnType<typeof request.agent>>;
+};
+
+async function workspace(): Promise<Harness> {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-perm-"));
+  const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+  const owner = request.agent(app);
+  await owner
+    .post("/api/auth/signup")
+    .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+    .expect(201);
+  await owner
+    .post("/api/business-profile")
+    .send({ businessType: "Asphalt", selectedPlan: "free", selectedProducts: [], seats: 3 })
+    .expect(200);
+  const orgId = (await owner.get("/api/auth/me").expect(200)).body.org.id as string;
+
+  const main = (app.locals.storeManager as { main: MainStore }).main;
+
+  const join = async (level: PermissionLevel, email = `${level}@asphaltco.com`) => {
+    await owner.post("/api/team/invites").send({ invites: [{ email, role: "Crew Lead" }] }).expect(201);
+    const row = main.all<{ id: string; email: string }>("SELECT id, email FROM invites WHERE acceptedAt IS NULL").find(
+      (r) => r.email === email
+    )!;
+    // The raw token is only ever in the email, and its hash is all the row keeps, so mint
+    // a fresh one the same way a resend does.
+    const fresh = main.refreshInvite(row.id, orgId, 60_000)!;
+    const agent = request.agent(app);
+    const joined = await agent
+      .post("/api/auth/invite/accept")
+      .send({ token: fresh.token, name: `${level} person`, password: "Paver-Screed-2026", acceptTerms: true })
+      .expect(201);
+    // Acceptance always writes "member" today; the invite gains a permission field in the
+    // next step. Until then an Admin is made by setting the level directly.
+    expect(joined.body.account.role).toBe("member");
+    if (level !== "member") expect(main.setAccountRole(joined.body.account.id, level)?.role).toBe(level);
+    return agent;
+  };
+
+  return { app, owner, orgId, join };
+}
+
+type MainStore = {
+  all: <T>(sql: string) => T[];
+  refreshInvite: (id: string, orgId: string, ttlMs: number) => { token: string } | undefined;
+  setAccountRole: (id: string, role: string) => { role: string } | undefined;
+};
+
+describe("the Owner-only rows, once they are on", () => {
+  it("keeps the plan and the seat count to the Owner, and says which capability was missing", async () => {
+    const { owner, join } = await workspace();
+    const member = await join("member");
+    const admin = await join("admin");
+
+    // This is the escalation the plan called the clearest one in the codebase: before this
+    // step, any signed-in person in the workspace could change the plan and the seat count.
+    for (const [level, agent] of [
+      ["member", member],
+      ["admin", admin]
+    ] as const) {
+      const refused = await agent
+        .post("/api/business-profile")
+        .send({ businessType: "Asphalt", selectedPlan: "business", seats: 40 })
+        .expect(403);
+      expect(refused.body).toMatchObject({ code: "forbidden", need: "billing.plan" });
+      expect(refused.body.error).toContain("owner");
+      expect(level).toBeTruthy();
+    }
+
+    // Seats alone, with no plan, is the same commercial change and is refused the same way.
+    await member.post("/api/business-profile").send({ businessType: "Asphalt", seats: 40 }).expect(403);
+
+    // The Owner still can, and the change takes effect.
+    const applied = await owner
+      .post("/api/business-profile")
+      .send({ businessType: "Asphalt", selectedPlan: "business", seats: 12 })
+      .expect(200);
+    expect(applied.body).toMatchObject({ selectedPlan: "business", seats: 12 });
+  });
+
+  it("still lets a Member name the trade, which is the row the NEXT step narrows", async () => {
+    // Stated outright rather than left implicit: this step turned on the Owner rows only.
+    // The Admin rows -- org settings among them -- are the next step, and this assertion
+    // is expected to flip to 403 there.
+    const { join } = await workspace();
+    const member = await join("member");
+    await member.post("/api/business-profile").send({ businessType: "Asphalt", selectedProducts: [] }).expect(200);
+  });
+
+  it("keeps Stripe's customer portal to the Owner", async () => {
+    const { owner, join } = await workspace();
+    const admin = await join("admin");
+    const refused = await admin.post("/api/billing/portal").send({ email: "dana@asphaltco.com" }).expect(403);
+    expect(refused.body).toMatchObject({ code: "forbidden", need: "billing.pay" });
+    // The Owner gets through to the handler, which answers that Stripe is not wired up here.
+    const allowed = await owner.post("/api/billing/portal").send({ email: "dana@asphaltco.com" }).expect(200);
+    expect(allowed.body.configured).toBe(false);
+  });
+
+  it("lets a visitor with no workspace buy, and only the Owner buy for one that exists", async () => {
+    const { app, owner, join } = await workspace();
+    const member = await join("member");
+    const body = { plan: "pro", period: "monthly", seats: 4, returnTo: "settings", origin: "http://localhost:5432" };
+
+    // No session: the public pricing page, where there is no workspace to bill yet.
+    expect((await request(app).post("/api/billing/checkout").send(body).expect(200)).body.configured).toBe(false);
+    // A session that is not the Owner's: buying FOR a workspace, which is theirs to do.
+    expect((await member.post("/api/billing/checkout").send(body).expect(403)).body.need).toBe("billing.pay");
+    expect((await owner.post("/api/billing/checkout").send(body).expect(200)).body.configured).toBe(false);
+  });
+
+  it("refuses a permission level it does not recognise instead of guessing one", async () => {
+    // The other half of why migration 20 adds no CHECK constraint: the column is guarded
+    // at both places it is written.
+    const { app, join } = await workspace();
+    await join("member");
+    const main = (app.locals.storeManager as { main: MainStore }).main;
+    const [account] = main.all<{ id: string }>("SELECT id FROM accounts WHERE role = 'member'");
+    expect(main.setAccountRole(account.id, "superuser")).toBeUndefined();
+    expect(main.setAccountRole("acct-nobody", "admin")).toBeUndefined();
+    expect(main.setAccountRole(account.id, "admin")?.role).toBe("admin");
+  });
+});
