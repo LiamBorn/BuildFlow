@@ -2235,6 +2235,12 @@ type OnboardingSelections = {
   destinationPage?: Page | "inviteTeam";
 };
 
+/* The redesign's scope class. It goes on the app shell AND on <body>, because
+   every dialog in this app is a createPortal to document.body and so sits
+   outside the shell — a shell-scoped rule cannot reach them. Both applications
+   read this one constant, so emptying it still reverts the whole re-skin. */
+const BF_SCOPE = "bf-shell";
+
 function App() {
   const [data, setData] = useState<BootstrapPayload | null>(null);
   const [page, setPageRaw] = useState<Page>("welcome");
@@ -2604,6 +2610,14 @@ function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Portaled dialogs mount to document.body, outside the shell, so the scope has
+  // to exist there too for app-shell-daylight.css to reach them.
+  useEffect(() => {
+    document.body.classList.add(BF_SCOPE);
+    return () => document.body.classList.remove(BF_SCOPE);
+  }, []);
+
   const paletteCommands = () => [
     ...navItems
       .filter((item) => !isSchedulePage(item.page))
@@ -2794,8 +2808,7 @@ function App() {
 
   const shellClassName = [
     "app-shell",
-    // Phase 4 step 2: scopes app-shell-daylight.css. Delete this one word to revert the re-skin.
-    "bf-shell",
+    BF_SCOPE,
     page === "schedule" ? "schedule-shell" : "",
     page === "reports" ? "reports-shell" : "",
     page === "settings" ? "settings-shell" : "",

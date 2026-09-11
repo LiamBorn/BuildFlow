@@ -918,3 +918,313 @@
     transform: none;
   }
 }
+
+/* ============================================================================
+   8. DIALOGS, OVERLAYS AND FULL-SCREEN STATES (Phase 4 step 3b)
+   ----------------------------------------------------------------------------
+   Every dialog in this app is a createPortal to document.body, so it sits
+   OUTSIDE .app-shell and a shell-scoped rule cannot reach it. App.tsx therefore
+   mirrors the scope onto <body> from the same BF_SCOPE constant the shell reads,
+   which is why the selectors below are `.bf-shell X` rather than
+   `.hs-shell.bf-shell X`. One constant still reverts everything.
+
+   The .pdx family is the shared dialog system: project add/edit, crew add/edit
+   and both remove-confirms, across six pages. Its rules sit at one or two
+   classes, so `.bf-shell .pdx X` at two or three wins.
+
+   NOT TOUCHED HERE, and deliberately: .pdx-title's font-family. It resolves to
+   var(--wx-serif), which is the Palatino stack, and renders the dialog title at
+   42px — the largest display type in the signed-in product. Retiring it is
+   approval item 1 in REDESIGN_PLAN.md section 6 because it visibly changes nine
+   dialog titles, so it waits for sign-off. Everything else about these dialogs
+   is restyled, which means they will read as modern chrome around a serif title
+   until that call is made.
+   ============================================================================ */
+
+/* ---- 8a. the shared .pdx dialog ---------------------------------------- */
+.bf-shell .pdx {
+  background: rgba(28, 28, 26, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.bf-shell .pdx .pdx-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  /* the stage step: a modal is the biggest object on screen when it is open */
+  border-radius: var(--bf-radius-stage);
+  box-shadow: var(--bf-shadow-stage);
+}
+.bf-shell .pdx .pdx-eyebrow {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.bf-shell .pdx .pdx-sub {
+  font-size: var(--bf-app-lede);
+  color: #575550;
+  max-width: var(--bf-app-prose);
+}
+.bf-shell .pdx .pdx-close {
+  border-radius: var(--bf-radius-control);
+  border-color: transparent;
+  background: transparent;
+  color: #575550;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    transform var(--bf-dur-press) var(--bf-ease);
+}
+.bf-shell .pdx .pdx-close:hover {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+}
+.bf-shell .pdx .pdx-close:active {
+  transform: scale(var(--bf-press-scale));
+}
+
+/* ---- 8b. dialog form controls ------------------------------------------
+   The field label becomes the eyebrow, the same role it plays on every other
+   surface. Only presentation: the <label> wrapping and its text are untouched,
+   because they are the accessible names the tests query by. */
+.bf-shell .pdx .pdx-form > label {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.bf-shell .pdx .pdx-form input,
+.bf-shell .pdx .pdx-form select,
+.bf-shell .pdx .pdx-form textarea {
+  border-radius: var(--bf-radius-control);
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: #ffffff;
+  color: #1c1c1a;
+  font-size: var(--bf-app-row-strong);
+  box-shadow: none;
+  transition:
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.bf-shell .pdx .pdx-form input::placeholder,
+.bf-shell .pdx .pdx-form textarea::placeholder {
+  color: #8a877e;
+}
+.bf-shell .pdx .pdx-form input:focus,
+.bf-shell .pdx .pdx-form select:focus,
+.bf-shell .pdx .pdx-form textarea:focus {
+  outline: none;
+  border-color: #2f6bff;
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- 8c. dialog actions: the same two pills as everywhere else --------- */
+.bf-shell .pdx .pdx-actions button {
+  border-radius: 999px;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.bf-shell .pdx .pdx-actions .pdx-cancel {
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #1c1c1a;
+}
+/* hover move 2 */
+.bf-shell .pdx .pdx-actions .pdx-cancel:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+.bf-shell .pdx .pdx-actions .pdx-save {
+  border: 1px solid #2f6bff;
+  background: #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+}
+.bf-shell .pdx .pdx-actions .pdx-save:hover:not(:disabled) {
+  background: #1f57e0;
+  border-color: #1f57e0;
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+}
+.bf-shell .pdx .pdx-actions button:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- 8d. What's new, and the add-on prompt -----------------------------
+   These two share the .hs-upd-* base. The add-on prompt already carries its own
+   .hs-addon-dialog hook in the markup, so the base can be restyled without the
+   two drifting apart — the split the plan asked for is already there. */
+.bf-shell .hs-upd-backdrop {
+  background: rgba(28, 28, 26, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.bf-shell .hs-upd-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  border-radius: var(--bf-radius-stage);
+  box-shadow: var(--bf-shadow-stage);
+}
+.bf-shell .hs-upd-eyebrow {
+  font-size: var(--bf-app-eyebrow);
+  font-weight: 650;
+  letter-spacing: var(--bf-app-eyebrow-track);
+  text-transform: uppercase;
+  color: #8a877e;
+}
+.bf-shell .hs-upd-title {
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 600;
+  letter-spacing: var(--bf-app-title-track);
+  line-height: var(--bf-app-title-lead);
+  color: #1c1c1a;
+}
+.bf-shell .hs-upd-desc {
+  font-size: var(--bf-app-lede);
+  color: #575550;
+  max-width: var(--bf-app-prose);
+}
+.bf-shell .hs-upd-close {
+  border-radius: var(--bf-radius-control);
+  border-color: transparent;
+  background: transparent;
+  color: #575550;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease;
+}
+.bf-shell .hs-upd-close:hover {
+  background: rgba(28, 28, 26, 0.05);
+  color: #1c1c1a;
+}
+.bf-shell .hs-upd-btn {
+  border-radius: 999px;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.bf-shell .hs-upd-btn-primary {
+  background: #2f6bff;
+  border: 1px solid #2f6bff;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(47, 107, 255, 0.2);
+}
+.bf-shell .hs-upd-btn-primary:hover {
+  background: #1f57e0;
+  border-color: #1f57e0;
+  box-shadow: 0 8px 22px rgba(47, 107, 255, 0.28);
+}
+.bf-shell .hs-upd-btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  color: #1c1c1a;
+}
+.bf-shell .hs-upd-btn-secondary:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+.bf-shell .hs-upd-actions button:focus-visible {
+  outline: none;
+  box-shadow: var(--bf-focus-ring);
+}
+/* the add-on prompt's tone art keeps its six tones; only the frame moves */
+.bf-shell .hs-addon-art,
+.bf-shell .hs-upd-art {
+  border-radius: var(--bf-radius-card);
+}
+.bf-shell .hs-addon-where {
+  font-size: var(--bf-app-meta);
+  color: #575550;
+}
+.bf-shell .hs-addon-where-ico {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 8e. the two full-viewport states ----------------------------------
+   These are the only screens a failed bootstrap can reach, and both were
+   recorded as never having had a design pass. Copy and actions are unchanged. */
+.bf-shell .loading-screen {
+  background: #f5f6fa;
+  color: #1c1c1a;
+}
+.bf-shell .loading-screen strong,
+.bf-shell .loading-screen h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1c1c1a;
+}
+.bf-shell .loading-screen p,
+.bf-shell .error-screen p {
+  font-size: var(--bf-app-lede);
+  color: #575550;
+  max-width: var(--bf-app-prose);
+}
+.bf-shell .error-screen button,
+.bf-shell .error-screen .error-screen-back {
+  border-radius: 999px;
+  font-size: var(--bf-app-row);
+  font-weight: 600;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .error-screen .error-screen-back {
+  background: transparent;
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  color: #1c1c1a;
+}
+.bf-shell .error-screen .error-screen-back:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+
+/* ---- 8f. the dashboard's loading skeleton ------------------------------
+   role="status", aria-label and the DASH_LAYOUT_DEFAULT block shapes are
+   untouched. grid-auto-rows stays 40px: it mirrors DASH_ROW_UNIT and the board
+   measures against it. */
+.bf-shell .dash-skeleton .dash-skel-block {
+  border-radius: var(--bf-radius-panel);
+  border: 1px solid rgba(28, 28, 26, 0.07);
+  background: #ffffff;
+  box-shadow: var(--bf-shadow-card);
+}
+.bf-shell .dash-skeleton .dash-skel-line {
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(28, 28, 26, 0.06) 0%, rgba(28, 28, 26, 0.11) 50%, rgba(28, 28, 26, 0.06) 100%);
+  background-size: 200% 100%;
+  animation: bf-skel-sheen 1.6s var(--bf-ease-size) infinite;
+}
+@keyframes bf-skel-sheen {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---- 8g. reduced motion ------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-skeleton .dash-skel-line {
+    animation: none;
+  }
+  .bf-shell .pdx .pdx-close:active,
+  .bf-shell .pdx .pdx-actions button:active {
+    transform: none;
+  }
+}
