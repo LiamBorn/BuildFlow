@@ -152,7 +152,30 @@
   /* ---- dense type --------------------------------------------------------
      The eyebrow is the one role that does NOT re-scale: 11.5px uppercase
      carries over at 1:1 and is what ties a 13px table to a 96px hero. */
-  --bf-app-title: clamp(22px, 1.9vw, 26px); /* page h1, never below today's 22px */
+  /* ---- the page display rung  (the "match the Welcome Page" pass) ---------
+     Measured off the live Welcome Page at 1440px, not taken from a document:
+     its hero h1 is 96px/500 at -0.025em and its SECTION heads are 54px/500 at
+     -0.03em. A page title in the app is a section head in the information
+     hierarchy -- it names the surface -- so it lands on that rung rather than
+     the hero's. 3.75vw hits 54px at 1440 exactly.
+     Weight DROPS to 500 as the size rises. That is the characteristic the app
+     was missing most after colour: it set 650 at 32px, and heavy weight at
+     display size is what made a big title read as an app header rather than as
+     this product's own voice.
+     Kept separate from --bf-app-title on purpose: that token is also read by
+     the What's-new and add-on DIALOG titles, which must not become 54px. */
+  --bf-page-display: clamp(30px, 3.75vw, 54px);
+  --bf-page-display-track: -0.03em;
+  --bf-page-display-weight: 500;
+  --bf-page-display-lead: 1.06;
+  --bf-page-lede: clamp(16px, 1.35vw, 19px); /* the Welcome Page's lede, verbatim */
+  /* The Gantt board subtracts this from the viewport. It is the app chrome above
+     the board summed by hand -- bar, rail gutter, page header, control row, KPI
+     strip -- and it has to grow with the page title, so it lives beside the
+     title token rather than buried in schedule.css as a bare 336px. */
+  --bf-gantt-chrome: clamp(336px, calc(336px + 2.2vw), 368px);
+
+  --bf-app-title: clamp(22px, 1.9vw, 26px); /* dialog h1; page h1 uses --bf-page-display */
   --bf-app-title-track: -0.02em;
   --bf-app-title-lead: 1.14;
   --bf-app-section: 16px; /* card / section head */

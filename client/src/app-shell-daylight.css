@@ -2995,3 +2995,287 @@
       changes the URL and nothing else, and `.hs-page-tag` renders unstyled on
       six schedule pages.
    ============================================================================ */
+
+/* ============================================================================
+   21. MATCHING THE WELCOME PAGE FOR REAL
+   ----------------------------------------------------------------------------
+   Written after opening the Welcome Page at 1440px and measuring it, rather
+   than from DESIGN_TOKENS.md. The document was right about colour and wrong
+   about how far the type had been allowed to fall. Measured, live:
+
+       Welcome nav        64px, sticky, rgba(245,246,250,0.82) + blur, 1px hairline
+       Welcome hero h1    96px / 500 / -0.025em / 1.02
+       Welcome section h2 54px / 500 / -0.03em
+       Welcome lede       19px / 400 / #575550
+       Welcome measure    1140px
+       App page title     26px cap, and the Dashboard greeting 32px / 650
+       App page lede      14.5px
+
+   The chrome already matched: the top bar came out of step 2 at exactly
+   rgba(245,246,250,0.82) with blur(14px) saturate(1.4) and the same hairline,
+   which is the Welcome nav's recipe to the character. So the gap was never the
+   bar. It was TYPE, and in two dimensions at once:
+
+   1. SIZE. A page title at 26px against a 54px section head is a 2.1x drop at
+      the one place a reader looks first. The earlier plan capped it at 26px to
+      protect the frozen 56px shell geometry, but the cap was never what the
+      geometry needed -- the frame heights subtract a chrome constant, not a
+      title size, and the one place that constant includes the title is fixed in
+      21d below.
+   2. WEIGHT. The app set 650 where the Welcome Page sets 500. Heavy weight at
+      display size is precisely what makes large type read as generic app
+      chrome instead of as this product's voice. Every measured display size on
+      the Welcome Page is 500, at every viewport.
+
+   A page title is a SECTION head in the information hierarchy -- it names the
+   surface -- so it takes the 54px rung rather than the 96px hero rung. The hero
+   rung stays unused in-app, deliberately: nothing in a dense product is the
+   single loudest thing on a marketing page.
+
+   WHAT IS STILL NOT MATCHED, and why, so the remaining distance is named rather
+   than implied: the Welcome Page navigates with WORDED horizontal links, and
+   the app navigates with a 56px icon-only rail. Closing that needs a text node
+   added inside each rail button in App.tsx -- the button contains nothing but
+   an svg today, verified -- and App.tsx was being written to by another session
+   throughout this pass. It is a small, safe edit (an aria-label already
+   supplies the accessible name, so no test that navigates by name is affected)
+   and it is the single largest remaining difference.
+   ============================================================================ */
+
+/* ---- 21a. the page title, onto the Welcome Page's section-head rung ------
+   Each selector is an existing one taken verbatim and prefixed, so each wins by
+   one class without !important. The Dashboard greeting is included because it
+   is that page's h1 even though it is not called a title. */
+.bf-shell .hs-index .hs-index-title,
+.bf-shell .dash-rx .dx-title,
+.bf-shell .dash-rx.hs-home .hs-home-greeting,
+.bf-shell .sched-rx .dx-title,
+.bf-shell .proj-rx .dx-title,
+.bf-shell .crew-rx .dx-title,
+.bf-shell .equip-rx .dx-title,
+.bf-shell .mat-rx .dx-title,
+.bf-shell .field-rx .dx-title,
+.bf-shell .delayIQ-rx .dx-title {
+  font-size: var(--bf-page-display);
+  font-weight: var(--bf-page-display-weight);
+  letter-spacing: var(--bf-page-display-track);
+  line-height: var(--bf-page-display-lead);
+  color: #1c1c1a;
+  text-wrap: balance;
+}
+
+/* ---- 21b. the page lede, at the Welcome Page's own 19px ------------------
+   Deliberately NOT --bf-app-lede, which stays at 14px because it is also the
+   body copy of dialogs and of the two full-screen states, where 19px would be
+   shouting. The measure comes with it: the Welcome lede runs about 52ch. */
+.bf-shell .hs-index .hs-index-sub,
+.bf-shell .hs-index .hs-index-lede,
+.bf-shell .dash-rx.hs-home .hs-home-sub,
+.bf-shell .sched-rx .dx-sub,
+.bf-shell .proj-rx .dx-sub,
+.bf-shell .crew-rx .dx-sub,
+.bf-shell .equip-rx .dx-sub,
+.bf-shell .mat-rx .dx-sub,
+.bf-shell .field-rx .dx-sub,
+.bf-shell .delayIQ-rx .dx-sub {
+  font-size: var(--bf-page-lede);
+  line-height: 1.55;
+  color: #575550;
+  max-width: 52ch;
+}
+
+/* ---- 21c. air under the page header --------------------------------------
+   The one place Welcome-scale rhythm is genuinely free. The plan's own honest
+   section said rhythm is the dimension that does not survive translation, and
+   that is true BETWEEN CARDS -- a 108px gap between two tables would make the
+   product unusable. It is not true directly under the page title, where the
+   only thing competing for the space is the first card. The Welcome Page runs
+   clamp(76px, 12vh, 130px) between sections; this takes roughly half of that,
+   which is about double what the app had. */
+.bf-shell .hs-index .hs-index-head,
+.bf-shell .dash-rx.hs-home .hs-home-head,
+.bf-shell .sched-rx .schedule-title-row {
+  margin-bottom: clamp(22px, 3.4vh, 44px);
+}
+
+/* ---- 21d. the Gantt frame, corrected for the taller title ----------------
+   schedule.css:4353 sizes the board as clamp(420px, calc(100vh - 336px), 900px),
+   where 336px is today's chrome summed BY HAND. The page title growing from
+   26px to as much as 54px adds up to about 32px of line box above the board, so
+   the hand-summed constant is now short by that much and the board would push
+   the page into a scroll on every load. This is the failure the plan's step 0
+   existed to prevent, arriving one pass later than expected.
+   The subtrahend is expressed as a token so the two numbers cannot drift apart
+   again silently. */
+.bf-shell .sched-rx .gantt-frame {
+  height: clamp(420px, calc(100vh - var(--bf-gantt-chrome)), 900px);
+}
+
+/* ---- 21e. APPROVED: the serif comes off the app ---------------------------
+   Approval 1. --wx-serif is NOT dead, correcting my own Phase 1 finding: the
+   project dialog title renders Iowan Old Style at up to 42px and the crew,
+   equipment and material dialog headings at 24px, all verified in a browser.
+   That is the largest display type in the signed-in product, inside a language
+   that is otherwise Inter only.
+
+   Retired by redefining the TOKEN on each app scope rather than by chasing its
+   consumers. The reason is coverage: a grep finds about thirty rules reading
+   var(--wx-serif) across page titles, panel headings, KPI figures and
+   empty-state copy, and most are already beaten by a later sheet, so hunting
+   the live ones would be guesswork about which are which. One redefinition per
+   scope catches every consumer, present and future.
+
+   Specificity matters here and is the reason this is not a single .bf-shell
+   rule: --wx-serif is declared ON each page scope (project-dialog-redesign.css
+   line 25 and its siblings), and a custom property declared on the element
+   itself beats one inherited from an ancestor. Prefixing each scope makes each
+   of these one class more specific than the declaration it replaces.
+
+   The marketing scopes are deliberately absent. .bf-shell sits on <body> from
+   the moment the app mounts, which includes while the Welcome Page renders, so
+   listing .acct-split or the About and Careers scopes here would strip the
+   serif from the reference design too. The Welcome Page keeps its serif. */
+.bf-shell .pdx,
+.bf-shell .dash-rx,
+.bf-shell .sched-rx,
+.bf-shell .proj-rx,
+.bf-shell .crew-rx,
+.bf-shell .equip-rx,
+.bf-shell .mat-rx,
+.bf-shell .field-rx,
+.bf-shell .delayIQ-rx,
+.bf-shell .settings-rx {
+  --wx-serif: var(--bf-font-sans);
+}
+/* the project dialog title is the one that actually rendered the serif, and at
+   up to 42px it is also the largest type in the product. It keeps its size and
+   joins the display rung's weight and tracking. */
+.bf-shell .pdx .pdx-title {
+  font-family: var(--bf-font-sans);
+  font-weight: var(--bf-page-display-weight);
+  letter-spacing: var(--bf-page-display-track);
+}
+
+/* ---- 21f. reduced motion ------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  /* nothing in section 21 animates; the pairing list is unchanged. */
+  .bf-shell .hs-index .hs-index-title {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   22. THE APPROVED BEHAVIOUR CHANGES, STYLED
+   ----------------------------------------------------------------------------
+   The six approvals are behaviour and copy, so most of them live in App.tsx.
+   Three of them leave something new on screen that needs a rule here.
+   ============================================================================ */
+
+/* ---- 22a. the notification panel's empty state (approval 4) --------------
+   A fresh workspace showed a 420px card with a header and nothing beneath it.
+   The copy is new, which is why it needed approving. Set on the prose measure
+   and the muted ink, matching every other empty line in the product. */
+.bf-shell .notifications-empty {
+  margin: 0;
+  padding: 18px 20px 22px;
+  font-size: var(--bf-app-row);
+  line-height: var(--bf-app-lead-row);
+  color: #575550;
+  max-width: 42ch;
+}
+
+/* ---- 22b. the two controls that never had a handler (approval 3) ---------
+   They stay rendered and stop promising an action. The treatment is the one the
+   rest of the product already uses for a disabled control: the ink drops to
+   muted, the cursor says no, and every hover and press move is withdrawn so the
+   surface does not respond to a pointer at all. `disabled` also removes them
+   from the tab order, which is the half a purely visual treatment would miss. */
+.bf-shell .dash-rx.hs-home .cc-quick-btn:disabled,
+.bf-shell .dash-rx.hs-home .cc-app.add:disabled {
+  color: #575550;
+  cursor: not-allowed;
+  opacity: 0.62;
+  box-shadow: none;
+}
+.bf-shell .dash-rx.hs-home .cc-quick-btn:disabled:hover,
+.bf-shell .dash-rx.hs-home .cc-app.add:disabled:hover {
+  background: transparent;
+  border-color: rgba(28, 28, 26, 0.09);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---- 22c. Settings now renders the top bar (approval 5) ------------------
+   Nothing to restyle: the bar is the same component the other 22 routes use and
+   section 1 already dressed it. One correction is needed though, because the
+   Settings page was written on the assumption that no bar sat above it and so
+   starts its own layout at the top of the viewport. */
+.bf-shell .settings-rx {
+  padding-top: 0;
+}
+
+/* ---- 22d. reduced motion ------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .cc-quick-btn:disabled:hover,
+  .bf-shell .dash-rx.hs-home .cc-app.add:disabled:hover {
+    transform: none;
+  }
+}
+
+/* ---- 22e. the two-step confirm (approval 2) ------------------------------
+   The destructive control arms itself on the first click and performs on the
+   second, with a Cancel beside it. Both replacement buttons are worded rather
+   than iconographic, because a confirmation is the one moment where a glyph is
+   not enough. The destructive one takes the red the row actions already use, so
+   the colour says what will happen; the Cancel takes the neutral pill. */
+.bf-shell .settings-rx .settings-member-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.bf-shell .settings-rx .settings-member-remove.is-confirming,
+.bf-shell .settings-rx .settings-member-cancel {
+  width: auto;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: var(--bf-app-micro);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) ease,
+    color var(--bf-dur-hover) ease,
+    border-color var(--bf-dur-hover) ease;
+}
+.bf-shell .settings-rx .settings-member-remove.is-confirming {
+  border: 1px solid rgba(197, 34, 31, 0.28);
+  background: rgba(197, 34, 31, 0.08);
+  color: #b01b18;
+}
+.bf-shell .settings-rx .settings-member-remove.is-confirming:hover {
+  background: #b01b18;
+  border-color: #b01b18;
+  color: #fdfcf9;
+}
+.bf-shell .settings-rx .settings-member-cancel {
+  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: transparent;
+  color: #1c1c1a;
+}
+.bf-shell .settings-rx .settings-member-cancel:hover {
+  background: #1c1c1a;
+  border-color: #1c1c1a;
+  color: #fdfcf9;
+}
+.bf-shell .settings-rx .settings-member-remove.is-confirming:focus-visible,
+.bf-shell .settings-rx .settings-member-cancel:focus-visible {
+  outline: 2px solid var(--bf-focus-ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .settings-rx .settings-member-remove.is-confirming,
+  .bf-shell .settings-rx .settings-member-cancel {
+    transition: none;
+  }
+}
