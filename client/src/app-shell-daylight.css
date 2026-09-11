@@ -419,12 +419,12 @@
 .hs-shell.bf-shell .hs-menu,
 .hs-shell.bf-shell .hs-bookmarks-menu,
 .hs-shell.bf-shell .notifications-panel {
-  animation: hs-pop 0.22s var(--bf-ease) both;
+  animation: hs-pop var(--bf-dur-hover) var(--bf-ease) both;
 }
 /* the account menu never carried .hs-menu, so it never animated at all — a
    recorded inconsistency. It joins the others. */
 .hs-shell.bf-shell .reports-account-menu {
-  animation: hs-pop 0.22s var(--bf-ease) both;
+  animation: hs-pop var(--bf-dur-hover) var(--bf-ease) both;
 }
 .hs-shell.bf-shell .hs-menu-head,
 .hs-shell.bf-shell .notifications-panel > header,
@@ -554,7 +554,7 @@
   border-radius: var(--bf-radius-card);
   /* the stage step: the palette is the one full-page modal object in the shell */
   box-shadow: var(--bf-shadow-stage);
-  animation: bf-pop 0.22s var(--bf-ease) both;
+  animation: bf-pop var(--bf-dur-hover) var(--bf-ease) both;
 }
 .hs-shell.bf-shell .cmdk-input {
   font-size: 15px;
@@ -1207,7 +1207,7 @@
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(28, 28, 26, 0.06) 0%, rgba(28, 28, 26, 0.11) 50%, rgba(28, 28, 26, 0.06) 100%);
   background-size: 200% 100%;
-  animation: bf-skel-sheen 1.6s var(--bf-ease-size) infinite;
+  animation: bf-skel-sheen var(--bf-dur-skeleton) var(--bf-ease-size) infinite;
 }
 @keyframes bf-skel-sheen {
   from {
@@ -2005,5 +2005,783 @@
   .bf-shell .settings-rx .settings-panel,
   .bf-shell .settings-rx .settings-account-card {
     transition: none;
+  }
+}
+
+/* ============================================================================
+   16. MOTION                                                        (step 11)
+   ----------------------------------------------------------------------------
+   Motion re-scales on AMPLITUDE, not on time. The interaction band -- press
+   0.18s, hover 0.25s, move 0.28s, panel 0.30s -- carries over from the Welcome
+   Page at 1:1, because those are the gestures a user performs hundreds of times
+   a day and they should feel byte-identical in the app and on the marketing
+   site. Entrance motion, met once per navigation, is where the compression is
+   spent: 0.9s/28px becomes 0.55s/12px. Same ladder, bottom rung identical.
+
+   THE REVEAL CASCADE *IS* THE PAGE TRANSITION. There is no router; the shell
+   renders once for every route and never remounts. What changes on navigation
+   is the page body, and useHudMotion then runs fresh on the new root, observes
+   every reveal target, and fires immediately for everything above the fold. So
+   the cascade runs on EVERY navigation, not once per session -- which is why
+   the retime matters more than it looks. 0.9s + 90ms x i settles a busy page at
+   about 1.5s; 0.55s + 50ms x i settles it at 0.8s.
+
+   FOUR THINGS THIS SECTION DELIBERATELY DOES NOT DO.
+   - No container crossfade or slide on route change. It would re-run on all 23
+     routes and on every schedule view keypress, and during the fade the
+     tutorial spotlight would be dimming the very control a gated step needs
+     clicked.
+   - No exit animation and no AnimatePresence around the page switch. An exit
+     holds the outgoing page mounted while the incoming one mounts, which puts
+     two copies of every [data-tutorial-id] in the tree and makes every
+     name-scoped getByRole ambiguous for the duration.
+   - No View Transitions API. It snapshots the whole document, freezing the
+     tutorial overlay and the always-mounted assistant, and jsdom has no support
+     so it would silently no-op under test and diverge from production.
+   - No transform on the shell, the body, the main column, the top bar, the rail
+     or any page root. Every one of them is an ancestor of at least one static
+     [data-tutorial-id] anchor, and a non-none transform makes an element a
+     containing block for position: fixed descendants. bf-shell-in is therefore
+     opacity-only. An 8px settle is not worth a silent tutorial-geometry bug.
+
+   RULE R, AND THE CORRECTION THAT MATTERS. The four reduced-motion blocks in
+   app-shell-hubspot.css null by SELECTOR, not by keyframe name, and they carry
+   2-3 classes. This file's recipe -- take the existing selector verbatim and
+   prefix .bf-shell -- produces 3-4. So any animation rule here out-specifies
+   the block that was nulling it, and reduced motion silently comes back on,
+   with no test to catch it because test/setup.ts stubs matchMedia to
+   matches:false and every reduced-motion branch in the product is untested.
+   The hazard is PREFIXING, not renaming.
+   Two rules in this file were already doing it before step 11, found by
+   auditing all 70 motion selectors against every reduce block in the 40 sheets
+   that load ahead of this one, and both are fixed in 16a:
+       .hs-shell.bf-shell .hs-rail-btn      defeated app-shell-hubspot.css:947
+       .hs-shell.bf-shell .hs-flyout-star   defeated app-shell-hubspot.css:1116
+   So: every selector here that animates, or that moves something by a literal
+   amount, appears in 16k too. What does NOT need pairing is a rule whose
+   amplitude is entirely a --bf-* token, because design-tokens.css zeroes those
+   under reduce and translateY(0px) moves nothing. Preferring a token over a
+   literal is the cheapest way to satisfy this rule, and it is why 16k is as
+   short as it is.
+
+   WHY NEW KEYFRAME NAMES RATHER THAN RE-VALUED OLD ONES. The plan called for
+   re-valuing shipped keyframes in place (dash-land's ring alpha from 0.5 to
+   0.24, and so on). Not done, and the reason is this file's central invariant:
+   a keyframe is global. Re-declaring @keyframes dash-land here would win for
+   everyone, and it would keep winning after someone deleted the word bf-shell
+   from shellClassName -- so the one-word kill switch would no longer revert the
+   redesign. Instead the old keyframe keeps its name, its body and its users,
+   and a .bf-shell-scoped rule points at a new bf-* name. Deleting the class
+   word restores every original animation exactly.
+   For the same reason, the reduced-motion coverage the plan assigned to twelve
+   other stylesheets is written HERE, in 16k, scoped to .bf-shell. Same effect,
+   one file, still reversible.
+
+   AMPLITUDE CHANGES, DECLARED. The land rings and the live flash were built to
+   read against a navy chrome. At rgba(47,107,255,0.5) on #f5f6fa a ring reads
+   as an error state rather than a highlight, so they drop to 0.24 and the live
+   flash's fill to 0.06. The information is untouched: every ring still fires,
+   and the live-edit pill still carries the other planner's name.
+   ============================================================================ */
+
+/* ---- 16a. the two rules that were re-enabling motion under reduce -------
+   Both pair their inherited null in 16k. Nothing visible changes for a reader
+   who has not asked for reduced motion. */
+
+/* ---- 16b. the shell's first paint --------------------------------------
+   Opacity only (see RULE T above). This is a CSS animation on a static class,
+   never a [data-reveal]: shellClassName is computed, and a dynamic className on
+   a reveal target wipes the imperatively-added .in and strands the element at
+   opacity 0 forever. That is a documented failure in this repo. */
+@keyframes bf-shell-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.hs-shell.bf-shell .topbar.hs-topbar {
+  animation: bf-shell-in var(--bf-dur-enter) var(--bf-ease) both;
+}
+.hs-shell.bf-shell .sidebar.hs-rail {
+  animation: bf-shell-in var(--bf-dur-enter) var(--bf-ease) both;
+  animation-delay: var(--bf-dur-shell-stagger);
+}
+
+/* ---- 16c. the reveal cascade, retimed ----------------------------------
+   RULE A, the 8% rule: a reveal shift may not exceed 8% of the revealed
+   element's own height, because that fraction is what the eye reads rather than
+   the absolute distance. 28px on a 264px panel is 10.6% and reads as a lurch;
+   12px is 4.5%. At 12px anything >=150px tall is licensed and everything
+   shorter is not, which is the arithmetic reason reveals attach to sections --
+   a card, a band, a strip, a board -- and never to a 46px table row, a calendar
+   cell, a chip or a badge.
+
+   Only the REST state is touched, plus the arrival rule the next block
+   explains. The .dx-ready gate and the [data-reveal] attribute gate are left
+   exactly as they are.
+
+   ONE CORRECTION TO THE PLAN'S RULE B, because it is stated as universal and it
+   is not. RULE B says a page's reveal count is cut by deleting the data-reveal
+   ATTRIBUTE, never the CSS, on the grounds that the hidden rest state is gated
+   on the attribute so a stripped element renders at full opacity. That holds for
+   the eight scopes below. It is FALSE on Contacts, Companies and Deals:
+   hs-contacts.css:47-54 hides `.contacts-page .hs-kpis` and
+   `.contacts-page .hs-index-main` with a bare `opacity: 0` -- no .dx-ready gate
+   and no attribute selector -- and only `.in` brings them back. Delete the
+   attribute there and the KPI strip and the entire table card are invisible
+   FOREVER, which is the exact failure RULE B claims cannot happen. Those three
+   pages are also the ones that genuinely fetch, which is why the MutationObserver
+   ported into useHudMotion.ts in this step matters most to them.
+
+   Note also which pages these rules do NOT reach: the Sales pages are
+   `page-stack contacts-page hs-index` and carry no -rx scope at all, so their
+   entrance keeps hs-contacts.css's own 0.5s/12px. Nothing here retimes them.
+
+   The eight app scopes are enumerated rather than collapsed into one short
+   selector on purpose. bf-shell sits on <body> from the moment App mounts,
+   which includes while the marketing page is rendering, so a broad
+   `.bf-shell .dx-ready [data-reveal]` would retime the Welcome Page's own
+   reveals -- and the Welcome Page is this redesign's reference, not its
+   target. */
+.bf-shell .dash-rx.dx-ready [data-reveal],
+.bf-shell .sched-rx.dx-ready [data-reveal],
+.bf-shell .proj-rx.dx-ready [data-reveal],
+.bf-shell .crew-rx.dx-ready [data-reveal],
+.bf-shell .equip-rx.dx-ready [data-reveal],
+.bf-shell .mat-rx.dx-ready [data-reveal],
+.bf-shell .field-rx.dx-ready [data-reveal],
+.bf-shell .delayIQ-rx.dx-ready [data-reveal] {
+  transform: translateY(var(--bf-app-reveal-shift));
+  transition:
+    opacity var(--bf-app-reveal-dur) var(--bf-ease),
+    transform var(--bf-app-reveal-dur) var(--bf-ease);
+  transition-delay: calc(var(--i, 0) * var(--bf-app-reveal-stagger));
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .field-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger] > * {
+  transform: translateY(var(--bf-app-reveal-shift));
+  transition:
+    opacity var(--bf-app-reveal-dur) var(--bf-ease),
+    transform var(--bf-app-reveal-dur) var(--bf-ease);
+}
+
+/* THE ARRIVAL, AND WHY IT NEEDS ITS OWN RULE.
+   Caught in the browser before shipping, with transitions forced off so the
+   reading was the cascade winner and not a mid-flight value. The arithmetic:
+
+     theirs, rest      .dash-rx.dx-ready [data-reveal]            (0,3,0)
+     theirs, arrived   .dash-rx.dx-ready [data-reveal].in         (0,4,0)
+     mine,   rest      .bf-shell .dash-rx.dx-ready [data-reveal]  (0,4,0)  <- ties .in
+
+   A tie is broken by source order, and this file loads after all eight page
+   sheets. So the rest-state override above was beating the very rule that ends
+   the reveal, and every revealed section on all eight pages would have settled
+   12px BELOW its correct position and stayed there, with a transition that
+   never resolves. Measured: rest 12px (right), revealed 12px (wrong, should be
+   none); with the scope removed, revealed none (right).
+
+   The same tie exists for stagger children at (0,4,1), so both halves are
+   re-declared here one class higher. This is the general trap in prefixing a
+   selector that has a state twin: raising the rest state raises it past the
+   state, and only the rest state looks wrong in a static reading of the file.
+
+   Why not simply drop the rest-state transform and keep 28px? Because 28px on
+   a 264px panel is 10.6% of its height and RULE A caps a reveal at 8%; the
+   shift is the whole point of the retime. */
+.bf-shell .dash-rx.dx-ready [data-reveal].in,
+.bf-shell .sched-rx.dx-ready [data-reveal].in,
+.bf-shell .proj-rx.dx-ready [data-reveal].in,
+.bf-shell .crew-rx.dx-ready [data-reveal].in,
+.bf-shell .equip-rx.dx-ready [data-reveal].in,
+.bf-shell .mat-rx.dx-ready [data-reveal].in,
+.bf-shell .field-rx.dx-ready [data-reveal].in,
+.bf-shell .delayIQ-rx.dx-ready [data-reveal].in {
+  transform: none;
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > * {
+  transform: none;
+}
+
+/* WHAT IS ACTUALLY RENDERED TODAY, counted rather than assumed.
+   `data-reveal-stagger` appears at exactly TWO attribute sites in the whole
+   product, both on the Dashboard: `.cc-stat-grid` and `.kpi-grid`. So of the
+   eight scopes above, only .dash-rx has a live stagger; the other seven mirror
+   selectors that match nothing right now. They are kept rather than trimmed,
+   and the distinction from a selector invented out of a wrong guess is worth
+   drawing: these mirror a live rule set in seven shipped sheets whose targets
+   are data- and page-driven, so the day a Projects strip gains the attribute it
+   inherits this retime instead of silently keeping the 0.75s/22px original.
+   A selector that matches nothing because I guessed the class name wrong gets
+   deleted; a selector that matches nothing because the attribute is not
+   rendered yet gets documented.
+
+   Same census for the plain [data-reveal]: the Dashboard renders 11 sites
+   against the plan's budget of six, and the six workspace index pages render
+   ZERO (DelayIQs renders one), so most of those 13-15 reveal rules per sheet
+   have never matched anything. Bringing the Dashboard to six means deleting
+   attributes in App.tsx, which a parallel session is editing -- deferred, not
+   done, and named in the step report. */
+
+/* RULE S, stagger BANDS not items. The inherited steps are 80ms apart and run
+   to 0.44s on the sixth child; six steps at --bf-app-reveal-stagger run to
+   0.25s, so the last band starts before the first has finished and the whole
+   entrance settles inside the 800ms budget. Six is the cap because the
+   inherited rules stop at :nth-child(6); a seventh child inherits band six,
+   which is the correct bounded behaviour rather than an unbounded delay. */
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1) {
+  transition-delay: 0s;
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2) {
+  transition-delay: calc(1 * var(--bf-app-reveal-stagger));
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3) {
+  transition-delay: calc(2 * var(--bf-app-reveal-stagger));
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4) {
+  transition-delay: calc(3 * var(--bf-app-reveal-stagger));
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5) {
+  transition-delay: calc(4 * var(--bf-app-reveal-stagger));
+}
+.bf-shell .dash-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6) {
+  transition-delay: calc(5 * var(--bf-app-reveal-stagger));
+}
+
+/* ---- 16d. press, completing the grammar --------------------------------
+   scale(0.94) over 0.18s. The top-bar icon buttons, the index buttons, the row
+   actions and the dialog close already carry it from earlier steps; these are
+   the rest of the set the plan names. --bf-press-scale is 1 under reduce, so
+   none of these needs a pairing in 16k.
+
+   NOT given press: anything carrying a [data-tutorial-id]. A transform makes an
+   element a containing block and changes its measured rect, and the tutorial
+   spotlight is drawn from a rect it does not re-measure on pointer state. The
+   rail hub buttons are clear -- the anchors live on .hs-flyout-item, one level
+   in. Which leaves one documented interaction, worth stating rather than
+   discovering later: a spotlit flyout row still takes the 3px hover slide from
+   section 3, so it sits 3px inside its own ring while hovered. It stays
+   clickable (the overlay is pointer-events: none except on its panel) and the
+   gated step stays satisfiable; under reduce --bf-slide is 0 and it does not
+   happen at all. It is on the browser walk's checklist, not left implicit. */
+.hs-shell.bf-shell .hs-rail-btn:active,
+.hs-shell.bf-shell .hs-rail-bottom button:active,
+.hs-shell.bf-shell .cmdk-item:active,
+.bf-shell .dash-rx.hs-home .dash-hide:active,
+.bf-shell .dash-rx.hs-home .dash-resize:active {
+  transform: scale(var(--bf-press-scale));
+}
+
+/* ---- 16e. the pointer tilt finally gets a reduced-motion guard ----------
+   A real defect, not a style choice. DxTilt writes --rx/--ry on every
+   pointermove at +/-7deg with no matchMedia check, and six stylesheets compose
+   them into one transform:
+       transform: translateY(var(--lift, 0px)) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg))
+   A parse of every reduced-motion block in all 57 sheets finds zero mentions of
+   --rx, --ry or .dx-tilt. dashboard-redesign.css:852 touches .dash-rx .kpi-card
+   only to set transition-duration: 0.2s -- which makes the tilt SNAPPIER, not
+   still -- and then nulls .dash-rx .dx-aurora with transform: none two rules
+   later. The author knew the idiom and used it on the aurora, not on the card.
+   So a reader who has asked for reduced motion gets a 14-degree 3D swing on
+   every KPI and directory card, tracking their pointer.
+
+   The fix is in 16k, and it keeps --lift composed so the hover lift still
+   works: transform: translateY(var(--lift, 0px)). It is written there rather
+   than in the six sheets for the kill-switch reason in this section's header.
+   The JS half -- bounding DxTilt's own max at var(--bf-tilt-max), which is
+   0deg under reduce -- is deferred: schedule/parts/shared.tsx has uncommitted
+   changes from a parallel session. The CSS above is sufficient on its own; the
+   JS change would only stop the variables being written in the first place. */
+
+/* ---- 16f. the calendar's 42 cells -------------------------------------
+   schedCellIn is the repo's ONE correct stagger and it is the model for RULE S:
+   month.tsx sets --d to the cell's weekIndex, so a 42-cell grid arrives in six
+   BANDS rather than 42 steps. Retimed from 0.5s/55ms to 0.4s/40ms so the last
+   band starts at 200ms instead of 275ms. It is also the one animation in
+   schedule.css that no reduce block covers -- the seven blocks there cover
+   .ss-band, .dx-dot, [data-reveal], .kpi-card, .schedule-job, .unassigned-card,
+   .dx-aurora, .is-pending, .is-live, .sched-matrix-tip, .sched-kan-card and the
+   Gantt family, and .sched-cal-cell is in none of them. So opening Month with
+   reduced motion on slides the whole grid. Guarded in 16k. */
+.bf-shell .sched-rx .sched-cal-cell {
+  animation-duration: var(--bf-dur-cell);
+  animation-delay: calc(var(--d, 0) * var(--bf-stagger-band));
+}
+
+/* ---- 16g. the drop rings, re-based off navy ----------------------------
+   One grammar at three scales -- your drop landed HERE -- and the meaning is
+   load-bearing, so every ring still fires. Only the alpha moves: 0.5/0.55 was
+   built to read against #14203a and reads as an error on #f5f6fa.
+   New names rather than re-valued ones, for the kill-switch reason above. The
+   board panel gets a shadow-only ring because it is absolutely positioned from
+   the user's own saved layout and a scale would fight the grid; the deal card
+   and the Gantt bar keep their squash, halved. */
+@keyframes bf-land-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.24);
+  }
+  45% {
+    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+  }
+}
+@keyframes bf-land-card {
+  0% {
+    transform: scale(0.985);
+    border-color: #2f6bff;
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.24);
+  }
+  45% {
+    transform: scale(1.01);
+    border-color: #2f6bff;
+    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: var(--bf-shadow-raised);
+  }
+}
+@keyframes bf-live-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0.2);
+    background-color: rgba(47, 107, 255, 0.06);
+  }
+  60% {
+    box-shadow: 0 0 0 10px rgba(47, 107, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 255, 0);
+  }
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing {
+  animation: bf-land-ring var(--bf-dur-flash) var(--bf-ease) both;
+}
+.bf-shell .hs-deal-card.is-landing {
+  animation: bf-land-card var(--bf-dur-flash) var(--bf-ease) both;
+  /* 0.32s fired 20ms BEFORE the flight it is supposed to follow, because
+     DEAL_DROP_ANIMATION is 340ms. On a slow frame the ring appeared beside the
+     card instead of around it. The token mirrors the JS constant so the pair
+     cannot drift again. */
+  animation-delay: var(--bf-dur-drop-lane);
+}
+/* the real selector puts .is-landing on the FEATURE and the ring on the bar
+   inside it; `.gantt-bar.is-landing` matches zero elements */
+.bf-shell .sched-rx .gantt-feature.is-landing .gantt-bar {
+  animation: bf-land-card var(--bf-dur-flash) var(--bf-ease) both;
+}
+.bf-shell .sched-rx .is-live {
+  animation: bf-live-flash var(--bf-dur-live) ease-out both;
+}
+
+/* ---- 16h. the row stagger that held the last row invisible -------------
+   .contacts-page .hs-table tbody tr animates hsc-row-in with
+   animation-delay: calc(0.025s * var(--i, 0)), where --i is the RAW ARRAY INDEX
+   and the per-page selector offers 10 / 25 / 50. fill-mode: both holds each row
+   at opacity 0 for the whole delay, so at the default 25 rows the last row is
+   invisible for 600ms and readable at 960ms, and at 50 rows for 1,250ms and
+   1,610ms. The rows remount on every page change, view-tab change, filter
+   change and search keystroke -- so the bottom of the table is unreadable for
+   about a second, repeatedly, during exactly the interaction the stagger was
+   decorating. RULE S forbids it: an index must come from a bounded structural
+   position, never a data array.
+   Retired from table rows. The keyframe keeps its name and its other user,
+   .hs-deal-card, where a lane is bounded. Nothing else changes: the rows are
+   already at full opacity without the animation, because the hidden state is
+   the keyframe's own `from`, not a rest-state rule. */
+.bf-shell .contacts-page .hs-table tbody tr {
+  animation: none;
+}
+/* The plan said to KEEP hsc-row-in on .hs-deal-card "with the index capped at
+   8". Checked: the deal card's rule (hs-contacts.css:1365) carries no
+   animation-delay at all and the card is never given --i, so there is no
+   per-card stagger to cap. Capping an index that is always 0 would have been a
+   no-op rule; writing one would have been worse, because the obvious reading of
+   the plan is to ADD the delay, and adding a stagger the product does not have
+   is new motion, not a re-skin. Deal cards keep their undelayed 0.36s arrival
+   exactly as they are. --bf-stagger-card stays declared for the day a bounded
+   lane genuinely needs it.
+
+   Correction to the plan's scope, found while checking this: the row stagger is
+   NOT contacts-only. All three Sales pages render `page-stack contacts-page`
+   (Companies adds companies-page, Deals adds deals-page), and all three set
+   --i to the raw array index on <tr>. So the rule above retires the stagger
+   from three tables, and the 25-row default was costing every one of them. */
+
+/* ---- 16i. the loops and lifts nothing was guarding ---------------------
+   Three stylesheets carry live motion and declare no reduced-motion block at
+   all: timecard.css, assistant-global.css and delayiq.css. Six more declare
+   transitions with no coverage: hs-index.css, redesign.css, topbar-redesign.css
+   and the marketing sheets. Rather than add a block to each -- nine files this
+   redesign would then own, and nine places a revert would have to visit -- the
+   coverage is written in 16k under .bf-shell. Same effect, still one word to
+   undo. command-palette.css and schedule-phone.css genuinely have nothing to
+   guard: zero transitions, zero animations. The palette gains motion here, so
+   it gains coverage here too. */
+
+/* the skeleton's handoff: today the loading board hard-cuts to the real one.
+   0.18s of fade is what makes the bootstrap read as one motion instead of two
+   states. Opacity only, so it cannot become a containing block for the board's
+   absolutely positioned panels. */
+.bf-shell .dash-rx.hs-home .dash-board {
+  animation: bf-fade var(--bf-dur-press) var(--bf-ease) both;
+}
+
+/* RULE N -- at most one infinite animation running in the chrome at a time.
+   hs-tag-ping is 2.4s INFINITE on .hs-rail-tag, and two hubs can carry a tag at
+   once (Sales `New` beside a `Beta`), so a nav that is supposed to hold one
+   blue holds two pinging rings forever. The author already agreed it should
+   stop: the rule nulls itself once its own hub is active. Three iterations
+   makes it stop for everyone. Declared visible change. */
+.hs-shell.bf-shell .hs-rail-tag {
+  animation-iteration-count: 3;
+}
+
+/* the app's floating AI launcher lifts rather than inverts, because a pill that
+   floats over content at rest would read as BREAKING if it turned into an
+   outline. Floating pills lift; anchored pills invert. Scoped to .hs-shell so
+   the marketing help-centre's copy of this button is untouched -- bf-shell sits
+   on <body> from the moment App mounts, including while the welcome page
+   renders, so an unscoped rule would reach it. */
+.hs-shell.bf-shell .hc-assistant-fab {
+  transition:
+    transform var(--bf-dur-move) var(--bf-ease),
+    box-shadow var(--bf-dur-move) var(--bf-ease);
+}
+.hs-shell.bf-shell .hc-assistant-fab:hover {
+  transform: translateY(var(--bf-lift-small));
+  box-shadow: var(--bf-shadow-pill-hover);
+}
+
+/* tcRowIn is a 2.2s wash on the timecard row you just added (TimeCard.tsx:518
+   sets .tc-row-new from `justAdded`). It carries meaning -- this is the row you
+   added -- so under reduce it SHORTENS rather than stops. 2.2s is also outside
+   every duration band in the system; 0.75s is the flash rung. */
+.bf-shell .tc-row-new {
+  animation-duration: var(--bf-dur-flash);
+}
+
+/* the import dropzone's 0.16s ease appears nowhere in the token set */
+.bf-shell .sim-drop {
+  transition:
+    border-color var(--bf-dur-hover) var(--bf-ease),
+    background var(--bf-dur-hover) var(--bf-ease);
+}
+
+/* the hover-reveal control layer, extended to the rest of the set. Below
+   1024px a pointer never rests, so a control that only appears on hover cannot
+   be reached at all. These are ACTIONS, not decoration: the panel grip carries
+   the app's only aria-keyshortcuts. */
+@media (max-width: 1023px), (hover: none) {
+  .hs-shell.bf-shell .hs-bookmark-remove,
+  .bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide,
+  .bf-shell .sched-rx .sched-cal-add {
+    opacity: 0.55;
+    transform: none;
+  }
+}
+
+/* ---- 16k. this file's motion reduce block (RULE R) ---------------------
+   Everything above that animates, or moves by a literal amount, is paired here.
+   Token-driven amplitudes are absent on purpose: --bf-lift-dense, --bf-slide,
+   --bf-press-scale, --bf-app-reveal-shift and --bf-tilt-max are all zero under
+   reduce, so those rules already move nothing.
+
+   The idiom is the repo's own, across ten existing blocks: CLAMP entrances,
+   REMOVE loops. A clamped entrance still settles the layout, so nothing appears
+   to teleport. `.spin` is the standard exception and is deliberately left
+   running at all three of its call sites -- a spinner that stops is a broken
+   spinner. */
+@media (prefers-reduced-motion: reduce) {
+  /* 16a, the two that were defeating app-shell-hubspot.css's own blocks */
+  .hs-shell.bf-shell .hs-rail-btn,
+  .hs-shell.bf-shell .hs-flyout-star {
+    transition: none;
+  }
+
+  /* 16b, the shell's first paint */
+  .hs-shell.bf-shell .topbar.hs-topbar,
+  .hs-shell.bf-shell .sidebar.hs-rail {
+    animation: none;
+    opacity: 1;
+  }
+
+  /* 16c, the reveal cascade: clamped to 0.3s, matching the ten inherited
+     blocks. The shift is already 0 through the token, so the elements do not
+     move; they cross-fade over 0.3s and the stagger collapses to nothing. */
+  .bf-shell .dash-rx.dx-ready [data-reveal],
+  .bf-shell .sched-rx.dx-ready [data-reveal],
+  .bf-shell .proj-rx.dx-ready [data-reveal],
+  .bf-shell .crew-rx.dx-ready [data-reveal],
+  .bf-shell .equip-rx.dx-ready [data-reveal],
+  .bf-shell .mat-rx.dx-ready [data-reveal],
+  .bf-shell .field-rx.dx-ready [data-reveal],
+  .bf-shell .delayIQ-rx.dx-ready [data-reveal],
+  .bf-shell .dash-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .sched-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .proj-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .crew-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .equip-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .mat-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .field-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger] > * {
+    transition-duration: 0.3s;
+    transition-delay: 0s;
+  }
+
+  /* 16e, BUG 1: the pointer tilt. --lift stays composed so the hover lift
+     still resolves; only the two rotations are dropped. Each selector is the
+     one the six sheets actually use, taken verbatim. */
+  .bf-shell .dash-rx .kpi-card,
+  .bf-shell .sched-rx .schedule-kpis .kpi-card,
+  .bf-shell .proj-rx .project-card,
+  .bf-shell .equip-rx .crew-stat-card,
+  .bf-shell .mat-rx .crew-stat-card,
+  .bf-shell .field-rx .crew-stat-card {
+    transform: translateY(var(--lift, 0px));
+  }
+
+  /* BUG 2: the 480px pointer glow, on ten page roots and in zero reduce
+     blocks. The rAF loop that feeds --mx/--my is now guarded in
+     useHudMotion.ts, so this is the belt to that braces: with the variables
+     frozen at their -400px fallback the glow would sit off-screen anyway, but
+     a stale value from before the guard would leave it parked mid-page. */
+  .bf-shell .dx-cursor {
+    display: none;
+  }
+
+  /* 16f, BUG 8: the 42-cell month grid, in none of schedule.css's seven
+     blocks */
+  .bf-shell .sched-rx .sched-cal-cell {
+    animation: none;
+  }
+
+  /* 16g, the drop rings. The ring is the motion; the information is elsewhere
+     and survives -- the live-edit pill still renders with the other planner's
+     name, and the board's aria-live announcer still speaks every keyboard
+     nudge. Removing the animation must never remove the announcement. */
+  .bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing,
+  .bf-shell .hs-deal-card.is-landing,
+  .bf-shell .sched-rx .gantt-feature.is-landing .gantt-bar,
+  .bf-shell .sched-rx .is-live,
+  .bf-shell .dash-rx.hs-home .dash-board {
+    animation: none;
+  }
+
+  /* 16i, the three files with no block of their own */
+  .hs-shell.bf-shell .hs-rail-tag {
+    animation: none;
+  }
+  .hs-shell.bf-shell .hc-assistant-fab,
+  .bf-shell .sim-drop {
+    transition: none;
+  }
+  .hs-shell.bf-shell .hc-assistant-fab:hover {
+    transform: none;
+  }
+  /* meaning-bearing, so clamped rather than removed */
+  .bf-shell .tc-row-new {
+    animation-duration: 0.3s;
+  }
+
+  /* the tutorial spotlight JUMPS rather than travels, which is the correct
+     reading: a reader who asked for less motion should not watch the light
+     slide across the screen to find their next control. pointer-events stays
+     exactly as it is -- none on the overlay, auto on the panel -- because that
+     is what keeps a spotlit control clickable and every gated step
+     satisfiable. */
+  .bf-shell .buildflow-tutorial-spotlight {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   17. THE STATES THE EARLIER STEPS FLATTENED                        (step 11)
+   ----------------------------------------------------------------------------
+   Found by a new audit, written after the reveal cascade turned out to be
+   beating its own arrival rule, and then run over the whole file rather than
+   only over section 16. The check is:
+
+     for every rule here that prefixes an existing selector, is there an
+     existing STATE rule (.active, .in, :hover, :focus-visible, .is-*) on the
+     same element declaring the same property -- and does my prefixed rule now
+     tie or beat it?
+
+   A prefix adds one class. If the state rule was exactly one class above the
+   rest state -- which is how nearly every state rule in this repo is written --
+   then prefixing the rest state lifts it level with the state, and source order
+   hands the tie to the rest state. The state then stops rendering. Nothing
+   about either file looks wrong in isolation, and no test sees it, because
+   jsdom applies no CSS at all.
+
+   Eighteen hits, triaged. Two were false: the palette's highlighted row is
+   re-styled through [aria-selected="true"] rather than .is-active, which is a
+   different hook for the same state and wins on specificity; and .pdx-form
+   input:focus wanted var(--wx-card), which resolves to the same #ffffff I set.
+   One was intended: .hs-view:hover wanted `border-radius: 6px 6px 0 0` from the
+   era when saved views were folder tabs, and they are pills now.
+   The rest are restored below, in this shell's own grammar rather than the
+   navy-era values, because the point was never to keep those colours -- it was
+   to keep the STATES they carried.
+
+   THE PATTERN BEHIND MOST OF THEM, worth naming so it is not repeated: I wrote
+   grouped base and hover rules -- `.hs-view, .hs-chip` and
+   `.hs-btn-icon, .hs-row-action` -- and then wrote the `.active` follow-up for
+   only ONE member of each pair. An off-by-one in a selector list.
+
+   THE ONE THAT MATTERED MOST. `.hs-index .hs-chip.active` is the quick-filter
+   chip. Measured on the Projects index with transitions forced off: with the
+   scope on, an active chip computed transparent background, a 0.13 hairline and
+   #575550 text -- character for character identical to an inactive chip. With
+   the scope off: #e8f0fe fill, blue border, blue text. So "which filter is
+   applied" had stopped being visible anywhere on six index pages. That is
+   information, not decoration, and the brief's first rule is that no
+   information may be lost.
+   ============================================================================ */
+
+/* ---- 17a. the two active states the grouped rules missed ---------------- */
+.bf-shell .hs-index .hs-chip.active,
+.bf-shell .hs-index .hs-btn-icon.active {
+  background: rgba(47, 107, 255, 0.08);
+  border-color: rgba(47, 107, 255, 0.28);
+  color: #2f6bff;
+  font-weight: 650;
+}
+/* their icon followed the text colour; keep that so the chip reads as one object */
+.bf-shell .hs-index .hs-chip.active svg,
+.bf-shell .hs-index .hs-btn-icon.active svg {
+  color: #2f6bff;
+}
+
+/* ---- 17b. the row actions get their meaning back -----------------------
+   The original tinted the plain action red and the .edit variant blue, so the
+   hover itself said which one deletes. My neutral wash erased the distinction
+   on all twelve of these buttons -- every one of which is a real action with
+   its own aria-label and title. Restored at the ladder's alpha rather than the
+   old #fbe4e2 fill, and the border is set here because the base rule made it
+   transparent, which had left the old rule's dark ink border showing through on
+   a faint wash. */
+.bf-shell .hs-index .hs-row-action:hover {
+  background: rgba(197, 34, 31, 0.08);
+  border-color: rgba(197, 34, 31, 0.28);
+  color: #c5221f;
+}
+.bf-shell .hs-index .hs-row-action.edit:hover {
+  background: rgba(47, 107, 255, 0.08);
+  border-color: rgba(47, 107, 255, 0.28);
+  color: #2f6bff;
+}
+
+/* ---- 17c. the dialog close button's hover, made coherent ---------------
+   Their hover inverted the button to solid ink. Mine replaced the background
+   and the text with a neutral wash but left border-color to fall through to
+   theirs, so a hovered close button drew a near-black border around a barely
+   tinted fill. Their `transform: rotate(90deg)` is deliberately left to fall
+   through: the quarter turn is the gesture, and it still composes because this
+   file sets no transform on :hover. */
+.bf-shell .pdx .pdx-close:hover {
+  border-color: rgba(28, 28, 26, 0.13);
+}
+
+/* ---- 17d. the hover feedback three cards lost --------------------------
+   Each base rule here set a shadow (or removed one), which outranked the hover
+   shadow that used to be the whole feedback. RULE C decides which move each one
+   gets: a frame is licensed to LIFT only if its whole body navigates.
+   .ss-band navigates (it opens the schedule) so it keeps its lift, re-scaled
+   from -4px to the dense token. .reports-card and .review-card are directory
+   cards that open a record, so they lift too. .cc-stat is a static readout on
+   the performance strip -- it never navigated and it does not lift; it gets the
+   raised shadow only, which is the "this is pressable" signal without the
+   travel. */
+.bf-shell .ss-band:hover {
+  transform: translateY(var(--bf-lift-dense));
+  border-color: rgba(28, 28, 26, 0.13);
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.bf-shell .reports-card:hover,
+.bf-shell .reports-kpi-card:hover,
+.bf-shell .reports-chart-card:hover,
+.bf-shell .reports-efficiency-card:hover {
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.bf-shell .dash-rx.hs-home .cc-stat:hover {
+  box-shadow: var(--bf-shadow-raised);
+}
+
+/* ---- 17e. the Settings AI button's two states -------------------------- */
+.bf-shell .settings-rx .settings-ai-button:hover {
+  border-color: #2f6bff;
+  color: #2f6bff;
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.bf-shell .settings-rx .settings-ai-button.active,
+.bf-shell .settings-rx .settings-ai-button:focus-visible {
+  outline: 0;
+  border-color: #2f6bff;
+  color: #2f6bff;
+  box-shadow: var(--bf-focus-ring);
+}
+
+/* ---- 17f. reduced motion for the one move added above ------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .ss-band:hover {
+    transform: none;
   }
 }

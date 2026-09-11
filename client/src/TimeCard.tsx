@@ -1199,6 +1199,19 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
 
       <SectionCard title="Schedule vs. actual" subtitle="Planned crew hours against logged hours" icon={TrendingUp} className="tc-span-2">
         <div className="tc-chart">
+          {/* Chart durations are pinned rather than left to recharts' defaults, which
+              are 400ms for a Bar but 1500ms for a Line or an Area, and 1500ms AFTER a
+              400ms animationBegin for a Pie -- so the pie below used to finish 1.9s
+              after the page, well outside the 800ms settle budget. Two rungs: 400ms for
+              a bar's short grow and a pie's sweep, 600ms for a line or area crossing the
+              full width.
+              isAnimationActive is deliberately NOT passed. recharts 3.8.1 defaults it to
+              'auto', which reads AND subscribes to prefers-reduced-motion
+              (recharts/es6/animation/JavascriptAnimate.js:37). Passing an explicit
+              boolean REPLACES 'auto' and removes that gate, so the obvious
+              "useChartAnimation" helper would make reduced motion worse, not better.
+              The one exception is the 40px sparkline strip further down, which is set to
+              false outright: on a 40px chart a grow-in is noise, not a reveal. */}
           <ResponsiveContainer width="100%" height={260}>
             <BarChart
               data={model.crews.map((crew) => ({
@@ -1218,8 +1231,8 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} />
               <Tooltip cursor={{ fill: "rgba(9, 32, 56, 0.04)" }} />
-              <Bar dataKey="planned" name="Planned" fill="#0a233a" radius={[5, 5, 0, 0]} barSize={20} />
-              <Bar dataKey="actual" name="Actual" fill="#fb8500" radius={[5, 5, 0, 0]} barSize={20} />
+              <Bar dataKey="planned" name="Planned" fill="#0a233a" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
+              <Bar dataKey="actual" name="Actual" fill="#fb8500" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
             </BarChart>
           </ResponsiveContainer>
           <div className="tc-legend">
@@ -1315,8 +1328,8 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} />
               <Tooltip cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="planned" stroke="#0a233a" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="actual" stroke="#fb8500" strokeWidth={3} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="planned" stroke="#0a233a" strokeWidth={2} dot={{ r: 3 }} animationDuration={600} />
+              <Line type="monotone" dataKey="actual" stroke="#fb8500" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1336,8 +1349,8 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} domain={[1200, 1800]} />
               <Tooltip cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
-              <Area type="monotone" dataKey="forecastIQ" stroke="#1568c9" strokeWidth={3} fill="url(#tcForecastIQ)" />
-              <Line type="monotone" dataKey="actual" stroke="#20b15a" strokeWidth={3} dot={{ r: 4 }} />
+              <Area type="monotone" dataKey="forecastIQ" stroke="#1568c9" strokeWidth={3} fill="url(#tcForecastIQ)" animationDuration={600} />
+              <Line type="monotone" dataKey="actual" stroke="#20b15a" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1351,7 +1364,7 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} domain={[0, 1.1]} />
               <Tooltip cursor={{ fill: "rgba(9, 32, 56, 0.04)" }} />
-              <Bar dataKey="value" fill="#20b15a" radius={[5, 5, 0, 0]} barSize={26}>
+              <Bar dataKey="value" fill="#20b15a" radius={[5, 5, 0, 0]} barSize={26} animationDuration={400}>
                 {productivityTrend.map((point) => (
                   <Cell key={point.week} fill={point.value >= 0.9 ? "#20b15a" : "#7cc39a"} />
                 ))}
@@ -1493,7 +1506,7 @@ function ComplianceTab({ model, entries }: { model: Model; entries: TcEntry[] })
         <div className="tc-class-chart">
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie data={classData} dataKey="value" nameKey="name" innerRadius={46} outerRadius={72} paddingAngle={3}>
+              <Pie data={classData} dataKey="value" nameKey="name" innerRadius={46} outerRadius={72} paddingAngle={3} animationDuration={400} animationBegin={0}>
                 {classData.map((slice) => (
                   <Cell key={slice.name} fill={slice.color} />
                 ))}
@@ -1677,7 +1690,7 @@ export function TimeCardDashboardCards({
           <span className="tc-spark">
             <ResponsiveContainer width="100%" height={40}>
               <LineChart data={laborCostTrend} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
-                <Line type="monotone" dataKey="actual" stroke="#fb8500" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="actual" stroke="#fb8500" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </span>

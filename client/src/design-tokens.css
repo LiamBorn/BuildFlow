@@ -111,6 +111,7 @@
   --bf-dur-move: 0.28s;
   --bf-dur-panel: 0.3s;
   --bf-dur-enter: 0.7s;
+  --bf-dur-shell-stagger: 60ms; /* the rail follows the bar by one beat on first paint */
   --bf-dur-reveal: 1s;
 
   /* the scroll-reveal contract, so a new surface can join it without guessing */
@@ -167,6 +168,54 @@
   --bf-lift-dense: -4px; /* cards under ~200px tall lift less than the page's -6px */
   --bf-spotlight-r: 220px; /* the tilt move's in-app stand-in: a pointer-follow sheen */
   --bf-spotlight-a: 0.06;
+
+  /* ========================================================================
+     The dense motion scale (Phase 4, step 11).
+     Motion re-scales on AMPLITUDE, not on time. The interaction band above
+     (press / hover / move / panel) carries over from the Welcome Page at 1:1
+     and is the family resemblance -- a button press feels byte-identical in
+     the app and on the marketing site. Entrance motion, which a user meets
+     once per navigation rather than hundreds of times a day, is where the
+     compression is spent. Evidence and the per-role factors are in
+     redesign-plan/motion-plan.md section 1.
+     ===================================================================== */
+
+  /* ---- the reveal cascade, app-side --------------------------------------
+     RULE A, the 8% rule: a reveal shift may not exceed 8% of the revealed
+     element's own height. At 12px that licenses anything >=150px tall and
+     forbids everything shorter, so reveals attach to sections -- a card, a
+     band, a strip, a board -- and never to a row, a cell, a chip or a badge.
+     Six steps x 50ms + 550ms = the page settles in 800ms. The Welcome Page
+     settles at 1.45s; there is no router here, so this cascade runs on every
+     navigation rather than once. */
+  --bf-app-reveal-shift: 12px;
+  --bf-app-reveal-dur: 0.55s;
+  --bf-app-reveal-stagger: 50ms;
+  --bf-app-reveal-max: 6; /* documentation only; the budget is per rendered attribute */
+
+  /* ---- the durations the four interaction steps do not cover -------------
+     Each mirrors a number that already exists in JS or in a shipped keyframe,
+     so the pair can never drift silently. */
+  --bf-dur-flash: 0.75s; /* the land ring: dash-land / hs-deal-land / hsg-land */
+  --bf-dur-live: 6s; /* sched-live-flash; mirrors LIVE_FLASH_MS = 6000 */
+  --bf-dur-skeleton: 1.6s; /* bf-skel-sheen's 200% -> -200% sweep */
+  --bf-dur-drag: 0.26s; /* board reflow; mirrors DASH_SORT_TRANSITION */
+  --bf-dur-drop: 0.26s; /* mirrors DASH_DROP_ANIMATION */
+  --bf-dur-drop-lane: 0.34s; /* mirrors DEAL_DROP_ANIMATION, a longer flight */
+  --bf-dur-chart: 0.6s; /* recharts bars and lines */
+  --bf-dur-chart-pie: 0.4s; /* recharts pie sweep */
+  --bf-dur-cell: 0.4s; /* schedCellIn, the banded stagger */
+
+  /* ---- stagger, bounded ---------------------------------------------------
+     RULE S: a stagger index comes from a bounded STRUCTURAL position -- a row
+     band, a column, a fixed set of siblings -- never from a data array's
+     index. Total travel may not exceed 250ms. */
+  --bf-stagger-band: 40ms; /* schedCellIn's per-row delay */
+  --bf-stagger-card: 25ms; /* hsc-row-in's per-card delay, index capped at 8 */
+
+  /* ---- the tilt bound -----------------------------------------------------
+     DxTilt's existing default, tokenised so it can be zeroed. */
+  --bf-tilt-max: 7deg;
 }
 
 /* The reveal contract's reduced-motion half, matching what the Welcome Page
@@ -183,5 +232,26 @@
     --bf-slide: 0px;
     --bf-press-scale: 1;
     --bf-spotlight-a: 0;
+
+    /* The dense motion scale's reduced half. The app's own convention, across
+       ten existing blocks, is CLAMP entrances rather than remove them -- the
+       layout still settles, so nothing appears to teleport -- and remove
+       infinite loops. Extended here, not reinvented.
+
+       Every amplitude below degrades FOR FREE: a rule written as
+       translateY(var(--bf-lift-dense)) or bounded by var(--bf-tilt-max) moves
+       zero pixels once these are zero, so it needs no reduce rule of its own.
+       That is the cheapest way to satisfy RULE R, and it is why the pairing
+       list in app-shell-daylight.css is as short as it is. */
+    --bf-app-reveal-shift: 0px;
+    --bf-app-reveal-dur: 0.3s; /* the app's clamp value, not the page's 0.4s */
+    --bf-app-reveal-stagger: 0ms;
+    --bf-dur-flash: 0.01s;
+    --bf-dur-cell: 0.3s;
+    --bf-stagger-band: 0ms;
+    --bf-stagger-card: 0ms;
+    --bf-dur-chart: 0s;
+    --bf-dur-chart-pie: 0s;
+    --bf-tilt-max: 0deg;
   }
 }

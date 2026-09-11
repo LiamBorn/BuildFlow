@@ -19,7 +19,7 @@
  */
 
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
 
 export interface LocationMapProps {
   location?: string;
@@ -69,10 +69,25 @@ export function LocationMap({
   const rotateX = useTransform(mouseY, [-50, 50], [8, -8]);
   const rotateY = useTransform(mouseX, [-50, 50], [-8, 8]);
 
-  const springRotateX = useSpring(rotateX, { stiffness: 300, damping: 30 });
-  const springRotateY = useSpring(rotateY, { stiffness: 300, damping: 30 });
+  // framer-motion does NOT read prefers-reduced-motion on its own, and this component
+  // is the densest piece of choreography in the product: a pointer-tracked tilt, an
+  // expand spring, eleven pathLength road draws, six staggered building fades and a pin
+  // drop, about twenty animations in all. expand-map.css's only reduced-motion block
+  // kills a single .lm-surface transition, so everything else still ran.
+  // `zero` collapses any transition to an instant one. The map still renders COMPLETE --
+  // every road at full pathLength, every building at full opacity, the pin in place --
+  // which is the correct reduced-motion behaviour: the content is never withheld, only
+  // the choreography stops.
+  const reduceMotion = useReducedMotion() === true;
+  const zero = { duration: 0 };
+
+  const springRotateX = useSpring(rotateX, reduceMotion ? zero : { stiffness: 300, damping: 30 });
+  const springRotateY = useSpring(rotateY, reduceMotion ? zero : { stiffness: 300, damping: 30 });
 
   const handleMouseMove = (event: MouseEvent) => {
+    // the tilt is zeroed at the source, so the motion values never leave 0 and the
+    // spring has nothing to chase
+    if (reduceMotion) return;
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     mouseX.set(event.clientX - (rect.left + rect.width / 2));
@@ -115,7 +130,7 @@ export function LocationMap({
         className="lm-surface"
         style={{ rotateX: springRotateX, rotateY: springRotateY, transformStyle: "preserve-3d" }}
         animate={{ height: isExpanded ? 280 : 140 }}
-        transition={{ type: "spring", stiffness: 400, damping: 35 }}
+        transition={reduceMotion ? zero : { type: "spring", stiffness: 400, damping: 35 }}
       >
         <div className="lm-wash" />
 
@@ -126,7 +141,7 @@ export function LocationMap({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
+              transition={reduceMotion ? zero : { duration: 0.4, delay: 0.1 }}
             >
               <div className="lm-street-ground" />
 
@@ -143,7 +158,7 @@ export function LocationMap({
                     strokeWidth="4"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.8, delay: 0.2 + index * 0.1 }}
+                    transition={reduceMotion ? zero : { duration: 0.8, delay: 0.2 + index * 0.1 }}
                   />
                 ))}
                 {[30, 70].map((x, index) => (
@@ -157,7 +172,7 @@ export function LocationMap({
                     strokeWidth="3"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
+                    transition={reduceMotion ? zero : { duration: 0.6, delay: 0.4 + index * 0.1 }}
                   />
                 ))}
                 {/* side streets */}
@@ -172,7 +187,7 @@ export function LocationMap({
                     strokeWidth="1.5"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
+                    transition={reduceMotion ? zero : { duration: 0.5, delay: 0.6 + index * 0.1 }}
                   />
                 ))}
                 {[15, 45, 55, 85].map((x, index) => (
@@ -186,7 +201,7 @@ export function LocationMap({
                     strokeWidth="1.5"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
+                    transition={reduceMotion ? zero : { duration: 0.5, delay: 0.7 + index * 0.1 }}
                   />
                 ))}
               </svg>
@@ -198,7 +213,7 @@ export function LocationMap({
                   style={building.style}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: building.delay }}
+                  transition={reduceMotion ? zero : { duration: 0.4, delay: building.delay }}
                 />
               ))}
 
@@ -206,7 +221,7 @@ export function LocationMap({
                 className="lm-pin"
                 initial={{ scale: 0, y: -20 }}
                 animate={{ scale: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.3 }}
+                transition={reduceMotion ? zero : { type: "spring", stiffness: 400, damping: 20, delay: 0.3 }}
               >
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="var(--lm-accent)" />
@@ -220,7 +235,7 @@ export function LocationMap({
         </AnimatePresence>
 
         {/* the grid only reads while the card is collapsed */}
-        <motion.div className="lm-grid" animate={{ opacity: isExpanded ? 0 : 0.05 }} transition={{ duration: 0.3 }}>
+        <motion.div className="lm-grid" animate={{ opacity: isExpanded ? 0 : 0.05 }} transition={reduceMotion ? zero : { duration: 0.3 }}>
           <svg width="100%" height="100%">
             <defs>
               <pattern id="lm-grid-pattern" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -233,7 +248,7 @@ export function LocationMap({
 
         <div className="lm-body">
           <div className="lm-top">
-            <motion.div className="lm-count" animate={{ opacity: isExpanded ? 0 : 1 }} transition={{ duration: 0.3 }}>
+            <motion.div className="lm-count" animate={{ opacity: isExpanded ? 0 : 1 }} transition={reduceMotion ? zero : { duration: 0.3 }}>
               {jobCount !== undefined && (
                 <>
                   <strong>{jobCount}</strong>
@@ -243,7 +258,7 @@ export function LocationMap({
             </motion.div>
 
             {live && (
-              <motion.div className="lm-live" animate={{ scale: isHovered ? 1.05 : 1 }} transition={{ duration: 0.2 }}>
+              <motion.div className="lm-live" animate={{ scale: isHovered ? 1.05 : 1 }} transition={reduceMotion ? zero : { duration: 0.2 }}>
                 <i />
                 <span>Live</span>
               </motion.div>
@@ -254,7 +269,7 @@ export function LocationMap({
             <motion.h3
               className="lm-title"
               animate={{ x: isHovered ? 4 : 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              transition={reduceMotion ? zero : { type: "spring", stiffness: 400, damping: 25 }}
               title={location}
             >
               {location}
@@ -269,7 +284,7 @@ export function LocationMap({
                   initial={{ opacity: 0, y: -10, height: 0 }}
                   animate={{ opacity: 1, y: 0, height: "auto" }}
                   exit={{ opacity: 0, y: -10, height: 0 }}
-                  transition={{ duration: 0.25 }}
+                  transition={reduceMotion ? zero : { duration: 0.25 }}
                 >
                   {coordinates}
                 </motion.p>
@@ -280,7 +295,7 @@ export function LocationMap({
               className="lm-rule"
               initial={{ scaleX: 0, originX: 0 }}
               animate={{ scaleX: isHovered || isExpanded ? 1 : 0.3 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
+              transition={reduceMotion ? zero : { duration: 0.4, ease: "easeOut" }}
             />
           </div>
         </div>
@@ -290,7 +305,7 @@ export function LocationMap({
         className="lm-hint"
         initial={{ opacity: 0 }}
         animate={{ opacity: isHovered && !isExpanded ? 1 : 0, y: isHovered ? 0 : 4 }}
-        transition={{ duration: 0.2 }}
+        transition={reduceMotion ? zero : { duration: 0.2 }}
         aria-hidden="true"
       >
         Click to expand
