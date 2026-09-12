@@ -62,20 +62,58 @@ describe("the top bar's Preferences panel", () => {
     }
   });
 
-  it("disables the two topics that have nothing to switch to, and says why", async () => {
+  it("disables the one topic that still has nothing to switch to, and says why", async () => {
     const panel = await openPreferences();
 
     // No dark palette exists in the product, so Light / Dark / System is inert
-    // on purpose and says so, rather than being a switch onto nothing.
+    // on purpose and says so, rather than being a switch onto nothing. Fonts used
+    // to be disabled beside it and is now live, which leaves this the only one.
     const mode = within(panel).getByRole("radiogroup", { name: "Theme Mode" });
     for (const option of ["Light", "Dark", "System"]) {
       expect(within(mode).getByRole("radio", { name: option })).toBeDisabled();
     }
     expect(within(panel).getByText(/no dark palette yet/i)).toBeInTheDocument();
 
-    // One font family ships.
-    expect(within(panel).getByLabelText("Fonts")).toBeDisabled();
-    expect(within(panel).getByText(/One family ships today/i)).toBeInTheDocument();
+    expect(within(panel).getByLabelText("Fonts")).toBeEnabled();
+  });
+
+  it("offers the eighteen fonts, grouped, and sets the whole product to the chosen one", async () => {
+    const panel = await openPreferences();
+    const picker = within(panel).getByLabelText("Fonts") as HTMLSelectElement;
+
+    // Every name from the reference, in its order. "Geist Pixel Square" is the
+    // recording's label for Geist Pixel's square element-shape axis.
+    expect([...picker.options].map((option) => option.textContent)).toEqual([
+      "Geist",
+      "Inter",
+      "Noto Sans",
+      "Nunito Sans",
+      "Figtree",
+      "Roboto",
+      "Raleway",
+      "DM Sans",
+      "Public Sans",
+      "Outfit",
+      "Geist Mono",
+      "Geist Pixel Square",
+      "JetBrains Mono",
+      "Noto Serif",
+      "Roboto Slab",
+      "Merriweather",
+      "Lora",
+      "Playfair Display"
+    ]);
+    // Grouped the way the recording groups them.
+    expect([...picker.querySelectorAll("optgroup")].map((group) => group.label)).toEqual(["Sans", "Mono", "Serif"]);
+    // Each option is set in its own face, which is what makes the list choosable by eye.
+    const figtree = [...picker.options].find((option) => option.textContent === "Figtree");
+    expect(figtree?.style.fontFamily).toContain("Figtree");
+
+    fireEvent.change(picker, { target: { value: "playfair-display" } });
+    await waitFor(() => expect(shell().dataset.bfFont).toBe("playfair-display"));
+    // The face is fetched, rather than merely named in a stack that falls back.
+    const link = document.getElementById("bf-font-active") as HTMLLinkElement | null;
+    expect(link?.href).toContain("Playfair+Display");
   });
 
   it("moves the shell for each of the four live layout choices", async () => {

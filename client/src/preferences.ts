@@ -29,6 +29,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type ThemePreset = "default" | "brutalist" | "soft-pop" | "tangerine";
+export type FontId =
+  | "geist"
+  | "inter"
+  | "noto-sans"
+  | "nunito-sans"
+  | "figtree"
+  | "roboto"
+  | "raleway"
+  | "dm-sans"
+  | "public-sans"
+  | "outfit"
+  | "geist-mono"
+  | "geist-pixel"
+  | "jetbrains-mono"
+  | "noto-serif"
+  | "roboto-slab"
+  | "merriweather"
+  | "lora"
+  | "playfair-display";
 export type ThemeMode = "light" | "dark" | "system";
 export type PageLayout = "centered" | "full";
 export type NavbarBehavior = "sticky" | "scroll";
@@ -37,8 +56,8 @@ export type SidebarCollapse = "icon" | "offcanvas";
 
 export type AppPreferences = {
   preset: ThemePreset;
-  /** Locked: one family ships. Kept in the model so the panel can name it. */
-  font: "inter";
+  /** The typeface the whole product is set in. */
+  font: FontId;
   /** Locked: there is no dark palette to switch to. */
   mode: ThemeMode;
   layout: PageLayout;
@@ -85,8 +104,59 @@ export const THEME_PRESETS: Array<{ id: ThemePreset; label: string; dot: string 
 /** The picker's swatch for one theme. */
 export const themeDot = (id: ThemePreset): string => THEME_PRESETS.find((theme) => theme.id === id)?.dot ?? "#1c1c1a";
 
-/** The one font that ships, named for the panel rather than hidden from it. */
-export const FONT_OPTIONS: Array<{ id: AppPreferences["font"]; label: string }> = [{ id: "inter", label: "Inter" }];
+/* ── the fonts ───────────────────────────────────────────────────────────────
+   The eighteen from the reference recording, in its order and its grouping.
+
+   `family` is the CSS family name and `query` is its Google Fonts request, and
+   the two differ in exactly one place: the recording lists "Geist Pixel Square",
+   which is not a family. Google Fonts publishes "Geist Pixel" with a custom ELSH
+   axis (element shape, 0-100, default 0) and the square pixel is that axis at 0 —
+   so the label follows the recording and the request asks for the axis. Checked
+   against the live catalogue rather than assumed: 17 of the 18 names resolve
+   directly, and that one resolves through the axis.
+
+   `stack` is what actually ships in the token, so a face that has not downloaded
+   yet, or fails to, falls back inside its own genre instead of to a default serif. */
+export type FontGroup = "sans" | "mono" | "serif";
+
+export type FontChoice = { id: FontId; label: string; family: string; query: string; group: FontGroup };
+
+const SANS_FALLBACK = 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif';
+const MONO_FALLBACK = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+const SERIF_FALLBACK = 'Georgia, "Times New Roman", Times, serif';
+
+export const FONT_OPTIONS: FontChoice[] = [
+  { id: "geist", label: "Geist", family: "Geist", query: "Geist:wght@400..700", group: "sans" },
+  { id: "inter", label: "Inter", family: "Inter", query: "Inter:wght@400..700", group: "sans" },
+  { id: "noto-sans", label: "Noto Sans", family: "Noto Sans", query: "Noto+Sans:wght@400..700", group: "sans" },
+  { id: "nunito-sans", label: "Nunito Sans", family: "Nunito Sans", query: "Nunito+Sans:wght@400..700", group: "sans" },
+  { id: "figtree", label: "Figtree", family: "Figtree", query: "Figtree:wght@400..700", group: "sans" },
+  { id: "roboto", label: "Roboto", family: "Roboto", query: "Roboto:wght@400..700", group: "sans" },
+  { id: "raleway", label: "Raleway", family: "Raleway", query: "Raleway:wght@400..700", group: "sans" },
+  { id: "dm-sans", label: "DM Sans", family: "DM Sans", query: "DM+Sans:wght@400..700", group: "sans" },
+  { id: "public-sans", label: "Public Sans", family: "Public Sans", query: "Public+Sans:wght@400..700", group: "sans" },
+  { id: "outfit", label: "Outfit", family: "Outfit", query: "Outfit:wght@400..700", group: "sans" },
+  { id: "geist-mono", label: "Geist Mono", family: "Geist Mono", query: "Geist+Mono:wght@400..700", group: "mono" },
+  { id: "geist-pixel", label: "Geist Pixel Square", family: "Geist Pixel", query: "Geist+Pixel:ELSH@0", group: "mono" },
+  { id: "jetbrains-mono", label: "JetBrains Mono", family: "JetBrains Mono", query: "JetBrains+Mono:wght@400..700", group: "mono" },
+  { id: "noto-serif", label: "Noto Serif", family: "Noto Serif", query: "Noto+Serif:wght@400..700", group: "serif" },
+  { id: "roboto-slab", label: "Roboto Slab", family: "Roboto Slab", query: "Roboto+Slab:wght@400..700", group: "serif" },
+  { id: "merriweather", label: "Merriweather", family: "Merriweather", query: "Merriweather:wght@400..700", group: "serif" },
+  { id: "lora", label: "Lora", family: "Lora", query: "Lora:wght@400..700", group: "serif" },
+  { id: "playfair-display", label: "Playfair Display", family: "Playfair Display", query: "Playfair+Display:wght@400..700", group: "serif" }
+];
+
+const FALLBACK: Record<FontGroup, string> = { sans: SANS_FALLBACK, mono: MONO_FALLBACK, serif: SERIF_FALLBACK };
+
+export const fontById = (id: FontId): FontChoice => FONT_OPTIONS.find((font) => font.id === id) ?? FONT_OPTIONS[1];
+
+/** The value the token carries: the face, then the rest of its own genre. */
+export const fontStack = (id: FontId): string => {
+  const font = fontById(id);
+  return `"${font.family}", ${FALLBACK[font.group]}`;
+};
+
+export const FONT_GROUP_LABELS: Record<FontGroup, string> = { sans: "Sans", mono: "Mono", serif: "Serif" };
 
 const isOneOf = <T extends string>(value: unknown, allowed: readonly T[]): value is T =>
   typeof value === "string" && (allowed as readonly string[]).includes(value);
@@ -114,11 +184,64 @@ export function parsePreferences(raw: unknown): AppPreferences {
 export function preferenceAttributes(preferences: AppPreferences): Record<string, string> {
   return {
     "data-bf-theme": preferences.preset,
+    "data-bf-font": preferences.font,
     "data-bf-layout": preferences.layout,
     "data-bf-navbar": preferences.navbar,
     "data-bf-sidebar": preferences.sidebar,
     "data-bf-collapse": preferences.collapse
   };
+}
+
+/* ── loading the faces ───────────────────────────────────────────────────────
+   index.html preconnects to Google Fonts and never linked a stylesheet, so no
+   webfont was ever fetched: "Inter" in every stack was decoration and the
+   product has been rendering in the system UI face all along. These two links
+   are what make the choice real.
+
+   TWO REQUESTS, FOR TWO DIFFERENT JOBS.
+
+   The SELECTED face is requested in full, at the weight range the product uses
+   (400-700). One family, under a kilobyte of CSS.
+
+   The PICKER needs all eighteen at once, because the reference renders each name
+   in its own typeface and that is the only way to choose one by eye. Eighteen
+   full families would be a heavy download for a dropdown, so they are requested
+   with `text=`, which returns only the glyphs those eighteen NAMES need — one
+   request, about 5KB of CSS for all of them. The subset is loaded once, lazily,
+   the first time the panel opens rather than on boot.
+   ------------------------------------------------------------------------- */
+
+const FONT_LINK_ID = "bf-font-active";
+const FONT_PREVIEW_LINK_ID = "bf-font-preview";
+
+/** Swap the one <link> that carries the chosen face. */
+export function loadFont(id: FontId): void {
+  if (typeof document === "undefined") return;
+  const href = `https://fonts.googleapis.com/css2?family=${fontById(id).query}&display=swap`;
+  let link = document.getElementById(FONT_LINK_ID) as HTMLLinkElement | null;
+  if (!link) {
+    link = document.createElement("link");
+    link.id = FONT_LINK_ID;
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }
+  if (link.href !== href) link.href = href;
+}
+
+/**
+ * The eighteen faces at name-glyph subset, for the picker's previews. Loaded at
+ * most once: the link's presence is the guard.
+ */
+export function loadFontPreviews(): void {
+  if (typeof document === "undefined" || document.getElementById(FONT_PREVIEW_LINK_ID)) return;
+  // only the characters the eighteen names are spelled with
+  const glyphs = [...new Set(FONT_OPTIONS.map((font) => font.label).join(""))].join("");
+  const families = FONT_OPTIONS.map((font) => `family=${font.query.split(":")[0]}`).join("&");
+  const link = document.createElement("link");
+  link.id = FONT_PREVIEW_LINK_ID;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?${families}&text=${encodeURIComponent(glyphs)}&display=swap`;
+  document.head.appendChild(link);
 }
 
 /**
@@ -160,6 +283,12 @@ export function usePreferences(remote: string | undefined, storageKey: string, s
     if (touched.current) return;
     setPreferences(read());
   }, [read]);
+
+  // The chosen face is fetched as soon as it is known, and again whenever it
+  // changes. Nothing else in the app has to know that a font needs loading.
+  useEffect(() => {
+    loadFont(preferences.font);
+  }, [preferences.font]);
 
   // One save per burst: clicking through a segmented control is several changes
   // in a second, and each one should not be its own request.

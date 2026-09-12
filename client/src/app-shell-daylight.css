@@ -4125,3 +4125,148 @@
 .bf-shell .pref-select-dot {
   border-radius: 999px;
 }
+
+/* ============================================================================
+   28. THE EIGHTEEN FONTS
+   ============================================================================
+   Chosen from Fonts in the top bar's Preferences panel, carried on
+   `data-bf-font` on the shell, and applied to the WHOLE product.
+
+   WHAT WAS ACTUALLY WRONG. index.html preconnects to Google Fonts and never
+   linked a stylesheet, so "Inter" at the head of every stack in this codebase
+   has been decoration: no webfont was fetched and the product rendered in the
+   system UI face. Choosing a font now fetches it (see loadFont in
+   preferences.ts) and this section points the type at it.
+
+   ONE TOKEN, NOT EIGHTEEN BLOCKS PER SCOPE. Type here runs through SEVEN token
+   families -- --bf-font-sans, --cc-sans, --wx-sans, --hs-sans, --hsh-sans,
+   --hsx-sans -- and each is declared on its own page scope, so the same
+   descendant-shadows-ancestor problem the themes hit applies. Rather than write
+   eighteen fonts x seven tokens x sixteen scopes, 28a points every token at a
+   single `--bf-font-active`, and 28b is eighteen one-line rules that set it.
+   Adding a nineteenth font is one line.
+
+   --wx-serif IS INCLUDED, and that is a decision worth naming. It is a Palatino
+   stack used 131 times, so leaving it out would have left a third of the type in
+   a serif the reader did not choose and made the whole feature look half-applied
+   -- "the entire program" is the ask. The marketing scopes are deliberately
+   absent, exactly as in the themes: `.welcome-rx` and `.careers-apply-page` keep
+   their own typography because a workspace preference must not restyle the
+   public site.
+   ------------------------------------------------------------------------- */
+
+/* ---- 28a. the plumbing: every family follows one token ------------------- */
+.bf-shell,
+.bf-shell .dash-rx,
+.bf-shell .dash-rx.hs-home,
+.bf-shell .crew-rx,
+.bf-shell .proj-rx,
+.bf-shell .sched-rx,
+.bf-shell .settings-rx,
+.bf-shell .equip-rx,
+.bf-shell .field-rx,
+.bf-shell .mat-rx,
+.bf-shell .delayIQ-rx,
+.bf-shell .pdx,
+.bf-shell .acct-split,
+.bf-shell .hc-assistant,
+.bf-shell .hs-index,
+.bf-shell .lm-card,
+.bf-shell .gantt-menu {
+  --bf-font-sans: var(--bf-font-active);
+  --cc-sans: var(--bf-font-active);
+  --wx-sans: var(--bf-font-active);
+  --hs-sans: var(--bf-font-active);
+  --hsh-sans: var(--bf-font-active);
+  --hsx-sans: var(--bf-font-active);
+  --wx-serif: var(--bf-font-active);
+}
+
+/* The default, so the token always resolves even before a choice is made. */
+.bf-shell {
+  --bf-font-active: "Inter", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* And the type itself, on the shell.
+   Pointing the seven tokens at the choice is not enough on its own: styles.css
+   declares `font-family` as a LITERAL on `:root`, so every element that does not
+   name a family of its own inherits Inter from above the shell -- which was most
+   of the top bar and the rail. One declaration here hands the whole app subtree
+   the chosen face by inheritance.
+
+   Scoped to `.bf-shell.app-shell`, the shell DIV, and deliberately not to
+   `.bf-shell` alone. That class is also on document.body, so the loose form would
+   reach the marketing page, which renders outside the shell and keeps its own
+   typography. Portaled dialogs mount to the body and are outside this rule, but
+   they name `--cc-sans` and follow through 28a. */
+.bf-shell.app-shell {
+  font-family: var(--bf-font-active);
+}
+
+/* ---- 28b. the eighteen ------------------------------------------------- */
+.bf-shell[data-bf-font="geist"] {
+  --bf-font-active: "Geist", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="inter"] {
+  --bf-font-active: "Inter", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="noto-sans"] {
+  --bf-font-active: "Noto Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="nunito-sans"] {
+  --bf-font-active: "Nunito Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="figtree"] {
+  --bf-font-active: "Figtree", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="roboto"] {
+  --bf-font-active: "Roboto", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="raleway"] {
+  --bf-font-active: "Raleway", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="dm-sans"] {
+  --bf-font-active: "DM Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="public-sans"] {
+  --bf-font-active: "Public Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="outfit"] {
+  --bf-font-active: "Outfit", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.bf-shell[data-bf-font="geist-mono"] {
+  --bf-font-active: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.bf-shell[data-bf-font="geist-pixel"] {
+  --bf-font-active: "Geist Pixel", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.bf-shell[data-bf-font="jetbrains-mono"] {
+  --bf-font-active: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.bf-shell[data-bf-font="noto-serif"] {
+  --bf-font-active: "Noto Serif", Georgia, "Times New Roman", Times, serif;
+}
+.bf-shell[data-bf-font="roboto-slab"] {
+  --bf-font-active: "Roboto Slab", Georgia, "Times New Roman", Times, serif;
+}
+.bf-shell[data-bf-font="merriweather"] {
+  --bf-font-active: "Merriweather", Georgia, "Times New Roman", Times, serif;
+}
+.bf-shell[data-bf-font="lora"] {
+  --bf-font-active: "Lora", Georgia, "Times New Roman", Times, serif;
+}
+.bf-shell[data-bf-font="playfair-display"] {
+  --bf-font-active: "Playfair Display", Georgia, "Times New Roman", Times, serif;
+}
+
+/* ---- 28c. the picker's own control ------------------------------------- */
+/* The "Aa" sample sits where the theme swatch sits on the control above it, and
+   shows the chosen face rather than naming it twice. */
+.bf-shell .pref-select-face {
+  flex: none;
+  min-width: 20px;
+  font-size: var(--bf-app-row);
+  font-weight: 650;
+  color: #1c1c1a;
+  text-align: center;
+}

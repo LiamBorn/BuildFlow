@@ -14,12 +14,17 @@
    ========================================================================= */
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { Check, ChevronDown, Lock, RotateCcw, Settings } from "lucide-react";
+import { Check, ChevronDown, RotateCcw, Settings } from "lucide-react";
 import {
+  FONT_GROUP_LABELS,
   FONT_OPTIONS,
   THEME_PRESETS,
+  fontStack,
+  loadFontPreviews,
   themeDot,
   type AppPreferences,
+  type FontGroup,
+  type FontId,
   type NavbarBehavior,
   type PageLayout,
   type SidebarCollapse,
@@ -127,6 +132,12 @@ export function PreferencesMenu({
   const presetId = `${ids}-preset`;
   const fontId = `${ids}-font`;
 
+  // The eighteen preview faces are only needed once this panel exists, so they
+  // are fetched here rather than costing every page load a request.
+  useEffect(() => {
+    loadFontPreviews();
+  }, []);
+
   // Escape closes it, and so does a click outside. Both are what the account
   // menu beside it already does, so the two dropdowns behave the same way.
   useEffect(() => {
@@ -167,14 +178,23 @@ export function PreferencesMenu({
         </div>
       </Field>
 
-      <Field label="Fonts" htmlFor={fontId} note="One family ships today, so there is nothing to choose between yet.">
-        <div className="pref-select" data-disabled="true">
-          <Lock size={13} aria-hidden="true" />
-          <select id={fontId} value={preferences.font} disabled>
-            {FONT_OPTIONS.map((font) => (
-              <option key={font.id} value={font.id}>
-                {font.label}
-              </option>
+      <Field label="Fonts" htmlFor={fontId}>
+        <div className="pref-select">
+          <span className="pref-select-face" aria-hidden="true">
+            Aa
+          </span>
+          <select id={fontId} value={preferences.font} onChange={(event) => onUpdate({ font: event.target.value as FontId })}>
+            {(["sans", "mono", "serif"] as FontGroup[]).map((group) => (
+              <optgroup key={group} label={FONT_GROUP_LABELS[group]}>
+                {FONT_OPTIONS.filter((font) => font.group === group).map((font) => (
+                  /* Each name is set in its own face, the way the reference's list is —
+                     which is the only way to pick a typeface by looking at it. The faces
+                     behind these come from a glyph subset covering just these names. */
+                  <option key={font.id} value={font.id} style={{ fontFamily: fontStack(font.id) }}>
+                    {font.label}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           <ChevronDown size={16} aria-hidden="true" />
