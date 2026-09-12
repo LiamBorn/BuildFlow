@@ -3946,23 +3946,60 @@
 }
 
 /* ---- 26i. Sidebar Collapse Mode --------------------------------------- */
-/* Icon is the rail as it ships: 56px of glyphs, always there. OffCanvas gives
-   that width back to the page and leaves a sliver to bring the rail out, which
-   `:focus-within` also does, so it is reachable by keyboard and not only by
-   pointer. */
+/* Icon is the rail as it ships: 56px of glyphs, always there. OffCanvas hands
+   that width back to the page and leaves a strip to bring the rail out, by hover
+   or by `:focus-within`, so it is reachable without a pointer.
+
+   THIS RULE IS AUTHORITATIVE ABOUT POSITION, and it has to be, because three
+   things fought over it:
+
+   The sliver changed width with Sidebar Style. Floating's `margin: 14px 12px`
+   survived into off-canvas, so the strip was 24px and the rail started 14px
+   lower — a different target depending on an unrelated setting. Margins are
+   zeroed here.
+
+   The rail hung below a bar that had gone. With Navbar Behavior on Scroll the bar
+   scrolls away, but this rule's `top: var(--hs-topbar-h)` beat the navbar rule on
+   source order and pinned the rail 56px down for ever. It now sits at `top: 0`
+   with the FULL height and a z-index BELOW the bar's 40 — so at rest the opaque
+   bar covers its top strip and the rail appears to begin under it, and once the
+   bar scrolls off the rail simply owns the whole side. One rule, correct in both
+   navbar modes, and no specificity contest.
+
+   And a revealed rail lies ON the page, so it needs to read that way: a shadow
+   when it comes out, and an edge on the strip so there is something to aim at.
+   A 12px strip with no marking was a target you had to know about. */
 .bf-shell[data-bf-collapse="offcanvas"] .hs-body {
-  grid-template-columns: 12px minmax(0, 1fr);
+  grid-template-columns: var(--bf-rail-sliver) minmax(0, 1fr);
 }
+
+.bf-shell {
+  --bf-rail-sliver: 14px;
+}
+
 .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
   position: fixed;
-  top: var(--hs-topbar-h);
+  top: 0;
   left: 0;
-  z-index: 45;
-  transform: translateX(calc(-100% + 12px));
+  z-index: 35;
+  height: 100vh;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+  transform: translateX(calc(-100% + var(--bf-rail-sliver)));
+  /* The parked strip's own marker, as an INSET SHADOW on the rail's right edge --
+     which is the only part of it the strip shows. The obvious build is a ::before
+     with `content`, faded out on hover, and this sheet's guard refused it: that
+     needs three separate mechanisms which can remove content for one decorative
+     line. The hover state below simply REPLACES this with the lift, so nothing is
+     ever hidden and there is one declaration instead of three rules. */
+  box-shadow: inset -2px 0 0 var(--bf-rail-fill);
 }
+
 .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail:hover,
 .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail:focus-within {
   transform: none;
+  box-shadow: var(--bf-shadow-float);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3975,7 +4012,14 @@
   }
   .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
     position: sticky;
+    top: var(--hs-topbar-h);
+    height: calc(100vh - var(--hs-topbar-h));
+    z-index: 30;
     transform: none;
+  }
+  /* The strip's marker has no strip to mark once the rail is back in the layout. */
+  .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
+    box-shadow: none;
   }
 }
 

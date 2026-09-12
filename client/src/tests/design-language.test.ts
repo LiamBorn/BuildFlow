@@ -175,6 +175,48 @@ describe("the ink ladder holds against every ground the design uses", () => {
     expect(missing).toEqual([]);
   });
 
+  it("lets OffCanvas win the three contests it has to win", () => {
+    /* OffCanvas parks the rail off the side and brings it back on hover or focus. Three
+       other rules had a claim on the same properties, and it lost all three before this:
+
+       SIDEBAR STYLE. Floating's `margin: 14px 12px` survived into off-canvas, so the strip
+       you aim at was 24px wide and started 14px lower than in the other styles — a moving
+       target that depended on an unrelated setting. Measured; margins are zeroed here.
+
+       NAVBAR BEHAVIOR. This rule's `top: var(--hs-topbar-h)` beat the navbar rule on source
+       order, so with the bar set to scroll away the rail stayed pinned 56px down for ever.
+       It now sits at `top: 0` with the full height and a z-index UNDER the bar's 40, so the
+       opaque bar covers its top strip at rest and the rail owns the whole side once the bar
+       leaves. One rule, right in both navbar modes, no specificity contest to lose.
+
+       AND THE GUARD ITSELF, which is the one worth keeping. The parked strip needs a visible
+       marker, and the obvious build — a ::before with `content`, faded out on hover — needs
+       three mechanisms that can remove content for one decorative line. It is an inset
+       shadow on the rail instead, which the hover state REPLACES with the lift, so nothing
+       is ever hidden. That is the second time this sheet's content rule has produced a
+       simpler design than the one I reached for. */
+    const css = read(SHEET);
+    const rule = css.match(/\.bf-shell\[data-bf-collapse="offcanvas"\]\s+\.sidebar\.hs-rail\s*\{([^}]*)\}/);
+    expect(rule, "OffCanvas repositions the rail").not.toBeNull();
+    const body = norm(rule![1]);
+
+    expect(body, "a Sidebar Style margin must not change the strip").toMatch(/margin:\s*0/);
+    expect(body, "the rail must not hang below a bar that has scrolled away").toMatch(/top:\s*0/);
+    expect(body).toMatch(/height:\s*100vh/);
+    expect(body, "the parked strip carries its own marker").toMatch(/box-shadow:\s*inset/);
+
+    // under the bar, so the bar hides the rail's top strip instead of the rail covering it
+    const railZ = Number(body.match(/z-index:\s*(\d+)/)?.[1]);
+    const barRule = css.match(/\.hs-shell\.bf-shell\s+\.topbar\.hs-topbar\s*\{([^}]*)\}/);
+    const barZ = Number(norm(barRule?.[1] ?? "").match(/z-index:\s*(\d+)/)?.[1] ?? 40);
+    expect(railZ, "the off-canvas rail sits under the top bar").toBeLessThan(barZ || 40);
+
+    // and the strip's width is one token, so the column and the translate cannot disagree
+    const column = css.match(/\.bf-shell\[data-bf-collapse="offcanvas"\]\s+\.hs-body\s*\{([^}]*)\}/);
+    expect(norm(column![1])).toContain("var(--bf-rail-sliver)");
+    expect(body).toContain("var(--bf-rail-sliver)");
+  });
+
   it("widens the rail's own grid column for every style that insets it", () => {
     /* `.hs-body`'s first column is `var(--hs-rail-w)` -- 56px, exactly the rail -- so a
        margin on the rail moves it right and pushes its far edge INTO the page. Measured
