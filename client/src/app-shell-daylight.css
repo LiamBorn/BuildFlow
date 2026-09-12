@@ -3872,8 +3872,28 @@
 }
 
 /* ---- 26g. Navbar Behavior --------------------------------------------- */
+/* Sticky is the bar as it ships: pinned at the top through the whole page.
+   Scroll lets it leave with the content. Verified by scrolling rather than by
+   reading `position`: at 500px the sticky bar is still at 0 and the scrolling
+   one is at -500.
+
+   `relative`, NOT `static`. Both scroll away, but `static` also drops the bar's
+   z-index -- z-index is ignored on an unpositioned box -- and the bar contains
+   three dropdowns that have to paint above the page and above the rail's own
+   z-index 30. `relative` keeps the stacking and still moves with the content. */
 .bf-shell[data-bf-navbar="scroll"] .topbar.hs-topbar {
-  position: static;
+  position: relative;
+}
+
+/* And the rail has to follow, which is the part that actually made Scroll mode
+   look broken. The rail sticks at `top: var(--hs-topbar-h)` because a sticky bar
+   occupies that strip -- so with the bar gone it held a 56px empty gap at the top
+   and sat 56px short of the viewport bottom. Measured at a 600px scroll: bar at
+   -600, rail still starting at 56 in an 834px viewport. With the bar out of the
+   way the rail owns the full height. */
+.bf-shell[data-bf-navbar="scroll"] .sidebar.hs-rail {
+  top: 0;
+  height: 100vh;
 }
 
 /* ---- 26h. Sidebar Style ----------------------------------------------- */

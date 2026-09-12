@@ -175,6 +175,28 @@ describe("the ink ladder holds against every ground the design uses", () => {
     expect(missing).toEqual([]);
   });
 
+  it("makes Scroll mode move the rail as well as the bar, and keep the bar's stacking", () => {
+    /* Two halves, and the second is the one that made Scroll mode look broken. The rail
+       sticks at `top: var(--hs-topbar-h)` because a sticky bar occupies that strip, so with
+       the bar scrolling away the rail held a 56px empty gap at the top and sat 56px short of
+       the viewport. Measured at a 600px scroll before the fix: bar at -600, rail still
+       starting at 56.
+
+       And the bar must be `relative`, not `static`: both scroll away, but an unpositioned box
+       ignores z-index, and the bar carries three dropdowns that have to paint above the rail's
+       z-index 30. Verified in a browser by hit-testing the open panel, which lands inside it. */
+    const css = read(SHEET);
+    const bar = css.match(/\.bf-shell\[data-bf-navbar="scroll"\]\s+\.topbar\.hs-topbar\s*\{([^}]*)\}/);
+    expect(bar, "Scroll mode repositions the bar").not.toBeNull();
+    expect(norm(bar![1]), "static would drop the bar's z-index").toMatch(/position:\s*relative/);
+    expect(norm(bar![1])).not.toMatch(/position:\s*static/);
+
+    const rail = css.match(/\.bf-shell\[data-bf-navbar="scroll"\]\s+\.sidebar\.hs-rail\s*\{([^}]*)\}/);
+    expect(rail, "Scroll mode moves the rail up with the bar").not.toBeNull();
+    expect(norm(rail![1])).toMatch(/top:\s*0/);
+    expect(norm(rail![1])).toMatch(/height:\s*100vh/);
+  });
+
   it("makes Full Width release both the measure and the gutter", () => {
     /* Releasing only the 880px cap made the two Page Layout states differ by the window's
        width minus 880 -- dramatic on a wide screen, about ten pixels at the width the
