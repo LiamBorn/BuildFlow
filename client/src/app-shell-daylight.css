@@ -35,23 +35,23 @@
 /* The Welcome Page's nav recipe verbatim — rgba(245,246,250,0.82) over a blur —
    at 56px instead of 64px. A hairline, never a shadow. */
 .hs-shell.bf-shell .topbar.hs-topbar {
-  background: rgba(245, 246, 250, 0.82);
+  background: rgba(var(--bf-surface-rgb), 0.82);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid rgba(28, 28, 26, 0.07);
+  border-bottom: 1px solid rgba(var(--bf-line-rgb), 0.07);
   box-shadow: none;
   color: var(--bf-ink, #1c1c1a);
 }
 
 /* ---- brand --------------------------------------------------------------- */
 .hs-shell.bf-shell .hs-topbar-brand {
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-brand);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 .hs-shell.bf-shell .hs-topbar-brand:hover {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
 }
 
 /* ---- search: the one search-shaped grammar on the Welcome Page is a pill --
@@ -61,8 +61,8 @@
    dangerous element in the shell to restructure. Restyled only. */
 .hs-shell.bf-shell .topbar .search-box {
   border-radius: 999px;
-  background: #ffffff;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  background: var(--bf-surface);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   box-shadow: none;
   transition:
     border-color var(--bf-dur-hover) ease,
@@ -71,24 +71,24 @@
 .hs-shell.bf-shell .topbar .search-box:focus-within {
   border-color: var(--bf-accent);
   box-shadow: var(--bf-focus-ring);
-  background: #ffffff;
+  background: var(--bf-surface);
 }
 .hs-shell.bf-shell .topbar .search-box input {
   font-size: var(--bf-app-row-strong);
   font-weight: 500;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .hs-shell.bf-shell .topbar .search-box input::placeholder {
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .hs-shell.bf-shell .topbar .search-box svg {
-  color: #8a877e;
+  color: var(--bf-ink-faint);
 }
 .hs-shell.bf-shell .topbar .search-box kbd {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
   border: 0;
   border-radius: 6px;
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-micro);
   font-weight: 600;
 }
@@ -98,7 +98,7 @@
   border-radius: var(--bf-radius-control);
   border-color: transparent;
   background: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   box-shadow: none;
   transition:
     background var(--bf-dur-hover) ease,
@@ -107,8 +107,8 @@
 }
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:hover,
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button[aria-expanded="true"] {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
   border-color: transparent;
   transform: none;
 }
@@ -126,7 +126,7 @@
   background: linear-gradient(96deg, #4285f4 0%, #9b72cb 54%, #d96570 100%);
   border: 0;
   border-radius: 999px;
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: none;
 }
 .hs-shell.bf-shell .topbar .hs-ai-button:hover {
@@ -148,7 +148,7 @@
 .hs-shell.bf-shell .topbar.hs-topbar .bubble,
 .hs-shell.bf-shell .topbar.hs-topbar .hs-bookmarks-count {
   background: var(--bf-accent-fill);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   border-radius: 999px;
   font-size: var(--bf-app-micro);
   font-weight: 700;
@@ -157,9 +157,9 @@
 /* ---- verify-email pill: hover INVERTS (hover move 2) ------------------- */
 .hs-shell.bf-shell .topbar .topbar-verify {
   border-radius: 999px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-meta);
   font-weight: 600;
   box-shadow: none;
@@ -169,49 +169,49 @@
     border-color var(--bf-dur-hover) ease;
 }
 .hs-shell.bf-shell .topbar .topbar-verify:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 
 /* ---- divider + account -------------------------------------------------- */
 .hs-shell.bf-shell .hs-topbar-divider {
-  background: rgba(28, 28, 26, 0.13);
+  background: rgba(var(--bf-line-rgb), 0.13);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-avatar {
   background: var(--bf-accent-fill);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   border-radius: 50%;
   box-shadow: none;
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-user-button {
-  color: #1c1c1a;
+  color: var(--bf-ink);
   border-radius: var(--bf-radius-control);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-user-button:hover {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-user-button svg {
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ============================ 2. the rail ================================
    Opaque, not translucent: the flyout needs solid ground under it. */
 .hs-shell.bf-shell .sidebar.hs-rail {
-  background: #f5f6fa;
-  border-right: 1px solid rgba(28, 28, 26, 0.07);
+  background: var(--bf-ground);
+  border-right: 1px solid rgba(var(--bf-line-rgb), 0.07);
   box-shadow: none;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .hs-shell.bf-shell .sidebar.hs-rail::after,
 .hs-shell.bf-shell .sidebar.hs-rail::before {
-  background: rgba(28, 28, 26, 0.07);
+  background: rgba(var(--bf-line-rgb), 0.07);
 }
 
 .hs-shell.bf-shell .hs-rail-btn {
   border-radius: var(--bf-radius-control);
   background: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   box-shadow: none;
   transition:
     background var(--bf-dur-hover) ease,
@@ -220,16 +220,16 @@
 }
 .hs-shell.bf-shell .hs-rail-btn:hover,
 .hs-shell.bf-shell .hs-rail-slot.open .hs-rail-btn {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
 }
 /* the rail's focus affordance was `outline: 0` and nothing else — a recorded
    weakness. It now matches the top bar. */
 .hs-shell.bf-shell .hs-rail-btn:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
   outline-offset: 2px;
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
 }
 .hs-shell.bf-shell .hs-rail-btn.active {
   background: var(--bf-rail-fill);
@@ -282,8 +282,8 @@
 
 /* ============================ 3. the rail flyout ========================= */
 .hs-shell.bf-shell .hs-flyout {
-  background: #ffffff;
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  background: var(--bf-surface);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-float);
   animation: hs-flyout-in var(--bf-dur-panel) var(--bf-ease) both;
@@ -293,11 +293,11 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .hs-shell.bf-shell .hs-flyout-item {
   border-radius: 10px;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row-strong);
   font-weight: 500;
   transition:
@@ -306,12 +306,12 @@
     transform var(--bf-dur-hover) var(--bf-ease);
 }
 .hs-shell.bf-shell .hs-flyout-item svg {
-  color: #8a877e;
+  color: var(--bf-ink-faint);
 }
 /* hover move 3: the menu-row nudge */
 .hs-shell.bf-shell .hs-flyout-item:hover {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
   transform: translateX(var(--bf-slide));
 }
 .hs-shell.bf-shell .hs-flyout-item:focus-visible {
@@ -340,7 +340,7 @@
   color: #6d28d9;
 }
 .hs-shell.bf-shell .hs-flyout-star {
-  color: #8a877e;
+  color: var(--bf-ink-faint);
   transition:
     opacity var(--bf-dur-press) var(--bf-ease),
     color var(--bf-dur-press) var(--bf-ease);
@@ -361,18 +361,18 @@
 }
 /* the add-on tooltip: navy bubble becomes an ink pill */
 .hs-shell.bf-shell .hs-flyout-tip {
-  background: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  color: var(--bf-on-accent);
   border: 0;
   border-radius: var(--bf-radius-control);
   box-shadow: var(--bf-shadow-pill);
 }
 .hs-shell.bf-shell .hs-flyout-tip p {
   max-width: var(--bf-app-prose);
-  color: #fdfcf9;
+  color: var(--bf-on-accent);
 }
 .hs-shell.bf-shell .hs-flyout-tip::before {
-  background: #1c1c1a;
+  background: var(--bf-ink);
 }
 .hs-shell.bf-shell .hs-flyout-upgrade {
   color: var(--bf-accent);
@@ -383,11 +383,11 @@
    these three rules the Schedule flyout would show a navy-era block sitting
    inside a white card. */
 .hs-shell.bf-shell .hs-flyout .hs-flyout-views {
-  border-top: 1px solid rgba(28, 28, 26, 0.07);
+  border-top: 1px solid rgba(var(--bf-line-rgb), 0.07);
 }
 .hs-shell.bf-shell .hs-flyout .hs-flyout-view {
   border-radius: 10px;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row-strong);
   font-weight: 500;
   transition:
@@ -395,11 +395,11 @@
     transform var(--bf-dur-hover) var(--bf-ease);
 }
 .hs-shell.bf-shell .hs-flyout .hs-flyout-view:hover {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
   transform: translateX(var(--bf-slide));
 }
 .hs-shell.bf-shell .hs-flyout .hs-flyout-view em {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-eyebrow);
   font-style: normal;
 }
@@ -411,8 +411,8 @@
 .hs-shell.bf-shell .hs-bookmarks-menu,
 .hs-shell.bf-shell .notifications-panel,
 .hs-shell.bf-shell .reports-account-menu {
-  background: #ffffff;
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  background: var(--bf-surface);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-float);
 }
@@ -433,14 +433,14 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .hs-shell.bf-shell .hs-menu-item,
 .hs-shell.bf-shell .hs-bookmark-item,
 .hs-shell.bf-shell .reports-account-menu button,
 .hs-shell.bf-shell .notifications-panel li > button {
   border-radius: 10px;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row-strong);
   font-weight: 500;
   transition:
@@ -451,12 +451,12 @@
 .hs-shell.bf-shell .hs-bookmark-item:hover,
 .hs-shell.bf-shell .reports-account-menu button:hover,
 .hs-shell.bf-shell .notifications-panel li > button:hover {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
   transform: translateX(var(--bf-slide));
 }
 .hs-shell.bf-shell .hs-menu-item svg,
 .hs-shell.bf-shell .reports-account-menu button svg {
-  color: #8a877e;
+  color: var(--bf-ink-faint);
 }
 .hs-shell.bf-shell .hs-menu-tag {
   border-radius: 999px;
@@ -473,12 +473,12 @@
 .hs-shell.bf-shell .hs-bookmarks-empty,
 .hs-shell.bf-shell .hs-bookmarks-empty p {
   max-width: var(--bf-app-prose);
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-meta);
 }
 .hs-shell.bf-shell .hs-bookmark-hub,
 .hs-shell.bf-shell .hs-bookmark-item em {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-eyebrow);
   font-style: normal;
 }
@@ -497,18 +497,18 @@
 
 /* ---- notification rows -------------------------------------------------- */
 .hs-shell.bf-shell .notifications-panel li strong {
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row-strong);
   font-weight: 600;
 }
 .hs-shell.bf-shell .notifications-panel li p {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-meta);
   font-weight: 500;
   max-width: var(--bf-app-prose);
 }
 .hs-shell.bf-shell .notifications-panel li time {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-eyebrow);
 }
 .hs-shell.bf-shell .notifications-panel li .notification-icon,
@@ -549,8 +549,8 @@
   animation: bf-fade var(--bf-dur-press) var(--bf-ease) both;
 }
 .hs-shell.bf-shell .cmdk {
-  background: #ffffff;
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  background: var(--bf-surface);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-card);
   /* the stage step: the palette is the one full-page modal object in the shell */
   box-shadow: var(--bf-shadow-stage);
@@ -559,21 +559,21 @@
 .hs-shell.bf-shell .cmdk-input {
   font-size: var(--bf-type-body);
   font-weight: 500;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .hs-shell.bf-shell .cmdk-input::placeholder {
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .hs-shell.bf-shell .cmdk-group {
   font-size: var(--bf-app-eyebrow);
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .hs-shell.bf-shell .cmdk-item {
   border-radius: 10px;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row-strong);
   transition:
     background var(--bf-dur-hover) ease,
@@ -592,22 +592,22 @@
   color: inherit;
 }
 .hs-shell.bf-shell .cmdk-empty {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-row);
   max-width: var(--bf-app-prose);
 }
 .hs-shell.bf-shell .cmdk-hint kbd,
 .hs-shell.bf-shell .cmdk-foot kbd {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
   border: 0;
   border-radius: 6px;
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-micro);
 }
 .hs-shell.bf-shell .cmdk-foot {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-eyebrow);
-  border-top: 1px solid rgba(28, 28, 26, 0.07);
+  border-top: 1px solid rgba(var(--bf-line-rgb), 0.07);
 }
 
 /* ============================ 6. reduced motion ==========================
@@ -660,12 +660,12 @@
   letter-spacing: var(--bf-app-title-track);
   line-height: var(--bf-app-title-lead);
   /* was #14203a — the third ink the language does not have */
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .hs-index .hs-index-sub,
 .bf-shell .hs-index .hs-index-lede {
   font-size: var(--bf-app-lede);
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: var(--bf-app-prose);
 }
 
@@ -693,7 +693,7 @@
    The rhythm story on a dense page is this one gap. Everything else about
    spacing stays where it is. */
 .bf-shell .hs-index .hs-index-card {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
   padding: 20px 22px 18px;
@@ -708,7 +708,7 @@
   font-size: var(--bf-app-section);
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   margin: 0 0 12px;
 }
 
@@ -716,7 +716,7 @@
    The label becomes the Welcome Page's stat label, at the same size it uses. */
 .bf-shell .hs-index .hs-kpi {
   border-radius: var(--bf-radius-panel);
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   box-shadow: var(--bf-shadow-card);
 }
 .bf-shell .hs-index .hs-kpi-label {
@@ -724,18 +724,18 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .hs-index .hs-kpi-value {
   font-size: var(--bf-app-figure);
   font-weight: 700;
   letter-spacing: var(--bf-app-figure-track);
   font-variant-numeric: tabular-nums;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .hs-index .hs-kpi-note {
   font-size: var(--bf-app-meta);
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .hs-index .hs-kpi-ico {
   border-radius: var(--bf-radius-control);
@@ -757,24 +757,24 @@
    interaction state. Section 17 enumerated .active / .in / :hover / :focus-visible /
    .is-* and missed .sorted for that reason. */
 .bf-shell .hs-index .hs-table thead th.sorted {
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-weight: 700;
 }
 .bf-shell .hs-index .hs-table thead th {
   background: transparent;
-  border-bottom: 1px solid rgba(28, 28, 26, 0.13);
+  border-bottom: 1px solid rgba(var(--bf-line-rgb), 0.13);
   font-size: var(--bf-app-eyebrow);
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .hs-index .hs-table tbody td {
   font-size: var(--bf-app-row);
   font-weight: 500;
   line-height: var(--bf-app-lead-row);
-  color: #575550;
-  border-bottom: 1px solid rgba(28, 28, 26, 0.07);
+  color: var(--bf-ink-muted);
+  border-bottom: 1px solid rgba(var(--bf-line-rgb), 0.07);
 }
 /* the primary cell carries the row's identity */
 .bf-shell .hs-index .hs-table tbody td:first-of-type,
@@ -782,13 +782,13 @@
 .bf-shell .hs-index .hs-table tbody td .hs-link-plain {
   font-size: var(--bf-app-row-strong);
   font-weight: 600;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .hs-index .hs-table tbody tr {
   transition: background var(--bf-dur-press) var(--bf-ease);
 }
 .bf-shell .hs-index .hs-table tbody tr:hover {
-  background: rgba(28, 28, 26, 0.035);
+  background: rgba(var(--bf-line-rgb), 0.035);
 }
 /* hover move 3: the row's trailing action slides */
 .bf-shell .hs-index .hs-table tbody tr .hs-row-action {
@@ -811,9 +811,9 @@
 .bf-shell .hs-index .hs-btn {
   border-radius: 999px;
   padding: 8px 16px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row);
   font-weight: 600;
   box-shadow: none;
@@ -825,9 +825,9 @@
 }
 /* hover move 2: the outline pill inverts */
 .bf-shell .hs-index .hs-btn:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 .bf-shell .hs-index .hs-btn:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
@@ -836,13 +836,13 @@
 .bf-shell .hs-index .hs-btn.hs-btn-primary {
   background: var(--bf-accent-fill);
   border-color: var(--bf-accent);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .hs-index .hs-btn.hs-btn-primary:hover {
   background: var(--bf-accent-dark);
   border-color: var(--bf-accent-dark);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
 .bf-shell .hs-index .hs-btn-icon,
@@ -850,7 +850,7 @@
   border-radius: var(--bf-radius-control);
   background: transparent;
   border-color: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   transition:
     background var(--bf-dur-hover) ease,
     color var(--bf-dur-hover) ease,
@@ -858,8 +858,8 @@
 }
 .bf-shell .hs-index .hs-btn-icon:hover,
 .bf-shell .hs-index .hs-row-action:hover {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
 }
 .bf-shell .hs-index .hs-btn-icon:active,
 .bf-shell .hs-index .hs-row-action:active {
@@ -869,10 +869,10 @@
 /* ---- 7f. index controls: search, saved views, chips, links -------------- */
 .bf-shell .hs-index .hs-search {
   border-radius: 999px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
-  background: #ffffff;
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
+  background: var(--bf-surface);
   font-size: var(--bf-app-row);
-  color: #1c1c1a;
+  color: var(--bf-ink);
   box-shadow: none;
   transition:
     border-color var(--bf-dur-hover) ease,
@@ -886,9 +886,9 @@
 .bf-shell .hs-index .hs-view,
 .bf-shell .hs-index .hs-chip {
   border-radius: 999px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-size: var(--bf-app-row);
   font-weight: 600;
   transition:
@@ -898,8 +898,8 @@
 }
 .bf-shell .hs-index .hs-view:hover,
 .bf-shell .hs-index .hs-chip:hover {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
 }
 .bf-shell .hs-index .hs-view.active,
 .bf-shell .hs-index .hs-view[aria-current="true"],
@@ -958,13 +958,13 @@
 
 /* ---- 8a. the shared .pdx dialog ---------------------------------------- */
 .bf-shell .pdx {
-  background: rgba(28, 28, 26, 0.28);
+  background: rgba(var(--bf-line-rgb), 0.28);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 .bf-shell .pdx .pdx-dialog {
-  background: #ffffff;
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  background: var(--bf-surface);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   /* the stage step: a modal is the biggest object on screen when it is open */
   border-radius: var(--bf-radius-stage);
   box-shadow: var(--bf-shadow-stage);
@@ -974,26 +974,26 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .pdx .pdx-sub {
   font-size: var(--bf-app-lede);
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: var(--bf-app-prose);
 }
 .bf-shell .pdx .pdx-close {
   border-radius: var(--bf-radius-control);
   border-color: transparent;
   background: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   transition:
     background var(--bf-dur-hover) ease,
     color var(--bf-dur-hover) ease,
     transform var(--bf-dur-press) var(--bf-ease);
 }
 .bf-shell .pdx .pdx-close:hover {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
 }
 .bf-shell .pdx .pdx-close:active {
   transform: scale(var(--bf-press-scale));
@@ -1008,15 +1008,15 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .pdx .pdx-form input,
 .bf-shell .pdx .pdx-form select,
 .bf-shell .pdx .pdx-form textarea {
   border-radius: var(--bf-radius-control);
-  border: 1px solid rgba(28, 28, 26, 0.13);
-  background: #ffffff;
-  color: #1c1c1a;
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
   font-size: var(--bf-app-row-strong);
   box-shadow: none;
   transition:
@@ -1025,7 +1025,7 @@
 }
 .bf-shell .pdx .pdx-form input::placeholder,
 .bf-shell .pdx .pdx-form textarea::placeholder {
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .pdx .pdx-form input:focus,
 .bf-shell .pdx .pdx-form select:focus,
@@ -1047,20 +1047,20 @@
     box-shadow var(--bf-dur-hover) ease;
 }
 .bf-shell .pdx .pdx-actions .pdx-cancel {
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 /* hover move 2 */
 .bf-shell .pdx .pdx-actions .pdx-cancel:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 .bf-shell .pdx .pdx-actions .pdx-save {
   border: 1px solid var(--bf-accent);
   background: var(--bf-accent-fill);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .pdx .pdx-actions .pdx-save:hover:not(:disabled) {
@@ -1078,13 +1078,13 @@
    .hs-addon-dialog hook in the markup, so the base can be restyled without the
    two drifting apart — the split the plan asked for is already there. */
 .bf-shell .hs-upd-backdrop {
-  background: rgba(28, 28, 26, 0.28);
+  background: rgba(var(--bf-line-rgb), 0.28);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 .bf-shell .hs-upd-dialog {
-  background: #ffffff;
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  background: var(--bf-surface);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-stage);
   box-shadow: var(--bf-shadow-stage);
 }
@@ -1093,32 +1093,32 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .hs-upd-title {
   font-size: var(--bf-app-title);
   font-weight: 600;
   letter-spacing: var(--bf-app-title-track);
   line-height: var(--bf-app-title-lead);
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .hs-upd-desc {
   font-size: var(--bf-app-lede);
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: var(--bf-app-prose);
 }
 .bf-shell .hs-upd-close {
   border-radius: var(--bf-radius-control);
   border-color: transparent;
   background: transparent;
-  color: #575550;
+  color: var(--bf-ink-muted);
   transition:
     background var(--bf-dur-hover) ease,
     color var(--bf-dur-hover) ease;
 }
 .bf-shell .hs-upd-close:hover {
-  background: rgba(28, 28, 26, 0.05);
-  color: #1c1c1a;
+  background: rgba(var(--bf-line-rgb), 0.05);
+  color: var(--bf-ink);
 }
 .bf-shell .hs-upd-btn {
   border-radius: 999px;
@@ -1133,7 +1133,7 @@
 .bf-shell .hs-upd-btn-primary {
   background: var(--bf-accent-fill);
   border: 1px solid var(--bf-accent);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .hs-upd-btn-primary:hover {
@@ -1143,13 +1143,13 @@
 }
 .bf-shell .hs-upd-btn-secondary {
   background: transparent;
-  border: 1px solid rgba(28, 28, 26, 0.13);
-  color: #1c1c1a;
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
+  color: var(--bf-ink);
 }
 .bf-shell .hs-upd-btn-secondary:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 .bf-shell .hs-upd-actions button:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
@@ -1162,7 +1162,7 @@
 }
 .bf-shell .hs-addon-where {
   font-size: var(--bf-app-meta);
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .hs-addon-where-ico {
   border-radius: var(--bf-radius-control);
@@ -1172,19 +1172,19 @@
    These are the only screens a failed bootstrap can reach, and both were
    recorded as never having had a design pass. Copy and actions are unchanged. */
 .bf-shell .loading-screen {
-  background: #f5f6fa;
-  color: #1c1c1a;
+  background: var(--bf-ground);
+  color: var(--bf-ink);
 }
 .bf-shell .loading-screen strong,
 .bf-shell .loading-screen h1 {
   font-size: var(--bf-app-screen);
   font-weight: 600;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .loading-screen p,
 .bf-shell .error-screen p {
   font-size: var(--bf-app-lede);
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: var(--bf-app-prose);
 }
 .bf-shell .error-screen button,
@@ -1199,13 +1199,13 @@
 }
 .bf-shell .error-screen .error-screen-back {
   background: transparent;
-  border: 1px solid rgba(28, 28, 26, 0.13);
-  color: #1c1c1a;
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
+  color: var(--bf-ink);
 }
 .bf-shell .error-screen .error-screen-back:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 
 /* ---- 8f. the dashboard's loading skeleton ------------------------------
@@ -1214,13 +1214,18 @@
    measures against it. */
 .bf-shell .dash-skeleton .dash-skel-block {
   border-radius: var(--bf-radius-panel);
-  border: 1px solid rgba(28, 28, 26, 0.07);
-  background: #ffffff;
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
+  background: var(--bf-surface);
   box-shadow: var(--bf-shadow-card);
 }
 .bf-shell .dash-skeleton .dash-skel-line {
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(28, 28, 26, 0.06) 0%, rgba(28, 28, 26, 0.11) 50%, rgba(28, 28, 26, 0.06) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(var(--bf-line-rgb), 0.06) 0%,
+    rgba(var(--bf-line-rgb), 0.11) 50%,
+    rgba(var(--bf-line-rgb), 0.06) 100%
+  );
   background-size: 200% 100%;
   animation: bf-skel-sheen var(--bf-dur-skeleton) var(--bf-ease-size) infinite;
 }
@@ -1274,7 +1279,7 @@
 
 /* ---- 9a. the panel card ------------------------------------------------- */
 .bf-shell .dash-rx.hs-home .cc-panel > .cc-list {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
 }
@@ -1288,10 +1293,10 @@
 .bf-shell .dash-rx.hs-home .cc-panel-head h2,
 .bf-shell .dash-rx.hs-home .cc-sec-head h2 {
   letter-spacing: -0.01em;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .dash-rx.hs-home .hs-widget-head {
-  border-bottom-color: rgba(28, 28, 26, 0.07);
+  border-bottom-color: rgba(var(--bf-line-rgb), 0.07);
 }
 
 /* ---- 9b. tiles inside a panel sit one rung down the ladder -------------
@@ -1300,7 +1305,7 @@
 .bf-shell .dash-rx.hs-home .cc-stat,
 .bf-shell .dash-rx.hs-home .kpi-card,
 .bf-shell .dash-rx.hs-home .cc-app {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
   box-shadow: none;
 }
@@ -1310,24 +1315,24 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .dash-rx.hs-home .cc-stat-value {
   letter-spacing: var(--bf-app-figure-track);
   font-variant-numeric: tabular-nums;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .dash-rx .cc-stat-note {
   font-size: var(--bf-app-meta);
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 9c. panel actions become the same pill as everywhere else ---------- */
 .bf-shell .dash-rx.hs-home .cc-link {
   border-radius: 999px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-meta);
   font-weight: 600;
   transition:
@@ -1337,9 +1342,9 @@
 }
 /* hover move 2 */
 .bf-shell .dash-rx.hs-home .cc-link:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 .bf-shell .dash-rx.hs-home .cc-link:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
@@ -1375,7 +1380,7 @@
    already put the form column on the Welcome Page's language: the #f5f6fa paper
    ground, Inter display type at weight 500, the ink pill CTA, hairline fields
    and the pill eyebrow. Verified live on the signup screen: the primary computes
-   to rgb(28,28,26) at 999px with 0 8px 22px rgba(28,28,26,0.2), which is the
+   to rgb(28,28,26) at 999px with 0 8px 22px rgba(var(--bf-line-rgb),0.2), which is the
    Welcome Page's .wx-btn-ink exactly, and NO element anywhere on the screen
    renders the Google blue. The 14 trade cards and the seats control are in that
    layer too.
@@ -1410,11 +1415,11 @@
 
 /* ---- the four plan cards ----------------------------------------------- */
 .bf-shell .acct-plan {
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   /* 13px matches the parity layer's own field radius on this screen; using the
      ladder's 12px would leave a 1px mismatch against every adjacent input */
   border-radius: 13px;
-  background: #ffffff;
+  background: var(--bf-surface);
   box-shadow: none;
   transition:
     transform var(--bf-dur-move) var(--bf-ease),
@@ -1426,7 +1431,7 @@
    shadow ladder rather than the old navy-tinted one */
 .bf-shell .acct-plan:hover {
   transform: translateY(var(--bf-lift-dense));
-  border-color: rgba(28, 28, 26, 0.28);
+  border-color: rgba(var(--bf-line-rgb), 0.28);
   box-shadow: var(--bf-shadow-card-hover);
 }
 .bf-shell .acct-plan:focus-visible {
@@ -1440,7 +1445,7 @@
 }
 /* #141922 was a fourth ink */
 .bf-shell .acct-plan strong {
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-weight: 700;
 }
 .bf-shell .acct-plan-price {
@@ -1450,7 +1455,7 @@
 }
 .bf-shell .acct-plan-meta,
 .bf-shell .acct-plan em {
-  color: #575550;
+  color: var(--bf-ink-muted);
   font-style: normal;
 }
 
@@ -1498,11 +1503,11 @@
   font-weight: 600;
   letter-spacing: var(--bf-app-title-track);
   line-height: var(--bf-app-title-lead);
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .sched-rx .dx-sub {
   font-size: var(--bf-app-lede);
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: var(--bf-app-prose);
 }
 /* The pulsing dot's ring is still rgba(26,115,232,0.12) - the Google blue,
@@ -1516,20 +1521,20 @@
 /* ---- 11b. panels onto the ladder: 18px and the card shadow ------------- */
 .bf-shell .sched-rx .sched-home-section,
 .bf-shell .sched-rx .sched-rail-panel {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
 }
 .bf-shell .sched-rx .sched-cpm,
 .bf-shell .sched-rx .ss-strip {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
 }
 /* the six view cards are the one thing on the landing that navigates, so they
    are the one thing licensed to lift */
 .bf-shell .sched-rx .sched-view-card {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
   transition:
@@ -1553,10 +1558,10 @@
    .sched-queue-row is not in that pinned list, so it keeps its radius. */
 .bf-shell .sched-rx .schedule-side-panel,
 .bf-shell .sched-rx .unassigned-card {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
 }
 .bf-shell .sched-rx .sched-queue-row {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
 }
 
@@ -1567,7 +1572,7 @@
   border-radius: 999px;
   border: 1px solid var(--bf-accent);
   background: var(--bf-accent-fill);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
   transition:
     background var(--bf-dur-hover) ease,
@@ -1583,18 +1588,18 @@
 .bf-shell .sched-rx .schedule-add-job-button {
   border-radius: var(--bf-radius-control);
   /* rgb(203,216,232) was a navy-era line colour */
-  border-color: rgba(28, 28, 26, 0.13);
+  border-color: rgba(var(--bf-line-rgb), 0.13);
 }
 .bf-shell .sched-rx .sched-cpm-baseline {
   border-radius: var(--bf-radius-control);
-  border-color: rgba(28, 28, 26, 0.13);
+  border-color: rgba(var(--bf-line-rgb), 0.13);
 }
 .bf-shell .sched-rx .sched-views-label {
   font-size: var(--bf-app-eyebrow);
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 11d. the board's day heads are deliberately NOT made eyebrows -----
@@ -1701,7 +1706,7 @@
 .bf-shell .reports-kpi-card,
 .bf-shell .reports-chart-card,
 .bf-shell .reports-efficiency-card {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   box-shadow: var(--bf-shadow-card);
 }
 
@@ -1737,7 +1742,7 @@
    Scoped to the shell instead of to a page, so all four agree. */
 .bf-shell .ss-strip,
 .bf-shell .ss-band {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-card);
 }
@@ -1773,16 +1778,16 @@
 /* .hs-record carried rgba(20, 32, 58, 0.22) — a navy-tinted side shadow. Kept
    directional, since it is a drawer, but on the ink ladder's float alpha. */
 .bf-shell .hs-record {
-  box-shadow: -24px 0 70px rgba(28, 28, 26, 0.14);
+  box-shadow: -24px 0 70px rgba(var(--bf-line-rgb), 0.14);
 }
 .bf-shell .hs-record-backdrop {
-  background: rgba(28, 28, 26, 0.28);
+  background: rgba(var(--bf-line-rgb), 0.28);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 .bf-shell .hs-record-card,
 .bf-shell .hs-timeline-body {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
 }
 /* The drawer's controls were the one place in the product still shipping 8px
@@ -1790,9 +1795,9 @@
    inside it. Same grammar as everywhere else now. */
 .bf-shell .hs-record .hs-btn {
   border-radius: 999px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-size: var(--bf-app-row);
   font-weight: 600;
   transition:
@@ -1801,14 +1806,14 @@
     border-color var(--bf-dur-hover) ease;
 }
 .bf-shell .hs-record .hs-btn:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 .bf-shell .hs-record .hs-btn.hs-btn-primary {
   background: var(--bf-accent-fill);
   border-color: var(--bf-accent);
-  color: #ffffff;
+  color: var(--bf-on-accent);
   box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
 }
 .bf-shell .hs-record .hs-btn.hs-btn-primary:hover {
@@ -1818,7 +1823,7 @@
 .bf-shell .hs-record .hs-search,
 .bf-shell .hs-record .hs-qf {
   border-radius: 999px;
-  border-color: rgba(28, 28, 26, 0.13);
+  border-color: rgba(var(--bf-line-rgb), 0.13);
 }
 .bf-shell .hs-record .hs-btn:focus-visible,
 .bf-shell .hs-record .hs-search:focus-within,
@@ -1833,7 +1838,7 @@
 .bf-shell .bf-breeze-main {
   border-radius: var(--bf-radius-card);
   box-shadow: var(--bf-shadow-float);
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
 }
 .bf-shell .bf-breeze-mark {
   box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.24);
@@ -1844,7 +1849,7 @@
 }
 .bf-shell .bf-breeze-drop,
 .bf-shell .bf-breeze-suggested {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
 }
 /* the composer's blue rim is already the accent and is left as it is; it only
@@ -1858,7 +1863,7 @@
 /* ---- 14c. Bookmarks tiles ----------------------------------------------
    These navigate, which is what licenses a lift under the card rule. */
 .bf-shell .bm-tile {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
   transition:
     transform var(--bf-dur-move) var(--bf-ease),
@@ -1870,7 +1875,7 @@
   box-shadow: var(--bf-shadow-card-hover);
 }
 .bf-shell .bm-empty {
-  border-color: rgba(28, 28, 26, 0.07);
+  border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
   max-width: var(--bf-app-prose);
 }
@@ -1927,7 +1932,7 @@
    Swapping navy for ink made the tint right and left the shadow wrong.
    The border-color I also set was a no-op on both: there is no border-width to
    colour on the panel, and the account card's hairline already resolves to
-   exactly rgba(28,28,26,0.07) through --wx-line-soft. */
+   exactly rgba(var(--bf-line-rgb),0.07) through --wx-line-soft. */
 .bf-shell .settings-rx .settings-panel,
 .bf-shell .settings-rx .settings-account-card {
   box-shadow: none;
@@ -1946,7 +1951,7 @@
   font-weight: 650;
   letter-spacing: var(--bf-app-eyebrow-track);
   text-transform: uppercase;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 15a-ii. the category rows, onto the shell's own nav grammar -------
@@ -1956,7 +1961,7 @@
    shared 4px/0.12. Using --bf-slide also fixes reduced motion for free, since
    design-tokens.css nulls it there. */
 .bf-shell .settings-rx .settings-nav-item:hover {
-  background: rgba(28, 28, 26, 0.05);
+  background: rgba(var(--bf-line-rgb), 0.05);
   transform: translateX(var(--bf-slide));
 }
 .bf-shell .settings-rx .settings-nav-item.active {
@@ -2781,7 +2786,7 @@
    through: the quarter turn is the gesture, and it still composes because this
    file sets no transform on :hover. */
 .bf-shell .pdx .pdx-close:hover {
-  border-color: rgba(28, 28, 26, 0.13);
+  border-color: rgba(var(--bf-line-rgb), 0.13);
 }
 
 /* ---- 17d. the hover feedback three cards lost --------------------------
@@ -2796,7 +2801,7 @@
    travel. */
 .bf-shell .ss-band:hover {
   transform: translateY(var(--bf-lift-dense));
-  border-color: rgba(28, 28, 26, 0.13);
+  border-color: rgba(var(--bf-line-rgb), 0.13);
   box-shadow: var(--bf-shadow-card-hover);
 }
 .bf-shell .reports-card:hover,
@@ -2914,7 +2919,7 @@
    CHECKED AND LEFT ALONE, because measuring beats assuming:
    - the destructive red, #c5221f on its own 8% wash, is 5.09 and passes;
    - the Beta violet, #6d28d9 on its own 10% wash, is 6.03 and passes;
-   - the neutral washes are ink or muted on rgba(28,28,26,0.05), 14.5 and 6.4;
+   - the neutral washes are ink or muted on rgba(var(--bf-line-rgb),0.05), 14.5 and 6.4;
    - the accent as a BORDER at rgba(var(--bf-accent-rgb),0.28) is only 1.46 against a card,
      which would matter if a boundary were the sole indicator of state. It is
      not: every active state here carries a fill, a darker ink and weight 650, so
@@ -3060,7 +3065,7 @@
   font-weight: var(--bf-page-display-weight);
   letter-spacing: var(--bf-page-display-track);
   line-height: var(--bf-page-display-lead);
-  color: #1c1c1a;
+  color: var(--bf-ink);
   text-wrap: balance;
 }
 
@@ -3080,7 +3085,7 @@
 .bf-shell .delayIQ-rx .dx-sub {
   font-size: var(--bf-page-lede);
   line-height: 1.55;
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: 52ch;
 }
 
@@ -3180,7 +3185,7 @@
   padding: 18px 20px 22px;
   font-size: var(--bf-app-row);
   line-height: var(--bf-app-lead-row);
-  color: #575550;
+  color: var(--bf-ink-muted);
   max-width: 42ch;
 }
 
@@ -3192,7 +3197,7 @@
    from the tab order, which is the half a purely visual treatment would miss. */
 .bf-shell .dash-rx.hs-home .cc-quick-btn:disabled,
 .bf-shell .dash-rx.hs-home .cc-app.add:disabled {
-  color: #575550;
+  color: var(--bf-ink-muted);
   cursor: not-allowed;
   opacity: 0.62;
   box-shadow: none;
@@ -3200,7 +3205,7 @@
 .bf-shell .dash-rx.hs-home .cc-quick-btn:disabled:hover,
 .bf-shell .dash-rx.hs-home .cc-app.add:disabled:hover {
   background: transparent;
-  border-color: rgba(28, 28, 26, 0.09);
+  border-color: rgba(var(--bf-line-rgb), 0.09);
   transform: none;
   box-shadow: none;
 }
@@ -3256,17 +3261,17 @@
 .bf-shell .settings-rx .settings-member-remove.is-confirming:hover {
   background: #b01b18;
   border-color: #b01b18;
-  color: #fdfcf9;
+  color: var(--bf-on-accent);
 }
 .bf-shell .settings-rx .settings-member-cancel {
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   background: transparent;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .settings-rx .settings-member-cancel:hover {
-  background: #1c1c1a;
-  border-color: #1c1c1a;
-  color: #fdfcf9;
+  background: var(--bf-ink);
+  border-color: var(--bf-ink);
+  color: var(--bf-on-accent);
 }
 .bf-shell .settings-rx .settings-member-remove.is-confirming:focus-visible,
 .bf-shell .settings-rx .settings-member-cancel:focus-visible {
@@ -3336,12 +3341,12 @@
      note above), so the padding is the least that still reads as a card rather
      than the most that looks like the reference. */
   padding: 12px 16px;
-  border: 1px solid rgba(28, 28, 26, 0.08);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.08);
   border-radius: var(--bf-radius-card);
   /* The reference's surface: white falling to the paper tone this sheet already
      uses for the app's own ground, so the gradient introduces no new colour. */
-  background-color: #ffffff;
-  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  background-color: var(--bf-surface);
+  background-image: linear-gradient(180deg, var(--bf-surface) 0%, var(--bf-surface-raised) 100%);
   box-shadow: var(--bf-shadow-card);
 }
 
@@ -3386,13 +3391,13 @@
 .bf-shell .dash-rx.hs-home .dash-block .cc-panel-head h2,
 .bf-shell .dash-rx.hs-home .dash-block .cc-sec-head h2 {
   letter-spacing: -0.01em;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 
 /* The head's icon becomes the reference's chip rather than a loose glyph. */
 .bf-shell .dash-rx.hs-home .dash-block > .hs-widget-head h2 svg,
 .bf-shell .dash-rx.hs-home .dash-block .cc-sec-head h2 svg {
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 24d. the tiles, brought onto the card's radius -----------------------
@@ -3405,10 +3410,10 @@
 .bf-shell .dash-rx.hs-home .kpi-card,
 .bf-shell .dash-rx.hs-home .tc-dash-card,
 .bf-shell .dash-rx.hs-home .cc-quick {
-  border: 1px solid rgba(28, 28, 26, 0.07);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
-  background-color: #ffffff;
-  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  background-color: var(--bf-surface);
+  background-image: linear-gradient(180deg, var(--bf-surface) 0%, var(--bf-surface-raised) 100%);
   box-shadow: none;
 }
 
@@ -3454,7 +3459,7 @@
   font-size: var(--bf-app-eyebrow);
   letter-spacing: 0.005em;
   text-transform: none;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* The numeral's SIZE is deliberately not set here. --bf-app-figure is the app's
@@ -3467,7 +3472,7 @@
 .bf-shell .dash-rx.hs-home .kpi-card strong,
 .bf-shell .dash-rx.hs-home .tc-dash-card strong {
   letter-spacing: var(--bf-app-figure-track);
-  color: #1c1c1a;
+  color: var(--bf-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3475,7 +3480,7 @@
 .bf-shell .dash-rx.hs-home .kpi-card > div > span,
 .bf-shell .dash-rx.hs-home .tc-dash-card em {
   font-size: var(--bf-app-meta);
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 24g. the delta pill ---------------------------------------------------
@@ -3511,14 +3516,14 @@
 /* ---- 24j. the status band, on the same card ------------------------------- */
 .bf-shell .dash-rx.hs-home .ss-band {
   border-radius: var(--bf-radius-card);
-  background-color: #ffffff;
-  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  background-color: var(--bf-surface);
+  background-image: linear-gradient(180deg, var(--bf-surface) 0%, var(--bf-surface-raised) 100%);
 }
 
 /* .ss-band navigates, so it keeps the lift section 17d gave it; re-declared
    here because 24j ties the rest state that rule sits above. */
 .bf-shell .dash-rx.hs-home .ss-band:hover {
-  border-color: rgba(28, 28, 26, 0.13);
+  border-color: rgba(var(--bf-line-rgb), 0.13);
   box-shadow: var(--bf-shadow-card-hover);
 }
 
@@ -3561,10 +3566,10 @@
 /* ---- 25b. the two sections in normal flow ------------------------------- */
 .bf-shell .dash-rx.hs-home > .dx-inner > section[data-reveal] {
   padding: 18px 20px 16px;
-  border: 1px solid rgba(28, 28, 26, 0.08);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.08);
   border-radius: var(--bf-radius-card);
-  background-color: #ffffff;
-  background-image: linear-gradient(180deg, #ffffff 0%, #fdfcf9 100%);
+  background-color: var(--bf-surface);
+  background-image: linear-gradient(180deg, var(--bf-surface) 0%, var(--bf-surface-raised) 100%);
   box-shadow: var(--bf-shadow-card);
 }
 
@@ -3599,7 +3604,7 @@
 
 /* ---- 25c. the status band's edge --------------------------------------- */
 .bf-shell .dash-rx.hs-home .ss-band {
-  border-color: rgba(28, 28, 26, 0.08);
+  border-color: rgba(var(--bf-line-rgb), 0.08);
   box-shadow: var(--bf-shadow-card);
 }
 
@@ -3651,9 +3656,9 @@
   max-height: min(78vh, 760px);
   overflow-y: auto;
   padding: 18px;
-  border: 1px solid rgba(28, 28, 26, 0.1);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.1);
   border-radius: var(--bf-radius-panel);
-  background: #ffffff;
+  background: var(--bf-surface);
   box-shadow: var(--bf-shadow-float);
 }
 
@@ -3667,13 +3672,13 @@
   font-size: var(--bf-app-section);
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 .bf-shell .pref-head p {
   margin: 0;
   font-size: var(--bf-app-meta);
   line-height: 1.45;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 26c. one topic ----------------------------------------------------- */
@@ -3685,14 +3690,14 @@
   font-size: var(--bf-app-row);
   font-weight: 650;
   letter-spacing: -0.005em;
-  color: #1c1c1a;
+  color: var(--bf-ink);
 }
 /* The reason a disabled topic gives for being disabled. */
 .bf-shell .pref-note {
   margin: 0;
   font-size: var(--bf-app-micro);
   line-height: 1.45;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 26d. the two selects ---------------------------------------------- */
@@ -3701,10 +3706,10 @@
   align-items: center;
   gap: 8px;
   padding: 0 10px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   border-radius: var(--bf-radius-control);
-  background: #ffffff;
-  color: #575550;
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
 }
 .bf-shell .pref-select select {
   flex: 1 1 auto;
@@ -3715,7 +3720,7 @@
   background: none;
   font: inherit;
   font-size: var(--bf-app-row);
-  color: #1c1c1a;
+  color: var(--bf-ink);
   appearance: none;
 }
 .bf-shell .pref-select select:focus-visible {
@@ -3727,15 +3732,15 @@
   width: 9px;
   height: 9px;
   border-radius: var(--bf-radius-pill);
-  background: #1c1c1a;
+  background: var(--bf-ink);
   flex: none;
 }
 .bf-shell .pref-select[data-disabled="true"] {
-  border-color: rgba(28, 28, 26, 0.08);
-  background: #fdfcf9;
+  border-color: rgba(var(--bf-line-rgb), 0.08);
+  background: var(--bf-surface-raised);
 }
 .bf-shell .pref-select[data-disabled="true"] select {
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 26e. the segmented controls --------------------------------------- */
@@ -3743,9 +3748,9 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   border-radius: var(--bf-radius-control);
-  background: #ffffff;
+  background: var(--bf-surface);
 }
 /* The end segments carry the container's corners themselves. The obvious way to
    do this is `overflow: hidden` on the group, and the sheet's guard is right to
@@ -3763,36 +3768,36 @@
 .bf-shell .pref-seg {
   padding: 9px 6px;
   border: 0;
-  border-left: 1px solid rgba(28, 28, 26, 0.09);
+  border-left: 1px solid rgba(var(--bf-line-rgb), 0.09);
   background: none;
   font: inherit;
   font-size: var(--bf-app-row);
   font-weight: 600;
-  color: #575550;
+  color: var(--bf-ink-muted);
   cursor: pointer;
 }
 .bf-shell .pref-seg:first-child {
   border-left: 0;
 }
 .bf-shell .pref-seg[aria-checked="true"] {
-  background: #f4f3f0;
-  color: #1c1c1a;
+  background: var(--bf-hover);
+  color: var(--bf-ink);
 }
 .bf-shell .pref-seg:hover:not([aria-checked="true"]):not(:disabled) {
-  background: #fbfaf7;
-  color: #1c1c1a;
+  background: var(--bf-hover);
+  color: var(--bf-ink);
 }
 .bf-shell .pref-seg:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
   outline-offset: -2px;
 }
 .bf-shell .pref-segmented[data-disabled="true"] {
-  border-color: rgba(28, 28, 26, 0.08);
-  background: #fdfcf9;
+  border-color: rgba(var(--bf-line-rgb), 0.08);
+  background: var(--bf-surface-raised);
 }
 .bf-shell .pref-seg:disabled {
   cursor: default;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 
 /* ---- the two footer buttons ------------------------------------------- */
@@ -3803,25 +3808,25 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(28, 28, 26, 0.13);
+  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
   border-radius: var(--bf-radius-control);
-  background: #ffffff;
+  background: var(--bf-surface);
   font: inherit;
   font-size: var(--bf-app-row);
   font-weight: 650;
-  color: #1c1c1a;
+  color: var(--bf-ink);
   cursor: pointer;
 }
 .bf-shell .pref-full {
   border-color: transparent;
   background: none;
   font-weight: 600;
-  color: #575550;
+  color: var(--bf-ink-muted);
 }
 .bf-shell .pref-restore:hover:not(:disabled),
 .bf-shell .pref-full:hover {
-  border-color: rgba(28, 28, 26, 0.2);
-  background: #fbfaf7;
+  border-color: rgba(var(--bf-line-rgb), 0.2);
+  background: var(--bf-hover);
 }
 .bf-shell .pref-restore:focus-visible,
 .bf-shell .pref-full:focus-visible {
@@ -3830,9 +3835,9 @@
 }
 .bf-shell .pref-restore:disabled {
   cursor: default;
-  border-color: rgba(28, 28, 26, 0.08);
-  background: #fdfcf9;
-  color: #575550;
+  border-color: rgba(var(--bf-line-rgb), 0.08);
+  background: var(--bf-surface-raised);
+  color: var(--bf-ink-muted);
 }
 
 /* ---- 26f. Page Layout -------------------------------------------------- */
@@ -4201,6 +4206,14 @@
    they name `--cc-sans` and follow through 28a. */
 .bf-shell.app-shell {
   font-family: var(--bf-font-active);
+  /* The ink and the ground, for the same reason as the family above it: styles.css
+     sets `color` and `background` as LITERALS on `:root` (#10203f on #ebedfb), so
+     anything that does not paint its own inherits them from above the shell. In dark
+     mode that showed as the exact bug it sounds like -- cards whose background had
+     inverted and whose text had not. One declaration each, on the shell div, so the
+     whole app subtree follows the mode and the marketing page does not. */
+  color: var(--bf-ink);
+  background: var(--bf-ground);
 }
 
 /* ---- 28b. the eighteen ------------------------------------------------- */
@@ -4269,4 +4282,227 @@
   font-weight: 650;
   color: #1c1c1a;
   text-align: center;
+}
+
+/* ============================================================================
+   29. LIGHT, DARK AND SYSTEM
+   ============================================================================
+   Theme Mode, carried on `data-bf-mode` on the shell. Light is the product as it
+   ships. Dark redefines the semantic layer. System follows the OS by answering
+   the same media query the OS sets.
+
+   WHAT THIS COVERS, STATED PLAINLY BECAUSE IT IS NOT EVERYTHING. The app shell,
+   the Dashboard, the index pages and every surface app-shell-daylight.css owns
+   go dark, because those resolve through the semantic tokens above. The product
+   has 1,793 neutral colour values across sixteen stylesheets and roughly half of
+   them are still literals in older sheets, so a page the redesign has not reached
+   keeps light patches until its sheet is converted the same way. That is a known
+   edge, agreed before building rather than discovered after.
+
+   THE CHROME WAS ALREADY DARK. The top bar and the rail are navy with light text
+   in both modes, so dark mode's real work is the page body: the ground, the cards
+   and the ink ladder. That is also why the shell needs no separate dark chrome.
+
+   TWO THINGS DELIBERATELY DO NOT INVERT. --bf-on-accent, because the label on a
+   coloured fill sits on a fill that does not change; and the accent FILL rungs,
+   for the same reason -- white on Brutalist's #c8232a still measures 5.63 in dark.
+
+   THE ACCENT ITSELF DOES CHANGE, and it has to. Measured on the dark surface the
+   shipped accents fail: #2f6bff is 3.83, Tangerine's 4.00, Brutalist's 4.42, and
+   Soft Pop's indigo is 2.34 -- under even the 3:1 floor for a non-text indicator.
+   Each theme therefore carries a lighter rung for dark, all of which clear 6.8.
+
+   `color-scheme` is set alongside, so the scrollbars, form controls and caret the
+   browser paints follow the mode instead of staying light on a dark page.
+   ------------------------------------------------------------------------- */
+
+/* ---- 29a. the semantic layer reaches the older token families ------------ */
+.bf-shell,
+.bf-shell .dash-rx,
+.bf-shell .dash-rx.hs-home,
+.bf-shell .crew-rx,
+.bf-shell .proj-rx,
+.bf-shell .sched-rx,
+.bf-shell .settings-rx,
+.bf-shell .equip-rx,
+.bf-shell .field-rx,
+.bf-shell .mat-rx,
+.bf-shell .delayIQ-rx,
+.bf-shell .pdx,
+.bf-shell .hs-index,
+.bf-shell .lm-card {
+  --hs-paper: var(--bf-ground);
+  --hs-card: var(--bf-surface);
+  --hs-ink: var(--bf-ink);
+  --hs-line: var(--bf-line-solid);
+  --hs-hover: var(--bf-hover);
+  --hsh-ink: var(--bf-ink);
+  --hsh-mut: var(--bf-ink-muted);
+  --hsh-faint: var(--bf-ink-faint);
+  --hsh-line: var(--bf-line-solid);
+  --hsh-line-soft: var(--bf-line-soft);
+  --hsh-hover: var(--bf-hover);
+  /* The `--wx-*` neutrals, which are the ones the Dashboard's own sheet uses and the
+     ones I missed the first time. Every dark-on-dark node left after the first pass
+     resolved through exactly two of them -- --wx-ink and --wx-mut -- found by asking
+     the browser which rule supplied each offender's colour rather than by grepping.
+     The whole family is mapped here so the next one cannot be missed the same way. */
+  --wx-ink: var(--bf-ink);
+  --wx-mut: var(--bf-ink-muted);
+  --wx-faint: var(--bf-ink-faint);
+  --wx-card: var(--bf-surface);
+  --wx-bg: var(--bf-ground);
+  --wx-bg-2: var(--bf-hover);
+  /* The page scopes set `color` themselves, as literals, in their own sheets --
+     `.dash-rx.hs-home` is a dark ink -- and everything inside them inherits it.
+     Setting the ink on the shell alone therefore stopped at the page boundary and
+     dark mode showed cards whose background had inverted and whose text had not.
+     Measured by walking the ancestor chain: correct down to `.content-scroll`,
+     wrong from `.dash-rx` inward. */
+  color: var(--bf-ink);
+}
+
+/* ---- 29b. the dark palette --------------------------------------------- */
+/* One block, two selectors: an explicit choice, and System when the OS asks for
+   dark. Both set the same variables, so there is one dark palette and not two. */
+.bf-shell[data-bf-mode="dark"] {
+  color-scheme: dark;
+  --bf-surface: #1b1b19;
+  --bf-surface-rgb: 27, 27, 25;
+  --bf-surface-raised: #232320;
+  --bf-ground: #121211;
+  --bf-hover: #262623;
+  --bf-ink: #f4f3f0;
+  --bf-ink-muted: #b5b2ab;
+  --bf-ink-faint: #8a877e;
+  --bf-line-rgb: 244, 243, 240;
+  --bf-line-solid: #33332f;
+  --bf-line-soft: #2a2a27;
+}
+
+.bf-shell[data-bf-mode="light"] {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"] {
+    color-scheme: dark;
+    --bf-surface: #1b1b19;
+    --bf-surface-rgb: 27, 27, 25;
+    --bf-surface-raised: #232320;
+    --bf-ground: #121211;
+    --bf-hover: #262623;
+    --bf-ink: #f4f3f0;
+    --bf-ink-muted: #b5b2ab;
+    --bf-ink-faint: #8a877e;
+    --bf-line-rgb: 244, 243, 240;
+    --bf-line-solid: #33332f;
+    --bf-line-soft: #2a2a27;
+  }
+}
+
+/* ---- 29c. the tone washes get a dark counterpart ----------------------- */
+/* A wash is a light tint of its tone, so on a dark ground it cannot simply stay:
+   it becomes a dark tint of the same tone, and the tone's INK lightens to sit on
+   it. Six families, the ones hs-home.css declares. */
+.bf-shell[data-bf-mode="dark"] .dash-rx,
+.bf-shell[data-bf-mode="dark"] .dash-rx.hs-home,
+.bf-shell[data-bf-mode="dark"] .crew-rx,
+.bf-shell[data-bf-mode="dark"] .proj-rx,
+.bf-shell[data-bf-mode="dark"] .sched-rx,
+.bf-shell[data-bf-mode="dark"] .settings-rx,
+.bf-shell[data-bf-mode="dark"] .equip-rx,
+.bf-shell[data-bf-mode="dark"] .field-rx,
+.bf-shell[data-bf-mode="dark"] .mat-rx,
+.bf-shell[data-bf-mode="dark"] .delayIQ-rx,
+.bf-shell[data-bf-mode="dark"] .pdx,
+.bf-shell[data-bf-mode="dark"] .hs-index,
+.bf-shell[data-bf-mode="dark"] .lm-card {
+  --cc-blue: #7ea2ff;
+  --cc-blue-soft: #1e2a44;
+  --cc-green: #5ac77e;
+  --cc-green-soft: #16281c;
+  --cc-amber: #e0a35c;
+  --cc-amber-soft: #2c2216;
+  --cc-red: #ff8b87;
+  --cc-red-soft: #2e1a19;
+  --cc-violet: #b69bf0;
+  --cc-violet-soft: #241c33;
+  --cc-orange: #f09468;
+  --cc-orange-soft: #2d1d13;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"] .dash-rx,
+  .bf-shell[data-bf-mode="system"] .dash-rx.hs-home,
+  .bf-shell[data-bf-mode="system"] .crew-rx,
+  .bf-shell[data-bf-mode="system"] .proj-rx,
+  .bf-shell[data-bf-mode="system"] .sched-rx,
+  .bf-shell[data-bf-mode="system"] .settings-rx,
+  .bf-shell[data-bf-mode="system"] .equip-rx,
+  .bf-shell[data-bf-mode="system"] .field-rx,
+  .bf-shell[data-bf-mode="system"] .mat-rx,
+  .bf-shell[data-bf-mode="system"] .delayIQ-rx,
+  .bf-shell[data-bf-mode="system"] .pdx,
+  .bf-shell[data-bf-mode="system"] .hs-index,
+  .bf-shell[data-bf-mode="system"] .lm-card {
+    --cc-blue: #7ea2ff;
+    --cc-blue-soft: #1e2a44;
+    --cc-green: #5ac77e;
+    --cc-green-soft: #16281c;
+    --cc-amber: #e0a35c;
+    --cc-amber-soft: #2c2216;
+    --cc-red: #ff8b87;
+    --cc-red-soft: #2e1a19;
+    --cc-violet: #b69bf0;
+    --cc-violet-soft: #241c33;
+    --cc-orange: #f09468;
+    --cc-orange-soft: #2d1d13;
+  }
+}
+
+/* ---- 29d. each theme's accent, lightened for the dark ground ----------- */
+.bf-shell[data-bf-mode="dark"] {
+  --bf-accent: #7ea2ff;
+  --bf-accent-dark: #7ea2ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"] {
+    --bf-accent: #7ea2ff;
+    --bf-accent-dark: #7ea2ff;
+  }
+}
+.bf-shell[data-bf-mode="dark"][data-bf-theme="brutalist"] {
+  --bf-accent: #ff7a7e;
+  --bf-accent-dark: #ff7a7e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"][data-bf-theme="brutalist"] {
+    --bf-accent: #ff7a7e;
+    --bf-accent-dark: #ff7a7e;
+  }
+}
+.bf-shell[data-bf-mode="dark"][data-bf-theme="soft-pop"] {
+  --bf-accent: #a79bff;
+  --bf-accent-dark: #a79bff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"][data-bf-theme="soft-pop"] {
+    --bf-accent: #a79bff;
+    --bf-accent-dark: #a79bff;
+  }
+}
+.bf-shell[data-bf-mode="dark"][data-bf-theme="tangerine"] {
+  --bf-accent: #f0917c;
+  --bf-accent-dark: #f0917c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"][data-bf-theme="tangerine"] {
+    --bf-accent: #f0917c;
+    --bf-accent-dark: #f0917c;
+  }
 }

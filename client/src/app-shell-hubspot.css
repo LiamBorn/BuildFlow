@@ -76,7 +76,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #fff;
+  color: var(--bf-on-accent);
   font-family: var(--hs-sans);
   font-size: 17px;
   font-weight: 750;
@@ -112,7 +112,7 @@
   color: var(--hs-muted-on-navy);
 }
 .hs-shell .topbar.hs-topbar .search-box input {
-  color: #fff;
+  color: var(--bf-on-accent);
   font-size: 13.5px;
   font-weight: 500;
 }
@@ -130,8 +130,8 @@
   font-weight: 600;
 }
 .hs-shell .topbar.hs-topbar .search-box:focus-within {
-  background: #fff;
-  border-color: #fff;
+  background: var(--bf-surface);
+  border-color: var(--bf-on-accent);
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.35);
   color: var(--hs-ink);
 }
@@ -159,7 +159,7 @@
   border: 0;
   border-radius: 9px;
   background: linear-gradient(135deg, #4285f4, #9b72cb);
-  color: #fff;
+  color: var(--bf-on-accent);
   cursor: pointer;
   box-shadow: 0 6px 16px rgba(66, 92, 244, 0.35);
   transition:
@@ -216,7 +216,7 @@
 .hs-shell .topbar.hs-topbar .topbar-actions .icon-button:focus-visible,
 .hs-shell .topbar.hs-topbar .topbar-actions .icon-button[aria-expanded="true"] {
   background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  color: var(--bf-on-accent);
   border: 0;
   outline: 0;
 }
@@ -227,7 +227,7 @@
   color: var(--hs-muted-on-navy);
 }
 .hs-shell .topbar.hs-topbar .topbar-help-button:hover {
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 .hs-shell .hs-topbar-divider {
   width: 1px;
@@ -244,7 +244,7 @@
   height: 16px;
   border: 2px solid var(--hs-navy);
   background: var(--hs-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-size: 10px;
   font-weight: 700;
 }
@@ -399,12 +399,12 @@
 .hs-shell .hs-rail-btn.open,
 .hs-shell .hs-rail-btn:focus-visible {
   background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: var(--bf-on-accent);
   outline: 0;
 }
 .hs-shell .hs-rail-btn.active {
   background: var(--hs-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
   box-shadow: 0 6px 16px rgba(47, 107, 255, 0.38);
 }
 .hs-shell .hs-rail-btn.recommended::after {
@@ -710,7 +710,7 @@
 }
 .hs-shell .hs-flyout-head {
   padding: 8px 10px 10px;
-  color: #fff;
+  color: var(--bf-on-accent);
   font-family: var(--hs-sans);
   font-size: 14px;
   font-weight: 700;
@@ -742,18 +742,18 @@
 }
 .hs-shell .hs-flyout-item:hover {
   background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 .hs-shell .hs-flyout-item:hover svg {
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 .hs-shell .hs-flyout-item.active {
   background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-weight: 650;
 }
 .hs-shell .hs-flyout-item.active svg {
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 .hs-shell .hs-flyout-item.recommended:not(.active) .hs-flyout-label::after {
   content: "";
@@ -794,7 +794,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.2;
-  color: #fff;
+  color: var(--bf-on-accent);
   background: var(--hs-blue);
   animation: hs-tag-in 0.35s var(--hs-ease) both;
 }
@@ -869,7 +869,7 @@
 }
 .hs-shell .hs-flyout-item.locked:hover .hs-flyout-upgrade,
 .hs-shell .hs-flyout-item.locked:focus-visible .hs-flyout-upgrade {
-  color: #fff;
+  color: var(--bf-on-accent);
   opacity: 1;
 }
 .hs-shell .hs-flyout-tip {
@@ -911,7 +911,7 @@
 .hs-shell .hs-flyout-tip strong {
   display: block;
   margin-bottom: 3px;
-  color: #fff;
+  color: var(--bf-on-accent);
   font-weight: 700;
 }
 .hs-shell .hs-flyout-item:hover .hs-flyout-tip,
@@ -1024,7 +1024,7 @@
   padding: 0 4px;
   border-radius: 999px;
   background: var(--hs-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-family: var(--hs-sans);
   font-size: 9.5px;
   font-weight: 700;

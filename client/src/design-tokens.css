@@ -148,6 +148,35 @@
      rgba() glows and washes, and the darker rung that accent TEXT uses when it
      sits on an accent wash (the plain accent measures 4.06 there and fails).
      Themes override all three together; see section 27 of the daylight sheet. */
+  /* ---- the semantic surface + ink layer ----------------------------------
+     Dark mode needs one place to invert. These are that place: every surface,
+     ink and hairline the redesign paints resolves through them, and section 29
+     of the daylight sheet redefines them for dark. The LIGHT values here are
+     exactly what the product already shipped, so light mode is unchanged.
+
+     --bf-line-rgb is a bare triple rather than a colour because the hairlines
+     are used at eight different alphas (0.06 through 0.2); keeping the triple
+     lets every one of those rgba() calls survive the swap.
+
+     --bf-on-accent does NOT invert. It is the label on a coloured fill -- a
+     primary button, the rail's active item -- and white stays white there in
+     both modes, because the fill underneath it does not change. */
+  --bf-surface: #ffffff;
+  /* The surface as a bare triple, for the translucent surfaces: a few panels sit on
+     rgba(255,255,255,0.7) and a glassy top bar on rgba(245,246,250,0.82). Those are
+     backgrounds, so in dark they have to darken like any other surface — without the
+     triple they stayed light and the ink on them went invisible. */
+  --bf-surface-rgb: 255, 255, 255;
+  --bf-surface-raised: #fdfcf9;
+  --bf-ground: #f5f6fa;
+  --bf-hover: #fbfaf7;
+  --bf-ink: #1c1c1a;
+  --bf-ink-muted: #575550;
+  --bf-ink-faint: #8a877e;
+  --bf-line-rgb: 28, 28, 26;
+  --bf-line-solid: #e6e8f0;
+  --bf-line-soft: #eef0f4;
+  --bf-on-accent: #ffffff;
   --bf-accent: #2f6bff;
   --bf-accent-rgb: 47, 107, 255;
   /* Where light TEXT sits on the accent -- a primary button's label, the rail's

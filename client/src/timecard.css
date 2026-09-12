@@ -36,7 +36,7 @@
   padding: 8px 13px;
   border-radius: 999px;
   background: var(--navy);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-size: 13px;
   font-weight: 600;
 }
@@ -50,7 +50,7 @@
   padding: 9px 15px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--navy);
   font-weight: 600;
   font-size: 14px;
@@ -65,14 +65,14 @@
 .tc-btn.primary {
   background: var(--orange);
   border-color: transparent;
-  color: #fff;
+  color: var(--bf-on-accent);
   box-shadow: 0 10px 20px -12px rgba(251, 133, 0, 0.8);
 }
 .tc-btn.primary:hover:not(:disabled) {
   background: #0042e9;
 }
 .tc-btn.ghost {
-  background: #fff;
+  background: var(--bf-surface);
 }
 .tc-btn.ghost:hover:not(:disabled) {
   background: var(--soft);
@@ -166,7 +166,7 @@
 }
 .tc-tab.active {
   background: var(--navy);
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 
 /* Body grids ------------------------------------------------------------- */
@@ -390,7 +390,7 @@
   height: 32px;
   border-radius: 9px;
   background: linear-gradient(135deg, #133a5e, #0a2138);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-size: 12px;
   font-weight: 700;
   font-style: normal;
@@ -410,7 +410,7 @@
   min-width: 70px;
   height: 7px;
   border-radius: 999px;
-  background: #ebedfb;
+  background: var(--bf-ground);
   overflow: hidden;
 }
 .tc-bar i {
@@ -479,7 +479,7 @@
   padding: 9px 11px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--navy);
   font-size: 13.5px;
 }
@@ -564,7 +564,7 @@
   padding: 6px 11px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--navy);
   font-size: 12.5px;
   font-weight: 600;
@@ -600,7 +600,7 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--tc-amber);
   flex-shrink: 0;
 }
@@ -631,7 +631,7 @@
   width: 23px;
   height: 23px;
   border-radius: 7px;
-  background: #ebedfb;
+  background: var(--bf-ground);
   color: #b3bdcb;
 }
 .tc-verify-icons i.on {
@@ -669,7 +669,7 @@
   color: var(--muted);
 }
 .tc-seg button.active {
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--navy);
   box-shadow: 0 1px 3px rgba(9, 32, 56, 0.14);
 }
@@ -747,7 +747,7 @@
 .tc-budget-bar {
   height: 9px;
   border-radius: 999px;
-  background: #ebedfb;
+  background: var(--bf-ground);
   overflow: hidden;
 }
 .tc-budget-bar i {
@@ -978,7 +978,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--bf-surface);
 }
 .tc-approval-card.flagged {
   border-color: #f3c3c0;
@@ -1033,7 +1033,7 @@
   height: 20px;
   border-radius: 50%;
   background: #d7dde6;
-  color: #fff;
+  color: var(--bf-on-accent);
   flex-shrink: 0;
 }
 .tc-chain-step.green .tc-chain-dot {
@@ -1279,7 +1279,7 @@
   padding: 5px 11px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--bf-surface);
   font-size: 12px;
   font-weight: 600;
   color: var(--navy);

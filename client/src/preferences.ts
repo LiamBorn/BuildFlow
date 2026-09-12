@@ -9,21 +9,17 @@
    it needs to change.
 
    WHAT IS REAL AND WHAT IS NOT. Six of the eight preferences take effect the
-   moment they change, because each has a live target in the shell: the page's
-   measure, the top bar's position, the rail's presentation and how the rail
-   reads when collapsed. Two do NOT, and they are marked `locked` rather than
-   quietly shipped as controls that do nothing:
+   moment they change, because each has a live target in the shell.
 
-     - Theme Mode. There is no dark palette in this product. Not one of the
-       sixty stylesheets carries a `prefers-color-scheme` rule, and the only
-       dark scope that exists is one decorative band on the marketing page. A
-       Light / Dark / System switch would therefore be a switch onto nothing.
-     - Fonts. One family is declared five times over and nothing selects
-       between families, so there is no second face to choose.
+   ALL EIGHT ARE LIVE NOW. Theme Mode and Fonts each shipped disabled, with the
+   reason on the control, because the product had no dark palette and one font
+   family. Both have since been built: the fonts load from Google Fonts, and dark
+   mode redefines a semantic surface/ink layer (section 29 of the daylight sheet).
 
-   Both are presented with the reason, which is the pattern this product already
-   uses for a locked add-on. A control with no handler is the one thing this
-   shell has had to go back and clean up before.
+   Dark mode covers the app shell, the Dashboard, the index pages and everything
+   the redesign sheet owns. A page the redesign has not reached keeps light
+   patches until its stylesheet is converted the same way -- a known edge, agreed
+   before it was built rather than discovered afterwards.
    ========================================================================= */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -58,7 +54,7 @@ export type AppPreferences = {
   preset: ThemePreset;
   /** The typeface the whole product is set in. */
   font: FontId;
-  /** Locked: there is no dark palette to switch to. */
+  /** Light, dark, or whatever the operating system is asking for. */
   mode: ThemeMode;
   layout: PageLayout;
   navbar: NavbarBehavior;
@@ -185,6 +181,7 @@ export function preferenceAttributes(preferences: AppPreferences): Record<string
   return {
     "data-bf-theme": preferences.preset,
     "data-bf-font": preferences.font,
+    "data-bf-mode": preferences.mode,
     "data-bf-layout": preferences.layout,
     "data-bf-navbar": preferences.navbar,
     "data-bf-sidebar": preferences.sidebar,

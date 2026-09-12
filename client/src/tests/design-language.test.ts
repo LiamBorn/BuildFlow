@@ -54,6 +54,21 @@ const GROUND: RGB = hex("#f5f6fa");
 const INK: RGB = hex("#1c1c1a");
 const MUTED: RGB = hex("#575550");
 const FAINT: RGB = hex("#8a877e");
+/**
+ * The sheet's surfaces and inks are tokens now, so a colour read out of a rule can be
+ * `var(--bf-ink)`. This resolves one level of that against design-tokens.css rather than
+ * hard-coding the light values here, so the guard follows the palette instead of a copy
+ * of it. Dark mode redefines the same names in section 29; the LIGHT value is what the
+ * assertions below are about, which is why it reads the `:root` block.
+ */
+const TOKEN_VALUES: Record<string, string> = Object.fromEntries(
+  [...read(TOKENS).matchAll(/(--bf-[\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8})\s*;/g)].map((m) => [m[1], m[2]])
+);
+const resolveColour = (value: string): string => {
+  const token = value.match(/var\(\s*(--bf-[\w-]+)/);
+  return token ? (TOKEN_VALUES[token[1]] ?? value) : value;
+};
+
 const ACCENT: RGB = hex("#2f6bff");
 const ACCENT_DARK: RGB = hex("#1f57e0");
 
@@ -158,6 +173,53 @@ describe("the ink ladder holds against every ground the design uses", () => {
       expect(round(contrast(hex(accent), CARD)), `${theme}: --bf-accent as an indicator`).toBeGreaterThanOrEqual(3);
     }
     expect(missing).toEqual([]);
+  });
+
+  it("gives the dark palette an ink ladder and an accent that hold their own contrast", () => {
+    /* Dark mode is a redefinition of the semantic layer, so "the ladder is legible" stopped
+       being one measurement and became two. These are re-derived from section 29's own
+       values rather than copied, so retuning the palette cannot slip past.
+
+       The accent is the part that had to change and the reason this test exists: measured on
+       the dark surface the shipped accents FAIL -- #2f6bff is 3.83, Tangerine's 4.00,
+       Brutalist's 4.42, and Soft Pop's indigo is 2.34, under even the 3:1 floor for a
+       non-text indicator. Each theme therefore carries a lighter rung for dark. */
+    const css = read(SHEET);
+    const darkBlock = css.match(/\.bf-shell\[data-bf-mode="dark"\]\s*\{([^}]*)\}/);
+    expect(darkBlock, "section 29 declares a dark palette").not.toBeNull();
+    const pick = (name: string) => darkBlock![1].match(new RegExp(`--bf-${name}:\\s*([^;]+)`))?.[1]?.trim();
+
+    const surface = hex(pick("surface")!);
+    const raised = hex(pick("surface-raised")!);
+    const ground = hex(pick("ground")!);
+    // the ink ladder, against all three dark grounds
+    for (const [name, floor] of [
+      ["ink", 4.5],
+      ["ink-muted", 4.5],
+      ["ink-faint", 3]
+    ] as Array<[string, number]>) {
+      const ink = hex(pick(name)!);
+      for (const [where, bg] of [
+        ["surface", surface],
+        ["raised", raised],
+        ["ground", ground]
+      ] as Array<[string, RGB]>) {
+        expect(round(contrast(ink, bg)), `dark --bf-${name} on the ${where}`).toBeGreaterThanOrEqual(floor);
+      }
+    }
+
+    // every theme's dark accent, on the dark surface, as a non-text indicator at minimum
+    const themes = ["dark"] // the default theme's dark block carries no [data-bf-theme]
+      .map(() => css.match(/\.bf-shell\[data-bf-mode="dark"\]\s*\{[^}]*--bf-accent:\s*([^;]+)/))
+      .filter(Boolean);
+    expect(themes.length, "the default theme lightens its accent for dark").toBeGreaterThan(0);
+    for (const theme of ["brutalist", "soft-pop", "tangerine"]) {
+      const m = css.match(
+        new RegExp(`\\.bf-shell\\[data-bf-mode="dark"\\]\\[data-bf-theme="${theme}"\\]\\s*\\{[^}]*--bf-accent:\\s*([^;]+)`)
+      );
+      expect(m, `${theme} lightens its accent for dark`).not.toBeNull();
+      expect(round(contrast(hex(m![1].trim()), surface)), `${theme}'s dark accent on the dark surface`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it("keeps the destructive red and the beta violet, which were measured and do pass", () => {
@@ -275,7 +337,7 @@ describe("a prefixed rest-state rule never silences the state it sits next to", 
     expect(sorted, "the sorted head sets an ink").not.toBeNull();
     expect(sorted).not.toBe(unsorted);
     // and the sorted ink must itself be legible
-    expect(round(contrast(hex(sorted!), CARD))).toBeGreaterThanOrEqual(4.5);
+    expect(round(contrast(hex(resolveColour(sorted!)), CARD))).toBeGreaterThanOrEqual(4.5);
   });
 });
 

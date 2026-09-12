@@ -62,19 +62,35 @@ describe("the top bar's Preferences panel", () => {
     }
   });
 
-  it("disables the one topic that still has nothing to switch to, and says why", async () => {
+  it("has no disabled controls left, and no stale reasons for having had them", async () => {
     const panel = await openPreferences();
 
-    // No dark palette exists in the product, so Light / Dark / System is inert
-    // on purpose and says so, rather than being a switch onto nothing. Fonts used
-    // to be disabled beside it and is now live, which leaves this the only one.
-    const mode = within(panel).getByRole("radiogroup", { name: "Theme Mode" });
-    for (const option of ["Light", "Dark", "System"]) {
-      expect(within(mode).getByRole("radio", { name: option })).toBeDisabled();
+    /* Theme Mode and Fonts each shipped disabled with the reason on the control,
+       which was honest while neither was built. Both are built now, so this asserts
+       the absence of BOTH the disabled state and the explanation — a note that
+       outlives the limitation it described is worse than no note. */
+    for (const group of ["Theme Mode", "Page Layout", "Navbar Behavior", "Sidebar Style", "Sidebar Collapse Mode"]) {
+      const radios = within(panel).getByRole("radiogroup", { name: group });
+      for (const radio of within(radios).getAllByRole("radio")) expect(radio).toBeEnabled();
     }
-    expect(within(panel).getByText(/no dark palette yet/i)).toBeInTheDocument();
-
     expect(within(panel).getByLabelText("Fonts")).toBeEnabled();
+    expect(within(panel).getByLabelText("Theme Preset")).toBeEnabled();
+    expect(within(panel).queryByText(/no dark palette yet/i)).not.toBeInTheDocument();
+    expect(within(panel).queryByText(/One family ships today/i)).not.toBeInTheDocument();
+  });
+
+  it("switches theme mode, and tells the browser so its own chrome follows", async () => {
+    const panel = await openPreferences();
+    expect(shell().dataset.bfMode).toBe("light");
+
+    choose(panel, "Theme Mode", "Dark");
+    await waitFor(() => expect(shell().dataset.bfMode).toBe("dark"));
+
+    choose(panel, "Theme Mode", "System");
+    await waitFor(() => expect(shell().dataset.bfMode).toBe("system"));
+
+    choose(panel, "Theme Mode", "Light");
+    await waitFor(() => expect(shell().dataset.bfMode).toBe("light"));
   });
 
   it("offers the eighteen fonts, grouped, and sets the whole product to the chosen one", async () => {

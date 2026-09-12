@@ -5,12 +5,10 @@
    the page is still one click away at the foot of the panel, because the panel
    holds the shell's layout choices and the page holds everything else.
 
-   All eight topics from the reference are here, in its order. Six are live. Two
-   — Theme Mode and Fonts — are disabled and say why, because this product has
-   no dark palette and one font family; see the note at the top of
-   preferences.ts. A disabled control that explains itself is the pattern used
-   for a locked add-on elsewhere in the app, and it is the honest version of a
-   control that cannot work yet.
+   All eight topics from the reference are here, in its order, and all eight are
+   live. Theme Mode and Fonts each shipped disabled with the reason on the
+   control, which was the honest version of something not yet built; both have
+   since been built, so the reasons are gone rather than left to go stale.
    ========================================================================= */
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
@@ -201,8 +199,8 @@ export function PreferencesMenu({
         </div>
       </Field>
 
-      <Field label="Theme Mode" note="BuildFlow has no dark palette yet, so there is nothing to switch to.">
-        <Segmented label="Theme Mode" value={preferences.mode} options={MODE_OPTIONS} disabled onChange={() => undefined} />
+      <Field label="Theme Mode">
+        <Segmented label="Theme Mode" value={preferences.mode} options={MODE_OPTIONS} onChange={(mode) => onUpdate({ mode })} />
       </Field>
 
       <Field label="Page Layout">

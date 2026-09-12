@@ -49,7 +49,7 @@
   min-height: 96px;
   border: 1px dashed #cbd8e8;
   border-radius: 8px;
-  background: #f5f6fe;
+  background: var(--bf-ground);
   color: #6d7e95;
   font: inherit;
   font-size: 12px;
@@ -62,7 +62,7 @@
   min-height: 34px;
   justify-content: center;
   padding: 6px 8px;
-  background: #fff;
+  background: var(--bf-surface);
 }
 
 .schedule-add-job-button svg {
@@ -220,7 +220,7 @@
   border: 1px solid #dbe4ee;
   border-radius: 7px;
   padding: 8px 10px;
-  background: #fff;
+  background: var(--bf-surface);
   color: #1f2d45;
   font: inherit;
   font-size: 14px;
@@ -329,10 +329,10 @@
   display: grid;
   gap: 18px;
   padding: 22px 24px 20px;
-  border: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+  border: 1px solid var(--wx-line-soft, rgba(var(--bf-line-rgb), 0.07));
   border-radius: 18px;
   background: var(--wx-card, #ffffff);
-  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  box-shadow: 0 14px 34px rgba(var(--bf-line-rgb), 0.06);
   transition:
     transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.32s ease,
@@ -340,8 +340,8 @@
 }
 .ss-band:hover {
   transform: translateY(-4px);
-  box-shadow: 0 26px 52px rgba(28, 28, 26, 0.12);
-  border-color: var(--wx-line, rgba(28, 28, 26, 0.13));
+  box-shadow: 0 26px 52px rgba(var(--bf-line-rgb), 0.12);
+  border-color: var(--wx-line, rgba(var(--bf-line-rgb), 0.13));
 }
 
 .ss-head {
@@ -434,7 +434,7 @@
   gap: 14px;
   margin: 0;
   padding: 16px 0 0;
-  border-top: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+  border-top: 1px solid var(--wx-line-soft, rgba(var(--bf-line-rgb), 0.07));
 }
 .ss-facts > div {
   display: grid;
@@ -473,7 +473,7 @@
   margin: 0;
   padding: 14px 0 0;
   list-style: none;
-  border-top: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+  border-top: 1px solid var(--wx-line-soft, rgba(var(--bf-line-rgb), 0.07));
 }
 .ss-project {
   width: 100%;
@@ -574,10 +574,10 @@
   gap: 10px 22px;
   flex-wrap: wrap;
   padding: 12px 18px;
-  border: 1px solid var(--wx-line-soft, rgba(28, 28, 26, 0.07));
+  border: 1px solid var(--wx-line-soft, rgba(var(--bf-line-rgb), 0.07));
   border-radius: 14px;
   background: var(--wx-card, #ffffff);
-  box-shadow: 0 10px 26px rgba(28, 28, 26, 0.05);
+  box-shadow: 0 10px 26px rgba(var(--bf-line-rgb), 0.05);
 }
 .ss-strip-figure {
   display: inline-flex;
@@ -667,8 +667,8 @@
   --wx-ink: #1c1c1a;
   --wx-mut: #575550;
   --wx-faint: #6b6862; /* 5.5:1 on white — the lighter #8a877e was 3.6:1 and failed AA for text */
-  --wx-line: rgba(28, 28, 26, 0.13);
-  --wx-line-soft: rgba(28, 28, 26, 0.07);
+  --wx-line: rgba(var(--bf-line-rgb), 0.13);
+  --wx-line-soft: rgba(var(--bf-line-rgb), 0.07);
   --wx-card: #ffffff;
   --wx-blue: #2f6bff;
   --wx-g-blue: #4285f4;
@@ -799,7 +799,7 @@
   padding: 7px 15px 7px 12px;
   border: 1px solid var(--wx-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(var(--bf-surface-rgb), 0.7);
   color: var(--wx-mut);
   font-size: 12.5px;
   font-weight: 600;
@@ -862,14 +862,14 @@
 .sched-rx .schedule-select {
   border: 1px solid var(--wx-line);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bf-surface);
   box-shadow: none;
   transition:
     border-color 0.2s ease,
     background 0.2s ease;
 }
 .sched-rx .schedule-select:hover {
-  border-color: rgba(28, 28, 26, 0.25);
+  border-color: rgba(var(--bf-line-rgb), 0.25);
 }
 .sched-rx .schedule-select label,
 .sched-rx .schedule-select span {
@@ -884,7 +884,7 @@
 .sched-rx .week-stepper {
   border: 1px solid var(--wx-line);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bf-surface);
   box-shadow: none;
 }
 .sched-rx .week-stepper strong {
@@ -907,7 +907,7 @@
   min-height: 44px;
   border: 1px solid var(--wx-line);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bf-surface);
   color: var(--wx-mut);
   font-size: 14px;
   font-weight: 600;
@@ -929,7 +929,7 @@
   border: 1px solid var(--wx-line-soft);
   border-radius: var(--wx-radius);
   background: var(--wx-card);
-  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+  box-shadow: 0 18px 44px rgba(var(--bf-line-rgb), 0.07);
   animation: dx-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes dx-fade-up {
@@ -956,7 +956,7 @@
 .sched-rx .schedule-filter-panel header button {
   border: 1px solid var(--wx-line);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bf-surface);
   color: var(--wx-mut);
 }
 .sched-rx .schedule-filter-panel header button:hover {
@@ -967,7 +967,7 @@
 .sched-rx .schedule-filter-chips button {
   border: 1px solid var(--wx-line-soft);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bf-surface);
 }
 .sched-rx .schedule-filter-chips button.active {
   border-color: rgba(26, 115, 232, 0.4);
@@ -981,7 +981,7 @@
   border: 1px solid var(--wx-line-soft);
   border-radius: var(--wx-radius);
   background: var(--wx-card);
-  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
+  box-shadow: 0 18px 44px rgba(var(--bf-line-rgb), 0.07);
 }
 
 /* ============================ KPI cards ================================= */
@@ -1008,7 +1008,7 @@
 }
 .sched-rx .dx-tilt:hover .kpi-card {
   --lift: -6px;
-  box-shadow: 0 30px 62px rgba(28, 28, 26, 0.14);
+  box-shadow: 0 30px 62px rgba(var(--bf-line-rgb), 0.14);
   border-color: var(--wx-line);
 }
 .sched-rx .schedule-kpis .kpi-icon {
@@ -1082,7 +1082,7 @@
   overflow: hidden;
 }
 .sched-rx .schedule-header {
-  background: #ffffff;
+  background: var(--bf-surface);
   border-bottom: 1px solid var(--wx-line-soft);
 }
 .sched-rx .schedule-header > span,
@@ -1139,14 +1139,14 @@
 /* job cards — soft paper status tints */
 .sched-rx .schedule-job {
   border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.05);
+  box-shadow: 0 4px 14px rgba(var(--bf-line-rgb), 0.05);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
 }
 .sched-rx .schedule-job:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(28, 28, 26, 0.12);
+  box-shadow: 0 12px 28px rgba(var(--bf-line-rgb), 0.12);
 }
 .sched-rx .schedule-job.confirmed,
 .sched-rx .schedule-job.on-site,
@@ -1170,7 +1170,7 @@
 }
 .sched-rx .schedule-job.planned {
   border-color: var(--wx-line);
-  background: #ffffff;
+  background: var(--bf-surface);
 }
 .sched-rx .schedule-job strong {
   color: var(--wx-ink);
@@ -1192,7 +1192,7 @@
 
 /* board footer */
 .sched-rx .schedule-board-footer {
-  background: #ffffff;
+  background: var(--bf-surface);
   border-top: 1px solid var(--wx-line-soft);
 }
 .sched-rx .schedule-legend {
@@ -1238,7 +1238,7 @@
 .sched-rx .schedule-board-footer .export-button {
   border: 1px solid var(--wx-line);
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--bf-surface);
   color: var(--wx-mut);
   font-weight: 600;
   transition:
@@ -1255,7 +1255,7 @@
 
 /* list view */
 .sched-rx .schedule-list-view header {
-  background: #ffffff;
+  background: var(--bf-surface);
   border-bottom: 1px solid var(--wx-line-soft);
   color: var(--wx-faint);
 }
@@ -1315,8 +1315,8 @@
 .sched-rx .unassigned-card {
   border: 1px solid var(--wx-line-soft);
   border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.04);
+  background: var(--bf-surface);
+  box-shadow: 0 4px 14px rgba(var(--bf-line-rgb), 0.04);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -1324,7 +1324,7 @@
 }
 .sched-rx .unassigned-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(28, 28, 26, 0.1);
+  box-shadow: 0 14px 30px rgba(var(--bf-line-rgb), 0.1);
 }
 .sched-rx .unassigned-card.ready,
 .sched-rx .unassigned-card.ready-to-start {
@@ -1357,7 +1357,7 @@
 /* ============================ badges =================================== */
 .sched-rx .badge {
   border-radius: 999px;
-  background: #ebedfb;
+  background: var(--bf-ground);
   color: var(--wx-mut);
   font-weight: 700;
   font-size: 11.5px;
@@ -1410,7 +1410,7 @@
   border-radius: var(--wx-radius);
   background: var(--wx-card);
   border: 1px solid var(--wx-line-soft);
-  box-shadow: 0 40px 90px rgba(28, 28, 26, 0.28);
+  box-shadow: 0 40px 90px rgba(var(--bf-line-rgb), 0.28);
 }
 .sched-rx .schedule-dialog h2 {
   font-family: var(--cc-sans);
@@ -1585,7 +1585,7 @@
   padding: 16px;
   border: 1px solid var(--wx-line-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--bf-surface);
   text-align: left;
   cursor: pointer;
   transition:
@@ -1596,7 +1596,7 @@
 .sched-rx .sched-view-card:hover,
 .sched-rx .sched-view-card:focus-visible {
   transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(28, 28, 26, 0.1);
+  box-shadow: 0 14px 30px rgba(var(--bf-line-rgb), 0.1);
   border-color: rgba(47, 107, 255, 0.4);
 }
 .sched-rx .sched-view-ico {
@@ -1629,7 +1629,7 @@
   padding: 18px;
   border: 1px solid var(--wx-line-soft);
   border-radius: 18px;
-  background: #fff;
+  background: var(--bf-surface);
 }
 .sched-rx .sched-home-section > header {
   display: flex;
@@ -1733,7 +1733,7 @@
   padding: 6px;
   border: 1px solid #e6e8f0;
   border-radius: 12px;
-  background: #fff;
+  background: var(--bf-surface);
   box-shadow: 0 14px 34px rgba(20, 32, 58, 0.14);
 }
 .sched-export-menu button {
@@ -1746,7 +1746,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #14203a;
+  color: var(--bf-ink);
   font: 600 13px var(--cc-sans, Inter, system-ui, sans-serif);
   text-align: left;
   cursor: pointer;
@@ -1792,7 +1792,7 @@
     SFMono-Regular,
     Menlo,
     monospace;
-  color: #575550;
+  color: var(--bf-ink-muted);
   overflow-wrap: anywhere;
 }
 .sched-feeds {
@@ -1814,7 +1814,7 @@
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--wx-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
   font: 600 10.5px/1.5 var(--cc-sans);
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -1955,7 +1955,7 @@
 .sched-rx .sched-views-form button[type="submit"] {
   background: var(--wx-blue);
   border-color: var(--wx-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 .sched-rx .sched-views-form button:disabled {
   opacity: 0.55;
@@ -2058,7 +2058,7 @@
   grid-column: 2 / -1;
 }
 .sched-rx .crew-row.is-lazy .schedule-cell {
-  background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(28, 28, 26, 0.03) 10px 20px);
+  background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(var(--bf-line-rgb), 0.03) 10px 20px);
 }
 .gantt-page.hs-index .gantt-cap-note {
   margin-bottom: 8px;
@@ -2108,7 +2108,7 @@
 .sched-rx .sched-firstrun-mark.is-done {
   background: var(--wx-green);
   border-color: var(--wx-green);
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 .sched-rx .sched-firstrun-form {
   display: flex;
@@ -2131,7 +2131,7 @@
   border: 1px solid var(--wx-blue);
   border-radius: 999px;
   background: var(--wx-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
   font: 600 12.5px/1.2 var(--cc-sans);
   padding: 7px 12px;
   cursor: pointer;
@@ -2176,7 +2176,7 @@
   padding: 6px 9px;
   border-radius: 8px;
   background: var(--wx-ink);
-  color: #fff;
+  color: var(--bf-on-accent);
   font: 500 12px/1.35 var(--cc-sans);
   text-align: left;
   white-space: normal;
@@ -2250,7 +2250,7 @@
   border-radius: 11px;
   padding: 9px 16px;
   background: var(--sc-concrete);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-family: var(--cc-sans, Inter, system-ui, sans-serif);
   font-size: 13.5px;
   font-weight: 650;
@@ -2410,7 +2410,7 @@
 }
 .sched-rx .sched-cal-cell.is-today .sched-cal-daynum {
   background: var(--sc-concrete);
-  color: #fff;
+  color: var(--bf-on-accent);
   box-shadow: 0 4px 10px rgba(47, 107, 255, 0.35);
 }
 .sched-rx .sched-holiday-tag {
@@ -2455,7 +2455,7 @@
 .sched-rx .sched-cal-add:hover {
   background: var(--wx-blue, #2f6bff);
   border-color: var(--wx-blue, #2f6bff);
-  color: #fff;
+  color: var(--bf-on-accent);
 }
 
 /* activity chips */
@@ -2562,7 +2562,7 @@
   border-radius: 18px;
   background: var(--wx-card);
   padding: 18px;
-  box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
+  box-shadow: 0 14px 34px rgba(var(--bf-line-rgb), 0.06);
 }
 .sched-rx .sched-rail-head {
   display: flex;
@@ -2794,7 +2794,7 @@
   cursor: grabbing;
 }
 .sched-rx .sched-act.dragging {
-  box-shadow: 0 14px 30px rgba(28, 28, 26, 0.18);
+  box-shadow: 0 14px 30px rgba(var(--bf-line-rgb), 0.18);
 }
 
 /* month calendar cell: highlight as a drop target while a job hovers over it */
@@ -2929,7 +2929,7 @@
   border: 1px solid var(--wx-line-soft);
   border-radius: 14px;
   background: var(--wx-card);
-  box-shadow: 0 6px 18px rgba(28, 28, 26, 0.05);
+  box-shadow: 0 6px 18px rgba(var(--bf-line-rgb), 0.05);
 }
 .sched-rx .sched-cpm-ico {
   display: grid;
@@ -3133,7 +3133,7 @@
   background: var(--wx-card);
   padding: 11px;
   cursor: grab;
-  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.05);
+  box-shadow: 0 4px 12px rgba(var(--bf-line-rgb), 0.05);
   transition:
     transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.18s ease,
@@ -3141,12 +3141,12 @@
 }
 .sched-rx .sched-kan-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(28, 28, 26, 0.12);
+  box-shadow: 0 14px 28px rgba(var(--bf-line-rgb), 0.12);
   border-color: var(--wx-line);
 }
 .sched-rx .sched-kan-card.dragging {
   cursor: grabbing;
-  box-shadow: 0 18px 34px rgba(28, 28, 26, 0.2);
+  box-shadow: 0 18px 34px rgba(var(--bf-line-rgb), 0.2);
 }
 .sched-rx .sched-kan-card.focused {
   box-shadow: inset 0 0 0 2px var(--sc-concrete);
@@ -3526,7 +3526,7 @@
   padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--bf-surface);
 }
 .sim-formats strong {
   font-size: 12.5px;
@@ -3593,7 +3593,7 @@
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
+  background: var(--bf-surface);
   text-align: center;
 }
 .sim-stats b {
@@ -3612,7 +3612,7 @@
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--bf-surface);
 }
 .sim-project-head {
   display: flex;
@@ -3730,7 +3730,7 @@
   padding: 0 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--ink, #141922);
   font-size: 14px;
   font-weight: 700;
@@ -3929,7 +3929,7 @@
   gap: 4px;
   padding: 3px 10px;
   border-radius: 999px;
-  background: #fff;
+  background: var(--bf-surface);
   border: 1px solid var(--sim-line);
   color: var(--sim-accent);
   font-size: 11.5px;
@@ -4107,7 +4107,7 @@
   font-variant-numeric: tabular-nums;
 }
 .sim-band-key-plan {
-  border-left-color: #64748b;
+  border-left-color: var(--bf-ink-muted);
 }
 .sim-band-key-p50 {
   border-left-color: #0b2a6b;
@@ -4168,7 +4168,7 @@
   border: 1px solid var(--line);
   border-left-width: 3px;
   border-radius: 9px;
-  background: #fff;
+  background: var(--bf-surface);
 }
 .sim-finding.sim-sev-high {
   border-left-color: #d33;
@@ -4419,7 +4419,7 @@
   min-height: 100%;
   overflow: clip;
   border-right: 1px solid var(--hsx-line);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--bf-surface-rgb), 0.92);
   backdrop-filter: blur(8px);
 }
 .gantt-sidebar-header {
@@ -4434,7 +4434,7 @@
   height: var(--gantt-header-height);
   padding: 10px;
   border-bottom: 1px solid var(--hsx-line);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--bf-surface-rgb), 0.92);
   backdrop-filter: blur(8px);
   color: var(--hsx-mut);
   font-size: 12px;
@@ -4567,7 +4567,7 @@
   box-sizing: border-box;
   width: 100%;
   height: var(--gantt-header-height);
-  background: rgba(245, 246, 250, 0.92);
+  background: rgba(var(--bf-surface-rgb), 0.92);
   backdrop-filter: blur(6px);
 }
 .gantt-content-header-title {
@@ -4805,7 +4805,7 @@
   padding: 4px 9px;
   border: 1px solid var(--hsx-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(var(--bf-surface-rgb), 0.96);
   color: var(--hsx-ink);
   font-size: 11.5px;
   font-weight: 600;
@@ -4840,7 +4840,7 @@
   padding: 4px 8px;
   border-radius: 0 0 8px 8px;
   background: var(--hsx-ink);
-  color: #fff;
+  color: var(--bf-on-accent);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -4925,7 +4925,7 @@
   padding: 3px 8px;
   border: 1px solid var(--hsx-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(var(--bf-surface-rgb), 0.95);
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -4999,7 +4999,7 @@
   width: min(440px, 100%);
   overflow-y: auto;
   padding: 18px 22px 28px;
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--hsx-ink, var(--wx-ink));
   box-shadow: -24px 0 60px rgba(20, 32, 58, 0.22);
   animation: hsg-slide-in 0.32s var(--hsx-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
@@ -5114,7 +5114,7 @@
 .gantt-drawer .hs-btn-primary {
   border-color: var(--hsx-blue, var(--wx-blue));
   background: var(--hsx-blue, var(--wx-blue));
-  color: #fff;
+  color: var(--bf-on-accent);
   box-shadow: 0 6px 16px rgba(47, 107, 255, 0.28);
 }
 .gantt-drawer .hs-btn-primary:hover {
@@ -5204,7 +5204,7 @@
   padding: 0 12px;
   border: 1px solid var(--hsx-line, var(--wx-line));
   border-radius: 10px;
-  background: #fff;
+  background: var(--bf-surface);
   color: var(--hsx-ink, var(--wx-ink));
   font: 600 14px var(--hsx-sans, var(--cc-sans));
   outline: 0;

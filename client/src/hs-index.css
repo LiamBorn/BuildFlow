@@ -236,7 +236,7 @@
 .hs-index .hs-btn-primary {
   border-color: var(--hsx-blue);
   background: var(--hsx-blue);
-  color: #fff;
+  color: var(--bf-on-accent);
   box-shadow: 0 6px 16px rgba(47, 107, 255, 0.28);
 }
 .hs-index .hs-btn-primary:hover {
@@ -515,7 +515,7 @@
 }
 .hs-index .hs-table thead th {
   height: 42px;
-  background: #fafbfd;
+  background: var(--bf-surface-raised);
   color: var(--hsx-mut);
   font-size: 12.5px;
   font-weight: 650;
@@ -982,7 +982,7 @@
   padding: 3px 8px;
   border-radius: 999px;
   background: #2f6bff;
-  color: #fff;
+  color: var(--bf-on-accent);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
