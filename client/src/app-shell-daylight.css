@@ -3897,21 +3897,52 @@
 }
 
 /* ---- 26h. Sidebar Style ----------------------------------------------- */
-/* Inset: the rail sits inside the body's edge instead of being flush to it. */
+/* Three presentations of the same 56px rail: flush to the edge, inset from it,
+   or detached and lifted off the page.
+
+   THE COLUMN HAS TO GROW WITH THE MARGIN, which is what the first version got
+   wrong. `.hs-body` is a grid whose first column is `var(--hs-rail-w)` -- 56px,
+   exactly the rail -- so adding a left margin moved the rail right and pushed its
+   far edge INTO the content. Measured: Inset put the rail's right edge 10px over
+   the page, Floating 12px. The rail was overlapping the thing it sits beside, in
+   both non-default modes, which is why neither looked deliberate.
+
+   So each mode widens its column by its own gutters, and the margins are
+   symmetric so the rail sits centred in the space it was given. */
+
+/* Inset: inside the body's edge rather than flush to it. */
+.bf-shell[data-bf-sidebar="inset"] .hs-body {
+  grid-template-columns: calc(var(--hs-rail-w) + 20px) minmax(0, 1fr);
+}
 .bf-shell[data-bf-sidebar="inset"] .sidebar.hs-rail {
   height: calc(100vh - var(--hs-topbar-h) - 20px);
-  margin: 10px 0 10px 10px;
+  margin: 10px;
   border-right: 0;
   border-radius: var(--bf-radius-control);
 }
+
 /* Floating: detached, only as tall as it needs to be, and lifted off the page. */
+.bf-shell[data-bf-sidebar="floating"] .hs-body {
+  grid-template-columns: calc(var(--hs-rail-w) + 24px) minmax(0, 1fr);
+}
 .bf-shell[data-bf-sidebar="floating"] .sidebar.hs-rail {
   height: auto;
   max-height: calc(100vh - var(--hs-topbar-h) - 28px);
-  margin: 14px 0 14px 12px;
+  margin: 14px 12px;
   border-right: 0;
   border-radius: var(--bf-radius-card);
   box-shadow: var(--bf-shadow-float);
+}
+
+/* The float shadow is an ink shadow, which says nothing against a dark ground, so
+   in dark the detached rail is read by an edge instead. */
+.bf-shell[data-bf-mode="dark"][data-bf-sidebar="floating"] .sidebar.hs-rail {
+  border: 1px solid rgba(var(--bf-line-rgb), 0.14);
+}
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"][data-bf-sidebar="floating"] .sidebar.hs-rail {
+    border: 1px solid rgba(var(--bf-line-rgb), 0.14);
+  }
 }
 
 /* ---- 26i. Sidebar Collapse Mode --------------------------------------- */

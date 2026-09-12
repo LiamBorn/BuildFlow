@@ -175,6 +175,39 @@ describe("the ink ladder holds against every ground the design uses", () => {
     expect(missing).toEqual([]);
   });
 
+  it("widens the rail's own grid column for every style that insets it", () => {
+    /* `.hs-body`'s first column is `var(--hs-rail-w)` -- 56px, exactly the rail -- so a
+       margin on the rail moves it right and pushes its far edge INTO the page. Measured
+       before the fix: Inset put the rail's right edge 10px over the content, Floating 12px.
+       Both non-default styles were overlapping the thing the rail sits beside.
+
+       Each inset style therefore has to widen its own column, and the margin has to be
+       symmetric so the rail is centred in the space it was given. Measured after: gutters
+       10/10 and 12/12, overlap 0 in all three styles. */
+    const css = read(SHEET);
+    for (const [style, gutter] of [
+      ["inset", 20],
+      ["floating", 24]
+    ] as Array<[string, number]>) {
+      const column = css.match(new RegExp(`\\.bf-shell\\[data-bf-sidebar="${style}"\\]\\s+\\.hs-body\\s*\\{([^}]*)\\}`));
+      expect(column, `${style} widens the rail's column`).not.toBeNull();
+      // the column is the rail plus its own gutters, expressed off the rail token so the
+      // two cannot drift apart
+      expect(norm(column![1])).toContain("var(--hs-rail-w)");
+      expect(norm(column![1])).toContain(`${gutter}px`);
+
+      const rule = css.match(new RegExp(`\\.bf-shell\\[data-bf-sidebar="${style}"\\]\\s+\\.sidebar\\.hs-rail\\s*\\{([^}]*)\\}`));
+      expect(rule, `${style} restyles the rail`).not.toBeNull();
+      const margin =
+        norm(rule![1])
+          .match(/margin:\s*([^;]+)/)?.[1]
+          ?.trim()
+          .split(/\s+/) ?? [];
+      // one or two values only: either is symmetric left-to-right, three or four is not
+      expect(margin.length, `${style}'s margin is symmetric`).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("makes Scroll mode move the rail as well as the bar, and keep the bar's stacking", () => {
     /* Two halves, and the second is the one that made Scroll mode look broken. The rail
        sticks at `top: var(--hs-topbar-h)` because a sticky bar occupies that strip, so with
