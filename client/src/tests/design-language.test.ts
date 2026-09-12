@@ -175,6 +175,30 @@ describe("the ink ladder holds against every ground the design uses", () => {
     expect(missing).toEqual([]);
   });
 
+  it("makes Full Width release both the measure and the gutter", () => {
+    /* Releasing only the 880px cap made the two Page Layout states differ by the window's
+       width minus 880 -- dramatic on a wide screen, about ten pixels at the width the
+       Preferences panel is usually opened at, which reads as a control that does nothing.
+       Full Width therefore releases the page's side padding as well, so it gains room at
+       any width. Measured at a 1180px viewport: 880px with 122px gutters becomes 1088px
+       with 18px, a gain of 208px. This asserts both halves are present, because dropping
+       either one silently returns the control to imperceptible. */
+    const css = read(SHEET);
+    const full = css.match(/\.bf-shell\[data-bf-layout="full"\]\s+\.dash-rx\s+\.dx-inner\s*\{([^}]*)\}/);
+    expect(full, "Full Width releases the measure").not.toBeNull();
+    expect(norm(full![1])).toMatch(/max-width:\s*none/);
+
+    const gutter = css.match(/\.bf-shell\[data-bf-layout="full"\]\s+\.dash-rx\s*\{([^}]*)\}/);
+    expect(gutter, "Full Width releases the gutter").not.toBeNull();
+    const fullPad = Number(norm(gutter![1]).match(/padding-left:\s*(\d+)px/)?.[1]);
+
+    const centered = css.match(/\.bf-shell\[data-bf-layout="centered"\]\s+\.dash-rx\s*\{([^}]*)\}/);
+    expect(centered, "Centered states its gutter rather than relying on a missing rule").not.toBeNull();
+    const centredPad = Number(norm(centered![1]).match(/padding-left:\s*(\d+)px/)?.[1]);
+
+    expect(fullPad).toBeLessThan(centredPad);
+  });
+
   it("gives the dark palette an ink ladder and an accent that hold their own contrast", () => {
     /* Dark mode is a redefinition of the semantic layer, so "the ladder is legible" stopped
        being one measurement and became two. These are re-derived from section 29's own

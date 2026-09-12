@@ -3841,11 +3841,34 @@
 }
 
 /* ---- 26f. Page Layout -------------------------------------------------- */
-/* The dashboard's measure is 880px, which is what "Centered" means here. Full
-   Width releases it. Scoped to the dashboard on purpose: the index pages are
-   already `max-width: 100%`, so there is nothing for this to release there. */
+/* Centered caps the page at the Home layout's designed 880px column and centres
+   it; Full Width releases the cap so the content fills the panel.
+
+   AND FULL WIDTH ALSO TIGHTENS THE GUTTER, which is the part that took a
+   measurement to get right. The cap alone makes the two states differ by the
+   window's width MINUS 880px -- dramatic at 1680px, about ten pixels at the
+   window the panel is usually opened in, which reads as a control that does
+   nothing. Releasing the page's 40px side padding to 18px as well means Full
+   Width visibly gains room at any width, including the narrow one.
+
+   (The centring itself was already correct and I nearly "fixed" it: Chrome
+   reports an `auto` margin on a grid element as `0px`, which looks flush-left in
+   a computed-style read. Measuring the box told the truth -- the inner edge sits
+   at 428px in a 1544px content box starting at 96px, which is dead centre.) */
 .bf-shell[data-bf-layout="full"] .dash-rx .dx-inner {
   max-width: none;
+}
+
+.bf-shell[data-bf-layout="full"] .dash-rx {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+/* Centered keeps the designed gutter, and says so rather than relying on the
+   absence of a rule. */
+.bf-shell[data-bf-layout="centered"] .dash-rx {
+  padding-left: 40px;
+  padding-right: 40px;
 }
 
 /* ---- 26g. Navbar Behavior --------------------------------------------- */
