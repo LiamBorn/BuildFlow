@@ -35,23 +35,23 @@
 /* The Welcome Page's nav recipe verbatim — rgba(245,246,250,0.82) over a blur —
    at 56px instead of 64px. A hairline, never a shadow. */
 .hs-shell.bf-shell .topbar.hs-topbar {
-  background: rgba(var(--bf-surface-rgb), 0.82);
+  background: rgba(var(--bf-chrome-rgb), 0.82);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid rgba(var(--bf-line-rgb), 0.07);
+  border-bottom: 1px solid rgba(var(--bf-chrome-line-rgb), 0.07);
   box-shadow: none;
-  color: var(--bf-ink, #1c1c1a);
+  color: var(--bf-chrome-ink);
 }
 
 /* ---- brand --------------------------------------------------------------- */
 .hs-shell.bf-shell .hs-topbar-brand {
-  color: var(--bf-ink);
+  color: var(--bf-chrome-ink);
   font-size: var(--bf-app-brand);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 .hs-shell.bf-shell .hs-topbar-brand:hover {
-  background: rgba(var(--bf-line-rgb), 0.05);
+  background: rgba(var(--bf-chrome-line-rgb), 0.05);
 }
 
 /* ---- search: the one search-shaped grammar on the Welcome Page is a pill --
@@ -98,7 +98,7 @@
   border-radius: var(--bf-radius-control);
   border-color: transparent;
   background: transparent;
-  color: var(--bf-ink-muted);
+  color: var(--bf-chrome-muted);
   box-shadow: none;
   transition:
     background var(--bf-dur-hover) ease,
@@ -107,8 +107,8 @@
 }
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:hover,
 .hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button[aria-expanded="true"] {
-  background: rgba(var(--bf-line-rgb), 0.05);
-  color: var(--bf-ink);
+  background: rgba(var(--bf-chrome-line-rgb), 0.05);
+  color: var(--bf-chrome-ink);
   border-color: transparent;
   transform: none;
 }
@@ -176,7 +176,7 @@
 
 /* ---- divider + account -------------------------------------------------- */
 .hs-shell.bf-shell .hs-topbar-divider {
-  background: rgba(var(--bf-line-rgb), 0.13);
+  background: rgba(var(--bf-chrome-line-rgb), 0.13);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-avatar {
   background: var(--bf-accent-fill);
@@ -185,33 +185,33 @@
   box-shadow: none;
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-user-button {
-  color: var(--bf-ink);
+  color: var(--bf-chrome-ink);
   border-radius: var(--bf-radius-control);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-user-button:hover {
-  background: rgba(var(--bf-line-rgb), 0.05);
+  background: rgba(var(--bf-chrome-line-rgb), 0.05);
 }
 .hs-shell.bf-shell .topbar.hs-topbar .reports-user-button svg {
-  color: var(--bf-ink-muted);
+  color: var(--bf-chrome-muted);
 }
 
 /* ============================ 2. the rail ================================
    Opaque, not translucent: the flyout needs solid ground under it. */
 .hs-shell.bf-shell .sidebar.hs-rail {
-  background: var(--bf-ground);
-  border-right: 1px solid rgba(var(--bf-line-rgb), 0.07);
+  background: var(--bf-chrome);
+  border-right: 1px solid rgba(var(--bf-chrome-line-rgb), 0.07);
   box-shadow: none;
-  color: var(--bf-ink-muted);
+  color: var(--bf-chrome-muted);
 }
 .hs-shell.bf-shell .sidebar.hs-rail::after,
 .hs-shell.bf-shell .sidebar.hs-rail::before {
-  background: rgba(var(--bf-line-rgb), 0.07);
+  background: rgba(var(--bf-chrome-line-rgb), 0.07);
 }
 
 .hs-shell.bf-shell .hs-rail-btn {
   border-radius: var(--bf-radius-control);
   background: transparent;
-  color: var(--bf-ink-muted);
+  color: var(--bf-chrome-muted);
   box-shadow: none;
   transition:
     background var(--bf-dur-hover) ease,
@@ -220,16 +220,16 @@
 }
 .hs-shell.bf-shell .hs-rail-btn:hover,
 .hs-shell.bf-shell .hs-rail-slot.open .hs-rail-btn {
-  background: rgba(var(--bf-line-rgb), 0.05);
-  color: var(--bf-ink);
+  background: rgba(var(--bf-chrome-line-rgb), 0.05);
+  color: var(--bf-chrome-ink);
 }
 /* the rail's focus affordance was `outline: 0` and nothing else — a recorded
    weakness. It now matches the top bar. */
 .hs-shell.bf-shell .hs-rail-btn:focus-visible {
   outline: 2px solid var(--bf-focus-ink);
   outline-offset: 2px;
-  background: rgba(var(--bf-line-rgb), 0.05);
-  color: var(--bf-ink);
+  background: rgba(var(--bf-chrome-line-rgb), 0.05);
+  color: var(--bf-chrome-ink);
 }
 .hs-shell.bf-shell .hs-rail-btn.active {
   background: var(--bf-rail-fill);
@@ -412,7 +412,7 @@
 .hs-shell.bf-shell .notifications-panel,
 .hs-shell.bf-shell .reports-account-menu {
   background: var(--bf-surface);
-  border: 1px solid rgba(var(--bf-line-rgb), 0.07);
+  border: 1px solid rgba(var(--bf-chrome-line-rgb), 0.07);
   border-radius: var(--bf-radius-panel);
   box-shadow: var(--bf-shadow-float);
 }
@@ -473,7 +473,7 @@
 .hs-shell.bf-shell .hs-bookmarks-empty,
 .hs-shell.bf-shell .hs-bookmarks-empty p {
   max-width: var(--bf-app-prose);
-  color: var(--bf-ink-muted);
+  color: var(--bf-chrome-muted);
   font-size: var(--bf-app-meta);
 }
 .hs-shell.bf-shell .hs-bookmark-hub,
@@ -3937,11 +3937,11 @@
 /* The float shadow is an ink shadow, which says nothing against a dark ground, so
    in dark the detached rail is read by an edge instead. */
 .bf-shell[data-bf-mode="dark"][data-bf-sidebar="floating"] .sidebar.hs-rail {
-  border: 1px solid rgba(var(--bf-line-rgb), 0.14);
+  border: 1px solid rgba(var(--bf-chrome-line-rgb), 0.14);
 }
 @media (prefers-color-scheme: dark) {
   .bf-shell[data-bf-mode="system"][data-bf-sidebar="floating"] .sidebar.hs-rail {
-    border: 1px solid rgba(var(--bf-line-rgb), 0.14);
+    border: 1px solid rgba(var(--bf-chrome-line-rgb), 0.14);
   }
 }
 
@@ -4024,229 +4024,238 @@
 }
 
 /* ============================================================================
-   27. THE FOUR THEMES
+   27. THE FIVE THEMES
    ============================================================================
-   Default, Brutalist, Soft Pop and Tangerine, chosen from Theme Preset in the
-   top bar's Preferences panel and carried on `data-bf-theme` on the shell.
+   Default (Clean), Dark, Red (Bold), Purple (Modern) and Green (Earth), chosen
+   from Theme Preset in the top bar's Preferences panel and carried on
+   `data-bf-theme`. The layout is untouched: a theme only ever changes colour.
 
-   EVERY COLOUR HERE WAS SAMPLED FROM THE REFERENCE RECORDING, not matched by
-   eye: frames were pulled from the .mov and individual pixels read out of them,
-   which is the only way to get a hex rather than an impression. It is also what
-   surfaced the thing that shapes this whole section -- each theme colours the
-   SHELL and the PAGE with DIFFERENT hues. Brutalist is a blue rail over a red
-   product, Soft Pop an orange rail over an indigo one, Tangerine a pale rail
-   over terracotta. A single accent per theme would have got all three wrong.
+   EVERY VALUE WAS MEASURED, and the measuring changed four of them. The numbers
+   are in each theme's own note, and the short version is that a palette has
+   three different jobs and one hex cannot do all three:
 
-   HOW A THEME REACHES THE APP. The accent is not one token. It is declared
-   per page scope -- `--cc-blue` and `--wx-blue` on each of a dozen `*-rx`
-   classes -- and a custom property declared on a descendant shadows the same
-   property on an ancestor, so a theme block on the shell alone would never
-   arrive. Each theme therefore re-declares across every app scope, which is why
-   these selector lists are long. The marketing scopes are deliberately absent:
-   a workspace theme must not repaint the public site.
+     --bf-accent       the identity: borders, washes, charts, non-text fills
+     --bf-accent-fill  the same surface where light TEXT sits on it
+     --bf-accent-dark  accent TEXT sitting on an accent wash
+     --bf-rail-*       the rail's active pill, which is its own pair
+     --bf-chrome-*     the top bar and rail surface, separate from the page
 
-   DEFAULT HAS NO BLOCK. It is the product as it ships, so the absence of an
-   override IS the theme. Writing one out would be three ways to drift.
+   WHY THE CHROME IS SEPARATE. Green (Earth) is a forest-green rail over a cream
+   dashboard, so the chrome cannot read the page's surface token. Three themes
+   leave it light, Dark and Green set it.
 
-   NO MOTION, so RULE R has nothing to pair, and no type sizes, so the token
-   rule has nothing to check. What these blocks change is colour and radius.
+   HOW A THEME REACHES THE APP. The accent is declared per page scope -- on a
+   dozen `*-rx` classes -- and a custom property on a descendant shadows the same
+   property on an ancestor, so a block on the shell alone would never arrive.
+   Each theme re-declares across every app scope, which is why these lists are
+   long. The marketing scopes are absent on purpose: a workspace theme must not
+   repaint the public site.
    ------------------------------------------------------------------------- */
 
-/* ---- 27a. Brutalist ----------------------------------------------------
-   Hard edges and a heavy hairline: the radius ladder goes to zero and the line
-     token goes to ink, which is what makes this theme read as brutalist rather
-     than merely red. The rail keeps a strong blue over a red product -- sampled
-     from the recording, not invented; this theme does not use one accent. */
-.bf-shell[data-bf-theme="brutalist"] .dash-rx,
-.bf-shell[data-bf-theme="brutalist"] .crew-rx,
-.bf-shell[data-bf-theme="brutalist"] .proj-rx,
-.bf-shell[data-bf-theme="brutalist"] .sched-rx,
-.bf-shell[data-bf-theme="brutalist"] .settings-rx,
-.bf-shell[data-bf-theme="brutalist"] .equip-rx,
-.bf-shell[data-bf-theme="brutalist"] .field-rx,
-.bf-shell[data-bf-theme="brutalist"] .mat-rx,
-.bf-shell[data-bf-theme="brutalist"] .delayIQ-rx,
-.bf-shell[data-bf-theme="brutalist"] .pdx,
-.bf-shell[data-bf-theme="brutalist"] .acct-split,
-.bf-shell[data-bf-theme="brutalist"] .hc-assistant {
-  --cc-blue: #f82b30;
-  --cc-blue-soft: #ffe7e7;
-  --wx-blue: #f82b30;
-  --hsh-blue: #f82b30;
-  --hsh-blue-soft: #ffe7e7;
-  --hsh-line: #1c1c1a;
-  --hsh-radius: 0px;
+/* ---- 27a. Default (Clean) ---------------------------------------------
+   The product's own blue, on the light chrome the redesign already paints.
+     White on the #2563eb fill measures 5.17; accent text on its own wash uses
+     #1d4ed8 at 6.12, because the plain accent is only 3.36 there. */
+.bf-shell[data-bf-theme="default"] .dash-rx,
+.bf-shell[data-bf-theme="default"] .crew-rx,
+.bf-shell[data-bf-theme="default"] .proj-rx,
+.bf-shell[data-bf-theme="default"] .sched-rx,
+.bf-shell[data-bf-theme="default"] .settings-rx,
+.bf-shell[data-bf-theme="default"] .equip-rx,
+.bf-shell[data-bf-theme="default"] .field-rx,
+.bf-shell[data-bf-theme="default"] .mat-rx,
+.bf-shell[data-bf-theme="default"] .delayIQ-rx,
+.bf-shell[data-bf-theme="default"] .pdx,
+.bf-shell[data-bf-theme="default"] .acct-split,
+.bf-shell[data-bf-theme="default"] .hc-assistant {
+  --cc-blue: #3b82f6;
+  --cc-blue-soft: #dbeafe;
+  --wx-blue: #3b82f6;
+  --hsh-blue: #3b82f6;
+  --hsh-blue-soft: #dbeafe;
 }
 
-/* The shell's own family, on the shell element itself. */
-.bf-shell[data-bf-theme="brutalist"] {
-  /* The rail's own pair, sampled from the recording: white on #015afe is 5.39. */
-  --bf-rail-fill: #015afe;
-  --bf-rail-rgb: 1, 90, 254;
+.bf-shell[data-bf-theme="default"] {
+  --bf-accent: #3b82f6;
+  --bf-accent-rgb: 59, 130, 246;
+  --bf-accent-fill: #2563eb;
+  --bf-accent-dark: #1d4ed8;
+  --bf-rail-fill: #2563eb;
+  --bf-rail-rgb: 37, 99, 235;
   --bf-rail-ink: #ffffff;
-  /* The accent trio. All three measured, not chosen by eye:
-     white text measures 3.90 on #f82b30, so the fill rung darkens to #c8232a (5.63), and accent text on its own 8% wash uses #c8232a. */
-  --bf-accent: #f82b30;
-  --bf-accent-rgb: 248, 43, 48;
-  --bf-accent-fill: #c8232a;
-  --bf-accent-dark: #c8232a;
-  --hs-blue: #015afe;
-  --hs-line: #1c1c1a;
-  --hs-paper: #ffffff;
-  --bf-focus-ink: #f82b30;
-  --bf-radius-stage: 0px;
-  --bf-radius-card: 0px;
-  --bf-radius-panel: 0px;
-  --bf-radius-control: 0px;
-  --bf-radius-chip: 0px;
 }
 
-/* The rail's active item hardcodes white text and a blue glow, so both move with
-   the theme or the label goes unreadable and the glow disagrees with the fill. */
-.bf-shell[data-bf-theme="brutalist"] .hs-rail-btn.active {
-  color: #ffffff;
-  box-shadow: 0 6px 16px rgba(1, 90, 254, 0.38);
+/* ---- 27b. Dark ---------------------------------------------
+   A dark theme, not a dark MODE: it pins the dark surfaces itself, so
+     choosing it darkens the product whatever Theme Mode says. The identity accent
+     is the LIGHT rung #34d399, because its surfaces are dark -- #10b981 measures
+     2.54 on white but 8.97 on the dark surface, and picking the light rung is the
+     difference between an accent you can see and one you cannot. The rail's pill
+     keeps #10b981 with INK on it: white there is 2.54, ink is 6.73. */
+.bf-shell[data-bf-theme="dark"] .dash-rx,
+.bf-shell[data-bf-theme="dark"] .crew-rx,
+.bf-shell[data-bf-theme="dark"] .proj-rx,
+.bf-shell[data-bf-theme="dark"] .sched-rx,
+.bf-shell[data-bf-theme="dark"] .settings-rx,
+.bf-shell[data-bf-theme="dark"] .equip-rx,
+.bf-shell[data-bf-theme="dark"] .field-rx,
+.bf-shell[data-bf-theme="dark"] .mat-rx,
+.bf-shell[data-bf-theme="dark"] .delayIQ-rx,
+.bf-shell[data-bf-theme="dark"] .pdx,
+.bf-shell[data-bf-theme="dark"] .acct-split,
+.bf-shell[data-bf-theme="dark"] .hc-assistant {
+  --cc-blue: #34d399;
+  --cc-blue-soft: rgba(52, 211, 153, 0.14);
+  --wx-blue: #34d399;
+  --hsh-blue: #34d399;
+  --hsh-blue-soft: rgba(52, 211, 153, 0.14);
 }
 
-/* ---- 27b. Soft Pop ----------------------------------------------------
-   Indigo product, orange rail, and the softest corners of the four. The rail's
-     label goes to INK rather than white: white on #f2940e is about 2.3:1, which
-     is unreadable, and a theme is not allowed to cost legibility. */
-.bf-shell[data-bf-theme="soft-pop"] .dash-rx,
-.bf-shell[data-bf-theme="soft-pop"] .crew-rx,
-.bf-shell[data-bf-theme="soft-pop"] .proj-rx,
-.bf-shell[data-bf-theme="soft-pop"] .sched-rx,
-.bf-shell[data-bf-theme="soft-pop"] .settings-rx,
-.bf-shell[data-bf-theme="soft-pop"] .equip-rx,
-.bf-shell[data-bf-theme="soft-pop"] .field-rx,
-.bf-shell[data-bf-theme="soft-pop"] .mat-rx,
-.bf-shell[data-bf-theme="soft-pop"] .delayIQ-rx,
-.bf-shell[data-bf-theme="soft-pop"] .pdx,
-.bf-shell[data-bf-theme="soft-pop"] .acct-split,
-.bf-shell[data-bf-theme="soft-pop"] .hc-assistant {
-  --cc-blue: #4636df;
-  --cc-blue-soft: #ecebfd;
-  --wx-blue: #4636df;
-  --hsh-blue: #4636df;
-  --hsh-blue-soft: #ecebfd;
-  --hsh-line: #e6e8f0;
-  --hsh-radius: 14px;
-}
-
-/* The shell's own family, on the shell element itself. */
-.bf-shell[data-bf-theme="soft-pop"] {
-  /* The rail's own pair, sampled from the recording: white on #f2940e is 2.33 and unreadable; ink is 7.33. */
-  --bf-rail-fill: #f2940e;
-  --bf-rail-rgb: 242, 148, 14;
+.bf-shell[data-bf-theme="dark"] {
+  --bf-accent: #34d399;
+  --bf-accent-rgb: 52, 211, 153;
+  --bf-accent-fill: #047857;
+  --bf-accent-dark: #047857;
+  --bf-rail-fill: #10b981;
+  --bf-rail-rgb: 16, 185, 129;
   --bf-rail-ink: #1c1c1a;
-  /* The accent trio. All three measured, not chosen by eye:
-     #4636df carries white text at 7.36, so the fill rung is the accent itself, and accent text on its own 8% wash uses #3d2fc4. */
-  --bf-accent: #4636df;
-  --bf-accent-rgb: 70, 54, 223;
-  --bf-accent-fill: #4636df;
-  --bf-accent-dark: #3d2fc4;
-  --hs-blue: #f2940e;
-  --hs-line: #e6e8f0;
-  --hs-paper: #f4f7f0;
-  --bf-focus-ink: #4636df;
-  --bf-radius-stage: 14px;
-  --bf-radius-card: 14px;
-  --bf-radius-panel: 14px;
-  --bf-radius-control: 14px;
-  --bf-radius-chip: 14px;
+  --bf-chrome: #111827;
+  --bf-chrome-rgb: 17, 24, 39;
+  --bf-chrome-ink: #f4f3f0;
+  --bf-chrome-muted: #b5b2ab;
+  --bf-chrome-line-rgb: 244, 243, 240;
+  --bf-surface: #1b1b19;
+  --bf-surface-rgb: 27, 27, 25;
+  --bf-surface-raised: #232320;
+  --bf-ground: #121211;
+  --bf-hover: #262623;
+  --bf-ink: #f4f3f0;
+  --bf-ink-muted: #b5b2ab;
+  --bf-ink-faint: #8a877e;
+  --bf-line-rgb: 244, 243, 240;
+  --bf-line-solid: #33332f;
+  --bf-line-soft: #2a2a27;
 }
 
-/* The rail's active item hardcodes white text and a blue glow, so both move with
-   the theme or the label goes unreadable and the glow disagrees with the fill. */
-.bf-shell[data-bf-theme="soft-pop"] .hs-rail-btn.active {
-  color: #1c1c1a;
-  box-shadow: 0 6px 16px rgba(242, 148, 14, 0.34);
+/* ---- 27c. Red (Bold) ---------------------------------------------
+   White on #dc2626 is 4.83 and on the brighter #ef4444 only 3.76, so the
+     fill darkens one rung while the identity keeps the brighter red. Accent text
+     on its own wash uses #b91c1c at 5.83. */
+.bf-shell[data-bf-theme="red"] .dash-rx,
+.bf-shell[data-bf-theme="red"] .crew-rx,
+.bf-shell[data-bf-theme="red"] .proj-rx,
+.bf-shell[data-bf-theme="red"] .sched-rx,
+.bf-shell[data-bf-theme="red"] .settings-rx,
+.bf-shell[data-bf-theme="red"] .equip-rx,
+.bf-shell[data-bf-theme="red"] .field-rx,
+.bf-shell[data-bf-theme="red"] .mat-rx,
+.bf-shell[data-bf-theme="red"] .delayIQ-rx,
+.bf-shell[data-bf-theme="red"] .pdx,
+.bf-shell[data-bf-theme="red"] .acct-split,
+.bf-shell[data-bf-theme="red"] .hc-assistant {
+  --cc-blue: #ef4444;
+  --cc-blue-soft: #fee2e2;
+  --wx-blue: #ef4444;
+  --hsh-blue: #ef4444;
+  --hsh-blue-soft: #fee2e2;
 }
 
-/* ---- 27c. Tangerine ----------------------------------------------------
-   Terracotta over a warm grey ground, and the one theme whose rail is a pale
-     wash rather than a colour. Its active label is ink for the same reason as
-     Soft Pop's, and more so: white on #d1dfec is about 1.2:1. */
-.bf-shell[data-bf-theme="tangerine"] .dash-rx,
-.bf-shell[data-bf-theme="tangerine"] .crew-rx,
-.bf-shell[data-bf-theme="tangerine"] .proj-rx,
-.bf-shell[data-bf-theme="tangerine"] .sched-rx,
-.bf-shell[data-bf-theme="tangerine"] .settings-rx,
-.bf-shell[data-bf-theme="tangerine"] .equip-rx,
-.bf-shell[data-bf-theme="tangerine"] .field-rx,
-.bf-shell[data-bf-theme="tangerine"] .mat-rx,
-.bf-shell[data-bf-theme="tangerine"] .delayIQ-rx,
-.bf-shell[data-bf-theme="tangerine"] .pdx,
-.bf-shell[data-bf-theme="tangerine"] .acct-split,
-.bf-shell[data-bf-theme="tangerine"] .hc-assistant {
-  --cc-blue: #cc533e;
-  --cc-blue-soft: #fdece2;
-  --wx-blue: #cc533e;
-  --hsh-blue: #cc533e;
-  --hsh-blue-soft: #fdece2;
-  --hsh-line: #e8e2db;
-  --hsh-radius: 10px;
+.bf-shell[data-bf-theme="red"] {
+  --bf-accent: #ef4444;
+  --bf-accent-rgb: 239, 68, 68;
+  --bf-accent-fill: #dc2626;
+  --bf-accent-dark: #b91c1c;
+  --bf-rail-fill: #dc2626;
+  --bf-rail-rgb: 220, 38, 38;
+  --bf-rail-ink: #ffffff;
 }
 
-/* The shell's own family, on the shell element itself. */
-.bf-shell[data-bf-theme="tangerine"] {
-  /* The rail's own pair, sampled from the recording: white on #d1dfec is 1.36; ink is 12.58. */
-  --bf-rail-fill: #d1dfec;
-  --bf-rail-rgb: 209, 223, 236;
+/* ---- 27d. Purple (Modern) ---------------------------------------------
+   The easiest of the five: white on #7c3aed is 5.70 and the violet clears
+     the indicator floor on white at 4.23 without help. */
+.bf-shell[data-bf-theme="purple"] .dash-rx,
+.bf-shell[data-bf-theme="purple"] .crew-rx,
+.bf-shell[data-bf-theme="purple"] .proj-rx,
+.bf-shell[data-bf-theme="purple"] .sched-rx,
+.bf-shell[data-bf-theme="purple"] .settings-rx,
+.bf-shell[data-bf-theme="purple"] .equip-rx,
+.bf-shell[data-bf-theme="purple"] .field-rx,
+.bf-shell[data-bf-theme="purple"] .mat-rx,
+.bf-shell[data-bf-theme="purple"] .delayIQ-rx,
+.bf-shell[data-bf-theme="purple"] .pdx,
+.bf-shell[data-bf-theme="purple"] .acct-split,
+.bf-shell[data-bf-theme="purple"] .hc-assistant {
+  --cc-blue: #8b5cf6;
+  --cc-blue-soft: #ede9fe;
+  --wx-blue: #8b5cf6;
+  --hsh-blue: #8b5cf6;
+  --hsh-blue-soft: #ede9fe;
+}
+
+.bf-shell[data-bf-theme="purple"] {
+  --bf-accent: #8b5cf6;
+  --bf-accent-rgb: 139, 92, 246;
+  --bf-accent-fill: #7c3aed;
+  --bf-accent-dark: #6d28d9;
+  --bf-rail-fill: #7c3aed;
+  --bf-rail-rgb: 124, 58, 237;
+  --bf-rail-ink: #ffffff;
+}
+
+/* ---- 27e. Green (Earth) ---------------------------------------------
+   The one theme with a dark chrome over a LIGHT page: forest green rail
+     above a cream dashboard, which is what the chrome tokens exist for. The lime
+     #84cc16 is the RAIL's pill, not the page accent -- it measures 1.98 against
+     white text and 2.71 as an indicator on its own cream ground, so the page
+     accent is #4d7c0f and the lime carries ink at 8.64. Its chrome muted ink is
+     #d8e3c4 at 6.81, because the usual #b5b2ab is 4.30 on forest green. */
+.bf-shell[data-bf-theme="green"] .dash-rx,
+.bf-shell[data-bf-theme="green"] .crew-rx,
+.bf-shell[data-bf-theme="green"] .proj-rx,
+.bf-shell[data-bf-theme="green"] .sched-rx,
+.bf-shell[data-bf-theme="green"] .settings-rx,
+.bf-shell[data-bf-theme="green"] .equip-rx,
+.bf-shell[data-bf-theme="green"] .field-rx,
+.bf-shell[data-bf-theme="green"] .mat-rx,
+.bf-shell[data-bf-theme="green"] .delayIQ-rx,
+.bf-shell[data-bf-theme="green"] .pdx,
+.bf-shell[data-bf-theme="green"] .acct-split,
+.bf-shell[data-bf-theme="green"] .hc-assistant {
+  --cc-blue: #4d7c0f;
+  --cc-blue-soft: #ecfccb;
+  --wx-blue: #4d7c0f;
+  --hsh-blue: #4d7c0f;
+  --hsh-blue-soft: #ecfccb;
+}
+
+.bf-shell[data-bf-theme="green"] {
+  --bf-accent: #4d7c0f;
+  --bf-accent-rgb: 77, 124, 15;
+  --bf-accent-fill: #4d7c0f;
+  /* One rung darker than the fill, and the guard is why: #4d7c0f on its own 10%
+     wash measures 4.39, just under the floor. #3f6212 clears it at 6.5. */
+  --bf-accent-dark: #3f6212;
+  --bf-rail-fill: #84cc16;
+  --bf-rail-rgb: 132, 204, 22;
   --bf-rail-ink: #1c1c1a;
-  /* The accent trio. All three measured, not chosen by eye:
-     white text measures 4.31 on #cc533e, so the fill rung darkens to #a83f2c (6.15), and accent text on its own 8% wash uses #a83f2c. */
-  --bf-accent: #cc533e;
-  --bf-accent-rgb: 204, 83, 62;
-  --bf-accent-fill: #a83f2c;
-  --bf-accent-dark: #a83f2c;
-  --hs-blue: #d1dfec;
-  --hs-line: #e8e2db;
-  --hs-paper: #e7e7e7;
-  --bf-focus-ink: #cc533e;
-  --bf-radius-stage: 10px;
-  --bf-radius-card: 10px;
-  --bf-radius-panel: 10px;
-  --bf-radius-control: 10px;
-  --bf-radius-chip: 10px;
+  --bf-chrome: #14532d;
+  --bf-chrome-rgb: 20, 83, 45;
+  --bf-chrome-ink: #f5f0e1;
+  --bf-chrome-muted: #d8e3c4;
+  --bf-chrome-line-rgb: 245, 240, 225;
+  --bf-surface: #fffdf7;
+  --bf-surface-rgb: 255, 253, 247;
+  --bf-surface-raised: #faf6ea;
+  --bf-ground: #f5f0e1;
+  --bf-hover: #f0ead6;
 }
 
-/* The rail's active item hardcodes white text and a blue glow, so both move with
-   the theme or the label goes unreadable and the glow disagrees with the fill. */
-.bf-shell[data-bf-theme="tangerine"] .hs-rail-btn.active {
-  color: #1c1c1a;
-  box-shadow: 0 6px 16px rgba(28, 28, 26, 0.1);
-}
-
-/* ---- 27d. what makes Brutalist brutal --------------------------------------
-   A red palette at zero radius is not yet the reference's look: its panels carry
-   a hairline heavy enough to read as a drawn edge. Applied to the surfaces this
-   sheet already owns rather than to every bordered thing in the product, so the
-   theme stays a theme and does not become a rewrite. */
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .dash-block,
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home > .dx-inner > section[data-reveal],
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .ss-band,
-.bf-shell[data-bf-theme="brutalist"] .pref-menu {
-  border-width: 2px;
-  border-color: #1c1c1a;
-  box-shadow: none;
-}
-
-/* Its tiles keep a single hairline: two 2px edges nested read as a table, not a card. */
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .cc-stat,
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .kpi-card,
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .tc-dash-card,
-.bf-shell[data-bf-theme="brutalist"] .dash-rx.hs-home .cc-quick {
-  border-color: #1c1c1a;
-}
-
-/* ---- 27e. the picker's swatch --------------------------------------------
-   The dot's colour is set inline from the theme it names (PreferencesMenu.tsx),
-   because it is data about the theme rather than a rule about the panel. This
-   only keeps its shape when a theme zeroes the radius ladder: a swatch is round
-   in every theme, including the one where nothing else is. */
-.bf-shell .pref-select-dot {
-  border-radius: 999px;
+/* ---- 27f. the detached rail on a dark ground --------------------------- */
+/* The float shadow is an ink shadow, which says nothing against a dark chrome,
+   so a floating rail is read by an edge there instead. */
+.bf-shell[data-bf-theme="dark"][data-bf-sidebar="floating"] .sidebar.hs-rail,
+.bf-shell[data-bf-theme="green"][data-bf-sidebar="floating"] .sidebar.hs-rail {
+  border: 1px solid rgba(var(--bf-chrome-line-rgb), 0.16);
 }
 
 /* ============================================================================
@@ -4580,6 +4589,12 @@
 }
 
 /* ---- 29d. each theme's accent, lightened for the dark ground ----------- */
+/* Measured on the dark surface the light-theme accents fail: #3b82f6 is 3.60,
+   Red's 4.42 and Green's #4d7c0f only 1.70 -- under even the 3:1 floor for a
+   non-text indicator. Each gets a lighter rung for dark, all clearing 6.8.
+   The Dark THEME needs none of this: it is already dark and its identity accent
+   is the light rung by construction. */
+
 .bf-shell[data-bf-mode="dark"] {
   --bf-accent: #7ea2ff;
   --bf-accent-dark: #7ea2ff;
@@ -4591,36 +4606,39 @@
     --bf-accent-dark: #7ea2ff;
   }
 }
-.bf-shell[data-bf-mode="dark"][data-bf-theme="brutalist"] {
+
+.bf-shell[data-bf-mode="dark"][data-bf-theme="red"] {
   --bf-accent: #ff7a7e;
   --bf-accent-dark: #ff7a7e;
 }
 
 @media (prefers-color-scheme: dark) {
-  .bf-shell[data-bf-mode="system"][data-bf-theme="brutalist"] {
+  .bf-shell[data-bf-mode="system"][data-bf-theme="red"] {
     --bf-accent: #ff7a7e;
     --bf-accent-dark: #ff7a7e;
   }
 }
-.bf-shell[data-bf-mode="dark"][data-bf-theme="soft-pop"] {
+
+.bf-shell[data-bf-mode="dark"][data-bf-theme="purple"] {
   --bf-accent: #a79bff;
   --bf-accent-dark: #a79bff;
 }
 
 @media (prefers-color-scheme: dark) {
-  .bf-shell[data-bf-mode="system"][data-bf-theme="soft-pop"] {
+  .bf-shell[data-bf-mode="system"][data-bf-theme="purple"] {
     --bf-accent: #a79bff;
     --bf-accent-dark: #a79bff;
   }
 }
-.bf-shell[data-bf-mode="dark"][data-bf-theme="tangerine"] {
-  --bf-accent: #f0917c;
-  --bf-accent-dark: #f0917c;
+
+.bf-shell[data-bf-mode="dark"][data-bf-theme="green"] {
+  --bf-accent: #a3e635;
+  --bf-accent-dark: #a3e635;
 }
 
 @media (prefers-color-scheme: dark) {
-  .bf-shell[data-bf-mode="system"][data-bf-theme="tangerine"] {
-    --bf-accent: #f0917c;
-    --bf-accent-dark: #f0917c;
+  .bf-shell[data-bf-mode="system"][data-bf-theme="green"] {
+    --bf-accent: #a3e635;
+    --bf-accent-dark: #a3e635;
   }
 }

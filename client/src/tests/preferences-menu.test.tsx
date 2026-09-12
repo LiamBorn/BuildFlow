@@ -161,25 +161,31 @@ describe("the top bar's Preferences panel", () => {
   it("offers the four themes, and picking one recolours without moving the layout", async () => {
     const panel = await openPreferences();
     const picker = within(panel).getByLabelText("Theme Preset") as HTMLSelectElement;
-    expect([...picker.options].map((option) => option.textContent)).toEqual(["Default", "Brutalist", "Soft Pop", "Tangerine"]);
+    expect([...picker.options].map((option) => option.textContent)).toEqual([
+      "Default (Clean)",
+      "Dark",
+      "Red (Bold)",
+      "Purple (Modern)",
+      "Green (Earth)"
+    ]);
 
-    fireEvent.change(picker, { target: { value: "brutalist" } });
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe("brutalist"));
+    fireEvent.change(picker, { target: { value: "red" } });
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe("red"));
     /* A theme is a theme: it must NOT move the four layout choices. That separation is
        the whole reason the preset stopped being a bundle of them. */
     expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout);
     expect(shell().dataset.bfSidebar).toBe(DEFAULT_PREFERENCES.sidebar);
 
-    fireEvent.change(picker, { target: { value: "tangerine" } });
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe("tangerine"));
+    fireEvent.change(picker, { target: { value: "green" } });
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe("green"));
   });
 
   it("puts a theme and the layout back with Restore Defaults", async () => {
     const panel = await openPreferences();
 
-    fireEvent.change(within(panel).getByLabelText("Theme Preset"), { target: { value: "soft-pop" } });
+    fireEvent.change(within(panel).getByLabelText("Theme Preset"), { target: { value: "purple" } });
     choose(panel, "Page Layout", "Full Width");
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe("soft-pop"));
+    await waitFor(() => expect(shell().dataset.bfTheme).toBe("purple"));
     expect(shell().dataset.bfLayout).toBe("full");
 
     fireEvent.click(within(panel).getByRole("button", { name: "Restore Defaults" }));

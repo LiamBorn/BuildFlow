@@ -191,6 +191,16 @@
      over a red product, an orange rail over an indigo one -- so the rail gets its
      own fill and its own label ink, and the two are chosen together: white on
      #f2940e is 2.33 and unreadable, ink on it is 7.33. */
+  /* ---- the chrome: the top bar and the rail ------------------------------
+     A separate surface from the page, because two themes want a DARK chrome over
+     a LIGHT page — Green (Earth) is a forest-green rail above a cream dashboard,
+     and that is not expressible while the chrome reads the page's own surface
+     token. Light by default, which is what the redesign already painted. */
+  --bf-chrome: #ffffff;
+  --bf-chrome-rgb: 255, 255, 255;
+  --bf-chrome-ink: #1c1c1a;
+  --bf-chrome-muted: #575550;
+  --bf-chrome-line-rgb: 28, 28, 26;
   --bf-rail-fill: #2f6bff;
   --bf-rail-rgb: 47, 107, 255;
   --bf-rail-ink: #ffffff;

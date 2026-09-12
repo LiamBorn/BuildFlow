@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type ThemePreset = "default" | "brutalist" | "soft-pop" | "tangerine";
+export type ThemePreset = "default" | "dark" | "red" | "purple" | "green";
 export type FontId =
   | "geist"
   | "inter"
@@ -76,25 +76,26 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 };
 
 /**
- * The four themes, and they are now real themes rather than the layout bundles
- * that stood here first. A preset recolours the product; it does not move the
- * layout, which is what the four controls below it are for.
+ * The five themes, named as the reference names them.
  *
- * `dot` is the swatch the picker shows beside each name, and it is the theme's
- * PAGE accent — the colour a reader will see on buttons, pills and charts.
+ * `dot` is the swatch the picker shows, and it is each theme's PAGE accent — the
+ * colour a reader actually sees on buttons, pills and charts.
  *
- * Every value in the stylesheet's theme blocks was sampled out of the reference
- * recording frame by frame rather than guessed, which is how the split below
- * came to light: each theme colours the SHELL and the PAGE differently.
- * Brutalist has a blue rail over a red product; Soft Pop an orange rail over an
- * indigo one; Tangerine a pale rail over terracotta. That maps onto the two
- * token families this codebase already had.
+ * Two of them also change the CHROME (the top bar and the rail): Dark is dark
+ * throughout, and Green (Earth) is a forest-green rail over a cream dashboard.
+ * The other three leave the chrome light. Every value was measured rather than
+ * matched by eye; the numbers live beside each theme in section 27 of
+ * app-shell-daylight.css.
+ *
+ * Note that Dark is a THEME, not Theme Mode: it pins the dark surfaces itself,
+ * so selecting it darkens the product whatever the mode says.
  */
 export const THEME_PRESETS: Array<{ id: ThemePreset; label: string; dot: string }> = [
-  { id: "default", label: "Default", dot: "#1c1c1a" },
-  { id: "brutalist", label: "Brutalist", dot: "#f82b30" },
-  { id: "soft-pop", label: "Soft Pop", dot: "#4636df" },
-  { id: "tangerine", label: "Tangerine", dot: "#cc533e" }
+  { id: "default", label: "Default (Clean)", dot: "#3b82f6" },
+  { id: "dark", label: "Dark", dot: "#34d399" },
+  { id: "red", label: "Red (Bold)", dot: "#ef4444" },
+  { id: "purple", label: "Purple (Modern)", dot: "#8b5cf6" },
+  { id: "green", label: "Green (Earth)", dot: "#4d7c0f" }
 ];
 
 /** The picker's swatch for one theme. */
@@ -162,7 +163,7 @@ export function parsePreferences(raw: unknown): AppPreferences {
   if (!raw || typeof raw !== "object") return DEFAULT_PREFERENCES;
   const input = raw as Record<string, unknown>;
   return {
-    preset: isOneOf(input.preset, ["default", "brutalist", "soft-pop", "tangerine"] as const) ? input.preset : DEFAULT_PREFERENCES.preset,
+    preset: isOneOf(input.preset, ["default", "dark", "red", "purple", "green"] as const) ? input.preset : DEFAULT_PREFERENCES.preset,
     font: "inter",
     mode: isOneOf(input.mode, ["light", "dark", "system"] as const) ? input.mode : DEFAULT_PREFERENCES.mode,
     layout: isOneOf(input.layout, ["centered", "full"] as const) ? input.layout : DEFAULT_PREFERENCES.layout,

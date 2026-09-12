@@ -141,12 +141,14 @@ describe("the ink ladder holds against every ground the design uses", () => {
          --bf-accent       the identity: borders, washes, charts, glows, non-text fills
          --bf-accent-fill  the same surface where light TEXT sits on it
          --bf-accent-dark  accent TEXT sitting on an accent wash
-       Two of the four have an accent that cannot carry white text (Brutalist 3.90,
-       Tangerine 4.31 against a 4.5 floor), which is exactly why the fill rung exists
-       rather than being the accent everywhere. The numbers are recomputed here from the
+       Measuring moved four of the five: Red's brighter #ef4444 carries white text at only
+       3.76 so its fill darkens a rung, Green's lime is 1.98 against white text and 2.71 as
+       an indicator on its own cream so the lime is the RAIL and the page accent is darker,
+       and Dark takes the LIGHT rung as its identity because its surfaces are dark. That is
+       exactly why the fill rung exists rather than being the accent everywhere. The numbers are recomputed here from the
        stylesheet's own values, so a theme cannot be added or retuned past this. */
     const css = read(SHEET);
-    const themes = ["brutalist", "soft-pop", "tangerine"];
+    const themes = ["dark", "red", "purple", "green"];
     const missing: string[] = [];
     for (const theme of themes) {
       const block = css.match(new RegExp(`\\.bf-shell\\[data-bf-theme="${theme}"\\]\\s*\\{([^}]*)\\}`));
@@ -169,8 +171,12 @@ describe("the ink ladder holds against every ground the design uses", () => {
       const own10 = composite(hex(accent), 0.1, CARD);
       expect(round(contrast(hex(dark), own8)), `${theme}: --bf-accent-dark on its 8% wash`).toBeGreaterThanOrEqual(4.5);
       expect(round(contrast(hex(dark), own10)), `${theme}: --bf-accent-dark on its 10% wash`).toBeGreaterThanOrEqual(4.5);
-      // the identity hue still has to be visible as a non-text indicator
-      expect(round(contrast(hex(accent), CARD)), `${theme}: --bf-accent as an indicator`).toBeGreaterThanOrEqual(3);
+      /* The identity hue still has to be visible as a non-text indicator -- against the
+         theme's OWN surface, not against white. The Dark theme pins dark surfaces itself,
+         so checking it on a white card asked the wrong question and reported 1.92 for a
+         colour that measures 8.97 where it actually sits. */
+      const ownSurface = pick("surface") ?? "#ffffff";
+      expect(round(contrast(hex(accent), hex(ownSurface))), `${theme}: --bf-accent on its own surface`).toBeGreaterThanOrEqual(3);
     }
     expect(missing).toEqual([]);
   });
@@ -334,7 +340,7 @@ describe("the ink ladder holds against every ground the design uses", () => {
       .map(() => css.match(/\.bf-shell\[data-bf-mode="dark"\]\s*\{[^}]*--bf-accent:\s*([^;]+)/))
       .filter(Boolean);
     expect(themes.length, "the default theme lightens its accent for dark").toBeGreaterThan(0);
-    for (const theme of ["brutalist", "soft-pop", "tangerine"]) {
+    for (const theme of ["red", "purple", "green"]) {
       const m = css.match(
         new RegExp(`\\.bf-shell\\[data-bf-mode="dark"\\]\\[data-bf-theme="${theme}"\\]\\s*\\{[^}]*--bf-accent:\\s*([^;]+)`)
       );
