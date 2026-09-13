@@ -2571,6 +2571,20 @@ function App() {
       showOnboarding();
       return;
     }
+    /* SIGNING IN LANDS ON THE DASHBOARD, always. The pending schedule link is drained
+       first so it cannot redirect the way in.
+
+       It used to win, because openAppPage("dashboard") consumes it — and the link is
+       usually this tab's OWN leftover rather than one the person followed: a schedule
+       page writes its link into the hash so it can be shared, that hash survives a
+       reload, and every later sign-in then opened on whatever schedule page was last
+       visited instead of the Dashboard.
+
+       The cost is real and worth naming: someone who follows a shared schedule link
+       while signed out now arrives on the Dashboard after signing in, not on that
+       schedule page. Landing predictably on the Dashboard is what was asked for; the
+       link is still in the hash, so the page is one reload away. */
+    consumeScheduleDeepLink();
     openAppPage("dashboard");
   };
   const handleSignup = async (input: SignupInput) => {
