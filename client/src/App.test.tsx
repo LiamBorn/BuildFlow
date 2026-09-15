@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { businessTypeOptions } from "@buildflow/shared";
 import { describe, expect, it, vi } from "vitest";
-import App from "./App";
+import type { OnboardingProductId } from "@buildflow/shared";
+import App, { buildTutorialSteps } from "./App";
 import { bootstrapFixture } from "./test/fixture";
 import {
   ACCOUNT,
@@ -239,9 +240,35 @@ describe("BuildFlow app", () => {
     expect(
       screen.getByText(/BuildFlow is set up for Asphalt on the Business plan with Map & Field Ops, Equipment Tracking/)
     ).toBeInTheDocument();
-    expect(screen.getByText("Map & Field Ops lesson")).toBeInTheDocument();
-    expect(screen.getByText("Equipment Tracking lesson")).toBeInTheDocument();
-    expect(screen.queryByText("Materials Readiness lesson")).not.toBeInTheDocument();
+
+    // the panel counts the steps the two add-ons added
+    expect(within(screen.getByRole("dialog")).getByText(/Step 1 of \d+/)).toBeInTheDocument();
+  });
+
+  /**
+   * The lessons the chosen add-ons add, asked of the builder rather than of the panel.
+   *
+   * It used to be asked of the panel's strip of lesson chips; the 2026-09-14 redesign
+   * follows the reference recording, which shows ONE step at a time, so the strip is gone.
+   * Walking the list instead is not an option either — two of its steps are gated on really
+   * creating a crew and really scheduling a job. Asking the builder is simpler than either,
+   * and it tests the behaviour itself rather than a rendering of it.
+   */
+  it("adds one lesson per selected product, and none for products not selected", () => {
+    const titlesFor = (selectedProductIds: OnboardingProductId[]) =>
+      buildTutorialSteps({ selectedBusinessType: "Asphalt", selectedPlanId: "business", selectedProductIds }).map((step) => step.title);
+
+    const core = titlesFor([]);
+    const withTwo = titlesFor(["map-field-ops", "equipment-tracking"]);
+
+    expect(withTwo).toContain("Map & Field Ops lesson");
+    expect(withTwo).toContain("Equipment Tracking lesson");
+    expect(withTwo).not.toContain("Time Cards lesson");
+    expect(core).not.toContain("Map & Field Ops lesson");
+    expect(withTwo).toHaveLength(core.length + 2);
+
+    // and a product chosen twice still earns one lesson
+    expect(titlesFor(["map-field-ops", "map-field-ops"])).toHaveLength(core.length + 1);
   });
 
   it("restarts the tutorial from the top bar", async () => {

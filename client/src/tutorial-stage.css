@@ -1,0 +1,1002 @@
+/* ============================================================================
+   tutorial-stage.css — the onboarding tutorial, rebuilt to the reference
+   recording the user supplied on 2026-09-14 (TutorialStage.tsx).
+
+   The reference's anatomy, top to bottom: an accent band with a close button, a
+   demonstration panel overlapping it on three sides, the heading and body, then
+   a progress bar beside Back/Next. Its band is monday's teal; here it is the
+   theme's accent, so the tutorial follows whichever preset the workspace picked.
+
+   WHAT THE PANEL PLAYS. A step with a real clip plays it. Until such files
+   exist, every step plays one of four looping demonstrations — the same device
+   the reference uses, whose panel is an animated illustration with a drawn
+   cursor rather than a screen recording.
+   ========================================================================== */
+/* The wrapper App.tsx positions against the step's target. styles.css gives
+   `.buildflow-tutorial-panel` a border, a white ground, 18px of padding, a shadow and a
+   430px cap — all of which the stage inside provides itself, so `.is-stage` strips them
+   rather than doubling them up and squeezing the panel to 430px. */
+.buildflow-tutorial-panel.is-stage {
+  display: block;
+  gap: 0;
+  width: min(520px, calc(100vw - 32px));
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.bftu-panel {
+  position: relative;
+  box-sizing: border-box;
+  width: min(520px, calc(100vw - 32px));
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 30px 80px rgba(28, 28, 26, 0.3);
+}
+
+/* ---- the accent band and its close button ------------------------------ */
+.bftu-band {
+  display: flex;
+  justify-content: flex-end;
+  height: 112px;
+  padding: 12px;
+  background: var(--bf-accent-fill, #2563eb);
+}
+.bftu-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bf-on-accent, #ffffff);
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+.bftu-close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ---- the demonstration, overlapping the band as the reference's does --- */
+.bftu-media {
+  position: relative;
+  height: 196px;
+  margin: -78px 0 0 26px;
+  overflow: hidden;
+  border-radius: 10px 0 0 0;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 -1px 0 rgba(var(--bf-line-rgb, 28, 28, 26), 0.08);
+}
+.bftu-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left top;
+}
+
+/* ---- the scenes: eleven screens and four actions ----------------------
+   Each step shows the screen it is about — a calendar looks like a calendar, lanes
+   look like lanes — with one of four actions over it. The shapes are markup in
+   TutorialStage.tsx; all of the motion is here, and every loop is paired in the
+   reduce block at the foot of this file. */
+.bftu-scene {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 14px 0 0 16px;
+}
+.bftu-scene-head {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 11px;
+}
+.bftu-scene-line {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.13);
+}
+.bftu-scene-line.is-lg {
+  width: 42%;
+}
+.bftu-scene-line.is-sm {
+  width: 20%;
+  height: 6px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+}
+.bftu-scene-body {
+  position: relative;
+  height: 130px;
+}
+
+/* the shared parts every shape draws from */
+.bftu-stub,
+.bftu-substub,
+.bftu-chip,
+.bftu-cell,
+.bftu-field {
+  display: block;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.15);
+}
+.bftu-stub {
+  width: 74px;
+  height: 5px;
+}
+.bftu-stub.is-head {
+  width: 96px;
+  height: 7px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.22);
+}
+.bftu-stub.is-crew {
+  flex: none;
+  width: 52px;
+}
+.bftu-substub {
+  width: 44px;
+  height: 4px;
+  margin-top: 4px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.09);
+}
+.bftu-chip {
+  flex: none;
+  width: 34px;
+  height: 6px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+}
+.bftu-cell {
+  flex: none;
+  width: 56px;
+  height: 7px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+}
+
+/* ---- TILES: the dashboard's KPI cards --------------------------------- */
+.bftu-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+  padding-right: 16px;
+}
+.bftu-tile {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+  border-radius: 7px;
+}
+.bftu-tile-mark {
+  display: block;
+  width: 15px;
+  height: 15px;
+  border-radius: 5px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.22);
+}
+.bftu-tile-label {
+  display: block;
+  width: 56%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.14);
+}
+.bftu-tile-figure {
+  display: block;
+  width: 34%;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--bf-accent, #2f6bff);
+  animation: bftu-rise 4.4s ease-in-out infinite both;
+}
+.bftu-tile:nth-child(2) .bftu-tile-figure {
+  animation-delay: 0.22s;
+}
+.bftu-tile:nth-child(3) .bftu-tile-figure {
+  animation-delay: 0.44s;
+}
+.bftu-tile:nth-child(4) .bftu-tile-figure {
+  animation-delay: 0.66s;
+}
+@keyframes bftu-rise {
+  0%,
+  5% {
+    opacity: 0.25;
+    transform: scaleX(0.3);
+    transform-origin: left center;
+  }
+  20%,
+  86% {
+    opacity: 1;
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+  96%,
+  100% {
+    opacity: 0.25;
+    transform: scaleX(0.3);
+    transform-origin: left center;
+  }
+}
+
+/* ---- TABLE: an index page, with its primary action top-right ---------- */
+.bftu-table {
+  display: grid;
+  gap: 0;
+  padding-right: 16px;
+}
+.bftu-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 9px;
+}
+.bftu-table-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 22px;
+  border-top: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.08);
+}
+.bftu-table-row .bftu-cell {
+  animation: bftu-rise 4.4s ease-in-out infinite both;
+}
+.bftu-table-row:nth-child(3) .bftu-cell {
+  animation-delay: 0.18s;
+}
+.bftu-table-row:nth-child(4) .bftu-cell {
+  animation-delay: 0.36s;
+}
+.bftu-table-row:nth-child(5) .bftu-cell {
+  animation-delay: 0.54s;
+}
+.bftu-table-row:nth-child(6) .bftu-cell {
+  animation-delay: 0.72s;
+}
+
+/* ---- BOARD: crew rows by day columns --------------------------------- */
+.bftu-board {
+  display: grid;
+  gap: 5px;
+  padding-right: 16px;
+}
+.bftu-board-days,
+.bftu-board-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.bftu-board-days {
+  padding-left: 57px;
+}
+.bftu-board-days i {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
+}
+.bftu-board-cell {
+  flex: 1;
+  height: 17px;
+  border-radius: 4px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.05);
+}
+/* five of the cells carry work, and they land one after another */
+.bftu-board-row:nth-child(2) .bftu-board-cell:nth-child(3),
+.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(2),
+.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(5),
+.bftu-board-row:nth-child(4) .bftu-board-cell:nth-child(4),
+.bftu-board-row:nth-child(5) .bftu-board-cell:nth-child(6) {
+  background: var(--bf-accent, #2f6bff);
+  animation: bftu-pop 4.4s ease-out infinite both;
+}
+.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(5) {
+  animation-delay: 0.32s;
+}
+.bftu-board-row:nth-child(4) .bftu-board-cell:nth-child(4) {
+  animation-delay: 0.48s;
+}
+.bftu-board-row:nth-child(5) .bftu-board-cell:nth-child(6) {
+  animation-delay: 0.64s;
+}
+@keyframes bftu-pop {
+  0%,
+  4% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  16%,
+  88% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  97%,
+  100% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+/* ---- CALENDAR: the month grid ---------------------------------------- */
+.bftu-cal {
+  display: grid;
+  gap: 5px;
+  padding-right: 16px;
+}
+.bftu-cal-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.bftu-cal-dow i {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
+}
+.bftu-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.bftu-cal-cell {
+  height: 23px;
+  border: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.07);
+  border-radius: 3px;
+}
+.bftu-cal-cell:nth-child(4),
+.bftu-cal-cell:nth-child(10),
+.bftu-cal-cell:nth-child(17),
+.bftu-cal-cell:nth-child(23) {
+  border-color: transparent;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.42);
+}
+
+/* ---- LANES: kanban columns ------------------------------------------- */
+.bftu-lanes {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  padding-right: 16px;
+}
+.bftu-lane {
+  display: grid;
+  gap: 5px;
+  align-content: start;
+  padding: 6px;
+  border-radius: 6px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.045);
+}
+.bftu-lane-head {
+  display: block;
+  width: 70%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.45);
+}
+.bftu-lane-card {
+  display: block;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(28, 28, 26, 0.12);
+}
+
+/* ---- TIMELINE: the Gantt's bars -------------------------------------- */
+.bftu-time {
+  display: grid;
+  gap: 5px;
+  padding-right: 16px;
+}
+.bftu-time-scale {
+  display: flex;
+  gap: 5px;
+  padding-left: 57px;
+}
+.bftu-time-scale i {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
+}
+.bftu-time-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+}
+.bftu-time-bar {
+  display: block;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--bf-accent, #2f6bff);
+  animation: bftu-rise 4.4s ease-in-out infinite both;
+}
+.bftu-time-row:nth-child(2) .bftu-time-bar {
+  width: 38%;
+  margin-left: 4%;
+}
+.bftu-time-row:nth-child(3) .bftu-time-bar {
+  width: 30%;
+  margin-left: 26%;
+  animation-delay: 0.18s;
+}
+.bftu-time-row:nth-child(4) .bftu-time-bar {
+  width: 44%;
+  margin-left: 12%;
+  animation-delay: 0.36s;
+}
+.bftu-time-row:nth-child(5) .bftu-time-bar {
+  width: 26%;
+  margin-left: 48%;
+  animation-delay: 0.54s;
+}
+.bftu-time-row:nth-child(6) .bftu-time-bar {
+  width: 34%;
+  margin-left: 32%;
+  animation-delay: 0.72s;
+}
+
+/* ---- LIST: alerts, inspections, the List view ------------------------ */
+.bftu-list {
+  display: grid;
+  gap: 0;
+  padding-right: 16px;
+}
+.bftu-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+  border-top: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.08);
+}
+.bftu-list-row:first-child {
+  border-top: 0;
+}
+.bftu-list-mark {
+  flex: none;
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.2);
+  animation: bftu-pop 4.4s ease-out infinite both;
+}
+.bftu-list-row:nth-child(2) .bftu-list-mark {
+  animation-delay: 0.16s;
+}
+.bftu-list-row:nth-child(3) .bftu-list-mark {
+  animation-delay: 0.32s;
+}
+.bftu-list-row:nth-child(4) .bftu-list-mark {
+  animation-delay: 0.48s;
+}
+.bftu-list-row:nth-child(5) .bftu-list-mark {
+  animation-delay: 0.64s;
+}
+.bftu-list-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- FORM: the crew and job dialogs ---------------------------------- */
+.bftu-form-wrap {
+  display: grid;
+  place-items: start center;
+  padding-right: 16px;
+}
+.bftu-form {
+  display: grid;
+  gap: 9px;
+  width: 78%;
+  padding: 11px 12px 12px;
+  border: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+  border-radius: 8px;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 12px 30px rgba(28, 28, 26, 0.14);
+}
+.bftu-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+}
+.bftu-field {
+  height: 13px;
+  border-radius: 3px;
+  animation: bftu-typed 4.4s ease-in-out infinite both;
+}
+.bftu-field.is-wide {
+  grid-column: span 2;
+}
+.bftu-form-grid .bftu-field:nth-child(2) {
+  animation-delay: 0.28s;
+}
+.bftu-form-grid .bftu-field:nth-child(3) {
+  animation-delay: 0.56s;
+}
+.bftu-form-grid .bftu-field:nth-child(4) {
+  animation-delay: 0.84s;
+}
+.bftu-form-grid .bftu-field:nth-child(5) {
+  animation-delay: 1.12s;
+}
+@keyframes bftu-typed {
+  0%,
+  4% {
+    background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+  }
+  14%,
+  86% {
+    background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.4);
+  }
+  96%,
+  100% {
+    background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+  }
+}
+
+/* ---- SWITCHER: the view segmented control, and the filter row -------- */
+.bftu-switch {
+  display: grid;
+  gap: 10px;
+  padding-right: 16px;
+}
+.bftu-switch-row {
+  position: relative;
+  display: flex;
+  gap: 6px;
+}
+.bftu-switch-pill {
+  display: block;
+  width: 46px;
+  height: 17px;
+  border: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+  border-radius: 999px;
+}
+.bftu-switch-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.08);
+  border-radius: 6px;
+}
+.bftu-switch-panel .bftu-cell {
+  animation: bftu-rise 4.4s ease-in-out infinite both;
+}
+.bftu-switch-panel .bftu-cell:nth-child(2) {
+  width: 76px;
+  animation-delay: 0.2s;
+}
+.bftu-switch-panel .bftu-cell:nth-child(3) {
+  width: 44px;
+  animation-delay: 0.4s;
+}
+.bftu-switch-panel .bftu-cell:nth-child(4) {
+  width: 64px;
+  animation-delay: 0.6s;
+}
+
+/* ---- STATUS: the schedule status band -------------------------------- */
+.bftu-status {
+  display: grid;
+  gap: 7px;
+  padding-right: 16px;
+}
+.bftu-status-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bftu-status-figure {
+  display: block;
+  width: 30px;
+  height: 26px;
+  border-radius: 4px;
+  background: var(--bf-accent-fill, #2563eb);
+}
+.bftu-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 18px;
+}
+.bftu-status-row .bftu-cell {
+  flex: 1;
+  animation: bftu-rise 4.4s ease-in-out infinite both;
+}
+.bftu-status-row:nth-child(3) .bftu-cell {
+  animation-delay: 0.2s;
+}
+.bftu-status-row:nth-child(4) .bftu-cell {
+  animation-delay: 0.4s;
+}
+.bftu-status-row:nth-child(5) .bftu-cell {
+  animation-delay: 0.6s;
+}
+
+/* ---- MAP: the field-ops plane --------------------------------------- */
+.bftu-map {
+  position: relative;
+  height: 100%;
+  margin-right: 16px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.05);
+}
+.bftu-map-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(var(--bf-line-rgb, 28, 28, 26), 0.06) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(var(--bf-line-rgb, 28, 28, 26), 0.06) 0 1px, transparent 1px 30px);
+}
+.bftu-map-route {
+  position: absolute;
+  top: 34px;
+  left: 28px;
+  width: 58%;
+  height: 44px;
+  border-top: 2px dashed rgba(var(--bf-accent-rgb, 47, 107, 255), 0.55);
+  border-right: 2px dashed rgba(var(--bf-accent-rgb, 47, 107, 255), 0.55);
+  border-top-right-radius: 14px;
+}
+.bftu-map-pin {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--bf-surface, #ffffff);
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+  animation: bftu-pop 4.4s ease-out infinite both;
+}
+.bftu-map-pin:nth-child(3) {
+  top: 28px;
+  left: 24px;
+}
+.bftu-map-pin:nth-child(4) {
+  top: 72px;
+  left: 82px;
+  animation-delay: 0.18s;
+}
+.bftu-map-pin:nth-child(5) {
+  top: 40px;
+  left: 168px;
+  animation-delay: 0.36s;
+}
+.bftu-map-pin:nth-child(6) {
+  top: 92px;
+  left: 214px;
+  animation-delay: 0.54s;
+}
+.bftu-map-pin:nth-child(7) {
+  top: 20px;
+  left: 262px;
+  animation-delay: 0.72s;
+}
+
+/* ---- the two action props: what gets clicked, and what gets dragged -- */
+/* `.bftu-hit` is the control the cursor is travelling to; it presses when the
+   cursor arrives. `.bftu-mover` is the card the cursor carries. Both are only
+   visible on the action that uses them. */
+.bftu-hit,
+.bftu-mover {
+  display: none;
+}
+.bftu-scene.act-click .bftu-hit,
+.bftu-scene.act-fill .bftu-hit.is-submit {
+  display: block;
+}
+.bftu-scene.act-drag .bftu-mover {
+  display: block;
+}
+.bftu-hit.is-pill {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 62px;
+  height: 19px;
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+  animation: bftu-press 4.4s ease-out infinite both;
+}
+.bftu-hit.is-cell {
+  position: absolute;
+  top: 58px;
+  left: 148px;
+  width: 42px;
+  height: 17px;
+  border-radius: 4px;
+  background: var(--bf-accent-fill, #2563eb);
+  animation: bftu-press 4.4s ease-out infinite both;
+}
+.bftu-hit.is-submit {
+  justify-self: end;
+  width: 58px;
+  height: 17px;
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+  animation: bftu-press 4.4s ease-out infinite both;
+  animation-delay: 1.4s;
+}
+.bftu-tiles .bftu-hit {
+  position: absolute;
+  top: -30px;
+  right: 18px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+  animation: bftu-press 4.4s ease-out infinite both;
+}
+@keyframes bftu-press {
+  0%,
+  40% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+  }
+  48% {
+    transform: scale(0.93);
+    box-shadow: 0 0 0 9px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+  }
+  58%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+  }
+}
+
+/* the dragged card: lifted, carried, set down */
+.bftu-mover {
+  position: absolute;
+  top: 30px;
+  left: 96px;
+  width: 48px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--bf-accent, #2f6bff);
+  box-shadow: 0 8px 18px rgba(var(--bf-accent-rgb, 47, 107, 255), 0.42);
+  animation: bftu-carry 4.4s cubic-bezier(0.22, 1, 0.36, 1) infinite both;
+}
+@keyframes bftu-carry {
+  0%,
+  14% {
+    transform: none;
+  }
+  46%,
+  72% {
+    transform: translate(96px, 46px);
+  }
+  94%,
+  100% {
+    transform: none;
+  }
+}
+
+/* ---- the cursor, and its path per action ----------------------------- */
+.bftu-scene-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 26px;
+  background: #1c1c1a;
+  /* a real pointer, not a triangle: the reference's cursor is the familiar arrow with a
+     tail, and the white outline is what lets it read over the accent cells as well as the
+     white ground it starts on */
+  clip-path: polygon(0 0, 0 74%, 26% 56%, 44% 100%, 62% 92%, 44% 48%, 76% 44%);
+  filter: drop-shadow(0 0 1.5px #ffffff) drop-shadow(0 2px 5px rgba(28, 28, 26, 0.35));
+  animation: bftu-cursor-read 4.4s cubic-bezier(0.22, 1, 0.36, 1) infinite both;
+}
+.bftu-scene.act-click .bftu-scene-cursor {
+  animation-name: bftu-cursor-click;
+}
+.bftu-scene.act-fill .bftu-scene-cursor {
+  animation-name: bftu-cursor-fill;
+}
+.bftu-scene.act-drag .bftu-scene-cursor {
+  animation-name: bftu-cursor-drag;
+}
+/* READ: it drifts down the rows, the way someone scanning a screen does */
+@keyframes bftu-cursor-read {
+  0%,
+  6% {
+    transform: translate(52px, 54px);
+  }
+  34%,
+  44% {
+    transform: translate(168px, 92px);
+  }
+  70%,
+  80% {
+    transform: translate(96px, 134px);
+  }
+  96%,
+  100% {
+    transform: translate(52px, 54px);
+  }
+}
+/* CLICK: straight to the control, and it presses at 48% — the same beat as bftu-press */
+@keyframes bftu-cursor-click {
+  0%,
+  8% {
+    transform: translate(66px, 128px);
+  }
+  44%,
+  60% {
+    transform: translate(258px, 44px);
+  }
+  90%,
+  100% {
+    transform: translate(66px, 128px);
+  }
+}
+/* FILL: down the fields as they tint, then onto the submit */
+@keyframes bftu-cursor-fill {
+  0%,
+  5% {
+    transform: translate(88px, 52px);
+  }
+  22% {
+    transform: translate(150px, 66px);
+  }
+  40% {
+    transform: translate(112px, 86px);
+  }
+  62%,
+  78% {
+    transform: translate(208px, 118px);
+  }
+  96%,
+  100% {
+    transform: translate(88px, 52px);
+  }
+}
+/* DRAG: it meets the card, carries it, and lets go */
+@keyframes bftu-cursor-drag {
+  0%,
+  14% {
+    transform: translate(112px, 40px);
+  }
+  46%,
+  72% {
+    transform: translate(208px, 86px);
+  }
+  94%,
+  100% {
+    transform: translate(112px, 40px);
+  }
+}
+
+/* ---- the copy ---------------------------------------------------------- */
+.bftu-copy {
+  padding: 22px 26px 0;
+}
+.bftu-copy h2 {
+  margin: 0 0 8px;
+  color: var(--bf-ink, #1c1c1a);
+  font-family: var(--bf-font-active, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.bftu-copy p {
+  margin: 0;
+  color: var(--bf-ink-muted, #575550);
+  font-family: var(--bf-font-active, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.bftu-requirement {
+  margin-top: 10px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.08);
+  color: var(--bf-accent-dark, #1f57e0);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---- the foot: the progress bar, the count, Back and Next -------------- */
+.bftu-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 26px 22px;
+}
+.bftu-meter {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
+}
+.bftu-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+  transition: width 0.26s var(--bf-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.bftu-steps {
+  flex: none;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bftu-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+.bftu-back {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s ease;
+}
+.bftu-back:hover {
+  background: var(--bf-hover, #f5f5f5);
+}
+.bftu-next {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--bf-accent-fill, #2563eb);
+  color: var(--bf-on-accent, #ffffff);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    opacity 0.16s ease;
+}
+.bftu-next:hover:not(:disabled) {
+  background: var(--bf-accent-dark, #1f57e0);
+}
+.bftu-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- reduced motion (RULE R: every rule that moves is paired) ---------- */
+/* Every demonstration is a loop, so under reduce they all stop. The rows are
+   left in their FILLED state rather than blank, because a still of a finished
+   board still shows what the step is about; the heading and body carry the rest. */
+@media (prefers-reduced-motion: reduce) {
+  .bftu-tile-figure,
+  .bftu-table-row .bftu-cell,
+  .bftu-board-row .bftu-board-cell,
+  .bftu-time-bar,
+  .bftu-list-mark,
+  .bftu-field,
+  .bftu-switch-panel .bftu-cell,
+  .bftu-status-row .bftu-cell,
+  .bftu-map-pin,
+  .bftu-hit,
+  .bftu-mover,
+  .bftu-scene-cursor {
+    animation: none;
+  }
+  /* the fields are left FILLED rather than blank: a still of a finished screen still shows
+     what the step is about, and the heading and body carry the rest */
+  .bftu-field {
+    background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.4);
+  }
+}

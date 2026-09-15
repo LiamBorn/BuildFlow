@@ -69,6 +69,7 @@ import "./app-shell-hubspot.css"; // HubSpot-style app shell (top bar + icon rai
 import "./app-shell-daylight.css"; // the Welcome Page's language over that shell — must load after it
 import "./dashboard-admin-kit.css"; // the Dashboard only, on the shadcn admin-kit language — must load after that
 import "./setup-stage.css"; // the animation a new workspace shows while the server builds it
+import "./tutorial-stage.css"; // the onboarding tutorial, on the reference recording's design
 
 initAnalytics();
 

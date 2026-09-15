@@ -1732,6 +1732,14 @@ type TutorialStep = {
   targetId?: TutorialTargetId;
   validation?: TutorialValidation;
   requirement?: string;
+  /**
+   * A demonstration clip for this step, served from client/public (e.g.
+   * "/tutorial/create-crew.mp4"). Optional, and no such files exist yet: until one does,
+   * TutorialStage plays a looping animation of the same action instead, and it picks which
+   * one from `validation` and `targetId`. Naming a file here is the only change needed to
+   * swap a recording in. See TutorialStage.tsx.
+   */
+  video?: string;
 };
 
 type TutorialSpotlightRect = {
@@ -1848,7 +1856,15 @@ function writeStoredTutorialStatus(setupKey: string, status: Extract<TutorialSta
   apiSetUserSetting(tutorialSettingKey(setupKey), status).catch(() => undefined);
 }
 
-function buildTutorialSteps({
+/**
+ * Exported for App.test.tsx. The tutorial's personalisation used to be assertable through
+ * the panel's strip of lesson chips; the 2026-09-14 redesign follows the reference
+ * recording, which shows one step at a time, so the strip is gone. Two of the steps are
+ * gated on really creating a crew and really scheduling a job, which means the list cannot
+ * be walked in a test either. Asking this function directly is both simpler and a better
+ * test of the actual behaviour than reading it back out of the DOM ever was.
+ */
+export function buildTutorialSteps({
   selectedBusinessType,
   selectedPlanId,
   selectedProductIds
@@ -22827,7 +22843,6 @@ function BuildFlowTutorial({
   const activeStep = steps[Math.min(activeIndex, steps.length - 1)];
   const isFinalStep = activeIndex >= steps.length - 1;
   const isStepSatisfied = tutorialStepIsSatisfied(activeStep, data, baselineRef.current);
-  const lessonItems = steps.map((step) => step.shortTitle);
 
   useEffect(() => {
     if (!activeStep.page || activeStep.page === page) return;
@@ -22931,52 +22946,23 @@ function BuildFlowTutorial({
   return (
     <section className="buildflow-tutorial-overlay" aria-label="BuildFlow tutorial" style={overlayStyle}>
       {spotlightRect && <div className="buildflow-tutorial-spotlight" aria-hidden="true" />}
-      <aside
-        className="buildflow-tutorial-panel"
-        ref={panelRef}
-        role="dialog"
-        aria-modal="false"
-        aria-labelledby="buildflow-tutorial-title"
-        style={panelStyle}
-      >
-        <div className="buildflow-tutorial-progress">
-          <span>
-            Step {activeIndex + 1} of {steps.length}
-          </span>
-          <strong>{Math.round(((activeIndex + 1) / steps.length) * 100)}%</strong>
-        </div>
-        <div className="buildflow-tutorial-meter" aria-hidden="true">
-          <span style={{ width: `${((activeIndex + 1) / steps.length) * 100}%` }} />
-        </div>
-        <div className="buildflow-tutorial-copy">
-          <h2 id="buildflow-tutorial-title">{activeStep.title}</h2>
-          <p>{activeStep.body}</p>
-          {activeStep.requirement && !isStepSatisfied && (
-            <p className="buildflow-tutorial-requirement" role="status">
-              {activeStep.requirement}
-            </p>
-          )}
-        </div>
-        <div className="buildflow-tutorial-lessons" aria-label="Tutorial lessons">
-          {lessonItems.map((lesson, index) => (
-            <span key={`${lesson}-${index}`} className={index === activeIndex ? "active" : index < activeIndex ? "done" : ""}>
-              {lesson}
-            </span>
-          ))}
-        </div>
-        <div className="buildflow-tutorial-actions">
-          <button type="button" className="outline-button" onClick={onSkip}>
-            Skip Tutorial
-          </button>
-          <span>
-            <button type="button" className="outline-button" onClick={goBack} disabled={activeIndex === 0}>
-              Back
-            </button>
-            <button type="button" className="primary-button" onClick={goNext} disabled={!isStepSatisfied}>
-              {isFinalStep ? "Finish" : "Next"}
-            </button>
-          </span>
-        </div>
+      {/* The panel is TutorialStage now — the reference recording's design. It stays
+          ANCHORED to the step's target rather than centred, because a step with a gate
+          ("Open the Add Crew form to continue") asks the person to use the real control,
+          and a centred modal would sit on top of the thing they have to click. So the
+          spotlight, the gates and their two tests are untouched; only the panel changed.
+          The lesson-chip strip is gone: the reference carries progress as one bar and a
+          count, and the chips were a second copy of the same information. */}
+      <aside className="buildflow-tutorial-panel is-stage" ref={panelRef} style={panelStyle}>
+        <TutorialStage
+          step={activeStep}
+          index={activeIndex}
+          total={steps.length}
+          satisfied={isStepSatisfied}
+          onBack={goBack}
+          onNext={goNext}
+          onSkip={onSkip}
+        />
       </aside>
     </section>
   );

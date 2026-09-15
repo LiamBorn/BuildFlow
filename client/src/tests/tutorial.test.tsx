@@ -43,7 +43,13 @@ const TUTORIAL_TITLE = "Your BuildFlow workspace is ready";
     landing's gallery rail and the tutorial render a "Next" button, so every
     tutorial query is scoped here. */
 const tutorial = () => within(screen.getByRole("region", { name: "BuildFlow tutorial" }));
-const tutorialNext = () => tutorial().getByRole("button", { name: "Next" });
+/**
+ * The tutorial's primary action. Its LABEL varies by step — the redesign of 2026-09-14 put
+ * "Start working" on the first step and "Finish" on the last, the way the reference does —
+ * so this matches the action rather than one of its names. The gates these tests are about
+ * are unchanged: the button is disabled until the step is satisfied either way.
+ */
+const tutorialNext = () => tutorial().getByRole("button", { name: /^(Next|Start working|Finish)$/ });
 
 /** Intercept the per-user settings writes; everything else goes to the fake BuildFlow API. */
 function stubSettingsWrites() {
