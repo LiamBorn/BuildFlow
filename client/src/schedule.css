@@ -4580,6 +4580,21 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+/* The name takes the row's free space, so it sits hard left beside its dot. Without this
+   the row's own `justify-content: space-between` puts the title between the dot and the
+   count and the group names float to the middle of the pane. */
+.gantt-sidebar-group-name > .gantt-sidebar-group-title {
+  flex: 1;
+  min-width: 0;
+}
+/* the dot that leads a group's name, reporting the project's schedule health */
+.gantt-group-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border-radius: 999px;
+}
 .gantt-sidebar-items > * + * {
   border-top: 1px solid var(--hsx-line-soft);
 }
@@ -4637,7 +4652,12 @@
 }
 .gantt-sidebar-item-trailing {
   flex: none;
+  max-width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--hsx-mut);
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -4756,8 +4776,56 @@
 .gantt-feature-list > * + * {
   margin-top: 16px;
 }
+/* The group's own row, which this padding has always reserved to keep the timeline's rows
+   aligned with the sidebar's. The reference draws its phase summary there, so that is where
+   the rule goes -- it costs no height and no stored row position moves. */
 .gantt-feature-group {
+  position: relative;
   padding-top: var(--gantt-row-height);
+}
+.gantt-group-summary-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: var(--gantt-row-height);
+  width: 100%;
+  pointer-events: none;
+}
+/* a 3px rule spanning the group's whole span, with its label sitting above it */
+.gantt-group-summary {
+  position: absolute;
+  bottom: 8px;
+  height: 3px;
+  min-width: 3px;
+  border-radius: 999px;
+  background: var(--hsx-mut);
+}
+.gantt-group-summary-label {
+  position: absolute;
+  bottom: 7px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* deliberately NOT clamped to the rule's width: a two-day group's rule is 30px wide and
+     its label is 300, and the reference lets the label outrun the bar it labels. It is
+     absolutely positioned, so however long it runs it adds nothing to the scroll width. */
+  white-space: nowrap;
+  color: var(--hsx-mut);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.gantt-group-summary-label strong {
+  color: var(--hsx-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+/* the bullet the reference separates the name, the dates and the duration with */
+.gantt-group-summary-label i {
+  font-style: normal;
+  color: var(--hsx-faint);
 }
 .gantt-feature-row {
   position: relative;
@@ -4767,10 +4835,14 @@
   min-width: 100%;
   height: var(--gantt-row-height);
 }
+/* Redesigned 2026-09-14 to the reference Gantt: a solid rounded bar with its label
+   OUTSIDE it, on the right. The height is the baseline ghost's own height, so a bar and
+   the striped ghost behind it are finally the same size and can be compared. */
 .gantt-feature {
+  --gantt-bar-height: calc(var(--gantt-row-height) - 18px);
   position: absolute;
-  top: 3px;
-  height: calc(var(--gantt-row-height) - 6px);
+  top: 9px;
+  height: var(--gantt-bar-height);
   pointer-events: auto;
   transition:
     left 0.18s var(--hsx-ease),
@@ -4787,46 +4859,57 @@
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  padding: 0 8px;
-  overflow: hidden;
-  border: 1px solid var(--gantt-bar-edge);
-  border-radius: 6px;
-  background: var(--gantt-bar-fill);
-  color: var(--gantt-bar-ink);
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(20, 32, 58, 0.06);
+  /* `overflow: visible` is what lets the label sit outside the bar; the progress fill and
+     the critical cap both take the radius themselves now instead of being clipped by it */
+  overflow: visible;
+  border: 0;
+  border-radius: 4px;
+  /* the SOLID status colour, not the pale tint: the reference's bars are solid, and the
+     five in use measure 3.11 to 10.12 against the white card, all clearing the 3:1 an
+     indicator carries */
+  background: var(--gantt-bar-dot);
   cursor: grab;
   outline: 0;
   transition:
     box-shadow 0.16s ease,
-    border-color 0.16s ease,
     transform 0.16s var(--hsx-ease);
 }
 .gantt-bar:hover {
-  border-color: var(--gantt-bar-dot);
-  box-shadow: 0 6px 16px rgba(20, 32, 58, 0.12);
+  box-shadow: 0 2px 8px rgba(20, 32, 58, 0.18);
 }
 .gantt-bar:focus-visible {
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.3);
 }
 .gantt-feature.is-selected .gantt-bar {
-  border-color: var(--hsx-blue);
-  box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.55);
 }
+/* Progress reads as a lighter band inside the solid bar, and carries the bar's radius
+   itself now that the bar no longer clips. */
 .gantt-bar-progress {
   position: absolute;
   inset: 0 auto 0 0;
-  background: var(--gantt-bar-edge);
-  opacity: 0.35;
+  border-radius: inherit;
+  background: #ffffff;
+  opacity: 0.32;
   pointer-events: none;
 }
+/* The label, outside the bar and to its right, as the reference prints it. It is
+   absolutely positioned inside a row that is already `width: max-content`, so it adds
+   nothing to the scrollable width however long the job's name is. */
 .gantt-bar-label {
-  position: relative;
-  min-width: 0;
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  translate: 0 -50%;
+  max-width: 240px;
+  margin-left: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--hsx-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  pointer-events: none;
 }
 /* pick-up: the same spring and deep shadow a deal card gets in flight */
 .gantt-feature.is-dragging .gantt-bar {
@@ -5455,16 +5538,16 @@
   pointer-events: none;
 }
 .gantt-bar.is-critical {
-  border-color: var(--hsx-red);
-  box-shadow:
-    inset 0 0 0 1px var(--hsx-red),
-    0 1px 2px rgba(20, 32, 58, 0.06);
+  box-shadow: 0 0 0 1.5px var(--hsx-red);
 }
+/* the red cap takes the bar's left corners itself, because the bar stopped clipping when
+   the label moved outside it */
 .gantt-bar.is-critical::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 4px;
+  border-radius: 4px 0 0 4px;
   background: var(--hsx-red);
 }
 .gantt-links {
@@ -5664,7 +5747,12 @@
 .month-page .schedule-board .gantt-status {
   margin: 12px 18px 0;
 }
+/* Today, when the calendar is already on this month. It dims its LABEL, and opts out of
+   the `button:disabled` fade in styles.css: opacity on the middle segment of the stepper
+   fades that segment's BORDER along with its text, leaving a gap in a group whose whole
+   point is one continuous outline. */
 .month-page .sched-today-btn:disabled {
-  opacity: 0.55;
+  opacity: 1;
+  color: var(--wx-faint);
   cursor: default;
 }

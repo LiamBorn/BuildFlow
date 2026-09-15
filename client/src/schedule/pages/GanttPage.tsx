@@ -21,6 +21,7 @@ import { ScheduleExportMenu } from "../ExportMenu";
 import { GanttDependencyLinks, type GanttLinkRow } from "../GanttDependencyLinks";
 import {
   GanttContextMenu,
+  GanttFeatureGroupSummary,
   GanttFeatureItem,
   GanttFeatureList,
   GanttFeatureListGroup,
@@ -85,7 +86,45 @@ type Row = {
   /** The baseline span, when it differs from the plan. */
   ghost?: { startAt: Date; endAt: Date; title: string };
 };
-type Group = { id: string; name: string; rows: Row[] };
+type Group = {
+  id: string;
+  name: string;
+  rows: Row[];
+  /** The group's whole span, for the summary rule the reference draws over each phase. */
+  startAt: Date;
+  endAt: Date;
+  days: number;
+  /** The project's schedule health, which is what the dot beside the group's name reports. */
+  health: string;
+};
+
+/**
+ * The colour of a group's dot and of its summary rule. Four values, all of them already in
+ * the app's vocabulary, all measured against the white card for the 3:1 a non-text indicator
+ * carries: on track 4.43, monitor 5.02, at risk 5.62, complete 3.11.
+ *
+ * The reference dashboard's dot is a plain group marker with no meaning. This one reports the
+ * project's health, because a coloured dot that says nothing is a wasted channel and this is
+ * exactly where the eye already goes.
+ */
+const GROUP_HEALTH_COLOUR: Record<string, string> = {
+  "On Track": "#138a42",
+  Monitor: "#b45309",
+  "At Risk": "#c62828",
+  Complete: "#8a92a6"
+};
+const groupColour = (health: string) => GROUP_HEALTH_COLOUR[health] ?? GROUP_HEALTH_COLOUR["On Track"];
+
+/**
+ * "Sep 7 - Sep 15, 2026", the way the reference prints a task's span. `endAt` is exclusive
+ * everywhere on this chart, so the last day shown is the day before it.
+ */
+function ganttRange(startAt: Date, endAt: Date) {
+  const last = addDays(endAt, -1);
+  const sameYear = startAt.getFullYear() === last.getFullYear();
+  const from = formatDate(startAt, sameYear ? "MMM d" : "MMM d, yyyy");
+  return `${from} - ${formatDate(last, "MMM d, yyyy")}`;
+}
 
 /** Where each project's rows sit in the chart's single column of rows: a group is its own header row, then its jobs. */
 type RowLayout = { starts: number[]; total: number };
@@ -293,11 +332,21 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
       byProject.set(job.projectId, rows);
     }
     return [...byProject.entries()]
-      .map(([projectId, rows]) => ({
-        id: projectId,
-        name: projectsById.get(projectId)?.name ?? "Unfiled",
-        rows: rows.sort((a, b) => a.job.startDate.localeCompare(b.job.startDate) || a.job.name.localeCompare(b.job.name))
-      }))
+      .map(([projectId, rows]) => {
+        const sorted = rows.sort((a, b) => a.job.startDate.localeCompare(b.job.startDate) || a.job.name.localeCompare(b.job.name));
+        // the group's span is its jobs' span; endAt is already exclusive, so the day count is the plain difference
+        const startAt = new Date(Math.min(...sorted.map((row) => row.feature.startAt.getTime())));
+        const endAt = new Date(Math.max(...sorted.map((row) => row.feature.endAt.getTime())));
+        return {
+          id: projectId,
+          name: projectsById.get(projectId)?.name ?? "Unfiled",
+          rows: sorted,
+          startAt,
+          endAt,
+          days: Math.max(1, Math.round((endAt.getTime() - startAt.getTime()) / 86_400_000)),
+          health: projectsById.get(projectId)?.scheduleHealth ?? "On Track"
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [chartJobs, crewNamesForJob, projectsById, cpm]);
   // the flat row layout both the sidebar and the timeline window against
@@ -547,12 +596,14 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                 rowHeight={phone ? 46 : 36}
                 fit={fit}
               >
-                <GanttSidebar title="Jobs" trailing="Duration">
+                {/* The reference's left pane is [name][date range], with the duration carried by
+                    the summary rule over each group instead of a column of its own. */}
+                <GanttSidebar title="Jobs" trailing="Dates">
                   <WindowedGroups
                     groups={groups}
                     layout={layout}
                     group={(group, children) => (
-                      <GanttSidebarGroup name={group.name} trailing={String(group.rows.length)}>
+                      <GanttSidebarGroup name={group.name} dot={groupColour(group.health)} trailing={String(group.rows.length)}>
                         {children}
                       </GanttSidebarGroup>
                     )}
@@ -567,6 +618,7 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                             .filter(Boolean)
                             .join(" · ") || undefined
                         }
+                        trailing={ganttRange(row.feature.startAt, row.feature.endAt)}
                       />
                     )}
                   />
@@ -577,7 +629,25 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                     <WindowedGroups
                       groups={groups}
                       layout={layout}
-                      group={(_group, children) => <GanttFeatureListGroup>{children}</GanttFeatureListGroup>}
+                      group={(group, children) => (
+                        <GanttFeatureListGroup>
+                          <GanttFeatureGroupSummary
+                            startAt={group.startAt}
+                            endAt={group.endAt}
+                            colour={groupColour(group.health)}
+                            label={
+                              <>
+                                <strong>{group.name}</strong>
+                                <i aria-hidden="true">·</i>
+                                {ganttRange(group.startAt, group.endAt)}
+                                <i aria-hidden="true">·</i>
+                                {group.days} {group.days === 1 ? "day" : "days"}
+                              </>
+                            }
+                          />
+                          {children}
+                        </GanttFeatureListGroup>
+                      )}
                       row={(row) => (
                         <GanttContextMenu
                           key={row.job.id}

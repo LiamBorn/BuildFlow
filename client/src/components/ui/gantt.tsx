@@ -457,11 +457,16 @@ export type GanttSidebarGroupProps = {
   action?: ReactNode;
   /** Secondary line under the name. */
   meta?: ReactNode;
+  /** A colour for the dot that leads the group's name. Omit for no dot. */
+  dot?: string;
 };
 
-export const GanttSidebarGroup: FC<GanttSidebarGroupProps> = ({ children, name, className, trailing, action, meta }) => (
+export const GanttSidebarGroup: FC<GanttSidebarGroupProps> = ({ children, name, className, trailing, action, meta, dot }) => (
   <div className={`gantt-sidebar-group${className ? ` ${className}` : ""}`}>
     <div className="gantt-sidebar-group-name" title={name}>
+      {/* a sibling of the title, not a child of it: the title span is a COLUMN, because it
+          also carries the group's secondary line, so a dot inside it stacks above the name */}
+      {dot && <span className="gantt-group-dot" style={{ backgroundColor: dot }} aria-hidden="true" />}
       <span className="gantt-sidebar-group-title">
         <span>{name}</span>
         {meta && <span className="gantt-sidebar-group-meta">{meta}</span>}
@@ -826,6 +831,37 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           </>
         )}
         {zone && <div className="gantt-drag-tip">{tip}</div>}
+      </div>
+    </div>
+  );
+};
+
+/**
+ * The thin rule that spans a group's whole date range, with its label above it: the
+ * summary bar the reference dashboard draws over each phase. It sits in the row
+ * `.gantt-feature-group`'s own padding-top already reserves, so it costs no height and
+ * every stored row position stays where it was.
+ *
+ * It reuses the chart's own date maths (`getOffset` / `getWidth`) rather than a second
+ * copy, so it cannot drift from the bars underneath it at any zoom.
+ */
+export type GanttFeatureGroupSummaryProps = {
+  startAt: Date;
+  endAt: Date;
+  label: ReactNode;
+  /** The group's colour; the rule takes it, the label stays on the page's ink. */
+  colour?: string;
+};
+
+export const GanttFeatureGroupSummary: FC<GanttFeatureGroupSummaryProps> = ({ startAt, endAt, label, colour }) => {
+  const gantt = useGantt();
+  return (
+    <div className="gantt-group-summary-row" aria-hidden="true">
+      <div
+        className="gantt-group-summary"
+        style={{ left: getOffset(startAt, gantt), width: getWidth(startAt, endAt, gantt), ...(colour ? { background: colour } : {}) }}
+      >
+        <span className="gantt-group-summary-label">{label}</span>
       </div>
     </div>
   );

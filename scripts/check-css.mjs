@@ -217,6 +217,45 @@ check("Matrix tooltip at 375px is hidden outright", winner(TIP, "display", 375),
 // The Week board's scroller is the pattern the Matrix follows.
 check("Week board at 375px scrolls sideways", winner(WEEK, "overflow-x", 375), /^(auto|scroll)$/);
 check("Week board at 1280px scrolls sideways", winner(WEEK, "overflow-x", 1280), /^(auto|scroll)$/);
+
+/* The Month grid's washes, which were invisible for a while and answered nothing.
+   Two questions, both of which failed before this was written:
+
+   1. WHICH TOKEN. Both washes were mixed against `--wx-bg-2`, and the dark-mode
+      section re-points that name to `--bf-hover` inside the shell — #fbfaf7, which is
+      1.5/255 from the white card. Neither wash rendered. `--wx-bg` is the page GROUND,
+      a real step below the card in every theme and inverted in dark mode, so the
+      question is asked of the token and not of a number that a theme can move.
+
+   2. WHICH RULE. A day outside the month that is also a non-working day carries both
+      classes; at equal specificity the later rule wins, so out-month has to sit AFTER
+      is-weekend or day 30 reads lighter than day 31 for no reason anyone can see. */
+check("a day outside the month is washed against the ground", winner(CAL_OUT, "background", 1280), /color-mix\(in srgb, var\(--wx-bg\) 70%/);
+check("a non-working day is washed against the same ground", winner(CAL_WEEKEND, "background", 1280), /color-mix\(in srgb, var\(--wx-bg\) 38%/);
+check(
+  "a Sunday outside the month still reads as outside it",
+  winner(CAL_OUT_WEEKEND, "background", 1280),
+  /color-mix\(in srgb, var\(--wx-bg\) 70%/
+);
+check("a holiday outranks both of them", winner(CAL_HOLIDAY, "background", 1280), /var\(--sc-holiday\)/);
+/* And the hover wash is an IMAGE, so it layers over whichever of those three colours the
+   day carries. As a colour it would outrank all three at four classes and wipe the tint
+   the legend names — which is the whole reason it is written the way it is. */
+// asked of `background`, because that is the property every wash rule actually writes —
+// the hover rule writes none of it, which is the point
+check("hovering a day keeps the wash its day carries", winner(CAL_HOVER, "background", 1280), /var\(--sc-holiday\)/);
+check("…and adds to it with an image", winner(CAL_HOVER, "background-image", 1280), /^linear-gradient\(/);
+/* The Gantt's redesign hangs on one thing a later rule could take away silently: the bar
+   does not clip, because the job's name is drawn to the RIGHT of it rather than inside. Put
+   `overflow: hidden` back on the bar and every label on the chart disappears, with no error
+   and nothing in the unit suites able to see it -- jsdom applies no CSS.
+
+   The fill is asked for too, because the bars only became solid once all five status colours
+   were measured against the white card (3.11 to 10.12, against the 3:1 an indicator carries).
+   `--gantt-bar-fill` is the pale tint the old bars used and would fail that. */
+check("the Gantt bar does not clip, so its label can sit outside it", winner(GANTT_BAR, "overflow", 1280), /^visible$/);
+check("the Gantt bar is filled with the solid status colour", winner(GANTT_BAR, "background", 1280), /var\(--gantt-bar-dot\)/);
+
 // The landing and the chart draw the same band; each keeps its own shape.
 check("the landing's critical-path band keeps its own corners", winner(LANDING_CPM, "border-radius", 1280), "14px");
 check("the chart's critical-path band keeps its own corners", winner(CHART_CPM, "border-radius", 1280), "12px");
