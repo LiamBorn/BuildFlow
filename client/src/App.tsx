@@ -39,7 +39,6 @@ import {
   ArrowRight,
   ArrowUp,
   CalendarClock,
-  Upload,
   ArrowUpRight,
   Bell,
   Bookmark,
@@ -73,6 +72,7 @@ import {
   Eye,
   EyeOff,
   Fan,
+  FileText,
   FileUp,
   FolderKanban,
   Gauge,
@@ -80,7 +80,6 @@ import {
   Globe2,
   Grid2X2,
   GripVertical,
-  FileText,
   Hammer,
   Handshake,
   HardHat,
@@ -145,6 +144,7 @@ import {
   TrendingDown,
   TrendingUp,
   Truck,
+  Upload,
   Users,
   Warehouse,
   Wrench,
@@ -4852,10 +4852,214 @@ function WxCompanyWave() {
   );
 }
 
+/* ── Production control: program showcase ────────────────────────────────
+   Modelled on monday.com's "Get more done with agents" block: a pill tab bar,
+   then for the chosen program a headline with an accented last word, a line of
+   copy and Get Started on the left, and a demo video on the right.
+
+   Videos are PLACEHOLDERS until real cuts exist. Give a program a `video`
+   (e.g. "/demos/crew-scheduling.mp4", 1600×1000, muted, looping) and the frame
+   plays it; without one it shows the poster with a play badge, a moving
+   progress bar and the "agent at work" steps, so the section never looks empty. */
+type WxProgramDemo = {
+  id: string;
+  tab: string;
+  lead: string;
+  accent: string;
+  text: string;
+  poster: string;
+  video?: string;
+  steps: [string, string, string];
+};
+
+const WX_PROGRAM_DEMOS: WxProgramDemo[] = [
+  {
+    id: "scheduling",
+    tab: "Scheduling",
+    lead: "Crews booked.",
+    accent: "Done.",
+    text: "Drag jobs onto crews by day, capacity and readiness. Double-bookings surface before dispatch, not after the crew rolls out.",
+    poster: "Crew Scheduling",
+    steps: ["Checking crew capacity", "Placing Deck pour on Concrete 1", "Double-booking avoided"]
+  },
+  {
+    id: "schedule-ai",
+    tab: "Schedule AI",
+    lead: "Next week drafted.",
+    accent: "Done.",
+    text: "Schedule AI reads ready work, free crews and the forecast, then lays out a week you can accept, edit, or ignore.",
+    poster: "Schedule AI",
+    steps: ["Reading ready work", "Matching crews to jobs", "Draft week ready to review"]
+  },
+  {
+    id: "field",
+    tab: "Field & DelayIQ",
+    lead: "Slips flagged.",
+    accent: "Done.",
+    text: "Crews post progress and photos from the jobsite. DelayIQ spots the job trending late while there is still time to recover.",
+    poster: "Field Updates & DelayIQs",
+    steps: ["Field update received", "Pour trending 2 days late", "Recovery plan suggested"]
+  },
+  {
+    id: "materials",
+    tab: "Materials",
+    lead: "Deliveries tracked.",
+    accent: "Done.",
+    text: "Every delivery carries a live status, so a crew only rolls to a job once the steel, rebar and units are actually on site.",
+    poster: "Materials Readiness",
+    steps: ["Checking delivery windows", "Rebar in transit, Wed 7am", "Blocked job held off the board"]
+  },
+  {
+    id: "equipment",
+    tab: "Equipment",
+    lead: "Fleet assigned.",
+    accent: "Done.",
+    text: "See which machines are free, in use or in the shop, and commit only the iron that is actually available that day.",
+    poster: "Equipment Tracking",
+    steps: ["Scanning the yard", "Crane #2 committed to Harborview", "Excavator flagged for service"]
+  },
+  {
+    id: "map",
+    tab: "Map & Field Ops",
+    lead: "Routes planned.",
+    accent: "Done.",
+    text: "Crews, trucks and jobsites on one live map. Re-route a late truck in seconds and the field sees the new plan first.",
+    poster: "Map & Field Ops",
+    steps: ["Locating crews and trucks", "Re-routing Truck 4 via Riverside", "Crews notified"]
+  },
+  {
+    id: "reports",
+    tab: "Reports",
+    lead: "Weekly review.",
+    accent: "Done.",
+    text: "On-time completion, utilization and backlog roll up from the work your crews ran, ready before the meeting starts.",
+    poster: "Production Reports",
+    steps: ["Rolling up field progress", "On-time completion at 87%", "Summary exported"]
+  }
+];
+
+function WxProgramShowcase({ onGetStarted, className = "" }: { onGetStarted: () => void; className?: string }) {
+  const [active, setActive] = useState(0);
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const demo = WX_PROGRAM_DEMOS[active];
+
+  const select = (index: number, focus = false) => {
+    setActive(index);
+    if (focus) tabRefs.current[index]?.focus();
+  };
+  const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const count = WX_PROGRAM_DEMOS.length;
+    const map: Record<string, number> = {
+      ArrowRight: (index + 1) % count,
+      ArrowDown: (index + 1) % count,
+      ArrowLeft: (index - 1 + count) % count,
+      ArrowUp: (index - 1 + count) % count,
+      Home: 0,
+      End: count - 1
+    };
+    const next = map[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    select(next, true);
+  };
+
+  return (
+    <div className={`wx-ps ${className}`.trim()} data-reveal>
+      <div className="wx-ps-head">
+        <h3 className="wx-ps-title">Get more done with BuildFlow.</h3>
+        <p>Pick a program and watch it take a piece of the week off your plate.</p>
+      </div>
+
+      <div className="wx-ps-tabs" role="tablist" aria-label="BuildFlow programs">
+        {WX_PROGRAM_DEMOS.map((item, index) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`wx-ps-tab-${item.id}`}
+            aria-selected={index === active}
+            aria-controls="wx-ps-panel"
+            tabIndex={index === active ? 0 : -1}
+            className={`wx-ps-tab${index === active ? " is-active" : ""}`}
+            ref={(el) => {
+              tabRefs.current[index] = el;
+            }}
+            onClick={() => select(index)}
+            onKeyDown={(event) => onTabKey(event, index)}
+          >
+            {item.tab}
+          </button>
+        ))}
+      </div>
+
+      <div className="wx-ps-panel" role="tabpanel" id="wx-ps-panel" aria-labelledby={`wx-ps-tab-${demo.id}`}>
+        <div className="wx-ps-copy" key={`copy-${demo.id}`}>
+          <h4 className="wx-ps-lead">
+            {demo.lead} <span className="wx-ps-accent">{demo.accent}</span>
+          </h4>
+          <p>{demo.text}</p>
+          <button type="button" className="wx-ps-cta" onClick={onGetStarted}>
+            Get Started <ArrowRight size={17} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="wx-ps-stage" key={`stage-${demo.id}`}>
+          <div className="wx-ps-video">
+            <div className="wx-ps-chrome" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <span>BuildFlow · {demo.tab}</span>
+            </div>
+            <div className="wx-ps-screen">
+              {demo.video ? (
+                <video
+                  className="wx-ps-media"
+                  src={demo.video}
+                  poster={WELCOME_ITEM_IMAGES[demo.poster]}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  aria-label={`${demo.tab} demo`}
+                />
+              ) : (
+                <>
+                  <img className="wx-ps-media" src={WELCOME_ITEM_IMAGES[demo.poster]} alt="" loading="lazy" />
+                  <span className="wx-ps-play" aria-hidden="true">
+                    <PlayCircle size={30} />
+                  </span>
+                  <span className="wx-ps-badge">Demo video coming soon</span>
+                </>
+              )}
+            </div>
+            <ol className="wx-ps-steps" aria-label={`What ${demo.tab} does`}>
+              {demo.steps.map((step, index) => (
+                <li key={step} style={{ "--s": index } as CSSProperties}>
+                  {index === demo.steps.length - 1 ? (
+                    <CheckCircle2 size={15} aria-hidden="true" />
+                  ) : (
+                    <span className="wx-ps-dot" aria-hidden="true" />
+                  )}
+                  {step}
+                </li>
+              ))}
+            </ol>
+            <div className="wx-ps-progress" aria-hidden="true">
+              <span />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WelcomeExperience({
   activeJobs,
   crewCount,
   materialReady,
+  onGetStarted,
   onLogin,
   onShowUpdates,
   onShowHelp,
@@ -5071,12 +5275,9 @@ function WelcomeExperience({
         <WxCompanyWave />
 
         <section className="wx-section" id="product-features">
-          <div className="wx-sec-head" data-reveal>
-            <span className="wx-eyebrow-2">Production control</span>
-            <h2 className="wx-h2">
-              Everything the field needs, <em>in one place.</em>
-            </h2>
-          </div>
+          {/* The program showcase leads the section, in place of the old
+              "Production control / Everything the field needs" heading. */}
+          <WxProgramShowcase onGetStarted={onGetStarted} className="wx-ps-lead-block" />
           <div className="wx-rows">
             {/* Crew scheduling — product-page treatment: one centered statement, the
                 board as the hero image, then the same sentence's three ideas as

@@ -38,6 +38,7 @@ import "./updates-page.css";
 import "./reviews-page.css";
 import "./help-center-page.css";
 import "./integrations-page.css";
+import "./program-showcase.css"; // landing: Production control program showcase
 import "./account-redesign.css";
 import "./compare-plans-redesign.css";
 import "./contact-sales-redesign.css";
