@@ -1,0 +1,112 @@
+/* ---------------------------------------------------------------------------
+   The landing a notification makes.
+   Clicking a notification opens the page that owns the record and lights the
+   record itself for a moment, so "it took me somewhere" and "it took me HERE"
+   are the same gesture. Two shapes: a row on one of the four HubSpot-style
+   indexes, and a Dashboard panel for the two kinds of notification that have
+   no page of their own (weather, inspections).
+
+   Both are pure keyframes that end at nothing, and the class is pulled at the
+   same moment the animation lands, so the highlight leaves without a step.
+   Colour is --bf-accent-rgb, so the flash follows the active Theme Preset.
+   Loaded after hs-index.css and dashboard-redesign.css, which is what lets a
+   same-specificity rule here win.
+   --------------------------------------------------------------------------- */
+
+/* A row. The tint goes on the CELLS, not the row: `tr.is-selected` and
+   `tr:hover` both paint the row's own background, and a cell background covers
+   whatever the row behind it is painting whatever the specificity. */
+.hs-index .hs-table tbody tr.is-bf-focused > td {
+  animation: bf-focus-cell 2.4s ease-out both;
+}
+.hs-index .hs-table tbody tr.is-bf-focused > td:first-child {
+  animation: bf-focus-cell-edge 2.4s ease-out both;
+}
+
+@keyframes bf-focus-cell {
+  0%,
+  70% {
+    background: rgba(var(--bf-accent-rgb), 0.14);
+    box-shadow:
+      inset 0 1px 0 rgba(var(--bf-accent-rgb), 0.5),
+      inset 0 -1px 0 rgba(var(--bf-accent-rgb), 0.5);
+  }
+  100% {
+    background: rgba(var(--bf-accent-rgb), 0);
+    box-shadow:
+      inset 0 1px 0 rgba(var(--bf-accent-rgb), 0),
+      inset 0 -1px 0 rgba(var(--bf-accent-rgb), 0);
+  }
+}
+
+/* The left edge carries a solid bar, the way a selected record does elsewhere. */
+@keyframes bf-focus-cell-edge {
+  0%,
+  70% {
+    background: rgba(var(--bf-accent-rgb), 0.14);
+    box-shadow:
+      inset 3px 0 0 rgba(var(--bf-accent-rgb), 0.9),
+      inset 0 1px 0 rgba(var(--bf-accent-rgb), 0.5),
+      inset 0 -1px 0 rgba(var(--bf-accent-rgb), 0.5);
+  }
+  100% {
+    background: rgba(var(--bf-accent-rgb), 0);
+    box-shadow:
+      inset 3px 0 0 rgba(var(--bf-accent-rgb), 0),
+      inset 0 1px 0 rgba(var(--bf-accent-rgb), 0),
+      inset 0 -1px 0 rgba(var(--bf-accent-rgb), 0);
+  }
+}
+
+/* A Dashboard panel. The ring goes on a PSEUDO-ELEMENT, not on the panel, and
+   that is not a style choice — dashboard-admin-kit.css animates the panel
+   itself at five classes of specificity:
+
+     .bf-shell .dash-rx.hs-home .dash-board .dash-block { animation: bfak-rise }
+
+   so a rule here that sets `animation` on `.dash-block` loses whatever the
+   source order, and the flash simply never plays. Nothing competes for
+   `.dash-block::after`, and a ring drawn there also leaves the card's own
+   resting shadow alone. */
+.dash-block.is-bf-focused::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 11px; /* the card's 8px plus the 3px the ring sits out by */
+  pointer-events: none;
+  animation: bf-focus-panel 2.4s ease-out both;
+}
+/* Stacked (phone) boards lay the panels out in flow, so the ring needs a
+   containing block. `relative` on an in-flow element moves nothing. */
+.dash-board.is-stacked .dash-block.is-bf-focused {
+  position: relative;
+}
+
+@keyframes bf-focus-panel {
+  0%,
+  70% {
+    box-shadow: 0 0 0 2px rgba(var(--bf-accent-rgb), 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(var(--bf-accent-rgb), 0);
+  }
+}
+
+/* Asked for less motion: the highlight still says which one, it just does not
+   travel there. Held flat for the life of the class instead of animating. */
+@media (prefers-reduced-motion: reduce) {
+  .hs-index .hs-table tbody tr.is-bf-focused > td,
+  .hs-index .hs-table tbody tr.is-bf-focused > td:first-child,
+  .dash-block.is-bf-focused::after {
+    animation: none;
+  }
+  .hs-index .hs-table tbody tr.is-bf-focused > td {
+    background: rgba(var(--bf-accent-rgb), 0.14);
+  }
+  .hs-index .hs-table tbody tr.is-bf-focused > td:first-child {
+    box-shadow: inset 3px 0 0 rgba(var(--bf-accent-rgb), 0.9);
+  }
+  .dash-block.is-bf-focused::after {
+    box-shadow: 0 0 0 2px rgba(var(--bf-accent-rgb), 0.85);
+  }
+}

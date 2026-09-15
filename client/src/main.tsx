@@ -73,6 +73,7 @@ import "./tutorial-stage.css"; // the onboarding tutorial, on the reference reco
 import "./meetings-panel.css"; // the Dashboard's Meetings panel (Google Calendar / Outlook)
 import "./plan-upgrade.css"; // the top bar's Upgrade button and its plan menu
 import "./notifications-panel.css"; // the notifications drawer, on the reference's layout
+import "./record-focus.css"; // the landing a notification makes: the row or panel it points at, lit for a moment
 
 initAnalytics();
 

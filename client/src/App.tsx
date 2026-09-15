@@ -2467,6 +2467,49 @@ function App() {
     setSalesOpenRequest({ page: target, id, nonce: Date.now() });
     setPage(target);
   };
+  /* Clicking a notification. The same two-part request the Sales pages use — a page plus an id,
+     with a nonce so clicking the same notification twice works — except that the four index pages
+     have filters, a saved view and pagination of their own, so the request also has to survive
+     whatever was on screen when the reader left. `useRecordFocus` on the receiving page does
+     that part; this only says which page and which record.
+
+     Panels are separate because two of the seven kinds (weather, inspections) are read on the
+     Dashboard and have no page to send anyone to. */
+  const [recordFocus, setRecordFocus] = useState<{ page: Page; id: string; nonce: number } | null>(null);
+  const [panelFocus, setPanelFocus] = useState<{ id: string; nonce: number } | null>(null);
+  /* The nonce is a counter, not `Date.now()`. Two clicks inside one millisecond would collide
+     on a clock, and under test the clock is frozen outright (setup.ts fakes Date so the
+     fixtures' dates stay put), which would make every click after the first a no-op. */
+  const focusTicket = useRef(0);
+  const recordFocusFor = (target: Page) =>
+    recordFocus?.page === target ? { id: recordFocus.id, nonce: recordFocus.nonce } : null;
+  const openNotificationTarget = (target: NotificationTarget) => {
+    if (target.kind === "record") {
+      setRecordFocus({ page: target.page, id: target.recordId, nonce: (focusTicket.current += 1) });
+      openAppPage(target.page);
+      return;
+    }
+    if (target.kind === "panel") {
+      setPanelFocus({ id: target.panelId, nonce: (focusTicket.current += 1) });
+      openAppPage("dashboard");
+      return;
+    }
+    /* A booking on the board. The board is addressed by week, not by row, and it remembers the
+       filters the reader last used — which can be exactly why the booking is not on screen. So
+       point it at the week and the crew and drop the filters that could hide it. This is the
+       same thing a pasted `#schedule/week?w=…&crew=…` link does, through the same writer. */
+    const userId = data?.activeUser.id;
+    if (!userId) return; // no bootstrap, no notifications to have clicked
+    writeScheduleContext(userId, {
+      weekStart: startOfScheduleWeek(target.date),
+      crewId: target.crewId,
+      crewType: null,
+      projectId: null,
+      region: null,
+      statuses: null
+    });
+    openAppPage("week");
+  };
   // BuildFlow AI (HubSpot Breeze-style): a panel that opens from the sparkle
   // button on any page, docked beside the rail or expanded across the content;
   // dashboard quick actions open it through the assistantOpener bridge.
@@ -3081,6 +3124,7 @@ function App() {
         links={linkBookmarks}
         onToggleLink={toggleLinkBookmark}
         scheduleLink={() => (isSchedulePage(page) ? scheduleLinkFor(page, readScheduleContext(data.activeUser.id), data) : null)}
+        onOpenNotificationTarget={openNotificationTarget}
       />
       <div className="hs-body">
         {page !== "settings" && (
@@ -3110,6 +3154,7 @@ function App() {
                 selectedBusinessType={selectedBusinessType}
                 selectedPlanId={selectedPlanId}
                 selectedProductIds={selectedProductIds}
+                panelFocus={panelFocus}
               />
             )}
             {page === "bookmarks" && (
@@ -3220,11 +3265,15 @@ function App() {
                 onOpenRecord={openSalesRecord}
               />
             )}
-            {page === "equipment" && <EquipmentPage data={data} reload={reload} />}
-            {page === "materials" && <MaterialsPage data={data} reload={reload} />}
-            {page === "field" && <FieldUpdatesPage data={data} activeUser={activeUser} reload={reload} />}
+            {page === "equipment" && <EquipmentPage data={data} reload={reload} focus={recordFocusFor("equipment")} />}
+            {page === "materials" && <MaterialsPage data={data} reload={reload} focus={recordFocusFor("materials")} />}
+            {page === "field" && (
+              <FieldUpdatesPage data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("field")} />
+            )}
             {page === "map" && <MapOpsPage data={data} />}
-            {page === "delayIQs" && <DelayIQsPage data={data} activeUser={activeUser} reload={reload} />}
+            {page === "delayIQs" && (
+              <DelayIQsPage data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
+            )}
             {page === "reports" && <ReportsPage data={data} />}
             {page === "timecard" && <TimeCardPage data={data} />}
             {page === "settings" && (
@@ -22246,6 +22295,25 @@ function Sidebar({
   );
 }
 
+/**
+ * Where the work a notification is about actually lives — what "bring me to it" resolves to.
+ *
+ * Three shapes, because BuildFlow keeps these seven kinds of thing in three different sorts of
+ * place. Materials, equipment, field updates and DelayIQs each have a page of their own, so the
+ * target is a record on that page's index. Weather alerts and inspections do NOT have a page —
+ * they are read on the Dashboard — so the target is the panel that holds them, and pretending
+ * otherwise would land the reader on a page that does not exist. A schedule assignment lives on
+ * the board, which is addressed by week and crew rather than by row.
+ */
+/** The className for an index row: selected, and/or lit because a notification pointed at it. */
+const indexRowClass = (selected: boolean, focused: boolean) =>
+  [selected ? "is-selected" : "", focused ? "is-bf-focused" : ""].filter(Boolean).join(" ") || undefined;
+
+export type NotificationTarget =
+  | { kind: "record"; page: Page; recordId: string }
+  | { kind: "panel"; panelId: string }
+  | { kind: "schedule"; date: string; crewId: string };
+
 export type NotificationItem = {
   id: string;
   title: string;
@@ -22259,6 +22327,12 @@ export type NotificationItem = {
    * `project.managerId`, where an "assigned to me" tab would have nothing behind it.
    */
   projectId?: string;
+  /**
+   * Where clicking the row goes. Optional in the type because a future source might have
+   * nowhere to send anyone — the panel renders such a row as plain text rather than a link,
+   * which is better than a control that looks live and does nothing.
+   */
+  target?: NotificationTarget;
 };
 
 function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
@@ -22274,6 +22348,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: update.status === "DelayIQed" || update.status === "At Risk" ? "red" : "green",
       icon: ClipboardList,
       projectId: update.projectId,
+      target: { kind: "record", page: "field", recordId: update.id }
     });
   });
 
@@ -22286,6 +22361,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: alert.severity === "High" ? "red" : alert.severity === "Medium" ? "amber" : "blue",
       icon: CloudSun,
       projectId: alert.projectId ?? undefined,
+      // weather has no page of its own: it is read in the Dashboard's Weather Impact panel
+      target: { kind: "panel", panelId: "weather" }
     });
   });
 
@@ -22298,6 +22375,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: delayIQ.severity === "High" ? "red" : delayIQ.severity === "Medium" ? "amber" : "slate",
       icon: ShieldAlert,
       projectId: delayIQ.projectId,
+      target: { kind: "record", page: "delayIQs", recordId: delayIQ.id }
     });
   });
 
@@ -22312,6 +22390,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: assignment.conflicts.length ? "red" : "blue",
       icon: CalendarDays,
       projectId: job?.projectId,
+      // the board, at the week this booking sits in and filtered to the crew it belongs to
+      target: { kind: "schedule", date: assignment.date, crewId: assignment.crewId }
     });
   });
 
@@ -22324,6 +22404,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: inspection.status === "Complete" ? "green" : "violet",
       icon: CheckCircle2,
       projectId: inspection.projectId,
+      // likewise no page: inspections are read in the Dashboard's Upcoming Inspections panel
+      target: { kind: "panel", panelId: "inspections" }
     });
   });
 
@@ -22336,6 +22418,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: material.status === "Missing" ? "red" : material.status === "Ready" ? "green" : "amber",
       icon: PackageCheck,
       projectId: material.projectId,
+      target: { kind: "record", page: "materials", recordId: material.id }
     });
   });
 
@@ -22500,7 +22583,8 @@ function TopBar({
   onOpenSearch,
   links = [],
   onToggleLink,
-  scheduleLink
+  scheduleLink,
+  onOpenNotificationTarget
 }: {
   data: BootstrapPayload;
   onOpenSettings: () => void;
@@ -22526,6 +22610,8 @@ function TopBar({
   onToggleLink?: (link: ScheduleLink) => void;
   /** The schedule view on screen as a link, when the page is one. */
   scheduleLink?: () => ScheduleLink | null;
+  /** Clicking a notification: open the page that owns the record and light the record. */
+  onOpenNotificationTarget?: (target: NotificationTarget) => void;
 }) {
   // The signed-in person, not a fixed name: the owner from signup, or the demo's Matt.
   const me = data.activeUser;
@@ -22811,6 +22897,7 @@ function TopBar({
               data={data}
               read={readNotifications}
               onOpenSettings={onOpenSettings}
+              onOpen={onOpenNotificationTarget}
               onClose={() => setIsNotificationsOpen(false)}
             />
           )}
@@ -25301,6 +25388,7 @@ function DashSection({
   dragging,
   resizing,
   landing,
+  focused = false,
   editable,
   onDragStart,
   onResizeStart,
@@ -25312,6 +25400,8 @@ function DashSection({
   dragging: boolean;
   resizing: boolean;
   landing: boolean;
+  /** Lit for a moment because a notification pointed here. */
+  focused?: boolean;
   editable: boolean;
   onDragStart: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLButtonElement>) => void;
@@ -25331,7 +25421,7 @@ function DashSection({
   return (
     <div
       style={style}
-      className={`dash-block${dragging ? " is-dragging" : ""}${resizing ? " is-resizing" : ""}${landing ? " is-landing" : ""}`}
+      className={`dash-block${dragging ? " is-dragging" : ""}${resizing ? " is-resizing" : ""}${landing ? " is-landing" : ""}${focused ? " is-bf-focused" : ""}`}
       data-dash-drag-id={panel.id}
     >
       {editable && (
@@ -25409,7 +25499,8 @@ function DashBoard({
   onFit,
   fitToContent = false,
   onEditingChange,
-  onHide
+  onHide,
+  panelFocus
 }: {
   layout: GridItem[];
   panels: Record<string, DashPanel>;
@@ -25420,8 +25511,11 @@ function DashBoard({
   fitToContent?: boolean;
   /** Offered while customizing: takes the panel with this id off the board. */
   onHide?: (id: string) => void;
+  /** A notification pointed at one of these panels: scroll it up and light it. */
+  panelFocus?: { id: string; nonce: number } | null;
 }) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const litPanel = usePanelFocus(panelFocus ?? null);
   const [boardWidth, setBoardWidth] = useState(0);
   const [stacked, setStacked] = useState(false);
   const [drag, setDrag] = useState<DashDrag | null>(null);
@@ -25644,6 +25738,7 @@ function DashBoard({
             dragging={active?.kind === "move"}
             resizing={active?.kind === "resize"}
             landing={landing === item.id}
+            focused={litPanel === item.id}
             editable={!stacked}
             onDragStart={startDrag("move", item.id)}
             onResizeStart={startDrag("resize", item.id)}
@@ -27377,7 +27472,8 @@ function Dashboard({
   onOpenBilling,
   selectedBusinessType,
   selectedPlanId,
-  selectedProductIds
+  selectedProductIds,
+  panelFocus
 }: {
   /** Opens Settings › Billing; the dashboard shows the way there when a trial has ended. */
   onOpenBilling?: () => void;
@@ -27388,6 +27484,8 @@ function Dashboard({
   selectedBusinessType: BusinessTypeId | "";
   selectedPlanId: ProductPlanId | "";
   selectedProductIds: OnboardingProductId[];
+  /** A notification pointed at a panel on this board (weather, inspections). */
+  panelFocus?: { id: string; nonce: number } | null;
 }) {
   const [activeFeed, setActiveFeed] = useState<DashboardFeedKey | null>(null);
   const [approvalView, setApprovalView] = useState<"open" | "resolved">("open");
@@ -28507,6 +28605,7 @@ function Dashboard({
                 onFit={panelLayout.fit}
                 fitToContent={!panelLayout.stored}
                 onEditingChange={setBoardEditing}
+                panelFocus={panelFocus}
               />
             </div>
           </div>
@@ -37419,7 +37518,7 @@ function equipmentForCrewJob(data: BootstrapPayload, job?: Job) {
   return matches.find((equipment) => equipment.assignedTo === job.projectId)?.name ?? matches[0]?.name ?? job.requiredEquipment;
 }
 
-function EquipmentPage({ data, reload }: { data: BootstrapPayload; reload: () => Promise<void> }) {
+function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload: () => Promise<void>; focus?: RecordFocusRequest }) {
   const [equipmentSearch, setEquipmentSearch] = useState("");
   const [equipmentModalMode, setEquipmentModalMode] = useState<EquipmentModalMode | null>(null);
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
@@ -37629,6 +37728,12 @@ function EquipmentPage({ data, reload }: { data: BootstrapPayload; reload: () =>
     setEquipmentSearch("");
     setEquipmentPage(1);
   };
+  /* A notification pointed at one of these rows: clear the saved view and every filter that
+     could hide it, turn to the page it lands on, and light it. */
+  const focusedId = useRecordFocus(focus ?? null, filteredEquipment.map((item) => item.id), equipmentPerPage, setEquipmentPage, () => {
+    setEquipmentView("all");
+    clearEquipmentFilters();
+  });
   const equipmentSortHeader = (key: typeof equipmentSortKey, label: string, className = "") => (
     <th className={`${className}${equipmentSortKey === key ? " sorted" : ""}`.trim()}>
       <button type="button" onClick={() => toggleEquipmentSort(key)}>
@@ -37880,7 +37985,11 @@ function EquipmentPage({ data, reload }: { data: BootstrapPayload; reload: () =>
                     const equipmentTone = equipment.status === "Available" ? "green" : equipment.status === "Maintenance" ? "red" : "blue";
                     const isChecked = equipmentSelected.has(equipment.id);
                     return (
-                      <tr key={equipment.id} className={isChecked || selectedEquipmentId === equipment.id ? "is-selected" : undefined}>
+                      <tr
+                        key={equipment.id}
+                        data-bf-focus={equipment.id}
+                        className={indexRowClass(isChecked || selectedEquipmentId === equipment.id, focusedId === equipment.id)}
+                      >
                         <td className="hs-cell-check">
                           <input
                             type="checkbox"
@@ -38167,7 +38276,7 @@ function activeJobForProject(data: BootstrapPayload, projectId: string) {
 
 const materialStatusOptions: Material["status"][] = ["Ready", "Ordered", "Waiting on Delivery", "Missing"];
 
-function MaterialsPage({ data, reload }: { data: BootstrapPayload; reload: () => Promise<void> }) {
+function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload: () => Promise<void>; focus?: RecordFocusRequest }) {
   const tradeProfile = useTradeProfile();
   // quantity hint in the trade's own units ("420 tons" for asphalt, "240 cy" for concrete)
   const materialQuantityHint = tradeProfile ? `Example: 420 ${tradeProfile.materialUnits[0]}` : "Example: 24 bundles";
@@ -38340,6 +38449,12 @@ function MaterialsPage({ data, reload }: { data: BootstrapPayload; reload: () =>
     setMaterialSearch("");
     setMaterialPage(1);
   };
+  /* A notification pointed at one of these rows: clear the saved view and every filter that
+     could hide it, turn to the page it lands on, and light it. */
+  const focusedId = useRecordFocus(focus ?? null, filteredMaterials.map((material) => material.id), materialPerPage, setMaterialPage, () => {
+    setMaterialView("all");
+    clearMaterialFilters();
+  });
   const materialSortHeader = (key: typeof materialSortKey, label: string, className = "") => (
     <th className={`${className}${materialSortKey === key ? " sorted" : ""}`.trim()}>
       <button type="button" onClick={() => toggleMaterialSort(key)}>
@@ -38579,7 +38694,11 @@ function MaterialsPage({ data, reload }: { data: BootstrapPayload; reload: () =>
                             : "blue";
                     const isChecked = materialSelected.has(material.id);
                     return (
-                      <tr key={material.id} className={isChecked ? "is-selected" : undefined}>
+                      <tr
+                        key={material.id}
+                        data-bf-focus={material.id}
+                        className={indexRowClass(isChecked, focusedId === material.id)}
+                      >
                         <td className="hs-cell-check">
                           <input
                             type="checkbox"
@@ -38858,7 +38977,17 @@ function FieldPhotoThumb({ photo, swatchTheme = "office-building" }: { photo: st
   return <span style={{ background: imageThemes[swatchTheme] ?? imageThemes["office-building"] }} />;
 }
 
-function FieldUpdatesPage({ data, activeUser, reload }: { data: BootstrapPayload; activeUser: User; reload: () => Promise<void> }) {
+function FieldUpdatesPage({
+  data,
+  activeUser,
+  reload,
+  focus
+}: {
+  data: BootstrapPayload;
+  activeUser: User;
+  reload: () => Promise<void>;
+  focus?: RecordFocusRequest;
+}) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<Status>("On Site");
   const [fieldSearch, setFieldSearch] = useState("");
@@ -39167,6 +39296,12 @@ function FieldUpdatesPage({ data, activeUser, reload }: { data: BootstrapPayload
     setFieldSearch("");
     setFieldPage(1);
   };
+  /* A notification pointed at one of these rows: clear the saved view and every filter that
+     could hide it, turn to the page it lands on, and light it. */
+  const focusedId = useRecordFocus(focus ?? null, filteredUpdates.map((row) => row.update.id), fieldPerPage, setFieldPage, () => {
+    setFieldView("all");
+    clearFieldFilters();
+  });
   const fieldSortHeader = (key: typeof fieldSortKey, label: string, className = "") => (
     <th className={`${className}${fieldSortKey === key ? " sorted" : ""}`.trim()}>
       <button type="button" onClick={() => toggleFieldSort(key)}>
@@ -39431,7 +39566,11 @@ function FieldUpdatesPage({ data, activeUser, reload }: { data: BootstrapPayload
                     const photoCount = update.photos.length;
                     const isChecked = fieldSelected.has(update.id);
                     return (
-                      <tr key={update.id} className={isChecked || editingUpdateId === update.id ? "is-selected" : undefined}>
+                      <tr
+                        key={update.id}
+                        data-bf-focus={update.id}
+                        className={indexRowClass(isChecked || editingUpdateId === update.id, focusedId === update.id)}
+                      >
                         <td className="hs-cell-check">
                           <input
                             type="checkbox"
@@ -39922,7 +40061,17 @@ function FieldUpdatesPage({ data, activeUser, reload }: { data: BootstrapPayload
   );
 }
 
-function DelayIQsPage({ data, activeUser, reload }: { data: BootstrapPayload; activeUser: User; reload: () => Promise<void> }) {
+function DelayIQsPage({
+  data,
+  activeUser,
+  reload,
+  focus
+}: {
+  data: BootstrapPayload;
+  activeUser: User;
+  reload: () => Promise<void>;
+  focus?: RecordFocusRequest;
+}) {
   // the trade this workspace runs — its own delayIQ categories replace the generic six
   const tradeProfile = useTradeProfile();
   const canCreate = activeUser.role !== "Crew Lead" && data.projects.length > 0;
@@ -40056,6 +40205,12 @@ function DelayIQsPage({ data, activeUser, reload }: { data: BootstrapPayload; ac
     setDelaySearch("");
     setDelayPage(1);
   };
+  /* A notification pointed at one of these rows: clear the saved view and every filter that
+     could hide it, turn to the page it lands on, and light it. */
+  const focusedId = useRecordFocus(focus ?? null, filteredDelayIQs.map((delayIQ) => delayIQ.id), delayPerPage, setDelayPage, () => {
+    setDelayView("all");
+    clearDelayFilters();
+  });
   const delaySortHeader = (key: typeof delaySortKey, label: string, className = "") => (
     <th className={`${className}${delaySortKey === key ? " sorted" : ""}`.trim()}>
       <button type="button" onClick={() => toggleDelaySort(key)}>
@@ -40306,7 +40461,11 @@ function DelayIQsPage({ data, activeUser, reload }: { data: BootstrapPayload; ac
                       const delayStatusTone = delayIQ.status === "Open" ? "red" : delayIQ.status === "Monitoring" ? "amber" : "green";
                       const isChecked = delaySelected.has(delayIQ.id);
                       return (
-                        <tr key={delayIQ.id} className={isChecked ? "is-selected" : undefined}>
+                        <tr
+                          key={delayIQ.id}
+                          data-bf-focus={delayIQ.id}
+                          className={indexRowClass(isChecked, focusedId === delayIQ.id)}
+                        >
                           <td className="hs-cell-check">
                             <input
                               type="checkbox"
