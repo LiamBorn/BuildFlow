@@ -35,9 +35,9 @@ import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sort
 import { CSS, type Transform } from "@dnd-kit/utilities";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   ArrowUp,
-  ArrowLeft,
   CalendarClock,
   Upload,
   ArrowUpRight,
@@ -1259,7 +1259,18 @@ const productPlans: ProductPlan[] = [
     cta: "Start Pro demo",
     icon: CheckCircle2,
     tone: "green",
-    features: ["Everything in Free", "Unlimited crew schedules", "Readiness rules and alerts", "Weekly production reporting"],
+    features: [
+      "Everything in Free: every calendar, scheduling, work order and export feature on the Free plan",
+      "Unlimited Job Scheduling: create and schedule as many jobs and work orders as the week needs, with no trial cap",
+      "Unlimited Seats: add every planner, foreman and manager who touches the schedule",
+      "Full Production Calendar: the complete calendar across every crew, job and production line",
+      "Full Work Orders: the whole work order rather than the basic name, date and quantity fields",
+      "Crew Capacity Planning: plan the week by who is actually free, and spot overbooking before you publish",
+      "Readiness Rules: hold work off the board until its materials, equipment and prerequisites clear",
+      "Risk Alerts: know when a job is trending late while there is still room to recover it",
+      "Weekly Production Reports: on-time completion, utilization and backlog built from the work your crews ran",
+      "Standard Support: help center and email, on a faster queue than the Free plan"
+    ],
     heroTitle: "Run BuildFlow Pro.",
     heroCopy:
       "Move beyond the demo with live crew plans, unlimited weekly schedules, readiness alerts, and production reporting for teams that publish the plan every day.",
@@ -1306,7 +1317,18 @@ const productPlans: ProductPlan[] = [
     icon: BriefcaseBusiness,
     tone: "orange",
     recommended: true,
-    features: ["Everything in Pro", "Cross-project dispatch planning", "Advanced field permissions", "Route and equipment coordination"],
+    features: [
+      "Everything in Pro: every scheduling, capacity, readiness and reporting feature on the Pro plan",
+      "Cross-Project Dispatch: plan and dispatch crews across every active project from one board",
+      "Multi-Division Planning: coordinate crews, routes and equipment across teams and regions",
+      "Advanced Field Permissions: role-based access so the office and the field each see what they should",
+      "Route and Equipment Coordination: routes and machines planned against the same schedule the crews run",
+      "DelayIQ Management: delays logged with a cause, a severity and a schedule impact in days",
+      "Map & Field Ops Included: live vehicle and equipment locations, traffic routing, and field operations on one map \u2014 a $12 per user add-on on Free and Pro",
+      "Equipment Tracking Included: assignment, utilization, and maintenance status for every machine in the fleet \u2014 a $9 per user add-on on Free and Pro",
+      "Time Cards Included: crew hours logged against jobs and approved for payroll and job costing \u2014 an $8 per user add-on on Free and Pro",
+      "Priority Support: a faster queue than the standard support on Pro"
+    ],
     heroTitle: "Scale with BuildFlow Business.",
     heroCopy:
       "Coordinate production across projects with advanced permissions, route-aware dispatch, equipment planning, and shared reporting for larger field teams.",
@@ -1353,10 +1375,16 @@ const productPlans: ProductPlan[] = [
     icon: Building2,
     tone: "violet",
     features: [
-      "Everything in Business",
-      "Custom onboarding and workflows",
-      "Executive schedule health views",
-      "Priority support and security review"
+      "Everything in Business: every dispatch, permission, routing and bundled add-on on the Business plan",
+      "Custom Seat Count: seats and pricing agreed with your team rather than set by a list price",
+      "SSO and Access Controls: single sign-on and the access rules your security team signs off",
+      "Security Review: a formal review of how BuildFlow handles your data before you roll it out",
+      "Custom Onboarding: a rollout shaped around your process instead of a generic setup path",
+      "Custom Workflows: BuildFlow tuned to how your org already plans, reviews and approves work",
+      "Executive Schedule-Health Views: on-time completion, risk and backlog across every division on one screen",
+      "Multi-Region Teams: one account spanning divisions and regions, each keeping the workflow its field operation needs",
+      "Priority Support: the priority queue on Business, plus a named contact for security and rollout",
+      "Custom Reporting: production reporting shaped to the measures your leadership already reviews"
     ],
     heroTitle: "Customize BuildFlow Enterprise.",
     heroCopy:
@@ -1399,6 +1427,124 @@ const planById = Object.fromEntries(productPlans.map((plan) => [plan.id, plan]))
 
 type BillingPeriod = "monthly" | "yearly";
 const YEARLY_DISCOUNT = 0.2; // yearly billing saves 20%
+/** Seats the Free plan covers — matches "Limited Users: 5 users included" in productPlans. */
+const FREE_PLAN_SEATS = 5;
+/** Plan pages that show the "Team size" seat picker under the description. */
+const SEAT_PICKER_PLANS: ProductPlanId[] = ["free", "pro", "business", "enterprise"];
+/** Plan pages that end on a closing advert band, keyed into WELCOME_ITEM_IMAGES. */
+const PLAN_BAND_SHOTS: Partial<Record<ProductPlanId, string>> = {
+  free: "Crew Scheduling",
+  pro: "Production Reports",
+  business: "Map & Field Ops",
+  enterprise: "About BuildFlow"
+};
+/** Per-plan FAQ, rendered above the footer. Add a plan id to give it one. */
+const PLAN_FAQS: Partial<Record<ProductPlanId, Array<{ q: string; a: string }>>> = {
+  enterprise: [
+    {
+      q: "How is Enterprise priced?",
+      a: "With you rather than from a list. Seats, modules and the level of support are agreed as one arrangement, so the price reflects how much of BuildFlow your organization actually runs."
+    },
+    {
+      q: "What does Enterprise add over Business?",
+      a: "Single sign-on and access controls, a security review, custom onboarding and workflows, executive schedule-health views, multi-region teams, custom reporting, and a named support contact."
+    },
+    {
+      q: "Can each region keep its own way of working?",
+      a: "Yes. One account spans divisions and regions, and each keeps the workflow its field operation needs while leadership sees schedule health across all of them."
+    },
+    {
+      q: "Will your security team work with ours?",
+      a: "Yes. A formal review of how BuildFlow handles your data happens before you roll it out, and single sign-on and access rules are set to what your security team signs off."
+    },
+    {
+      q: "How long does a rollout take?",
+      a: "It depends on how many divisions go live and how much workflow design you want. Onboarding is shaped around your process rather than a generic setup path, and a named contact runs it with you."
+    },
+    {
+      q: "How do we start?",
+      a: "Talk to sales, or try the same demo workspace the other plans use first. Nothing about an Enterprise arrangement has to be settled before you have seen the product run a real week."
+    }
+  ],
+  business: [
+    {
+      q: "What does Business cost?",
+      a: "$48 per user per month, or $38.40 billed yearly. Seats are unlimited, so you pay for the people who plan and run the work."
+    },
+    {
+      q: "What does Business add over Pro?",
+      a: "Cross-project dispatch, multi-division planning, advanced field permissions, route and equipment coordination, DelayIQ management and priority support."
+    },
+    {
+      q: "Are the add-on modules included?",
+      a: "Yes, all three. Map & Field Ops, Equipment Tracking and Time cards come with Business at no extra charge. On Free or Pro they are $12, $9 and $8 per user per month."
+    },
+    {
+      q: "Is Business worth it over Pro plus add-ons?",
+      a: "Usually. Pro at $20 plus the three modules at $29 comes to $49 per user, so Business at $48 costs less and adds cross-project dispatch and field permissions on top."
+    },
+    {
+      q: "What do advanced field permissions do?",
+      a: "They set role-based access, so the office and the field each see and change only what they should. Crews post to their own jobs while planning and approvals stay with the office."
+    },
+    {
+      q: "When should we talk about Enterprise?",
+      a: "When you need custom workflows, single sign-on, a security review or executive schedule-health views across divisions. Enterprise is priced with you rather than from a list."
+    }
+  ],
+  pro: [
+    {
+      q: "What does Pro cost?",
+      a: "$20 per user per month, or $16 billed yearly. You pay for the people who plan and run the work, and seats are unlimited."
+    },
+    {
+      q: "What does Pro add over Free?",
+      a: "Unlimited jobs and seats, the full production calendar and work orders, crew capacity planning, readiness rules, risk alerts and weekly production reports."
+    },
+    {
+      q: "How does capacity planning work?",
+      a: "The week is planned against who is actually free. A crew booked past its hours or onto two jobs at once is flagged on the board before you publish, not after."
+    },
+    {
+      q: "What are readiness rules?",
+      a: "They hold work off the board until its materials, equipment and prerequisites clear, so a crew is never dispatched to a job that cannot start."
+    },
+    {
+      q: "Can we try Pro before paying?",
+      a: "Yes. Start on the Free demo and move to Pro when you are ready. Your schedules, crews and materials come with you."
+    },
+    {
+      q: "When should we move to Business?",
+      a: "When several projects, roles and routes need coordinating at once. Business adds cross-project dispatch, field permissions, and the Map, Equipment and Time card modules at no extra charge."
+    }
+  ],
+  free: [
+    {
+      q: "Is the Free plan actually free?",
+      a: "Yes. It costs $0 and needs no card. It is a 14 day demo of the production board, with a limited number of jobs, resources and history."
+    },
+    {
+      q: "How many people can use it?",
+      a: "Five. That is enough for a planner and a few foremen to run a real week and see whether the board fits how you work."
+    },
+    {
+      q: "What can we actually do on it?",
+      a: "Build a production calendar, drag and drop jobs across days and crews, write basic work orders, assign resources, set due-date reminders, and export the schedule."
+    },
+    {
+      q: "What happens after the 14 days?",
+      a: "You choose the plan that fits. Pro is $20 and Business is $48 per user per month, and Enterprise is priced with you. Nothing forces a decision before then."
+    },
+    {
+      q: "Do we lose our work if we upgrade?",
+      a: "No. Your schedules, crews and materials come with you, so moving up a tier changes what you can do rather than what you have."
+    },
+    {
+      q: "Can we get our data back out?",
+      a: "At any time. Schedules export to CSV or PDF, so what you build on Free is yours whether or not you carry on."
+    }
+  ]
+};
 
 function formatPlanUsd(value: number): string {
   return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
@@ -1467,11 +1613,14 @@ function AnimatedPlanPrice({ plan, period }: { plan: ProductPlan; period: Billin
 function BillingToggle({
   value,
   onChange,
-  className = ""
+  className = "",
+  showSave = true
 }: {
   value: BillingPeriod;
   onChange: (period: BillingPeriod) => void;
   className?: string;
+  /** Off for a $0 plan, where yearly billing saves nothing. */
+  showSave?: boolean;
 }) {
   const monthlyRef = useRef<HTMLButtonElement>(null);
   const yearlyRef = useRef<HTMLButtonElement>(null);
@@ -1505,7 +1654,7 @@ function BillingToggle({
         className={`plans-billing-opt ${value === "yearly" ? "on" : ""}`}
         onClick={() => onChange("yearly")}
       >
-        Yearly <span className="plans-billing-save">Save 20%</span>
+        Yearly {showSave && <span className="plans-billing-save">Save 20%</span>}
       </button>
     </div>
   );
@@ -4108,6 +4257,17 @@ function WelcomePage({
           onShowUpdates={showUpdatesPage}
           onShowHelp={showHelpCenterPage}
         />
+      ) : welcomeView === "plansOverview" && activeOverviewVariant ? (
+        <WelcomePlansOverviewPage
+          variant={activeOverviewVariant}
+          onGetStarted={showCreateAccountPage}
+          onLogin={onEnterDashboard}
+          onLogIn={showLoginPage}
+          onExplore={onOpenPage}
+          onOpenHash={(hash) => {
+            if (typeof window !== "undefined") window.location.hash = hash;
+          }}
+        />
       ) : activeOverviewVariant ? (
         <WelcomeOverviewPage
           variant={activeOverviewVariant}
@@ -6658,6 +6818,530 @@ function WelcomeProductOverviewPage({
             <a onClick={onBack} role="button" tabIndex={0}>
               Back to home
             </a>
+            <a href="#privacy">Privacy</a>
+            <a href="#terms">Terms</a>
+            <a href="#security">Security</a>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+/**
+ * Plans > See overview (#plans-overview).
+ *
+ * The Apple-style layout the Products overview uses, carrying the plansOverview
+ * variant's own copy: every string on the classic layout is still here — hero,
+ * both intro paragraphs, the CTA pair and platform line, the four plan tiers,
+ * the four pricing principles, the stage caption and demo, the BuildFlow AI
+ * band, the four audience cards and the three live metrics.
+ */
+const PLANS_TIER_SHOTS: Record<string, string> = {
+  Free: "Route Optimization",
+  Pro: "Crew Scheduling",
+  Business: "Map & Field Ops",
+  Enterprise: "About BuildFlow"
+};
+const PLANS_PRINCIPLE_SHOTS: Record<string, string> = {
+  "Free demo": "Production Reports",
+  Transparent: "Contact Sales",
+  Modular: "Equipment Tracking",
+  Portable: "Materials Readiness"
+};
+const PLANS_FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "What do the plans cost?",
+    a: "Free is $0, Pro is $20 and Business is $48 per user per month. Enterprise is priced with you. Every tier is billed by the seat, so you pay for the people who actually plan and run the work."
+  },
+  {
+    q: "Is there a discount for paying yearly?",
+    a: "Yes, 20 percent. That brings Pro to $16 and Business to $38.40 per user per month, billed annually."
+  },
+  {
+    q: "What do you get on the Free plan?",
+    a: "A production calendar, drag-and-drop job scheduling, basic work orders, resource assignments, due-date reminders, CSV and PDF export, and five users. Jobs, resources and history are capped, and the help center and email support are included."
+  },
+  {
+    q: "Which modules cost extra?",
+    a: "Map & Field Ops at $12, Equipment Tracking at $9 and Time cards at $8 per user per month. All three are included with Business and Enterprise, so on Free or Pro you add only the ones you need."
+  },
+  {
+    q: "Can we move between plans later?",
+    a: "Yes, in either direction. Your schedules, crews and materials come with you, so a change of tier changes what you can do, not what you have."
+  },
+  {
+    q: "Can we bring a schedule we already have?",
+    a: "Yes. Schedules import from Primavera P6 and Microsoft Project, and everything exports back out to CSV or PDF. You are never locked in by the data."
+  }
+];
+
+/** Small team → one crew → a whole site → a corporate campus. */
+const PLANS_AUDIENCE_SHOTS: Record<string, string> = {
+  Startups: "Customer Reviews",
+  "Small business": "Field Updates & DelayIQs",
+  "Mid-market": "Schedule Suggestions",
+  Enterprise: "DelayIQ Detection"
+};
+
+function WelcomePlansOverviewPage({
+  variant,
+  onGetStarted,
+  onLogin,
+  onLogIn,
+  onExplore,
+  onOpenHash
+}: {
+  variant: OverviewVariant;
+  onGetStarted: () => void;
+  onLogin: () => void;
+  onLogIn: () => void;
+  onExplore: (page: Page) => void;
+  onOpenHash: (hash: WelcomeHash) => void;
+}) {
+  const rootRef = useRef<HTMLElement>(null);
+
+  // Pointer-reactive auroras / cursor — the same tween the other welcome pages use.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let raf = 0;
+    const handleMove = (event: PointerEvent) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const nx = event.clientX / window.innerWidth;
+        const ny = event.clientY / window.innerHeight;
+        root.style.setProperty("--mx", `${event.clientX}px`);
+        root.style.setProperty("--my", `${event.clientY}px`);
+        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
+        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
+      });
+    };
+    window.addEventListener("pointermove", handleMove);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // Reveal-on-scroll tweens.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.14, rootMargin: "0px 0px -6% 0px" }
+    );
+    root.querySelectorAll("[data-reveal]").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // The variant splits its modules into the four plan tiers (each links to its
+  // own plan page) and the four pricing principles (which do not).
+  const tiers = variant.modules.filter((mod) => Boolean(mod.hash));
+  const principles = variant.modules.filter((mod) => !mod.hash);
+
+  // "What each plan adds" — the product pages' tabbed viewer: a vertical tab list
+  // whose selected row expands, and that plan's contents beside it.
+  const [planTab, setPlanTab] = useState(0);
+  const [planFrameOn, setPlanFrameOn] = useState(true);
+  const planTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selectPlanTab = (index: number, focus = false) => {
+    if (index === planTab) return;
+    setPlanFrameOn(false);
+    setPlanTab(index);
+    if (focus) planTabRefs.current[index]?.focus();
+  };
+  useEffect(() => {
+    if (planFrameOn) return;
+    const raf = requestAnimationFrame(() => setPlanFrameOn(true));
+    return () => cancelAnimationFrame(raf);
+  }, [planFrameOn]);
+  const onPlanTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number, count: number) => {
+    const map: Record<string, number> = {
+      ArrowDown: (index + 1) % count,
+      ArrowRight: (index + 1) % count,
+      ArrowUp: (index - 1 + count) % count,
+      ArrowLeft: (index - 1 + count) % count,
+      Home: 0,
+      End: count - 1
+    };
+    const next = map[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    selectPlanTab(next, true);
+  };
+
+  const planContents: Record<string, CsListItem[]> = {
+    Free: [
+      {
+        icon: CalendarDays,
+        title: "Production calendar",
+        sub: "Scheduled jobs, work orders and production dates",
+        badge: "INCLUDED",
+        tone: "ready"
+      },
+      {
+        icon: ClipboardList,
+        title: "Basic work orders",
+        sub: "Name, due date, quantity, customer and notes",
+        badge: "INCLUDED",
+        tone: "ready"
+      },
+      { icon: Users, title: "5 users included", sub: "Jobs, resources and history are capped", badge: "LIMITED", tone: "wait" },
+      { icon: Download, title: "CSV or PDF export", sub: "Take the schedule out whenever you like", badge: "INCLUDED", tone: "ready" }
+    ],
+    Pro: [
+      { icon: CalendarDays, title: "Live scheduling", sub: "Unlimited schedules across every crew", badge: "INCLUDED", tone: "ready" },
+      { icon: Users, title: "Crew capacity", sub: "Plan the week by who is actually free", badge: "INCLUDED", tone: "ready" },
+      { icon: AlertTriangle, title: "Risk alerts", sub: "Readiness rules flag work before it is booked", badge: "INCLUDED", tone: "ready" },
+      { icon: LineChart, title: "Weekly reports", sub: "Production reporting on the work you ran", badge: "INCLUDED", tone: "ready" }
+    ],
+    Business: [
+      {
+        icon: BriefcaseBusiness,
+        title: "Portfolio planning",
+        sub: "Cross-project dispatch across divisions",
+        badge: "INCLUDED",
+        tone: "ready"
+      },
+      { icon: Route, title: "Route dispatch", sub: "Map & Field Ops at no extra charge", badge: "INCLUDED", tone: "ready" },
+      { icon: Wrench, title: "Equipment context", sub: "Equipment Tracking and Time cards, included", badge: "INCLUDED", tone: "ready" },
+      {
+        icon: ShieldAlert,
+        title: "Field permissions",
+        sub: "Role-based review for the office and the field",
+        badge: "INCLUDED",
+        tone: "ready"
+      }
+    ],
+    Enterprise: [
+      { icon: Building2, title: "Multi-region teams", sub: "One account across divisions and regions", badge: "INCLUDED", tone: "ready" },
+      { icon: Settings, title: "Custom workflows", sub: "Tuned to how your org already runs", badge: "INCLUDED", tone: "ready" },
+      {
+        icon: ShieldAlert,
+        title: "Security review",
+        sub: "SSO and controls your security team signs off",
+        badge: "INCLUDED",
+        tone: "ready"
+      },
+      { icon: Sparkles, title: "Priority support", sub: "Executive views and a named contact", badge: "INCLUDED", tone: "ready" }
+    ]
+  };
+  const planCards: Array<{ title: string; text: string; cta: string; action: () => void; mock: CsMockSpec }> = tiers.map((tier) => {
+    const plan = productPlans.find((entry) => entry.name === tier.kicker);
+    const price = plan ? planPricing(plan, "monthly") : null;
+    return {
+      title: tier.kicker,
+      text: tier.text,
+      cta: `Explore the ${tier.kicker} plan`,
+      action: () => (tier.hash ? onOpenHash(tier.hash) : onGetStarted()),
+      mock: {
+        kind: "list",
+        title: price ? `${tier.kicker} \u00b7 ${price.price} ${price.note.toLowerCase()}` : tier.kicker,
+        items: planContents[tier.kicker] ?? []
+      }
+    };
+  });
+  const activePlan = planCards[planTab] ?? planCards[0];
+
+  return (
+    <main className="cs-page cpx-page pov-page plx-page" id="plans-overview" ref={rootRef}>
+      <div className="wx-bg" aria-hidden="true">
+        <div className="wx-aurora wx-aurora-1" />
+        <div className="wx-aurora wx-aurora-2" />
+        <div className="wx-aurora wx-aurora-3" />
+      </div>
+      <div className="wx-cursor" aria-hidden="true" />
+
+      {/* 1 · The plans — every tier a link to its own page */}
+      <section className="cpx-section pov-lineup cpx-light" id="plx-plans" tabIndex={-1} aria-labelledby="plx-plans-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow">
+              <span className="wx-dot" /> {variant.eyebrow}
+            </span>
+            <h1 className="pov-title" id="plx-plans-title">
+              Plans
+            </h1>
+            <p className="cpx-body">
+              Every plan runs the same command center. What changes is how many crews and seats you can put on the schedule, which modules
+              are switched on, and how deep the reporting and controls go. Start free, and move up a tier when the work does.
+            </p>
+          </div>
+          <div className="plx-tier-grid">
+            {tiers.map((tier, index) => {
+              const plan = productPlans.find((entry) => entry.name === tier.kicker);
+              const monthly = plan ? planPricing(plan, "monthly") : null;
+              const yearly = plan && plan.priceMonthly ? planPricing(plan, "yearly") : null;
+              return (
+                <article className="plx-tier" key={tier.title} data-reveal style={{ "--i": index } as CSSProperties}>
+                  <span className="plx-tier-shot">
+                    <img src={WELCOME_ITEM_IMAGES[PLANS_TIER_SHOTS[tier.kicker] ?? "Crew Scheduling"]} alt="" loading="lazy" />
+                  </span>
+                  <h3 className="plx-tier-name">{tier.kicker}</h3>
+                  <p className="plx-tier-lead">{tier.text}</p>
+                  <p className="plx-tier-price">
+                    <b>{monthly ? monthly.price : "Custom"}</b>
+                    {/* The catalog note is Title Case for Enterprise only — even it out across the row. */}
+                    <span>{(monthly ? monthly.note : "Per user / month").replace("Per User / Month", "Per user / month")}</span>
+                  </p>
+                  <p className="plx-tier-alt">
+                    {yearly
+                      ? `or ${yearly.price} per user / mo billed yearly`
+                      : plan && plan.priceMonthly === 0
+                        ? "No card required"
+                        : "Talk to us about seats and controls"}
+                  </p>
+                  <div className="plx-tier-actions">
+                    <button type="button" className="plx-tier-btn" onClick={() => (tier.hash ? onOpenHash(tier.hash) : onGetStarted())}>
+                      Learn more
+                    </button>
+                    {tier.kicker === "Enterprise" ? (
+                      <button type="button" className="plx-tier-link" onClick={() => onOpenHash("#contact-sales")}>
+                        Contact sales <ChevronRight size={15} aria-hidden="true" />
+                      </button>
+                    ) : (
+                      <button type="button" className="plx-tier-link" onClick={onGetStarted}>
+                        {tier.kicker === "Free" ? "Start free" : "Get started"} <ChevronRight size={15} aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="plx-tier-for">{tier.title}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 2 · BuildFlow AI is in every tier, over the live command center */}
+      <section className="cpx-section pov-featured" id="plx-featured" tabIndex={-1} aria-labelledby="plx-featured-title" data-reveal>
+        <div className="pov-featured-bg" aria-hidden="true">
+          <WxBloomField seed={31} />
+        </div>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="pov-tag">{variant.bandEyebrow}</span>
+            <h2 className="cpx-statement" id="plx-featured-title">
+              {variant.bandLead} {variant.bandGrad}
+            </h2>
+            <p className="cpx-body">{variant.bandText}</p>
+            <div className="cpx-hero-actions">
+              <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Get BuildFlow">
+                Get BuildFlow <ArrowRight size={18} />
+              </WxMagnetic>
+              <WxMagnetic className="wx-btn wx-btn-line" onClick={onLogin} ariaLabel="Preview the live demo">
+                Preview the live demo
+              </WxMagnetic>
+            </div>
+          </div>
+          <div className="pov-featured-stage">
+            <div className="cs-panel cs-hero-panel">
+              <CsBoard title={variant.stageCap} rows={CREW_PAGE_CONTENT.hero.board} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3 · How the pricing works */}
+      <section className="cpx-section pov-why cpx-light" id="plx-fit" tabIndex={-1} aria-labelledby="plx-fit-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow-2">{variant.modulesEyebrow}</span>
+            <h2 className="cpx-statement-sm" id="plx-fit-title">
+              {variant.modulesTitleNormal}
+              {variant.modulesTitleEm}
+            </h2>
+          </div>
+          <div className="pov-why-grid">
+            {principles.map((principle, index) => (
+              <article className="pov-why-card" key={principle.title} data-reveal style={{ "--i": index } as CSSProperties}>
+                <span className="pov-why-sub">{principle.kicker}</span>
+                <h3>{principle.title}</h3>
+                <p>{principle.text}</p>
+                <span className="pov-why-shot">
+                  <img src={WELCOME_ITEM_IMAGES[PLANS_PRINCIPLE_SHOTS[principle.kicker] ?? "Crew Scheduling"]} alt="" loading="lazy" />
+                </span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4 · Who grows on which plan */}
+      <section className="cpx-section pov-learn cpx-light" id="plx-grow" tabIndex={-1} aria-labelledby="plx-grow-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow-2">{variant.galleryEyebrow}</span>
+            <h2 className="cpx-statement-sm" id="plx-grow-title">
+              {variant.galleryTitleNormal}
+              {variant.galleryTitleEm}
+            </h2>
+          </div>
+          <div className="pov-learn-grid">
+            {variant.gallery.map((card, index) => (
+              <article className="pov-learn-card plx-grow-card" key={card.title} data-reveal style={{ "--i": index } as CSSProperties}>
+                <span className="pov-learn-good">
+                  {card.stat} {card.label}
+                </span>
+                <span className="pov-learn-title">{card.title}</span>
+                <span className="plx-grow-text">{card.text}</span>
+                <span className="pov-learn-shot">
+                  <img src={WELCOME_ITEM_IMAGES[PLANS_AUDIENCE_SHOTS[card.title] ?? "Crew Scheduling"]} alt="" loading="lazy" />
+                </span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 5 · What each plan adds — the product pages' tabbed viewer, one tab per plan */}
+      <section className="cpx-section pov-also cpx-paper-bg" id="plx-more" tabIndex={-1} aria-labelledby="plx-more-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <h2 className="cpx-statement-sm" id="plx-more-title">
+              What each plan adds.
+            </h2>
+            <p className="cpx-body">
+              Every tier runs the same command center. This is what changes as you move up &mdash; pick a plan to see what comes with it.
+            </p>
+          </div>
+          <div className="cpx-viewer pov-also-viewer">
+            <div className="cpx-tabs" role="tablist" aria-orientation="vertical" aria-label="Plans">
+              {planCards.map((card, index) => (
+                <button
+                  type="button"
+                  role="tab"
+                  id={`plx-plan-tab-${index}`}
+                  aria-selected={index === planTab}
+                  aria-controls="plx-plan-panel"
+                  tabIndex={index === planTab ? 0 : -1}
+                  className="cpx-tab"
+                  key={card.title}
+                  ref={(el) => {
+                    planTabRefs.current[index] = el;
+                  }}
+                  onClick={() => selectPlanTab(index)}
+                  onKeyDown={(event) => onPlanTabKey(event, index, planCards.length)}
+                >
+                  <h3>{card.title}</h3>
+                  <p>{card.text}</p>
+                </button>
+              ))}
+            </div>
+            <div className="cpx-viewer-panel" role="tabpanel" id="plx-plan-panel" aria-labelledby={`plx-plan-tab-${planTab}`}>
+              <div className={`cpx-viewer-frame${planFrameOn ? " is-on" : ""}`} key={activePlan.title}>
+                <div className="cs-panel">
+                  <CsMock spec={activePlan.mock} />
+                </div>
+              </div>
+              <button type="button" className="pov-also-cta" onClick={activePlan.action}>
+                {activePlan.cta} <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6 · Closing advert */}
+      <section className="cpx-section cpx-cta pov-cta-band" id="plx-cta" aria-labelledby="plx-cta-title" data-reveal>
+        <div className="cpx-inner cpx-cta-grid">
+          <div className="cpx-cta-copy">
+            <h2 id="plx-cta-title">
+              {variant.titleNormal}
+              {variant.titleEm}
+            </h2>
+            <p>{variant.sub}</p>
+            <div className="cpx-cta-actions">
+              <button type="button" className="cpx-cta-btn primary" onClick={onGetStarted}>
+                Get BuildFlow
+              </button>
+              <button type="button" className="cpx-cta-btn secondary" onClick={onLogIn}>
+                Log in
+              </button>
+            </div>
+          </div>
+          <div className="cpx-cta-visual" aria-hidden="true">
+            <img className="cpx-cta-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
+            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES["Production Reports"]} alt="" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      {/* 7 · FAQ, directly above the footer */}
+      <section className="cpx-section cpx-faq" id="plx-faq" tabIndex={-1} aria-labelledby="plx-faq-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-reasons-head">
+            <h2 id="plx-faq-title">Frequently asked questions.</h2>
+            <a className="cpx-reasons-link" href="#help-center">
+              Visit the help center <ChevronRight size={18} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="cpx-faq-list">
+            {PLANS_FAQS.map((item, index) => (
+              <details className="cpx-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <summary>
+                  {item.q}
+                  <ChevronDown className="cpx-faq-chevron" size={20} aria-hidden="true" />
+                </summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer — the overview footer, unchanged */}
+      <footer className="wx-footer">
+        <div className="wx-footer-top">
+          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
+          <nav className="wx-footer-links" aria-label="Footer">
+            <div>
+              <h3>Product</h3>
+              <a onClick={() => onExplore("dashboard")}>Dashboard</a>
+              <a onClick={() => onExplore("schedule")}>Schedule</a>
+              <a onClick={() => onExplore("projects")}>Projects</a>
+              <a onClick={() => onExplore("map")}>Map Ops</a>
+              <a onClick={() => onExplore("reports")}>Reports</a>
+            </div>
+            <div>
+              <h3>Modules</h3>
+              <a onClick={() => onExplore("crews")}>Crews</a>
+              <a onClick={() => onExplore("materials")}>Materials</a>
+              <a onClick={() => onExplore("field")}>Field updates</a>
+              <a onClick={() => onExplore("delayIQs")}>DelayIQs</a>
+            </div>
+            <div>
+              <h3>Get started</h3>
+              <a onClick={onGetStarted}>Get BuildFlow</a>
+              <a onClick={onLogIn}>Log in</a>
+            </div>
+          </nav>
+        </div>
+
+        <div className="wx-footer-word" aria-hidden="true">
+          {"BuildFlow".split("").map((letter, index) => (
+            <span key={index} style={{ "--i": index } as CSSProperties}>
+              {letter}
+            </span>
+          ))}
+        </div>
+
+        <div className="wx-footer-legal">
+          <div className="wx-footer-brand">
+            <BuildFlowLogoMark />
+            <strong>BuildFlow</strong>
+          </div>
+          <div className="wx-footer-legal-links">
+            <a href="#about">About BuildFlow</a>
             <a href="#privacy">Privacy</a>
             <a href="#terms">Terms</a>
             <a href="#security">Security</a>
@@ -17056,11 +17740,49 @@ function WelcomePlanShowcase({
 }) {
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
   const pricing = planPricing(plan, billing);
+  // "Team size" — what the plan costs as people are added. Enabled per plan on
+  // request; add an id to SEAT_PICKER_PLANS to switch it on for another tier.
+  const PLAN_SEAT_MIN = 1;
+  const PLAN_SEAT_MAX = 50;
+  const [seats, setSeats] = useState(5);
+  const seatRate = plan.priceMonthly === null ? null : billing === "yearly" ? plan.priceMonthly * (1 - YEARLY_DISCOUNT) : plan.priceMonthly;
+  const proMonthly = productPlans.find((entry) => entry.id === "pro")?.priceMonthly ?? 0;
+  const proRate = billing === "yearly" ? proMonthly * (1 - YEARLY_DISCOUNT) : proMonthly;
+  const seatReadout = (() => {
+    if (plan.priceMonthly === 0) {
+      const included = Math.min(seats, FREE_PLAN_SEATS);
+      return seats <= FREE_PLAN_SEATS
+        ? {
+            cost: "$0",
+            unit: "/ month",
+            note: `All ${included} ${included === 1 ? "user is" : "users are"} included. Free covers up to ${FREE_PLAN_SEATS}.`
+          }
+        : {
+            cost: "$0",
+            unit: "/ month",
+            note: `Free covers ${FREE_PLAN_SEATS} users. A team of ${seats} needs Pro \u2014 ${formatPlanUsd(proRate * seats)}/mo at ${formatPlanUsd(proRate)} per user${billing === "yearly" ? ", billed yearly" : ""}.`
+          };
+    }
+    if (seatRate === null) {
+      // Enterprise has no list rate to multiply, so the slider sizes the conversation.
+      return {
+        cost: "Custom",
+        unit: "",
+        note: `Pricing for a team of ${seats} is agreed with you \u2014 talk to sales about seats and controls.`
+      };
+    }
+    return {
+      cost: formatPlanUsd(seatRate * seats),
+      unit: "/ month",
+      note: `${seats} ${seats === 1 ? "user" : "users"} \u00b7 ${formatPlanUsd(seatRate)} per user${billing === "yearly" ? " \u00b7 billed yearly" : ""}.`
+    };
+  })();
   const titleWords = plan.heroTitle.trim().split(" ");
   const lastWord = titleWords.pop() ?? "";
   const leadWords = titleWords.join(" ");
   const showUnit = plan.price.startsWith("$");
-  const showBillingToggle = plan.priceMonthly !== null && plan.priceMonthly > 0;
+  // Free shows the toggle as well — both periods read $0, and the unit line says which.
+  const showBillingToggle = plan.priceMonthly !== null;
   return (
     <>
       <main className="wx-plan-page">
@@ -17078,7 +17800,9 @@ function WelcomePlanShowcase({
             <div className="wx-plan-head">
               <div className="wx-plan-headline">
                 <h2 className="wx-plan-name">{plan.name}</h2>
-                {showBillingToggle && <BillingToggle value={billing} onChange={setBilling} className="wx-plan-billing" />}
+                {showBillingToggle && (
+                  <BillingToggle value={billing} onChange={setBilling} className="wx-plan-billing" showSave={plan.priceMonthly !== 0} />
+                )}
                 <div className="wx-plan-price">
                   <strong>
                     <AnimatedPlanPrice plan={plan} period={billing} />
@@ -17097,6 +17821,32 @@ function WelcomePlanShowcase({
               </div>
             </div>
             <p className="wx-plan-desc">{planBlurbById[plan.id]}</p>
+            {SEAT_PICKER_PLANS.includes(plan.id) && (
+              <div className="wx-plan-seats">
+                <div className="wx-plan-seats-head">
+                  <span className="wx-plan-seats-label">Team size</span>
+                  <span className="wx-plan-seats-val">
+                    <strong>{seats}</strong> {seats === 1 ? "person" : "people"}
+                  </span>
+                </div>
+                <input
+                  className="wx-plan-seats-range"
+                  type="range"
+                  min={PLAN_SEAT_MIN}
+                  max={PLAN_SEAT_MAX}
+                  step={1}
+                  value={seats}
+                  onChange={(event) => setSeats(Number(event.target.value))}
+                  style={{ "--pct": `${((seats - PLAN_SEAT_MIN) / (PLAN_SEAT_MAX - PLAN_SEAT_MIN)) * 100}%` } as CSSProperties}
+                  aria-label={`Team size for the ${plan.name} plan`}
+                />
+                <div className="wx-plan-seats-out">
+                  <strong>{seatReadout.cost}</strong>
+                  {seatReadout.unit && <span>{seatReadout.unit}</span>}
+                </div>
+                <p className="wx-plan-seats-note">{seatReadout.note}</p>
+              </div>
+            )}
             <div className="wx-plan-rule" />
             <h3 className="wx-plan-includes-title">Plan includes</h3>
             <ul className="wx-plan-list">
@@ -17119,6 +17869,55 @@ function WelcomePlanShowcase({
             </button>
           </article>
         </div>
+
+        {/* Closing advert — the product pages' band, full width above the footer */}
+        {PLAN_BAND_SHOTS[plan.id] && (
+          <section className="wx-plan-band" id="wx-plan-band" aria-labelledby="wx-plan-band-title">
+            <div className="wx-plan-band-grid">
+              <div className="wx-plan-band-copy">
+                <h2 id="wx-plan-band-title">{plan.finalCta}</h2>
+                <p>{plan.upgradeCopy}</p>
+                <div className="wx-plan-band-actions">
+                  <button type="button" className="wx-plan-band-btn primary" onClick={onGetStarted}>
+                    {plan.cta}
+                  </button>
+                  <button type="button" className="wx-plan-band-btn secondary" onClick={onOpenPlans}>
+                    Compare all plans
+                  </button>
+                </div>
+              </div>
+              <div className="wx-plan-band-visual" aria-hidden="true">
+                <img className="wx-plan-band-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
+                <img className="wx-plan-band-photo" src={WELCOME_ITEM_IMAGES[PLAN_BAND_SHOTS[plan.id] as string]} alt="" loading="lazy" />
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* FAQ — directly above the footer, the overview page's accordion */}
+        {PLAN_FAQS[plan.id] && (
+          <section className="wx-plan-faq" id="wx-plan-faq" aria-labelledby="wx-plan-faq-title">
+            <div className="wx-plan-faq-inner">
+              <div className="wx-plan-faq-head">
+                <h2 id="wx-plan-faq-title">Frequently asked questions.</h2>
+                <button type="button" className="wx-plan-faq-link" onClick={onShowHelp}>
+                  Visit the help center <ChevronRight size={18} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="wx-plan-faq-list">
+                {(PLAN_FAQS[plan.id] ?? []).map((item) => (
+                  <details className="wx-plan-faq-item" key={item.q}>
+                    <summary>
+                      {item.q}
+                      <ChevronDown className="wx-plan-faq-chevron" size={20} aria-hidden="true" />
+                    </summary>
+                    <p>{item.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="wx-footer" id="resources">

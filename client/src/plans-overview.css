@@ -1,0 +1,169 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Plans > See overview (#plans-overview).
+
+   The page rides on the Apple-style system the Products overview uses: the root
+   carries `cs-page cpx-page pov-page`, so every --cpx-* token, the .cpx-section
+   rhythm and the pov-* card shapes come from crew-scheduling-apple.css and
+   product-overview.css. Only what this page adds on top lives here.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* Hero. */
+.welcome-rx .plx-page .cpx-inner-narrow {
+  margin-bottom: clamp(32px, 5vw, 56px);
+}
+
+/* ── The lineup: one card per plan, Apple "Explore the lineup" style ──────── */
+.welcome-rx .plx-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(18px, 2.2vw, 30px);
+  align-items: start;
+}
+.welcome-rx .plx-tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  padding: 0 0 30px;
+  border-radius: 26px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  text-align: center;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s var(--cpx-ease),
+    transform 0.7s var(--cpx-ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.welcome-rx .plx-tier.in {
+  opacity: 1;
+  transform: none;
+}
+.welcome-rx .plx-tier-shot {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--cpx-ground-2);
+}
+.welcome-rx .plx-tier-shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.welcome-rx .plx-tier-name {
+  margin: 26px 0 0;
+  font-size: clamp(1.5rem, 2.1vw, 1.9rem);
+  line-height: 1.1;
+  letter-spacing: var(--cpx-track-tight);
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .plx-tier-lead {
+  margin: 12px 0 0;
+  padding: 0 24px;
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .plx-tier-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Pushed down so the price sits on one line across cards with uneven leads. */
+  margin: auto 0 0;
+  padding: 22px 24px 0;
+}
+.welcome-rx .plx-tier-price b {
+  font-size: clamp(1.8rem, 2.6vw, 2.3rem);
+  line-height: 1;
+  letter-spacing: var(--cpx-track-tight);
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .plx-tier-price span {
+  font-size: 14.5px;
+  color: var(--cpx-mut);
+}
+.welcome-rx .plx-tier-alt {
+  margin: 8px 0 0;
+  padding: 0 24px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--cpx-mut);
+}
+.welcome-rx .plx-tier-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 18px;
+  margin-top: 22px;
+  padding: 0 20px;
+}
+.welcome-rx .plx-tier-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cpx-blue);
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--cpx-card);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.welcome-rx .plx-tier-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px var(--cpx-blue-tint-2);
+}
+.welcome-rx .plx-tier-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--cpx-blue);
+  cursor: pointer;
+}
+.welcome-rx .plx-tier-link:hover {
+  text-decoration: underline;
+}
+.welcome-rx .plx-tier-for {
+  margin: 18px 0 0;
+  padding: 0 24px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cpx-mut);
+}
+
+/* Both card rows on this page hold four, not the product overview's six — let
+   them sit on one line at desktop instead of leaving an orphan on a second row. */
+.welcome-rx .plx-page .pov-why-grid,
+.welcome-rx .plx-page .pov-learn-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* Who grows on which plan — the dark cards carry a description the product
+   overview's "good for" cards do not, so it gets its own line above the photo. */
+.welcome-rx .plx-grow-text {
+  display: block;
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--cpx-dark-mut, rgba(255, 255, 255, 0.72));
+}

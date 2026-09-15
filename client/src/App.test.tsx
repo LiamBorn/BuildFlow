@@ -467,10 +467,11 @@ describe("BuildFlow app", () => {
   });
 
   // The guided demo player sits on the overview pages now, not the welcome home.
-  // The guided demo stage lives on the shared overview layout. #overview is now its
-  // own Apple-style product page (2026-09-11), so assert the stage on Plans overview.
-  it("toggles the guided demo playback on the plans overview", async () => {
-    window.history.pushState(null, "", "/#plans-overview");
+  // The guided demo stage lives on the shared overview layout, and both #overview and
+  // #plans-overview were rebuilt as their own Apple-style pages (2026-09-11), so the
+  // stage is asserted on Resources overview — one of the three still on that layout.
+  it("toggles the guided demo playback on the resources overview", async () => {
+    window.history.pushState(null, "", "/#resources-overview");
     render(<App />);
 
     const pauseButton = await screen.findByRole("button", { name: "Pause demo" });
@@ -479,8 +480,8 @@ describe("BuildFlow app", () => {
     expect(screen.getByRole("button", { name: "Play demo" })).toBeInTheDocument();
   });
 
-  it("switches guided demo scenes manually on the plans overview", async () => {
-    window.history.pushState(null, "", "/#plans-overview");
+  it("switches guided demo scenes manually on the resources overview", async () => {
+    window.history.pushState(null, "", "/#resources-overview");
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Open Schedule demo" }));
