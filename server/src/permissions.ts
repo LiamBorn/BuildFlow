@@ -258,6 +258,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/support/conversations/:id/messages": "public",
   "GET /api/team": "team.read",
   "GET /api/waitlist": "public",
+  "GET /api/updates/subscribe": "public", // changelog subscriber count
   "PATCH /api/auth/account": "public",
   "PATCH /api/crews/:id": "resources.write",
   "PATCH /api/equipment/:id": "resources.write",
@@ -336,6 +337,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "POST /api/support/conversations/:id/messages": "public",
   "POST /api/team/invites": "team.invite",
   "POST /api/team/invites/:id/resend": "team.invite",
+  "POST /api/updates/subscribe": "public", // changelog signup from the Updates page
   "POST /api/waitlist": "public",
   "POST /api/waitlist/announce": "public",
   /* The caller's OWN settings -- tutorial progress, their saved Dashboard board. Not a

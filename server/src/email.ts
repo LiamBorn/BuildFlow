@@ -182,6 +182,24 @@ export function waitlistConfirmationEmail(publicUrl: string) {
   return { subject, html, text };
 }
 
+export function updatesSubscriptionEmail(publicUrl: string) {
+  const subject = "You're subscribed to BuildFlow updates";
+  const text =
+    `Thanks for subscribing to the BuildFlow changelog.\n\n` +
+    `From now on you'll get an email each time we ship — new pages, improvements to the ` +
+    `schedule, and the fixes that came out of the field. No marketing, just what changed.\n\n` +
+    `Read the changelog: ${publicUrl}/#updates\n\n` +
+    `You can unsubscribe from any of these emails. — The BuildFlow team`;
+  const html = shell(
+    `<h1 style="font-size:22px;font-weight:600;margin:0 0 8px">You're subscribed</h1>` +
+      `<p style="font-size:14px;line-height:1.6;color:#575550;margin:0 0 16px">You'll get an email each time <strong>BuildFlow</strong> ships. Expect:</p>` +
+      `<ul style="font-size:14px;line-height:1.7;color:#575550;margin:0 0 22px;padding-left:18px"><li>New pages and products as they land</li><li>Improvements to the schedule your crews run</li><li>The fixes that came out of the field</li></ul>` +
+      `<a href="${publicUrl}/#updates" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:10px">Read the changelog →</a>` +
+      `<p style="font-size:13px;color:#8a877e;margin:22px 0 0">You can unsubscribe from any of these emails. — The BuildFlow team</p>`
+  );
+  return { subject, html, text };
+}
+
 export function waitlistLaunchEmail(publicUrl: string) {
   const subject = "BuildFlow is live 🚀";
   const text =

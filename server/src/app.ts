@@ -80,7 +80,7 @@ import {
   resetPasswordMessage,
   inviteMessage
 } from "./email.js";
-import { waitlistConfirmationEmail, waitlistLaunchEmail } from "./email.js"; // waitlist (removable feature)
+import { updatesSubscriptionEmail, waitlistConfirmationEmail, waitlistLaunchEmail } from "./email.js"; // waitlist (removable feature)
 import type Stripe from "stripe";
 import {
   createCheckoutSession,
@@ -2733,6 +2733,29 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      the waitlist schema, server/src/email.ts, and the waitlist table + methods
      in database.ts. ──────────────────────────────────────────────────────── */
   const waitlistPublicUrl = process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl;
+
+  /* ── Updates page "Subscribe" ───────────────────────────────────────────
+     Changelog subscription, separate from the waitlist above: this list is
+     "email me each release", the waitlist is "tell me when you launch", and
+     they send different confirmations. ─────────────────────────────────── */
+  app.get("/api/updates/subscribe", (_req, res) => {
+    res.json({ count: store.updateSubscriberCount() });
+  });
+
+  app.post("/api/updates/subscribe", async (req, res) => {
+    const parsed = waitlistEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Please provide a valid email address." });
+      return;
+    }
+    const result = store.addUpdateSubscriber(parsed.data.email);
+    let emailed = false;
+    if (!result.alreadySubscribed) {
+      const sent = await sendMail({ to: result.email, ...updatesSubscriptionEmail(waitlistPublicUrl) });
+      emailed = sent.ok;
+    }
+    res.status(201).json({ ok: true, count: result.count, alreadySubscribed: result.alreadySubscribed, emailed });
+  });
 
   app.get("/api/waitlist", (_req, res) => {
     res.json({ count: store.waitlistCount() });

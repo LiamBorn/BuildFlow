@@ -127,9 +127,10 @@ describe("landing category menus", () => {
 
     fireEvent.click(menuItem(await openMenu("Resources"), "Updates"));
 
-    expect(await screen.findByRole("heading", { name: "What is new in production scheduling." })).toBeInTheDocument();
-    // The Ascent timeline shows one release at a time, oldest first.
-    expect(screen.getByRole("heading", { level: 2, name: "BuildFlow launches for early construction teams" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Updates" })).toBeInTheDocument();
+    // The page lists every release in full (the scroll-pinned Ascent timeline was
+    // replaced 2026-09-12), so the oldest one is present from the start.
+    expect(screen.getByRole("heading", { name: "BuildFlow launches for early construction teams" })).toBeInTheDocument();
     expect(window.location.hash).toBe("#updates");
   });
 

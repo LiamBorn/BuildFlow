@@ -1432,6 +1432,15 @@ export class BuildFlowStore {
         notifiedAt TEXT
       );
 
+      /* changelog subscribers: "Subscribe" on the Updates page. Kept separate
+         from the waitlist table above - one is "tell me when you launch", the
+         other is "email me each release", and they send different mail.
+         (No backticks in here: this whole block is a template literal.) */
+      CREATE TABLE IF NOT EXISTS update_subscribers (
+        email TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL
+      );
+
       /* ── Sales & Customer-Service Desk ───────────────────────────────────────
          Backs the standalone "BuildFlow Sales & Support Desk" console (its own
          Vite app at sales-desk/, proxied to this backend). Additive tables, kept
@@ -5638,6 +5647,22 @@ export class BuildFlowStore {
      ──────────────────────────────────────────────────────────────────────── */
   waitlistCount(): number {
     return this.get<{ n: number }>("SELECT COUNT(*) AS n FROM waitlist")?.n ?? 0;
+  }
+
+  /* ── Updates page "Subscribe" ────────────────────────────────────────────
+     Emails that asked for each release as it ships. Separate list from the
+     waitlist above; see the table comment in migrate(). ──────────────────── */
+  updateSubscriberCount(): number {
+    return this.get<{ n: number }>("SELECT COUNT(*) AS n FROM update_subscribers")?.n ?? 0;
+  }
+
+  addUpdateSubscriber(email: string): { email: string; count: number; alreadySubscribed: boolean } {
+    const normalized = email.trim().toLowerCase();
+    const existing = this.get<{ email: string }>("SELECT email FROM update_subscribers WHERE email = ?", [normalized]);
+    if (!existing) {
+      this.insert("update_subscribers", { email: normalized, createdAt: new Date().toISOString() });
+    }
+    return { email: normalized, count: this.updateSubscriberCount(), alreadySubscribed: Boolean(existing) };
   }
 
   addWaitlistSubscriber(email: string): { email: string; count: number; alreadyJoined: boolean } {

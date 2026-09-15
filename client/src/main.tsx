@@ -33,6 +33,7 @@ import "./crew-scheduling-redesign.css";
 import "./glyph-portal.css";
 import "./crew-scheduling-apple.css";
 import "./product-overview.css";
+import "./updates-page.css";
 import "./account-redesign.css";
 import "./compare-plans-redesign.css";
 import "./contact-sales-redesign.css";

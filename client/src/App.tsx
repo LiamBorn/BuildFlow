@@ -17811,6 +17811,34 @@ function UpdatesAscent({
   );
 }
 
+/** Questions the updates page answers, above the footer. */
+const UPDATES_FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "How often does BuildFlow ship?",
+    a: "Every few weeks. Each release is listed here with its version, its date, and what changed, so you can see the pace rather than take our word for it."
+  },
+  {
+    q: "What is the difference between New and Update?",
+    a: "New means the release introduced a page or product that did not exist before. Update means it improved something you already had."
+  },
+  {
+    q: "Do we have to do anything to get a release?",
+    a: "No. Everything here is already on the schedule your crews run. There is nothing to migrate, install or switch on."
+  },
+  {
+    q: "Will an update change how our team works?",
+    a: "Not without you noticing. Nothing moves a date or re-plans a week on its own, and new pages appear in the navigation with a New pill for a month."
+  },
+  {
+    q: "Can we see what is coming next?",
+    a: "This log covers what has shipped. For what a specific product does today, open its page from the Product menu, or ask sales what is on the roadmap for your team."
+  },
+  {
+    q: "Where do we report a problem or ask for something?",
+    a: "The help center. It is the fastest route to the people who build this, and requests from the field are where a good share of these releases start."
+  }
+];
+
 function WelcomeUpdatesPage({
   onBack,
   onOpenSchedule,
@@ -17821,28 +17849,38 @@ function WelcomeUpdatesPage({
   initialAnchor?: string | null;
 }) {
   const rootRef = useRef<HTMLElement>(null);
-  const [year, setYear] = useState<number | null>(null);
-  const [month, setMonth] = useState<number | null>(null);
+  // The year / month filter pills were removed 2026-09-12 and replaced by the
+  // subscribe form below; every release is listed, newest first.
+  const filtered = UPDATE_ENTRIES;
 
-  const years = useMemo(() => Array.from(new Set(UPDATE_ENTRIES.map((entry) => entry.year))).sort((a, b) => b - a), []);
-  const months = useMemo(() => {
-    const pool = UPDATE_ENTRIES.filter((entry) => year == null || entry.year === year);
-    return Array.from(new Set(pool.map((entry) => entry.month))).sort((a, b) => b - a);
-  }, [year]);
-
-  const filtered = useMemo(
-    () => UPDATE_ENTRIES.filter((entry) => (year == null || entry.year === year) && (month == null || entry.month === month)),
-    [year, month]
-  );
-
-  useEffect(() => {
-    if (month != null && !months.includes(month)) setMonth(null);
-  }, [months, month]);
-
-  // UPDATE_ENTRIES is newest-first (how a changelog reads); the ascent runs
-  // forward through time, so it takes the same releases oldest-first and ends
-  // on the newest one at full progress.
-  const ascending = useMemo(() => [...filtered].reverse(), [filtered]);
+  // "Subscribe" — changelog signup, POSTed to /api/updates/subscribe.
+  const [email, setEmail] = useState("");
+  const [subscribeState, setSubscribeState] = useState<"idle" | "sending" | "done" | "already" | "error">("idle");
+  const [subscribeError, setSubscribeError] = useState("");
+  const submitSubscribe = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (subscribeState === "sending") return;
+    setSubscribeState("sending");
+    setSubscribeError("");
+    try {
+      const response = await fetch("/api/updates/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const payload = (await response.json().catch(() => null)) as { alreadySubscribed?: boolean; error?: string } | null;
+      if (!response.ok) {
+        setSubscribeError(payload?.error ?? "That did not go through. Try again in a moment.");
+        setSubscribeState("error");
+        return;
+      }
+      setSubscribeState(payload?.alreadySubscribed ? "already" : "done");
+      setEmail("");
+    } catch {
+      setSubscribeError("That did not go through. Try again in a moment.");
+      setSubscribeState("error");
+    }
+  };
 
   useEffect(() => {
     const root = rootRef.current;
@@ -17899,82 +17937,243 @@ function WelcomeUpdatesPage({
     };
   }, [initialAnchor]);
 
+  const featured = filtered[0] ? overviewRelease(filtered[0]) : null;
+  // Every release is a card; the newest one is also previewed in the band above,
+  // and "Read the release" opens that card's detail rather than repeating it.
+  const jumpToEntry = (dateTime: string) => {
+    const el = document.getElementById(`update-${dateTime}`);
+    if (!el) return;
+    const detail = el.querySelector("details");
+    if (detail) detail.open = true;
+    el.classList.add("is-target");
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => el.classList.remove("is-target"), 2800);
+  };
+
   return (
-    <main className="updates-page" id="updates" ref={rootRef}>
-      <section className="updates-lede" aria-labelledby="updates-title">
-        <div className="updates-lede-copy" data-reveal style={{ "--i": 0 } as CSSProperties}>
-          <span>BuildFlow Updates</span>
-          <h1 id="updates-title">What is new in production scheduling.</h1>
-          <p>
-            A running log of schedule, readiness, route, and field coordination improvements for teams that need the plan to stay close to
-            the jobsite.
+    <main className="cs-page cpx-page upd-page" id="updates" ref={rootRef}>
+      <div className="wx-bg" aria-hidden="true">
+        <div className="wx-aurora wx-aurora-1" />
+        <div className="wx-aurora wx-aurora-2" />
+        <div className="wx-aurora wx-aurora-3" />
+      </div>
+
+      {/* 1 · Updates — the lede and the year / month filters */}
+      <section className="cpx-section upd-hero cpx-light" id="upd-hero" tabIndex={-1} aria-labelledby="upd-hero-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow">
+              <span className="wx-dot" /> BuildFlow Updates
+            </span>
+            <h1 className="pov-title" id="upd-hero-title">
+              Updates
+            </h1>
+            <p className="cpx-body">
+              A running log of schedule, readiness, route, and field coordination improvements for teams that need the plan to stay close to
+              the jobsite.
+            </p>
+          </div>
+          <form className="upd-subscribe" onSubmit={submitSubscribe}>
+            <label className="wx-sr-only" htmlFor="upd-subscribe-email">
+              Your email address
+            </label>
+            <input
+              id="upd-subscribe-email"
+              className="upd-subscribe-input"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Your email address"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <button type="submit" className="upd-subscribe-btn" disabled={subscribeState === "sending"}>
+              {subscribeState === "sending" ? "Subscribing…" : "Subscribe"}
+            </button>
+          </form>
+          <p className="upd-subscribe-note" role="status">
+            {subscribeState === "done"
+              ? "Subscribed. Check your inbox for a confirmation."
+              : subscribeState === "already"
+                ? "That address is already subscribed."
+                : subscribeState === "error"
+                  ? subscribeError
+                  : "Get an email each time BuildFlow ships. No marketing, just what changed."}
           </p>
-        </div>
-        <div className="updates-lede-actions" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <button className="welcome-blue-button" onClick={onOpenSchedule}>
-            Open schedule <ArrowRight size={17} />
-          </button>
-          <button className="welcome-soft-button" onClick={onBack}>
-            Back to home
-          </button>
         </div>
       </section>
 
-      <section className="updates-filter" data-reveal style={{ "--i": 2 } as CSSProperties} aria-label="Filter updates by month and year">
-        <div className="updates-filter-group">
-          <span className="updates-filter-label">Year</span>
-          <div className="updates-filter-pills">
-            <button type="button" className={`updates-pill${year == null ? " is-active" : ""}`} onClick={() => setYear(null)}>
-              All
-            </button>
-            {years.map((value) => (
+      {filtered.length === 0 ? (
+        <section className="cpx-section cpx-light" aria-live="polite">
+          <div className="cpx-inner">
+            <p className="cpx-body upd-empty">No updates match this filter yet.</p>
+          </div>
+        </section>
+      ) : null}
+
+      {/* 2 · The newest release */}
+      {featured ? (
+        <section
+          className="cpx-section pov-featured upd-featured"
+          id="upd-featured"
+          tabIndex={-1}
+          aria-labelledby="upd-featured-title"
+          data-reveal
+        >
+          <div className="pov-featured-bg" aria-hidden="true">
+            <WxBloomField seed={31} />
+          </div>
+          <div className="cpx-inner">
+            <div className="cpx-inner-narrow">
+              <span className="pov-tag">{featured.kind === "New" ? "New" : "Latest"}</span>
+              <h2 className="cpx-statement" id="upd-featured-title">
+                {featured.entry.title}
+              </h2>
+              <p className="cpx-body upd-featured-desc">{featured.entry.description}</p>
+              <div className="cpx-hero-actions">
+                <WxMagnetic
+                  className="wx-btn wx-btn-ink"
+                  onClick={() => jumpToEntry(featured.entry.dateTime)}
+                  ariaLabel="Read the full release"
+                >
+                  Read the release <ArrowRight size={18} />
+                </WxMagnetic>
+              </div>
+              <p className="upd-featured-meta">
+                {featured.entry.version ? <span className="pov-version">v{featured.entry.version}</span> : null}
+                <time dateTime={featured.entry.dateTime}>{featured.entry.dateLabel}</time>
+                <span className="pov-release-product">{featured.label}</span>
+              </p>
+            </div>
+            <div className="pov-featured-stage">
+              <div className="cs-panel cs-hero-panel upd-featured-panel">
+                <img src={featured.image} alt="" loading="lazy" />
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* 3 · Every release, newest first — each card carries its full detail */}
+      {filtered.length > 0 ? (
+        <section className="cpx-section pov-latest cpx-light" id="upd-latest" tabIndex={-1} aria-labelledby="upd-latest-title" data-reveal>
+          <div className="cpx-inner">
+            <div className="pov-head">
+              <h2 id="upd-latest-title">Every release.</h2>
+            </div>
+            <div className="pov-latest-grid">
+              {filtered.map(overviewRelease).map((release, index) => (
+                <article
+                  className="pov-release upd-release"
+                  id={`update-${release.entry.dateTime}`}
+                  key={release.entry.dateTime}
+                  data-reveal
+                  style={{ "--i": index % 3 } as CSSProperties}
+                >
+                  <span className="pov-release-shot">
+                    <img src={release.image} alt="" loading="lazy" />
+                  </span>
+                  <span className={`pov-release-kind${release.kind === "New" ? " is-new" : ""}`}>{release.kind}</span>
+                  <h3>{release.entry.title}</h3>
+                  <p className="pov-release-desc">{release.entry.description}</p>
+                  <p className="pov-release-meta">
+                    {release.entry.version ? <span className="pov-version">v{release.entry.version}</span> : null}
+                    <time dateTime={release.entry.dateTime}>{release.entry.dateLabel}</time>
+                    <span className="pov-release-product">{release.label}</span>
+                  </p>
+                  <details className="upd-detail">
+                    <summary>
+                      What changed
+                      <ChevronDown className="upd-detail-chevron" size={18} aria-hidden="true" />
+                    </summary>
+                    <div className="upd-detail-body">
+                      <p className="upd-detail-full">{release.entry.description}</p>
+                      {release.entry.quote ? (
+                        <blockquote className="upd-entry-quote">
+                          <p>&ldquo;{release.entry.quote.text}&rdquo;</p>
+                          {release.entry.quote.cite ? <cite>{release.entry.quote.cite}</cite> : null}
+                        </blockquote>
+                      ) : null}
+                      {release.entry.sections.map((section) => (
+                        <div className="upd-entry-section" key={section.label}>
+                          <h4>{section.label}</h4>
+                          <ul>
+                            {section.items.map((item, itemIndex) => (
+                              <li key={itemIndex}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                      {release.entry.creator ? (
+                        <p className="upd-detail-by">
+                          {release.entry.creator}
+                          {release.entry.position ? ` \u00b7 ${release.entry.position}` : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                  </details>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* 5 · Closing advert */}
+      <section className="cpx-section cpx-cta pov-cta-band" id="upd-cta" aria-labelledby="upd-cta-title" data-reveal>
+        <div className="cpx-inner cpx-cta-grid">
+          <div className="cpx-cta-copy">
+            <h2 id="upd-cta-title">What is new in production scheduling.</h2>
+            <p>Every release above is on the same schedule your crews already run. Nothing to migrate, nothing to turn on.</p>
+            <div className="cpx-cta-actions">
               <button
                 type="button"
-                key={value}
-                className={`updates-pill${year === value ? " is-active" : ""}`}
-                onClick={() => setYear(value)}
+                className="cpx-cta-btn primary"
+                onClick={() => {
+                  if (typeof window !== "undefined") window.location.hash = "#overview";
+                }}
               >
-                {value}
+                Explore the products
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="updates-filter-group">
-          <span className="updates-filter-label">Month</span>
-          <div className="updates-filter-pills">
-            <button type="button" className={`updates-pill${month == null ? " is-active" : ""}`} onClick={() => setMonth(null)}>
-              All
-            </button>
-            {months.map((value) => (
               <button
                 type="button"
-                key={value}
-                className={`updates-pill${month === value ? " is-active" : ""}`}
-                onClick={() => setMonth(value)}
+                className="cpx-cta-btn secondary"
+                onClick={() => {
+                  if (typeof window !== "undefined") window.location.hash = "#plans-overview";
+                }}
               >
-                {UPDATE_MONTHS_SHORT[value]}
+                See the plans
               </button>
-            ))}
+            </div>
+          </div>
+          <div className="cpx-cta-visual" aria-hidden="true">
+            <img className="cpx-cta-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
+            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES["Production Reports"]} alt="" loading="lazy" />
           </div>
         </div>
-        <span className="updates-filter-count">
-          {filtered.length} {filtered.length === 1 ? "update" : "updates"}
-        </span>
       </section>
 
-      <section className="updates-timeline" aria-label="BuildFlow product updates">
-        {filtered.length === 0 ? (
-          <p className="updates-empty" data-reveal>
-            No updates match this filter yet.
-          </p>
-        ) : (
-          <UpdatesAscent
-            key={ascending.map((entry) => entry.dateTime).join("|")}
-            entries={ascending}
-            onOpenSchedule={onOpenSchedule}
-            initialAnchor={initialAnchor}
-          />
-        )}
+      {/* 6 · FAQ, directly above the footer */}
+      <section className="cpx-section cpx-faq" id="upd-faq" aria-labelledby="upd-faq-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-reasons-head">
+            <h2 id="upd-faq-title">Frequently asked questions.</h2>
+            <a className="cpx-reasons-link" href="#help-center">
+              Visit the help center <ChevronRight size={18} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="cpx-faq-list">
+            {UPDATES_FAQS.map((item, index) => (
+              <details className="cpx-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <summary>
+                  {item.q}
+                  <ChevronDown className="cpx-faq-chevron" size={20} aria-hidden="true" />
+                </summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
       </section>
     </main>
   );
