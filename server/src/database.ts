@@ -1084,7 +1084,52 @@ SCHEMA_MIGRATIONS.push({
   }
 });
 
+SCHEMA_MIGRATIONS.push({
+  version: 23,
+  name: "a person's calendar connection, and its refresh token",
+  up: (db) => {
+    // The Dashboard's Meetings panel reads Google Calendar and Outlook, which means holding a
+    // refresh token per person per provider.
+    //
+    // IT LIVES IN THE CONTROL DB, keyed by accountId, for two reasons. A calendar belongs to a
+    // PERSON and not to a workspace, so a tenant db is the wrong home; and the tenant payload is
+    // what `/api/bootstrap` ships to the browser, so a secret stored there would be one fetch
+    // away from the client. Nothing in this table is ever serialised into a bootstrap response --
+    // the only thing the client is told is which providers are connected and for which mailbox.
+    //
+    // One row per (accountId, provider): connecting the same provider twice replaces the row
+    // rather than accumulating tokens, which is what the PRIMARY KEY is for.
+    //
+    // Numbered 23 -- the runner sorts by version and SILENTLY skips anything at or below the
+    // stored user_version (:1170). Never renumber, never reuse.
+    db.exec(`CREATE TABLE IF NOT EXISTS calendar_connections (
+      accountId TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
+      refreshToken TEXT NOT NULL,
+      accessToken TEXT NOT NULL DEFAULT '',
+      expiresAt INTEGER NOT NULL DEFAULT 0,
+      connectedAt TEXT NOT NULL,
+      PRIMARY KEY (accountId, provider)
+    )`);
+  }
+});
+
 export const LATEST_SCHEMA_VERSION = SCHEMA_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);
+
+/**
+ * One person's connection to one calendar provider. `refreshToken` is a secret: it never
+ * leaves the server, and `calendarConnectionsForAccount` is the only reader.
+ */
+export interface CalendarConnectionRow {
+  accountId: string;
+  provider: string;
+  email: string;
+  refreshToken: string;
+  accessToken: string;
+  expiresAt: number;
+  connectedAt: string;
+}
 
 export interface SubscriptionRow {
   id: string;
@@ -2609,6 +2654,55 @@ export class BuildFlowStore {
    * before this there was no way to ask "who is in this workspace" or "is this the last owner" --
    * which are the two questions ownership transfer and teammate removal are made of.
    */
+  /* ── calendar connections (control db, per account) ───────────────────── */
+
+  /** Every provider this person has connected. Includes the refresh token, so server-side only. */
+  calendarConnectionsForAccount(accountId: string): CalendarConnectionRow[] {
+    return this.all<CalendarConnectionRow>("SELECT * FROM calendar_connections WHERE accountId = ? ORDER BY provider", [accountId]);
+  }
+
+  calendarConnection(accountId: string, provider: string): CalendarConnectionRow | undefined {
+    return this.get<CalendarConnectionRow>("SELECT * FROM calendar_connections WHERE accountId = ? AND provider = ?", [
+      accountId,
+      provider
+    ]);
+  }
+
+  /** Connecting again replaces the row, so a re-consent cannot leave a stale token behind. */
+  saveCalendarConnection(row: Omit<CalendarConnectionRow, "connectedAt"> & { connectedAt?: string }): CalendarConnectionRow {
+    const connectedAt = row.connectedAt ?? new Date().toISOString();
+    this.run(
+      `INSERT INTO calendar_connections (accountId, provider, email, refreshToken, accessToken, expiresAt, connectedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(accountId, provider) DO UPDATE SET
+         email = excluded.email,
+         refreshToken = excluded.refreshToken,
+         accessToken = excluded.accessToken,
+         expiresAt = excluded.expiresAt,
+         connectedAt = excluded.connectedAt`,
+      [row.accountId, row.provider, row.email, row.refreshToken, row.accessToken, row.expiresAt, connectedAt]
+    );
+    this.save();
+    return this.calendarConnection(row.accountId, row.provider)!;
+  }
+
+  /** After a refresh: the new access token, and the refresh token if the provider rotated it. */
+  updateCalendarTokens(accountId: string, provider: string, tokens: { accessToken: string; refreshToken: string; expiresAt: number }) {
+    this.run("UPDATE calendar_connections SET accessToken = ?, refreshToken = ?, expiresAt = ? WHERE accountId = ? AND provider = ?", [
+      tokens.accessToken,
+      tokens.refreshToken,
+      tokens.expiresAt,
+      accountId,
+      provider
+    ]);
+    this.save();
+  }
+
+  deleteCalendarConnection(accountId: string, provider: string) {
+    this.run("DELETE FROM calendar_connections WHERE accountId = ? AND provider = ?", [accountId, provider]);
+    this.save();
+  }
+
   accountsForOrg(orgId: string): Account[] {
     return this.all<AccountRow>("SELECT * FROM accounts WHERE orgId = ? ORDER BY createdAt", [orgId]).map(toAccount);
   }

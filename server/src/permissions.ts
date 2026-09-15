@@ -197,6 +197,16 @@ export type AnonymousOrCapability = { anonymous: "allow"; signedIn: Capability }
 export type Policy = Capability | "public" | "signed-in" | AnonymousOrCapability;
 
 export const ROUTE_POLICY: Record<string, Policy> = {
+  /* Calendar connections (Google Calendar / Outlook), behind `integrations.connect`.
+     Reading what is on your own calendar is "signed-in": the events come from the tokens on
+     YOUR account and nobody else's, so there is nothing a permission level would protect.
+     Making or breaking the connection is the privileged half, and that is the capability the
+     workspace-permissions work declared and deliberately left unrouted until now. */
+  "DELETE /api/calendar/:provider": "integrations.connect",
+  "GET /api/calendar/:provider/callback": "integrations.connect",
+  "GET /api/calendar/:provider/start": "integrations.connect",
+  "GET /api/calendar/events": "signed-in",
+  "GET /api/calendar/status": "signed-in",
   "DELETE /api/crews/:id": "resources.delete",
   "DELETE /api/equipment/:id": "resources.delete",
   "DELETE /api/jobs/:id": "jobs.delete",

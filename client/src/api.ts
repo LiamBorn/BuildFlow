@@ -973,3 +973,58 @@ export function updateSalesDeal(id: string, input: Partial<SalesDealInput>) {
 export function deleteSalesDeal(id: string) {
   return request<void>(`/api/sales/deals/${id}`, { method: "DELETE" });
 }
+
+/* ── Google Calendar / Outlook, for the Dashboard's Meetings panel ─────────
+   The connect flow is a full-page redirect to the provider, so it is a plain
+   link rather than a fetch: `calendarConnectUrl` is what the button opens. The
+   other three are ordinary calls. See server/src/calendar.ts for what has to be
+   registered with each provider before any of it can connect. */
+
+export type CalendarProviderId = "google" | "microsoft";
+
+/** Per provider: whether this deployment has credentials, and whether this person has connected. */
+export type CalendarStatus = {
+  providers: Record<CalendarProviderId, { configured: boolean; connected: boolean; email: string }>;
+};
+
+/** One meeting, already normalised by the server whichever provider it came from. */
+export type CalendarMeeting = {
+  id: string;
+  provider: CalendarProviderId;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+  location: string;
+  joinUrl: string;
+  attendees: string[];
+};
+
+export type CalendarFeed = {
+  events: CalendarMeeting[];
+  /** Providers that are connected but could not be reached on this fetch. */
+  failed: CalendarProviderId[];
+  fetchedAt: string;
+};
+
+export function calendarStatus(): Promise<CalendarStatus> {
+  return request<CalendarStatus>("/api/calendar/status");
+}
+
+export function calendarFeed(): Promise<CalendarFeed> {
+  return request<CalendarFeed>("/api/calendar/events");
+}
+
+/**
+ * Where the Connect button goes. A full-page navigation, not a fetch: the provider
+ * has to show its own consent screen, and it sends the browser back to `returnTo`
+ * with `?calendar=connected` or `?calendar=error&reason=…`.
+ */
+export function calendarConnectUrl(provider: CalendarProviderId): string {
+  const returnTo = typeof window === "undefined" ? "" : window.location.origin;
+  return apiUrl(`/api/calendar/${provider}/start?returnTo=${encodeURIComponent(returnTo)}`);
+}
+
+export function disconnectCalendar(provider: CalendarProviderId): Promise<{ ok: true }> {
+  return request<{ ok: true }>(`/api/calendar/${provider}`, { method: "DELETE" });
+}

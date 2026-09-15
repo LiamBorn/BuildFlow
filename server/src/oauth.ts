@@ -111,20 +111,25 @@ export type OAuthState = {
 // round trip. Set BUILDFLOW_SECRET to keep flows alive across restarts.
 const secret = env("BUILDFLOW_SECRET") ?? crypto.randomBytes(32).toString("hex");
 
-export function signState(state: OAuthState): string {
+/**
+ * Generic over the payload since 2026-09-14, so the calendar connect flow can ride the same
+ * signer rather than deriving a second secret from the same environment variable. Sign-in's
+ * own call sites are unchanged: `OAuthState` is still the default.
+ */
+export function signState<T extends { issuedAt: number }>(state: T): string {
   const body = Buffer.from(JSON.stringify(state)).toString("base64url");
   const mac = crypto.createHmac("sha256", secret).update(body).digest("base64url");
   return `${body}.${mac}`;
 }
 
-export function readState(raw: string | undefined): OAuthState | null {
+export function readState<T extends { issuedAt: number } = OAuthState>(raw: string | undefined): T | null {
   if (!raw) return null;
   const [body, mac] = raw.split(".");
   if (!body || !mac) return null;
   const expected = crypto.createHmac("sha256", secret).update(body).digest("base64url");
   if (mac.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null;
   try {
-    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as OAuthState;
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as T;
     if (Date.now() - parsed.issuedAt > OAUTH_STATE_TTL_MS) return null;
     return parsed;
   } catch {

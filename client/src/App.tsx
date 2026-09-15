@@ -38,7 +38,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  CalendarClock,
   ArrowUpRight,
   Bell,
   Bookmark,
@@ -47,6 +46,8 @@ import {
   BrickWall,
   BriefcaseBusiness,
   Building2,
+  CalendarCheck,
+  CalendarClock,
   CalendarDays,
   CalendarRange,
   ChartGantt,
@@ -24688,7 +24689,8 @@ const DASH_SECTION_TITLES: Record<string, string> = {
   weather: "Weather Impact",
   conflicts: "Equipment Conflicts",
   inspections: "Upcoming Inspections",
-  today: "Today's plan"
+  today: "Today's plan",
+  meetings: "Meetings"
 };
 // Widget-header icons for the HubSpot Home layout. Sections whose bodies carry
 // their own heading (apps, workflows) don't get a header from DashSection.
@@ -24700,7 +24702,8 @@ const DASH_SECTION_ICONS: Record<string, typeof Sparkles> = {
   weather: CloudSun,
   conflicts: Wrench,
   inspections: CalendarDays,
-  today: CalendarClock
+  today: CalendarClock,
+  meetings: CalendarCheck
 };
 const DASH_STAT_DEFAULT = ["st-sched", "st-ontrack", "st-labor"];
 const DASH_KPI_DEFAULT = ["kpi-jobs", "kpi-crews", "kpi-equip", "kpi-delayIQs"];
@@ -24726,7 +24729,11 @@ const DASH_LAYOUT_DEFAULT: GridItem[] = [
   { id: "weather", x: 0, y: 32, w: 3, h: 5 },
   { id: "readiness", x: 3, y: 32, w: 3, h: 6 },
   { id: "conflicts", x: 0, y: 37, w: 3, h: 5 },
-  { id: "inspections", x: 3, y: 38, w: 3, h: 5 }
+  { id: "inspections", x: 3, y: 38, w: 3, h: 5 },
+  // Meetings takes the full width: its not-connected state is a pitch beside a preview, the
+  // way the reference lays it out. A stored board gains it UNDERNEATH (reconcileLayout in
+  // dashGrid.ts appends defaults it has not seen), so nobody's saved arrangement moves.
+  { id: "meetings", x: 0, y: 43, w: 6, h: 6 }
 ];
 const DASH_PANEL_IDS = DASH_LAYOUT_DEFAULT.map((item) => item.id);
 /** Stacked for a phone, the panels read top-down in the order a superintendent needs them. */
@@ -24742,6 +24749,7 @@ const DASH_STACKED_ORDER = [
   "readiness",
   "conflicts",
   "inspections",
+  "meetings",
   "apps"
 ];
 const stackedRank = (id: string) => {
@@ -27761,6 +27769,10 @@ function Dashboard({
   // Body JSX for each reorderable section, looked up by id when rendering the
   // (user-ordered) section list.
   const sectionBodies: Record<string, ReactNode> = {
+    // Google Calendar / Outlook. The panel fetches its own status and events, so the
+    // Dashboard hands it nothing — see MeetingsPanel.tsx for what has to be registered
+    // with each provider before it can connect.
+    meetings: <MeetingsPanel />,
     quick: (
       <div className="cc-quick" data-reveal>
         {ccQuickActions.map((action) => {

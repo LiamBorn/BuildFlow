@@ -57,6 +57,17 @@ import {
   signState,
   type OAuthProvider
 } from "./oauth.js";
+import {
+  CALENDAR_PROVIDERS,
+  calendarAuthorizeUrl,
+  calendarConfigured,
+  exchangeCalendarCode,
+  fetchCalendarEvents,
+  refreshCalendarTokens,
+  sortEvents,
+  type CalendarEvent,
+  type CalendarProvider
+} from "./calendar.js";
 import { assertRoutePolicyCovers, can, installRoutePolicy, outranks } from "./permissions.js";
 import crypto from "node:crypto";
 import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
@@ -961,6 +972,157 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   app.get("/api/auth/oauth/status", (_req, res) => {
     res.json({ providers: configuredProviders() });
+  });
+
+  /* ── Google Calendar / Outlook, read-only ────────────────────────────────
+     The Dashboard's Meetings panel. Same credentials as sign-in above, a wider
+     scope, and the refresh token kept so the connection outlives the redirect.
+     See server/src/calendar.ts for what has to be registered with each provider
+     before any of this can do anything; until then `configured` is false and the
+     panel says so rather than offering a button that cannot work. */
+  const CAL_COOKIE = "bf_cal";
+  const CAL_COOKIE_PATH = "/api/calendar";
+  type CalendarState = { provider: CalendarProvider; state: string; verifier: string; returnTo: string; issuedAt: number };
+  const isCalProvider = (value: string): value is CalendarProvider => (CALENDAR_PROVIDERS as string[]).includes(value);
+  const calCallbackUri = (req: express.Request, provider: CalendarProvider) => `${apiOriginFor(req)}/api/calendar/${provider}/callback`;
+  const calDone = (res: Response, returnTo: string, params: Record<string, string>) => {
+    res.clearCookie(CAL_COOKIE, { path: CAL_COOKIE_PATH });
+    const query = new URLSearchParams(params).toString();
+    res.redirect(`${returnTo}/?${query}#dashboard`);
+  };
+
+  /** An access token that is good right now, refreshing and re-storing it when it is not. */
+  const calendarAccessToken = async (accountId: string, provider: CalendarProvider): Promise<string | null> => {
+    const row = mainStore.calendarConnection(accountId, provider);
+    if (!row) return null;
+    // a minute of head room, so a token does not expire mid-request
+    if (row.accessToken && row.expiresAt > Date.now() + 60_000) return row.accessToken;
+    try {
+      const fresh = await refreshCalendarTokens(provider, row.refreshToken);
+      mainStore.updateCalendarTokens(accountId, provider, {
+        accessToken: fresh.accessToken,
+        refreshToken: fresh.refreshToken ?? row.refreshToken,
+        expiresAt: fresh.expiresAt
+      });
+      return fresh.accessToken;
+    } catch {
+      // A refresh token the provider has revoked cannot be recovered, and leaving the row would
+      // make the panel claim a connection that no longer works. Drop it; the panel offers Connect.
+      mainStore.deleteCalendarConnection(accountId, provider);
+      return null;
+    }
+  };
+
+  app.get("/api/calendar/status", (req, res) => {
+    const configured = calendarConfigured();
+    const rows = mainStore.calendarConnectionsForAccount(req.account!.id);
+    res.json({
+      providers: Object.fromEntries(
+        CALENDAR_PROVIDERS.map((provider) => {
+          const row = rows.find((candidate) => candidate.provider === provider);
+          // `email` is the only thing about a connection the client is ever told
+          return [provider, { configured: configured[provider], connected: Boolean(row), email: row?.email ?? "" }];
+        })
+      )
+    });
+  });
+
+  app.get("/api/calendar/:provider/start", limiter.byIp("calendar-start", 30, QUARTER), (req, res) => {
+    const provider = String(req.params.provider);
+    const allowedReturn = [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
+    const returnTo = safeReturnTo(typeof req.query.returnTo === "string" ? req.query.returnTo : undefined, allowedReturn);
+    if (!isCalProvider(provider)) {
+      calDone(res, returnTo, { calendar: "error", reason: "unknown_provider" });
+      return;
+    }
+    const { verifier, challenge } = pkcePair();
+    const state = crypto.randomBytes(24).toString("base64url");
+    const url = calendarAuthorizeUrl(provider, { redirectUri: calCallbackUri(req, provider), state, challenge });
+    if (!url) {
+      calDone(res, returnTo, { calendar: "error", reason: "not_configured", provider });
+      return;
+    }
+    res.cookie(CAL_COOKIE, signState<CalendarState>({ provider, state, verifier, returnTo, issuedAt: Date.now() }), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: req.secure,
+      path: CAL_COOKIE_PATH,
+      maxAge: OAUTH_STATE_TTL_MS
+    });
+    res.redirect(url);
+  });
+
+  app.get("/api/calendar/:provider/callback", async (req, res) => {
+    const provider = String(req.params.provider);
+    // This app has no cookie-parser: it reads cookies with auth.ts's own `parseCookies`,
+    // which is what the sign-in callback below does too. `req.cookies` is always undefined
+    // here, and reaching for it is why the first version of this route saw no state at all.
+    const saved = readState<CalendarState>(parseCookies(req.headers.cookie)[CAL_COOKIE]);
+    const returnTo = saved?.returnTo ?? clientUrl.replace(/\/+$/, "");
+    if (!isCalProvider(provider) || !saved || saved.provider !== provider) {
+      calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" });
+      return;
+    }
+    if (typeof req.query.state !== "string" || req.query.state !== saved.state) {
+      calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" });
+      return;
+    }
+    if (typeof req.query.error === "string") {
+      calDone(res, returnTo, { calendar: "error", reason: req.query.error });
+      return;
+    }
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    if (!code) {
+      calDone(res, returnTo, { calendar: "error", reason: "no_code" });
+      return;
+    }
+    try {
+      const tokens = await exchangeCalendarCode(provider, {
+        code,
+        redirectUri: calCallbackUri(req, provider),
+        verifier: saved.verifier
+      });
+      mainStore.saveCalendarConnection({
+        accountId: req.account!.id,
+        provider,
+        email: tokens.email,
+        refreshToken: tokens.refreshToken ?? "",
+        accessToken: tokens.accessToken,
+        expiresAt: tokens.expiresAt
+      });
+      calDone(res, returnTo, { calendar: "connected", provider });
+    } catch (error) {
+      calDone(res, returnTo, { calendar: "error", reason: error instanceof Error ? error.message.slice(0, 80) : "exchange_failed" });
+    }
+  });
+
+  app.get("/api/calendar/events", async (req, res) => {
+    const from = new Date();
+    // two days: enough for "later today" and "tomorrow", which is all the panel shows
+    const to = new Date(from.getTime() + 48 * 60 * 60 * 1000);
+    const events: CalendarEvent[] = [];
+    const failed: CalendarProvider[] = [];
+    for (const provider of CALENDAR_PROVIDERS) {
+      const token = await calendarAccessToken(req.account!.id, provider);
+      if (!token) continue;
+      try {
+        events.push(...(await fetchCalendarEvents(provider, token, from, to)));
+      } catch {
+        // one provider being unreachable must not blank the other's meetings
+        failed.push(provider);
+      }
+    }
+    res.json({ events: sortEvents(events), failed, fetchedAt: from.toISOString() });
+  });
+
+  app.delete("/api/calendar/:provider", (req, res) => {
+    const provider = String(req.params.provider);
+    if (!isCalProvider(provider)) {
+      res.status(400).json({ error: "unknown_provider" });
+      return;
+    }
+    mainStore.deleteCalendarConnection(req.account!.id, provider);
+    res.json({ ok: true });
   });
 
   // The button lands here; we build the provider URL and send the browser on.

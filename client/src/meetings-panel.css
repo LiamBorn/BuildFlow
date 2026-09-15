@@ -1,0 +1,325 @@
+/* ============================================================================
+   meetings-panel.css — the Dashboard's Meetings panel (MeetingsPanel.tsx).
+
+   Built to the monday.com reference: the pitch and the two connect buttons on
+   the left, a preview of a connected panel on the right, and the connection
+   state beside the heading. Connected, the same panel becomes the live list.
+
+   Colours come from the tokens, so it follows the Theme Presets and both modes
+   like the rest of the Dashboard. The two brand marks are the exception, because
+   a provider's mark is its own colour and must not be re-themed.
+   ========================================================================== */
+.bfmt {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  height: 100%;
+}
+
+/* "Not connected", or the mailbox. The reference puts this in the panel's header row, which
+   a panel BODY cannot reach — DashSection owns the head — and positioning it up there
+   absolutely just gets it clipped by the body's own `overflow: auto`. So it is the body's
+   first row instead, right-aligned, which reads the same and cannot be cut off. */
+.bfmt-state {
+  justify-self: end;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ---- the not-connected state: pitch beside preview -------------------- */
+.bfmt-pitch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  gap: 18px;
+  align-items: stretch;
+  min-height: 0;
+}
+.bfmt-pitch-copy {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 4px 0 0;
+}
+.bfmt-pitch-copy h3 {
+  margin: 0;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.bfmt-pitch-copy p {
+  margin: 0;
+  max-width: 42ch;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.bfmt-connect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.bfmt-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.16s) ease,
+    border-color var(--bf-dur-hover, 0.16s) ease;
+}
+.bfmt-provider:hover:not(:disabled) {
+  background: var(--bf-hover, #f5f5f5);
+}
+/* A provider with no credentials on this deployment. It says so in its title and reads as
+   unavailable rather than offering a flow that cannot finish. */
+.bfmt-provider:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* the brand marks, which are the two colours here that must NOT follow the theme */
+.bfmt-provider-mark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+.bfmt-provider.is-google .bfmt-provider-mark {
+  background:
+    conic-gradient(from 135deg at 50% 50%, #4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+}
+.bfmt-provider.is-microsoft .bfmt-provider-mark {
+  background:
+    linear-gradient(90deg, #0078d4 0 50%, #28a8ea 0) top / 100% 48% no-repeat,
+    linear-gradient(90deg, #0364b8 0 50%, #14447d 0) bottom / 100% 48% no-repeat;
+}
+
+/* ---- the preview: what a connected panel looks like ------------------- */
+.bfmt-preview {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  padding: 12px;
+  border-radius: var(--bf-radius-panel, 8px);
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.07);
+}
+.bfmt-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--bf-ink-muted, #575550);
+}
+.bfmt-preview-head i {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.14);
+}
+.bfmt-preview-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(28, 28, 26, 0.07);
+}
+.bfmt-preview-pill {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.13);
+  color: var(--bf-accent-dark, #1f57e0);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.bfmt-preview-faces {
+  display: flex;
+  flex: 1;
+}
+.bfmt-preview-faces i {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--bf-surface, #ffffff);
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.28);
+}
+.bfmt-preview-faces i + i {
+  margin-left: -6px;
+}
+.bfmt-preview-prep {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+  color: var(--bf-on-accent, #ffffff);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+.bfmt-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: rgba(var(--bf-surface-rgb, 255, 255, 255), 0.72);
+}
+.bfmt-preview-row b {
+  flex: none;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bfmt-preview-row i {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
+}
+
+/* ---- connected: the live list ----------------------------------------- */
+.bfmt-list {
+  display: grid;
+  gap: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.bfmt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--bf-line-soft, #eef0f4);
+}
+.bfmt-row:first-child {
+  border-top: 0;
+}
+.bfmt-when {
+  flex: none;
+  width: 112px;
+}
+/* the countdown, which is the whole point of the panel */
+.bfmt-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.13);
+  color: var(--bf-accent-dark, #1f57e0);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bfmt-day {
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bfmt-what {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.bfmt-what strong {
+  overflow: hidden;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13.5px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmt-what em {
+  overflow: hidden;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 11.5px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmt-faces {
+  display: flex;
+  flex: none;
+}
+.bfmt-faces i {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--bf-surface, #ffffff);
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.16);
+  color: var(--bf-accent-dark, #1f57e0);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+}
+.bfmt-faces i + i {
+  margin-left: -7px;
+}
+.bfmt-join {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-accent-fill, #2563eb);
+  color: var(--bf-on-accent, #ffffff);
+  font-size: 12.5px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.bfmt-empty {
+  margin: 0;
+  padding: 14px 2px;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 13px;
+}
+.bfmt-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-top: 2px;
+}
+.bfmt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bfmt-link:hover:not(:disabled) {
+  color: var(--bf-ink, #1c1c1a);
+}
+.bfmt-note {
+  margin: 0;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12px;
+}
+.bfmt-note.is-error {
+  color: var(--bf-danger, #c5221f);
+}
+
+/* the pitch stacks below half width, where two columns stop reading */
+@media (max-width: 900px) {
+  .bfmt-pitch {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
