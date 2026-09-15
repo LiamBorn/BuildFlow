@@ -1,0 +1,413 @@
+/* ============================================================================
+   setup-stage.css — the animation a new workspace shows while it is being built
+   (SetupStage.tsx). Reconstructed from the reference recording the user supplied
+   on 2026-09-14: four panels fly in one at a time, each outlined as it lands,
+   until they have assembled a miniature of the board; then a burst; then it
+   loops until the real work finishes.
+
+   COLOURS AND SURFACES COME FROM THE TOKENS, so the card is the theme's surface
+   and the landing outline is the theme's accent. The status blocks are the four
+   the real board uses, set inline by the component, because they are the one
+   thing here that stands for something.
+
+   THE WHOLE CYCLE IS 4s, the length of the reference. One timeline drives it:
+   each panel gets the same keyframes and a delay one beat later, so retiming the
+   sequence means editing --bfsu-beat and nothing else.
+   ========================================================================== */
+.bfsu {
+  --bfsu-beat: 0.55s;
+  --bfsu-cycle: 4s;
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+/* The app dimmed and pushed out of focus behind the stage, as the reference does.
+   0.72 rather than a lighter scrim because the caption and the sparks are WHITE and the
+   page behind this is the light onboarding screen: composited over it, 0.55 leaves white
+   text at 3.84, which only clears the floor because 22px bold counts as large text. 0.72
+   puts it at 6.74, above the body floor, and it matches how dark the reference's backdrop
+   actually is. Over a dark page the alpha barely matters -- white is 17.5 either way. */
+.bfsu-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 28, 26, 0.72);
+  backdrop-filter: blur(7px);
+}
+
+.bfsu-stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 26px;
+}
+
+/* ---- the card the board is assembled inside ---------------------------- */
+.bfsu-card {
+  position: relative;
+  box-sizing: border-box;
+  width: min(480px, 84vw);
+  /* 26 padding + 2 header bars + 18 gap + 4 rows at 27 + 26 padding: the card is the size
+     of what it holds, the way the reference's is. Fixed rather than content-sized so the
+     card does not resize as the panels arrive. */
+  height: 236px;
+  padding: 26px 26px 0;
+  border-radius: 14px;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 24px 70px rgba(28, 28, 26, 0.28);
+}
+
+/* the two header bars that are there before anything arrives */
+.bfsu-line {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
+}
+.bfsu-line.is-lg {
+  width: 62%;
+}
+.bfsu-line.is-sm {
+  width: 26%;
+  margin-top: 10px;
+}
+
+/* ---- the board, and the four panels that fly in to make it ------------- */
+.bfsu-board {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-top: 18px;
+}
+.bfsu-panel {
+  display: grid;
+  gap: 0;
+  box-sizing: border-box;
+  /* every panel runs the same timeline; only the delay differs, so the sequence
+     is retimed from --bfsu-beat alone */
+  animation: bfsu-land var(--bfsu-cycle) var(--bf-ease, cubic-bezier(0.22, 1, 0.36, 1)) infinite both;
+}
+.bfsu-panel.is-jobs {
+  flex: 1;
+  min-width: 0;
+  animation-delay: 0s;
+}
+.bfsu-panel.is-crews {
+  flex: none;
+  width: 46px;
+  animation-delay: var(--bfsu-beat);
+}
+.bfsu-panel.is-progress {
+  flex: none;
+  width: 108px;
+  animation-delay: calc(var(--bfsu-beat) * 2);
+}
+.bfsu-panel.is-status {
+  flex: none;
+  width: 84px;
+  animation-delay: calc(var(--bfsu-beat) * 3);
+}
+
+/* one row of a panel, on the same 27px rhythm across all four */
+.bfsu-row {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 27px;
+  padding: 0 7px;
+  border-bottom: 1px solid rgba(var(--bf-line-rgb, 28, 28, 26), 0.08);
+}
+.bfsu-panel.is-status .bfsu-row {
+  padding: 0;
+  border-bottom: 0;
+}
+.bfsu-panel.is-progress .bfsu-row {
+  gap: 0;
+}
+
+/* ---- the detail inside each panel -------------------------------------
+   Added 2026-09-14 on the second pass. Everything here fits INSIDE the 27px row and
+   the four panels that were already there, so no beat, no delay and no box moves: the
+   sequence and its spacing are exactly what they were. */
+
+/* a job row is a name over its phase, not one bar */
+.bfsu-stack {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+.bfsu-stub {
+  display: block;
+  width: 72%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.18);
+}
+.bfsu-substub {
+  display: block;
+  width: 38%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.09);
+}
+/* per-row widths, so the column does not read as four identical rows */
+.bfsu-row:nth-child(2) .bfsu-stub {
+  width: 52%;
+}
+.bfsu-row:nth-child(2) .bfsu-substub {
+  width: 30%;
+}
+.bfsu-row:nth-child(3) .bfsu-stub {
+  width: 64%;
+}
+.bfsu-row:nth-child(3) .bfsu-substub {
+  width: 44%;
+}
+.bfsu-row:nth-child(4) .bfsu-stub {
+  width: 58%;
+}
+.bfsu-row:nth-child(4) .bfsu-substub {
+  width: 26%;
+}
+
+/* a crew is a person: a head and a pair of shoulders, drawn with the avatar's own two
+   pseudo-elements so the markup stays as small as it was */
+.bfsu-avatar {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.18);
+}
+.bfsu-avatar::before {
+  content: "";
+  position: absolute;
+  top: 3.5px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.72);
+  transform: translateX(-50%);
+}
+.bfsu-avatar::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 13px;
+  height: 10px;
+  border-radius: 999px 999px 0 0;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.72);
+  transform: translateX(-50%);
+}
+/* four crews, four tints — the same accent at four strengths, so it still follows the theme */
+.bfsu-panel.is-crews .bfsu-row:nth-child(2) .bfsu-avatar::before,
+.bfsu-panel.is-crews .bfsu-row:nth-child(2) .bfsu-avatar::after {
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+}
+.bfsu-panel.is-crews .bfsu-row:nth-child(3) .bfsu-avatar::before,
+.bfsu-panel.is-crews .bfsu-row:nth-child(3) .bfsu-avatar::after {
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.86);
+}
+.bfsu-panel.is-crews .bfsu-row:nth-child(4) .bfsu-avatar::before,
+.bfsu-panel.is-crews .bfsu-row:nth-child(4) .bfsu-avatar::after {
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.62);
+}
+
+/* progress sits in a track, with the stub where its figure would be */
+.bfsu-track {
+  position: relative;
+  display: block;
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.1);
+}
+.bfsu-meter {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--bf-accent, #2f6bff);
+}
+.bfsu-figure {
+  flex: none;
+  display: block;
+  width: 15px;
+  height: 4px;
+  margin-left: 7px;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.14);
+}
+
+/* a status cell, not a swatch: the block carries a light chip the way a real one carries
+   its label */
+.bfsu-block {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 27px;
+}
+.bfsu-block::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  width: 30px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  transform: translateY(-50%);
+}
+.bfsu-panel.is-status .bfsu-row:nth-child(2) .bfsu-block::after {
+  width: 40px;
+}
+.bfsu-panel.is-status .bfsu-row:nth-child(3) .bfsu-block::after {
+  width: 24px;
+}
+.bfsu-panel.is-status .bfsu-row:nth-child(4) .bfsu-block::after {
+  width: 34px;
+}
+
+/* ---- the landing: a panel arrives, outlined, and the outline fades ----- */
+/* The reference marks each panel with a bright edge for the beat after it lands,
+   which is what makes it read as "this piece just went in" rather than as a
+   panel that happens to be coloured. */
+@keyframes bfsu-land {
+  0% {
+    opacity: 0;
+    transform: translate(18px, -14px) scale(0.92);
+    box-shadow: 0 0 0 1.5px var(--bf-accent, #2f6bff);
+  }
+  9% {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 0 0 1.5px var(--bf-accent, #2f6bff);
+  }
+  22% {
+    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+  }
+  88% {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+  }
+  97%,
+  100% {
+    opacity: 0;
+    transform: none;
+    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+  }
+}
+
+/* ---- the burst, once the last panel is in ------------------------------ */
+.bfsu-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bfsu-spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--bf-surface, #ffffff);
+  opacity: 0;
+  /* fires on the beat after the fourth panel lands, then waits out the cycle */
+  animation: bfsu-spark var(--bfsu-cycle) ease-out infinite both;
+  animation-delay: calc(var(--bfsu-beat) * 4);
+}
+/* Every offset clears the CARD, which is 480x236 -- so past 240 horizontally or 118
+   vertically from its centre. The first pass used ±190/±96 and every spark landed ON the
+   white card, where a white spark is invisible. They have to burst onto the dark scrim,
+   which is where the reference's are. */
+.bfsu-spark:nth-child(1) {
+  --bfsu-x: -300px;
+  --bfsu-y: -152px;
+}
+.bfsu-spark:nth-child(2) {
+  --bfsu-x: -266px;
+  --bfsu-y: 168px;
+}
+.bfsu-spark:nth-child(3) {
+  --bfsu-x: -332px;
+  --bfsu-y: 38px;
+}
+.bfsu-spark:nth-child(4) {
+  --bfsu-x: 292px;
+  --bfsu-y: -170px;
+}
+.bfsu-spark:nth-child(5) {
+  --bfsu-x: 348px;
+  --bfsu-y: -22px;
+}
+.bfsu-spark:nth-child(6) {
+  --bfsu-x: 274px;
+  --bfsu-y: 180px;
+}
+.bfsu-spark:nth-child(7) {
+  --bfsu-x: -84px;
+  --bfsu-y: -206px;
+}
+.bfsu-spark:nth-child(8) {
+  --bfsu-x: 108px;
+  --bfsu-y: 202px;
+}
+/* THE TRANSFORM AND THE OPACITY HAVE TO BE IN STEP, and the first pass had them backwards:
+   opacity peaked at 3% while `transform` was specified only at 0% and 19%, so a spark was
+   brightest while still over the WHITE card -- invisible -- and reached the dark scrim
+   exactly as it hit zero. Measured: 0 of 8 sparks were clear of the card while any of them
+   was still visible. The flight now COMPLETES at 14% and the fade happens after it lands. */
+@keyframes bfsu-spark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  3% {
+    opacity: 1;
+  }
+  14% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--bfsu-x)), calc(-50% + var(--bfsu-y))) scale(1);
+  }
+  20%,
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--bfsu-x)), calc(-50% + var(--bfsu-y))) scale(1);
+  }
+}
+
+/* ---- the caption, which is the part that has to be read ---------------- */
+.bfsu-caption {
+  margin: 0;
+  max-width: min(480px, 84vw);
+  text-align: center;
+  color: #ffffff;
+  font-family: var(--bf-font-active, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* ---- reduced motion (RULE R: every rule that moves is paired) ---------- */
+/* Nothing flies and nothing bursts. The board is shown ASSEMBLED instead of
+   mid-build, because the point of the screen is the caption and a person who has
+   asked for less motion should still see what is being made. */
+@media (prefers-reduced-motion: reduce) {
+  .bfsu-panel {
+    animation: none;
+    opacity: 1;
+  }
+  .bfsu-spark {
+    animation: none;
+  }
+}

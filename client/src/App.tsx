@@ -3762,9 +3762,18 @@ function WelcomePage({
   const [, setPendingSetup] = useState<{ selectedPlan: ProductPlanId; selectedProducts: OnboardingProductId[]; seats: number } | null>(
     null
   );
+  /* The last onboarding step is the only real wait in the funnel: the server applies the
+     trade, the plan and the seats to the org and seeds a starter workspace behind it, and a
+     paid plan then opens a Stripe Checkout session too. `settingUp` is true for exactly that
+     span, and SetupStage decides for itself whether the wait was long enough to be worth
+     showing — see the note in SetupStage.tsx. It never pads the work. */
+  const [settingUp, setSettingUp] = useState(false);
+  const showSetupStage = useSetupStage(settingUp);
   const finishOnboarding = async (selectedPlan: ProductPlanId, selectedProducts: OnboardingProductId[], seats: number) => {
     track(EVENTS.planChosen, { plan: selectedPlan, addOns: selectedProducts.length, seats });
     setPendingSetup({ selectedPlan, selectedProducts, seats });
+    setSettingUp(true);
+    try {
       await onCompleteOnboarding({
         businessType: pendingBusinessType || fallbackBusinessType,
         selectedPlan,
@@ -3773,6 +3782,9 @@ function WelcomePage({
         destinationPage: "inviteTeam"
       });
     } finally {
+      // `finally`, so a failed setup does not leave the stage up over a page nobody can use
+      setSettingUp(false);
+    }
   };
   const finishInviteStep = () => {
     setPendingSetup(null);
@@ -3950,6 +3962,10 @@ function WelcomePage({
 
   return (
     <div className={`welcome-page ${isReskinView ? "welcome-rx" : ""} ${isReskinView ? "" : "updates-open"}`}>
+      {/* Over everything, and only while the org is actually being built. It is `fixed`, so
+          it covers whichever onboarding screen is behind it without that screen needing to
+          know about it. */}
+      {showSetupStage && <SetupStage />}
       {/* createAccount + businessType + additionalProducts are full-bleed `.acct-split`
           screens (100vh, own brand mark) — the marketing nav would push them down and
           clip the panel. */}
