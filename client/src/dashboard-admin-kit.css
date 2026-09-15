@@ -1,0 +1,224 @@
+/* ============================================================================
+   dashboard-admin-kit.css — the Dashboard on the shadcn admin-kit language.
+
+   Asked for on 2026-09-14 against the 21st.dev "Hero 195" reference: take its
+   DESIGN STYLE, its COLOURS and its ANIMATIONS; keep the Dashboard's own
+   INFORMATION and LAYOUT. So nothing here moves a box. Loads last, after
+   app-shell-daylight.css, so it needs no specificity gymnastics.
+
+   THE ANIMATION IS THE ENTRANCE, AND ONLY THE ENTRANCE. This file also carried the
+   reference's BorderBeam, tracing the Schedule Status band while it read behind
+   schedule. The user asked for it out on 2026-09-14 and it is gone: the beam, its
+   registered `--bfak-beam-angle`, its keyframe and its reduce pairing. The band's
+   own figure and its "Slipped by N days" pill were always what carried that
+   meaning, so nothing was lost with it. Do not re-add it without being asked.
+
+   WHY THIS FILE IS SHORT. Every card surface on this page already resolves its
+   radius and its shadow through a --bf-* token: measured in the browser,
+   `.dash-block` and `.ss-band` read --bf-radius-card + --bf-shadow-card,
+   `.cc-list` reads --bf-radius-panel, and .kpi-card / .cc-stat / .cc-app /
+   .tc-dash-card all read --bf-radius-control. One token block therefore re-skins
+   twenty-eight card surfaces, which is the same one-plumbing-rule shape as
+   section 28a of the daylight sheet.
+
+   WHY STORED LAYOUTS ARE SAFE. DASH_COLS 6, DASH_ROW_UNIT 40 and DASH_GAP 16 are
+   untouched; radius, border colour, shadow and ink change no box's size. The one
+   thing that touches a dimension REMOVES a 1px header border, which can only
+   give a scrolling panel body more room, never less. Every saved dash:layout
+   still fits what it fitted before.
+
+   THE SCOPE IS THIS PAGE. Every selector starts at .dash-rx, so the Schedule,
+   Crews, Projects and Settings pages keep the Daylight language they were given
+   in Phase 4. The one exception is `statusColors` in App.tsx (the Material
+   Readiness slices), whose only reader is this page's own chart.
+
+   AND THE THEMES STILL DECIDE THE SURFACES. See the note in 1b: this file takes
+   the reference's radius, hairline, shadow and ink ladder, and leaves
+   --bf-surface / --bf-ground / --bf-hover to the five Theme Presets.
+   ========================================================================== */
+
+/* ---- 1a. the one plumbing rule: radius and shadow ---------------------- */
+/* The reference's own numbers: --radius 8px and Tailwind's shadow-sm. Neither
+   depends on the theme or the mode, so they are declared once. */
+.bf-shell .dash-rx {
+  /* the radius ladder, rebased on the reference's --radius: 8px */
+  --bf-radius-stage: 12px;
+  --bf-radius-card: 8px;
+  --bf-radius-panel: 8px;
+  --bf-radius-control: 6px;
+  --bf-radius-chip: 4px;
+
+  /* the shadow ladder: Tailwind's shadow-sm / shadow / shadow-md, which is what
+     the reference's `shadow-sm` Card and its hover state compute to. The old
+     ladder opened at `0 10px 30px` -- a 30px blur is the opposite of this look. */
+  --bf-shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --bf-shadow-raised: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --bf-shadow-card-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* ---- 1b. the neutrals, light ------------------------------------------- */
+/* The reference is PURE grey where the app is warm: its ink is hsl(0 0% 3.9%)
+   and its muted ink hsl(0 0% 45.1%), against #1c1c1a / #575550 here. And
+   delineation moves off a soft 30px shadow onto a solid hairline, which is the
+   single biggest reason the two look different.
+
+   WHAT IS DELIBERATELY NOT HERE: --bf-surface, --bf-ground and --bf-hover. The
+   five Theme Presets own those -- Dark pins dark surfaces and Green (Earth) pins
+   a cream page -- and a declaration on `.dash-rx` is a DESCENDANT of the shell
+   they are set on, so it would win for this subtree whatever its specificity and
+   silently flatten two of the five themes. The reference's look does not need
+   them: it comes from the radius, the hairline and the flat card, so section 2
+   paints the card with `var(--bf-surface)` and the chosen theme still decides
+   what white means.
+
+   --bf-ink-muted is #707070, NOT the reference's own #737373: that value
+   measures 4.74 on white but only 4.35 on hsl(0 0% 96%), the muted surface it
+   ships alongside, so muted text on a hovered row would fail AA. One lightness
+   step down clears every ground this page paints -- 4.95 on the card, 4.74 on
+   the ground, 4.54 on a hover.
+
+   --bf-ink-faint COLLAPSES onto the muted rung, because the reference has two
+   text inks and not three. That is also a fix: the faint rung was #8a877e, which
+   measures 3.59 on white and was carrying 107 nodes of real text on this page,
+   every one of them under the 4.5 floor. */
+.bf-shell .dash-rx {
+  --bf-ink: #0a0a0a;
+  --bf-ink-muted: #707070;
+  --bf-ink-faint: #707070;
+  --bf-line-rgb: 0, 0, 0;
+  --bf-line-solid: #e5e5e5;
+  --bf-line-soft: #ededed;
+}
+
+/* ---- 1c. the neutrals, dark -------------------------------------------- */
+/* The reference ships its own `.dark` block and this is it: foreground
+   hsl(0 0% 98%) and muted-foreground hsl(240 5% 64.9%) on border
+   hsl(240 3.7% 15.9%), measuring 19.06 and 7.76 against a dark card.
+
+   THIS BRANCH IS NOT OPTIONAL, and leaving it out is the bug I nearly shipped.
+   Section 29b turns dark mode on by re-declaring the tokens on the SHELL; 1b
+   declares ink on `.dash-rx`, a descendant, so it wins for this subtree no
+   matter what the shell says. Without these three selectors the Dashboard alone
+   stayed black-on-black in dark mode. Same shape as 29b: an explicit choice, the
+   Dark THEME (which is dark whatever the mode says), and System when the OS asks.
+
+   THE HAIRLINE IS NOT THE REFERENCE'S #27272a, and the reason is the card under
+   it. This whole language leans on the edge rather than on a shadow, so what has
+   to be reproduced is the STEP between card and edge, not the hex: the reference
+   measures 1.26 light (#e5e5e5 on #ffffff) and 1.34 dark (#27272a on its own
+   #09090b card). BuildFlow's dark card is #1b1b19, a good deal lighter, and
+   #27272a against it is only 1.16 -- the edge the design depends on, gone faint.
+   #333338 restores 1.37. Same hue, the lightness that reproduces the step. */
+.bf-shell[data-bf-mode="dark"] .dash-rx,
+.bf-shell[data-bf-theme="dark"] .dash-rx {
+  --bf-ink: #fafafa;
+  --bf-ink-muted: #a1a1aa;
+  --bf-ink-faint: #a1a1aa;
+  --bf-line-rgb: 250, 250, 250;
+  --bf-line-solid: #333338;
+  --bf-line-soft: #2a2a2e;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bf-shell[data-bf-mode="system"] .dash-rx {
+    --bf-ink: #fafafa;
+    --bf-ink-muted: #a1a1aa;
+    --bf-ink-faint: #a1a1aa;
+    --bf-line-rgb: 250, 250, 250;
+    --bf-line-solid: #333338;
+    --bf-line-soft: #2a2a2e;
+  }
+}
+
+/* ---- 2. the flat card --------------------------------------------------- */
+/* The panels carried a white-to-#fdfcf9 vertical gradient. The reference's Card
+   is one flat `bg-card` with a `border`, so the hairline does the work the
+   gradient and the blur were doing. Named explicitly rather than through the
+   0.08 alpha, because the exact #e5e5e5 edge is the look. */
+.bf-shell .dash-rx.hs-home .dash-block,
+.bf-shell .dash-rx.hs-home .ss-band,
+.bf-shell .dash-rx.hs-home .cc-panel > .cc-list,
+.bf-shell .dash-rx.hs-home .kpi-card,
+.bf-shell .dash-rx.hs-home .cc-stat,
+.bf-shell .dash-rx.hs-home .cc-app,
+.bf-shell .dash-rx.hs-home .cc-quick,
+.bf-shell .dash-rx.hs-home .tc-dash-card {
+  border-color: var(--bf-line-solid);
+  background: var(--bf-surface);
+}
+
+/* The reference's CardHeader is `flex flex-col space-y-1.5 p-6` -- no rule under
+   the title. Removing the border is the one declaration here that touches a
+   dimension, and it only ever gives a scrolling body 1px more. */
+.bf-shell .dash-rx.hs-home .hs-widget-head {
+  border-bottom: 0;
+}
+
+/* ---- 3. the flat ground ------------------------------------------------- */
+/* Three 40vw blurred auroras and a 480px pointer glow sat behind this page. The
+   reference's ground is dead flat, and these are decoration: aria-hidden spans
+   with no text, no control and no state. Taking them out of the paint is also
+   why this page stops being paint-bound at 50px of blur. */
+.bf-shell .dash-rx .dx-bg,
+.bf-shell .dash-rx .dx-cursor {
+  display: none;
+}
+
+/* ---- 4. controls off the pill ------------------------------------------- */
+/* The reference has no pill buttons: its Button is `rounded-md`. Only the panel
+   actions move -- badges stay round, because the reference's Badge is round too. */
+.bf-shell .dash-rx.hs-home .cc-link,
+.bf-shell .dash-rx.hs-home .hs-home-empty-btn,
+.bf-shell .dash-rx.hs-home .tc-dash-open {
+  border-radius: var(--bf-radius-control);
+}
+
+/* ---- 5. the entrance --------------------------------------------------- */
+/* The reference's own `--animate-fade-in: fade-in 0.7s ease-out forwards`, whose
+   keyframe is opacity 0 -> 1 with translateY(20px) -> 0. The board had no
+   entrance at all before this.
+
+   Staggered in BANDS, not per panel: the repo's rule is that a grid arrives in a
+   few waves so the last one starts early. Six bands of 40ms puts the last at
+   200ms, matching the month grid's retimed stagger. A transform animation on
+   .dash-block is already shipped precedent (bf-land-card in section 16g of the
+   daylight sheet), and this one is finite and forwards, so the drag transform
+   dnd-kit writes inline is free again 0.7s after mount. */
+@keyframes bfak-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bf-shell .dash-rx.hs-home .dash-board .dash-block {
+  animation: bfak-rise 0.7s ease-out both;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block:nth-child(6n + 2) {
+  animation-delay: 40ms;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block:nth-child(6n + 3) {
+  animation-delay: 80ms;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block:nth-child(6n + 4) {
+  animation-delay: 120ms;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block:nth-child(6n + 5) {
+  animation-delay: 160ms;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block:nth-child(6n) {
+  animation-delay: 200ms;
+}
+
+/* ---- 6. reduced motion (RULE R: every rule that moves is paired) -------- */
+/* The entrance is CLAMPED, not removed: it still settles to its resting state,
+   so nothing appears to teleport. */
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .dash-board .dash-block {
+    animation: none;
+  }
+}

@@ -1211,7 +1211,7 @@ describe("BuildFlow app", () => {
     await waitFor(() => expect(screen.queryByText("Schedule status couldn't load.")).not.toBeInTheDocument());
   });
 
-  it("hides Customize and Reset when the board is stacked for a phone", async () => {
+  it("hides Reset layout when the board is stacked for a phone", async () => {
     const original = window.matchMedia;
     vi.stubGlobal(
       "matchMedia",
@@ -1239,7 +1239,6 @@ describe("BuildFlow app", () => {
       render(<App />);
       await enterDashboard();
       expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /^Customize$/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Reset layout/ })).not.toBeInTheDocument();
     } finally {
       vi.stubGlobal("matchMedia", original);
@@ -1579,34 +1578,30 @@ describe("BuildFlow app", () => {
     await waitFor(() => expect(settingsWrites(fetchMock)).toEqual([{ url: "/api/me/settings/dash:layout", value: "" }]), { timeout: 3000 });
   });
 
-  it("hides a panel from Customize, keeps it under Hidden panels, and saves the board to the account and this device", async () => {
-    const key = `bf:dash:layout:${bootstrapFixture.activeUser.id}`;
-    localStorage.removeItem(key);
-    const fetchMock = dashboardFetch();
-    vi.stubGlobal("fetch", fetchMock);
+  /**
+   * The board offers no rearrange mode. "Customize" was removed from the Dashboard header on
+   * 2026-09-14 at the user's request, and it was the only door into that mode, so the drag
+   * handles, the per-panel hide control and the Hidden panels chips went with it. This replaces
+   * the round-trip test that used to drive them, and it exists so the button cannot creep back
+   * without someone deciding to put it back.
+   *
+   * A board that was already customized is still recoverable: the test above this one loads an
+   * account layout with two hidden panels and puts them back with Reset layout.
+   */
+  it("offers no way to rearrange or hide a panel", async () => {
+    vi.stubGlobal("fetch", dashboardFetch());
     render(<App />);
     await enterDashboard();
     await screen.findByRole("heading", { name: "Weather Impact" });
-    // no hide control outside Customize
+
+    expect(screen.queryByRole("button", { name: /^Customize$/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Done$/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Hide Weather Impact" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /^Customize$/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Hide Weather Impact" }));
-    expect(screen.queryByRole("heading", { name: "Weather Impact" })).not.toBeInTheDocument();
-    const hidden = screen.getByRole("group", { name: "Hidden panels" });
-    expect(within(hidden).getByRole("button", { name: "Show Weather Impact" })).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem(key) ?? "{}")).toMatchObject({ hidden: ["weather"] });
-    await waitFor(() => expect(settingsWrites(fetchMock)).toHaveLength(1), { timeout: 3000 });
-    const saved = JSON.parse(settingsWrites(fetchMock)[0].value) as { items: Array<{ id: string }>; hidden: string[] };
-    expect(settingsWrites(fetchMock)[0].url).toBe("/api/me/settings/dash:layout");
-    expect(saved.hidden).toEqual(["weather"]);
-    expect(saved.items.map((item) => item.id)).not.toContain("weather");
-
-    fireEvent.click(within(hidden).getByRole("button", { name: "Show Weather Impact" }));
-    expect(screen.getByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Hidden panels" })).not.toBeInTheDocument();
-    await waitFor(() => expect(settingsWrites(fetchMock)).toHaveLength(2), { timeout: 3000 });
-    expect(JSON.parse(settingsWrites(fetchMock)[1].value).hidden).toEqual([]);
+    // and every panel is still on the board, which is the point of taking the mode away
+    for (const title of ["Weather Impact", "Today's plan", "Material Readiness", "Upcoming Inspections"]) {
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+    }
   });
 
   it("draws each Performance tile's delta and line from the weekly readings, and a missing week ends the line", async () => {

@@ -67,6 +67,7 @@ import "./interactive-hover-links.css"; // landing side-menu section heads (port
 import "./command-palette.css"; // the ⌘K palette (components/CommandPalette.tsx)
 import "./app-shell-hubspot.css"; // HubSpot-style app shell (top bar + icon rail + flyouts) — loads last so it wins
 import "./app-shell-daylight.css"; // the Welcome Page's language over that shell — must load after it
+import "./dashboard-admin-kit.css"; // the Dashboard only, on the shadcn admin-kit language — must load after that
 
 initAnalytics();
 

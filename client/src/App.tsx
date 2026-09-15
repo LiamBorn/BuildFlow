@@ -940,11 +940,38 @@ function initialProjectInput(project: Project | undefined, users: User[]): Creat
   };
 }
 
+/**
+ * The Material Readiness slices, on the reference dashboard's chart palette.
+ * Its five chart colours in its own order — chart-2 teal, chart-3 slate,
+ * chart-4 sand, chart-1 coral — which keeps the ready → ordered → waiting →
+ * missing reading intact while taking its hues.
+ *
+ * Only the coral is the reference's own hex. A slice is named by a legend, so its
+ * colour IS the information and it carries the 3:1 floor for a non-text
+ * indicator — against the light card AND the dark one, because this page has a
+ * dark mode. Measured against white / #1b1b19, three of the reference's five fail
+ * one ground or the other: chart-4 #e8c468 is 1.68 on white, chart-5 #f4a462 is
+ * 2.03, and chart-3 #274754 is 9.93 on white but 2.00 on the dark card. Holding
+ * both floors confines each hue to a narrow lightness band, so the other three
+ * take the reference's hue and saturation at the lightness that clears both:
+ *
+ *   Ready    #1f756b  hue 173/58 at L29   5.50 light / 3.13 dark
+ *   Ordered  #437c93  hue 197/37 at L42   4.62 / 3.73
+ *   Waiting  #a47d19  hue  43/74 at L37   3.80 / 4.54
+ *   Missing  #e76e50  chart-1 as shipped  3.11 / 5.54
+ *
+ * They are also picked to stay apart from EACH OTHER, since four slices on one
+ * ring are compared to a legend: the weakest pair is 1.19, against 1.10 for the
+ * green/blue/amber/red set that shipped here before. 1.19 is the ceiling, not a
+ * compromise — holding 3:1 on two grounds leaves no more room than that.
+ *
+ * It also fixes a slice that was failing outright: the old #f59e0b amber was 2.15.
+ */
 const statusColors = {
-  Ready: "#16a34a",
-  Ordered: "#2c7be5",
-  "Waiting on Delivery": "#f59e0b",
-  Missing: "#ef4444"
+  Ready: "#1f756b",
+  Ordered: "#437c93",
+  "Waiting on Delivery": "#a47d19",
+  Missing: "#e76e50"
 };
 
 const welcomeDemoScenes = [
@@ -27310,8 +27337,6 @@ function Dashboard({
     query.addEventListener("change", apply);
     return () => query.removeEventListener("change", apply);
   }, []);
-  // HubSpot Home "Customize": an explicit mode for the drag-to-rearrange layout.
-  const [customizing, setCustomizing] = useState(false);
   // id of the widget currently being dragged — mirrored from dnd-kit by DashDragLayer
   const [dashActiveId, setDashActiveId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -28241,7 +28266,7 @@ function Dashboard({
 
   return (
     <div
-      className={`dash-rx hs-home${customizing ? " is-customizing" : ""}${dashActiveId || boardEditing ? " is-rearranging" : ""}`}
+      className={`dash-rx hs-home${dashActiveId || boardEditing ? " is-rearranging" : ""}`}
       ref={rootRef}
     >
       <div className="dx-bg" aria-hidden="true">
@@ -28261,7 +28286,11 @@ function Dashboard({
               {hsHomeDate}
             </span>
             <div className="hs-home-topline-actions">
-              {!stackedBoard && (layoutCustomized || customizing) && (
+              {/* Reset layout is the way back from a stored board, hidden panels included. It is
+                  the last of the layout controls: the "Customize" button beside it was removed on
+                  2026-09-14 at the user's request, and the drag-to-rearrange mode it opened went
+                  with it, since it was the only door. */}
+              {!stackedBoard && layoutCustomized && (
                 <button
                   type="button"
                   className="dash-reset"
@@ -28273,18 +28302,8 @@ function Dashboard({
                   Reset layout
                 </button>
               )}
-              {!stackedBoard && (
-                <button
-                  type="button"
-                  className={`hs-home-customize${customizing ? " active" : ""}`}
                   aria-pressed={customizing}
                   onClick={() => setCustomizing((current) => !current)}
-                  title={customizing ? "Finish customizing" : "Rearrange the panels on this page"}
-                >
-                  <Settings size={15} />
-                  {customizing ? "Done" : "Customize"}
-                </button>
-              )}
             </div>
           </div>
           <h1 className="hs-home-greeting">
@@ -28320,34 +28339,6 @@ function Dashboard({
               </button>
             </section>
           )}
-          {customizing && (
-            <p className="hs-home-hint" role="status">
-              <GripVertical size={14} /> Drag any panel by its handle to rearrange this page, or hide one from its corner. Your layout
-              follows your account.
-            </p>
-          )}
-          {customizing && panelLayout.hidden.length > 0 && (
-            <div className="hs-home-hidden" role="group" aria-label="Hidden panels">
-              <span className="hs-home-hidden-label">
-                <EyeOff size={13} aria-hidden="true" />
-                Hidden panels
-              </span>
-              {panelLayout.hidden.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  className="hs-home-hidden-chip"
-                  aria-label={`Show ${panelTitles[id] ?? id}`}
-                  title="Put this panel back on the board"
-                  onClick={() => panelLayout.show(id)}
-                >
-                  <Eye size={13} aria-hidden="true" />
-                  {panelTitles[id] ?? id}
-                </button>
-              ))}
-            </div>
-          )}
-
           {data.billingStatus === "trial_expired" && (
             <p className="business-context-verify is-billing" role="status">
               <CreditCard size={15} aria-hidden="true" />
@@ -28378,7 +28369,6 @@ function Dashboard({
                 onFit={panelLayout.fit}
                 fitToContent={!panelLayout.stored}
                 onEditingChange={setBoardEditing}
-                onHide={customizing ? panelLayout.hide : undefined}
               />
             </div>
           </div>
