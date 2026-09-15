@@ -18196,6 +18196,46 @@ type CustomerReviewCardData =
       accent: "blue" | "green" | "amber";
     };
 
+/** A photo per customer, so a story card looks like a jobsite, not a placeholder. */
+const REVIEW_COMPANY_SHOTS: Record<string, string> = {
+  Riverside: "Crew Scheduling",
+  Harborview: "Map & Field Ops",
+  Pinecrest: "Field Updates & DelayIQs",
+  "Tech Ridge": "Schedule Suggestions",
+  "Logistics Group": "Route Optimization",
+  "Summit Utility": "Materials Readiness",
+  "Equals Contracting": "Contact Sales",
+  "Northline Builders": "DelayIQ Detection"
+};
+
+/** Questions the reviews page answers, above the footer. */
+const REVIEW_FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "Are these real customers?",
+    a: "Yes. Every story and quote here comes from a team running BuildFlow on live work, named with their permission."
+  },
+  {
+    q: "Can we talk to one of them?",
+    a: "Often, yes. Ask sales for a reference in your trade and region, and we will introduce you to a team doing work like yours."
+  },
+  {
+    q: "Where do the numbers come from?",
+    a: "From the customer's own schedule data before and after, not from a survey. Each figure is the measure that team already tracked."
+  },
+  {
+    q: "How long before a team sees a change?",
+    a: "Most see the first difference in the first planned week, because conflicts and unready work surface before the schedule is published rather than after."
+  },
+  {
+    q: "Do these teams all use the same parts of BuildFlow?",
+    a: "No. Some run scheduling only, others add the map, materials or reporting. The stories say which, so you can find the one closest to how you work."
+  },
+  {
+    q: "Can we be a customer story?",
+    a: "We would like that. Tell sales you are open to it and we will work around your team rather than the other way around."
+  }
+];
+
 const customerReviewCards: CustomerReviewCardData[] = [
   {
     kind: "story",
@@ -19461,7 +19501,7 @@ function WelcomeCustomerReviewsPage({ onOpenSchedule }: { onBack: () => void; on
   ];
 
   return (
-    <main className="cs-page reviews-rx" id="customer-reviews" ref={rootRef}>
+    <main className="cs-page cpx-page rv-page" id="customer-reviews" ref={rootRef}>
       <div className="wx-bg" aria-hidden="true">
         <div className="wx-aurora wx-aurora-1" />
         <div className="wx-aurora wx-aurora-2" />
@@ -19469,92 +19509,195 @@ function WelcomeCustomerReviewsPage({ onOpenSchedule }: { onBack: () => void; on
       </div>
       <div className="wx-cursor" aria-hidden="true" />
 
-      {/* Featured story hero */}
-      <section className="rvx-hero" data-reveal>
-        <div className="rvx-hero-copy">
-          <span className="wx-eyebrow">
-            <span className="wx-dot" /> Featured story
-          </span>
-          <h1 className="cmp-title rvx-title">
-            <WxTypewriter normal="Production plans that " em="stay ready." />
-          </h1>
-          <p className="cmp-sub">
-            How Riverside made BuildFlow their default &mdash; one live schedule that keeps crews, materials, and readiness moving together,
-            so the plan holds up in the field.
-          </p>
-          <div className="rvx-brands" aria-label="BuildFlow and Riverside">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-            <ArrowRight size={17} />
-            <strong>Riverside</strong>
+      {/* 1 · Customer reviews — the lede */}
+      <section className="cpx-section rv-hero cpx-light" id="rv-hero" tabIndex={-1} aria-labelledby="rv-hero-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow">
+              <span className="wx-dot" /> Customer stories
+            </span>
+            <h1 className="pov-title" id="rv-hero-title">
+              Customer reviews
+            </h1>
+            <p className="cpx-body">
+              Teams that build on BuildFlow, in their words &mdash; what changed on the schedule, and what it was worth on the jobsite.
+            </p>
           </div>
-          <WxMagnetic className="wx-btn wx-btn-ink rvx-read" onClick={onOpenSchedule} ariaLabel="Read the Riverside story">
-            Read story <ArrowRight size={17} />
-          </WxMagnetic>
-        </div>
-        <div className="rvx-hero-media-wrap" data-reveal style={{ "--i": 1 } as CSSProperties}>
-          <WxTilt className="rvx-hero-media-tilt" max={5} restRx={0} restRy={0}>
-            <article className="rvx-hero-media" aria-hidden="true">
-              <span className="rvx-media-glow" />
-              <span className="rvx-media-arc" />
-              <span className="rvx-media-logo">
-                <BuildFlowLogoMark /> BuildFlow
-              </span>
-              <span className="rvx-media-metric">
-                <LineChart size={15} /> 34% fewer same-day dispatch changes
-              </span>
-            </article>
-          </WxTilt>
+          <div className="rv-trust">
+            {reviewTrust.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div className="rv-trust-item" data-reveal style={{ "--i": index } as CSSProperties} key={item.label}>
+                  <span className="rv-trust-ic">
+                    <Icon size={18} />
+                  </span>
+                  {item.label}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Directory */}
-      <section className="rvx-directory" data-reveal>
-        <div className="rvx-head">
-          <div className="rvx-head-copy">
-            <span className="wx-eyebrow-2">Customer stories</span>
-            <h2 className="rvx-h2">Teams that build on BuildFlow.</h2>
+      {/* 2 · The featured story */}
+      <section
+        className="cpx-section pov-featured rv-featured"
+        id="rv-featured"
+        tabIndex={-1}
+        aria-labelledby="rv-featured-title"
+        data-reveal
+      >
+        <div className="pov-featured-bg" aria-hidden="true">
+          <WxBloomField seed={31} />
+        </div>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="pov-tag">Featured story</span>
+            <h2 className="cpx-statement" id="rv-featured-title">
+              Production plans that stay ready.
+            </h2>
+            <p className="cpx-body">
+              How Riverside made BuildFlow their default &mdash; one live schedule that keeps crews, materials, and readiness moving
+              together, so the plan holds up in the field.
+            </p>
+            <div className="rv-brands" aria-label="BuildFlow and Riverside">
+              <BuildFlowLogoMark />
+              <strong>BuildFlow</strong>
+              <ArrowRight size={17} />
+              <strong>Riverside</strong>
+            </div>
+            <div className="cpx-hero-actions">
+              <WxMagnetic className="wx-btn wx-btn-ink" onClick={onOpenSchedule} ariaLabel="Read the Riverside story">
+                Read story <ArrowRight size={18} />
+              </WxMagnetic>
+            </div>
+            <p className="rv-featured-metric">
+              <LineChart size={16} aria-hidden="true" /> 34% fewer same-day dispatch changes
+            </p>
           </div>
-          <div className="rvx-tabs" role="tablist" aria-label="Filter customer reviews">
-            {reviewFilters.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={filter === key}
-                className={`rvx-tab${filter === key ? " is-active" : ""}`}
-                onClick={() => setFilter(key)}
-              >
-                {label}
+          <div className="pov-featured-stage">
+            <div className="cs-panel cs-hero-panel rv-featured-panel">
+              <img src={WELCOME_ITEM_IMAGES[REVIEW_COMPANY_SHOTS.Riverside]} alt="" loading="lazy" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3 · Every story and quote */}
+      <section
+        className="cpx-section pov-latest rv-list cpx-light"
+        id="rv-stories"
+        tabIndex={-1}
+        aria-labelledby="rv-stories-title"
+        data-reveal
+      >
+        <div className="cpx-inner">
+          <div className="pov-head">
+            <h2 id="rv-stories-title">Teams that build on BuildFlow.</h2>
+            <div className="rv-tabs" role="tablist" aria-label="Filter customer reviews">
+              {reviewFilters.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={filter === key}
+                  className={`rv-tab${filter === key ? " is-active" : ""}`}
+                  onClick={() => setFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="pov-latest-grid">
+            {visibleCards.map((review, index) =>
+              review.kind === "story" ? (
+                <article
+                  className="pov-release rv-story"
+                  key={`${review.company}-${review.title}`}
+                  data-reveal
+                  style={{ "--i": index % 3 } as CSSProperties}
+                >
+                  <span className="pov-release-shot">
+                    <img src={WELCOME_ITEM_IMAGES[REVIEW_COMPANY_SHOTS[review.company] ?? "Crew Scheduling"]} alt="" loading="lazy" />
+                  </span>
+                  <span className="pov-release-kind">Story</span>
+                  <h3>{review.title}</h3>
+                  <p className="pov-release-meta">
+                    <span className="pov-release-product">{review.company}</span>
+                  </p>
+                  <p className="rv-metric">{review.metric}</p>
+                </article>
+              ) : (
+                <article
+                  className={`rv-quote accent-${review.accent}`}
+                  key={`${review.company}-${review.person}`}
+                  data-reveal
+                  style={{ "--i": index % 3 } as CSSProperties}
+                >
+                  <span className="pov-release-kind">Quote</span>
+                  <blockquote>&ldquo;{review.quote}&rdquo;</blockquote>
+                  <p className="rv-quote-by">
+                    <strong>{review.person}</strong>
+                    <span>{review.role}</span>
+                    <span className="pov-release-product">{review.company}</span>
+                  </p>
+                </article>
+              )
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 4 · Closing advert */}
+      <section className="cpx-section cpx-cta pov-cta-band" id="rv-cta" aria-labelledby="rv-cta-title" data-reveal>
+        <div className="cpx-inner cpx-cta-grid">
+          <div className="cpx-cta-copy">
+            <h2 id="rv-cta-title">Plan the week on Friday. Run it on Monday.</h2>
+            <p>The schedule these teams run is the one you would start on. Nothing to migrate, nothing to turn on.</p>
+            <div className="cpx-cta-actions">
+              <button type="button" className="cpx-cta-btn primary" onClick={onOpenSchedule}>
+                See it in the schedule
               </button>
+              <button
+                type="button"
+                className="cpx-cta-btn secondary"
+                onClick={() => {
+                  if (typeof window !== "undefined") window.location.hash = "#contact-sales";
+                }}
+              >
+                Talk to sales
+              </button>
+            </div>
+          </div>
+          <div className="cpx-cta-visual" aria-hidden="true">
+            <img className="cpx-cta-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
+            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES["Customer Reviews"]} alt="" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      {/* 5 · FAQ, directly above the footer */}
+      <section className="cpx-section cpx-faq" id="rv-faq" aria-labelledby="rv-faq-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-reasons-head">
+            <h2 id="rv-faq-title">Frequently asked questions.</h2>
+            <a className="cpx-reasons-link" href="#contact-sales">
+              Talk to sales <ChevronRight size={18} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="cpx-faq-list">
+            {REVIEW_FAQS.map((item, index) => (
+              <details className="cpx-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <summary>
+                  {item.q}
+                  <ChevronDown className="cpx-faq-chevron" size={20} aria-hidden="true" />
+                </summary>
+                <p>{item.a}</p>
+              </details>
             ))}
           </div>
         </div>
-
-        <div className="rvx-grid">
-          {visibleCards.map((review, index) => (
-            <CustomerReviewCard
-              key={`${review.company}-${review.kind === "story" ? review.title : review.person}`}
-              review={review}
-              index={index}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Trust strip */}
-      <section className="rvx-trust" aria-label="BuildFlow customer proof" data-reveal>
-        {reviewTrust.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <div className="rvx-trust-item" data-reveal style={{ "--i": index } as CSSProperties} key={item.label}>
-              <span className="rvx-trust-ic">
-                <Icon size={18} />
-              </span>
-              {item.label}
-            </div>
-          );
-        })}
       </section>
 
       <footer className="wx-footer">
