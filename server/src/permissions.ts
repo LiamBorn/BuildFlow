@@ -233,7 +233,13 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/field-updates": "schedule.read",
   "GET /api/health": "public",
   "GET /api/jobs": "schedule.read",
+  /* The three ops rows are "public" because this table answers a different question than they
+     do. It decides what a MEMBER of a workspace may do, by the role on their session; an ops
+     route has no session and no workspace — it is the platform operator, guarded by
+     OPS_ADMIN_TOKEN in opsAuthorized() (app.ts), or by being on localhost in dev. "public"
+     here means "no workspace capability applies", not "unguarded". */
   "GET /api/ops/backups": "public",
+  "GET /api/ops/metrics": "public",
   "GET /api/projects": "schedule.read",
   "GET /api/projects/:id": "schedule.read",
   "GET /api/resources": "schedule.read",

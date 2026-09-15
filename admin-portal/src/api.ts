@@ -1,41 +1,84 @@
-// The portal is a separate site but stays LINKED to BuildFlow: it reads live
-// object counts from the BuildFlow backend (Vite proxies /api → :4300).
+// The portal is a separate site but stays LINKED to BuildFlow: it reads real
+// platform counts from the BuildFlow backend (Vite proxies /api → :4300).
+//
+// It reads GET /api/ops/metrics, not /api/bootstrap. Two reasons, and the first
+// one was a bug: /api/bootstrap is behind the server's session gate, so the
+// anonymous fetch this file used to make always got a 401, and the catch below
+// used to answer with a hardcoded object that matched a fresh seed. The console
+// rendered constants as the workspace's contents — plausible enough that nobody
+// noticed, and already wrong (the seed has since drifted).
+//
+// The second reason is that a credential would not have fixed it. /api/bootstrap
+// returns the CALLER'S OWN workspace, and an operator has no workspace, so there
+// is nothing for a platform console to ask it. /api/ops/metrics answers the
+// question this console actually asks — how much is on the platform — in
+// integers, guarded by the OPS_ADMIN_TOKEN the operator already holds.
+//
+// There is no fallback any more. When the call fails we say so; we never invent a
+// number, because a number on this page reads as a customer's data.
 
-export type BootstrapData = {
-  projects: unknown[];
-  jobs: unknown[];
-  crews: unknown[];
-  equipment: unknown[];
-  materials: unknown[];
+export type PlatformMetrics = {
+  generatedAt: string;
+  /** Registered workspaces (the `orgs` registry), not just those with data. */
+  workspaces: number;
+  /** Workspaces counted as zero because their store has never been opened. */
+  coldWorkspaces: number;
+  /** projects + jobs + crews + equipment + materials, across all workspaces. */
+  objects: number;
+  byKind: { projects: number; jobs: number; crews: number; equipment: number; materials: number };
 };
 
-// Representative fallback (matches a fresh BuildFlow seed) so the panel always
-// renders even if the backend isn't running.
-const FALLBACK: BootstrapData = {
-  projects: Array.from({ length: 5 }),
-  jobs: Array.from({ length: 9 }),
-  crews: Array.from({ length: 6 }),
-  equipment: Array.from({ length: 6 }),
-  materials: Array.from({ length: 5 })
+/** Three states, never two: "we could not read it" is not the same as "it is zero". */
+export type MetricsState =
+  | { status: "loading" }
+  | { status: "live"; metrics: PlatformMetrics }
+  | { status: "unavailable"; reason: string; needsToken: boolean };
+
+const TOKEN_KEY = "bf-admin-ops-token";
+
+/** The operator's OPS_ADMIN_TOKEN, for this tab only.
+ *  Deliberately NOT a build-time constant: baking the platform admin token into the
+ *  bundle would serve it to anyone who loads the portal. The operator pastes the token
+ *  they hold, and it lives in sessionStorage so closing the tab discards it. */
+export const opsToken = {
+  get: () => {
+    try {
+      return sessionStorage.getItem(TOKEN_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  },
+  set: (value: string) => {
+    try {
+      if (value.trim()) sessionStorage.setItem(TOKEN_KEY, value.trim());
+      else sessionStorage.removeItem(TOKEN_KEY);
+    } catch {
+      /* private mode / storage blocked — the token just won't persist across reloads */
+    }
+  }
 };
 
-export async function fetchBuildFlowData(): Promise<{ data: BootstrapData; live: boolean }> {
+export async function fetchPlatformMetrics(): Promise<MetricsState> {
+  const token = opsToken.get();
   try {
-    const res = await fetch("/api/bootstrap");
-    if (!res.ok) throw new Error(`bootstrap ${res.status}`);
-    const json = (await res.json()) as Partial<BootstrapData>;
-    return {
-      data: {
-        projects: json.projects ?? [],
-        jobs: json.jobs ?? [],
-        crews: json.crews ?? [],
-        equipment: json.equipment ?? [],
-        materials: json.materials ?? []
-      },
-      live: true
-    };
+    const res = await fetch("/api/ops/metrics", {
+      headers: token ? { "x-ops-token": token } : undefined
+    });
+    if (res.status === 403) {
+      return {
+        status: "unavailable",
+        reason: token
+          ? "That ops token was rejected by the BuildFlow backend."
+          : "This BuildFlow backend requires an ops token (OPS_ADMIN_TOKEN).",
+        needsToken: true
+      };
+    }
+    if (!res.ok) {
+      return { status: "unavailable", reason: `BuildFlow backend answered ${res.status}.`, needsToken: false };
+    }
+    return { status: "live", metrics: (await res.json()) as PlatformMetrics };
   } catch {
-    return { data: FALLBACK, live: false };
+    return { status: "unavailable", reason: "Could not reach the BuildFlow backend.", needsToken: false };
   }
 }
 

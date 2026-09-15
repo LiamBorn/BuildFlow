@@ -2526,6 +2526,12 @@ export class BuildFlowStore {
     return this.get<Org>("SELECT * FROM orgs WHERE id = ?", [id]);
   }
 
+  /** Every registered workspace. The `orgs` table is the registry; a tenant's DATA lives in
+   *  its own file (stores.ts), so this answers "which workspaces exist", not "which have data". */
+  listOrgs(): Org[] {
+    return this.all<Org>("SELECT * FROM orgs ORDER BY createdAt");
+  }
+
   /** The plan label on the org record ("Free" / "Pro" / "Business" / "Enterprise"). */
   updateOrgPlan(id: string, plan: string) {
     this.run("UPDATE orgs SET plan = ? WHERE id = ?", [plan, id]);
@@ -3171,6 +3177,26 @@ export class BuildFlowStore {
       phases: this.phases(),
       inspections: this.inspections(),
       weatherAlerts: this.weatherAlerts()
+    };
+  }
+
+  /**
+   * How many objects of each kind this workspace holds — the SAME five collections
+   * bootstrap() returns, counted in SQL instead of materialised.
+   *
+   * This exists so the operator console can show real numbers without reading a
+   * workspace's contents: bootstrap() carries contract values, crew hourly rates and
+   * every job, and none of that is needed to say "84 objects". The five accessors are
+   * unfiltered `SELECT * FROM <table>`, so each COUNT(*) equals that array's length.
+   */
+  objectCounts(): { projects: number; jobs: number; crews: number; equipment: number; materials: number } {
+    const count = (table: string) => this.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`)?.n ?? 0;
+    return {
+      projects: count("projects"),
+      jobs: count("jobs"),
+      crews: count("crews"),
+      equipment: count("equipment"),
+      materials: count("materials")
     };
   }
 

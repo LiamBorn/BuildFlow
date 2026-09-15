@@ -160,3 +160,14 @@
     display: none;
   }
 }
+
+/* The third link state: we are still asking. "off" means we asked and could not
+   read the counts, which is not the same as "the backend is offline". */
+.portal-linkstate.wait {
+  color: #4b5563;
+  background: #eef0f3;
+  border-color: rgba(75, 85, 99, 0.2);
+}
+.portal-linkstate.wait i {
+  background: #9aa1ab;
+}

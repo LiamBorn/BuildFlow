@@ -2972,6 +2972,38 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     res.json({ dir, count: backups.length, backups });
   });
+
+  /* Platform object counts for the standalone admin portal (admin-portal/, port 5480).
+     Same OPS_ADMIN_TOKEN guard as the backup routes above — the portal is an operator
+     tool, and this is the credential the operator already holds.
+
+     Why this route exists at all: the portal used to read /api/bootstrap, which is
+     session-gated, so an anonymous call always 401'd and the portal silently rendered a
+     hardcoded fallback that happened to match a fresh seed. It looked like live data and
+     was a constant.
+
+     /api/bootstrap could not be the answer even with a credential. It returns the CALLER'S
+     OWN workspace, and an operator token has no workspace — there is no "this workspace"
+     for a platform console. So the honest number is the platform-wide total, which is what
+     this returns, and the gate on /api/bootstrap is untouched.
+
+     It answers in integers only. Counting happens in SQL (store.objectCounts()), so the
+     contract values and crew rates that made /api/bootstrap worth gating are never read,
+     let alone sent. */
+  app.get("/api/ops/metrics", async (req, res) => {
+    if (!opsAuthorized(req)) {
+      res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
+      return;
+    }
+    try {
+      const { workspaces, cold, totals } = await manager.objectCounts();
+      const objects = totals.projects + totals.jobs + totals.crews + totals.equipment + totals.materials;
+      res.json({ generatedAt: new Date().toISOString(), workspaces, coldWorkspaces: cold, objects, byKind: totals });
+    } catch (error) {
+      console.error("[ops] metrics failed:", error instanceof Error ? error.message : error);
+      res.status(500).json({ error: "Could not read platform metrics." });
+    }
+  });
   /* ─────────────────────────── end ops ─────────────────────────────────────── */
 
   /* ── Sales & Customer-Service Desk API ────────────────────────────────────

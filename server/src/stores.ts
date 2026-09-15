@@ -14,6 +14,7 @@
    Fast-follow: consolidate to a single DB with org_id columns if/when the
    tenant count makes one-file-per-tenant impractical.
    ========================================================================= */
+import fs from "node:fs";
 import path from "node:path";
 import { BuildFlowStore, DEMO_ORG_ID } from "./database.js";
 
@@ -40,6 +41,47 @@ export class StoreManager {
     const store = await BuildFlowStore.create(file, false, { seedDemo: false });
     this.cache.set(orgId, store);
     return store;
+  }
+
+  /**
+   * Object counts summed across every registered workspace — what the operator console
+   * shows. Aggregates only: the per-workspace numbers are added up and discarded, so no
+   * workspace's name or contents leaves this method.
+   *
+   * A workspace whose store has never been opened is counted as zero WITHOUT opening it:
+   * BuildFlowStore.create() ends in save(), so touching a cold org here would write an
+   * empty database as the side effect of a read, and load every tenant DB into memory to
+   * answer one number. An org with no file has no objects, so zero is also the true count;
+   * `cold` reports how many were answered that way rather than hiding the shortcut.
+   */
+  async objectCounts(): Promise<{
+    workspaces: number;
+    cold: number;
+    totals: { projects: number; jobs: number; crews: number; equipment: number; materials: number };
+  }> {
+    const totals = { projects: 0, jobs: 0, crews: 0, equipment: 0, materials: 0 };
+    const orgs = this.mainStore.listOrgs();
+    let cold = 0;
+    for (const org of orgs) {
+      const store = this.openedOrExistingStore(org.id) ? await this.getOrgStore(org.id) : undefined;
+      if (!store) {
+        cold += 1;
+        continue;
+      }
+      const counts = store.objectCounts();
+      totals.projects += counts.projects;
+      totals.jobs += counts.jobs;
+      totals.crews += counts.crews;
+      totals.equipment += counts.equipment;
+      totals.materials += counts.materials;
+    }
+    return { workspaces: orgs.length, cold, totals };
+  }
+
+  /** Whether this org's store can be read without creating it: already cached (the demo
+   *  org is, mapped to the main store) or its file is already on disk. */
+  private openedOrExistingStore(orgId: string): boolean {
+    return this.cache.has(orgId) || fs.existsSync(path.join(this.dataDir, `org-${orgId}.sqlite`));
   }
 
   /** Snapshot every open store (main + each accessed tenant) into data/backups/,

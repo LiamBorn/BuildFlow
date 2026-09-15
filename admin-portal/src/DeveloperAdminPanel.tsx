@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -10,6 +10,8 @@ import {
   DollarSign,
   Gauge,
   Globe2,
+  KeyRound,
+  RefreshCw,
   Rocket,
   Server,
   Sparkles,
@@ -38,7 +40,7 @@ import {
 } from "recharts";
 import { DxTilt, Panel, ProgressRing, Sparkline, useHudMotion, type CcTone } from "./hud-primitives";
 import { DottedGlobe } from "./DottedGlobe";
-import type { BootstrapData } from "./api";
+import { opsToken, type MetricsState } from "./api";
 
 type AdmTone = CcTone;
 
@@ -46,13 +48,31 @@ type AdmTone = CcTone;
 // "General Statistics" reference: heading → icon-on-right stat cards → a table
 // beside a dotted globe → a full-width overview chart. Colors and every motion
 // hook (reveals, tilt, sparklines, rings) are unchanged.
-export function DeveloperAdminPanel({ data, onOpenBuildFlow }: { data: BootstrapData; onOpenBuildFlow: () => void }) {
+export function DeveloperAdminPanel({
+  metrics,
+  onOpenBuildFlow,
+  onRetryMetrics
+}: {
+  metrics: MetricsState;
+  onOpenBuildFlow: () => void;
+  onRetryMetrics: () => void;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
 
-  // The one fully-live signal: objects this workspace is actively managing.
-  const managedObjects =
-    data.projects.length + data.jobs.length + data.crews.length + data.equipment.length + data.materials.length;
+  /* The only real data on this page: platform object counts from GET /api/ops/metrics.
+     Everything else below is sample data, and is labelled as such — this console used to
+     present a hardcoded stand-in for these counts as the live contents of a workspace. */
+  const real = metrics.status === "live" ? metrics.metrics : null;
+  const realKinds = real
+    ? ([
+        ["Projects", real.byKind.projects],
+        ["Jobs", real.byKind.jobs],
+        ["Crews", real.byKind.crews],
+        ["Equipment", real.byKind.equipment],
+        ["Materials", real.byKind.materials]
+      ] as const)
+    : [];
 
   const admStats: Array<{
     id: string;
@@ -181,21 +201,62 @@ export function DeveloperAdminPanel({ data, onOpenBuildFlow }: { data: Bootstrap
               </p>
             </div>
           </div>
+          {/* Real platform counts, or an explicit statement that we could not read them.
+              Never a stand-in number: on this page a number reads as a customer's data. */}
           <div className="adm-hero-meta">
-            <span className="adm-live">
-              <span className="adm-live-dot" />
-              All systems operational
-            </span>
+            {metrics.status === "live" ? (
+              <>
+                <span className="adm-live">
+                  <span className="adm-live-dot" />
+                  Live from BuildFlow
+                </span>
+                <span className="adm-hero-sep">·</span>
+                <span>
+                  <b>{metrics.metrics.workspaces.toLocaleString()}</b>{" "}
+                  {metrics.metrics.workspaces === 1 ? "workspace" : "workspaces"}
+                </span>
+                <span className="adm-hero-sep">·</span>
+                <span>
+                  <b>{metrics.metrics.objects.toLocaleString()}</b> objects across all workspaces
+                </span>
+              </>
+            ) : metrics.status === "loading" ? (
+              <span className="adm-metrics-wait">Reading platform counts…</span>
+            ) : (
+              <span className="adm-metrics-off">
+                <AlertTriangle size={13} />
+                Platform counts unavailable — {metrics.reason}
+              </span>
+            )}
             <span className="adm-hero-sep">·</span>
-            <span>{totalWorkspaces} workspaces</span>
-            <span className="adm-hero-sep">·</span>
-            <span>{usd(arrNow)} ARR</span>
-            <span className="adm-hero-sep">·</span>
-            <span>{managedObjects.toLocaleString()} objects in this workspace</span>
+            <span className="adm-sample-flag">Every other figure on this page is sample data</span>
           </div>
+
+          {real ? (
+            <div className="adm-real-strip">
+              {realKinds.map(([label, value]) => (
+                <div key={label}>
+                  <b>{value.toLocaleString()}</b>
+                  <span>{label}</span>
+                </div>
+              ))}
+              {real.coldWorkspaces > 0 && (
+                <p className="adm-real-note">
+                  {real.coldWorkspaces} {real.coldWorkspaces === 1 ? "workspace has" : "workspaces have"} no data store
+                  yet and count as zero.
+                </p>
+              )}
+            </div>
+          ) : (
+            <MetricsUnavailable state={metrics} onRetry={onRetryMetrics} />
+          )}
         </header>
 
         {/* ── row 1: headline stat cards (icon on the right) ─────────── */}
+        <p className="adm-sample-head" data-reveal>
+          <AlertTriangle size={13} />
+          Sample figures — revenue, users and platform health are not wired to a data source yet.
+        </p>
         <div className="cc-stat-grid" data-reveal-stagger>
           {admStats.map((stat) => {
             const Icon = stat.icon;
@@ -613,6 +674,63 @@ export function DeveloperAdminPanel({ data, onOpenBuildFlow }: { data: Bootstrap
           </Panel>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * What the console shows instead of a number it does not have. It used to show a
+ * constant here — five projects, nine jobs, six crews — which matched a fresh seed
+ * closely enough to pass for a customer's workspace.
+ *
+ * When the backend wants an ops token, this is also where the operator supplies it.
+ * The token is not built into the bundle on purpose: that would hand the platform
+ * admin credential to anyone who loads this page. It is typed in and kept for the
+ * tab only (sessionStorage). On a localhost backend with OPS_ADMIN_TOKEN unset, the
+ * server allows the call without one and this panel never appears.
+ */
+function MetricsUnavailable({ state, onRetry }: { state: MetricsState; onRetry: () => void }) {
+  const [token, setToken] = useState(opsToken.get());
+  const needsToken = state.status === "unavailable" && state.needsToken;
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    opsToken.set(token);
+    onRetry();
+  };
+
+  return (
+    <div className="adm-metrics-panel">
+      <p className="adm-metrics-panel-head">
+        <AlertTriangle size={15} />
+        No platform counts to show
+      </p>
+      <p className="adm-metrics-panel-sub">
+        {state.status === "unavailable" ? state.reason : "Reading platform counts…"} Nothing is shown in their place —
+        an invented count here would read as a customer's data.
+      </p>
+      {needsToken ? (
+        <form className="adm-token-form" onSubmit={submit}>
+          <label className="adm-token-field">
+            <KeyRound size={15} />
+            <input
+              type="password"
+              value={token}
+              placeholder="OPS_ADMIN_TOKEN"
+              autoComplete="off"
+              onChange={(event) => setToken(event.target.value)}
+            />
+          </label>
+          <button type="submit" className="cc-link">
+            Use token
+          </button>
+        </form>
+      ) : (
+        <button type="button" className="cc-link adm-metrics-retry" onClick={onRetry}>
+          <RefreshCw size={14} />
+          Try again
+        </button>
+      )}
     </div>
   );
 }

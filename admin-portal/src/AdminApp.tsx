@@ -3,29 +3,29 @@ import { ExternalLink, LogOut } from "lucide-react";
 import { BrandMark } from "./Brand";
 import { Login } from "./Login";
 import { DeveloperAdminPanel } from "./DeveloperAdminPanel";
-import { fetchBuildFlowData, BUILDFLOW_URL, type BootstrapData } from "./api";
+import { fetchPlatformMetrics, BUILDFLOW_URL, type MetricsState } from "./api";
 
 const AUTH_KEY = "bf-admin-portal-auth";
-const EMPTY: BootstrapData = { projects: [], jobs: [], crews: [], equipment: [], materials: [] };
 
 export function AdminApp() {
   const [email, setEmail] = useState<string | null>(() => localStorage.getItem(AUTH_KEY));
-  const [data, setData] = useState<BootstrapData>(EMPTY);
-  const [live, setLive] = useState(false);
+  const [metrics, setMetrics] = useState<MetricsState>({ status: "loading" });
+  // Bumped to re-run the fetch after the operator supplies an ops token.
+  const [reloads, setReloads] = useState(0);
 
-  // Once signed in, pull live object counts from the BuildFlow backend.
+  // Once signed in, pull real platform counts from the BuildFlow backend. There is no
+  // fallback: if this fails, the panel shows that it failed instead of a stand-in number.
   useEffect(() => {
     if (!email) return;
     let cancelled = false;
-    fetchBuildFlowData().then((result) => {
-      if (cancelled) return;
-      setData(result.data);
-      setLive(result.live);
+    setMetrics({ status: "loading" });
+    fetchPlatformMetrics().then((result) => {
+      if (!cancelled) setMetrics(result);
     });
     return () => {
       cancelled = true;
     };
-  }, [email]);
+  }, [email, reloads]);
 
   const signIn = (value: string) => {
     localStorage.setItem(AUTH_KEY, value);
@@ -34,7 +34,7 @@ export function AdminApp() {
   const signOut = () => {
     localStorage.removeItem(AUTH_KEY);
     setEmail(null);
-    setData(EMPTY);
+    setMetrics({ status: "loading" });
   };
   const openBuildFlow = () => window.open(BUILDFLOW_URL, "_blank", "noopener");
 
@@ -59,9 +59,17 @@ export function AdminApp() {
             BuildFlow <em>Admin</em>
           </span>
         </div>
-        <span className={`portal-linkstate ${live ? "on" : "off"}`}>
+        <span
+          className={`portal-linkstate ${
+            metrics.status === "live" ? "on" : metrics.status === "loading" ? "wait" : "off"
+          }`}
+        >
           <i />
-          {live ? "Linked to BuildFlow" : "BuildFlow offline — sample data"}
+          {metrics.status === "live"
+            ? "Linked to BuildFlow"
+            : metrics.status === "loading"
+              ? "Reading platform counts…"
+              : "Platform counts unavailable"}
         </span>
         <div className="portal-spacer" />
         <button type="button" className="portal-open" onClick={openBuildFlow}>
@@ -78,7 +86,11 @@ export function AdminApp() {
       </header>
 
       <main className="portal-main">
-        <DeveloperAdminPanel data={data} onOpenBuildFlow={openBuildFlow} />
+        <DeveloperAdminPanel
+          metrics={metrics}
+          onOpenBuildFlow={openBuildFlow}
+          onRetryMetrics={() => setReloads((n) => n + 1)}
+        />
       </main>
     </div>
   );

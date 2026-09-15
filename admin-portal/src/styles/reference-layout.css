@@ -1,7 +1,7 @@
 /* ============================================================================
    reference-layout.css — the ONLY thing this redesign adds: the Soft UI
-   "General Statistics" LAYOUT. Colors come entirely from the existing --wx-*/
-   --cc-* tokens and every animation hook (reveal, tilt, sparkline, ring) is
+   "General Statistics" LAYOUT. Colors come entirely from the existing --wx- and
+   --cc- tokens and every animation hook (reveal, tilt, sparkline, ring) is
    untouched. Scoped to .admin-rx, loaded after command-center + admin-redesign
    so it re-lays-out the stat cards and adds the table+globe row.
    ========================================================================== */
