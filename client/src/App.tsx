@@ -24903,9 +24903,13 @@ const DASH_SECTION_TITLES: Record<string, string> = {
   today: "Today's plan",
   meetings: "Meetings"
 };
-// Widget-header icons for the HubSpot Home layout. Sections whose bodies carry
-// their own heading (apps, workflows) don't get a header from DashSection.
+// Widget-header icons for the HubSpot Home layout. Every panel gets its header from
+// DashSection (since 2026-09-15), so every panel has an entry here.
 const DASH_SECTION_ICONS: Record<string, typeof Sparkles> = {
+  alerts: AlertTriangle,
+  approvals: ClipboardCheck,
+  recommendations: Sparkles,
+  apps: Grid2X2,
   quick: SlidersHorizontal,
   stats: Gauge,
   kpis: HardHat,
@@ -25345,7 +25349,14 @@ function DashDragLayer({ onActiveChange }: { onActiveChange: (id: string | null)
   return <DragOverlay dropAnimation={DASH_DROP_ANIMATION}>{activeId ? <DashDragGhost activeId={activeId} /> : null}</DragOverlay>;
 }
 
-type DashPanel = { id: string; title: string; heading: boolean; icon?: typeof Sparkles; body: ReactNode };
+/**
+ * One board panel. Every panel renders the SAME header — an icon, the title, and an optional
+ * control on the right — because the ask of 2026-09-15 was that each box look exactly like the
+ * others, on monday.com's card. Four panels (alerts, approvals, recommendations, apps) used to
+ * draw their own heading row inside the body; their right-hand controls arrive as `action`
+ * now and the heading itself is DashSection's, so there is one title row and not three.
+ */
+type DashPanel = { id: string; title: string; icon?: typeof Sparkles; action?: ReactNode; body: ReactNode };
 
 // One dashboard panel on the board: absolutely positioned by its grid cell, a
 // grip to move it, a dotted corner handle to resize it. The interactive content
@@ -25448,12 +25459,15 @@ function DashSection({
           <EyeOff size={14} />
         </button>
       )}
-      {panel.heading && (
-            {Icon && <Icon size={16} />}
+      {/* The one header every box shares: icon + title on the left, the panel's own control on
+          the right (View all, Manage, the approvals switch) — the reference's title row. The
+          glyph is 20px because that is what the reference's is; the sheet sizes it too. */}
       <div className="hs-widget-head">
         <h2>
+          {Icon && <Icon size={20} />}
           {panel.title}
         </h2>
+        {panel.action && <div className="hs-widget-actions">{panel.action}</div>}
       </div>
       <DashBlockBody title={panel.title}>{panel.body}</DashBlockBody>
       {editable && (
@@ -28062,12 +28076,6 @@ function Dashboard({
     ),
     apps: (
       <section data-reveal>
-        <div className="cc-sec-head">
-          <h2>BuildFlow Apps</h2>
-          <button type="button" className="cc-link" onClick={() => setPage("reports")}>
-            Manage
-          </button>
-        </div>
         <div className="cc-apps-grid">
           {ccApps.map((app) => {
             const Icon = app.icon;
@@ -28284,40 +28292,6 @@ function Dashboard({
   const railBodies: Record<string, ReactNode> = {
     approvals: (
       <section className="cc-panel" data-reveal>
-        <div className="cc-panel-head">
-          <h2>
-            <ClipboardCheck size={16} />
-            Pending Approvals
-          </h2>
-          <div className="cc-panel-head-actions">
-            <div className="hs-home-seg" role="group" aria-label="Approval view">
-              <button
-                type="button"
-                className={approvalView === "open" ? "active" : ""}
-                aria-pressed={approvalView === "open"}
-                onClick={() => setApprovalView("open")}
-              >
-                Open
-              </button>
-              <button
-                type="button"
-                className={approvalView === "resolved" ? "active" : ""}
-                aria-pressed={approvalView === "resolved"}
-                onClick={() => setApprovalView("resolved")}
-              >
-                Resolved
-              </button>
-            </div>
-            <button
-              type="button"
-              className="cc-link"
-              aria-label="View all approvals on the schedule page"
-              onClick={() => setPage("schedule")}
-            >
-              View all
-            </button>
-          </div>
-        </div>
         <div className="cc-list">
           {approvalError && (
             <p className="cc-appr-error" role="alert">
@@ -28384,15 +28358,6 @@ function Dashboard({
     ),
     alerts: (
       <section className="cc-panel" data-reveal>
-        <div className="cc-panel-head">
-          <h2>
-            <AlertTriangle size={16} />
-            Project Alerts
-          </h2>
-          <button type="button" className="cc-link" aria-label="View all project alerts" onClick={() => setPage("delayIQs")}>
-            View all
-          </button>
-        </div>
         <div className="cc-list">
           {ccAlerts.length ? (
             ccAlerts.map((alert) => {
@@ -28420,15 +28385,6 @@ function Dashboard({
     ),
     recommendations: (
       <section className="cc-panel" data-reveal>
-        <div className="cc-panel-head">
-          <h2>
-            <Sparkles size={16} />
-            AI Recommendations
-          </h2>
-          <button type="button" className="cc-link" aria-label="View all early warnings" onClick={() => setPage("delayIQs")}>
-            View all
-          </button>
-        </div>
         <div className="cc-list">
           {earlyWarningState === "loading" && !earlyWarning && <p className="cc-empty-line">Checking the schedule…</p>}
           {earlyWarningState === "failed" && (
@@ -28492,11 +28448,60 @@ function Dashboard({
   const panelBodies: Record<string, ReactNode> = { ...sectionBodies, ...railBodies };
   const panelTitles: Record<string, string> = { ...DASH_SECTION_TITLES, ...DASH_RAIL_TITLES };
   // panels whose own body already renders a heading do not get one from DashSection
-  const panelHasOwnHeading = (id: string) => id === "apps" || id in DASH_RAIL_TITLES;
+  /* The right-hand side of a panel's header. These four used to be drawn by the panel body's
+     own heading row; they live here so the header itself is DashSection's and identical on
+     every box. Every other panel's header carries just the icon and the title. */
+  const panelActions: Record<string, ReactNode> = {
+    alerts: (
+      <button type="button" className="cc-link" aria-label="View all project alerts" onClick={() => setPage("delayIQs")}>
+        View all
+      </button>
+    ),
+    approvals: (
+      <>
+        <div className="hs-home-seg" role="group" aria-label="Approval view">
+          <button
+            type="button"
+            className={approvalView === "open" ? "active" : ""}
+            aria-pressed={approvalView === "open"}
+            onClick={() => setApprovalView("open")}
+          >
+            Open
+          </button>
+          <button
+            type="button"
+            className={approvalView === "resolved" ? "active" : ""}
+            aria-pressed={approvalView === "resolved"}
+            onClick={() => setApprovalView("resolved")}
+          >
+            Resolved
+          </button>
+        </div>
+        <button
+          type="button"
+          className="cc-link"
+          aria-label="View all approvals on the schedule page"
+          onClick={() => setPage("schedule")}
+        >
+          View all
+        </button>
+      </>
+    ),
+    recommendations: (
+      <button type="button" className="cc-link" aria-label="View all early warnings" onClick={() => setPage("delayIQs")}>
+        View all
+      </button>
+    ),
+    apps: (
+      <button type="button" className="cc-link" onClick={() => setPage("reports")}>
+        Manage
+      </button>
+    )
+  };
   const dashPanels: Record<string, DashPanel> = Object.fromEntries(
     DASH_PANEL_IDS.map((id) => [
       id,
-      { id, title: panelTitles[id], heading: !panelHasOwnHeading(id), icon: DASH_SECTION_ICONS[id], body: panelBodies[id] }
+      { id, title: panelTitles[id], icon: DASH_SECTION_ICONS[id], action: panelActions[id], body: panelBodies[id] }
     ])
   );
 
@@ -28538,8 +28543,6 @@ function Dashboard({
                   Reset layout
                 </button>
               )}
-                  aria-pressed={customizing}
-                  onClick={() => setCustomizing((current) => !current)}
             </div>
           </div>
           <h1 className="hs-home-greeting">

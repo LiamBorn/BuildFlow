@@ -74,6 +74,7 @@ import "./meetings-panel.css"; // the Dashboard's Meetings panel (Google Calenda
 import "./plan-upgrade.css"; // the top bar's Upgrade button and its plan menu
 import "./notifications-panel.css"; // the notifications drawer, on the reference's layout
 import "./record-focus.css"; // the landing a notification makes: the row or panel it points at, lit for a moment
+import "./dashboard-monday-panels.css"; // the Dashboard's boxes on monday.com's card: one header row on every panel — must load after the admin-kit sheet
 
 initAnalytics();
 

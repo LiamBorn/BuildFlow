@@ -1084,8 +1084,10 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    // the variance, from the job's phase, with its real drift and severity
-    const approvals = within((await screen.findByRole("heading", { name: "Pending Approvals" })).closest("section") as HTMLElement);
+    // the variance, from the job's phase, with its real drift and severity. The panel is bounded
+    // by its .dash-block: since 2026-09-15 every board panel's heading is drawn by DashSection,
+    // above the body, so the heading's nearest <section> is the whole board, not the panel.
+    const approvals = within((await screen.findByRole("heading", { name: "Pending Approvals" })).closest(".dash-block") as HTMLElement);
     expect(await approvals.findByText("Concrete - Level 3 Slab")).toBeInTheDocument();
     expect(approvals.getByText("+3 working days")).toBeInTheDocument();
     expect(approvals.getByText(/Riverside Office Building · High severity · critical path/)).toBeInTheDocument();
@@ -1142,7 +1144,7 @@ describe("BuildFlow app", () => {
     expect(screen.getByText("No approvals waiting on you")).toBeInTheDocument();
 
     // and it now sits on the Resolved side with its status
-    const approvals = within(screen.getByRole("heading", { name: "Pending Approvals" }).closest("section") as HTMLElement);
+    const approvals = within(screen.getByRole("heading", { name: "Pending Approvals" }).closest(".dash-block") as HTMLElement);
     fireEvent.click(approvals.getByRole("button", { name: "Resolved" }));
     expect(await approvals.findByText("Concrete - Level 3 Slab")).toBeInTheDocument();
     expect(approvals.getByText("accepted")).toBeInTheDocument();
