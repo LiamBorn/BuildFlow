@@ -10,7 +10,16 @@ export * from "./matrix";
 export * from "./JobDrawer";
 export * from "../hooks";
 export { computeScheduleKpis, crewWeekUtilization, workingDays, type ScheduleKpis } from "../kpis";
-export { WEEK_DAYS, dayOf, formatScheduleDate, initialWeekStart, mondayOf, plural, scheduleWeekDays } from "../week";
+export {
+  WEEK_DAYS,
+  dayOf,
+  formatScheduleDate,
+  formatScheduleWeekRange,
+  initialWeekStart,
+  mondayOf,
+  plural,
+  scheduleWeekDays
+} from "../week";
 export { buildScheduleMonthCells, firstOfScheduleMonth, formatScheduleMonth, shiftScheduleMonth, type ScheduleMonthCell } from "../month";
 export { KANBAN_LANES, kanbanLaneOf, kanbanMove, type KanbanLane } from "../lanes";
 export { shiftScheduleDate } from "../scheduleUtils";

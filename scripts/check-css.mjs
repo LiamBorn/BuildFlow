@@ -162,6 +162,29 @@ const CREW = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-crew"]];
 const TIP = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-cell"], ["sched-matrix-tip"]];
 const TIP_HOVERED = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-cell", ":hover"], ["sched-matrix-tip"]];
 const WEEK = [ROOT, ["schedule-board"], ["schedule-week-scroll"]];
+/* The month grid's three day washes. All three are ONE class on the same element, so
+   source order is the whole of the decision between them — which is the only way to
+   ask whether a day outside the month still reads as outside it when it is also a
+   non-working day. */
+const CAL = [ROOT, ["schedule-board"], ["sched-cal"], ["sched-cal-grid"]];
+const CAL_OUT = [...CAL, ["sched-cal-cell", "out-month"]];
+const CAL_OUT_WEEKEND = [...CAL, ["sched-cal-cell", "out-month", "is-weekend"]];
+const CAL_WEEKEND = [...CAL, ["sched-cal-cell", "is-weekend"]];
+const CAL_HOLIDAY = [...CAL, ["sched-cal-cell", "is-holiday", "out-month"]];
+const CAL_HOVER = [...CAL, ["sched-cal-cell", "is-holiday", "is-addable", ":hover"]];
+/* The Gantt bar, whose label now sits OUTSIDE it. The chart root is its own set of classes
+   (the frame is not `.hs-index-main`), so this chain is built from what the page renders. */
+const GANTT_BAR = [
+  ["page-stack", "gantt-page", "hs-index"],
+  ["gantt-card"],
+  ["gantt-frame"],
+  ["gantt-timeline"],
+  ["gantt-feature-list"],
+  ["gantt-feature-group"],
+  ["gantt-feature-row"],
+  ["gantt-feature"],
+  ["gantt-bar"]
+];
 // the critical-path band, which both the landing and the chart draw
 const LANDING_CPM = [ROOT, ["schedule-control-row"], ["filter-strip"], ["sched-cpm"]];
 const CHART_CPM = [["page-stack", "gantt-page", "hs-index"], ["hs-index-main"], ["hs-index-card", "gantt-card"], ["sched-cpm"]];

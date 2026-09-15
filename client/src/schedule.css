@@ -2274,33 +2274,124 @@
   height: 16px;
 }
 
-/* month stepper (‹ May 2026 ›) + Today */
+/* ===================== the calendar's header ==========================
+   Today as a stamp, the month with the span it covers, then the stepper and the
+   page's one primary action.
+
+   The stepper is a SEGMENTED group: its three buttons share one edge, so the
+   corners belong to the group and not to the buttons. That is why the shared
+   base rule below sets no radius — `.sched-monthnav > *` does, and it has to be
+   able to win, which it cannot against `.sched-monthnav .sched-icon-btn`. */
 .sched-rx .sched-monthbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
   margin-bottom: 14px;
+}
+.sched-rx .sched-monthbar-lead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+/* today's date, boxed: the month over the day */
+.sched-rx .sched-datestamp {
+  flex: none;
+  display: grid;
+  gap: 2px;
+  width: 62px;
+  padding: 3px;
+  border: 1px solid var(--wx-line);
+  border-radius: 12px;
+  background: var(--wx-bg);
+  text-align: center;
+}
+.sched-rx .sched-datestamp-month {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-datestamp-day {
+  padding: 2px 0 3px;
+  border: 1px solid var(--wx-line);
+  border-radius: 9px;
+  background: var(--wx-card);
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 17px;
+  font-weight: 750;
+  color: var(--wx-ink);
+  font-variant-numeric: tabular-nums;
+}
+.sched-rx .sched-monthbar-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.sched-rx .sched-month-title {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--wx-ink);
+}
+.sched-rx .sched-month-range {
+  font-family: var(--cc-sans, Inter, sans-serif);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--wx-mut);
+}
+.sched-rx .sched-monthbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+/* the rule between the stepper and the action */
+.sched-rx .sched-monthbar-rule {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  background: var(--wx-line);
 }
 .sched-rx .sched-monthnav {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(var(--bf-line-rgb), 0.05);
 }
 .sched-rx .sched-monthnav .sched-icon-btn,
 .sched-rx .sched-today-btn {
   display: inline-grid;
   place-items: center;
   border: 1px solid var(--wx-line);
-  border-radius: 10px;
   background: var(--wx-card);
   color: var(--wx-ink);
   cursor: pointer;
   transition:
     background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.16s ease;
+    border-color 0.18s ease;
+}
+/* one shared edge, and the group's own corners */
+.sched-rx .sched-monthnav > * {
+  border-radius: 0;
+  margin-left: -1px;
+}
+.sched-rx .sched-monthnav > *:first-child {
+  border-radius: 10px 0 0 10px;
+  margin-left: 0;
+}
+.sched-rx .sched-monthnav > *:last-child {
+  border-radius: 0 10px 10px 0;
+}
+/* a focused segment's ring must not be cut by its neighbour's edge */
+.sched-rx .sched-monthnav > *:focus-visible {
+  position: relative;
+  z-index: 1;
 }
 .sched-rx .sched-monthnav .sched-icon-btn {
   width: 36px;
@@ -2317,18 +2408,6 @@
 .sched-rx .sched-today-btn:hover {
   background: var(--wx-bg-2);
   border-color: var(--wx-line);
-}
-.sched-rx .sched-today-btn:active {
-  transform: scale(0.97);
-}
-.sched-rx .sched-month-title {
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 20px;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  color: var(--wx-ink);
-  min-width: 168px;
-  text-align: center;
 }
 
 /* ============================ month calendar ========================== */
@@ -2352,6 +2431,11 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--wx-mut);
+  text-align: center;
+}
+/* the header divides the same way the grid below it does */
+.sched-rx .sched-cal-dow span:not(:last-child) {
+  border-right: 1px solid var(--wx-line-soft);
 }
 .sched-rx .sched-cal-grid {
   display: grid;
@@ -2364,12 +2448,12 @@
 }
 .sched-rx .sched-cal-cell {
   position: relative;
-  min-height: 116px;
-  padding: 8px 8px 10px;
+  min-height: 124px;
+  padding: 10px;
   background: var(--wx-card);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   animation: schedCellIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: calc(var(--d, 0) * 55ms);
 }
@@ -2383,26 +2467,39 @@
     transform: none;
   }
 }
+/* The three washes, weakest LAST-WINS first: all three are one class on the same
+   element, so source order is the whole of the decision. A day outside the month
+   has to read as outside it whether or not it is also a non-working day, which is
+   why out-month now sits after is-weekend and not before it. */
+.sched-rx .sched-cal-cell.is-weekend {
+  background: color-mix(in srgb, var(--wx-bg) 38%, var(--wx-card));
+}
 .sched-rx .sched-cal-cell.out-month {
-  background: color-mix(in srgb, var(--wx-bg-2) 55%, var(--wx-card));
+  background: color-mix(in srgb, var(--wx-bg) 70%, var(--wx-card));
 }
 .sched-rx .sched-cal-cell.out-month .sched-cal-daynum {
   color: var(--wx-faint);
 }
-.sched-rx .sched-cal-cell.is-weekend {
-  background: color-mix(in srgb, var(--wx-bg-2) 30%, var(--wx-card));
-}
 .sched-rx .sched-cal-cell.is-holiday {
   background: color-mix(in srgb, var(--sc-holiday) 9%, var(--wx-card));
 }
+/* Hovering an in-month day says it takes a click. It is a background IMAGE, not a
+   colour: the cell's colour is its identity -- out of month, a non-working day, a
+   holiday -- and a hover at four classes would outrank all three and wipe the tint
+   the legend names. An image layers over the colour instead of replacing it. */
+.sched-rx .sched-cal-cell.is-addable:hover {
+  background-image: linear-gradient(rgba(var(--bf-line-rgb), 0.035), rgba(var(--bf-line-rgb), 0.035));
+}
 .sched-rx .sched-cal-daynum {
   font-family: var(--cc-sans, Inter, sans-serif);
+  /* stays 13px: white on this circle's blue is already 3.83:1, and shrinking the
+     number to the reference's 12px would only push a failing measure further */
   font-size: 13px;
   font-weight: 650;
   color: var(--wx-ink);
   align-self: flex-start;
-  min-width: 24px;
-  height: 24px;
+  min-width: 28px;
+  height: 28px;
   display: inline-grid;
   place-items: center;
   border-radius: 999px;
@@ -2427,8 +2524,9 @@
 }
 .sched-rx .sched-cal-add {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  /* centred against the day number's row, which the cell's padding sets */
+  top: 13px;
+  right: 10px;
   display: grid;
   place-items: center;
   width: 22px;
@@ -2458,25 +2556,27 @@
   color: var(--bf-on-accent);
 }
 
-/* activity chips */
+/* Activity chips: a bordered card holding two tight lines, with the trade colour on
+   the dot. The dot stays because it is the key the legend at the foot of the page
+   reads against -- a card with no colour would leave that legend naming nothing. */
 .sched-rx .sched-act {
   display: flex;
   align-items: center;
   gap: 7px;
   width: 100%;
   text-align: left;
-  border: 0;
-  border-radius: 7px;
-  padding: 5px 8px;
-  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 11%, var(--wx-card));
+  border: 1px solid var(--wx-line);
+  border-radius: 9px;
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 8%, var(--wx-card));
   cursor: pointer;
   transition:
-    transform 0.14s ease,
-    background 0.18s ease;
+    background 0.18s ease,
+    border-color 0.18s ease;
 }
 .sched-rx .sched-act:hover {
-  transform: translateX(2px);
-  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 20%, var(--wx-card));
+  background: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 17%, var(--wx-card));
+  border-color: color-mix(in srgb, var(--sc-tone, var(--sc-concrete)) 30%, var(--wx-card));
 }
 .sched-rx .sched-act-dot {
   width: 7px;
@@ -2510,7 +2610,7 @@
   display: block;
 }
 .sched-rx .sched-act.is-milestone {
-  background: color-mix(in srgb, var(--sc-milestone) 12%, var(--wx-card));
+  background: color-mix(in srgb, var(--sc-milestone) 9%, var(--wx-card));
 }
 .sched-rx .sched-act.is-milestone .sched-act-dot {
   border-radius: 2px;
@@ -2520,11 +2620,11 @@
   background: none;
   color: var(--wx-mut);
   font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
-  padding: 2px 8px;
+  padding: 0 2px;
   align-self: flex-start;
 }
 .sched-rx .sched-act-more:hover {
@@ -2829,23 +2929,28 @@
 /* ============================ responsive ============================== */
 @media (max-width: 1180px) {
   .sched-rx .sched-cal-cell {
-    min-height: 96px;
+    min-height: 102px;
   }
 }
 @media (max-width: 900px) {
   .sched-rx .sched-cal-cell {
-    min-height: 78px;
+    min-height: 82px;
     padding: 6px;
   }
   .sched-rx .sched-act-text em {
     display: none;
   }
+  .sched-rx .sched-cal-daynum {
+    min-width: 24px;
+    height: 24px;
+  }
   .sched-rx .sched-month-title {
     font-size: 17px;
-    min-width: 130px;
   }
   /* No hover on touch — keep the add affordance visible. */
   .sched-rx .sched-cal-add {
+    top: 7px;
+    right: 6px;
     opacity: 0.85;
     transform: none;
   }

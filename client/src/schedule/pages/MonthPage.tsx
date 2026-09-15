@@ -1,11 +1,11 @@
 /**
  * Month — the Schedule hub's calendar as its own sub-page beside Week, List,
  * Kanban, Matrix and Gantt Chart: the Schedule page's Month view. Every job sits
- * on its start day as a trade-coloured chip, with milestone diamonds and
- * holidays. Drag a chip to another day to move the job (its dates and its crew
- * bookings shift together), click an empty day to add a job there, open a busy
- * day for its full list, and click a chip for the job drawer the other
- * sub-pages use. Export writes the month's jobs to CSV.
+ * on its start day as a trade-coloured card, with milestone diamonds and
+ * holidays. Drag a card to another day to move the job (its dates and its crew
+ * bookings shift together), click an empty day to add a job there or start one
+ * from the header, open a busy day for its full list, and click a card for the
+ * job drawer the other sub-pages use. Export writes the month's jobs to CSV.
  *
  * Stands in the shared page frame (schedule/page.tsx): everything the seven
  * pages share comes from the one page hook; this file is the calendar and its
@@ -13,7 +13,7 @@
  */
 import { useMemo, useState, type ReactNode } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
 import type { BootstrapPayload, Job } from "@buildflow/shared";
 import { rebookSchedule } from "../../api";
 import {
@@ -25,6 +25,8 @@ import {
   firstOfScheduleMonth,
   formatScheduleDate,
   formatScheduleMonth,
+  formatScheduleWeekRange,
+  shiftScheduleDate,
   shiftScheduleMonth,
   type ScheduleDialog,
   type ScheduleMilestone
@@ -83,6 +85,20 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
     return map;
   }, [data]);
   const monthJobs = useMemo(() => jobs.filter((job) => job.startDate.slice(0, 7) === monthKey), [jobs, monthKey]);
+  // the span the calendar covers, in the same shape the Week board prints its own
+  const monthRange = formatScheduleWeekRange([
+    { date: `${monthKey}-01` },
+    { date: shiftScheduleDate(shiftScheduleMonth(monthAnchor, 1), -1) }
+  ]);
+  // "Sep 13", split into the stamp's two lines so it reads in the one formatter's locale
+  const [todayMonthLabel, todayDayLabel] = formatScheduleDate(today).split(" ");
+  // "New job": the same form a day's "+" opens, on the first crew in view — today when
+  // the calendar is on this month, and the 1st otherwise, so the job lands in view.
+  const newJob = () => {
+    const first = scope.crews[0] ?? data.crews[0];
+    if (!first) say("Add a crew before scheduling work.", { error: true });
+    else openPicker(first.id, isThisMonth ? today : `${monthKey}-01`);
+  };
 
   // the live announcements name the job and the day
   const accessibility = useMemo(
@@ -151,34 +167,53 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
       drag={{ accessibility, onDragEnd }}
       dialogs={<>{dayDialog && <ScheduleDialogPanel dialog={dayDialog} onClose={() => setDayDialog(null)} />}</>}
     >
+      {/* The calendar's header: today as a stamp, the month with the span it covers, then the
+          stepper and the one primary action. The stepper is a SEGMENTED group — its three
+          buttons share one edge — so Today sits inside .sched-monthnav and the corners are
+          declared on the group rather than on the buttons. */}
       <div className="sched-monthbar">
-        <div className="sched-monthnav">
-          <button
-            type="button"
-            className="sched-icon-btn"
-            aria-label="Previous month"
-            onClick={() => setMonthAnchor((current) => shiftScheduleMonth(current, -1))}
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <span className="sched-month-title">{monthLabel}</span>
-          <button
-            type="button"
-            className="sched-icon-btn"
-            aria-label="Next month"
-            onClick={() => setMonthAnchor((current) => shiftScheduleMonth(current, 1))}
-          >
-            <ChevronRight size={18} />
+        <div className="sched-monthbar-lead">
+          <span className="sched-datestamp">
+            <span className="sched-datestamp-month">{todayMonthLabel}</span>
+            <span className="sched-datestamp-day">{todayDayLabel}</span>
+          </span>
+          <span className="sched-monthbar-heading">
+            <span className="sched-month-title">{monthLabel}</span>
+            <span className="sched-month-range">{monthRange}</span>
+          </span>
+        </div>
+        <div className="sched-monthbar-actions">
+          <div className="sched-monthnav">
+            <button
+              type="button"
+              className="sched-icon-btn"
+              aria-label="Previous month"
+              onClick={() => setMonthAnchor((current) => shiftScheduleMonth(current, -1))}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              className="sched-today-btn"
+              onClick={() => setMonthAnchor(firstOfScheduleMonth(today))}
+              disabled={isThisMonth}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              className="sched-icon-btn"
+              aria-label="Next month"
+              onClick={() => setMonthAnchor((current) => shiftScheduleMonth(current, 1))}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+          <span className="sched-monthbar-rule" aria-hidden="true" />
+          <button type="button" className="sched-new-activity" onClick={newJob}>
+            <PlusCircle size={16} /> New job
           </button>
         </div>
-        <button
-          type="button"
-          className="sched-today-btn"
-          onClick={() => setMonthAnchor(firstOfScheduleMonth(today))}
-          disabled={isThisMonth}
-        >
-          Today
-        </button>
       </div>
       <ScheduleMonthView
         cells={cells}
