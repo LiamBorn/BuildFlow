@@ -1,0 +1,187 @@
+/* ============================================================================
+   plan-upgrade.css — the top bar's "Upgrade" button and its plan menu.
+
+   Asked for from the monday.com reference, whose "See plans" button sits in the
+   top bar. The menu answers two questions in one place: the plan the workspace
+   is on now, and the plans better than it. Choosing one opens Settings ›
+   Billing, which is where a plan is actually changed.
+
+   The button lives in the app's chrome, which is its own surface: the chrome
+   tokens (--bf-chrome-*) are what the top bar is painted from, and the accent
+   fill is the same one every primary in the product uses.
+   ========================================================================== */
+.hs-upgrade {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.hs-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-accent-fill, #2563eb);
+  color: var(--bf-on-accent, #ffffff);
+  font-family: var(--bf-font-active, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.16s) ease,
+    box-shadow var(--bf-dur-hover, 0.16s) ease;
+}
+.hs-upgrade-btn:hover {
+  background: var(--bf-accent-dark, #1f57e0);
+}
+/* A trial that has ended is the one case worth shouting about, because the workspace is
+   about to stop being usable.
+
+   The literals are deliberate: there is no --bf-danger token — the destructive red is
+   #c5221f everywhere in this product and design-language.test.ts pins it by value. White on
+   it measures 5.80, and 7.58 on the hover, both over the 4.5 the label needs — and over the
+   5.17 the ordinary accent fill gives, so the urgent state is not a step down in legibility. */
+.hs-upgrade-btn.is-urgent {
+  background: #c5221f;
+}
+.hs-upgrade-btn.is-urgent:hover {
+  background: #a51b19;
+}
+
+/* ---- the menu --------------------------------------------------------- */
+.hs-upgrade-menu {
+  right: 0;
+  left: auto;
+  width: 320px;
+  padding-bottom: 6px;
+}
+
+/* the plan the workspace is on now */
+.hs-upgrade-current {
+  display: grid;
+  gap: 2px;
+  padding: 13px 14px 12px;
+  border-bottom: 1px solid var(--bf-line-soft, #eef0f4);
+}
+.hs-upgrade-eyebrow {
+  color: var(--bf-ink-muted, #575550);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.hs-upgrade-current strong {
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.hs-upgrade-meta {
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* one better plan */
+.hs-upgrade-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 14px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--bf-dur-hover, 0.16s) ease;
+}
+.hs-upgrade-row:hover {
+  background: var(--bf-hover, #f5f5f5);
+}
+.hs-upgrade-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--bf-radius-control, 6px);
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.11);
+  color: var(--bf-accent-dark, #1f57e0);
+}
+.hs-upgrade-body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+.hs-upgrade-body strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.hs-upgrade-body strong em {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.13);
+  color: var(--bf-accent-dark, #1f57e0);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.hs-upgrade-body span {
+  overflow: hidden;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hs-upgrade-price {
+  flex: none;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hs-upgrade-price i {
+  color: var(--bf-ink-muted, #575550);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.hs-upgrade-all {
+  width: calc(100% - 20px);
+  margin: 6px 10px 0;
+  padding: 9px 0;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-control, 6px);
+  background: none;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hs-upgrade-all:hover {
+  background: var(--bf-hover, #f5f5f5);
+}
+
+/* Below the width where the top bar starts shedding controls, the label goes and the
+   button keeps its icon — the shortest thing that is still a button, not a hidden one. */
+@media (max-width: 900px) {
+  .hs-upgrade-btn {
+    gap: 0;
+    padding: 0 9px;
+    font-size: 0;
+  }
+  .hs-upgrade-menu {
+    width: min(320px, calc(100vw - 24px));
+  }
+}

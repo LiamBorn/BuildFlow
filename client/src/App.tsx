@@ -77,6 +77,7 @@ import {
   FileUp,
   FolderKanban,
   Gauge,
+  Gem,
   Globe,
   Globe2,
   Grid2X2,
@@ -3067,6 +3068,7 @@ function App() {
         data={data}
         reportsMode={page === "reports"}
         onOpenSettings={openSettingsPage}
+        onOpenBilling={() => openSettingsView("billing")}
         preferences={appPreferences}
         onStartTutorial={startTutorial}
         onLogout={handleLogout}
@@ -22333,16 +22335,146 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${equipment.name} is ${equipment.status.toLowerCase()} for ${assignedProject}.`,
       timestamp: new Date().toISOString(),
       tone: equipment.status === "Maintenance" ? "red" : equipment.status === "In Use" ? "amber" : "green",
-      icon: Wrench
+      icon: Wrench,
+      projectId: equipment.assignedTo ?? undefined,
+      target: { kind: "record", page: "equipment", recordId: equipment.id }
     });
   });
 
-  return items.sort((first, second) => new Date(second.timestamp).getTime() - new Date(first.timestamp).getTime()).slice(0, 7);
+  /**
+   * ALL of them, newest first. This used to end `.slice(0, 7)`, so the bell had been showing
+   * the seven most recent and silently dropping the rest — which is the first thing the
+   * 2026-09-14 redesign had to fix, because "show all notifications" was the ask. The panel
+   * scrolls and filters instead of the builder truncating.
+   */
+  return items.sort((first, second) => new Date(second.timestamp).getTime() - new Date(first.timestamp).getTime());
+}
+
+/**
+ * The top bar's "Upgrade" button and the menu behind it.
+ *
+ * Asked for from the monday.com reference, whose "See plans" button sits in the top bar and
+ * leads to the plan list. This one answers the two things the user asked for in one place:
+ * which plan the workspace is on now, and which plans are better than it. Choosing one lands
+ * in Settings › Billing, which is where a plan is actually changed — the money is Stripe's
+ * job and it already lives there, so this menu never pretends to take a payment.
+ *
+ * IT HIDES ITSELF WHEN THERE IS NOTHING TO SELL. On the top plan there is no upgrade, so an
+ * "Upgrade" button would be a dead end; the button is simply absent. That is also why the
+ * current plan is read from the ORG (`data.selectedPlan`) rather than from this browser's
+ * localStorage copy: a teammate signing in on another machine must see the same answer.
+ */
+function PlanUpgradeButton({ data, onOpenBilling }: { data: BootstrapPayload; onOpenBilling?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    // globalThis-qualified, because React's MouseEvent/KeyboardEvent are imported in this
+    // file and shadow the DOM ones — the same shadowing that makes `new Map()` throw here.
+    const onAway = (event: globalThis.MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onAway);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onAway);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const currentId = (data.selectedPlan ?? "free") as ProductPlanId;
+  const currentIndex = productPlans.findIndex((plan) => plan.id === currentId);
+  const current = productPlans[currentIndex === -1 ? 0 : currentIndex];
+  // `productPlans` is ordered cheapest first, so "better" is simply everything after it
+  const better = productPlans.slice((currentIndex === -1 ? 0 : currentIndex) + 1);
+  if (better.length === 0) return null;
+
+  const trialing = data.billingStatus === "trial";
+  const expired = data.billingStatus === "trial_expired";
+  const seats = data.seats ?? null;
+
+  return (
+    <div className="hs-upgrade" ref={menuRef}>
+      <button
+        type="button"
+        className={`hs-upgrade-btn${expired ? " is-urgent" : ""}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((isOpen) => !isOpen)}
+      >
+        <Gem size={15} aria-hidden="true" />
+        Upgrade
+      </button>
+      {open && (
+        <div className="hs-menu hs-upgrade-menu" role="menu" aria-label="Plans">
+          <div className="hs-upgrade-current">
+            <span className="hs-upgrade-eyebrow">Your plan</span>
+            <strong>{current.name}</strong>
+            <span className="hs-upgrade-meta">
+              {[
+                current.priceMonthly === null ? current.price : `${current.price} ${current.priceNote.toLowerCase()}`,
+                seats ? `${seats} ${seats === 1 ? "seat" : "seats"}` : "",
+                expired ? "Trial ended" : trialing && data.trialEndsAt ? `Trial ends ${formatDate(data.trialEndsAt)}` : ""
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </div>
+          <div className="hs-menu-head">Better plans</div>
+          {better.map((plan) => {
+            const PlanIcon = plan.icon;
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                role="menuitem"
+                className="hs-upgrade-row"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenBilling?.();
+                }}
+              >
+                <span className="hs-upgrade-mark" aria-hidden="true">
+                  <PlanIcon size={16} />
+                </span>
+                <span className="hs-upgrade-body">
+                  <strong>
+                    {plan.name}
+                    {plan.recommended && <em>Recommended</em>}
+                  </strong>
+                  <span>{plan.detail}</span>
+                </span>
+                <span className="hs-upgrade-price">
+                  {plan.price}
+                  {plan.priceMonthly !== null && <i>/user/mo</i>}
+                </span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            role="menuitem"
+            className="hs-upgrade-all"
+            onClick={() => {
+              setOpen(false);
+              onOpenBilling?.();
+            }}
+          >
+            Compare every plan
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function TopBar({
   data,
   onOpenSettings,
+  onOpenBilling,
   preferences,
   onStartTutorial,
   onLogout,
@@ -22360,6 +22492,8 @@ function TopBar({
 }: {
   data: BootstrapPayload;
   onOpenSettings: () => void;
+  /** Settings › Billing, where a plan is actually changed. The Upgrade menu ends here. */
+  onOpenBilling?: () => void;
   /** The shell's layout preferences, rendered by the gear's Preferences panel. */
   preferences: ReturnType<typeof usePreferences>;
   onStartTutorial: () => void;
@@ -22487,6 +22621,7 @@ function TopBar({
         <Sparkles size={18} />
       </button>
       <div className="topbar-actions">
+        <PlanUpgradeButton data={data} onOpenBilling={onOpenBilling} />
         <div className="hs-bookmarks" ref={bookmarkMenuRef}>
           <button
             className={`icon-button hs-bookmarks-btn${bookmarks.length > 0 ? " has-items" : ""}`}

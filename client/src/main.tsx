@@ -71,6 +71,7 @@ import "./dashboard-admin-kit.css"; // the Dashboard only, on the shadcn admin-k
 import "./setup-stage.css"; // the animation a new workspace shows while the server builds it
 import "./tutorial-stage.css"; // the onboarding tutorial, on the reference recording's design
 import "./meetings-panel.css"; // the Dashboard's Meetings panel (Google Calendar / Outlook)
+import "./plan-upgrade.css"; // the top bar's Upgrade button and its plan menu
 
 initAnalytics();
 
