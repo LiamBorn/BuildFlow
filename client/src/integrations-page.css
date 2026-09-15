@@ -1,0 +1,221 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Resources > Integrations (#integrations), rebuilt 2026-09-12 in the same Apple
+   language as the Updates, Customer Reviews and Help Center pages: the root
+   carries `cs-page cpx-page`, so the --cpx-* tokens, the .cpx-section rhythm,
+   the pov-* featured band and the .cpx-faq accordion come from
+   crew-scheduling-apple.css and product-overview.css. Only the itx-* pieces the
+   new layout needs live here; the old itx-* rules in integrations-redesign.css
+   are no longer used by this route.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.welcome-rx .itx-page .cpx-inner-narrow { margin-bottom: clamp(26px, 3.5vw, 42px); }
+.welcome-rx .itx-page .itx-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 22px 0 0;
+  font-size: 14.5px;
+  color: var(--cpx-mut);
+}
+
+/* The four featured connectors. */
+.welcome-rx .itx-page .itx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: clamp(18px, 2.2vw, 26px);
+  align-items: start;
+}
+.welcome-rx .itx-page .itx-card {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(26px, 3vw, 34px);
+  border-radius: 24px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  border-top: 4px solid var(--itx-accent, var(--cpx-blue));
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s var(--cpx-ease), transform 0.7s var(--cpx-ease);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+.welcome-rx .itx-page .itx-card.in { opacity: 1; transform: none; }
+.welcome-rx .itx-page .itx-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.welcome-rx .itx-page .itx-card-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--itx-accent, #1a73e8) 12%, transparent);
+  color: var(--itx-accent, var(--cpx-blue));
+}
+.welcome-rx .itx-page .itx-tag {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cpx-mut);
+}
+.welcome-rx .itx-page .itx-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .itx-page .itx-card > p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--cpx-mut);
+}
+.welcome-rx .itx-page .itx-points { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 11px; }
+.welcome-rx .itx-page .itx-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--cpx-mut);
+}
+.welcome-rx .itx-page .itx-points svg { flex: 0 0 auto; margin-top: 3px; color: var(--itx-accent, var(--cpx-blue)); }
+.welcome-rx .itx-page .itx-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: auto 0 0;
+  padding-top: 22px;
+}
+.welcome-rx .itx-page .itx-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cpx-mut);
+}
+.welcome-rx .itx-page .itx-learn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--cpx-blue);
+  text-decoration: none;
+}
+.welcome-rx .itx-page .itx-learn:hover { text-decoration: underline; }
+
+/* The directory. */
+.welcome-rx .itx-page .itx-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+  align-items: start;
+}
+.welcome-rx .itx-page .itx-cat {
+  padding: 26px 28px 28px;
+  border-radius: 22px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.7s var(--cpx-ease), transform 0.7s var(--cpx-ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.welcome-rx .itx-page .itx-cat.in { opacity: 1; transform: none; }
+.welcome-rx .itx-page .itx-cat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.welcome-rx .itx-page .itx-cat-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--cpx-blue-tint);
+  color: var(--cpx-blue);
+}
+.welcome-rx .itx-page .itx-cat h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .itx-page .itx-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.welcome-rx .itx-page .itx-pill {
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--cpx-line-soft);
+  font-size: 13.5px;
+  color: var(--cpx-mut);
+}
+
+/* Connected in three steps, on the bloom field. */
+.welcome-rx .itx-page .itx-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+.welcome-rx .itx-page .itx-step {
+  padding: 30px;
+  border-radius: 22px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+}
+.welcome-rx .itx-page .itx-step-n {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--cpx-blue);
+}
+.welcome-rx .itx-page .itx-step strong {
+  display: block;
+  margin: 14px 0 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .itx-page .itx-step p { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--cpx-mut); }
+
+/* What procurement asks. */
+.welcome-rx .itx-page .itx-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 18px;
+}
+.welcome-rx .itx-page .itx-trust-item {
+  padding: 26px 28px 28px;
+  border-radius: 20px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+}
+.welcome-rx .itx-page .itx-trust-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 16px;
+  border-radius: 11px;
+  background: var(--cpx-blue-tint);
+  color: var(--cpx-blue);
+}
+.welcome-rx .itx-page .itx-trust-item strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .itx-page .itx-trust-item p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--cpx-mut); }

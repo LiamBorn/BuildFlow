@@ -15151,6 +15151,34 @@ function WelcomePartnersPage({
 // Integrations (#integrations) — QuickBooks / Procore / Calendar / Weather and the
 // broader connector directory. Enterprise buyers scan for this; built on the shared
 // `.cs-page` welcome system so it matches light + dark automatically.
+/** Questions the integrations page answers, above the footer. */
+const INTEGRATION_FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "How long does a connection take to set up?",
+    a: "Minutes. You authorize with OAuth, map projects, cost codes and crews once, and BuildFlow remembers the mapping. No engineering and no IT ticket."
+  },
+  {
+    q: "Which way does the data flow?",
+    a: "Both, for QuickBooks, Procore and calendars. Change something in either place and it stays in step. Weather is a live feed in one direction."
+  },
+  {
+    q: "What if our tool is not listed?",
+    a: "Tell us what you run and we will wire it up, or build it yourself on the open REST API and webhooks. Most requests ship within a release or two."
+  },
+  {
+    q: "Will our security team be satisfied?",
+    a: "Single sign-on through Okta, Azure AD or Google Workspace, TLS in transit and AES-256 at rest, a SOC 2 Type II audit in progress, and a data processing agreement on request."
+  },
+  {
+    q: "Does connecting change our schedule?",
+    a: "No. A connection moves data between systems. Dates still move only when a planner decides they should."
+  },
+  {
+    q: "Can we disconnect later?",
+    a: "At any time, and your schedule keeps working. Exports to CSV and PDF mean nothing you build here is trapped in a connector."
+  }
+];
+
 function WelcomeIntegrationsPage({
   onBack,
   onGetStarted,
@@ -15289,7 +15317,7 @@ function WelcomeIntegrationsPage({
   ];
 
   return (
-    <main className="cs-page itx-page" id="integrations" ref={rootRef}>
+    <main className="cs-page cpx-page itx-page" id="integrations" ref={rootRef}>
       <div className="wx-bg" aria-hidden="true">
         <div className="wx-aurora wx-aurora-1" />
         <div className="wx-aurora wx-aurora-2" />
@@ -15297,152 +15325,229 @@ function WelcomeIntegrationsPage({
       </div>
       <div className="wx-cursor" aria-hidden="true" />
 
-      <section className="cmp-hero itx-hero" data-reveal>
-        <span className="wx-eyebrow">
-          <span className="wx-dot" /> Integrations
-        </span>
-        <h1 className="cmp-title">
-          <WxTypewriter normal="Connect the tools your office " em="already runs on." />
-        </h1>
-        <p className="cmp-sub">
-          BuildFlow syncs with your accounting, project management, calendars, and weather data &mdash; so the schedule reflects reality
-          without anyone re-typing it.
-        </p>
-        <div className="itx-hero-actions">
-          <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Start free">
-            Start free <ArrowRight size={16} />
-          </WxMagnetic>
-          <WxMagnetic className="wx-btn wx-btn-line" onClick={onContactSales} ariaLabel="Request an integration">
-            Request an integration
-          </WxMagnetic>
+      {/* 1 · Integrations — the lede */}
+      <section className="cpx-section itx-hero cpx-light" id="itx-hero" tabIndex={-1} aria-labelledby="itx-hero-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow">
+              <span className="wx-dot" /> Integrations
+            </span>
+            <h1 className="pov-title" id="itx-hero-title">
+              Integrations
+            </h1>
+            <p className="cpx-body">
+              BuildFlow syncs with your accounting, project management, calendars, and weather data &mdash; so the schedule reflects reality
+              without anyone re-typing it.
+            </p>
+            <div className="cpx-hero-actions">
+              <WxMagnetic className="wx-btn wx-btn-ink" onClick={onGetStarted} ariaLabel="Start free">
+                Start free <ArrowRight size={18} />
+              </WxMagnetic>
+              <WxMagnetic className="wx-btn wx-btn-line" onClick={onContactSales} ariaLabel="Request an integration">
+                Request an integration
+              </WxMagnetic>
+            </div>
+            <p className="itx-note">
+              <RefreshCcw size={15} aria-hidden="true" /> Real-time, two-way sync &middot; connect in minutes, no IT ticket
+            </p>
+          </div>
         </div>
-        <span className="itx-hero-note">
-          <RefreshCcw size={15} /> Real-time, two-way sync &middot; connect in minutes, no IT ticket
-        </span>
       </section>
 
-      <section data-reveal>
-        <div className="itx-sec-head">
-          <span className="wx-eyebrow-2">Featured</span>
-          <h2>The connections crews ask for first.</h2>
-          <p>Purpose-built for construction workflows — set up once and the data keeps itself current.</p>
+      {/* 2 · The four connectors crews ask for first */}
+      <section
+        className="cpx-section itx-connectors cpx-paper-bg"
+        id="itx-connectors"
+        tabIndex={-1}
+        aria-labelledby="itx-connectors-title"
+        data-reveal
+      >
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow-2">Featured</span>
+            <h2 className="cpx-statement-sm" id="itx-connectors-title">
+              The connections crews ask for first.
+            </h2>
+            <p className="cpx-body">Purpose-built for construction workflows &mdash; set up once and the data keeps itself current.</p>
+          </div>
+          <div className="itx-grid">
+            {featured.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <article
+                  className="itx-card"
+                  key={item.name}
+                  data-reveal
+                  style={{ "--itx-accent": item.accent, "--i": index % 2 } as CSSProperties}
+                >
+                  <div className="itx-card-head">
+                    <span className="itx-card-ic">
+                      <Icon size={24} />
+                    </span>
+                    <span className="itx-tag">{item.tag}</span>
+                  </div>
+                  <h3>{item.name}</h3>
+                  <p>{item.text}</p>
+                  <ul className="itx-points">
+                    {item.points.map((point) => (
+                      <li key={point}>
+                        <CheckCircle2 size={15} aria-hidden="true" /> {point}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="itx-card-foot">
+                    <span className="itx-sync">
+                      <RefreshCcw size={14} aria-hidden="true" /> {item.sync}
+                    </span>
+                    {item.link && (
+                      <a className="itx-learn" href={item.link.href}>
+                        {item.link.label} <ArrowRight size={14} aria-hidden="true" />
+                      </a>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
-        <div className="itx-featured">
-          {featured.map((item) => {
-            const Icon = item.icon;
-            return (
-              <article className="itx-card" key={item.name} style={{ "--itx-accent": item.accent } as CSSProperties}>
-                <div className="itx-card-head">
-                  <span className="itx-card-ic">
-                    <Icon size={24} />
-                  </span>
-                  <span className="itx-tag">{item.tag}</span>
-                </div>
-                <h3>{item.name}</h3>
-                <p>{item.text}</p>
-                <ul className="itx-points">
-                  {item.points.map((point) => (
-                    <li key={point}>
-                      <CheckCircle2 size={15} /> {point}
-                    </li>
-                  ))}
-                </ul>
-                <div className="itx-card-foot">
-                  <span className="itx-sync">
-                    <RefreshCcw size={14} /> {item.sync}
-                  </span>
-                  {item.link && (
-                    <a className="itx-learn" href={item.link.href}>
-                      {item.link.label} <ArrowRight size={14} />
-                    </a>
-                  )}
-                </div>
+      </section>
+
+      {/* 3 · The directory */}
+      <section
+        className="cpx-section itx-directory cpx-light"
+        id="itx-directory"
+        tabIndex={-1}
+        aria-labelledby="itx-directory-title"
+        data-reveal
+      >
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow-2">The directory</span>
+            <h2 className="cpx-statement-sm" id="itx-directory-title">
+              Everything else your team already uses.
+            </h2>
+            <p className="cpx-body">Built on an open REST API and webhooks, with new connectors shipping through launch.</p>
+          </div>
+          <div className="itx-cat-grid">
+            {categories.map((cat, index) => {
+              const Icon = cat.icon;
+              return (
+                <article className="itx-cat" key={cat.title} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                  <div className="itx-cat-head">
+                    <span className="itx-cat-ic">
+                      <Icon size={18} />
+                    </span>
+                    <h3>{cat.title}</h3>
+                  </div>
+                  <div className="itx-pills">
+                    {cat.tools.map((tool) => (
+                      <span className="itx-pill" key={tool}>
+                        {tool}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 4 · How a connection is made */}
+      <section className="cpx-section pov-featured itx-steps" id="itx-steps" tabIndex={-1} aria-labelledby="itx-steps-title" data-reveal>
+        <div className="pov-featured-bg" aria-hidden="true">
+          <WxBloomField seed={31} />
+        </div>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="pov-tag">How it works</span>
+            <h2 className="cpx-statement" id="itx-steps-title">
+              Connected in three steps.
+            </h2>
+          </div>
+          <div className="itx-steps-grid">
+            {steps.map((step, index) => (
+              <article className="itx-step" data-reveal style={{ "--i": index } as CSSProperties} key={step.n}>
+                <span className="itx-step-n">{step.n}</span>
+                <strong>{step.title}</strong>
+                <p>{step.text}</p>
               </article>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </section>
 
-      <section data-reveal>
-        <div className="itx-sec-head">
-          <span className="wx-eyebrow-2">The directory</span>
-          <h2>Everything else your team already uses.</h2>
-          <p>Built on an open REST API and webhooks, with new connectors shipping through launch.</p>
-        </div>
-        <div className="itx-cats">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            return (
-              <div className="itx-cat" key={cat.title}>
-                <div className="itx-cat-head">
-                  <span className="itx-cat-ic">
+      {/* 5 · What procurement asks */}
+      <section className="cpx-section itx-trust cpx-light" id="itx-trust" tabIndex={-1} aria-labelledby="itx-trust-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow-2">Built for IT &amp; security</span>
+            <h2 className="cpx-statement-sm" id="itx-trust-title">
+              The answers procurement asks for.
+            </h2>
+          </div>
+          <div className="itx-trust-grid">
+            {trust.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <article className="itx-trust-item" key={item.title} data-reveal style={{ "--i": index % 4 } as CSSProperties}>
+                  <span className="itx-trust-ic">
                     <Icon size={18} />
                   </span>
-                  <h3>{cat.title}</h3>
-                </div>
-                <div className="itx-pills">
-                  {cat.tools.map((tool) => (
-                    <span className="itx-pill" key={tool}>
-                      {tool}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+                  <strong>{item.title}</strong>
+                  <p>{item.text}</p>
+                </article>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      <section className="csx-steps-sec" data-reveal>
-        <div className="csx-steps-head">
-          <span className="wx-eyebrow-2">How it works</span>
-          <h2>Connected in three steps.</h2>
-        </div>
-        <div className="csx-steps">
-          {steps.map((step, index) => (
-            <article className="csx-step" data-reveal style={{ "--i": index } as CSSProperties} key={step.n}>
-              <span className="csx-step-n">{step.n}</span>
-              <strong>{step.title}</strong>
-              <p>{step.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="itx-trust" data-reveal>
-        <div className="itx-trust-head">
-          <span className="wx-eyebrow-2">Built for IT &amp; security</span>
-          <h2>The answers procurement asks for.</h2>
-        </div>
-        <div className="itx-trust-grid">
-          {trust.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div className="itx-trust-item" key={item.title}>
-                <span className="itx-trust-ic">
-                  <Icon size={17} />
-                </span>
-                <strong>{item.title}</strong>
-                <p>{item.text}</p>
-              </div>
-            );
-          })}
+      {/* 6 · Closing advert */}
+      <section className="cpx-section cpx-cta pov-cta-band" id="itx-cta" aria-labelledby="itx-cta-title" data-reveal>
+        <div className="cpx-inner cpx-cta-grid">
+          <div className="cpx-cta-copy">
+            <h2 id="itx-cta-title">Connect the tools your office already runs on.</h2>
+            <p>
+              Don&rsquo;t see your tool? Tell us what you run and we&rsquo;ll wire it up &mdash; or build it yourself on our open API. Most
+              requests ship within a release or two.
+            </p>
+            <div className="cpx-cta-actions">
+              <button type="button" className="cpx-cta-btn primary" onClick={onContactSales}>
+                Request an integration
+              </button>
+              <button type="button" className="cpx-cta-btn secondary" onClick={onGetStarted}>
+                Try BuildFlow free
+              </button>
+            </div>
+          </div>
+          <div className="cpx-cta-visual" aria-hidden="true">
+            <img className="cpx-cta-logo" src="/buildflow-logo.png" alt="" loading="lazy" />
+            <img className="cpx-cta-photo" src={WELCOME_ITEM_IMAGES["Production Reports"]} alt="" loading="lazy" />
+          </div>
         </div>
       </section>
 
-      <section className="itx-cta" data-reveal>
-        <h2>Don&rsquo;t see your tool?</h2>
-        <p>
-          Tell us what you run and we&rsquo;ll wire it up &mdash; or build it yourself on our open API. Most requests ship within a release
-          or two.
-        </p>
-        <div className="itx-cta-actions">
-          <WxMagnetic className="wx-btn wx-btn-ink" onClick={onContactSales} ariaLabel="Request an integration">
-            Request an integration <ArrowRight size={16} />
-          </WxMagnetic>
-          <WxMagnetic className="wx-btn wx-btn-line" onClick={onGetStarted} ariaLabel="Try BuildFlow free">
-            Try BuildFlow free
-          </WxMagnetic>
+      {/* 7 · FAQ, directly above the footer */}
+      <section className="cpx-section cpx-faq" id="itx-faq" aria-labelledby="itx-faq-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-reasons-head">
+            <h2 id="itx-faq-title">Frequently asked questions.</h2>
+            <a className="cpx-reasons-link" href="#help-center">
+              Visit the help center <ChevronRight size={18} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="cpx-faq-list">
+            {INTEGRATION_FAQS.map((item, index) => (
+              <details className="cpx-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <summary>
+                  {item.q}
+                  <ChevronDown className="cpx-faq-chevron" size={20} aria-hidden="true" />
+                </summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 

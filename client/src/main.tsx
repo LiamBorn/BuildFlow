@@ -36,6 +36,7 @@ import "./product-overview.css";
 import "./updates-page.css";
 import "./reviews-page.css";
 import "./help-center-page.css";
+import "./integrations-page.css";
 import "./account-redesign.css";
 import "./compare-plans-redesign.css";
 import "./contact-sales-redesign.css";
