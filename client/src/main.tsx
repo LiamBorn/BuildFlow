@@ -72,6 +72,7 @@ import "./setup-stage.css"; // the animation a new workspace shows while the ser
 import "./tutorial-stage.css"; // the onboarding tutorial, on the reference recording's design
 import "./meetings-panel.css"; // the Dashboard's Meetings panel (Google Calendar / Outlook)
 import "./plan-upgrade.css"; // the top bar's Upgrade button and its plan menu
+import "./notifications-panel.css"; // the notifications drawer, on the reference's layout
 
 initAnalytics();
 

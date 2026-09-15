@@ -1,0 +1,446 @@
+/* ============================================================================
+   notifications-panel.css — the notifications drawer (NotificationsPanel.tsx).
+
+   Laid out like monday's: a wide panel from the right with a big title, a
+   settings button, a "more" menu and a close; three tabs with counts; a search
+   field beside an unread-only toggle; the list; and an empty state that says
+   what it means. Painted in BuildFlow's own language — the semantic tones the
+   rest of the app uses for a notification, the app's radius ladder, its ink.
+
+   It replaces a 420px dropdown. The old rules are `.notifications-panel` in
+   styles.css and are left alone: nothing renders them now.
+   ========================================================================== */
+.bfnt {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* monday's drawer is most of the window; this is the same idea inside the app's own
+     measure, and it stops short of the viewport edge so the shell still reads as the frame */
+  width: min(720px, calc(100vw - 40px));
+  max-height: min(660px, calc(100vh - 96px));
+  overflow: hidden;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-panel, 8px);
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink, #1c1c1a);
+  box-shadow: var(--bf-shadow-float, 0 24px 70px rgba(28, 28, 26, 0.14));
+  font-family: var(--bf-font-active, Inter, ui-sans-serif, system-ui, sans-serif);
+  text-align: left;
+}
+
+/* ---- the header ------------------------------------------------------- */
+.bfnt-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px 12px;
+}
+.bfnt-head h2 {
+  margin: 0;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.bfnt-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bfnt-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--bf-radius-control, 6px);
+  background: transparent;
+  color: var(--bf-ink-muted, #575550);
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.16s) ease,
+    color var(--bf-dur-hover, 0.16s) ease;
+}
+.bfnt-icon:hover {
+  background: var(--bf-hover, #f5f5f5);
+  color: var(--bf-ink, #1c1c1a);
+}
+.bfnt-head-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--bf-line-solid, #e6e8f0);
+}
+.bfnt-more {
+  position: relative;
+}
+.bfnt-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2;
+  min-width: 190px;
+  padding: 5px;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-surface, #ffffff);
+  box-shadow: var(--bf-shadow-raised, 0 4px 12px rgba(28, 28, 26, 0.08));
+}
+.bfnt-more-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.bfnt-more-menu button:hover:not(:disabled) {
+  background: var(--bf-hover, #f5f5f5);
+}
+.bfnt-more-menu button:disabled {
+  color: var(--bf-ink-muted, #575550);
+  cursor: default;
+}
+
+/* ---- the tabs --------------------------------------------------------- */
+.bfnt-tabs {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--bf-line-soft, #eef0f4);
+}
+.bfnt-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px 11px;
+  border: 0;
+  /* the underline is the selected state, as it is in the reference */
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--bf-dur-hover, 0.16s) ease,
+    border-color var(--bf-dur-hover, 0.16s) ease;
+}
+.bfnt-tab:hover {
+  color: var(--bf-ink, #1c1c1a);
+}
+.bfnt-tab.is-active {
+  border-bottom-color: var(--bf-accent-fill, #2563eb);
+  color: var(--bf-ink, #1c1c1a);
+}
+.bfnt-tab-count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bf-hover, #f5f5f5);
+  color: var(--bf-ink-muted, #575550);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bfnt-tab.is-active .bfnt-tab-count {
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.12);
+  color: var(--bf-accent-dark, #1f57e0);
+}
+
+/* ---- search and the unread toggle ------------------------------------ */
+.bfnt-filter {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+}
+.bfnt-search {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink-muted, #575550);
+}
+.bfnt-search:focus-within {
+  border-color: var(--bf-accent, #2f6bff);
+}
+.bfnt-search input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: var(--bf-ink, #1c1c1a);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: 0;
+}
+.bfnt-search input::placeholder {
+  color: var(--bf-ink-muted, #575550);
+}
+
+.bfnt-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* The checkbox stays in the accessibility tree and keeps the keyboard; the track beside it
+   is what is painted. `appearance: none` would leave nothing for a focus ring to land on. */
+.bfnt-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.bfnt-toggle-track {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 19px;
+  border-radius: 999px;
+  background: var(--bf-line-solid, #e6e8f0);
+  transition: background var(--bf-dur-hover, 0.16s) ease;
+}
+.bfnt-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--bf-surface, #ffffff);
+  box-shadow: 0 1px 2px rgba(28, 28, 26, 0.2);
+  transition: transform var(--bf-dur-hover, 0.16s) var(--bf-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.bfnt-toggle input:checked + .bfnt-toggle-track {
+  background: var(--bf-accent-fill, #2563eb);
+}
+.bfnt-toggle input:checked + .bfnt-toggle-track::after {
+  transform: translateX(15px);
+}
+.bfnt-toggle input:focus-visible + .bfnt-toggle-track {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 2px;
+}
+
+/* ---- the list --------------------------------------------------------- */
+.bfnt-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--bf-line-soft, #eef0f4);
+}
+.bfnt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--bf-line-soft, #eef0f4);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--bf-dur-hover, 0.16s) ease;
+}
+.bfnt-row:hover {
+  background: var(--bf-hover, #f5f5f5);
+}
+/* Read is quieter, not hidden: the row is still there and still says the same thing. */
+.bfnt-row.is-read .bfnt-row-body strong {
+  font-weight: 600;
+  color: var(--bf-ink-muted, #575550);
+}
+.bfnt-row-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--bf-radius-control, 6px);
+}
+/* the six tones buildNotificationItems assigns, in the app's own semantic colours */
+.bfnt-row.blue .bfnt-row-mark {
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.12);
+  color: var(--bf-accent-dark, #1f57e0);
+}
+.bfnt-row.green .bfnt-row-mark {
+  background: rgba(19, 138, 66, 0.12);
+  color: #138a42;
+}
+.bfnt-row.amber .bfnt-row-mark {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
+}
+.bfnt-row.red .bfnt-row-mark {
+  background: rgba(197, 34, 31, 0.12);
+  color: #c5221f;
+}
+.bfnt-row.violet .bfnt-row-mark {
+  background: rgba(109, 40, 217, 0.12);
+  color: #6d28d9;
+}
+.bfnt-row.slate .bfnt-row-mark {
+  background: var(--bf-hover, #f5f5f5);
+  color: var(--bf-ink-muted, #575550);
+}
+.bfnt-row-body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.bfnt-row-body strong {
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.bfnt-row-body p {
+  margin: 0;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.bfnt-row-meta {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+.bfnt-row-meta time {
+  color: var(--bf-ink-muted, #575550);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* A row that goes somewhere says so. The chevron holds a 12px lane at all times so the row's
+   three columns do not shift on hover; only its opacity changes. */
+.bfnt-row-go {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 12px;
+  margin-left: -4px;
+  padding-top: 2px;
+  color: var(--bf-ink-muted, #575550);
+  opacity: 0.45;
+  transition:
+    opacity var(--bf-dur-hover, 0.16s) ease,
+    transform var(--bf-dur-hover, 0.16s) ease;
+}
+.bfnt-row.is-link:hover .bfnt-row-go,
+.bfnt-row.is-link:focus-visible .bfnt-row-go {
+  color: var(--bf-accent-dark, #1f57e0);
+  opacity: 1;
+  transform: translateX(2px);
+}
+.bfnt-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bf-accent-fill, #2563eb);
+}
+
+/* ---- the empty state -------------------------------------------------- */
+.bfnt-empty {
+  display: grid;
+  flex: 1;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 46px 34px 54px;
+  border-top: 1px solid var(--bf-line-soft, #eef0f4);
+  text-align: center;
+}
+.bfnt-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.1);
+  color: var(--bf-accent-dark, #1f57e0);
+}
+.bfnt-empty strong {
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 16px;
+  font-weight: 700;
+}
+.bfnt-empty p {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--bf-ink-muted, #575550);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.bfnt-empty-action {
+  margin-top: 4px;
+  padding: 9px 16px;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink, #1c1c1a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bfnt-empty-action:hover {
+  background: var(--bf-hover, #f5f5f5);
+}
+
+/* On a narrow window the drawer takes the width it can get, and the tabs scroll
+   rather than wrapping into a second row that would push the list down. */
+@media (max-width: 760px) {
+  .bfnt {
+    width: calc(100vw - 20px);
+  }
+  .bfnt-tabs {
+    overflow-x: auto;
+  }
+  .bfnt-filter {
+    flex-wrap: wrap;
+  }
+}
+
+/* RULE R: the only thing here that moves is the toggle's knob. */
+@media (prefers-reduced-motion: reduce) {
+  .bfnt-row-go,
+  .bfnt-row.is-link:hover .bfnt-row-go,
+  .bfnt-row.is-link:focus-visible .bfnt-row-go {
+    transition: none;
+    transform: none;
+  }
+  .bfnt-toggle-track::after {
+    transition: none;
+  }
+}

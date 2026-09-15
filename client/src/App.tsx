@@ -22246,13 +22246,19 @@ function Sidebar({
   );
 }
 
-type NotificationItem = {
+export type NotificationItem = {
   id: string;
   title: string;
   detail: string;
   timestamp: string;
   tone: "blue" | "green" | "amber" | "red" | "violet" | "slate";
   icon: typeof Grid2X2;
+  /**
+   * The project the notification is about, where there is one. Added 2026-09-14 so the
+   * panel's third tab can mean something real — "the projects I manage" is derivable from
+   * `project.managerId`, where an "assigned to me" tab would have nothing behind it.
+   */
+  projectId?: string;
 };
 
 function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
@@ -22266,7 +22272,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${user.name} updated ${projectName(data, update.projectId)}: ${update.message}`,
       timestamp: update.createdAt,
       tone: update.status === "DelayIQed" || update.status === "At Risk" ? "red" : "green",
-      icon: ClipboardList
+      icon: ClipboardList,
+      projectId: update.projectId,
     });
   });
 
@@ -22277,7 +22284,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${alert.title} for ${alert.projectId ? projectName(data, alert.projectId) : "all projects"} - ${alert.details}`,
       timestamp: alert.startsAt,
       tone: alert.severity === "High" ? "red" : alert.severity === "Medium" ? "amber" : "blue",
-      icon: CloudSun
+      icon: CloudSun,
+      projectId: alert.projectId ?? undefined,
     });
   });
 
@@ -22288,7 +22296,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${delayIQ.title} is ${delayIQ.status.toLowerCase()} on ${projectName(data, delayIQ.projectId)} with ${delayIQ.impactDays} day impact.`,
       timestamp: delayIQ.reportedAt,
       tone: delayIQ.severity === "High" ? "red" : delayIQ.severity === "Medium" ? "amber" : "slate",
-      icon: ShieldAlert
+      icon: ShieldAlert,
+      projectId: delayIQ.projectId,
     });
   });
 
@@ -22301,7 +22310,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${crew?.name ?? "Crew"} is assigned to ${job?.name ?? "scheduled work"} with ${assignment.status.toLowerCase()} status.`,
       timestamp: assignment.date,
       tone: assignment.conflicts.length ? "red" : "blue",
-      icon: CalendarDays
+      icon: CalendarDays,
+      projectId: job?.projectId,
     });
   });
 
@@ -22312,7 +22322,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${inspection.title} is ${inspection.status.toLowerCase()} for ${projectName(data, inspection.projectId)}.`,
       timestamp: inspection.scheduledAt,
       tone: inspection.status === "Complete" ? "green" : "violet",
-      icon: CheckCircle2
+      icon: CheckCircle2,
+      projectId: inspection.projectId,
     });
   });
 
@@ -22323,7 +22334,8 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       detail: `${material.name} is ${material.status.toLowerCase()} for ${projectName(data, material.projectId)}.`,
       timestamp: material.deliveryDate,
       tone: material.status === "Missing" ? "red" : material.status === "Ready" ? "green" : "amber",
-      icon: PackageCheck
+      icon: PackageCheck,
+      projectId: material.projectId,
     });
   });
 
@@ -22526,7 +22538,9 @@ function TopBar({
   const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
   const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationItems = useMemo(() => buildNotificationItems(data), [data]);
-  const notificationCount = notificationItems.length;
+  const readNotifications = useReadNotifications(data.activeUser.id);
+  // the badge is the UNREAD count now, not the total: a badge that never goes down is noise
+  const notificationCount = notificationItems.filter((item) => !readNotifications.isRead(item.id)).length;
   const notificationPanelId = reportsMode ? "reports-notifications-panel" : "notifications-panel";
   const accountMenuId = reportsMode ? "reports-account-menu" : "account-menu";
   const notificationRef = useRef<HTMLDivElement | null>(null);
@@ -22791,39 +22805,14 @@ function TopBar({
             {notificationCount > 0 && <span className="bubble">{notificationCount}</span>}
           </button>
           {isNotificationsOpen && (
-            <section className="notifications-panel" id={notificationPanelId} aria-label="Recent BuildFlow activity">
-              <header>
-                <span>Notifications</span>
-                <strong>Recent BuildFlow activity</strong>
-              </header>
-              {/* APPROVED: the empty state. A fresh workspace showed an empty
-                  420px card with a header and nothing under it. The region and its
-                  accessible name are untouched, because tutorial.test.tsx asserts
-                  this panel by role and name. */}
-              {notificationItems.length === 0 && (
-                <p className="notifications-empty">
-                  No BuildFlow activity yet. Delays, assignments and conflicts will
-                  appear here as your crews start reporting.
-                </p>
-              )}
-              <div className="notifications-list">
-                {notificationItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <article key={item.id} className={`notification-item ${item.tone}`}>
-                      <span className="notification-icon">
-                        <Icon size={17} />
-                      </span>
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.detail}</p>
-                        <time>{formatNotificationTimestamp(item.timestamp)}</time>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
+            <NotificationsPanel
+              id={notificationPanelId}
+              items={notificationItems}
+              data={data}
+              read={readNotifications}
+              onOpenSettings={onOpenSettings}
+              onClose={() => setIsNotificationsOpen(false)}
+            />
           )}
         </div>
         <button
@@ -40912,11 +40901,6 @@ function formatDateTime(value: string) {
     hour: "numeric",
     minute: "2-digit"
   }).format(new Date(value));
-}
-
-function formatNotificationTimestamp(value: string) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatDate(value);
-  return formatDateTime(value);
 }
 
 function formatTime(value: string) {
