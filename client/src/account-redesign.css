@@ -1836,4 +1836,10 @@ button.acct-hint-center {
   border-color: rgba(180, 64, 75, 0.4);
   color: #b4404b;
 }
-.settings-role-select { width: auto; min-width: 170px; padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
+.settings-role-select {
+  width: auto;
+  min-width: 170px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 13px;
+}

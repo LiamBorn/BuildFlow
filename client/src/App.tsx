@@ -34,38 +34,18 @@ import {
 import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS, type Transform } from "@dnd-kit/utilities";
 import {
-  Link2,
   AlertTriangle,
   ArrowRight,
-  ArrowUpRight,
   ArrowUp,
-  Bookmark,
-  Brain,
-  FolderKanban,
-  History,
-  Lightbulb,
-  Maximize2,
-  Minimize2,
-  MessageSquare,
-  Package,
-  PanelLeftClose,
   ArrowLeft,
   CalendarClock,
-  ContactRound,
-  Copy,
-  CircleDollarSign,
-  Globe,
-  Kanban,
-  Handshake,
-  ListTodo,
-  Mail,
-  MailCheck,
-  MessageSquareText,
-  Phone,
-  StickyNote,
   Upload,
+  ArrowUpRight,
   Bell,
+  Bookmark,
   Boxes,
+  Brain,
+  BrickWall,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -76,54 +56,70 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  CircleArrowUp,
+  CircleDollarSign,
   ClipboardCheck,
   ClipboardList,
   Clock,
   CloudSun,
   Construction,
-  Warehouse,
-  BrickWall,
-  Fan,
-  Shovel,
-  Trees,
-  Paintbrush,
-  Droplets,
+  ContactRound,
+  Copy,
+  CreditCard,
+  Database,
+  DollarSign,
   Download,
+  Droplets,
   Eye,
   EyeOff,
-  Minus,
-  DollarSign,
+  Fan,
+  FileUp,
+  FolderKanban,
   Gauge,
+  Globe,
   Globe2,
   Grid2X2,
   GripVertical,
   FileText,
-  FileUp,
   Hammer,
+  Handshake,
   HardHat,
-  Image as ImageIcon,
   HelpCircle,
+  History,
+  Image as ImageIcon,
   ImagePlus,
+  Kanban,
   Layers,
+  Lightbulb,
   LineChart,
+  Link2,
   List,
-  SquareKanban,
-  Star,
-  Table2,
-  LogOut,
+  ListTodo,
   Loader2,
+  LogOut,
+  Mail,
+  MailCheck,
   Map,
   MapPin,
+  Maximize2,
   MessageCircle,
+  MessageSquare,
+  MessageSquareText,
   Mic,
+  Minimize2,
+  Minus,
   MousePointer2,
   Navigation,
+  Package,
+  PackageCheck,
+  Paintbrush,
+  PanelLeftClose,
   Paperclip,
   Pause,
   PauseCircle,
-  Play,
-  PackageCheck,
   Pencil,
+  Phone,
+  Play,
   PlayCircle,
   Plus,
   RefreshCcw,
@@ -131,25 +127,29 @@ import {
   Route,
   Search,
   Send,
+  Server,
   Settings,
   Share2,
   ShieldAlert,
   ShoppingCart,
+  Shovel,
   SlidersHorizontal,
   Sparkles,
+  SquareKanban,
+  Star,
+  StickyNote,
+  Table2,
   Timer,
-  TrendingUp,
-  TrendingDown,
   Trash2,
+  Trees,
+  TrendingDown,
+  TrendingUp,
   Truck,
   Users,
+  Warehouse,
   Wrench,
   X,
-  Zap,
-  CircleArrowUp,
-  CreditCard,
-  Database,
-  Server
+  Zap
 } from "lucide-react";
 import {
   Bar,
@@ -292,6 +292,7 @@ import {
 } from "./api";
 import { announcementIsLive } from "./announcements";
 import { statusTone, toLocalIsoDate, weekDays } from "./schedule/scheduleUtils";
+import { startOfScheduleWeek } from "./schedule/week";
 import {
   EMPTY_SCHEDULE_CONTEXT,
   consumeScheduleDeepLink,
@@ -360,6 +361,11 @@ import { animate } from "framer-motion";
 import { track, trackPageView, EVENTS } from "./analytics";
 import { startPlanCheckout, readCheckoutReturn, type CheckoutPlanId } from "./billing";
 import { PreferencesMenu } from "./PreferencesMenu";
+import { SetupStage, useSetupStage } from "./SetupStage";
+import { TutorialStage } from "./TutorialStage";
+import { MeetingsPanel } from "./MeetingsPanel";
+import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
+import { useRecordFocus, usePanelFocus, type RecordFocusRequest } from "./recordFocus";
 import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
 
 type Page =
@@ -2461,11 +2467,7 @@ function App() {
      shell's className because App has three early returns below this point --
      a hook after one of them changes the hook order between renders, which is
      exactly the error it produced the first time. */
-  const appPreferences = usePreferences(
-    serverUserSettings[PREFERENCES_SETTING],
-    `bf:prefs:${activeUser?.id ?? "anon"}`,
-    apiSetUserSetting
-  );
+  const appPreferences = usePreferences(serverUserSettings[PREFERENCES_SETTING], `bf:prefs:${activeUser?.id ?? "anon"}`, apiSetUserSetting);
   // bookmarked schedule views: a page as it is (week, month, filters), kept as its link
   const { links: linkBookmarks, toggle: toggleLinkBookmark } = useLinkBookmarks(activeUser?.id ?? "anon");
 
@@ -2868,23 +2870,23 @@ function App() {
           width for its own 14-category rail and two nav rails side by side is what
           the original gate was avoiding. */}
       <TopBar
-          onOpenSearch={() => setPaletteOpen(true)}
-          data={data}
-          reportsMode={page === "reports"}
-          onOpenSettings={openSettingsPage}
-          preferences={appPreferences}
-          onStartTutorial={startTutorial}
-          onLogout={handleLogout}
-          setPage={setPage}
-          onAskAi={toggleAssistant}
-          onCreateRecord={(target) => setCreateRequest({ page: target, nonce: Date.now() })}
-          bookmarks={bookmarks}
-          currentPage={page}
-          onToggleBookmark={toggleBookmark}
-          links={linkBookmarks}
-          onToggleLink={toggleLinkBookmark}
-          scheduleLink={() => (isSchedulePage(page) ? scheduleLinkFor(page, readScheduleContext(data.activeUser.id), data) : null)}
-        />
+        onOpenSearch={() => setPaletteOpen(true)}
+        data={data}
+        reportsMode={page === "reports"}
+        onOpenSettings={openSettingsPage}
+        preferences={appPreferences}
+        onStartTutorial={startTutorial}
+        onLogout={handleLogout}
+        setPage={setPage}
+        onAskAi={toggleAssistant}
+        onCreateRecord={(target) => setCreateRequest({ page: target, nonce: Date.now() })}
+        bookmarks={bookmarks}
+        currentPage={page}
+        onToggleBookmark={toggleBookmark}
+        links={linkBookmarks}
+        onToggleLink={toggleLinkBookmark}
+        scheduleLink={() => (isSchedulePage(page) ? scheduleLinkFor(page, readScheduleContext(data.activeUser.id), data) : null)}
+      />
       <div className="hs-body">
         {page !== "settings" && (
           <Sidebar
@@ -3587,13 +3589,14 @@ function WelcomePage({
   const finishOnboarding = async (selectedPlan: ProductPlanId, selectedProducts: OnboardingProductId[], seats: number) => {
     track(EVENTS.planChosen, { plan: selectedPlan, addOns: selectedProducts.length, seats });
     setPendingSetup({ selectedPlan, selectedProducts, seats });
-    await onCompleteOnboarding({
-      businessType: pendingBusinessType || fallbackBusinessType,
-      selectedPlan,
-      selectedProducts,
-      seats,
-      destinationPage: "inviteTeam"
-    });
+      await onCompleteOnboarding({
+        businessType: pendingBusinessType || fallbackBusinessType,
+        selectedPlan,
+        selectedProducts,
+        seats,
+        destinationPage: "inviteTeam"
+      });
+    } finally {
   };
   const finishInviteStep = () => {
     setPendingSetup(null);
@@ -6255,9 +6258,27 @@ function WelcomeProductOverviewPage({
         kind: "list",
         title: "Ask BuildFlow AI",
         items: [
-          { icon: Sparkles, title: "\u201cWhat is at risk this week?\u201d", sub: "3 jobs trending late \u00b7 1 blocked on locates", badge: "ANSWER", tone: "ready" },
-          { icon: Users, title: "\u201cWho is free Thursday?\u201d", sub: "Utility 1 and Finish 3 \u00b7 both under 70%", badge: "ANSWER", tone: "ready" },
-          { icon: Clock, title: "\u201cWhat if the deck pour slips?\u201d", sub: "Handover moves to the 24th", badge: "WHAT-IF", tone: "wait" }
+          {
+            icon: Sparkles,
+            title: "\u201cWhat is at risk this week?\u201d",
+            sub: "3 jobs trending late \u00b7 1 blocked on locates",
+            badge: "ANSWER",
+            tone: "ready"
+          },
+          {
+            icon: Users,
+            title: "\u201cWho is free Thursday?\u201d",
+            sub: "Utility 1 and Finish 3 \u00b7 both under 70%",
+            badge: "ANSWER",
+            tone: "ready"
+          },
+          {
+            icon: Clock,
+            title: "\u201cWhat if the deck pour slips?\u201d",
+            sub: "Handover moves to the 24th",
+            badge: "WHAT-IF",
+            tone: "wait"
+          }
         ]
       }
     },
@@ -9907,6 +9928,8 @@ type ProductPageContent = {
   rows: Array<{ kicker: string; title: string; text: string; ctaLabel: string; tab?: number; seed: number; mock: WxMockSpec }>;
   reasons: Array<{ slot: CrewMediaSlot; label: string; title: string; text: string; more: string }>;
   cta: { title: string; text: string };
+  /** Optional accordion above the footer. Omit and the page ends at the advert. */
+  faqs?: Array<{ q: string; a: string }>;
 };
 
 /** Renders a CsMockSpec inside the browser-chrome mock the product pages use. */
@@ -10295,7 +10318,33 @@ const CREW_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Plan the week on Friday. Run it on Monday.",
     text: "Crews, jobs, materials, and the field on one schedule. Start free, and see your first week planned in minutes."
-  }
+  },
+  faqs: [
+    {
+      q: "How long does it take to plan a week?",
+      a: "Most planners have their first week on the board in under an hour. Import the crews and jobs you already track, drop them onto the days that suit, and the board tells you straight away where the week does not fit."
+    },
+    {
+      q: "What counts as a conflict?",
+      a: "A crew booked on two jobs at the same time, a crew over its hours for the day, or a job scheduled before the work it depends on is finished. Each one is flagged on the board as you build the week, not after you publish it."
+    },
+    {
+      q: "Can a crew be split across two jobs in a day?",
+      a: "Yes. Book part of the day to each job and the capacity bar counts both. The crew shows as loaded rather than double-booked, so a half day of paving and a half day of prep reads as a full day."
+    },
+    {
+      q: "What happens when the field runs behind?",
+      a: "Progress from the field raises a priced variance rather than moving anything. A planner accepts or rejects it, and only then do the dates shift. The published week stays trustworthy because nothing changes behind your back."
+    },
+    {
+      q: "Do foremen need the full product?",
+      a: "No. Crews see their own assignments on a phone, with the job, the time, the site and what is expected that day. Planning stays with the people who plan."
+    },
+    {
+      q: "Can we keep using our current scheduler?",
+      a: "For a while, yes. Schedules import from Primavera P6 and Microsoft Project, so you can plan a week here against what you already have before you commit to moving."
+    }
+  ]
 };
 
 const SCHEDULE_AI_PAGE_CONTENT: ProductPageContent = {
@@ -10589,7 +10638,33 @@ const SCHEDULE_AI_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Let the schedule watch itself.",
     text: "Suggestions, early warnings and recovery options on the plan your crews already run. Start free, and see next week drafted in minutes."
-  }
+  },
+  faqs: [
+    {
+      q: "Does the AI change the schedule on its own?",
+      a: "No. Every suggestion, warning and recovery option is a proposal you accept, edit or ignore. Nothing is booked and no date moves until a planner says so."
+    },
+    {
+      q: "What does it read to draft a week?",
+      a: "The work that is ready, the crews that are free, the sequence the job runs in, and the forecast for each site. It is your live schedule, not a generic template."
+    },
+    {
+      q: "How does DelayIQ know a job is slipping?",
+      a: "It measures each job against its planned production rate. When one drifts, it names the job, shows the work waiting behind it, and says how much of the float is gone."
+    },
+    {
+      q: "How far ahead does the weather planning look?",
+      a: "Five days. Pours, trenching and crane picks are matched against the forecast for each site, so a rain day becomes a planned move on Monday rather than a scramble on Wednesday."
+    },
+    {
+      q: "What can I ask BuildFlow AI?",
+      a: "Anything you would ask a planner. What is at risk this week, who is free on Thursday, what happens if a pour slips a day. Answers are drawn from your live jobs, and the what-if leaves the plan untouched."
+    },
+    {
+      q: "Does our data train the model?",
+      a: "No. Your schedule is used to answer your questions and nothing else. It is not used to train a shared model and it is not visible to other companies."
+    }
+  ]
 };
 
 const MAP_FIELD_OPS_PAGE_CONTENT: ProductPageContent = {
@@ -10897,7 +10972,33 @@ const MAP_FIELD_OPS_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Send the crew the short way.",
     text: "Routes, live positions and site conditions on the plan your crews already run. Start free, and see today's runs on the map in minutes."
-  }
+  },
+  faqs: [
+    {
+      q: "Is Map & Field Ops included in our plan?",
+      a: "It is an add-on at $12 per user per month, and it comes with the Business and Enterprise plans. On Free or Pro you can add it to the seats that need it rather than the whole company."
+    },
+    {
+      q: "How are crews and trucks located?",
+      a: "From the phone the crew already carries, while they are on the clock. It is there to route the run and answer where the day is, not to follow anyone home."
+    },
+    {
+      q: "What does route optimization solve for?",
+      a: "Fastest time, least fuel, or a balance of the two. The map shows what each choice costs in minutes and miles before you send the run to the crew."
+    },
+    {
+      q: "Does the map work in the truck?",
+      a: "Yes. The live map, the run list and the site notes all work on a phone, so the plan travels with the crew instead of staying on a screen at the office."
+    },
+    {
+      q: "Is the map a separate system from the schedule?",
+      a: "No. The sites, crews and jobs on the map are the ones on the schedule. Re-route or re-assign on the map and the plan moves with it, so there is no second system to keep in step."
+    },
+    {
+      q: "What happens when a truck runs late?",
+      a: "Re-route and re-assign in seconds, and the crews affected are notified before they roll out. The stops behind the late one are re-ordered rather than left to sort themselves out."
+    }
+  ]
 };
 
 const FIELD_UPDATES_PAGE_CONTENT: ProductPageContent = {
@@ -11192,7 +11293,33 @@ const FIELD_UPDATES_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Know what happened on site, today.",
     text: "Check-ins, photos and delayIQ causes on the plan your crews already run. Start free, and see the first day on the record in minutes."
-  }
+  },
+  faqs: [
+    {
+      q: "How long does an update take a crew?",
+      a: "Seconds. The field log works on a phone in the truck, so a crew posts progress, a note and photos without going back to the office or writing anything up at the end of the day."
+    },
+    {
+      q: "What is a DelayIQ, exactly?",
+      a: "A logged delay with a cause, a severity and a schedule impact in days. Weather, material, labor, equipment, inspection and site conditions are each their own category, so a cause that keeps repeating is visible in the log rather than buried in it."
+    },
+    {
+      q: "Does a field report move the schedule?",
+      a: "Not on its own. A progress report raises a priced variance with the downstream work already rippled, and the office accepts or rejects it. Dates move only when someone decides they should."
+    },
+    {
+      q: "How many photos can ride along with an update?",
+      a: "Up to eight per update, dragged and dropped from the phone. They are timestamped and tied to the job, which is what makes them useful later in a backcharge or a review."
+    },
+    {
+      q: "Can we use this to settle a dispute?",
+      a: "That is much of the point. Timestamped photos and status from the crew who was there replace memory and group chats, so reviews and backcharges are argued from evidence."
+    },
+    {
+      q: "Do crews need their own logins?",
+      a: "Yes, so every update carries the name of the person who posted it. Crews see and post to their own jobs; planning and variance decisions stay with the office."
+    }
+  ]
 };
 
 const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
@@ -11474,7 +11601,33 @@ const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Ready to start means ready to start.",
     text: "Deliveries, vendors and readiness on the plan your crews already run. Start free, and see which jobs can actually start this week."
-  }
+  },
+  faqs: [
+    {
+      q: "What are the delivery statuses?",
+      a: "Ready, ordered, waiting on delivery, or missing. The whole materials list filters by status, quantity and delivery date, so you can see where every order stands without opening a purchase order."
+    },
+    {
+      q: "How is the readiness percent worked out?",
+      a: "Every material a job needs carries a live status, and those roll up into one number for the job. A job at 100 percent has everything on site, not everything promised."
+    },
+    {
+      q: "Does it stop a crew being booked on blocked work?",
+      a: "The readiness gate flags what is missing before dispatch and blocked work stays off the board until it clears. A planner can still override it, but they do so knowing the steel is not there."
+    },
+    {
+      q: "Do we have to move our purchasing into BuildFlow?",
+      a: "No. Keep raising purchase orders where you raise them today. What lives here is the vendor, the purchase order number, the delivery window, the quantity and a note, attached to the job that needs it."
+    },
+    {
+      q: "Who updates a delivery when it lands?",
+      a: "Whoever receives it. Statuses and delivery windows work on a phone, so a foreman can confirm what came off the truck from the yard instead of calling the office."
+    },
+    {
+      q: "What happens when a delivery slips?",
+      a: "The job's readiness drops and the work that depended on it stops reading as ready. The schedule does not re-plan itself, but the planner sees the problem while there is still a week to move something."
+    }
+  ]
 };
 
 const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
@@ -11754,7 +11907,33 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Keep the iron moving.",
     text: "Availability, assignments and maintenance on the plan your crews already run. Start free, and see the whole yard on one board in minutes."
-  }
+  },
+  faqs: [
+    {
+      q: "Is Equipment Tracking included in our plan?",
+      a: "It is an add-on at $9 per user per month, and it comes with the Business and Enterprise plans. On Free or Pro you can add it to the seats that need it rather than the whole company."
+    },
+    {
+      q: "Does this show me where a machine is?",
+      a: "It shows what a machine is doing and which job it is on, not its position on a map. Live vehicle and equipment locations are Map & Field Ops, and the two sit on the same fleet."
+    },
+    {
+      q: "What are the fleet statuses?",
+      a: "Available, in use, or in the shop. Filter the yard by status and type to see what is free to dispatch without walking the yard or making a round of phone calls."
+    },
+    {
+      q: "Can a machine end up double-booked?",
+      a: "No. Equipment already promised to a scheduled job shows as committed, so the schedule only commits iron that is actually free rather than a crane still tied up on another site."
+    },
+    {
+      q: "What happens to a machine due for service?",
+      a: "It is flagged and pulled from the available pool, so it comes off the board before it strands a crew mid-pour. Inspections due are flagged the same way."
+    },
+    {
+      q: "What does utilization tell us?",
+      a: "What is working and what is sitting. Idle iron is money parked in the yard, so seeing utilization per machine is usually what decides whether you rent the next one or move the one you have."
+    }
+  ]
 };
 
 const PRODUCTION_REPORTS_PAGE_CONTENT: ProductPageContent = {
@@ -12045,7 +12224,33 @@ const PRODUCTION_REPORTS_PAGE_CONTENT: ProductPageContent = {
   cta: {
     title: "Run the week on the numbers.",
     text: "KPIs, utilization and backlog from the plan your crews already run. Start free, and see your first production report in minutes."
-  }
+  },
+  faqs: [
+    {
+      q: "Which KPIs are on the dashboard?",
+      a: "Six: on-time completion, schedule variance, crew utilization, equipment utilization, labor hours and active backlog. Each one is rolled up from work your team already did, not entered by hand."
+    },
+    {
+      q: "How current are the numbers?",
+      a: "The report is rebuilt the moment the field posts an update. There is no nightly run and no refresh to remember, so the dashboard you open on Monday morning is Monday morning's."
+    },
+    {
+      q: "Do we have to enter anything to get a report?",
+      a: "No. Reports read the same schedule your crews are booked against and the progress the field already posts. There is no second system to reconcile at month end."
+    },
+    {
+      q: "How far out does the backlog forecast go?",
+      a: "Six months, built from the live schedule. That is enough warning to staff up before a crunch, or to go win work before a gap arrives."
+    },
+    {
+      q: "Can we export the weekly review?",
+      a: "Yes. Pick a period, such as last quarter, last six months or year to date, and export a clean production summary in one click."
+    },
+    {
+      q: "Can we see utilization per crew?",
+      a: "Yes, week over week for each crew. That is how a crew quietly running hot, or one with room to take more, shows up on a chart before it shows up on the schedule."
+    }
+  ]
 };
 
 function WelcomeCrewSchedulingPage({
@@ -12820,6 +13025,31 @@ function WelcomeCrewSchedulingPage({
           </div>
         </div>
       </section>
+
+      {/* FAQ — only for products that carry one, directly above the footer */}
+      {content.faqs ? (
+        <section className="cpx-section cpx-faq" id="cpx-faq" aria-labelledby="cpx-faq-title" data-reveal>
+          <div className="cpx-inner">
+            <div className="cpx-reasons-head">
+              <h2 id="cpx-faq-title">Frequently asked questions.</h2>
+              <a className="cpx-reasons-link" href="#help-center">
+                Visit the help center <ChevronRight size={18} aria-hidden="true" />
+              </a>
+            </div>
+            <div className="cpx-faq-list">
+              {content.faqs.map((item, index) => (
+                <details className="cpx-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                  <summary>
+                    {item.q}
+                    <ChevronDown className="cpx-faq-chevron" size={20} aria-hidden="true" />
+                  </summary>
+                  <p>{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* Footer */}
       <footer className="wx-footer">
@@ -21606,8 +21836,8 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
               ) : (
                 <span className="settings-role-pill">{user.role}</span>
               )}
-              {user.isSample && (
-                confirmingId === `user:${user.id}` ? (
+              {user.isSample &&
+                (confirmingId === `user:${user.id}` ? (
                   <span className="settings-member-confirm" role="group" aria-label={`Confirm removing ${user.name}`}>
                     <button
                       className="settings-member-remove is-confirming"
@@ -21630,16 +21860,15 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
                     </button>
                   </span>
                 ) : (
-                <button
-                  className="settings-member-remove"
-                  type="button"
-                  aria-label={`Remove ${user.name}`}
-                  onClick={() => setConfirmingId(`user:${user.id}`)}
-                >
-                  <Trash2 size={17} />
-                </button>
-                )
-              )}
+                  <button
+                    className="settings-member-remove"
+                    type="button"
+                    aria-label={`Remove ${user.name}`}
+                    onClick={() => setConfirmingId(`user:${user.id}`)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                ))}
             </div>
           </article>
         ))}
@@ -21697,14 +21926,14 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
                       </button>
                     </span>
                   ) : (
-                  <button
-                    className="settings-member-remove"
-                    type="button"
-                    aria-label={`Withdraw invite for ${inv.email}`}
-                    onClick={() => setConfirmingId(`invite:${inv.id}`)}
-                  >
-                    <Trash2 size={17} />
-                  </button>
+                    <button
+                      className="settings-member-remove"
+                      type="button"
+                      aria-label={`Withdraw invite for ${inv.email}`}
+                      onClick={() => setConfirmingId(`invite:${inv.id}`)}
+                    >
+                      <Trash2 size={17} />
+                    </button>
                   )}
                 </div>
               </article>
@@ -23521,13 +23750,12 @@ function DashSection({
         </button>
       )}
       {panel.heading && (
-        <div className="hs-widget-head">
-          <h2>
             {Icon && <Icon size={16} />}
-            {panel.title}
-          </h2>
-        </div>
-      )}
+      <div className="hs-widget-head">
+        <h2>
+          {panel.title}
+        </h2>
+      </div>
       <DashBlockBody title={panel.title}>{panel.body}</DashBlockBody>
       {editable && (
         <button
