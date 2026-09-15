@@ -149,8 +149,10 @@ describe("landing category menus", () => {
 
     fireEvent.click(menuItem(await openMenu("Resources"), "Help Center"));
 
-    expect(await screen.findByRole("heading", { name: "Hi, how can we help you?" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Popular topics" })).toBeInTheDocument();
+    // The page was rebuilt 2026-09-12: "Hi, how can we help you?" is now the lede
+    // under an "Help center" h1, and section headings carry a full stop.
+    expect(await screen.findByRole("heading", { level: 1, name: "Help center" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Popular topics." })).toBeInTheDocument();
     expect(window.location.hash).toBe("#help-center");
   });
 });

@@ -19875,15 +19875,6 @@ const helpTeamCards: Array<{ title: string; icon: typeof Grid2X2 }> = [
   { title: "Admins", icon: ShieldAlert }
 ];
 
-const helpTocItems = [
-  { id: "popular-topics", label: "Popular topics" },
-  { id: "browse-team", label: "Browse by team" },
-  { id: "academy", label: "BuildFlow Academy" },
-  { id: "cost-of-conflicts", label: "Cost of a double-booking" },
-  { id: "faq", label: "FAQ" },
-  { id: "support", label: "Still have questions" }
-];
-
 const helpFaqs: Array<{ q: string; a: string }> = [
   {
     q: "How does BuildFlow stop double-booked crews?",
@@ -19948,8 +19939,6 @@ function WelcomeHelpCenterPage({
   onOpenDashboard: () => void;
 }) {
   const rootRef = useRef<HTMLElement>(null);
-  const [activeSection, setActiveSection] = useState<string>(helpTocItems[0].id);
-  const [openCategory, setOpenCategory] = useState<number | null>(0);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -19970,215 +19959,228 @@ function WelcomeHelpCenterPage({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const sections = helpTocItems.map((item) => document.getElementById(item.id)).filter((el): el is HTMLElement => el !== null);
-    if (!sections.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActiveSection(entry.target.id);
-        });
-      },
-      { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
-    );
-    sections.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <main className="help-center-page" id="help-center" ref={rootRef}>
-      <aside className="help-sidebar" aria-label="Help Center sections">
-        <span className="help-sidebar-title">Help Center</span>
-        <nav>
-          {helpCenterNav.map((category, index) => {
-            const isOpen = openCategory === index;
-            return (
-              <div className={`help-nav-group${isOpen ? " open" : ""}`} key={category.title}>
-                <button
-                  type="button"
-                  className="help-nav-head"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenCategory(isOpen ? null : index)}
-                >
-                  <span>{category.title}</span>
-                  <ChevronRight size={15} className="help-nav-chevron" aria-hidden="true" />
-                </button>
-                <div className="help-nav-sub">
-                  <div className="help-nav-sub-inner">
-                    {category.items.map((item) => (
-                      <a key={item.title} className="help-nav-link">
-                        {item.title}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </nav>
-        <div>
-          <span>Get certified</span>
-          <a href="#academy">BuildFlow Academy</a>
-        </div>
-        <div>
-          <span>Support</span>
-          <a href="#support">Chat with us</a>
-          <a href="#support">Join our community</a>
-          <a href="#support">Find a consultant</a>
-        </div>
-      </aside>
-
-      <div className="help-main">
-        <section className="help-hero" aria-labelledby="help-title" data-reveal>
-          <span className="help-eyebrow">Help Center</span>
-          <h1 id="help-title">Hi, how can we help you?</h1>
-          <label className="help-search" htmlFor="help-search-input">
-            <Search size={24} />
+    <main className="cs-page cpx-page hc-page" id="help-center" ref={rootRef}>
+      <div className="wx-bg" aria-hidden="true">
+        <div className="wx-aurora wx-aurora-1" />
+        <div className="wx-aurora wx-aurora-2" />
+        <div className="wx-aurora wx-aurora-3" />
+      </div>
+      {/* 1 · Help center — the lede and the search */}
+      <section className="cpx-section hc-hero cpx-light" id="hc-hero" tabIndex={-1} aria-labelledby="hc-hero-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow">
+              <span className="wx-dot" /> Help Center
+            </span>
+            <h1 className="pov-title" id="hc-hero-title">
+              Help center
+            </h1>
+            <p className="cpx-body">Hi, how can we help you?</p>
+          </div>
+          <label className="hc-search" htmlFor="help-search-input">
+            <Search size={22} aria-hidden="true" />
             <input id="help-search-input" placeholder="Search for anything..." />
           </label>
-          <div className="help-chip-row" aria-label="Suggested help searches">
+          <div className="hc-chips" aria-label="Suggested help searches">
             {["Billing", "Readiness rules", "Restoring schedules", "Adding members"].map((chip) => (
               <button type="button" key={chip}>
                 {chip}
               </button>
             ))}
           </div>
-        </section>
-
-        <section className="help-section" id="popular-topics" aria-labelledby="popular-topics-title" data-reveal>
-          <h2 id="popular-topics-title">Popular topics</h2>
-          <div className="help-topic-grid">
+        </div>
+      </section>
+      {/* 2 · Popular topics */}
+      <section
+        className="cpx-section pov-why hc-topics"
+        id="popular-topics"
+        tabIndex={-1}
+        aria-labelledby="popular-topics-title"
+        data-reveal
+      >
+        <div className="cpx-inner">
+          <div className="pov-head">
+            <h2 id="popular-topics-title">Popular topics.</h2>
+          </div>
+          <div className="pov-why-grid">
             {helpPopularTopics.map((topic, index) => {
               const Icon = topic.icon;
               return (
-                <article key={topic.title} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
-                  <div>
-                    <h3>{topic.title}</h3>
-                    <p>{topic.text}</p>
-                  </div>
-                  <Icon size={40} />
+                <article className="pov-why-card hc-topic" key={topic.title} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                  <span className="hc-topic-ic">
+                    <Icon size={22} />
+                  </span>
+                  <h3>{topic.title}</h3>
+                  <p>{topic.text}</p>
                 </article>
               );
             })}
           </div>
-        </section>
-
-        <section className="help-section" id="browse-team" aria-labelledby="browse-team-title" data-reveal>
-          <h2 id="browse-team-title">Browse by team</h2>
-          <div className="help-team-grid">
+        </div>
+      </section>
+      {/* 3 · The whole help centre, by category */}
+      <section className="cpx-section hc-browse cpx-paper-bg" id="hc-browse" tabIndex={-1} aria-labelledby="hc-browse-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <h2 className="cpx-statement-sm" id="hc-browse-title">
+              Browse every article.
+            </h2>
+            <p className="cpx-body">Ten categories, from setting up a workspace to fixing a sync problem.</p>
+          </div>
+          <div className="hc-browse-grid">
+            {helpCenterNav.map((category, index) => (
+              <article className="hc-category" key={category.title} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <h3>{category.title}</h3>
+                <ul>
+                  {category.items.map((item) => (
+                    <li key={item.title}>{item.title}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* 4 · Browse by team */}
+      <section className="cpx-section hc-teams cpx-light" id="browse-team" tabIndex={-1} aria-labelledby="browse-team-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="pov-head">
+            <h2 id="browse-team-title">Browse by team.</h2>
+          </div>
+          <div className="hc-team-grid">
             {helpTeamCards.map((team, index) => {
               const Icon = team.icon;
               return (
-                <a key={team.title} href="#help-center" data-reveal style={{ "--i": index % 3 } as CSSProperties}>
-                  <Icon size={22} />
+                <a className="hc-team" key={team.title} href="#help-center" data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                  <span className="hc-team-ic">
+                    <Icon size={20} />
+                  </span>
                   {team.title}
-                  <ArrowRight size={17} />
+                  <ArrowRight size={17} aria-hidden="true" />
                 </a>
               );
             })}
           </div>
-        </section>
-
-        <section className="help-academy" id="academy" aria-labelledby="academy-title" data-reveal>
-          <div>
-            <span className="help-eyebrow">Get certified</span>
-            <h2 id="academy-title">BuildFlow Academy</h2>
-            <p>
+        </div>
+      </section>
+      {/* 5 · BuildFlow Academy */}
+      <section className="cpx-section pov-featured hc-academy" id="academy" tabIndex={-1} aria-labelledby="academy-title" data-reveal>
+        <div className="pov-featured-bg" aria-hidden="true">
+          <WxBloomField seed={31} />
+        </div>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="pov-tag">Get certified</span>
+            <h2 className="cpx-statement" id="academy-title">
+              BuildFlow Academy
+            </h2>
+            <p className="cpx-body">
               Turn curiosity into capability: learn production scheduling, readiness controls, field coordination, and reporting with guided
               lessons.
             </p>
-            <button type="button" className="welcome-blue-button" onClick={onOpenSchedule}>
-              Start learning
-            </button>
-          </div>
-          <div className="help-academy-illustration" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-        </section>
-
-        <section className="help-section help-roi" id="cost-of-conflicts" aria-labelledby="cost-title" data-reveal>
-          <span className="help-eyebrow">The math</span>
-          <h2 id="cost-title">What a double-booking costs you</h2>
-          <p className="help-roi-lede">
-            A double-booked crew rarely moves just one job. It strands a full crew for the day, pushes the work scheduled behind it, and
-            turns the morning into a scramble. Here is what a single conflict tends to cost.
-          </p>
-          <div className="help-roi-stats">
-            <div className="help-roi-stat" data-reveal style={{ "--i": 0 } as CSSProperties}>
-              <div className="help-roi-num">
-                $3,000<span>+/day</span>
-              </div>
-              <p>A full crew standing idle — labor, equipment, and rentals still on the clock with nothing to build.</p>
+            <div className="cpx-hero-actions">
+              <WxMagnetic className="wx-btn wx-btn-ink" onClick={onOpenSchedule} ariaLabel="Start learning">
+                Start learning <ArrowRight size={18} />
+              </WxMagnetic>
+              <WxMagnetic className="wx-btn wx-btn-line" onClick={onOpenDashboard} ariaLabel="Open the command center">
+                Open the command center
+              </WxMagnetic>
             </div>
-            <div className="help-roi-stat" data-reveal style={{ "--i": 1 } as CSSProperties}>
-              <div className="help-roi-num">
+          </div>
+          <div className="pov-featured-stage">
+            <div className="cs-panel cs-hero-panel hc-academy-panel">
+              <img src={WELCOME_ITEM_IMAGES["Help Center"]} alt="" loading="lazy" />
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* 6 · What a double-booking costs */}
+      <section className="cpx-section hc-roi cpx-paper-bg" id="cost-of-conflicts" tabIndex={-1} aria-labelledby="cost-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <span className="wx-eyebrow-2">The math</span>
+            <h2 className="cpx-statement-sm" id="cost-title">
+              What a double-booking costs you.
+            </h2>
+            <p className="cpx-body">
+              A double-booked crew rarely moves just one job. It strands a full crew for the day, pushes the work scheduled behind it, and
+              turns the morning into a scramble. Here is what a single conflict tends to cost.
+            </p>
+          </div>
+          <div className="hc-roi-stats">
+            <div className="hc-roi-stat" data-reveal style={{ "--i": 0 } as CSSProperties}>
+              <b>
+                $3,000<span>+/day</span>
+              </b>
+              <p>A full crew standing idle &mdash; labor, equipment, and rentals still on the clock with nothing to build.</p>
+            </div>
+            <div className="hc-roi-stat" data-reveal style={{ "--i": 1 } as CSSProperties}>
+              <b>
                 2&ndash;3<span>days</span>
-              </div>
+              </b>
               <p>Typical slip once the conflict cascades into the jobs and inspections scheduled behind it.</p>
             </div>
-            <div className="help-roi-stat" data-reveal style={{ "--i": 2 } as CSSProperties}>
-              <div className="help-roi-num">
+            <div className="hc-roi-stat" data-reveal style={{ "--i": 2 } as CSSProperties}>
+              <b>
                 37<span>%</span>
-              </div>
+              </b>
               <p>Fewer double-booked crews in the first 90 days for teams that plan the week on BuildFlow.</p>
             </div>
           </div>
-          <div className="help-roi-note">
-            <p>
-              <strong>BuildFlow catches it before the field does.</strong> The moment you assign a job to a crew that is already committed,
-              the conflict is flagged inline &mdash; before the week is published.{" "}
-              <a href="#schedule-ai">See how Schedule AI spots conflicts &rarr;</a>
-            </p>
+          <p className="hc-roi-note">
+            <strong>BuildFlow catches it before the field does.</strong> The moment you assign a job to a crew that is already committed,
+            the conflict is flagged inline &mdash; before the week is published.{" "}
+            <a href="#schedule-ai">See how Schedule AI spots conflicts &rarr;</a>
+          </p>
+        </div>
+      </section>
+      {/* 7 · FAQ */}
+      <section className="cpx-section cpx-faq" id="faq" tabIndex={-1} aria-labelledby="faq-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-reasons-head">
+            <h2 id="faq-title">Frequently asked questions.</h2>
           </div>
-        </section>
-
-        <section className="help-section help-faq" id="faq" aria-labelledby="faq-title" data-reveal>
-          <h2 id="faq-title">Frequently asked questions</h2>
-          <div className="help-faq-list">
+          <div className="cpx-faq-list">
             {helpFaqs.map((item, index) => (
-              <details className="help-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
-                <summary>{item.q}</summary>
+              <details className="cpx-faq-item" key={item.q} data-reveal style={{ "--i": index % 3 } as CSSProperties}>
+                <summary>
+                  {item.q}
+                  <ChevronDown className="cpx-faq-chevron" size={20} aria-hidden="true" />
+                </summary>
                 <p>{item.a}</p>
               </details>
             ))}
           </div>
-        </section>
-
-        <section className="help-question-section" id="support" aria-labelledby="help-questions-title" data-reveal>
-          <h2 id="help-questions-title">Still have questions?</h2>
-          <div>
+        </div>
+      </section>
+      {/* 8 · Still have questions — the closer, directly above the footer */}
+      <section className="cpx-section cpx-cta pov-cta-band hc-support" id="support" aria-labelledby="help-questions-title" data-reveal>
+        <div className="cpx-inner">
+          <div className="cpx-inner-narrow">
+            <h2 className="cpx-statement-sm" id="help-questions-title">
+              Still have questions?
+            </h2>
+          </div>
+          <div className="hc-support-grid">
             <article data-reveal style={{ "--i": 0 } as CSSProperties}>
-              <Bell size={28} />
+              <Bell size={26} aria-hidden="true" />
               <h3>Get in touch</h3>
               <p>Reach out to BuildFlow support.</p>
             </article>
             <article data-reveal style={{ "--i": 1 } as CSSProperties}>
-              <BriefcaseBusiness size={28} />
+              <BriefcaseBusiness size={26} aria-hidden="true" />
               <h3>Find a consultant</h3>
               <p>Hire a scheduling expert for your team.</p>
             </article>
             <article data-reveal style={{ "--i": 2 } as CSSProperties}>
-              <Globe2 size={28} />
+              <Globe2 size={26} aria-hidden="true" />
               <h3>Join the community</h3>
               <p>Sign up for webinars and peer sessions.</p>
             </article>
           </div>
-        </section>
-      </div>
-
-      <aside className="help-toc" aria-label="On this page">
-        <span className="help-toc-title">On this page</span>
-        <nav>
-          {helpTocItems.map((item) => (
-            <a key={item.id} href={`#${item.id}`} className={activeSection === item.id ? "is-active" : ""}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
-      </aside>
-
+        </div>
+      </section>
       <footer className="wx-footer">
         <div className="wx-footer-top">
           <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
@@ -20230,8 +20232,7 @@ function WelcomeHelpCenterPage({
           </div>
         </div>
       </footer>
-
-      <AskAiButton onAsk={onOpenDashboard} />
+      <AskAiButton onAsk={onOpenDashboard} />{" "}
     </main>
   );
 }

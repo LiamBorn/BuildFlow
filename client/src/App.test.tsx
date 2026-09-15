@@ -447,7 +447,7 @@ describe("BuildFlow app", () => {
     window.history.pushState(null, "", "/#help-center");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Hi, how can we help you?" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Help center" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search for anything...")).toBeInTheDocument();
     expect(screen.getByText("Still have questions?")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Customers" })).not.toBeInTheDocument();

@@ -1,0 +1,227 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Resources > Help Center (#help-center), rebuilt 2026-09-12 in the same Apple
+   language as the Updates and Customer Reviews pages: the root carries
+   `cs-page cpx-page`, so the --cpx-* tokens, the .cpx-section rhythm, the pov-*
+   cards and the .cpx-faq accordion come from crew-scheduling-apple.css and
+   product-overview.css. Only the hc-* additions live here.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.welcome-rx .hc-page .cpx-inner-narrow { margin-bottom: clamp(26px, 3.5vw, 40px); }
+
+/* Search + suggested chips, in the hero. */
+.welcome-rx .hc-search {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 22px;
+  min-height: 60px;
+  border-radius: 999px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  color: var(--cpx-mut);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.welcome-rx .hc-search:focus-within {
+  border-color: var(--cpx-blue);
+  box-shadow: 0 0 0 4px var(--cpx-blue-tint);
+}
+.welcome-rx .hc-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  color: var(--cpx-ink);
+  outline: none;
+}
+.welcome-rx .hc-search input::placeholder { color: var(--cpx-mut); }
+.welcome-rx .hc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.welcome-rx .hc-chips button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--cpx-line-soft);
+  background: transparent;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--cpx-ink);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.welcome-rx .hc-chips button:hover { background: var(--cpx-ground-2); }
+
+/* Popular topics — pov-why cards with an icon instead of a photo. */
+.welcome-rx .hc-topic { padding: 32px; }
+.welcome-rx .hc-topic-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: var(--cpx-blue-tint);
+  color: var(--cpx-blue);
+}
+
+/* Every article, by category. */
+.welcome-rx .hc-browse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+  align-items: start;
+}
+.welcome-rx .hc-category {
+  padding: 26px 28px 28px;
+  border-radius: 22px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.7s var(--cpx-ease), transform 0.7s var(--cpx-ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.welcome-rx .hc-category.in { opacity: 1; transform: none; }
+.welcome-rx .hc-category h3 {
+  margin: 0 0 14px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .hc-category ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+.welcome-rx .hc-category li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--cpx-mut);
+}
+.welcome-rx .hc-category li::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 0.58em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cpx-blue);
+}
+
+/* Browse by team. */
+.welcome-rx .hc-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+}
+.welcome-rx .hc-team {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cpx-ink);
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.6s var(--cpx-ease), transform 0.6s var(--cpx-ease), border-color 0.2s ease;
+  transition-delay: calc(var(--i, 0) * 60ms);
+}
+.welcome-rx .hc-team.in { opacity: 1; transform: none; }
+.welcome-rx .hc-team:hover { border-color: var(--cpx-blue); }
+.welcome-rx .hc-team svg:last-child { margin-left: auto; color: var(--cpx-blue); }
+.welcome-rx .hc-team-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--cpx-blue-tint);
+  color: var(--cpx-blue);
+}
+
+/* Academy stage. */
+.welcome-rx .hc-academy-panel { padding: 0; overflow: hidden; }
+.welcome-rx .hc-academy-panel img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+
+/* What a double-booking costs. */
+.welcome-rx .hc-roi-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+.welcome-rx .hc-roi-stat {
+  padding: 30px 30px 32px;
+  border-radius: 22px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+}
+.welcome-rx .hc-roi-stat b {
+  display: block;
+  font-size: clamp(2.4rem, 4.4vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .hc-roi-stat b span {
+  margin-left: 6px;
+  font-size: 0.4em;
+  letter-spacing: normal;
+  color: var(--cpx-mut);
+}
+.welcome-rx .hc-roi-stat p {
+  margin: 16px 0 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--cpx-mut);
+}
+.welcome-rx .hc-roi-note {
+  margin: clamp(22px, 3vw, 32px) 0 0;
+  max-width: 84ch;
+  font-size: 16px;
+  line-height: 1.62;
+  color: var(--cpx-mut);
+}
+.welcome-rx .hc-roi-note strong { color: var(--cpx-ink); }
+.welcome-rx .hc-roi-note a { color: var(--cpx-blue); text-decoration: none; }
+.welcome-rx .hc-roi-note a:hover { text-decoration: underline; }
+
+/* Still have questions — the closer above the footer. */
+.welcome-rx .hc-support .cpx-inner-narrow { text-align: center; }
+.welcome-rx .hc-support-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+.welcome-rx .hc-support-grid article {
+  padding: 30px;
+  border-radius: 22px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  text-align: center;
+}
+.welcome-rx .hc-support-grid svg { color: var(--cpx-blue); }
+.welcome-rx .hc-support-grid h3 {
+  margin: 16px 0 8px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .hc-support-grid p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--cpx-mut); }
