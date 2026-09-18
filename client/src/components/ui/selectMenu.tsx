@@ -90,6 +90,25 @@ const gooFrom = (anchor: Anchor, box: { left: number; top: number; width: number
   h: box.height > 0 ? Math.min(1, (anchor.below - anchor.above) / box.height) : 0.2
 });
 
+/**
+ * The popup layers this file and dateMenu.tsx draw into the BODY, for controls that live
+ * inside a panel somewhere else in the tree.
+ *
+ * A panel that dismisses itself on an outside `mousedown` has to treat a click in one of these
+ * as INSIDE, because it belongs to a control the panel owns. Preferences did not, and the order
+ * of events made the colour picker look broken: `mousedown` on an option unmounted the panel and
+ * the `<select>` with it, and the write-back on the following `click` then dispatched `change` at
+ * a detached node, so React never saw the choice. Reported 2026-09-18 with a recording — the
+ * dropdown opened, an option was clicked, and everything closed with nothing changed.
+ */
+export const OWN_POPUPS = ".bfsel, .bfdate";
+
+/** Whether an event landed in one of those popups, for a panel deciding if it should close. */
+export const isInOwnPopup = (target: EventTarget | null): boolean => {
+  const node = target instanceof Element ? target : ((target as Node | null)?.parentElement ?? null);
+  return Boolean(node?.closest(OWN_POPUPS));
+};
+
 /** A select the layer takes over: inside the program, and a plain single-choice list. */
 const isEnhanceable = (select: HTMLSelectElement): boolean => {
   if (select.disabled || select.multiple || select.size > 1) return false;

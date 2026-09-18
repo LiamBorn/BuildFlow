@@ -212,6 +212,55 @@ describe("the top bar's Preferences panel", () => {
     expect(swatch.style.background).toContain("#1c1c1c");
   });
 
+  /**
+   * AND THE COLOURS PICKER HAS TO SURVIVE BEING USED WITH A POINTER (2026-09-18).
+   *
+   * The case above drives it with `fireEvent.change`, which is why it passed for as long as the
+   * control was broken in the product: reported with a recording — the dropdown opened, an option
+   * was clicked, and the panel and the dropdown both closed with nothing changed.
+   *
+   * The cause was the ORDER of two listeners. This panel dismisses itself on a document
+   * `mousedown` outside its anchor, and the list a `<select>` opens is drawn by selectMenu.tsx
+   * into the BODY — outside that anchor. So pressing an option unmounted the panel, and the
+   * `<select>` with it, before the write-back on the following `click` could reach it; the change
+   * event then fired at a detached node and React never saw it.
+   *
+   * So this drives the full pointer sequence, and the assertion that matters is the middle one:
+   * the panel is still there AFTER the mousedown on an option.
+   */
+  it("changes the colour set when an option is pressed with a pointer, not just by a change event", async () => {
+    const panel = await openPreferences();
+    const picker = within(panel).getByLabelText("Colors") as HTMLSelectElement;
+    expect(shell().dataset.bfColors).toBe("default");
+
+    // open the list the way a pointer does
+    fireEvent.pointerDown(picker);
+    fireEvent.mouseDown(picker);
+    const menu = await waitFor(() => {
+      const found = document.querySelector(".bfsel-menu");
+      expect(found, "the program draws its own list for this select").toBeTruthy();
+      return found as HTMLElement;
+    });
+    expect(screen.queryByRole("dialog", { name: "Preferences" }), "opening the list must not dismiss the panel").toBeTruthy();
+
+    const blue = [...menu.querySelectorAll(".bfsel-item")].find((item) => item.textContent?.trim() === "Blue") as HTMLElement;
+    expect(blue, "the set is offered in the list").toBeTruthy();
+
+    /* THE REGRESSION. Before the fix this mousedown closed the panel, so the click below wrote
+       to a `<select>` that was no longer in the document. */
+    fireEvent.pointerDown(blue);
+    fireEvent.mouseDown(blue);
+    expect(
+      screen.queryByRole("dialog", { name: "Preferences" }),
+      "pressing an option in the list must not dismiss the panel that owns the select"
+    ).toBeTruthy();
+
+    fireEvent.mouseUp(blue);
+    fireEvent.click(blue);
+    await waitFor(() => expect(shell().dataset.bfColors).toBe("blue"));
+    expect(picker.value, "and the control shows what was chosen").toBe("blue");
+  });
+
   it("puts the layout and the colour set back with Restore Defaults", async () => {
     const panel = await openPreferences();
 

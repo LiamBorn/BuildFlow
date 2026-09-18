@@ -13,6 +13,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { Check, ChevronDown, RotateCcw, Settings } from "lucide-react";
+import { isInOwnPopup } from "./components/ui/selectMenu";
 import {
   FONT_GROUP_LABELS,
   FONT_OPTIONS,
@@ -148,6 +149,13 @@ export function PreferencesMenu({
          closed the panel here, and then its own click toggled the state back to open, so
          the panel appeared stuck and could only be dismissed by clicking elsewhere. The
          account menu beside it scopes its dismiss to its wrapper for the same reason. */
+      /* ...AND NOT THE PROGRAM'S OWN POPUPS. Colors and Fonts are `<select>`s, and their
+         list is drawn by selectMenu.tsx into the BODY — outside this panel's anchor. So
+         pressing an option used to dismiss the panel on `mousedown`, taking the `<select>`
+         with it, and the write-back on the following `click` then fired `change` at a
+         detached node: the dropdown opened, an option was pressed, and nothing changed.
+         Reported 2026-09-18 with a recording of exactly that. */
+      if (isInOwnPopup(event.target)) return;
       const anchor = panelRef.current?.parentElement ?? panelRef.current;
       if (!anchor?.contains(event.target as Node)) onClose();
     };
