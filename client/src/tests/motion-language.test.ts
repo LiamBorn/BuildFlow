@@ -72,8 +72,14 @@ function specificity(selector: string): [number, number] {
   let b = 0;
   let c = 0;
   let s = selector;
-  s = s.replace(/::[\w-]+/g, () => { c++; return " "; });
-  s = s.replace(/\[[^\]]*\]/g, () => { b++; return " "; });
+  s = s.replace(/::[\w-]+/g, () => {
+    c++;
+    return " ";
+  });
+  s = s.replace(/\[[^\]]*\]/g, () => {
+    b++;
+    return " ";
+  });
   s = s.replace(/:(?:not|is)\(([^)]*)\)/g, (_m, inner: string) => {
     const [ib, ic] = specificity(inner);
     b += ib;
@@ -81,17 +87,28 @@ function specificity(selector: string): [number, number] {
     return " ";
   });
   s = s.replace(/:where\([^)]*\)/g, () => " ");
-  s = s.replace(/:[\w-]+(\([^)]*\))?/g, () => { b++; return " "; });
-  s = s.replace(/\.[\w-]+/g, () => { b++; return " "; });
+  s = s.replace(/:[\w-]+(\([^)]*\))?/g, () => {
+    b++;
+    return " ";
+  });
+  s = s.replace(/\.[\w-]+/g, () => {
+    b++;
+    return " ";
+  });
   s = s.replace(/[>+~]/g, " ");
-  s.split(/\s+/).filter((x) => x && x !== "*").forEach(() => c++);
+  s.split(/\s+/)
+    .filter((x) => x && x !== "*")
+    .forEach(() => c++);
   return [b, c];
 }
 const atLeast = (a: [number, number], x: [number, number]) => a[0] > x[0] || (a[0] === x[0] && a[1] >= x[1]);
 
 const MOTION = /^(animation|transition|transform|translate|rotate|scale)(-|$)/;
 const nullsMotion = (d: Declaration) => {
-  const v = d.value.trim().toLowerCase().replace(/\s*!important$/, "");
+  const v = d.value
+    .trim()
+    .toLowerCase()
+    .replace(/\s*!important$/, "");
   return MOTION.test(d.prop) && (v === "none" || v === "0s");
 };
 
@@ -101,7 +118,9 @@ const zeroedTokens = (() => {
   const set = new Set<string>();
   parse(TOKENS).walkAtRules("media", (m) => {
     if (!/prefers-reduced-motion/.test(m.params)) return;
-    m.walkDecls((d) => { if (d.prop.startsWith("--bf-")) set.add(d.prop); });
+    m.walkDecls((d) => {
+      if (d.prop.startsWith("--bf-")) set.add(d.prop);
+    });
   });
   return set;
 })();
@@ -111,8 +130,7 @@ const movesNothing = (d: Declaration) => {
   const value = norm(d.value);
   if (value === "none") return true;
   const vars = [...value.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
-  const literals = (value.replace(/var\([^)]*\)/g, "").match(/-?\d*\.?\d+(px|deg|rem|em|%)/g) ?? [])
-    .filter((l) => parseFloat(l) !== 0);
+  const literals = (value.replace(/var\([^)]*\)/g, "").match(/-?\d*\.?\d+(px|deg|rem|em|%)/g) ?? []).filter((l) => parseFloat(l) !== 0);
   return vars.length > 0 && vars.every((v) => zeroedTokens.has(v)) && literals.length === 0;
 };
 
@@ -141,6 +159,45 @@ const selfPaired = (() => {
 })();
 
 describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
+  it("lets the wheel out of every in-page region, so a section cannot stop the page", () => {
+    /* Reported (2026-09-17): "when a user scrolls down through the pages they get stuck on
+       a certain section". A scroll container with `overscroll-behavior: contain` swallows
+       the wheel even when it has NOTHING to scroll, so a pointer resting on one stopped the
+       page dead. Measured on the Dashboard before the fix: the page held at 500px with
+       2614px still to go, because every panel body carried it. Four regions had it — the
+       panel bodies (so every Dashboard and Schedule section), the rail's list, the Gantt
+       chart and the sign-up preview column.
+
+       Containment belongs to OVERLAYS, which must not let the page move behind them, and
+       that behaviour is kept: with a dropdown open, a wheel over the list leaves the page
+       exactly where it was. So vertical containment is allowed only on the surfaces listed
+       here. `overscroll-behavior-x` is exempt: stopping a sideways swipe on a phone board
+       does not touch the wheel. */
+    /* `.gantt-drawer-body` joined them on 2026-09-17: the job drawer is a modal panel over the
+       page (`aria-modal`, on a backdrop that closes it), and the page behind a modal must not
+       move — measured after the change, five wheel ticks at the end of the drawer left the board
+       behind exactly where it was. It is not an in-page region: nothing is ever scrolled THROUGH
+       it to reach the rest of the page. */
+    /* `.pdx-form` / `.pdx-body` joined them on 2026-09-18, when every dialog in the app became a
+       right-side drawer (skin section 65). They are the scrolling body of a modal on a backdrop
+       that closes it — the same case as `.gantt-drawer-body`, and the same reason: the page behind
+       a modal must not move, and nothing is ever scrolled THROUGH a dialog to reach the page. */
+    /* `.schedule-job-picker-content` joined on 2026-09-18, when the add-job form became a right
+       panel on a backdrop that closes it (skin section 69) — the same case as the dialog bodies. */
+    const OVERLAYS = [".bfsel-menu", ".bfsp-grid", ".gantt-drawer-body", ".pdx-form", ".pdx-body", ".schedule-job-picker-content"];
+    const trapping: string[] = [];
+    for (const sheet of loadOrder) {
+      parse(sheet).walkDecls((decl: Declaration) => {
+        if (!/^overscroll-behavior(-y)?$/.test(decl.prop)) return;
+        if (!/contain|none/.test(decl.value)) return;
+        const selector = (decl.parent as Rule).selector ?? "";
+        if (OVERLAYS.some((overlay) => selector.includes(overlay))) return;
+        trapping.push(`${sheet}: ${norm(selector).slice(-56)} { ${decl.prop}: ${decl.value} }`);
+      });
+    }
+    expect(trapping, "only an overlay may keep the wheel to itself").toEqual([]);
+  });
+
   it("writes every timing through a token, never a literal", () => {
     // Assertion 1 and 2 of the plan's density guard, merged: one curve and one set of
     // durations, so a fifth easing or an off-ladder 0.16s cannot re-enter quietly.
@@ -149,8 +206,7 @@ describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
     // clamp this repo already uses in ten existing blocks -- that number is the one
     // thing a reader of a reduce block needs to see spelled out, and hiding it behind a
     // token would make the floor harder to check, not easier.
-    const allowed = (value: string, inReduceBlock: boolean) =>
-      parseFloat(value) === 0 || (inReduceBlock && /^0\.3s$/.test(value));
+    const allowed = (value: string, inReduceBlock: boolean) => parseFloat(value) === 0 || (inReduceBlock && /^0\.3s$/.test(value));
     const offenders: string[] = [];
     sheet.walkDecls((d) => {
       if (inKeyframes(d)) return;
@@ -176,7 +232,9 @@ describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
     sheet.walkDecls((d) => {
       if (d.prop !== "font-size") return;
       if (/var\(--bf-/.test(d.value)) return;
-      literals.push(`${d.source?.start?.line}: ${norm(d.parent && "selector" in d.parent ? (d.parent as Rule).selector : "?")} -> ${norm(d.value)}`);
+      literals.push(
+        `${d.source?.start?.line}: ${norm(d.parent && "selector" in d.parent ? (d.parent as Rule).selector : "?")} -> ${norm(d.value)}`
+      );
     });
     expect(literals).toEqual([]);
   });
@@ -279,9 +337,7 @@ describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
       root.walkAtRules("media", (m) => {
         if (!/prefers-reduced-motion/.test(m.params)) return;
         m.walkRules((r) => {
-          const props = new Set(
-            r.nodes.filter((n): n is Declaration => n.type === "decl" && nullsMotion(n)).map((n) => n.prop)
-          );
+          const props = new Set(r.nodes.filter((n): n is Declaration => n.type === "decl" && nullsMotion(n)).map((n) => n.prop));
           if (props.size) r.selectors.forEach((s) => inherited.push({ file: rel, sel: norm(s), props }));
         });
       });
@@ -327,9 +383,7 @@ describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
     const rest: Array<{ sel: string; spec: [number, number] }> = [];
     const arrived = new Map<string, [number, number]>();
     for (const rule of liveRules) {
-      const setsTransform = rule.nodes.some(
-        (n): n is Declaration => n.type === "decl" && /^transform$/.test(n.prop)
-      );
+      const setsTransform = rule.nodes.some((n): n is Declaration => n.type === "decl" && /^transform$/.test(n.prop));
       if (!setsTransform) continue;
       for (const sel of rule.selectors.map(norm)) {
         if (!/\[data-reveal(-stagger)?\]/.test(sel)) continue;
@@ -379,12 +433,117 @@ describe("the motion numbers that live in two places at once", () => {
   });
 
   it("keeps the board geometry the skeleton is drawn from frozen", () => {
+    /* The loading skeleton draws the board in plain CSS, so its three numbers are a
+       second copy of the engine's and the board would change shape on arrival if they
+       drifted. They drifted: the gap moved from 16 to 30 on 2026-09-15 (the sections
+       were asked to sit as far apart as the status band above them) and this test still
+       demanded 16 for a day. So the numbers are READ from the engine now and every copy
+       is checked against them, rather than being written out a third time here. */
     const grid = read("dashGrid.ts");
-    expect(grid).toMatch(/DASH_COLS\s*=\s*6\b/);
-    expect(grid).toMatch(/DASH_ROW_UNIT\s*=\s*40\b/);
-    expect(grid).toMatch(/DASH_GAP\s*=\s*16\b/);
-    // the skeleton re-declares the row unit independently, so the two must agree
-    expect(read("hs-home.css")).toMatch(/grid-auto-rows:\s*40px/);
+    const num = (name: string) => {
+      const m = grid.match(new RegExp(`${name}\\s*=\\s*(\\d+)`));
+      expect(m, `${name} is declared in dashGrid.ts`).not.toBeNull();
+      return Number(m![1]);
+    };
+    const cols = num("DASH_COLS");
+    const unit = num("DASH_ROW_UNIT");
+    const gap = num("DASH_GAP");
+    expect([cols, unit, gap]).toEqual([6, 40, 30]);
+    /* Every sheet that draws the skeleton board must carry the same three. Rules inside an
+       at-rule are skipped: the phone override deliberately stacks the skeleton into one
+       column with auto rows, the way the stacked board itself does. */
+    const copies: Array<[string, Record<string, string>]> = [];
+    for (const file of ["hs-home.css", "dashboard-monday-panels.css"]) {
+      postcss.parse(read(file)).walkRules((rule) => {
+        if (rule.parent?.type === "atrule") return;
+        if (!rule.selectors.some((one) => one.trim().endsWith(".dash-skel-board"))) return;
+        const decls: Record<string, string> = {};
+        rule.walkDecls((d) => {
+          decls[d.prop] = d.value.trim();
+        });
+        copies.push([file, decls]);
+      });
+    }
+    expect(copies.length, "the skeleton board is drawn somewhere").toBeGreaterThan(0);
+    for (const [file, decls] of copies) {
+      if (decls.gap) expect(decls.gap, `${file}: the skeleton's gap`).toBe(`${gap}px`);
+      if (decls["grid-auto-rows"]) expect(decls["grid-auto-rows"], `${file}: the skeleton's row unit`).toBe(`${unit}px`);
+      if (decls["grid-template-columns"]) {
+        expect(decls["grid-template-columns"], `${file}: the skeleton's columns`).toBe(`repeat(${cols}, 1fr)`);
+      }
+    }
+  });
+});
+
+describe("the card a DragOverlay carries", () => {
+  /* `:is(a, b, c)` counts as its MOST specific argument, not the sum of them; the helper
+     above adds them up, which over-counts a seven-trade `:is()` sevenfold. Reduce each
+     one to its heaviest argument first and the numbers are the browser's. */
+  const isMax = (selector: string) =>
+    selector.replace(/:is\(([^)]*)\)/g, (_m, inner: string) => {
+      const best = inner
+        .split(",")
+        .map((one) => one.trim())
+        .sort((a, b) => {
+          const [ab, ac] = specificity(a);
+          const [bb, bc] = specificity(b);
+          return bb - ab || bc - ac;
+        })[0];
+      return `:is(${best})`;
+    });
+  const specOf = (selector: string) => specificity(isMax(selector));
+
+  it("takes the window scale out of every overlay in App.tsx", () => {
+    /* dragZoom.ts was written and unit-tested while both of App.tsx's overlays still ran
+       on dnd-kit's own numbers: a correct helper is not a corrected layer. dnd-kit
+       measures in screen pixels and the overlay renders inside the shell's zoom, where
+       every length is multiplied a second time, so an uncorrected ghost sat (1 - zoom) x
+       its distance from the page's corner away from the hand and 1/zoom off size -- 84px
+       by 22px on a Dashboard stat card at 0.9, measured 2026-09-17. Both the placement
+       and the drop flight have to divide it back. */
+    const app = read("App.tsx");
+    const overlays = [...app.matchAll(/<DragOverlay[\s\S]*?>/g)].map((m) => norm(m[0]));
+    expect(overlays.length, "App.tsx renders a DragOverlay").toBeGreaterThan(0);
+    for (const tag of overlays) {
+      expect(tag, "an overlay placed on dnd-kit's own screen pixels").toContain("style={unzoomOverlay(");
+      const named = tag.match(/dropAnimation=\{(?:[^}]*?:\s*)?(\w+)\}/);
+      expect(named, `an overlay with no named dropAnimation: ${tag.slice(0, 70)}`).not.toBeNull();
+      expect(app, `${named![1]} flies dnd-kit's own distance`).toMatch(
+        new RegExp(`${named![1]}\\s*=\\s*\\{[^}]*keyframes:\\s*unzoomDropFlight`)
+      );
+    }
+  });
+
+  it("keeps the index pages' entrance cascade off it", () => {
+    /* dnd-kit draws the lifted card in a box of its own -- a bare child of the index
+       card -- so `.hs-index-card > *` claimed it, and an animation's transform outranks
+       the inline one dnd-kit rewrites every frame. `backwards` then pinned the Deals
+       ghost at the first keyframe for the whole 880ms delay: the card stopped following
+       the hand entirely (2026-09-17). The exemption has to outrank the cascade, come
+       after it, and name the class App.tsx actually puts on the overlay. */
+    const DESK = "app-shell-client-desk.css";
+    const claiming: Rule[] = [];
+    const exempting: Rule[] = [];
+    parse(DESK).walkRules((rule) => {
+      if (inKeyframes(rule) || isReduce(rule)) return;
+      const moves = rule.nodes.some((n) => n.type === "decl" && n.prop === "animation" && !nullsMotion(n));
+      if (moves && rule.selectors.some((one) => /\.hs-index-card\s*>\s*\*$/.test(norm(one)))) claiming.push(rule);
+      if (rule.selectors.some((one) => /\.hs-drag-overlay$/.test(norm(one)))) exempting.push(rule);
+    });
+    expect(claiming.length, "the index cards' row cascade is declared").toBeGreaterThan(0);
+    expect(exempting.length, "the drag layer is exempted from it").toBe(1);
+    const exempt = exempting[0];
+    expect(exempt.nodes.filter((n): n is Declaration => n.type === "decl").every(nullsMotion)).toBe(true);
+    const mine = Math.max(...exempt.selectors.map((one) => specOf(one)[0]));
+    for (const rule of claiming) {
+      for (const one of rule.selectors) {
+        expect(atLeast(specOf(exempt.selectors[0]), specOf(one)), `the exemption loses to ${norm(one)}`).toBe(true);
+      }
+      // and on a tie, source order decides: the exemption must be the later rule
+      expect(exempt.source!.start!.line, "the exemption is declared before the cascade").toBeGreaterThan(rule.source!.start!.line);
+    }
+    expect(mine).toBeGreaterThan(0);
+    expect(read("App.tsx"), "no overlay wears the class the sheet exempts").toContain('className="hs-drag-overlay"');
   });
 });
 

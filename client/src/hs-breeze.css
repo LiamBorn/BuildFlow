@@ -308,6 +308,114 @@
   text-decoration: underline;
 }
 
+/* The assistant asks before it changes anything (components/ui/aiProposal.tsx).
+   The state as it is now, then the proposal underneath it with the changed words
+   marked where they sit, then one row: amend it, refuse it, accept it. This is the
+   shape; the Client Desk skin (section 62) re-dresses it in the program's tones. */
+.bfai-prop {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  border: 1px solid var(--bfz-line);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.bfai-prop-block {
+  padding: 12px 14px 14px;
+}
+.bfai-prop-block.is-suggested {
+  border-top: 1px solid var(--bfz-line);
+  background: var(--bfz-paper);
+}
+.bfai-prop-block h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: var(--bfz-faint);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bfai-prop-block.is-suggested h4 {
+  color: var(--bfz-navy);
+}
+.bfai-prop-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.bfai-prop-text del {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #fbe4e2;
+  color: #b42318;
+  text-decoration-color: #d92d20;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.bfai-prop-text ins {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #eaf6ee;
+  color: #1a7f43;
+  text-decoration: none;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.bfai-prop-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+.bfai-prop-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--bfz-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--bfz-navy);
+  font:
+    600 12.5px/1 Inter,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.bfai-prop-actions button:hover {
+  background: var(--bfz-paper);
+}
+.bfai-prop-actions .bfai-prop-reject {
+  margin-left: auto;
+  border-color: transparent;
+  background: transparent;
+  color: var(--bfz-mut);
+}
+.bfai-prop-actions .bfai-prop-accept {
+  border-color: transparent;
+  background: var(--bfz-navy);
+  color: #fff;
+}
+.bfai-prop-state {
+  margin: 12px 0 0;
+  color: var(--bfz-mut);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.bfai-prop-state.is-accepted {
+  color: #1a7f43;
+}
+.bfai-prop-state.is-failed {
+  color: #b42318;
+}
+
 /* suggested + quick actions */
 .bf-breeze-foot {
   padding: 6px 16px 12px;
@@ -423,6 +531,10 @@
 }
 .bf-breeze-composer textarea {
   width: 100%;
+  /* One line's floor, so the field can never collapse below the text it holds even
+     if it is auto-sized while it has no layout box (the panel is display: none while
+     closed). 1.5em is exactly one line at both this sheet's size and the skin's. */
+  min-height: 1.5em;
   max-height: 140px;
   border: 0;
   background: transparent;

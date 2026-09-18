@@ -87,15 +87,6 @@
 .topbar .topbar-actions .icon-button:focus-visible {
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.22);
 }
-.topbar .topbar-help-button {
-  color: #4a5568;
-}
-.topbar .topbar-help-button:hover,
-.topbar .topbar-help-button:focus-visible {
-  background: #f0f2f6;
-  color: #2f6bff;
-}
-
 /* notification indicator — small blue badge top-right of the bell */
 .topbar .notification-center .bubble {
   position: absolute;

@@ -114,10 +114,12 @@ for (const file of SHEETS) {
 }
 
 /** Longhands a shorthand also sets, so `overflow: visible` is weighed against `overflow-x: auto`. */
-const SHORTHANDS = { "overflow-x": "overflow", "overflow-y": "overflow" };
+const SHORTHANDS = { "overflow-x": "overflow", "overflow-y": "overflow", "animation-fill-mode": "animation" };
 
 /** The side of a shorthand that lands on `prop`: `overflow: hidden auto` gives y hidden, x auto. */
 function sideOf(prop, value) {
+  // an animation names its fill as a keyword anywhere in the shorthand, or leaves it at none
+  if (prop === "animation-fill-mode") return value.match(/\b(none|forwards|backwards|both)\b/)?.[1] ?? "none";
   const parts = value.split(/\s+/);
   if (parts.length < 2) return parts[0];
   return prop.endsWith("-x") ? parts[1] : parts[0];
@@ -139,8 +141,10 @@ function winner(chain, prop, width) {
 
 /**
  * Every schedule page carries `gantt-page` — the shared frame puts it there — so a rule written for the
- * Gantt Chart has to say `.gantt-page.hs-index` or it reaches the six board pages too. These are the
- * classes the frame renders on all of them, where the wider reach is the point.
+ * Gantt Chart has to say `.gantt-page.gantt-chart` or it reaches the six board pages too. (Until
+ * 2026-09-17 the chart page said `.hs-index`, because it borrowed the index pages' layout to get a
+ * scope; it stands in the shared frame now and carries `.gantt-chart` for the same purpose.) These
+ * are the classes the frame renders on all of them, where the wider reach is the point.
  */
 const SHARED_ON_EVERY_PAGE = ["gantt-drawer", "gantt-status", "hs-btn", "sched-undo"];
 
@@ -162,21 +166,41 @@ const CREW = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-crew"]];
 const TIP = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-cell"], ["sched-matrix-tip"]];
 const TIP_HOVERED = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-cell", ":hover"], ["sched-matrix-tip"]];
 const WEEK = [ROOT, ["schedule-board"], ["schedule-week-scroll"]];
-/* The month grid's three day washes. All three are ONE class on the same element, so
-   source order is the whole of the decision between them — which is the only way to
-   ask whether a day outside the month still reads as outside it when it is also a
-   non-working day. */
+/* The month grid's day washes. Both are ONE class on the same element, so source order is the
+   whole of the decision between them. A third, `out-month`, went with the days either side of the
+   month on 2026-09-17: the grid ends on the month's last day now and pads with `.sched-cal-blank`,
+   which is not a day and carries no wash. */
 const CAL = [ROOT, ["schedule-board"], ["sched-cal"], ["sched-cal-grid"]];
-const CAL_OUT = [...CAL, ["sched-cal-cell", "out-month"]];
-const CAL_OUT_WEEKEND = [...CAL, ["sched-cal-cell", "out-month", "is-weekend"]];
 const CAL_WEEKEND = [...CAL, ["sched-cal-cell", "is-weekend"]];
-const CAL_HOLIDAY = [...CAL, ["sched-cal-cell", "is-holiday", "out-month"]];
+const CAL_HOLIDAY = [...CAL, ["sched-cal-cell", "is-holiday", "is-weekend"]];
 const CAL_HOVER = [...CAL, ["sched-cal-cell", "is-holiday", "is-addable", ":hover"]];
+/* A day at rest, with a job chip and a milestone in it: what a drag starts from. */
+const CAL_DAY = [...CAL, ["sched-cal-cell", "is-addable"]];
+const CAL_JOB = [...CAL_DAY, ["sched-act"]];
+const CAL_MILESTONE = [...CAL_DAY, ["sched-act", "is-milestone"]];
+/* And a drag in progress: the slot the chip left, the card the hand carries (a DragOverlay, so it
+   hangs at the page root rather than in a day), and the "+" of the day being crossed. */
+const CAL_SLOT = [...CAL_DAY, ["sched-act", "dragging"]];
+const CARRY = [ROOT, ["sched-carry"]];
+/* The job drawer — the panel that opens when a job is clicked, on every schedule page. */
+const DRAWER = [ROOT, ["gantt-drawer-layer"], ["gantt-drawer"]];
+const DRAWER_BODY = [...DRAWER, ["gantt-drawer-body"]];
+/* The control that opens a busy day up — the way to reach the jobs it is holding. */
+const CAL_MORE = [...CAL_DAY, ["sched-act-more"]];
+const CAL_CARRYING_ADD = [
+  ROOT,
+  ["schedule-board"],
+  ["sched-cal", "is-carrying"],
+  ["sched-cal-grid"],
+  ["sched-cal-cell", "is-addable", ":hover"],
+  ["sched-cal-add"]
+];
 /* The Gantt bar, whose label now sits OUTSIDE it. The chart root is its own set of classes
    (the frame is not `.hs-index-main`), so this chain is built from what the page renders. */
+const CHART_ROOT = [...ROOT, "gantt-chart"];
 const GANTT_BAR = [
-  ["page-stack", "gantt-page", "hs-index"],
-  ["gantt-card"],
+  CHART_ROOT,
+  ["schedule-board"],
   ["gantt-frame"],
   ["gantt-timeline"],
   ["gantt-feature-list"],
@@ -187,7 +211,8 @@ const GANTT_BAR = [
 ];
 // the critical-path band, which both the landing and the chart draw
 const LANDING_CPM = [ROOT, ["schedule-control-row"], ["filter-strip"], ["sched-cpm"]];
-const CHART_CPM = [["page-stack", "gantt-page", "hs-index"], ["hs-index-main"], ["hs-index-card", "gantt-card"], ["sched-cpm"]];
+/* The band sits in the frame's own slot above the controls now, not inside an index card. */
+const CHART_CPM = [CHART_ROOT, ["sched-cpm"]];
 
 const failures = [];
 /** `check(what, got, want)` where want is a regex or a string. */
@@ -218,26 +243,13 @@ check("Matrix tooltip at 375px is hidden outright", winner(TIP, "display", 375),
 check("Week board at 375px scrolls sideways", winner(WEEK, "overflow-x", 375), /^(auto|scroll)$/);
 check("Week board at 1280px scrolls sideways", winner(WEEK, "overflow-x", 1280), /^(auto|scroll)$/);
 
-/* The Month grid's washes, which were invisible for a while and answered nothing.
-   Two questions, both of which failed before this was written:
-
-   1. WHICH TOKEN. Both washes were mixed against `--wx-bg-2`, and the dark-mode
-      section re-points that name to `--bf-hover` inside the shell — #fbfaf7, which is
-      1.5/255 from the white card. Neither wash rendered. `--wx-bg` is the page GROUND,
-      a real step below the card in every theme and inverted in dark mode, so the
-      question is asked of the token and not of a number that a theme can move.
-
-   2. WHICH RULE. A day outside the month that is also a non-working day carries both
-      classes; at equal specificity the later rule wins, so out-month has to sit AFTER
-      is-weekend or day 30 reads lighter than day 31 for no reason anyone can see. */
-check("a day outside the month is washed against the ground", winner(CAL_OUT, "background", 1280), /color-mix\(in srgb, var\(--wx-bg\) 70%/);
-check("a non-working day is washed against the same ground", winner(CAL_WEEKEND, "background", 1280), /color-mix\(in srgb, var\(--wx-bg\) 38%/);
-check(
-  "a Sunday outside the month still reads as outside it",
-  winner(CAL_OUT_WEEKEND, "background", 1280),
-  /color-mix\(in srgb, var\(--wx-bg\) 70%/
-);
-check("a holiday outranks both of them", winner(CAL_HOLIDAY, "background", 1280), /var\(--sc-holiday\)/);
+/* The Month grid's washes, which were invisible for a while and answered nothing. WHICH TOKEN was
+   the question: they were mixed against `--wx-bg-2`, and the dark-mode section re-points that name
+   to `--bf-hover` inside the shell — #fbfaf7, which is 1.5/255 from the white card. Neither wash
+   rendered. `--wx-bg` is the page GROUND, a real step below the card in every theme and inverted
+   in dark mode, so the question is asked of the token and not of a number a theme can move. */
+check("a non-working day is washed against the ground", winner(CAL_WEEKEND, "background", 1280), /color-mix\(in srgb, var\(--wx-bg\) 38%/);
+check("a holiday outranks it", winner(CAL_HOLIDAY, "background", 1280), /var\(--sc-holiday\)/);
 /* And the hover wash is an IMAGE, so it layers over whichever of those three colours the
    day carries. As a colour it would outrank all three at four classes and wipe the tint
    the legend names — which is the whole reason it is written the way it is. */
@@ -245,6 +257,65 @@ check("a holiday outranks both of them", winner(CAL_HOLIDAY, "background", 1280)
 // the hover rule writes none of it, which is the point
 check("hovering a day keeps the wash its day carries", winner(CAL_HOVER, "background", 1280), /var\(--sc-holiday\)/);
 check("…and adds to it with an image", winner(CAL_HOVER, "background-image", 1280), /^linear-gradient\(/);
+/* Moving a job on the Month calendar. A chip being dragged sits at z-index 30, which only lifts
+   it over the other days while its own day is NOT a stacking context -- and until 2026-09-17
+   every day was one: the entrance animation filled `both`, which holds its last keyframe's
+   `transform: none` for good, and any transform counts. The chip was painted under the next day
+   the moment it left home. The drop still landed, so nothing failed; the job just vanished from
+   under the hand, which reads as "you can't move jobs here". So the fill is asked, not the
+   look: anything but both or forwards lets go once the days have risen in. */
+check("a Month day lets go of its entrance once it has played", winner(CAL_DAY, "animation-fill-mode", 1280), /^(?!both$|forwards$)/);
+check("…on a phone too", winner(CAL_DAY, "animation-fill-mode", 375), /^(?!both$|forwards$)/);
+check("a job chip on the calendar offers to be picked up", winner(CAL_JOB, "cursor", 1280), "grab");
+/* Milestones are carried too now, so they answer the same way: the hand a planner sees is the
+   promise that a chip can be picked up, and a marker that could be moved while showing an arrow
+   was the whole of the report that came back ("it only lets me move the last job"). */
+check("a milestone can be picked up as well", winner(CAL_MILESTONE, "cursor", 1280), "grab");
+/* And what a drag looks like (2026-09-17 pm): the chip stays in its day as the dashed slot it is
+   leaving while the card itself is carried above the page, so the day never reflows. The card's
+   own rule has to sit AFTER the grab rule above -- both are two classes -- or the hand opens
+   again the moment a card is picked up. */
+/* "+N more" is how a planner reaches a job on a day that holds more than three, so it is a row and
+   not the 14px scrap of text it used to be. Asked at both widths because the phone sheet has its
+   own, larger answer, and a change that only lands on one of them is the bug this guards. */
+check("the control that opens a day is a target, not a hint", winner(CAL_MORE, "min-height", 1280), "26px");
+check("…and a bigger one on a phone", winner(CAL_MORE, "min-height", 375), "40px");
+check("the slot a lifted job leaves is dashed", winner(CAL_SLOT, "outline", 1280), /\bdashed\b/);
+/* ...and the same slot on the other four boards, which had each lifted the card itself with a
+   shadow of its own before the carry layer took the job over. The Week board's card is the one
+   that proves it: `styles.css` fades it to 0.76 while it is dragged, and a slot at three quarters
+   opacity reads as a card that is still there. */
+for (const [what, chain] of [
+  ["the Week board's card", [ROOT, ["schedule-board"], ["schedule-week-scroll"], ["crew-row"], ["schedule-job", "dragging"]]],
+  ["a queued job", [ROOT, ["schedule-layout"], ["unassigned-card", "dragging"]]],
+  ["a Kanban card", [ROOT, ["schedule-board"], ["sched-kan-lane"], ["sched-kan-cards"], ["sched-kan-card", "dragging"]]]
+]) {
+  check(`the slot ${what} leaves is dashed`, winner(chain, "outline", 1280), /\bdashed\b/);
+  check(`...and is not still showing through`, winner(chain, "opacity", 1280), "1");
+}
+check("the card in the air keeps the closed hand", winner(CARRY, "cursor", 1280), "grabbing");
+/* THE JOB DRAWER HAS TO BE REACHABLE. It ran from the top of the WINDOW and scrolled itself, and a
+   job's name and the close button sat behind the top bar with nothing to scroll to reach them
+   (reported 2026-09-17). The fix that matters is BELOW — the panel is not the scroller, its body
+   is, so the header keeps its place however long the job is. Starting it below the bar was the
+   other half of that fix and has since been undone (2026-09-18, asked to match the editing
+   drawers): the layer is `z-index: 95` against the bar's 5, so it paints over the bar, and the
+   header is held by the body-scroller rather than by an offset. What must stay true is that the
+   panel runs the full height and the HEADER is not what scrolls. */
+check("the job drawer runs the full height of the page", winner(DRAWER, "top", 1280), "0");
+check("the panel itself is not the scroller", winner(DRAWER, "overflow", 1280), "hidden");
+check("the body under its header is", winner(DRAWER_BODY, "overflow-y", 1280), "auto");
+check("...and can shrink far enough to scroll", winner(DRAWER_BODY, "min-height", 1280), "0");
+check("...on a phone as well", winner(DRAWER_BODY, "overflow-y", 375), "auto");
+/* The day's "+" would otherwise pop up under the card as the hand crosses a day. It cannot be
+   hidden with `opacity`: the rule that shows it on hover is four classes and wins. */
+check("a day being crossed keeps its \u002b down", winner(CAL_CARRYING_ADD, "visibility", 1280), "hidden");
+/* The card also LEANS the way the hand is moving, and that lean is written frame by frame onto its
+   own `transform` (schedule/parts/month.tsx, `scheduleCarryLean`). An inline style loses to a CSS
+   animation and beats a plain rule, so a `transform` in these sheets is either dead or -- animated
+   -- it silently erases the lean and the card just stops leaning. The pick-up may only animate
+   `rotate` and `scale`, which compose with a transform instead of replacing it. */
+check("no rule takes the carried card's transform, which the lean writes", winner(CARRY, "transform", 1280), "(nothing sets it)");
 /* The Gantt's redesign hangs on one thing a later rule could take away silently: the bar
    does not clip, because the job's name is drawn to the RIGHT of it rather than inside. Put
    `overflow: hidden` back on the bar and every label on the chart disappears, with no error
@@ -262,7 +333,7 @@ check("the chart's critical-path band keeps its own corners", winner(CHART_CPM, 
 
 // No rule written for the chart may reach the six board pages by accident.
 const strays = rules
-  .filter((rule) => rule.selector.includes(".gantt-page") && !rule.selector.includes(".gantt-page.hs-index"))
+  .filter((rule) => rule.selector.includes(".gantt-page") && !rule.selector.includes(".gantt-chart"))
   .filter((rule) => !isSharedFurniture(rule.selector));
 const strayNames = [...new Set(strays.map((rule) => rule.selector))];
 console.log(
@@ -270,8 +341,23 @@ console.log(
 );
 if (strayNames.length > 0) {
   failures.push(
-    `${strayNames.length} .gantt-page rules are not scoped to .hs-index and are not shared: ${strayNames.slice(0, 6).join(", ")}`
+    `${strayNames.length} .gantt-page rules are not scoped to .gantt-chart and are not shared: ${strayNames.slice(0, 6).join(", ")}`
   );
+}
+
+/** …and the same question of the pick-up's keyframes, which a `check` cannot see inside. */
+const leanErasers = [];
+for (const file of SHEETS) {
+  postcss.parse(fs.readFileSync(path.join(root, file), "utf8")).walkAtRules("keyframes", (frames) => {
+    if (frames.params.trim() !== "sched-chip-lift") return;
+    frames.walkDecls((decl) => {
+      if (decl.prop === "transform") leanErasers.push(`${file} · ${frames.params} @ ${decl.parent.selector}`);
+    });
+  });
+}
+console.log(`${leanErasers.length === 0 ? "ok  " : "FAIL"}  keyframes that would animate the lean away: ${leanErasers.length}`);
+if (leanErasers.length > 0) {
+  failures.push(`the carried card's pick-up animates transform, which erases its lean: ${leanErasers.join(", ")}`);
 }
 
 /**
@@ -283,7 +369,11 @@ if (strayNames.length > 0) {
  */
 const BARE_CHART_TOKEN = /var\(\s*(--hsx-[\w-]+)\s*\)/;
 const unresolvable = rules.filter(
-  (rule) => !rule.selector.includes(".hs-index") && isSharedFurniture(rule.selector) && BARE_CHART_TOKEN.test(rule.value)
+  (rule) =>
+    !rule.selector.includes(".hs-index") &&
+    !rule.selector.includes(".gantt-chart") &&
+    isSharedFurniture(rule.selector) &&
+    BARE_CHART_TOKEN.test(rule.value)
 );
 const unresolvableNames = [
   ...new Set(unresolvable.map((rule) => `${rule.selector} { ${rule.prop}: ${rule.value.match(BARE_CHART_TOKEN)[1]} }`))

@@ -131,3 +131,233 @@
   border-color: var(--bf-line-solid);
   border-radius: var(--bf-radius-card);
 }
+
+/* ---- 5. the layout controls: Reset layout, and Customize underneath it ----
+   Asked for on 2026-09-15: a Customize button "right underneath Reset layout".
+   The row becomes a right-aligned column, and Customize takes the Reset pill's
+   own anatomy (radius, border, ink, shadow, 12.5px/600) so the two read as one
+   family stacked, rather than a pill over a 6px-radius button. Its pressed
+   state keeps hs-home.css's blue tint: that is what says the mode is on.
+
+   Later the same day: the stack moved DOWN off the date line to sit beside the
+   lede ("Your AI-powered hub for…"), its top on the lede's first line. App.tsx
+   renders the lede and the stack in one .hs-home-subline row: the lede keeps
+   daylight's 52ch measure on the left, the stack keeps the right edge it always
+   had (margin-left: auto holds it there even when a narrow pane wraps the row).
+   The Reset pill is 29px tall and the lede's line box 29.45px, so top-aligning
+   the two centres the pill on that first line. */
+.bf-shell .dash-rx.hs-home .hs-home-subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 24px;
+}
+.bf-shell .dash-rx.hs-home .hs-home-topline-actions {
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+.bf-shell .dash-rx.hs-home .hs-home-customize {
+  min-height: 0;
+  padding: 6px 12px;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: var(--wx-card);
+  color: var(--wx-mut);
+  font-family: var(--cc-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(var(--bf-line-rgb), 0.06);
+}
+.bf-shell .dash-rx.hs-home .hs-home-customize:hover {
+  background: var(--wx-card);
+  color: var(--cc-blue);
+  border-color: var(--cc-blue);
+}
+.bf-shell .dash-rx.hs-home .hs-home-customize.active {
+  background: var(--hsh-blue-soft);
+  border-color: rgba(47, 107, 255, 0.35);
+  color: var(--hsh-blue);
+}
+.bf-shell .dash-rx.hs-home .hs-home-customize svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---- 7. remove a section: the trash at the corner, while customizing ------
+   The reference's control: a round white button floating at the widget's
+   bottom-right corner, shown when the widget is hovered in its edit mode, with
+   a tooltip. hs-home.css draws this control as a 26px eye badge pinned to the
+   TOP-right corner (top: -8px; right: -8px) at five classes; this re-draws it
+   at six -- the form daylight already uses for its touch rule -- so it wins
+   every property, and resets `top`, because an absolutely positioned box given
+   both a top and a bottom keeps the top. It sits left of the resize grip, which
+   keeps the corner itself, on the raised shadow and the ink, and appears on
+   hover OR keyboard focus so it is reachable without a mouse. Only inside the
+   mode: DashSection renders it only while the board is being customized, and
+   nothing is deleted -- the section returns from "+". */
+.bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide {
+  position: absolute;
+  top: auto;
+  left: auto;
+  right: 40px;
+  bottom: 10px;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: 999px;
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink, #1c1c1a);
+  box-shadow: var(--bf-shadow-raised, 0 4px 12px rgba(28, 28, 26, 0.08));
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity var(--bf-dur-hover, 0.16s) ease,
+    transform var(--bf-dur-hover, 0.16s) var(--bf-ease, ease),
+    color var(--bf-dur-hover, 0.16s) ease,
+    border-color var(--bf-dur-hover, 0.16s) ease;
+}
+/* Shown by the pointer resting on the section, or by keyboard focus landing on the trash
+   itself -- NOT by focus anywhere inside the section, which made it appear after any click
+   in a panel. */
+.bf-shell .dash-rx.hs-home .dash-board .dash-block:hover > .dash-hide,
+.bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide:focus-visible {
+  opacity: 1;
+  transform: none;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide:hover,
+.bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide:focus-visible {
+  color: #c5221f;
+  border-color: rgba(197, 34, 31, 0.35);
+  background: var(--bf-surface, #ffffff);
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 2px;
+}
+/* Only a device that cannot hover gets the trash without hovering. Daylight's
+   rule at 2584 keys this on WIDTH too (under 1024px it assumes a touch screen),
+   which put a trash on every section at once in a narrow desktop window -- the
+   user's own. Width says nothing about a pointer; `hover: none` does. The base
+   rule above already out-orders daylight's 0.55 at the same six classes, so a
+   narrow window with a mouse is back to hover-only. */
+@media (hover: none) {
+  .bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ---- 8. outside Customize the board is read-only ----------------------------
+   The grip, the resize handle and the remove control are not rendered outside
+   the mode (DashBoard's `editable`), and the Performance / KPI cards' sort is
+   disabled there; this takes the grab cursor off those cards too, so nothing
+   invites a drag that would not happen. */
+.bf-shell .dash-rx.hs-home:not(.is-customizing) .dash-board .cc-stat.dash-card,
+.bf-shell .dash-rx.hs-home:not(.is-customizing) .dash-board .dash-kpi {
+  cursor: default;
+}
+
+/* ---- 9. a carried section looks like the reference's -----------------------
+   The lifted card keeps its own surface, size and content, takes the accent
+   edge and a deep soft shadow, and tilts a touch (the tilt is in the inline
+   transform DashBoard writes, since a sheet cannot add to an inline transform).
+   hs-home.css:1804 drew the card in flight as a transparent box with a
+   drop-shadow filter; this re-draws it at six classes. The slot it left is a
+   plain filled shape in the ground's tint -- the reference's grey well -- not
+   a dashed outline. */
+.bf-shell .dash-rx.hs-home .dash-board .dash-block.is-dragging,
+.bf-shell .dash-rx.hs-home.is-customizing .dash-board .dash-block.is-dragging {
+  border-color: var(--bf-accent, #2f6bff);
+  background: var(--bf-surface, #ffffff);
+  background-image: none;
+  filter: none;
+  box-shadow:
+    0 0 0 1px rgba(var(--bf-accent-rgb, 47, 107, 255), 0.35),
+    0 30px 60px -12px rgba(28, 28, 26, 0.32),
+    0 12px 24px -8px rgba(28, 28, 26, 0.18);
+  transform-origin: 50% 40%;
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-placeholder {
+  border: 0;
+  border-radius: var(--bf-radius-card, 16px);
+  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.07);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .dash-board .dash-placeholder {
+    transition: none;
+  }
+}
+
+/* ---- 10. the section under the pointer, while customizing ------------------
+   hs-home.css:1280 gives every section a dashed accent outline in the mode. The
+   one the pointer rests on -- the one about to be moved -- turns that outline
+   solid and full-strength, the way the reference's hovered widget takes its
+   solid edge while the rest stay dashed. Keyboard focus inside a section reads
+   the same way, so the person tabbing to a grip sees which section it belongs
+   to. outline-style does not animate; the colour does. */
+.bf-shell .dash-rx.hs-home.is-customizing .dash-board .dash-block {
+  transition:
+    outline-color var(--bf-dur-hover, 0.16s) ease,
+    top 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bf-shell .dash-rx.hs-home.is-customizing .dash-board .dash-block:hover,
+.bf-shell .dash-rx.hs-home.is-customizing .dash-board .dash-block:focus-within {
+  outline-style: solid;
+  outline-color: var(--bf-accent, #2f6bff);
+}
+/* the card in flight has its own accent edge; no outline on top of it */
+.bf-shell .dash-rx.hs-home.is-customizing .dash-board .dash-block.is-dragging {
+  outline: 0;
+}
+
+/* ---- 11. the same air between sections as above them -----------------------
+   DASH_GAP is 30 now (dashGrid.ts), the page stack's own gap, so every cell gap
+   on the board matches the space between the Schedule Status band and the
+   first section. The loading skeleton draws the same board and follows. */
+.bf-shell .dash-skeleton .dash-skel-board {
+  gap: 30px;
+}
+
+/* ---- 12. the move itself: instant in the hand, one smooth path on the drop ----
+   While carried, the panel's transform must follow the pointer with no easing at
+   all, on its own compositor layer. On the drop the inline transform goes away in
+   the same frame the panel's top/left change to its new cell; with `transform` in
+   the resting transition (hs-home's list has only top/left/width/height) both
+   interpolate over the same 0.26s and the sum is a straight line from where it
+   was let go to where it lands -- instead of a snap back to the old cell and a
+   slide from there. */
+.bf-shell .dash-rx.hs-home .dash-board .dash-block {
+  transition:
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bf-shell .dash-rx.hs-home .dash-board .dash-block.is-dragging {
+  transition: none;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .dash-board .dash-block {
+    transition: none;
+  }
+}
+

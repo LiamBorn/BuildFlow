@@ -44,7 +44,7 @@ export function TextShimmer({
   duration = 2,
   spread = 2,
   baseColor = "#9aa2ad",
-  highlightColor = "#2f6bff"
+  highlightColor = "var(--bf-color-accent, #1c1c1c)"
 }: TextShimmerProps) {
   // Bright-band width scales with the text length, like the original component.
   const dynamicSpread = useMemo(() => children.length * spread, [children, spread]);

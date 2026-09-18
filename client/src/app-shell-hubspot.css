@@ -178,13 +178,11 @@
   align-items: center;
   gap: 2px;
 }
-/* HubSpot order (create · help · settings · alerts · | · account) via flex order,
-   so the existing notification/account panels keep their DOM + behavior. */
+/* HubSpot order (create · settings · alerts · | · account) via flex order, so the
+   existing notification/account panels keep their DOM + behavior. (The help /
+   tutorial button that sat second went on 2026-09-15: the tutorial shows once.) */
 .hs-shell .topbar.hs-topbar .topbar-actions .hs-create {
   order: 1;
-}
-.hs-shell .topbar.hs-topbar .topbar-actions .topbar-help-button {
-  order: 2;
 }
 .hs-shell .topbar.hs-topbar .topbar-actions .hs-settings-button {
   order: 3;
@@ -222,12 +220,6 @@
 }
 .hs-shell .topbar.hs-topbar .topbar-actions .icon-button:focus-visible {
   box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.45);
-}
-.hs-shell .topbar.hs-topbar .topbar-help-button {
-  color: var(--hs-muted-on-navy);
-}
-.hs-shell .topbar.hs-topbar .topbar-help-button:hover {
-  color: var(--bf-on-accent);
 }
 .hs-shell .hs-topbar-divider {
   width: 1px;
@@ -1135,7 +1127,6 @@
   }
   .hs-shell .topbar.hs-topbar .topbar-actions > .hs-bookmarks,
   .hs-shell .topbar.hs-topbar .topbar-actions > .hs-create,
-  .hs-shell .topbar.hs-topbar .topbar-actions > .topbar-help-button,
   .hs-shell .topbar.hs-topbar .topbar-actions > .hs-settings-button {
     display: none;
   }

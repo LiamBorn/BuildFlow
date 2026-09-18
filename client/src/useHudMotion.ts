@@ -18,11 +18,13 @@ export function useHudMotion(rootRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    // The pointer loop publishes --mx/--my for the 480px .dx-cursor glow and --px/--py
-    // for the aurora parallax. Both are decoration, so a reduced-motion reader gets
-    // neither the glow nor the rAF loop that feeds it. This guard used to be missing
-    // while the reveal effect below had it — same file, same hook, one guard — which
-    // left the glow tracking the pointer for exactly the readers who asked it not to.
+    // The pointer loop publishes --px/--py for the aurora parallax. It used to publish
+    // --mx/--my too, which positioned a 480px glow on the cursor (.dx-cursor) on every
+    // command-center page; that glow was removed on request (2026-09-16, skin §51), so
+    // the loop no longer writes those two and nothing reads them inside the program.
+    // The parallax is decoration, so a reduced-motion reader gets neither it nor the rAF
+    // loop that feeds it. This guard used to be missing while the reveal effect below had
+    // it — same file, same hook, one guard.
     if (prefersReducedMotion()) return;
     let raf = 0;
     const handleMove = (event: PointerEvent) => {
@@ -30,8 +32,6 @@ export function useHudMotion(rootRef: RefObject<HTMLElement | null>) {
       raf = requestAnimationFrame(() => {
         const nx = event.clientX / window.innerWidth;
         const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
         root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
         root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
       });

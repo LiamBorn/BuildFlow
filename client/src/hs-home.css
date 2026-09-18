@@ -1794,7 +1794,11 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  overscroll-behavior: contain;
+  /* NO `overscroll-behavior: contain` here. Chrome lets a scroll container with it swallow
+     the wheel even when the container has NOTHING to scroll, so a pointer resting on this
+     region stopped the page dead — measured on the Dashboard: the page held at 500px with
+     2614px still to go. Containment belongs to overlays (a dropdown, a drawer), which must
+     not let the page move behind them; an in-page region has to chain. */
 }
 .dash-rx.hs-home .dash-board .dash-block-body > * {
   min-height: 0;
@@ -2068,9 +2072,14 @@
 }
 .dash-skeleton .dash-skel-board {
   display: grid;
+  /* these three are a second copy of the engine's geometry (dashGrid.ts: DASH_COLS,
+     DASH_ROW_UNIT, DASH_GAP) so the board does not change shape when the data arrives.
+     The gap read 16 until 2026-09-16 while the engine had been on 30 since 09-15 — the
+     skeleton only drew correctly because dashboard-monday-panels.css was overriding it.
+     motion-language.test.ts now reads the engine and checks every copy against it. */
   grid-template-columns: repeat(6, 1fr);
   grid-auto-rows: 40px;
-  gap: 16px;
+  gap: 30px;
 }
 .dash-skeleton .dash-skel-block {
   display: grid;

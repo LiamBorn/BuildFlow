@@ -2,7 +2,7 @@
    Account / login — two-column split redesign.
 
    Left: the auth form. Right: a BuildFlow-branded aurora panel with a
-   WxTypewriter quote. Keeps the program's palette (#2f6bff blue, white
+   WxTypewriter quote. Keeps the program's palette (#7d7d7d olive, white
    surfaces) and its typewriter/tween conventions — fresh `.acct-*` classes so
    it doesn't fight the old `.account-*` rules in styles.css. Light-mode to
    match the rest of the auth flow.
@@ -16,7 +16,7 @@
   display: grid;
   grid-template-columns: 1fr;
   background: #ffffff;
-  color: #141922;
+  color: #1e1e1e;
   font-family: inherit;
 }
 @media (min-width: 900px) {
@@ -55,14 +55,14 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: #637083;
+  color: #6f6f6f;
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
   transition: color 0.16s ease;
 }
 .acct-back:hover {
-  color: #2f6bff;
+  color: #7d7d7d;
 }
 
 .acct-brand {
@@ -78,7 +78,7 @@
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: #0b0e14;
+  color: #0e0e0e;
 }
 
 .acct-head {
@@ -91,7 +91,7 @@
   font-size: clamp(24px, 3.2vw, 30px);
   line-height: 1.1;
   letter-spacing: -0.02em;
-  color: #070b12;
+  color: #0b0b0b;
   font-weight: 800;
 }
 .acct-head p {
@@ -113,7 +113,7 @@
 .acct-field label {
   font-size: 13px;
   font-weight: 700;
-  color: #47505f;
+  color: #4f4f4f;
 }
 .acct-optional {
   color: #9aa0ab;
@@ -128,11 +128,11 @@
   width: 100%;
   min-width: 0;
   height: 46px;
-  border: 1.5px solid #d7dbe2;
+  border: 1.5px solid #dbdbdb;
   border-radius: 11px;
   padding: 0 14px;
   background: #ffffff;
-  color: #141922;
+  color: #1e1e1e;
   font-size: 15px;
   font-weight: 500;
   outline: 0;
@@ -145,8 +145,8 @@
   font-weight: 400;
 }
 .acct-input:focus {
-  border-color: #2f6bff;
-  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.14);
+  border-color: #7d7d7d;
+  box-shadow: 0 0 0 4px rgba(125, 125, 125, 0.14);
 }
 .acct-input.has-toggle {
   padding-right: 44px;
@@ -166,14 +166,14 @@
   font-weight: 400;
 }
 .acct-select option {
-  color: #141922;
+  color: #1e1e1e;
   font-weight: 500;
 }
 .acct-select-chevron {
   position: absolute;
   top: 50%;
   right: 14px;
-  color: #2f6bff;
+  color: #7d7d7d;
   pointer-events: none;
   transform: translateY(-50%);
   transition: transform 0.16s ease;
@@ -196,16 +196,16 @@
   transition: color 0.16s ease;
 }
 .acct-pw-toggle:hover {
-  color: #2f6bff;
+  color: #7d7d7d;
 }
 
 .acct-error {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: #b42318;
-  background: #fef3f2;
-  border: 1px solid #fecdc9;
+  color: #5d5d5d;
+  background: #f5f5f5;
+  border: 1px solid #d8d8d8;
   border-radius: 9px;
   padding: 8px 12px;
 }
@@ -219,7 +219,7 @@
   margin-top: 2px;
   font-size: 13.5px;
   font-weight: 600;
-  color: #47505f;
+  color: #4f4f4f;
   cursor: pointer;
   user-select: none;
 }
@@ -228,11 +228,11 @@
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #2f6bff;
+  accent-color: #7d7d7d;
   cursor: pointer;
 }
 .acct-remember input:focus-visible {
-  outline: 2px solid #2f6bff;
+  outline: 2px solid #7d7d7d;
   outline-offset: 2px;
 }
 
@@ -245,21 +245,21 @@
   gap: 8px;
   border: 0;
   border-radius: 11px;
-  background: #2f6bff;
+  background: #7d7d7d;
   color: #ffffff;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 12px 24px -8px rgba(47, 107, 255, 0.5);
+  box-shadow: 0 12px 24px -8px rgba(125, 125, 125, 0.5);
   transition:
     transform 0.14s ease,
     box-shadow 0.16s ease,
     background 0.16s ease;
 }
 .acct-primary:hover:not(:disabled) {
-  background: #2560f0;
+  background: #7d7d7d;
   transform: translateY(-1px);
-  box-shadow: 0 16px 30px -10px rgba(47, 107, 255, 0.55);
+  box-shadow: 0 16px 30px -10px rgba(125, 125, 125, 0.55);
 }
 .acct-primary:active:not(:disabled) {
   transform: translateY(0);
@@ -278,7 +278,7 @@
 }
 .acct-divider span {
   height: 1px;
-  background: #e6e8ec;
+  background: #e8e8e8;
 }
 .acct-divider em {
   font-style: normal;
@@ -298,10 +298,10 @@
   justify-content: center;
   gap: 8px;
   height: 44px;
-  border: 1.5px solid #e0e3e9;
+  border: 1.5px solid #e3e3e3;
   border-radius: 11px;
   background: #ffffff;
-  color: #3a3f4a;
+  color: #3f3f3f;
   font-size: 14px;
   font-weight: 600;
   cursor: not-allowed;
@@ -309,7 +309,7 @@
 }
 .acct-google-mark {
   font-weight: 800;
-  color: #4285f4;
+  color: #1e1e1e;
   font-size: 15px;
 }
 .acct-ms-mark {
@@ -323,16 +323,16 @@
   border-radius: 1px;
 }
 .acct-ms-mark i:nth-child(1) {
-  background: #f25022;
+  background: #888888;
 }
 .acct-ms-mark i:nth-child(2) {
-  background: #7fba00;
+  background: #a9a9a9;
 }
 .acct-ms-mark i:nth-child(3) {
-  background: #00a4ef;
+  background: #1e1e1e;
 }
 .acct-ms-mark i:nth-child(4) {
-  background: #ffb900;
+  background: #c5c5c5;
 }
 
 .acct-note {
@@ -345,13 +345,13 @@
   margin: 2px 0 0;
   text-align: center;
   font-size: 14px;
-  color: #47505f;
+  color: #4f4f4f;
 }
 .acct-toggle-copy button {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #2f6bff;
+  color: #7d7d7d;
   font-weight: 700;
   cursor: pointer;
 }
@@ -406,9 +406,9 @@
   gap: 9px;
   width: fit-content;
   padding: 7px 15px 7px 12px;
-  border: 1px solid #e6e8ec;
+  border: 1px solid #e8e8e8;
   border-radius: 999px;
-  background: #f8f9fb;
+  background: #f9f9f9;
   color: #6f7785;
   font-size: 12.5px;
   font-weight: 600;
@@ -417,9 +417,10 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2f6bff;
-  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.12);
-  animation: acct-dot-pulse 2.6s ease-in-out infinite;
+  background: #7d7d7d;
+  box-shadow: 0 0 0 4px rgba(125, 125, 125, 0.12);
+  /* held still (2026-09-16): a label's marker, not a live indicator — the same call the
+     app shell's .dx-dot took. The keyframes stay for the visualisation below. */
 }
 @keyframes acct-dot-pulse {
   0%,
@@ -446,7 +447,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: #070b12;
+  color: #0b0b0b;
 }
 .acct-sec-head span {
   font-size: 12.5px;
@@ -466,7 +467,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 13px 14px;
-  border: 1.5px solid #d7dbe2;
+  border: 1.5px solid #dbdbdb;
   border-radius: 13px;
   background: #ffffff;
   cursor: pointer;
@@ -488,17 +489,17 @@
 }
 .acct-pick:hover {
   transform: translateY(-2px);
-  border-color: #c3c9d4;
-  box-shadow: 0 14px 30px -12px rgba(11, 14, 20, 0.28);
+  border-color: #c9c9c9;
+  box-shadow: 0 14px 30px -12px rgba(30, 30, 30, 0.28);
 }
 .acct-pick:focus-within {
-  border-color: #2f6bff;
-  box-shadow: 0 0 0 4px rgba(47, 107, 255, 0.14);
+  border-color: #7d7d7d;
+  box-shadow: 0 0 0 4px rgba(125, 125, 125, 0.14);
 }
 .acct-pick.selected {
-  border-color: #2f6bff;
-  background: #f5f9ff;
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12);
+  border-color: #7d7d7d;
+  background: #f9f9f9;
+  box-shadow: 0 0 0 3px rgba(125, 125, 125, 0.12);
 }
 .acct-pick-ico {
   flex: none;
@@ -517,7 +518,7 @@
 .acct-pick-copy strong {
   font-size: 13.5px;
   font-weight: 700;
-  color: #141922;
+  color: #1e1e1e;
 }
 .acct-pick-copy em {
   font-size: 12px;
@@ -533,7 +534,7 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border: 1.5px solid #d7dbe2;
+  border: 1.5px solid #dbdbdb;
   border-radius: 50%;
   color: #ffffff;
   background: transparent;
@@ -549,8 +550,8 @@
     transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .acct-pick.selected .acct-pick-check {
-  background: #2f6bff;
-  border-color: #2f6bff;
+  background: #7d7d7d;
+  border-color: #7d7d7d;
 }
 .acct-pick.selected .acct-pick-check svg {
   opacity: 1;
@@ -559,25 +560,25 @@
 
 /* icon tones — same values the command center / hud-onb grid uses */
 .acct-pick-ico.tone-blue {
-  background: #e8f0fe;
-  color: #2f6bff;
+  background: #fafafa;
+  color: #7d7d7d;
 }
 .acct-pick-ico.tone-violet,
 .acct-pick-ico.tone-purple {
-  background: #efe8f8;
-  color: #6d28d9;
+  background: #ececec;
+  color: #565656;
 }
 .acct-pick-ico.tone-green {
-  background: #e2f1e6;
-  color: #188038;
+  background: #ededed;
+  color: #6f6f6f;
 }
 .acct-pick-ico.tone-teal {
-  background: #d9f1f0;
-  color: #0f766e;
+  background: #ececec;
+  color: #696969;
 }
 .acct-pick-ico.tone-orange {
-  background: #feecdc;
-  color: #c2410c;
+  background: #efefef;
+  color: #6d6d6d;
 }
 
 /* plan cards */
@@ -593,7 +594,7 @@
   justify-items: start;
   text-align: left;
   padding: 13px 14px;
-  border: 1.5px solid #d7dbe2;
+  border: 1.5px solid #dbdbdb;
   border-radius: 13px;
   background: #ffffff;
   cursor: pointer;
@@ -607,28 +608,28 @@
 }
 .acct-plan:hover {
   transform: translateY(-2px);
-  border-color: #c3c9d4;
-  box-shadow: 0 14px 30px -12px rgba(11, 14, 20, 0.28);
+  border-color: #c9c9c9;
+  box-shadow: 0 14px 30px -12px rgba(30, 30, 30, 0.28);
 }
 .acct-plan:focus-visible {
-  outline: 2px solid #2f6bff;
+  outline: 2px solid #7d7d7d;
   outline-offset: 2px;
 }
 .acct-plan.selected {
-  border-color: #2f6bff;
-  background: #f5f9ff;
-  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.12);
+  border-color: #7d7d7d;
+  background: #f9f9f9;
+  box-shadow: 0 0 0 3px rgba(125, 125, 125, 0.12);
 }
 .acct-plan strong {
   font-size: 14px;
   font-weight: 700;
-  color: #141922;
+  color: #1e1e1e;
 }
 .acct-plan-price {
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: #2f6bff;
+  color: #7d7d7d;
   font-variant-numeric: tabular-nums;
 }
 .acct-plan em {
@@ -645,7 +646,7 @@
   place-items: center;
   width: 18px;
   height: 18px;
-  border: 1.5px solid #d7dbe2;
+  border: 1.5px solid #dbdbdb;
   border-radius: 50%;
   color: #ffffff;
   background: transparent;
@@ -660,8 +661,8 @@
 .acct-plan.selected .acct-plan-check {
   opacity: 1;
   transform: none;
-  background: #2f6bff;
-  border-color: #2f6bff;
+  background: #7d7d7d;
+  border-color: #7d7d7d;
 }
 
 /* the CTA carries a trailing arrow on this step */
@@ -698,7 +699,7 @@
   display: none;
   padding: clamp(32px, 4vw, 48px);
   color: #ffffff;
-  background: radial-gradient(125% 120% at 18% 12%, #2a4bff 0%, #1b2a6b 46%, #0b1030 100%);
+  background: radial-gradient(125% 120% at 18% 12%, #7d7d7d 0%, #3c3c3c 46%, #1e1e1e 100%);
 }
 @media (min-width: 900px) {
   .acct-aside {
@@ -719,7 +720,7 @@
   height: 420px;
   top: -90px;
   right: -70px;
-  background: #4f7bff;
+  background: #7d7d7d;
   opacity: 0.55;
 }
 .acct-aurora-2 {
@@ -727,7 +728,7 @@
   height: 360px;
   bottom: -110px;
   left: -70px;
-  background: #9b6ecb;
+  background: #565656;
   opacity: 0.42;
 }
 .acct-aurora-3 {
@@ -735,7 +736,7 @@
   height: 300px;
   top: 42%;
   left: 34%;
-  background: #d96570;
+  background: #8a8a8a;
   opacity: 0.26;
 }
 
@@ -769,7 +770,7 @@
   font-weight: 600;
 }
 .acct-aside-type em {
-  color: #bcd0ff;
+  color: #e5e5e5;
   font-style: normal;
 }
 /* WxTypewriter internals (normally scoped under .welcome-rx) — replicated here
@@ -846,8 +847,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #48e5a3;
-  animation: acct-viz-pulse 2.4s ease-out infinite;
+  background: #cccccc;
 }
 .acct-viz-week {
   margin-left: auto;
@@ -891,16 +891,16 @@
   animation: acct-viz-job-in 12s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 .acct-viz-job-blue {
-  background-color: #4f7bff;
-  box-shadow: 0 2px 10px -2px rgba(79, 123, 255, 0.85);
+  background-color: #7d7d7d;
+  box-shadow: 0 2px 10px -2px rgba(125, 125, 125, 0.85);
 }
 .acct-viz-job-cyan {
-  background-color: #35c8f0;
-  box-shadow: 0 2px 10px -2px rgba(53, 200, 240, 0.7);
+  background-color: #e5e5e5;
+  box-shadow: 0 2px 10px -2px rgba(229, 229, 229, 0.7);
 }
 .acct-viz-job-violet {
-  background-color: #9b6ecb;
-  box-shadow: 0 2px 10px -2px rgba(155, 110, 203, 0.7);
+  background-color: #565656;
+  box-shadow: 0 2px 10px -2px rgba(86, 86, 86, 0.7);
 }
 
 /* the double-booked block: lands overlapping its lane-mate, holds amber, then
@@ -935,11 +935,11 @@
 }
 @keyframes acct-viz-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(72, 229, 163, 0.55);
+    box-shadow: 0 0 0 0 rgba(204, 204, 204, 0.55);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 7px rgba(72, 229, 163, 0);
+    box-shadow: 0 0 0 7px rgba(204, 204, 204, 0);
   }
 }
 @keyframes acct-viz-job-in {
@@ -989,17 +989,17 @@
 @keyframes acct-viz-job-tone {
   0%,
   40% {
-    background-color: #f2a63b;
-    box-shadow: 0 2px 12px -2px rgba(242, 166, 59, 0.9);
+    background-color: #b5b5b5;
+    box-shadow: 0 2px 12px -2px rgba(181, 181, 181, 0.9);
   }
   45% {
-    background-color: #f2a63b;
-    box-shadow: 0 0 0 4px rgba(242, 166, 59, 0.3);
+    background-color: #b5b5b5;
+    box-shadow: 0 0 0 4px rgba(181, 181, 181, 0.3);
   }
   52%,
   100% {
-    background-color: #4f7bff;
-    box-shadow: 0 2px 10px -2px rgba(79, 123, 255, 0.85);
+    background-color: #7d7d7d;
+    box-shadow: 0 2px 10px -2px rgba(125, 125, 125, 0.85);
   }
 }
 @keyframes acct-viz-sweep {
@@ -1051,7 +1051,7 @@
 /* =========================================================================
    Landing-page parity — left (form) column only.
 
-   The auth split kept its own white/#2f6bff identity while the landing page
+   The auth split kept its own white/#7d7d7d identity while the landing page
    moved onto the `.welcome-rx` system. These rules bring the form column onto
    that same language — paper background, Inter display type, the ink pill CTA,
    line-bordered fields and the eyebrow chip — so signing in reads as the same
@@ -1065,20 +1065,20 @@
    `.welcome-rx` ancestor exists to supply the tokens.
    ========================================================================== */
 .acct-split {
-  --wx-bg: #f5f6fa;
-  --wx-bg-2: #eaedf3;
+  --wx-bg: #f6f6f6;
+  --wx-bg-2: #eeeeee;
   --wx-ink: #1c1c1a;
   --wx-mut: #575550;
   --wx-faint: #8a877e;
   --wx-line: rgba(28, 28, 26, 0.13);
   --wx-line-soft: rgba(28, 28, 26, 0.07);
   --wx-card: #ffffff;
-  --wx-blue: #1a73e8;
+  --wx-blue: #7d7d7d;
   --wx-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--wx-ink);
 }
 
-/* paper, not white — the landing hero sits on #f5f6fa */
+/* paper, not white — the landing hero sits on #f6f6f6 */
 .acct-split .acct-form-col {
   background: var(--wx-bg);
 }
@@ -1192,7 +1192,7 @@
   height: 48px;
   border-radius: 999px;
   background: var(--wx-ink);
-  color: #fdfcf9;
+  color: #fcfcfc;
   font-family: var(--wx-sans);
   font-size: 15px;
   font-weight: 600;
@@ -1271,7 +1271,7 @@
 /* selected trade: the icon tile flips to the brand ink so it reads as the answer */
 .acct-trade-grid .acct-pick.selected .acct-pick-ico {
   background: #1c1c1a;
-  color: #fdfcf9;
+  color: #fcfcfc;
 }
 
 .acct-preview {
@@ -1286,7 +1286,7 @@
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  color: #eef2ff;
+  color: #f4f4f4;
   animation: acct-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .acct-preview-title {
@@ -1295,7 +1295,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(238, 242, 255, 0.62);
+  color: rgba(244, 244, 244, 0.62);
 }
 .acct-preview-row {
   display: grid;
@@ -1307,7 +1307,7 @@
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: rgba(238, 242, 255, 0.72);
+  color: rgba(244, 244, 244, 0.72);
 }
 .acct-preview-row dd {
   margin: 0;
@@ -1324,20 +1324,20 @@
   background: rgba(255, 255, 255, 0.1);
   font-size: 12px;
   font-weight: 600;
-  color: #f4f6ff;
+  color: #f6f6f6;
   white-space: nowrap;
 }
 .acct-preview-empty {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(238, 242, 255, 0.7);
+  color: rgba(244, 244, 244, 0.7);
 }
 .acct-preview-desc {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.5;
-  color: rgba(238, 242, 255, 0.86);
+  color: rgba(244, 244, 244, 0.86);
 }
 
 @media (max-width: 1180px) {
@@ -1380,7 +1380,8 @@
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    /* the wheel CHAINS out of this column: containment swallows it even with nothing
+       left to scroll, which stuck the sign-up page on it. */
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
     scrollbar-gutter: stable;
@@ -1399,18 +1400,18 @@
    Per-field errors, the live password meter and the terms checkbox. Colours
    stay on the page's own blue / red so the form reads as one object. */
 .acct-input.is-invalid {
-  border-color: #d96570;
+  border-color: #8a8a8a;
 }
 .acct-input.is-invalid:focus {
-  border-color: #d96570;
-  box-shadow: 0 0 0 4px rgba(217, 101, 112, 0.16);
+  border-color: #8a8a8a;
+  box-shadow: 0 0 0 4px rgba(138, 138, 138, 0.16);
 }
 .acct-field-error {
   margin: 0;
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.45;
-  color: #b4404b;
+  color: #686868;
   display: flex;
   flex-wrap: wrap;
   gap: 0 8px;
@@ -1422,12 +1423,12 @@
   padding: 0;
   background: none;
   font: inherit;
-  color: #2f6bff;
+  color: #7d7d7d;
   text-decoration: underline;
   cursor: pointer;
 }
 .acct-field-error .acct-inline-link:focus-visible {
-  outline: 2px solid #2f6bff;
+  outline: 2px solid #7d7d7d;
   outline-offset: 2px;
   border-radius: 3px;
 }
@@ -1450,20 +1451,20 @@
 .acct-strength-bar span {
   height: 5px;
   border-radius: 999px;
-  background: #e6e8ec;
+  background: #e8e8e8;
   transition: background 0.25s ease;
 }
 .acct-strength[data-score="1"] .acct-strength-bar span:nth-child(-n + 1) {
-  background: #d96570;
+  background: #8a8a8a;
 }
 .acct-strength[data-score="2"] .acct-strength-bar span:nth-child(-n + 2) {
-  background: #e0a23c;
+  background: #adadad;
 }
 .acct-strength[data-score="3"] .acct-strength-bar span:nth-child(-n + 3) {
-  background: #2f9e6b;
+  background: #8c8c8c;
 }
 .acct-strength[data-score="4"] .acct-strength-bar span {
-  background: #1f8a58;
+  background: #797979;
 }
 .acct-strength-label {
   font-size: 12px;
@@ -1474,14 +1475,14 @@
   gap: 10px;
 }
 .acct-strength[data-score="1"] .acct-strength-label b {
-  color: #b4404b;
+  color: #686868;
 }
 .acct-strength[data-score="2"] .acct-strength-label b {
-  color: #a8721b;
+  color: #7d7d7d;
 }
 .acct-strength[data-score="3"] .acct-strength-label b,
 .acct-strength[data-score="4"] .acct-strength-label b {
-  color: #1f8a58;
+  color: #797979;
 }
 .acct-strength-label b {
   font-weight: 700;
@@ -1493,14 +1494,14 @@
 .acct-terms span {
   font-size: 13px;
   line-height: 1.45;
-  color: #47505f;
+  color: #4f4f4f;
 }
 .acct-terms a {
-  color: #2f6bff;
+  color: #7d7d7d;
   text-decoration: underline;
 }
 .acct-terms.is-invalid input {
-  outline: 2px solid #d96570;
+  outline: 2px solid #8a8a8a;
   outline-offset: 1px;
   border-radius: 4px;
 }
@@ -1528,7 +1529,7 @@
   margin: 0 0 10px;
   font-size: 13.5px;
   line-height: 1.5;
-  color: #47505f;
+  color: #4f4f4f;
 }
 .acct-seats-total b {
   color: #1c1c1a;
@@ -1559,12 +1560,12 @@
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
-  color: #2f6bff;
+  color: #7d7d7d;
   cursor: pointer;
   text-decoration: underline;
 }
 .acct-link-btn:focus-visible {
-  outline: 2px solid #2f6bff;
+  outline: 2px solid #7d7d7d;
   outline-offset: 2px;
   border-radius: 3px;
 }
@@ -1572,14 +1573,14 @@
   margin: 0;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(47, 158, 107, 0.1);
-  border: 1px solid rgba(47, 158, 107, 0.28);
+  background: rgba(140, 140, 140, 0.1);
+  border: 1px solid rgba(140, 140, 140, 0.28);
   font-size: 13.5px;
   line-height: 1.5;
-  color: #1f5f41;
+  color: #545454;
 }
 .acct-success b {
-  color: #143f2b;
+  color: #373737;
 }
 .business-context-verify {
   display: flex;
@@ -1589,13 +1590,13 @@
   margin: 0 0 12px;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(47, 107, 255, 0.08);
-  border: 1px solid rgba(47, 107, 255, 0.22);
+  background: rgba(125, 125, 125, 0.08);
+  border: 1px solid rgba(125, 125, 125, 0.22);
   font-size: 13px;
   color: #1c1c1a;
 }
 .business-context-verify svg {
-  color: #2f6bff;
+  color: #7d7d7d;
   flex-shrink: 0;
 }
 .business-context-verify b {
@@ -1603,14 +1604,14 @@
 }
 .business-context-verify em {
   font-style: normal;
-  color: #2a7d55;
+  color: #6f6f6f;
   font-weight: 600;
 }
 .business-context-verify button {
   appearance: none;
-  border: 1px solid rgba(47, 107, 255, 0.4);
+  border: 1px solid rgba(125, 125, 125, 0.4);
   background: #fff;
-  color: #2f6bff;
+  color: #7d7d7d;
   padding: 4px 10px;
   border-radius: 999px;
   font: inherit;
@@ -1659,7 +1660,7 @@
 }
 .acct-invite-remove {
   appearance: none;
-  border: 1px solid #d7dbe2;
+  border: 1px solid #dbdbdb;
   background: #fff;
   color: #6f7785;
   width: 40px;
@@ -1671,8 +1672,8 @@
   margin-top: 2px;
 }
 .acct-invite-remove:hover {
-  color: #b4404b;
-  border-color: #e8b4b9;
+  color: #686868;
+  border-color: #c1c1c1;
 }
 .acct-invite-add {
   justify-self: start;
@@ -1693,7 +1694,7 @@
   gap: 6px 14px;
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid #d7dbe2;
+  border: 1px solid #dbdbdb;
   background: #fff;
   font-size: 13.5px;
 }
@@ -1701,11 +1702,11 @@
   color: #6f7785;
 }
 .acct-invite-results li[data-status="sent"] span {
-  color: #1f8a58;
+  color: #797979;
   font-weight: 600;
 }
 .acct-invite-results li[data-status="held"] span {
-  color: #a8721b;
+  color: #7d7d7d;
   font-weight: 600;
 }
 button.acct-hint-center {
@@ -1735,7 +1736,7 @@ button.acct-hint-center {
 .settings-inline-form .acct-field label {
   font-size: 13px;
   font-weight: 700;
-  color: #47505f;
+  color: #4f4f4f;
 }
 .settings-inline-submit {
   width: auto;
@@ -1755,24 +1756,24 @@ button.acct-hint-center {
   font-style: normal;
 }
 .settings-me-tag {
-  background: rgba(47, 107, 255, 0.12);
-  color: #1f4fc2;
+  background: rgba(125, 125, 125, 0.12);
+  color: #7d7d7d;
 }
 .settings-sample-tag {
-  background: rgba(224, 162, 60, 0.16);
-  color: #a8721b;
+  background: rgba(173, 173, 173, 0.16);
+  color: #7d7d7d;
 }
 .settings-role-pill {
   font-size: 12.5px;
   font-weight: 600;
-  color: #47505f;
+  color: #4f4f4f;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #f0f1f4;
+  background: #f1f1f1;
 }
 .settings-member-avatar.is-pending {
-  background: #eef1f6;
-  color: #6f7785;
+  background: #f1f1f1;
+  color: #61636f;
 }
 .settings-invite-submit {
   width: auto;
@@ -1803,20 +1804,20 @@ button.acct-hint-center {
   font-style: normal;
   letter-spacing: 0.02em;
   vertical-align: middle;
-  background: #f0f1f4;
-  color: #47505f;
+  background: #f1f1f1;
+  color: #4f4f4f;
 }
 .settings-billing-panel[data-status="trial"] .settings-status-pill {
-  background: rgba(224, 162, 60, 0.16);
-  color: #a8721b;
+  background: rgba(173, 173, 173, 0.16);
+  color: #7d7d7d;
 }
 .settings-billing-panel[data-status="trial_expired"] .settings-status-pill {
-  background: rgba(217, 101, 112, 0.16);
-  color: #b4404b;
+  background: rgba(138, 138, 138, 0.16);
+  color: #686868;
 }
 .settings-billing-panel[data-status="active"] .settings-status-pill {
-  background: rgba(47, 158, 107, 0.14);
-  color: #1f8a58;
+  background: rgba(140, 140, 140, 0.14);
+  color: #797979;
 }
 .settings-billing-actions {
   display: flex;
@@ -1826,15 +1827,15 @@ button.acct-hint-center {
   margin-top: 16px;
 }
 .business-context-verify.is-billing {
-  background: rgba(217, 101, 112, 0.09);
-  border-color: rgba(217, 101, 112, 0.28);
+  background: rgba(138, 138, 138, 0.09);
+  border-color: rgba(138, 138, 138, 0.28);
 }
 .business-context-verify.is-billing svg {
-  color: #b4404b;
+  color: #686868;
 }
 .business-context-verify.is-billing button {
-  border-color: rgba(180, 64, 75, 0.4);
-  color: #b4404b;
+  border-color: rgba(104, 104, 104, 0.4);
+  color: #686868;
 }
 .settings-role-select {
   width: auto;

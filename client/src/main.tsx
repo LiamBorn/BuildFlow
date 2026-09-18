@@ -7,6 +7,7 @@ import "./styles.css";
 import "./redesign.css";
 import "./timecard.css";
 import "./welcome-redesign.css";
+import "./frost-landing.css"; // the landing page (Frost hero)
 import "./updates-redesign.css";
 import "./updates-ascent.css";
 import "./reviews-redesign.css";
@@ -75,6 +76,11 @@ import "./plan-upgrade.css"; // the top bar's Upgrade button and its plan menu
 import "./notifications-panel.css"; // the notifications drawer, on the reference's layout
 import "./record-focus.css"; // the landing a notification makes: the row or panel it points at, lit for a moment
 import "./dashboard-monday-panels.css"; // the Dashboard's boxes on monday.com's card: one header row on every panel — must load after the admin-kit sheet
+import "./feedback-tab.css"; // the Dashboard's "Give feedback" tab and the parts of its dialog the .pdx system does not draw
+import "./section-picker.css"; // the Dashboard's "+": the Add-a-section drawer, on the notifications drawer's chrome
+import "./workspace-switcher.css"; // the Dashboard's workspace switcher: one login, several BuildFlow programs
+import "./schedule-board.css"; // the Schedule page's sections on the Dashboard's panel board — after the panel sheets it leans on
+import "./app-shell-client-desk.css"; // the whole product on the Client Desk language: tokens, the frame, the top row, the rail — loads LAST so it wins ties
 
 initAnalytics();
 

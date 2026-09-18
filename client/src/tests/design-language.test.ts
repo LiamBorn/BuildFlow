@@ -41,6 +41,27 @@ const channel = (v: number) => {
   return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
 };
 const luminance = (c: RGB) => 0.2126 * channel(c[0]) + 0.7152 * channel(c[1]) + 0.0722 * channel(c[2]);
+/** The hue in degrees, so "could this colour be mistaken for that one" is answerable. */
+const hue = (c: RGB): number => {
+  const [r, g, b] = c.map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  const raw = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return Math.round(raw * 60 + 360) % 360;
+};
+const apart = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+/** Saturation, which is how a muted trade colour is told from a saturated status tone. */
+const sat = (c: RGB): number => {
+  const [r, g, b] = c.map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const l = (max + min) / 2;
+  return Math.round(((max - min) / (l > 0.5 ? 2 - max - min : max + min)) * 100) / 100;
+};
+
 const contrast = (a: RGB, b: RGB) => {
   const l1 = luminance(a);
   const l2 = luminance(b);
@@ -135,50 +156,343 @@ describe("the ink ladder holds against every ground the design uses", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("gives every theme an accent trio that holds its own contrast", () => {
-    /* The four themes each re-point the accent, so "the accent is safe" stopped being one
-       measurement and became four. Each theme declares three rungs and each has a job:
-         --bf-accent       the identity: borders, washes, charts, glows, non-text fills
-         --bf-accent-fill  the same surface where light TEXT sits on it
-         --bf-accent-dark  accent TEXT sitting on an accent wash
-       Measuring moved four of the five: Red's brighter #ef4444 carries white text at only
-       3.76 so its fill darkens a rung, Green's lime is 1.98 against white text and 2.71 as
-       an indicator on its own cream so the lime is the RAIL and the page accent is darker,
-       and Dark takes the LIGHT rung as its identity because its surfaces are dark. That is
-       exactly why the fill rung exists rather than being the accent everywhere. The numbers are recomputed here from the
-       stylesheet's own values, so a theme cannot be added or retuned past this. */
-    const css = read(SHEET);
-    const themes = ["dark", "red", "purple", "green"];
-    const missing: string[] = [];
-    for (const theme of themes) {
-      const block = css.match(new RegExp(`\\.bf-shell\\[data-bf-theme="${theme}"\\]\\s*\\{([^}]*)\\}`));
-      if (!block) {
-        missing.push(`${theme}: no token block`);
-        continue;
+  it("gives every Colors set an accent trio and four tones that hold their own contrast", () => {
+    /* The five whole-palette themes this used to measure were removed on 2026-09-16: the
+       Preferences panel offers COLOUR SETS now, which supply only the hints (skin §47), so
+       the same questions are asked of each set. Default is monochrome and Blue overrides
+       only the hints that are black in Default, so a set is read as the base plus its
+       override — exactly how the cascade resolves it. */
+    expect(read(SHEET)).not.toMatch(/data-bf-theme="(red|purple|green)"/);
+    const skin = read("app-shell-client-desk.css");
+    const blockWith = (selector: string, marker: string) => {
+      let from = 0;
+      for (;;) {
+        const i = skin.indexOf(selector, from);
+        expect(i, `${selector} carrying ${marker}`).toBeGreaterThan(-1);
+        const open = skin.indexOf("{", i);
+        const body = skin.slice(open + 1, skin.indexOf("}", open));
+        if (body.includes(marker)) return body;
+        from = i + 1;
       }
-      const pick = (name: string) => block[1].match(new RegExp(`--bf-${name}:\\s*([^;]+)`))?.[1]?.trim();
-      const accent = pick("accent");
-      const fill = pick("accent-fill");
-      const dark = pick("accent-dark");
-      if (!accent || !fill || !dark) {
-        missing.push(`${theme}: accent ${accent} fill ${fill} dark ${dark}`);
-        continue;
+    };
+    const base = blockWith("body:has(.app-shell.hs-shell.bf-shell)", "--bf-color-accent:");
+    const blue = blockWith('body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"])', "--bf-color-accent:");
+    const pick = (block: string, name: string) => block.match(new RegExp(`--bf-color-${name}:\\s*([^;]+)`))?.[1]?.trim();
+    const sets: Array<[string, string]> = [
+      ["Default", ""],
+      ["Blue", blue]
+    ];
+    for (const [name, override] of sets) {
+      const tok = (key: string) => pick(override, key) ?? pick(base, key);
+      const accent = tok("accent")!;
+      const fill = tok("accent-fill")!;
+      const onAccent = tok("on-accent")!;
+      const wash = tok("accent-wash")!;
+      expect([accent, fill, onAccent, wash].every(Boolean), `${name}: the accent trio is declared`).toBe(true);
+      // its label on the fill that carries it
+      expect(round(contrast(hex(onAccent), hex(fill))), `${name}: --bf-color-on-accent on the fill`).toBeGreaterThanOrEqual(4.5);
+      // the accent as text on its own wash
+      expect(round(contrast(hex(accent), hex(wash))), `${name}: the accent on its own wash`).toBeGreaterThanOrEqual(4.5);
+      // and as a non-text indicator on the white card
+      expect(round(contrast(hex(accent), CARD)), `${name}: the accent on the card`).toBeGreaterThanOrEqual(3);
+      // each of the four tones reads on the wash it is paired with
+      for (const tone of ["info", "ok", "warn", "bad"]) {
+        const ink = tok(tone)!;
+        const toneWash = tok(`${tone}-wash`)!;
+        expect(round(contrast(hex(ink), hex(toneWash))), `${name}: the ${tone} tone on its wash`).toBeGreaterThanOrEqual(4.5);
       }
-      // light text on the surface that carries it
-      expect(round(contrast(hex(fill), CARD)), `${theme}: white text on --bf-accent-fill`).toBeGreaterThanOrEqual(4.5);
-      // accent text on its own wash, at both tints this sheet uses
-      const own8 = composite(hex(accent), 0.08, CARD);
-      const own10 = composite(hex(accent), 0.1, CARD);
-      expect(round(contrast(hex(dark), own8)), `${theme}: --bf-accent-dark on its 8% wash`).toBeGreaterThanOrEqual(4.5);
-      expect(round(contrast(hex(dark), own10)), `${theme}: --bf-accent-dark on its 10% wash`).toBeGreaterThanOrEqual(4.5);
-      /* The identity hue still has to be visible as a non-text indicator -- against the
-         theme's OWN surface, not against white. The Dark theme pins dark surfaces itself,
-         so checking it on a white card asked the wrong question and reported 1.92 for a
-         colour that measures 8.97 where it actually sits. */
-      const ownSurface = pick("surface") ?? "#ffffff";
-      expect(round(contrast(hex(accent), hex(ownSurface))), `${theme}: --bf-accent on its own surface`).toBeGreaterThanOrEqual(3);
     }
-    expect(missing).toEqual([]);
+  });
+
+  it("gives a chart's two series their own colours, which no status tone could be mistaken for", () => {
+    /* Colour pass phase two (2026-09-17). Both series were gray, so planned and actual were
+       told apart only by position; and five charts had borrowed a STATUS tone for a plain
+       comparison, which after phase one meant a planned-versus-actual bar chart read as
+       "gray versus warning". The rule this case holds: a series is drawn in a series
+       colour, a status tone is only for status, and the two families cannot be confused. */
+    const skin = read("app-shell-client-desk.css");
+    const blockWith = (selector: string, marker: string) => {
+      let from = 0;
+      for (;;) {
+        const i = skin.indexOf(selector, from);
+        expect(i, `${selector} carrying ${marker}`).toBeGreaterThan(-1);
+        const open = skin.indexOf("{", i);
+        const body = skin.slice(open + 1, skin.indexOf("}", open));
+        if (body.includes(marker)) return body;
+        from = i + 1;
+      }
+    };
+    const pick = (block: string, name: string) => block.match(new RegExp(`--bf-color-${name}:\\s*([^;]+)`))?.[1]?.trim();
+    const READINGS: Array<[string, string, RGB]> = [
+      ["light", "body:has(.app-shell.hs-shell.bf-shell)", CARD],
+      ["dark", 'body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"])', hex("#1b1b19")]
+    ];
+    for (const [mode, selector, card] of READINGS) {
+      const block = blockWith(selector, "--bf-color-series-1:");
+      const one = pick(block, "series-1")!;
+      const two = pick(block, "series-2")!;
+      // each series is legible as a bar or a line on the card it is drawn on
+      expect(round(contrast(hex(one), card)), `${mode}: series-1 on the card`).toBeGreaterThanOrEqual(3);
+      expect(round(contrast(hex(two), card)), `${mode}: series-2 on the card`).toBeGreaterThanOrEqual(3);
+      // and from each other, which is what a legend asks of them
+      expect(round(contrast(hex(one), hex(two))), `${mode}: the two series against each other`).toBeGreaterThanOrEqual(1.15);
+      // the second series carries a hue no status tone is near, so it cannot read as one
+      const [r, g, b] = hex(two);
+      expect(Math.max(r, g, b) - Math.min(r, g, b), `${mode}: series-2 is a colour, not a gray`).toBeGreaterThan(40);
+      for (const tone of ["ok", "warn", "bad", "info"]) {
+        const value = pick(block, tone)!;
+        expect(
+          apart(hue(hex(two)), hue(hex(value))),
+          `${mode}: series-2 sits ${apart(hue(hex(two)), hue(hex(value)))}deg from the ${tone} tone`
+        ).toBeGreaterThanOrEqual(25);
+      }
+    }
+
+    /* And the derivation that found the five: every charted series in the sources reads a
+       series token, unless the tone IS the thing being charted. */
+    const ALLOWED_STATUS_SERIES = [
+      ["App.tsx", "days", "bad"], // days of delay: the tone is the news
+      ["TimeCard.tsx", "value", "ok"] // the efficiency bar, filled per point against its threshold
+    ];
+    const borrowed: string[] = [];
+    for (const file of ["App.tsx", "TimeCard.tsx"]) {
+      const source = read(file);
+      for (const match of source.matchAll(/<(Bar|Line|Area)\b([\s\S]{0,400}?)\/?>/g)) {
+        const element = match[2];
+        const token = element.match(/(?:fill|stroke)="var\(--bf-color-([a-z0-9-]+)\)"/)?.[1];
+        if (!token || token.startsWith("series-")) continue;
+        const key = element.match(/dataKey="([^"]+)"/)?.[1] ?? "(no dataKey)";
+        if (ALLOWED_STATUS_SERIES.some(([f, k, t]) => f === file && k === key && token.startsWith(t))) continue;
+        borrowed.push(`${file}: <${match[1]} dataKey="${key}"> draws with the ${token} tone`);
+      }
+    }
+    expect(borrowed, "a chart series may not borrow a status tone").toEqual([]);
+
+    /* The other half of the same rule, and the one that made phase two look like it had
+       done nothing: the skin PAINTS chart geometry from CSS (that is how the monochrome
+       pass reached a chart), and an SVG `fill` written on the element is a presentation
+       attribute — the lowest priority there is — so those rules silently beat the series
+       token the chart asks for. Any rule that paints geometry has to name a series token;
+       the furniture (grid, text, the hover band) is neutral and exempt. */
+    const GEOMETRY = ["-bar-rectangle path", "-line-curve", "-line-dot", "-line .recharts-dot", "-active-dot"];
+    const painted: string[] = [];
+    for (const match of skin.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = match[1].trim().split("\n").at(-1)!.trim();
+      const body = match[2];
+      if (!GEOMETRY.some((part) => selector.includes(part))) continue;
+      for (const decl of body.matchAll(/(fill|stroke):\s*([^;]+)/g)) {
+        const value = decl[2].trim();
+        // a dot's ring is drawn in the card's own colour so the line reads through it
+        if (decl[1] === "stroke" && value.includes("--bf-surface")) continue;
+        if (!value.includes("--bf-color-series-")) painted.push(`${selector.slice(-54)} { ${decl[1]}: ${value} }`);
+      }
+    }
+    expect(painted, "a rule that paints chart geometry must name a series token").toEqual([]);
+  });
+
+  it("gives each trade its own muted identity, which no status tone could be mistaken for", () => {
+    /* Colour pass phase three (2026-09-17). A Month card, a Kanban lane, a milestone
+       diamond and the load grid all take their tone from the job's trade (`--sc-tone`,
+       from tradeColorVar), and while the eight trade tokens were grays a board could not
+       be read by trade at all. The rule: a trade is MUTED and a status tone is SATURATED,
+       which is what keeps a trade chip from reading as a warning — hue tells the trades
+       apart from each other, saturation tells the two families apart. */
+    const skin = read("app-shell-client-desk.css");
+    const blockWith = (selector: string, marker: string) => {
+      let from = 0;
+      for (;;) {
+        const i = skin.indexOf(selector, from);
+        expect(i, `${selector} carrying ${marker}`).toBeGreaterThan(-1);
+        const open = skin.indexOf("{", i);
+        const body = skin.slice(open + 1, skin.indexOf("}", open));
+        if (body.includes(marker)) return body;
+        from = i + 1;
+      }
+    };
+    const pick = (block: string, name: string) => block.match(new RegExp(`--bf-color-${name}:\\s*([^;]+)`))?.[1]?.trim();
+    const TRADES = ["concrete", "framing", "mep", "finishes", "sitework", "inspections"];
+    const MUTED_CAP = 0.42;
+    for (const [mode, selector, card] of [
+      ["light", "body:has(.app-shell.hs-shell.bf-shell)", CARD],
+      ["dark", 'body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"])', hex("#1b1b19")]
+    ] as Array<[string, string, RGB]>) {
+      const block = blockWith(selector, "--bf-color-trade-concrete:");
+      const values = TRADES.map((trade) => [trade, pick(block, `trade-${trade}`)!] as const);
+      for (const [trade, value] of values) {
+        // a chip, a dot and a lane rail are all drawn solid, so the indicator floor applies
+        expect(round(contrast(hex(value), card)), `${mode}: the ${trade} chip on the card`).toBeGreaterThanOrEqual(3);
+        expect(sat(hex(value)), `${mode}: the ${trade} tone is muted`).toBeLessThanOrEqual(MUTED_CAP);
+        const h = hue(hex(value));
+        expect(h < 190 || h > 262 || sat(hex(value)) < 0.3, `${mode}: ${trade} is out of the blue band`).toBe(true);
+      }
+      /* The anti-confusion rule, PER PAIR. Five trades cannot all avoid four status hues in
+         a circle that also bans the blues, so a trade may share a status's neighbourhood
+         only by being markedly less saturated than it. Written this way because the first
+         attempt put MEP on a violet at the information tone's own hue (274 against 274) at
+         nearly its saturation, which this rule caught. */
+      for (const [trade, value] of values) {
+        for (const tone of ["ok", "warn", "bad", "info"]) {
+          const status = pick(block, tone)!;
+          const gap = apart(hue(hex(value)), hue(hex(status)));
+          if (gap >= 30) continue;
+          expect(
+            sat(hex(value)),
+            `${mode}: ${trade} sits ${gap}deg from the ${tone} tone, so it has to be far less saturated`
+          ).toBeLessThanOrEqual(round(sat(hex(status)) * 0.6));
+        }
+      }
+      // and the trades that carry a hue are far enough apart to be read off a legend
+      const hued = values.filter(([, value]) => sat(hex(value)) >= 0.08);
+      expect(hued.length, `${mode}: five trades carry a hue`).toBeGreaterThanOrEqual(5);
+      for (let i = 0; i < hued.length; i += 1) {
+        for (let j = i + 1; j < hued.length; j += 1) {
+          const [a, b] = [hued[i], hued[j]];
+          expect(apart(hue(hex(a[1])), hue(hex(b[1]))), `${mode}: ${a[0]} and ${b[0]} are too close in hue`).toBeGreaterThanOrEqual(30);
+        }
+      }
+      /* The two calendar marks are not trades: a milestone is the schedule's own marker
+         and a holiday is an absence, so both stay neutral. */
+      for (const mark of ["milestone", "holiday"]) {
+        const [r, g, b] = hex(pick(block, `trade-${mark}`)!);
+        expect(r === g && g === b, `${mode}: the ${mark} mark stays neutral`).toBe(true);
+      }
+    }
+  });
+
+  it("gives every identity disc a colour of its own, with initials that hold their contrast", () => {
+    /* Colour pass phase four (2026-09-17). Every identity disc in the program — the top
+       row's avatar, the Settings member rows, a contact's record, the project marks, the
+       workspace tiles, the map's avatar stacks — wears one of four gradients, cycled by
+       position or mapped by project type. As gray gradients a list of people or projects
+       had nothing to tell them apart by. There are FIVE because one project type used to
+       borrow the accent gradient for want of a fifth, which made that mark follow the
+       brand instead of standing for the project.
+
+       A disc is a different kind of mark from a status pill or a trade dot: it is a big
+       area of colour with WHITE INITIALS in it, so its rule is legibility, not saturation.
+       This case also holds the defect phase four fixed — the dark set's faces used to be
+       light grays while every avatar rule hard-codes `color: #ffffff`, putting the initials
+       between 1.45 and 2.52 in dark mode. */
+    const skin = read("app-shell-client-desk.css");
+    const blockWith = (selector: string, marker: string) => {
+      let from = 0;
+      for (;;) {
+        const i = skin.indexOf(selector, from);
+        expect(i, `${selector} carrying ${marker}`).toBeGreaterThan(-1);
+        const open = skin.indexOf("{", i);
+        const body = skin.slice(open + 1, skin.indexOf("}", open));
+        if (body.includes(marker)) return body;
+        from = i + 1;
+      }
+    };
+    const WHITE: RGB = [255, 255, 255];
+    for (const [mode, selector] of [
+      ["light", "body:has(.app-shell.hs-shell.bf-shell)"],
+      ["dark", 'body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"])']
+    ] as Array<[string, string]>) {
+      const block = blockWith(selector, "--bf-color-face-1:");
+      const faces = [1, 2, 3, 4, 5].map((n) => {
+        const value = block.match(new RegExp(`--bf-color-face-${n}:\\s*([^;]+)`))?.[1]?.trim();
+        expect(value, `${mode}: face ${n} is declared`).toBeTruthy();
+        const stops = value!.match(/#[0-9a-f]{6}/gi) ?? [];
+        expect(stops.length, `${mode}: face ${n} is a two-stop gradient`).toBe(2);
+        const [lighter, darker] = stops as [string, string];
+        return { n, lighter, darker };
+      });
+      for (const { n, lighter, darker } of faces) {
+        // the initials sit across the whole disc, so BOTH stops have to hold them
+        for (const stop of [lighter, darker]) {
+          expect(round(contrast(WHITE, hex(stop))), `${mode}: white initials on face ${n} (${stop})`).toBeGreaterThanOrEqual(4.5);
+        }
+        const h = hue(hex(lighter));
+        expect(h < 190 || h > 262 || sat(hex(lighter)) < 0.3, `${mode}: face ${n} is out of the blue band`).toBe(true);
+        // a disc is a big area, so it stays calm rather than shouting
+        expect(sat(hex(lighter)), `${mode}: face ${n} stays calm`).toBeLessThanOrEqual(0.5);
+      }
+      // five identities, far enough apart in hue to be told apart down a list
+      const hues = faces.map(({ lighter }) => hue(hex(lighter)));
+      for (let i = 0; i < hues.length; i += 1) {
+        for (let j = i + 1; j < hues.length; j += 1) {
+          expect(apart(hues[i], hues[j]), `${mode}: faces ${i + 1} and ${j + 1} are too close in hue`).toBeGreaterThanOrEqual(30);
+        }
+      }
+    }
+  });
+
+  it("says what a KPI's disc and a panel's glyph mean, in one place each", () => {
+    /* Colour pass phase five (2026-09-17). Two surfaces, one rule each.
+
+       THE DISC. Every KPI and stat tile already declares its tone in App.tsx
+       (`tone: "red"`, `tone: "amber"`, …), but the disc under the glyph was drawn three
+       different ways depending on the page: a white disc on a card shadow on the Schedule,
+       the tone's own wash on two of the Dashboard's, the neutral wash on the index pages.
+       Twelve per-page rules were deleted so section 59 is the only thing that paints one,
+       and this case holds that: the disc is its tone's wash, the glyph is the tone, and the
+       glyph clears the 3:1 an icon needs on the wash it sits on.
+
+       THE GLYPH. A panel header is structure, not information, so the colour goes on the
+       20px glyph and only where the panel's body has one dominant tone. The rest keep a
+       quiet ink, and no header names a colour that is not one of the semantic tones. */
+    const skin = read("app-shell-client-desk.css");
+    const CARD_TONES = ["ok", "bad", "warn", "info", "accent"] as const;
+
+    /* One place paints a toned disc. Any rule outside section 59 that fills a KPI disc
+       from a tone is what this catches — that was the defect. */
+    const painters: string[] = [];
+    for (const match of skin.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = match[1].trim().split("\n").at(-1)!.trim();
+      const body = match[2];
+      if (!/\.(kpi-icon|cc-stat-ico|hs-kpi-ico|tc-dash-icon)\b/.test(selector)) continue;
+      if (!/background:\s*var\(--bf-color-/.test(body)) continue;
+      if (selector.includes(":is(.kpi-icon, .cc-stat-ico, .hs-kpi-ico, .tc-dash-icon)")) continue;
+      painters.push(selector.slice(-60));
+    }
+    expect(painters, "only section 59 may fill a toned KPI disc").toEqual([]);
+
+    /* And what it fills them with: a tone's wash under that tone's glyph, legible. */
+    const discRules = [...skin.matchAll(/([^{}]*:is\(\.kpi-icon, \.cc-stat-ico, \.hs-kpi-ico, \.tc-dash-icon\)[^{}]*)\{([^{}]*)\}/g)];
+    expect(discRules.length, "the disc rule covers every tone a tile can declare").toBeGreaterThanOrEqual(5);
+    const base = (() => {
+      let from = 0;
+      for (;;) {
+        const i = skin.indexOf("body:has(.app-shell.hs-shell.bf-shell)", from);
+        expect(i).toBeGreaterThan(-1);
+        const open = skin.indexOf("{", i);
+        const body = skin.slice(open + 1, skin.indexOf("}", open));
+        if (body.includes("--bf-color-ok:")) return body;
+        from = i + 1;
+      }
+    })();
+    const token = (name: string) => base.match(new RegExp(`--bf-color-${name}:\\s*([^;]+)`))?.[1]?.trim();
+    for (const [, selector, body] of discRules) {
+      const wash = body.match(/background: var\(--bf-color-([a-z-]+)-wash\)/)?.[1];
+      const glyph = body.match(/color: var\(--bf-color-([a-z-]+)\)/)?.[1];
+      expect(wash, `${selector.slice(-40)}: the disc is a tone's wash`).toBeTruthy();
+      expect(glyph, `${selector.slice(-40)}: the glyph is a tone`).toBe(wash);
+      expect(CARD_TONES).toContain(wash as (typeof CARD_TONES)[number]);
+      // an icon is a non-text indicator, so 3:1 on the disc it is drawn on
+      expect(
+        round(contrast(hex(token(glyph!)!), hex(token(`${wash}-wash`)!))),
+        `the ${glyph} glyph on its own wash`
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    /* The panel glyphs: a quiet ink by default, a semantic tone where the panel has one. */
+    const headGlyph = />\s*\.hs-widget-head h2 svg \{([^}]*)\}/g;
+    /* The same selector also carries the glyph's SIZE, so only the rules that name a
+       colour are the ones this rule is about. */
+    const glyphColours = [...skin.matchAll(headGlyph)]
+      .map(([, body]) => body.match(/color:\s*([^;]+)/)?.[1]?.trim())
+      .filter((colour): colour is string => Boolean(colour));
+    expect(glyphColours.length, "the header glyph is coloured in one place plus its panels").toBeGreaterThanOrEqual(2);
+    expect(glyphColours).toContain("var(--bf-ink-muted)");
+    for (const colour of glyphColours) {
+      const named = colour.match(/var\(--bf-(?:color-)?([a-z-]+)\)/)?.[1];
+      expect(
+        named === "ink-muted" || CARD_TONES.includes(named as (typeof CARD_TONES)[number]),
+        `a panel header may only carry a semantic tone, not ${colour}`
+      ).toBe(true);
+    }
   });
 
   it("lets OffCanvas win the three contests it has to win", () => {
@@ -335,17 +649,20 @@ describe("the ink ladder holds against every ground the design uses", () => {
       }
     }
 
-    // every theme's dark accent, on the dark surface, as a non-text indicator at minimum
-    const themes = ["dark"] // the default theme's dark block carries no [data-bf-theme]
-      .map(() => css.match(/\.bf-shell\[data-bf-mode="dark"\]\s*\{[^}]*--bf-accent:\s*([^;]+)/))
-      .filter(Boolean);
-    expect(themes.length, "the default theme lightens its accent for dark").toBeGreaterThan(0);
-    for (const theme of ["red", "purple", "green"]) {
-      const m = css.match(
-        new RegExp(`\\.bf-shell\\[data-bf-mode="dark"\\]\\[data-bf-theme="${theme}"\\]\\s*\\{[^}]*--bf-accent:\\s*([^;]+)`)
-      );
-      expect(m, `${theme} lightens its accent for dark`).not.toBeNull();
-      expect(round(contrast(hex(m![1].trim()), surface)), `${theme}'s dark accent on the dark surface`).toBeGreaterThanOrEqual(4.5);
+    /* Each Colors set lightens its accent for the dark ground (skin §47's dark twins); the
+       per-theme dark accents this used to read went with the themes. */
+    const skin = read("app-shell-client-desk.css");
+    for (const [name, selector] of [
+      ["Default", 'body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"])'],
+      ["Blue", 'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"][data-bf-mode="dark"])']
+    ] as Array<[string, string]>) {
+      const i = skin.indexOf(selector);
+      expect(i, `${name} has a dark reading`).toBeGreaterThan(-1);
+      const open = skin.indexOf("{", i);
+      const block = skin.slice(open + 1, skin.indexOf("}", open));
+      const accent = block.match(/--bf-color-accent:\s*([^;]+)/)?.[1]?.trim();
+      expect(accent, `${name} lightens its accent for dark`).toBeTruthy();
+      expect(round(contrast(hex(accent!), surface)), `${name}'s dark accent on the dark surface`).toBeGreaterThanOrEqual(4.5);
     }
   });
 

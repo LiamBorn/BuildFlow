@@ -195,8 +195,14 @@
   }
 }
 
+/* `backwards`, NOT `both` (2026-09-15). A filled animation outranks an inline style, and
+   `both` kept holding the last keyframe's `transform: none` after the entrance was over --
+   which silently overrode the inline transform DashBoard writes while a panel is carried, so
+   a dragged panel could not ride the pointer. `backwards` still hides a panel through its
+   stagger delay, then releases the property when the entrance ends; the last keyframe equals
+   the resting values, so nothing jumps at the hand-off. */
 .bf-shell .dash-rx.hs-home .dash-board .dash-block {
-  animation: bfak-rise 0.7s ease-out both;
+  animation: bfak-rise 0.7s ease-out backwards;
 }
 .bf-shell .dash-rx.hs-home .dash-board .dash-block:nth-child(6n + 2) {
   animation-delay: 40ms;
