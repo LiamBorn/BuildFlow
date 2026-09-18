@@ -207,6 +207,9 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/calendar/:provider/start": "integrations.connect",
   "GET /api/calendar/events": "signed-in",
   "GET /api/calendar/status": "signed-in",
+  /* "Give feedback": every signed-in person may write to the product team. The session, not
+     the body, says which workspace and which person it came from. */
+  "POST /api/feedback": "signed-in",
   "DELETE /api/crews/:id": "resources.delete",
   "DELETE /api/equipment/:id": "resources.delete",
   "DELETE /api/jobs/:id": "jobs.delete",
@@ -269,12 +272,19 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/team": "team.read",
   "GET /api/waitlist": "public",
   "GET /api/updates/subscribe": "public", // changelog subscriber count
+  /* A person's own workspaces (2026-09-15): per-login, like the settings row below -- every
+     level lists, creates and switches its own; the routes themselves refuse the demo and the
+     limit, and a switch only to a workspace the login is a member of. */
+  "GET /api/workspaces": "signed-in",
   "PATCH /api/auth/account": "public",
   "PATCH /api/crews/:id": "resources.write",
   "PATCH /api/equipment/:id": "resources.write",
   "PATCH /api/field-updates/:id": "field.report",
   "PATCH /api/jobs/:id": "jobs.write",
   "PATCH /api/org": "org.settings",
+  /* A phase belongs to a project's plan, so moving its finish line is a project write — the same
+     level that may move a job, which is the gesture it shares on the Month calendar. */
+  "PATCH /api/phases/:id": "projects.write",
   "PATCH /api/projects/:id": "projects.write",
   "PATCH /api/sales/companies/:id": "public",
   "PATCH /api/sales/deals/:id": "public",
@@ -350,6 +360,8 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "POST /api/updates/subscribe": "public", // changelog signup from the Updates page
   "POST /api/waitlist": "public",
   "POST /api/waitlist/announce": "public",
+  "POST /api/workspaces": "signed-in",
+  "POST /api/workspaces/:id/switch": "signed-in",
   /* The caller's OWN settings -- tutorial progress, their saved Dashboard board. Not a
      workspace permission at all: it is per-person state, keyed to the person making the
      request, so every level has it and no capability describes it. The one row in the table

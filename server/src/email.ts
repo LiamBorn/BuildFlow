@@ -295,6 +295,55 @@ export function contactSalesLeadEmail(lead: SalesLead) {
   return { subject, html, text };
 }
 
+/* ── in-app feedback ───────────────────────────────────────────────────────
+   The "Give feedback" tab on the Dashboard. The server fills in WHO is writing —
+   the workspace and the signed-in person — so the person only types the
+   feedback; the identification is what the recipient asked for. */
+export type FeedbackEntry = {
+  category: string;
+  message: string;
+  page: string;
+  company: { id: string; name: string; plan: string };
+  person: { name: string; email: string; role: string };
+  sentAt: string;
+};
+
+export function feedbackEmail(entry: FeedbackEntry) {
+  const label = FEEDBACK_LABELS[entry.category] ?? entry.category;
+  const subject = `BuildFlow feedback from ${entry.company.name} · ${label}`;
+  const text =
+    `New feedback from inside BuildFlow:\n\n` +
+    `  Company:  ${entry.company.name} (${entry.company.plan} plan, workspace ${entry.company.id})\n` +
+    `  From:     ${entry.person.name} <${entry.person.email}> · ${entry.person.role}\n` +
+    `  Kind:     ${label}\n` +
+    `  Page:     ${entry.page}\n` +
+    `  Sent:     ${entry.sentAt}\n\n` +
+    `${entry.message}\n\n` +
+    `Reply to ${entry.person.email} to follow up.`;
+  const html = shell(
+    `<p style="font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#1a73e8;margin:0 0 6px">Feedback · ${escapeHtml(label)}</p>` +
+      `<h1 style="font-size:20px;font-weight:600;margin:0 0 16px">${escapeHtml(entry.company.name)}</h1>` +
+      `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:13.5px;line-height:1.8;color:#575550;margin:0 0 18px">` +
+      leadRow("Company", `${escapeHtml(entry.company.name)} · ${escapeHtml(entry.company.plan)} plan`) +
+      leadRow("Workspace", escapeHtml(entry.company.id)) +
+      leadRow("From", `${escapeHtml(entry.person.name)} · ${escapeHtml(entry.person.role)}`) +
+      leadRow("Email", `<a href="mailto:${escapeHtml(entry.person.email)}" style="color:#1a73e8">${escapeHtml(entry.person.email)}</a>`) +
+      leadRow("Page", escapeHtml(entry.page)) +
+      leadRow("Sent", escapeHtml(entry.sentAt)) +
+      `</table>` +
+      `<p style="font-size:14px;line-height:1.6;color:#1c1c1a;margin:0 0 18px;padding:14px 16px;background:#f5f6fa;border-radius:10px;white-space:pre-wrap">${escapeHtml(entry.message)}</p>` +
+      `<a href="mailto:${escapeHtml(entry.person.email)}" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:10px">Reply to ${escapeHtml(entry.person.name.trim().split(/\s+/)[0] || "them")} →</a>`
+  );
+  return { subject, html, text };
+}
+
+const FEEDBACK_LABELS: Record<string, string> = {
+  idea: "Idea",
+  bug: "Something is broken",
+  praise: "Praise",
+  other: "Other"
+};
+
 /* ── account emails: verify address, reset password ─────────────────────── */
 
 function accountEmailShell(title: string, intro: string, buttonLabel: string, link: string, footer: string) {

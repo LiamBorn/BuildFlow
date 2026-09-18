@@ -35,6 +35,7 @@ import type {
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
+  UpdatePhaseInput,
   UpdateProjectInput,
   User,
   VarianceProposal,
@@ -88,6 +89,23 @@ export type InviteRow = {
 };
 type AccountRow = Account & { passwordHash: string };
 export type SessionContext = { account: Account; org: Org };
+/** A membership row joined to its org: the shape workspacesForAccount and workspaceMembership return. */
+const WORKSPACE_MEMBER_SELECT = `SELECT m.accountId, m.orgId, m.role, m.kind, m.createdAt,
+       o.name AS orgName, o.plan AS orgPlan, o.createdAt AS orgCreatedAt
+     FROM workspace_members m JOIN orgs o ON o.id = m.orgId`;
+/** "home" is the org a login was created in; "extra" is one it created beside it (migration 24). */
+export type WorkspaceKind = "home" | "extra";
+/** One row of workspace_members, joined to its org. */
+export type WorkspaceMemberRow = {
+  accountId: string;
+  orgId: string;
+  role: string;
+  kind: WorkspaceKind;
+  createdAt: string;
+  orgName: string;
+  orgPlan: string;
+  orgCreatedAt: string;
+};
 
 /** One project's worth of an imported schedule — see `importSchedule`. Ids and
  *  projectIds are assigned by the store, so callers supply neither. */
@@ -1112,6 +1130,39 @@ SCHEMA_MIGRATIONS.push({
       connectedAt TEXT NOT NULL,
       PRIMARY KEY (accountId, provider)
     )`);
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 24,
+  name: "one login, several workspaces",
+  up: (db) => {
+    // Asked for on 2026-09-15: a person can run more than one BuildFlow program from one
+    // login -- their original workspace plus up to three more, each a separate org with its
+    // own data file, trade, team and 7-day trial. `accounts.orgId` had been the whole answer
+    // to "which workspace is this login in", so this table is the many-to-many that answers
+    // it from now on, and `sessions.orgId` becomes the ACTIVE workspace (switching rewrites
+    // it). `accounts.orgId` stays as the home workspace: login lands there, and every path
+    // that reads it keeps working.
+    //
+    // Backfilled from `accounts` so nobody who signed up before this loses their workspace:
+    // each existing login becomes the "home" member of its own org. Guarded, because the
+    // control tables only exist in the main database and this runner visits every file.
+    //
+    // Numbered 24 -- the runner sorts by version and silently skips anything at or below the
+    // stored user_version (:1170). Never renumber, never reuse.
+    db.exec(`CREATE TABLE IF NOT EXISTS workspace_members (
+      accountId TEXT NOT NULL,
+      orgId TEXT NOT NULL,
+      role TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'extra',
+      createdAt TEXT NOT NULL,
+      PRIMARY KEY (accountId, orgId)
+    )`);
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='accounts'");
+    if (!tables[0]) return;
+    db.exec(`INSERT OR IGNORE INTO workspace_members (accountId, orgId, role, kind, createdAt)
+             SELECT id, orgId, role, 'home', createdAt FROM accounts`);
   }
 });
 
@@ -2627,6 +2678,8 @@ export class BuildFlowStore {
       providerSubject: input.providerSubject ?? null
     };
     this.insert("accounts", row);
+    // and the home member of its own workspace (migration 24)
+    this.insert("workspace_members", { accountId: row.id, orgId: row.orgId, role: row.role, kind: "home", createdAt: row.createdAt });
     this.save();
     return toAccount(row);
   }
@@ -2704,7 +2757,77 @@ export class BuildFlowStore {
   }
 
   accountsForOrg(orgId: string): Account[] {
-    return this.all<AccountRow>("SELECT * FROM accounts WHERE orgId = ? ORDER BY createdAt", [orgId]).map(toAccount);
+    // The logins registered in the workspace, plus anyone reaching it through
+    // workspace_members -- the owner of a workspace created beside their first (migration 24).
+    return this.all<AccountRow>(
+      `SELECT a.* FROM accounts a WHERE a.orgId = ?
+       UNION
+       SELECT a.* FROM accounts a JOIN workspace_members m ON m.accountId = a.id WHERE m.orgId = ?
+       ORDER BY createdAt`,
+      [orgId, orgId]
+    ).map(toAccount);
+  }
+
+  /* ── workspaces: one login, several orgs (migration 24) ─────────────────── */
+
+  /** Every workspace one login can open, oldest first, so the home workspace leads. */
+  workspacesForAccount(accountId: string): WorkspaceMemberRow[] {
+    return this.all<WorkspaceMemberRow>(`${WORKSPACE_MEMBER_SELECT} WHERE m.accountId = ? ORDER BY m.createdAt`, [accountId]);
+  }
+
+  workspaceMembership(accountId: string, orgId: string): WorkspaceMemberRow | undefined {
+    return this.get<WorkspaceMemberRow>(`${WORKSPACE_MEMBER_SELECT} WHERE m.accountId = ? AND m.orgId = ?`, [accountId, orgId]);
+  }
+
+  addWorkspaceMember(accountId: string, orgId: string, role: string, kind: WorkspaceKind = "extra") {
+    this.run("INSERT OR REPLACE INTO workspace_members (accountId, orgId, role, kind, createdAt) VALUES (?, ?, ?, ?, ?)", [
+      accountId,
+      orgId,
+      role,
+      kind,
+      new Date().toISOString()
+    ]);
+    this.save();
+  }
+
+  /** A login always belongs to its home workspace (`accounts.orgId`), even one whose file predates migration 24's backfill. */
+  ensureHomeMembership(account: Account) {
+    if (this.workspaceMembership(account.id, account.orgId)) return;
+    this.run("INSERT OR IGNORE INTO workspace_members (accountId, orgId, role, kind, createdAt) VALUES (?, ?, ?, 'home', ?)", [
+      account.id,
+      account.orgId,
+      account.role,
+      account.createdAt
+    ]);
+    this.save();
+  }
+
+  /** How many workspaces beyond the home one this login has created; the limit counts these. */
+  extraWorkspaceCount(accountId: string): number {
+    return this.get<{ n: number }>("SELECT COUNT(*) AS n FROM workspace_members WHERE accountId = ? AND kind = 'extra'", [accountId])?.n ?? 0;
+  }
+
+  /**
+   * Forget a workspace created beside a login's first: its memberships, the sessions and invites
+   * pointing at it, any login registered INSIDE it (a teammate who accepted an invite there --
+   * their only workspace is going), and the org row. The tenant file is the StoreManager's to
+   * drop. Used for the shared demo's throwaway workspaces; never for a home workspace.
+   */
+  removeWorkspace(orgId: string) {
+    if (orgId === DEMO_ORG_ID) return;
+    this.run("DELETE FROM workspace_members WHERE orgId = ?", [orgId]);
+    this.run("DELETE FROM sessions WHERE orgId = ?", [orgId]);
+    this.run("DELETE FROM invites WHERE orgId = ?", [orgId]);
+    this.run("DELETE FROM accounts WHERE orgId = ?", [orgId]);
+    this.run("DELETE FROM orgs WHERE id = ?", [orgId]);
+    this.save();
+  }
+
+  /** Point a live session at another of the person's workspaces. The cookie is unchanged: the row is the state. */
+  switchSession(token: string, orgId: string) {
+    if (!token) return;
+    this.run("UPDATE sessions SET orgId = ? WHERE token = ?", [orgId, token]);
+    this.save();
   }
 
   /**
@@ -3201,6 +3324,20 @@ export class BuildFlowStore {
     };
   }
 
+  /* A workspace created beside the person's first one (POST /api/workspaces) runs on a dated
+     free trial whatever plan it picks at onboarding: `trialEndsAt` is set the moment it is
+     created and `workspaceTrial` marks it, so the Free pick in recordWorkspaceSetup does not
+     erase the clock and billingStatusFor reads it as a trial rather than as "free". */
+  isWorkspaceTrial(): boolean {
+    return this.workspaceSetting("workspaceTrial") === "1";
+  }
+
+  startWorkspaceTrial(days: number) {
+    this.setWorkspaceSetting("workspaceTrial", "1");
+    this.setWorkspaceSetting("trialEndsAt", new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString());
+    this.save();
+  }
+
   /**
    * Record what the owner chose. A paid plan that has not been through
    * checkout runs as a trial from the moment it is chosen; picking Free again
@@ -3213,7 +3350,7 @@ export class BuildFlowStore {
       if (paid && !this.workspaceSetting("trialEndsAt")) {
         this.setWorkspaceSetting("trialEndsAt", new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString());
       }
-      if (!paid) this.run("DELETE FROM workspace_settings WHERE key = 'trialEndsAt'");
+      if (!paid && !this.isWorkspaceTrial()) this.run("DELETE FROM workspace_settings WHERE key = 'trialEndsAt'");
     }
     if (setup.selectedProducts) this.setWorkspaceSetting("selectedProducts", JSON.stringify(setup.selectedProducts));
     if (setup.seats) this.setWorkspaceSetting("seats", String(Math.round(setup.seats)));
@@ -3260,6 +3397,7 @@ export class BuildFlowStore {
     return {
       businessType: this.businessType(),
       onboardingCompletedAt: this.onboardingCompletedAt(),
+      workspaceTrial: this.isWorkspaceTrial(),
       sampleData: this.sampleData() !== null,
       ...this.workspaceSetup(),
       userSettings: activeUser ? this.userSettings(activeUser.id) : {},
@@ -5786,6 +5924,26 @@ export class BuildFlowStore {
       ? this.all<ReadinessItem & { complete: number }>("SELECT * FROM readiness WHERE projectId = ? ORDER BY id", [projectId])
       : this.all<ReadinessItem & { complete: number }>("SELECT * FROM readiness ORDER BY id");
     return rows.map((row) => ({ ...row, complete: Boolean(row.complete) }));
+  }
+
+  phase(id: string): Phase | undefined {
+    return this.get<Phase>("SELECT * FROM phases WHERE id = ?", [id]);
+  }
+
+  /**
+   * A phase's dates, one or both. The Month calendar draws a marker on every phase's finish and
+   * lets a planner drag it, so the finish is writable on its own; the caller has already checked
+   * that the span still runs forwards.
+   */
+  updatePhase(id: string, input: UpdatePhaseInput): Phase | undefined {
+    const current = this.phase(id);
+    if (!current) return undefined;
+    const startDate = input.startDate ?? current.startDate;
+    const endDate = input.endDate ?? current.endDate;
+    if (startDate === current.startDate && endDate === current.endDate) return current;
+    this.run("UPDATE phases SET startDate = ?, endDate = ? WHERE id = ?", [startDate, endDate, id]);
+    this.save();
+    return this.phase(id);
   }
 
   phases(projectId?: string): Phase[] {

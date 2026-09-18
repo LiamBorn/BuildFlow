@@ -25,7 +25,9 @@ import {
   JOB_STATUSES,
   projectScheduleStatus,
   scheduleCalendarFor,
-  type ScheduleVariance
+  type ScheduleVariance,
+  type WorkspaceSummary,
+  type WorkspacesPayload
 } from "@buildflow/shared";
 import {
   BuildFlowStore,
@@ -36,7 +38,8 @@ import {
   toAccount,
   DEMO_ACCOUNT_EMAIL,
   type Account,
-  type Org
+  type Org,
+  type WorkspaceMemberRow
 } from "./database.js";
 import type { ScheduleAssignment, ScheduleLiveEvent } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
@@ -85,6 +88,7 @@ declare module "express-serve-static-core" {
 import {
   sendMail,
   contactSalesThankYouEmail,
+  feedbackEmail,
   contactSalesLeadEmail,
   type SalesLead,
   verifyEmailMessage,
@@ -203,6 +207,11 @@ const jobSchema = z
   })
   .refine(spanIsForwards, SPAN_MESSAGE);
 
+/* A phase's dates, either on its own: the Month calendar's completion marker writes the finish. */
+const phasePatchSchema = z
+  .object({ startDate: isoDate.optional(), endDate: isoDate.optional() })
+  .refine((body) => body.startDate !== undefined || body.endDate !== undefined, "Nothing to change");
+
 const projectPatchSchema = z.object({
   name: z.string().trim().min(1),
   location: z.string().trim().min(1),
@@ -317,6 +326,14 @@ const waitlistEmailSchema = z.object({
 });
 
 // contact sales: potential-customer lead validation
+/* "Give feedback", from the Dashboard tab. Only the words are the person's; who they are and
+   which workspace they are in come from the session, never from the body. */
+const feedbackSchema = z.object({
+  category: z.enum(["idea", "bug", "praise", "other"]).default("other"),
+  message: z.string().trim().min(1, "Please write a few words.").max(4000),
+  page: z.string().trim().max(80).default("dashboard")
+});
+
 const contactSalesSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z
@@ -689,6 +706,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     "/api/team",
     "/api/org",
     "/api/me",
+    // A person's own workspaces: listing, creating and switching all need the login resolved.
+    "/api/workspaces",
     /* Step 1 of the workspace-permissions plan. These were public, and being public was
        not merely a missing permission check — it was a live defect. `store` (:551) is a
        Proxy that resolves to `orgStoreALS.getStore() ?? mainStore`, so a route outside
@@ -945,15 +964,27 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   // Credential-free demo sign-in — powers "Preview the live demo".
-  app.post("/api/auth/demo", (_req, res) => {
+  app.post("/api/auth/demo", async (_req, res) => {
     const row = mainStore.getAccountRowByEmail(DEMO_ACCOUNT_EMAIL);
     const org = row ? mainStore.getOrg(row.orgId) : undefined;
     if (!row || !org) {
       res.status(500).json({ error: "Demo account is unavailable." });
       return;
     }
-    issueSession(res, toAccount(row), org);
-    res.json({ account: toAccount(row), org });
+    const demo = toAccount(row);
+    // The demo is shared, so a fresh look at it starts with just the demo workspace: the
+    // workspaces the last visitor created beside it go, files and all (2026-09-15).
+    for (const membership of mainStore.workspacesForAccount(demo.id)) {
+      if (membership.kind !== "extra") continue;
+      mainStore.removeWorkspace(membership.orgId);
+      await manager.dropOrgStore(membership.orgId);
+    }
+    // The demo workspace is seeded, never onboarded, so it never recorded the "trade picked"
+    // date that says onboarding is done -- and switching BACK to it from a workspace the demo
+    // created went to onboarding, which turns a demo session away. It is set up; say so.
+    if (!mainStore.onboardingCompletedAt()) mainStore.setWorkspaceSetting("onboardingCompletedAt", new Date().toISOString());
+    issueSession(res, demo, org);
+    res.json({ account: demo, org });
   });
 
   /* ── Sign in with Google / Microsoft (OpenID Connect) ───────────────────── */
@@ -1555,6 +1586,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const billingStatusFor = (payload: BootstrapPayload, account?: { email: string }): BillingStatus => {
     const sub = account ? mainStore.getSubscriptionByEmail(account.email) : undefined;
     if (sub && (sub.status === "active" || sub.status === "trialing" || sub.status === "past_due")) return "active";
+    if (payload.workspaceTrial) {
+      // a workspace created beside the first one: a dated free trial whatever its plan
+      if (!payload.trialEndsAt) return "trial";
+      return new Date(payload.trialEndsAt).getTime() > Date.now() ? "trial" : "trial_expired";
+    }
     if (payload.selectedPlan === "enterprise") return "enterprise";
     if (payload.selectedPlan === "pro" || payload.selectedPlan === "business") {
       if (!payload.trialEndsAt) return "trial";
@@ -1908,6 +1944,89 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json({ ok: true, key, value: parsed.data.value });
   });
 
+  /* ── Workspaces: one login, several BuildFlow programs (2026-09-15) ──────────
+     A person's first workspace is the org their login was created in; they can create up to
+     EXTRA_WORKSPACE_LIMIT more, each a separate org with its own data file, trade, team and a
+     WORKSPACE_TRIAL_DAYS free trial. The session's org is the ACTIVE workspace: creating one
+     switches to it, so the onboarding that follows (trade, plan, invites -- the same questions
+     the first workspace answered) sets up the new one, and the switcher moves the session
+     between them. A workspace is called by its trade -- "Roofing" -- with the company beneath. */
+  const EXTRA_WORKSPACE_LIMIT = 3;
+  const WORKSPACE_TRIAL_DAYS = 7;
+  const workspaceSummary = async (membership: WorkspaceMemberRow, activeOrgId: string): Promise<WorkspaceSummary> => {
+    const orgStore = await manager.getOrgStore(membership.orgId);
+    const businessType = orgStore.businessType();
+    return {
+      id: membership.orgId,
+      name: membership.orgName,
+      title: businessType || membership.orgName,
+      businessType,
+      kind: membership.kind,
+      role: isPermissionLevel(membership.role) ? membership.role : "member",
+      active: membership.orgId === activeOrgId,
+      onboardingCompletedAt: orgStore.onboardingCompletedAt(),
+      trialEndsAt: orgStore.isWorkspaceTrial() ? orgStore.workspaceSetup().trialEndsAt : null,
+      createdAt: membership.orgCreatedAt
+    };
+  };
+  const workspacesPayload = async (account: Account, activeOrgId: string): Promise<WorkspacesPayload> => {
+    mainStore.ensureHomeMembership(account);
+    const workspaces: WorkspaceSummary[] = [];
+    for (const membership of mainStore.workspacesForAccount(account.id)) workspaces.push(await workspaceSummary(membership, activeOrgId));
+    return {
+      workspaces,
+      activeId: activeOrgId,
+      limit: EXTRA_WORKSPACE_LIMIT,
+      remaining: Math.max(0, EXTRA_WORKSPACE_LIMIT - mainStore.extraWorkspaceCount(account.id))
+    };
+  };
+
+  app.get("/api/workspaces", async (req, res) => {
+    res.json(await workspacesPayload(req.account!, req.org!.id));
+  });
+
+  app.post("/api/workspaces", async (req, res) => {
+    const account = req.account!;
+    // The shared demo creates workspaces like anyone else (asked 2026-09-15); "Preview the
+    // live demo" clears the ones the last visitor left, so the demo never fills up.
+    mainStore.ensureHomeMembership(account);
+    if (mainStore.extraWorkspaceCount(account.id) >= EXTRA_WORKSPACE_LIMIT) {
+      res.status(409).json({
+        error: `You can create up to ${EXTRA_WORKSPACE_LIMIT} workspaces beyond your first, and this account already has ${EXTRA_WORKSPACE_LIMIT}.`,
+        code: "workspace_limit"
+      });
+      return;
+    }
+    // The company carries over; the trade -- and with it the workspace's title -- is chosen at
+    // the onboarding that follows.
+    const org = mainStore.createOrg(req.org!.name);
+    mainStore.addWorkspaceMember(account.id, org.id, account.role, "extra");
+    try {
+      const orgStore = await manager.getOrgStore(org.id);
+      orgStore.ensureAccountUser(account);
+      orgStore.startWorkspaceTrial(WORKSPACE_TRIAL_DAYS);
+    } catch (error) {
+      console.error("[workspaces] could not prepare the new workspace:", error instanceof Error ? error.message : error);
+      res.status(500).json({ error: "The new workspace could not be created. Please try again." });
+      return;
+    }
+    mainStore.switchSession(parseCookies(req.headers.cookie)[SESSION_COOKIE], org.id);
+    res.status(201).json({ ...(await workspacesPayload(account, org.id)), session: sessionPayload(account, org) });
+  });
+
+  app.post("/api/workspaces/:id/switch", async (req, res) => {
+    const account = req.account!;
+    const orgId = String(req.params.id);
+    mainStore.ensureHomeMembership(account);
+    const org = mainStore.getOrg(orgId);
+    if (!org || !mainStore.workspaceMembership(account.id, orgId)) {
+      res.status(404).json({ error: "That workspace isn't one of yours.", code: "not_member" });
+      return;
+    }
+    mainStore.switchSession(parseCookies(req.headers.cookie)[SESSION_COOKIE], orgId);
+    res.json({ ...(await workspacesPayload(account, orgId)), session: sessionPayload(account, org) });
+  });
+
   /* ── Org: the company name ───────────────────────────────────────────────── */
   app.patch("/api/org", (req, res) => {
     const parsed = z.object({ name: z.string().trim().min(2, "Enter your company name.").max(160) }).safeParse(req.body);
@@ -2084,6 +2203,34 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     res.json(project);
+  });
+
+  /* A phase's finish line, moved on its own. Every phase draws a "<name> Complete" marker on the
+     Month calendar and a planner can drag it, the same gesture that moves a job — so this writes
+     the phase's own dates and touches nothing else: the jobs inside it keep theirs, because a
+     planner moving a milestone is saying when the phase is DUE, not rescheduling the work. */
+  app.patch("/api/phases/:id", (req, res) => {
+    const parsed = phasePatchSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const current = store.phase(String(req.params.id));
+    if (!current) {
+      res.status(404).json({ error: "Phase not found" });
+      return;
+    }
+    const span = { startDate: parsed.data.startDate ?? current.startDate, endDate: parsed.data.endDate ?? current.endDate };
+    if (!spanIsForwards(span)) {
+      res.status(400).json({ error: "The finish cannot be before the start", field: "endDate" });
+      return;
+    }
+    const phase = store.updatePhase(String(req.params.id), parsed.data);
+    if (!phase) {
+      res.status(404).json({ error: "Phase not found" });
+      return;
+    }
+    res.json(phase);
   });
 
   app.patch("/api/projects/:id", (req, res) => {
@@ -3003,6 +3150,40 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     });
   });
   /* ───────────────────────── end contact sales ────────────────────────────── */
+
+  /* ── In-app feedback ──────────────────────────────────────────────────────
+     The "Give feedback" tab on the Dashboard. Every signed-in person can use it, and
+     every message lands in one inbox WITH the company attached: the route reads the
+     workspace and the person off the session, so the recipient always knows who wrote.
+     The address is the one the product owner asked for; FEEDBACK_EMAIL overrides it. */
+  const feedbackInbox = process.env.FEEDBACK_EMAIL ?? "ljsantos020803@gmail.com";
+  app.post("/api/feedback", async (req, res) => {
+    const parsed = feedbackSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Please write a few words." });
+      return;
+    }
+    const account = req.account!;
+    const org = req.org!;
+    const result = await sendMail({
+      to: feedbackInbox,
+      ...feedbackEmail({
+        category: parsed.data.category,
+        message: parsed.data.message,
+        page: parsed.data.page,
+        company: { id: org.id, name: org.name, plan: org.plan },
+        person: { name: account.name, email: account.email, role: account.role },
+        sentAt: new Date().toISOString()
+      })
+    });
+    if (!result.ok) {
+      // sendMail never throws, so a transport failure is the one case the person must hear about
+      res.status(502).json({ error: "Your feedback could not be sent right now. Please try again in a moment." });
+      return;
+    }
+    res.status(201).json({ ok: true, mode: result.mode });
+  });
+  /* ───────────────────────── end feedback ─────────────────────────────────── */
 
   /* ── Billing / subscriptions (Stripe) ─────────────────────────────────────
      Turns the pricing plans into real Stripe Checkout subscriptions. Runs in a

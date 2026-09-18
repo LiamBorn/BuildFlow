@@ -216,6 +216,12 @@ export type Phase = {
   sequence: number;
 };
 
+/**
+ * A phase's own dates. Either may move on its own — the Month calendar's "<phase> Complete"
+ * marker is draggable, and what it writes is the finish.
+ */
+export type UpdatePhaseInput = Partial<Pick<Phase, "startDate" | "endDate">>;
+
 /* The CPM engine owns the precedence/constraint vocabulary — it is deliberately
    domain-agnostic, so the schedule network types live there and the domain
    re-exports them rather than declaring a second, drifting copy. */
@@ -573,6 +579,8 @@ export type BootstrapPayload = {
   seats?: number | null;
   /** A paid plan without a completed checkout runs as a dated trial; this is when it ends. */
   trialEndsAt?: string | null;
+  /** True for a workspace created beside the person's first one (2026-09-15): a dated free trial whatever its plan. */
+  workspaceTrial?: boolean;
   billingStatus?: BillingStatus;
   /** The signed-in login behind this bootstrap, for the "verify your email" notice. */
   account?: { email: string; emailVerifiedAt: string | null } | null;
@@ -582,6 +590,33 @@ export type BootstrapPayload = {
   userSettings?: Record<string, string>;
   /** True while the trade's starter workspace is loaded as sample data (P3.6); it can be removed again. */
   sampleData?: boolean;
+};
+
+/**
+ * One of a person's workspaces, as the Dashboard's switcher lists them (GET /api/workspaces).
+ * `title` is the trade the workspace is set up for -- "Roofing", "Asphalt" -- which is what the
+ * switcher calls it; `name` is the company behind it. `kind` tells the original ("home") from
+ * the ones created beside it ("extra"): those are what the limit counts and the 7-day trial
+ * applies to.
+ */
+export type WorkspaceSummary = {
+  id: string;
+  name: string;
+  title: string;
+  businessType: BusinessTypeId | "";
+  kind: "home" | "extra";
+  role: PermissionLevel;
+  active: boolean;
+  onboardingCompletedAt: string | null;
+  trialEndsAt: string | null;
+  createdAt: string;
+};
+export type WorkspacesPayload = {
+  workspaces: WorkspaceSummary[];
+  activeId: string;
+  /** How many workspaces a login may create beside its first, and how many of those it still can. */
+  limit: number;
+  remaining: number;
 };
 
 /* Schedule Creation Tool — the §3 contract and (soon) the CPM engine, kept in

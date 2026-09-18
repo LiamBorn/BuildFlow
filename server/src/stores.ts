@@ -43,6 +43,13 @@ export class StoreManager {
     return store;
   }
 
+  /** Forget a tenant's store and its file. The demo org, which is the main store, is never dropped. */
+  async dropOrgStore(orgId: string): Promise<void> {
+    if (orgId === DEMO_ORG_ID) return;
+    this.cache.delete(orgId);
+    await fs.promises.rm(path.join(this.dataDir, `org-${orgId}.sqlite`), { force: true });
+  }
+
   /**
    * Object counts summed across every registered workspace — what the operator console
    * shows. Aggregates only: the per-workspace numbers are added up and discarded, so no

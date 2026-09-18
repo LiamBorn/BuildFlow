@@ -967,6 +967,48 @@ describe("BuildFlow API", () => {
     expect(bookings[0].status).toBe("In Progress");
   });
 
+  /* The Month calendar draws a marker on every phase's finish and lets a planner drag it, so a
+     phase's dates are writable on their own. What it must NOT do is move the work: the jobs inside
+     the phase keep their dates, because the gesture says when the phase is due. */
+  it("moves a phase's finish on its own, and leaves the work inside it alone", async () => {
+    const agent = await testApp();
+    const before = await agent.get("/api/bootstrap").expect(200);
+    const phase = before.body.phases[0];
+    const jobsInProject = before.body.jobs
+      .filter((job: { projectId: string }) => job.projectId === phase.projectId)
+      .map((job: { id: string; startDate: string; endDate: string }) => [job.id, job.startDate, job.endDate]);
+
+    const moved = await agent.patch(`/api/phases/${phase.id}`).send({ endDate: "2026-12-18" }).expect(200);
+    expect(moved.body).toMatchObject({ id: phase.id, startDate: phase.startDate, endDate: "2026-12-18" });
+
+    const after = await agent.get("/api/bootstrap").expect(200);
+    expect(after.body.phases.find((row: { id: string }) => row.id === phase.id).endDate).toBe("2026-12-18");
+    expect(
+      after.body.jobs
+        .filter((job: { projectId: string }) => job.projectId === phase.projectId)
+        .map((job: { id: string; startDate: string; endDate: string }) => [job.id, job.startDate, job.endDate])
+    ).toEqual(jobsInProject);
+
+    // and back again, which is what Undo sends
+    await agent.patch(`/api/phases/${phase.id}`).send({ endDate: phase.endDate }).expect(200);
+    const back = await agent.get("/api/bootstrap").expect(200);
+    expect(back.body.phases.find((row: { id: string }) => row.id === phase.id).endDate).toBe(phase.endDate);
+  });
+
+  it("refuses a phase finish before its start, an empty change, and a phase that is not there", async () => {
+    const agent = await testApp();
+    const before = await agent.get("/api/bootstrap").expect(200);
+    const phase = before.body.phases[0];
+
+    await agent.patch(`/api/phases/${phase.id}`).send({ endDate: "2020-01-01" }).expect(400);
+    await agent.patch(`/api/phases/${phase.id}`).send({}).expect(400);
+    await agent.patch(`/api/phases/${phase.id}`).send({ endDate: "not-a-date" }).expect(400);
+    await agent.patch("/api/phases/ph-nope").send({ endDate: "2026-12-18" }).expect(404);
+
+    const after = await agent.get("/api/bootstrap").expect(200);
+    expect(after.body.phases.find((row: { id: string }) => row.id === phase.id).endDate).toBe(phase.endDate);
+  });
+
   it("gives crews an hourly rate: the one set, or the specialty's default", async () => {
     const agent = await testApp();
     const bootstrap = await agent.get("/api/bootstrap").expect(200);
