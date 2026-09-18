@@ -30,14 +30,115 @@ describe("BuildFlow app", () => {
   it("renders the welcome page first", async () => {
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: /^Where crews, projects, and schedules move together\.$/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Login from welcome navigation$/ })).toBeInTheDocument();
+    // The Frost landing (2026-09-16): heavy + thin headline, the five category
+    // names, the waitlist pill and Login in the nav, and the email capture pill.
+    expect(await screen.findByRole("heading", { name: /^Precision by Default\.\s*Clarity in Everything\.$/ })).toBeInTheDocument();
+    for (const category of ["Product", "Plans", "Resources", "Company", "AI"]) {
+      expect(screen.getByText(category)).toBeInTheDocument();
+    }
     expect(screen.getByRole("button", { name: /^Login from welcome navigation$/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^Join the waitlist from welcome navigation$/ })).toBeInTheDocument();
-    expect(
-      screen.getByText("Coordinate crews, project phases, materials, field updates, and delayIQs from one clean command center.")
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Preview the live demo$/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Email address")).toHaveAttribute("placeholder", "Enter your email");
+    expect(screen.getByText("4,900+ people already on the waitlist")).toBeInTheDocument();
+    // The old landing's menus and pages are gone.
+    expect(screen.queryByRole("button", { name: /^Preview the live demo$/ })).not.toBeInTheDocument();
+    // The names open dropdowns now rather than routing to pages.
+    expect(screen.getByRole("button", { name: /^Product$/ })).toHaveAttribute("aria-haspopup", "true");
+    expect(screen.queryByRole("region", { name: "Product menu" })).not.toBeInTheDocument();
+  });
+
+  it("joins the waitlist from the landing page's email pill", async () => {
+    render(<App />);
+
+    fireEvent.change(await screen.findByLabelText("Email address"), { target: { value: "foreman@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Join the Waitlist$/ }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("You’re on the list");
+    // The harness stubs fetch with a vi.fn per test; the pill must post the address.
+    const calls = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls as Array<[RequestInfo | URL, RequestInit?]>;
+    const call = calls.find(([url]) => String(url) === "/api/waitlist");
+    expect(call).toBeDefined();
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ email: "foreman@example.com" });
+  });
+
+  it("folds the categories into a side drawer behind the Menu pill on narrow windows", async () => {
+    render(<App />);
+
+    // The pill is only shown by CSS under 720px; in the DOM it is always there.
+    fireEvent.click(await screen.findByRole("button", { name: "Open menu" }));
+
+    const drawer = await screen.findByRole("dialog", { name: "Menu" });
+    for (const category of ["Product", "Plans", "Resources", "Company", "AI"]) {
+      expect(within(drawer).getByRole("button", { name: category })).toBeInTheDocument();
+    }
+    expect(within(drawer).getByRole("button", { name: "Join the Waitlist" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Log in" })).toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("hidden");
+    // The page steps back into its black frame while the drawer is open.
+    expect(screen.getByTestId("frost-stage")).toHaveClass("is-open");
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close menu" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument());
+    expect(document.body.style.overflow).toBe("");
+    expect(screen.getByTestId("frost-stage")).not.toHaveClass("is-open");
+  });
+
+  it("opens the full-width category band under the bar on click or hover, and closes it on Escape", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { name: /^Precision by Default\./ });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Product$/ }));
+    const menu = await screen.findByRole("region", { name: "Product menu" });
+    for (const item of ["Crew Scheduling", "Schedule AI", "Map & Field Ops", "Production Reports"]) {
+      expect(within(menu).getByRole("button", { name: item })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: /^Product$/ })).toHaveAttribute("aria-expanded", "true");
+    // The page steps into the drawer's black frame while the band is open.
+    expect(screen.getByTestId("frost-stage")).toHaveClass("is-open");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Product menu" })).not.toBeInTheDocument());
+    expect(screen.getByTestId("frost-stage")).not.toHaveClass("is-open");
+
+    // Hovering a different name opens that one.
+    fireEvent.mouseEnter(screen.getByRole("button", { name: /^Company$/ }));
+    const companyMenu = await screen.findByRole("region", { name: "Company menu" });
+    expect(within(companyMenu).getByRole("button", { name: "Contact Sales" })).toBeInTheDocument();
+    // The band belongs to the whole bar: leaving the bar closes it.
+    fireEvent.mouseLeave(screen.getByRole("navigation", { name: "Welcome" }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Company menu" })).not.toBeInTheDocument());
+  });
+
+  it("slides the drawer out when the pointer rests on the right edge, and back when it leaves", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { name: /^Precision by Default\./ });
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByTestId("frost-edge-zone"));
+    const drawer = await screen.findByRole("dialog", { name: "Menu" });
+    expect(within(drawer).getByRole("button", { name: "Product" })).toBeInTheDocument();
+
+    fireEvent.mouseEnter(drawer);
+    fireEvent.mouseLeave(drawer);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument());
+  });
+
+  it("does not open the drawer for a pointer that only passes the edge", async () => {
+    render(<App />);
+    await screen.findByRole("heading", { name: /^Precision by Default\./ });
+    const zone = screen.getByTestId("frost-edge-zone");
+    fireEvent.mouseEnter(zone);
+    fireEvent.mouseLeave(zone);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+  });
+
+  it("lands removed marketing hashes on the landing page", async () => {
+    window.history.pushState(null, "", "/#help-center");
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: /^Precision by Default\./ })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Help center" })).not.toBeInTheDocument();
   });
 
   it("opens the create account page from the landing nav", async () => {
@@ -271,250 +372,36 @@ describe("BuildFlow app", () => {
     expect(titlesFor(["map-field-ops", "map-field-ops"])).toHaveLength(core.length + 1);
   });
 
-  it("restarts the tutorial from the top bar", async () => {
-    render(<App />);
+  /**
+   * The tutorial is a one-time thing (2026-09-15): seen once, never shown again, and the top
+   * bar's Help-and-tutorial button that restarted it is gone. tutorial.test.tsx covers the
+   * server record; this covers the top bar and the device-level memory across a remount.
+   */
+  it("shows the tutorial once: nothing in the top bar restarts it, and a second setup by the same person is not asked", async () => {
+    const view = render(<App />);
     await completeOnboarding();
     fireEvent.click(await screen.findByRole("button", { name: "Skip Tutorial" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Help and tutorial" }));
+    expect(screen.queryByRole("button", { name: "Help and tutorial" })).not.toBeInTheDocument();
+    expect(document.querySelector(".topbar-help-button")).toBeNull();
 
-    expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
+    view.unmount();
+    render(<App />);
+    await completeOnboarding({ email: "ops@asphalt.test", businessType: "Asphalt", products: ["Map & Field Ops"], plan: "Business" });
+    expect(screen.queryByRole("dialog", { name: "Your BuildFlow workspace is ready" })).not.toBeInTheDocument();
   });
 
-  it("opens the Schedule AI page from the BuildFlow AI direct hash route", async () => {
-    window.history.pushState(null, "", "/#buildflow-ai");
+  it("returns to the landing page when the BuildFlow brand is clicked on a legal page", async () => {
+    window.history.pushState(null, "", "/#privacy");
     render(<App />);
 
-    // Schedule AI is the Crew Scheduling page shape with Schedule AI's copy.
-    expect(await screen.findByRole("heading", { name: "See all features" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Why you should choose BuildFlow." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Let the schedule watch itself." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Slips are caught before they spread." })).toBeInTheDocument();
-  });
-
-  it.each([
-    [
-      "Field Updates & DelayIQs",
-      "#solutions-field-updates-delayIQs",
-      "A clean field log for progress, photos, delayIQ causes, and recovery steps.",
-      "Bring field notes in, then turn delayIQs into accountable recovery work."
-    ],
-    [
-      "Map & Field Ops",
-      "#solutions-map-field-ops",
-      "A clean field map for routes, crew proximity, site access, and dispatch decisions.",
-      "Bring locations in, then plan routes from one live workspace."
-    ],
-    [
-      "Reports",
-      "#solutions-reports",
-      "A clean reporting workspace for schedule variance, bottlenecks, backlog, and crew demand.",
-      "Bring schedule history in, then publish reporting from one live workspace."
-    ]
-  ])("opens the %s solution page from the direct hash route", async (pageTitle, hash, featureHeading, migrationHeading) => {
-    window.history.pushState(null, "", `/${hash}`);
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { level: 1, name: pageTitle })).toBeInTheDocument();
-    expect(screen.getByText(featureHeading)).toBeInTheDocument();
-    expect(screen.getByText(migrationHeading)).toBeInTheDocument();
-    expect(window.location.hash).toBe(hash);
-  });
-
-  it("opens the Schedule solution page from the direct hash route", async () => {
-    window.history.pushState(null, "", "/#solutions-schedule");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { level: 1, name: "Schedule" })).toBeInTheDocument();
-    expect(screen.getByText("A clean production board for crews, jobs, blockers, and handoffs.")).toBeInTheDocument();
-    expect(screen.getByText("Weekly Production Schedule")).toBeInTheDocument();
-    expect(screen.getByText("Bring the old schedule in, then plan from one live workspace.")).toBeInTheDocument();
-  });
-
-  it("opens the Startups business size page from the direct hash route", async () => {
-    window.history.pushState(null, "", "/#solutions-startups");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { level: 1, name: "One workspace. Every startup tool." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Move faster, cut scheduling costs." })).toBeInTheDocument();
-    expect(screen.getByText("The tool of choice for startups.")).toBeInTheDocument();
-    expect(screen.getByText("Join our partner network alongside top VCs and accelerators.")).toBeInTheDocument();
-    expect(screen.getByText("Questions & answers")).toBeInTheDocument();
-  });
-
-  it.each([
-    [
-      "#solutions-small-businesses",
-      "One workspace. Every small business tool.",
-      "The tool of choice for small businesses.",
-      "Run with the same structure growing contractors use.",
-      "Build and run your small business with one workspace.",
-      "QuickBooks"
-    ],
-    [
-      "#solutions-enterprise",
-      "One workspace. Every enterprise tool.",
-      "The tool of choice for enterprise teams.",
-      "Connect enterprise planning with trusted operating systems.",
-      "Scale enterprise operations with one workspace.",
-      "Microsoft"
-    ]
-  ])(
-    "opens the %s business size page from the direct hash route",
-    async (hash, heading, choiceHeading, partnerHeading, useCasesHeading, partnerLogo) => {
-      window.history.pushState(null, "", `/${hash}`);
-      render(<App />);
-
-      expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: choiceHeading })).toBeInTheDocument();
-      expect(screen.getByText(partnerHeading)).toBeInTheDocument();
-      expect(screen.getByText(useCasesHeading)).toBeInTheDocument();
-      expect(screen.getByText(partnerLogo)).toBeInTheDocument();
-      expect(screen.getByText("Questions & answers")).toBeInTheDocument();
-    }
-  );
-
-  it("updates the Startups savings totals when calculator tools are toggled", async () => {
-    window.history.pushState(null, "", "/#solutions-startups");
-    render(<App />);
-
-    const crewScheduling = await screen.findByLabelText(/Crew scheduling/);
-
-    expect(crewScheduling).toBeChecked();
-    expect(screen.getByText("$2,470")).toBeInTheDocument();
-    expect(screen.getByText("$29,640")).toBeInTheDocument();
-
-    fireEvent.click(crewScheduling);
-
-    expect(crewScheduling).not.toBeChecked();
-    expect(screen.queryByText("$2,470")).not.toBeInTheDocument();
-    expect(screen.getByText("$2,080")).toBeInTheDocument();
-    expect(screen.getByText("$24,960")).toBeInTheDocument();
-
-    fireEvent.click(crewScheduling);
-
-    expect(crewScheduling).toBeChecked();
-    expect(screen.getByText("$2,470")).toBeInTheDocument();
-    expect(screen.getByText("$29,640")).toBeInTheDocument();
-  });
-
-  it.each([
-    ["#solutions-field-updates-delayIQs", "Field Updates & DelayIQs", "Cause tracking"],
-    ["#solutions-map-field-ops", "Map & Field Ops", "Travel windows"],
-    ["#solutions-reports", "Reports", "Schedule variance"]
-  ])("opens the %s solution page from the direct hash route", async (hash, heading, feature) => {
-    window.history.pushState(null, "", `/${hash}`);
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
-    expect(screen.getByText(feature)).toBeInTheDocument();
-  });
-
-  it("routes the product hash to the Free plan page", async () => {
-    window.history.pushState(null, "", "/#product");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { name: "Try BuildFlow for free." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Free" })).toBeInTheDocument();
-  });
-
-  it.each([
-    ["Pro", "#pro-plan", "Run BuildFlow Pro."],
-    ["Business", "#business-plan", "Scale with BuildFlow Business."],
-    ["Enterprise", "#enterprise-plan", "Customize BuildFlow Enterprise."]
-  ])("opens the %s plan page from the direct hash route", async (_planName, hash, heading) => {
-    window.history.pushState(null, "", `/${hash}`);
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
-  });
-
-  it("lists the plan's features on the Free plan page", async () => {
-    window.history.pushState(null, "", "/#free-plan");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { name: "Try BuildFlow for free." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Plan includes" })).toBeInTheDocument();
-
-    // Each "Label: detail" feature renders as a label/detail pair, not one string.
-    expect(screen.getByText("Production Calendar")).toBeInTheDocument();
-    expect(screen.getByText("basic calendar view for scheduled jobs, work orders, and production dates")).toBeInTheDocument();
-    expect(screen.getByText("Limited Users")).toBeInTheDocument();
-    expect(screen.getByText("5 users included")).toBeInTheDocument();
-    expect(screen.getByText("Trial Limits")).toBeInTheDocument();
-    expect(screen.getByText("limited number of jobs, users, resources, and historical data")).toBeInTheDocument();
-  });
-
-  it.each([
-    ["#free-plan", /^Start free demo/],
-    ["#pro-plan", /^Start Pro demo/],
-    ["#business-plan", /^Start Business demo/],
-    ["#enterprise-plan", /^Start Enterprise demo/]
-  ])("starts registration from the %s page", async (hash, buttonName) => {
-    window.history.pushState(null, "", `/${hash}`);
-    render(<App />);
-
-    fireEvent.click((await screen.findAllByRole("button", { name: buttonName }))[0]);
-
-    // The plan CTAs register first — the workspace is created after signup, not before.
-    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
-    expect(window.location.hash).toBe("#create-account");
-  });
-
-  it("opens the customer reviews page from the direct hash route", async () => {
-    window.history.pushState(null, "", "/#customer-reviews");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { name: "Production plans that stay ready." })).toBeInTheDocument();
-    expect(screen.getByRole("tablist", { name: "Filter customer reviews" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "What is new in production scheduling." })).not.toBeInTheDocument();
-  });
-
-  it("opens the help center page from the direct hash route", async () => {
-    window.history.pushState(null, "", "/#help-center");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { level: 1, name: "Help center" })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Search for anything...")).toBeInTheDocument();
-    expect(screen.getByText("Still have questions?")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Customers" })).not.toBeInTheDocument();
-  });
-
-  it("returns to the welcome home page when the BuildFlow brand is clicked", async () => {
-    window.history.pushState(null, "", "/#updates");
-    render(<App />);
-
-    expect(await screen.findByRole("heading", { name: "What is new in production scheduling." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Your data, handled with care\./ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^BuildFlow$/ }));
 
-    expect(await screen.findByRole("heading", { name: /^Where crews, projects, and schedules move together\.$/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^Precision by Default\./ })).toBeInTheDocument();
     expect(window.location.hash).toBe("");
     expect(screen.queryByRole("heading", { name: "Pending Approvals" })).not.toBeInTheDocument();
-  });
-
-  // The guided demo player sits on the overview pages now, not the welcome home.
-  // The guided demo stage lives on the shared overview layout, and both #overview and
-  // #plans-overview were rebuilt as their own Apple-style pages (2026-09-11), so the
-  // stage is asserted on Resources overview — one of the three still on that layout.
-  it("toggles the guided demo playback on the resources overview", async () => {
-    window.history.pushState(null, "", "/#resources-overview");
-    render(<App />);
-
-    const pauseButton = await screen.findByRole("button", { name: "Pause demo" });
-    fireEvent.click(pauseButton);
-
-    expect(screen.getByRole("button", { name: "Play demo" })).toBeInTheDocument();
-  });
-
-  it("switches guided demo scenes manually on the resources overview", async () => {
-    window.history.pushState(null, "", "/#resources-overview");
-    render(<App />);
-
-    fireEvent.click(await screen.findByRole("button", { name: "Open Schedule demo" }));
-
-    expect(screen.getByText("Drag work onto the right crew")).toBeInTheDocument();
-    expect(screen.getByText("Conflict warning")).toBeInTheDocument();
   });
 
   it("opens the dashboard from the welcome page", async () => {
@@ -623,17 +510,6 @@ describe("BuildFlow app", () => {
     expect(within(equipmentFeed).getByRole("heading", { name: "Equipment In Use" })).toBeInTheDocument();
     expect(within(equipmentFeed).getByText("Concrete Pump #2")).toBeInTheDocument();
     expect(within(equipmentFeed).getByText("Pump · Riverside Office Building · Concrete - Level 3 Slab")).toBeInTheDocument();
-  });
-
-  it("opens the dashboard from the welcome page demo link", async () => {
-    render(<App />);
-
-    // "Preview the live demo" is the credential-free way into the product; the
-    // welcome page's "Login" CTA now opens the login form instead. Every entry
-    // point lands on the Dashboard first.
-    fireEvent.click(await screen.findByRole("button", { name: /^Preview the live demo$/ }));
-
-    expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
   });
 
   it("creates a field update from the Field Updates form", async () => {
@@ -1192,30 +1068,6 @@ describe("BuildFlow app", () => {
     expect(bootstrapCalls).toBeGreaterThanOrEqual(3);
   }, 15000);
 
-  it("shows the Dashboard's shape while the workspace loads", async () => {
-    let release: () => void = () => undefined;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url === "/api/bootstrap") await gate;
-        if (url === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
-        return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
-      })
-    );
-
-    render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Preview the live demo$/ }));
-
-    expect(await screen.findByRole("status", { name: "Loading your dashboard" })).toBeInTheDocument();
-    release();
-    expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
-    expect(screen.queryByRole("status", { name: "Loading your dashboard" })).not.toBeInTheDocument();
-  });
-
   it("says so and offers Retry when the schedule status cannot load", async () => {
     let statusCalls = 0;
     vi.stubGlobal(
@@ -1240,7 +1092,7 @@ describe("BuildFlow app", () => {
     await waitFor(() => expect(screen.queryByText("Schedule status couldn't load.")).not.toBeInTheDocument());
   });
 
-  it("hides Reset layout when the board is stacked for a phone", async () => {
+  it("hides Customize and Reset layout when the board is stacked for a phone", async () => {
     const original = window.matchMedia;
     vi.stubGlobal(
       "matchMedia",
@@ -1269,6 +1121,7 @@ describe("BuildFlow app", () => {
       await enterDashboard();
       expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Reset layout/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Customize/ })).not.toBeInTheDocument();
     } finally {
       vi.stubGlobal("matchMedia", original);
     }
@@ -1375,6 +1228,42 @@ describe("BuildFlow app", () => {
     expect(document.querySelector(".business-context-verify")).toBeNull();
     const notices = document.querySelectorAll(".hs-home-promo, .business-context-verify, .business-context-banner");
     expect(notices.length).toBeLessThanOrEqual(1);
+  });
+  /**
+   * The confirmation link is opened somewhere else — the mail client's tab, a phone — so this
+   * tab only learns about it by asking (2026-09-15). Coming back to the tab asks; the pill leaves
+   * the moment the answer says confirmed, and not before.
+   */
+  it("takes the Confirm-email pill down once the address is confirmed elsewhere, without a reload", async () => {
+    const unverified = { ...bootstrapFixture, account: { email: "liam@example.com", emailVerifiedAt: null } };
+    let verifiedAt: string | null = null;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
+      if (url.endsWith("/api/auth/me")) {
+        const account = { id: "acct-1", orgId: "org-1", email: "liam@example.com", name: "Liam", role: "owner", createdAt: "2026-06-01T00:00:00.000Z", emailVerifiedAt: verifiedAt };
+        const org = { id: "org-1", name: "Reyes Construction", plan: "free", createdAt: "2026-06-01T00:00:00.000Z" };
+        return new Response(JSON.stringify({ account, org }), { status: 200 });
+      }
+      return new Response(JSON.stringify(unverified), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    await enterDashboard();
+    const pill = () => screen.queryByRole("button", { name: /Confirm liam@example.com/ });
+    expect(pill()).toBeInTheDocument();
+    const sessionReads = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/api/auth/me")).length;
+
+    // coming back to the tab before confirming: asked, still unconfirmed, still there
+    window.dispatchEvent(new Event("focus"));
+    await waitFor(() => expect(sessionReads()).toBe(1));
+    expect(pill()).toBeInTheDocument();
+
+    // confirmed in the other tab; coming back again takes it down, no reload
+    verifiedAt = "2026-09-15T12:00:00.000Z";
+    window.dispatchEvent(new Event("focus"));
+    await waitFor(() => expect(pill()).not.toBeInTheDocument());
+    expect(sessionReads()).toBe(2);
   });
   // ---- Dashboard, Phase 4: reachable by everyone, guarded by tests ---------
   const dashboardFetch = (overrides: Partial<typeof bootstrapFixture> = {}, risks: unknown[] = []) =>
@@ -1541,6 +1430,9 @@ describe("BuildFlow app", () => {
   });
 
   // ---- Phase 5: the board follows the person, panels can be hidden, tiles trend on real weeks ----
+  /** The reset layout's order: the superintendent's reading order, every section full width. */
+  const FULL_WIDTH_ORDER = ["today", "quick", "kpis", "approvals", "alerts", "recommendations", "weather", "stats", "readiness", "conflicts", "inspections", "meetings", "apps"];
+  const boardOrder = () => Array.from(document.querySelectorAll<HTMLElement>(".dash-board .dash-block")).map((node) => node.dataset.dashDragId);
   const settingsWrites = (fetchMock: ReturnType<typeof vi.fn>) =>
     fetchMock.mock.calls
       .filter(([url, init]) => (init as RequestInit | undefined)?.method === "PUT" && String(url).startsWith("/api/me/settings/"))
@@ -1600,37 +1492,115 @@ describe("BuildFlow app", () => {
     expect(localStorage.getItem(key)).toBe(account);
     expect(settingsWrites(fetchMock)).toHaveLength(0);
 
+    /* Reset (2026-09-15): every section full width, one under the next, in the reading order,
+       the removed ones back — and SAVED, to this device and to the account, so the next login
+       opens on it. It used to clear the board instead. */
     fireEvent.click(screen.getByRole("button", { name: /Reset layout/ }));
     expect(await screen.findByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
     expect(screen.getByText("Schedule Intelligence")).toBeInTheDocument();
-    expect(localStorage.getItem(key)).toBeNull();
-    await waitFor(() => expect(settingsWrites(fetchMock)).toEqual([{ url: "/api/me/settings/dash:layout", value: "" }]), { timeout: 3000 });
+    const saved = JSON.parse(localStorage.getItem(key) ?? "{}") as { items: Array<{ id: string; x: number; w: number }>; hidden: string[]; fit?: boolean };
+    expect(saved.hidden).toEqual([]);
+    expect(saved.fit).toBe(true);
+    expect(saved.items.every((item) => item.x === 0 && item.w === 6)).toBe(true);
+    expect(saved.items.map((item) => item.id)).toEqual(FULL_WIDTH_ORDER);
+    expect(boardOrder()).toEqual(FULL_WIDTH_ORDER);
+    await waitFor(() => expect(settingsWrites(fetchMock).length).toBeGreaterThan(0), { timeout: 3000 });
+    const last = settingsWrites(fetchMock).at(-1)!;
+    expect(last.url).toBe("/api/me/settings/dash:layout");
+    expect(JSON.parse(last.value).items.every((item: { w: number }) => item.w === 6)).toBe(true);
+  });
+
+  it("opens the next login on the reset layout, as saved", async () => {
+    const key = `bf:dash:layout:${bootstrapFixture.activeUser.id}`;
+    localStorage.removeItem(key);
+    let y = 0;
+    const account = JSON.stringify({
+      items: FULL_WIDTH_ORDER.map((id) => {
+        const item = { id, x: 0, y, w: 6, h: 4 };
+        y += 4;
+        return item;
+      }),
+      hidden: [],
+      fit: true
+    });
+    const fetchMock = dashboardFetch({ userSettings: { "dash:layout": account } });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    await enterDashboard();
+    await screen.findByRole("heading", { name: "Today's plan" });
+    expect(boardOrder()).toEqual(FULL_WIDTH_ORDER);
+    expect(screen.getByRole("button", { name: /Reset layout/ })).toBeInTheDocument();
   });
 
   /**
-   * The board offers no rearrange mode. "Customize" was removed from the Dashboard header on
-   * 2026-09-14 at the user's request, and it was the only door into that mode, so the drag
-   * handles, the per-panel hide control and the Hidden panels chips went with it. This replaces
-   * the round-trip test that used to drive them, and it exists so the button cannot creep back
-   * without someone deciding to put it back.
-   *
-   * A board that was already customized is still recoverable: the test above this one loads an
-   * account layout with two hidden panels and puts them back with Reset layout.
+   * Asked for on 2026-09-15: the layout controls moved DOWN off the date line, to sit beside
+   * the lede ("Your AI-powered hub…"). The lede and the stack share one row, so the controls
+   * cannot drift back up to the date, and the stack keeps its order: Reset, then + and Customize.
    */
-  it("offers no way to rearrange or hide a panel", async () => {
+  it("keeps the layout controls beside the lede, off the date line", async () => {
     vi.stubGlobal("fetch", dashboardFetch());
     render(<App />);
     await enterDashboard();
-    await screen.findByRole("heading", { name: "Weather Impact" });
 
-    expect(screen.queryByRole("button", { name: /^Customize$/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Done$/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Hide Weather Impact" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Hidden panels" })).not.toBeInTheDocument();
-    // and every panel is still on the board, which is the point of taking the mode away
-    for (const title of ["Weather Impact", "Today's plan", "Material Readiness", "Upcoming Inspections"]) {
-      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
-    }
+    const lede = screen.getByText("Your AI-powered hub for construction scheduling, insights, and execution.");
+    const row = lede.closest(".hs-home-subline") as HTMLElement | null;
+    expect(row).not.toBeNull();
+    const stack = within(row!).getByRole("button", { name: /Reset layout/ }).closest(".hs-home-topline-actions") as HTMLElement;
+    expect(within(stack).getAllByRole("button").map((button) => button.getAttribute("aria-label") ?? button.textContent?.trim())).toEqual([
+      "Reset layout",
+      "Add a section",
+      "Customize"
+    ]);
+    // the date line above carries the date alone now
+    const dateLine = document.querySelector(".hs-home-topline") as HTMLElement;
+    expect(dateLine).not.toContainElement(stack);
+    expect(within(dateLine).queryByRole("button")).toBeNull();
+  });
+
+  /**
+   * The rearrange mode is back (2026-09-15), entered from the Customize button under Reset
+   * layout. Outside the mode nothing on a panel offers to hide it; inside it the corner control
+   * does, the hidden panel waits under "Hidden panels", and the board is saved to the account
+   * and to this device — the round trip the mode exists for.
+   */
+  it("hides a panel from Customize, keeps it under Hidden panels, and saves the board to the account and this device", async () => {
+    const key = `bf:dash:layout:${bootstrapFixture.activeUser.id}`;
+    localStorage.removeItem(key);
+    const fetchMock = dashboardFetch();
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+    await enterDashboard();
+
+    // outside Customize there is nothing to move, size or remove a section with
+    expect(screen.queryByRole("button", { name: "Remove Weather Impact" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Move Weather Impact/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resize Weather Impact" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Customize$/ }));
+    expect(screen.getByRole("button", { name: /^Done$/ })).toHaveAttribute("aria-pressed", "true");
+    // and inside it, all three
+    expect(screen.getByRole("button", { name: /^Move Weather Impact/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resize Weather Impact" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Weather Impact" }));
+    expect(screen.queryByRole("heading", { name: "Weather Impact" })).not.toBeInTheDocument();
+    const hidden = screen.getByRole("group", { name: "Hidden panels" });
+    expect(within(hidden).getByRole("button", { name: "Show Weather Impact" })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(key) ?? "{}")).toMatchObject({ hidden: ["weather"] });
+    await waitFor(() => expect(settingsWrites(fetchMock)).toHaveLength(1), { timeout: 3000 });
+    const saved = JSON.parse(settingsWrites(fetchMock)[0].value) as { items: Array<{ id: string }>; hidden: string[] };
+    expect(settingsWrites(fetchMock)[0].url).toBe("/api/me/settings/dash:layout");
+    expect(saved.hidden).toEqual(["weather"]);
+    expect(saved.items.map((item) => item.id)).not.toContain("weather");
+
+    fireEvent.click(within(hidden).getByRole("button", { name: "Show Weather Impact" }));
+    expect(screen.getByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
+    await waitFor(() => expect(settingsWrites(fetchMock)).toHaveLength(2), { timeout: 3000 });
+    expect(JSON.parse(settingsWrites(fetchMock)[1].value).hidden).toEqual([]);
+
+    // Done leaves the mode, and the controls go with it
+    fireEvent.click(screen.getByRole("button", { name: /^Done$/ }));
+    expect(screen.queryByRole("button", { name: "Remove Weather Impact" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Move Weather Impact/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resize Weather Impact" })).not.toBeInTheDocument();
   });
 
   it("draws each Performance tile's delta and line from the weekly readings, and a missing week ends the line", async () => {

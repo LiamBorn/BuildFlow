@@ -1,0 +1,401 @@
+/* The Frost landing page (components/FrostLanding.tsx). The prompt's Tailwind
+   `w-full min-h-screen` and `@layer base` rules, as plain CSS scoped to the page
+   so Tailwind's preflight never touches the rest of the product. */
+.frost-page {
+  width: 100%;
+  min-height: 100svh;
+  background: #000;
+  color: #fff;
+  font-family: "Inter", sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.frost-page * ,
+.frost-page *::before,
+.frost-page *::after { box-sizing: border-box; }
+/* ── The nav scales with the window ────────────────────────────────────────
+   The prompt's fixed values are the TOP of every clamp (40px padding, 34px link
+   gap, 14.5px links, 12/24px pill), so a wide window looks exactly like the
+   prompt and a narrower one shrinks in step instead of letting the logo, the
+   centred names and the right-hand buttons run into each other. Three columns:
+   logo | names (centred in what is left) | buttons — none can overlap. */
+.frost-page .frost-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: clamp(12px, 2vw, 32px);
+  padding: clamp(14px, 1.8vw, 24px) clamp(16px, 3vw, 40px);
+}
+.frost-page .frost-brand { grid-column: 1; display: flex; align-items: center; gap: clamp(7px, 0.8vw, 10px); flex-shrink: 0; }
+.frost-page .frost-brand svg { width: clamp(22px, 2vw, 26px); height: clamp(22px, 2vw, 26px); }
+.frost-page .frost-brand-name { font-size: clamp(15px, 1.35vw, 18px); font-weight: 600; color: #fff; letter-spacing: -0.01em; white-space: nowrap; }
+.frost-page .frost-links {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: clamp(14px, 2.4vw, 34px);
+  min-width: 0;
+}
+.frost-page .frost-link {
+  display: flex;
+  align-items: center;
+  font-size: clamp(12.5px, 1.1vw, 14.5px);
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.frost-page .frost-link:hover,
+.frost-page .frost-link[aria-expanded="true"] { color: #fff; }
+.frost-page .frost-link { padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer; }
+.frost-page .frost-link:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 4px; }
+
+/* ── Category menus: the full-width band (reference recording) ───────────
+   One dark, frosted band behind the bar grows to the open category's content
+   and the hero dims beneath it. The bar's own row sits above the band; the
+   columns start where the names start (FrostLanding measures both). The open
+   name stays white while the others fall back; inside a list the hovered
+   entry is white and its neighbours fall back the same way. */
+.frost-page .frost-brand,
+.frost-page .frost-links,
+.frost-page .frost-nav-right { position: relative; z-index: 1; }
+.frost-page .frost-mega-dim {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+}
+.frost-page .frost-mega {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: rgba(14, 14, 16, 0.86);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+}
+.frost-page .frost-mega-content { padding-right: 40px; padding-bottom: 46px; }
+.frost-page .frost-mega-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(56px, 8vw, 110px);
+}
+.frost-page .frost-mega-heading {
+  margin: 0 0 14px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.45);
+}
+.frost-page .frost-mega-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.frost-page .frost-mega-item {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: #fff;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.frost-page .frost-mega-column:first-child .frost-mega-item {
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.frost-page .frost-mega-column:not(:first-child) .frost-mega-list { gap: 4px; }
+.frost-page .frost-mega-column:not(:first-child) .frost-mega-item {
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+.frost-page .frost-mega-list:hover .frost-mega-item { color: rgba(255, 255, 255, 0.5); }
+.frost-page .frost-mega-list .frost-mega-item:hover,
+.frost-page .frost-mega-list .frost-mega-item:focus-visible { color: #fff; outline: none; }
+.frost-page .frost-links[data-menu-open="true"] .frost-link:not([aria-expanded="true"]) { color: rgba(255, 255, 255, 0.5); }
+/* grid-column pins keep the buttons on the right once the names hide below
+   980px (a hidden grid item frees its column, and auto-placement would pull
+   the buttons into the middle). */
+.frost-page .frost-nav-right { grid-column: 3; justify-self: end; }
+.frost-page .frost-nav-right,
+.frost-page .frost-nav-actions { display: flex; align-items: center; gap: clamp(10px, 1.6vw, 22px); flex-shrink: 0; }
+.frost-page .frost-join {
+  flex-shrink: 0;
+  padding: clamp(9px, 0.9vw, 12px) clamp(14px, 1.8vw, 24px);
+  border-radius: 999px;
+  font: inherit;
+  font-size: clamp(12.5px, 1.05vw, 14px);
+  font-weight: 500;
+  color: #fff;
+  background: transparent;
+  border: 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.frost-page .frost-join::after {
+  border-radius: 999px;
+  background-color: rgba(17, 15, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.frost-page .frost-login {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: clamp(12.5px, 1.1vw, 14.5px);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.frost-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+/* Below this the names no longer fit between the logo and the buttons even at
+   the smallest scale; the drawer carries them from here down. */
+@media (max-width: 980px) {
+  .frost-page .frost-links { display: none; }
+}
+@media (max-width: 720px) {
+  .frost-page .frost-brand-name { font-size: 16px; }
+}
+
+/* ── Narrow windows: "Menu +" pill and the side drawer ─────────────────────── */
+.frost-page .frost-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: clamp(8px, 0.8vw, 10px) clamp(12px, 1.3vw, 16px);
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: clamp(12.5px, 1.05vw, 13.5px);
+  font-weight: 500;
+  color: #14111f;
+  cursor: pointer;
+}
+.frost-page .frost-menu-btn::after {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transition: scale 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), background-color 0.2s ease;
+}
+.frost-page .frost-menu-btn:hover::after { background-color: #fff; }
+.frost-page .frost-menu-plus { display: inline-block; }
+/* The email pill's submit: the white pill is its ::after so the label and the
+   arrow stay put while the shape contracts on hover. */
+.frost-page .frost-submit::after {
+  border-radius: 999px;
+  background-color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.frost-page .frost-submit:disabled { cursor: default; opacity: 0.85; }
+.frost-page .frost-menu-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.frost-page .frost-menu-btn span { font-size: 16px; line-height: 1; }
+@media (max-width: 720px) {
+  .frost-page .frost-nav-actions { display: none; }
+}
+
+/* ── The stage: everything but the drawer ─────────────────────────────────
+   Opening the drawer steps the page back into a black frame with rounded
+   corners (the reference recording): the stage scales down by the two
+   factors FrostLanding computes so the frame is 12px on every side. The scale
+   is always set (scale(1) at rest) so the fixed nav's containing block never
+   flips between the viewport and the stage mid-animation. */
+.frost-page .frost-stage {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  border-radius: 0;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.frost-page .frost-stage.is-open {
+  transform: scale(var(--frost-sx, 0.98), var(--frost-sy, 0.97));
+  border-radius: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .frost-page .frost-stage { transition: none; }
+}
+
+/* The hover strip on the right edge that slides the drawer out. Under the
+   drawer (z 70 < 80) so the pointer lands on the drawer once it is open. */
+.frost-page .frost-edge-zone {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 22px;
+  z-index: 70;
+}
+@media (hover: none) {
+  .frost-page .frost-edge-zone { display: none; }
+}
+
+.frost-drawer-root { position: fixed; inset: 0; z-index: 80; }
+.frost-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.frost-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 86vw);
+  padding: 120px 28px 32px;
+  background: #0c0c0e;
+  color: #fff;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: -30px 0 80px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  font-family: "Inter", sans-serif;
+}
+.frost-drawer-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 0;
+  background: #fff;
+  color: #14111f;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.frost-drawer-close:hover { transform: rotate(90deg); }
+.frost-drawer-close:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.frost-drawer-label {
+  margin: 0 0 18px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
+}
+.frost-drawer-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.frost-drawer-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 30px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: #fff;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.25s ease;
+}
+/* The reference's orange dash grows in ahead of the word on hover. */
+.frost-drawer-dash {
+  display: inline-block;
+  width: 0;
+  height: 2px;
+  margin-right: 0;
+  background: #f47b20;
+  transition: width 0.25s ease, margin-right 0.25s ease;
+}
+.frost-drawer-link:hover,
+.frost-drawer-link:focus-visible { color: #f47b20; outline: none; }
+.frost-drawer-link:hover .frost-drawer-dash,
+.frost-drawer-link:focus-visible .frost-drawer-dash { width: 14px; margin-right: 10px; }
+.frost-drawer-rule { height: 1px; margin: 26px 0 22px; background: rgba(255, 255, 255, 0.12); }
+.frost-drawer-secondary { display: grid; gap: 12px; justify-items: start; }
+.frost-drawer-secondary button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.frost-drawer-secondary button:hover { color: #fff; }
+
+/* ── button-01: the hover-animated label ─────────────────────────────────
+   Ported from the prompt (pure CSS; SlideLabel in FrostLanding.tsx builds the
+   markup). On hover each .span-text slides up 2em and its text-shadow copy,
+   2em below in currentColor, slides into the clipping .span-wrapper. The solid
+   variant's ::after is the background shape and contracts to 0.97 on hover /
+   0.98 on press; the .ghost variant has no background. 0.5s ease-out-quart.
+   Adaptations: the slide targets .span-text (not every span) so the sr-only
+   name copy and icon spans are untouched; the pill colours are BuildFlow's. */
+.button-01 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.button-01 .frost-slide {
+  display: inline-flex;
+  align-items: center;
+}
+.button-01 .word-space {
+  flex-shrink: 0;
+  white-space: pre;
+}
+.button-01 .span-wrapper {
+  display: inline-flex;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.button-01 .span-text {
+  display: inline-block;
+  position: relative;
+  text-shadow: 0 2em 0 currentColor;
+  transition: transform 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+.button-01:not(.ghost) {
+  position: relative;
+  z-index: 1;
+}
+.button-01:not(.ghost)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  transition: scale 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+  z-index: -1;
+}
+.button-01:not(.ghost):active::after { scale: 0.98; }
+.button-01:hover .span-text { transform: translateY(-2em); }
+.button-01:not(.ghost):hover::after { scale: 0.97; }
+/* The accessible-name copy: present for readers and tests, never painted. */
+.frost-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .button-01 .span-text,
+  .button-01:not(.ghost)::after { transition: none; }
+  .button-01:hover .span-text { transform: none; }
+}
