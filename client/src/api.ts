@@ -13,6 +13,7 @@ import type {
   FieldUpdate,
   Job,
   Material,
+  Phase,
   Project,
   ProjectScheduleStatus,
   ScheduleAssignment,
@@ -20,6 +21,7 @@ import type {
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
+  UpdatePhaseInput,
   UpdateProjectInput,
   PlanId,
   OnboardingProductId,
@@ -33,7 +35,8 @@ import type {
   JobDependency,
   RebookMove,
   RebookResult,
-  WeeklyDigest
+  WeeklyDigest,
+  WorkspacesPayload
 } from "@buildflow/shared";
 
 const configuredApiBaseUrl =
@@ -273,6 +276,13 @@ export function logout() {
   return request<{ ok: boolean }>("/api/auth/logout", { method: "POST" });
 }
 
+/* ── in-app feedback ─────────────────────────────────────────────────────── */
+export type FeedbackCategory = "idea" | "bug" | "praise" | "other";
+/** "Give feedback": only the words travel. The server adds who wrote and from which workspace. */
+export function sendFeedback(input: { category: FeedbackCategory; message: string; page: string }) {
+  return request<{ ok: true; mode: string }>("/api/feedback", { method: "POST", body: JSON.stringify(input) });
+}
+
 /** Restore the current session on load (401 if not signed in). */
 export function fetchSession() {
   return request<AuthSession>("/api/auth/me");
@@ -304,6 +314,20 @@ export function resetPassword(token: string, password: string) {
 /** Re-sends the email confirmation link to the signed-in account. */
 export function requestEmailVerification() {
   return request<{ ok: true; alreadyVerified?: boolean }>("/api/auth/verify/request", { method: "POST" });
+}
+
+/* ── workspaces: one login, several BuildFlow programs (2026-09-15) ──────── */
+/** The person's workspaces, the active one flagged, with how many more they may create. */
+export function listWorkspaces() {
+  return request<WorkspacesPayload>("/api/workspaces");
+}
+/** Creates a workspace beside the person's first and makes it the active one; its onboarding follows. */
+export function createWorkspace() {
+  return request<WorkspacesPayload & { session: AuthSession }>("/api/workspaces", { method: "POST", body: "{}" });
+}
+/** Makes another of the person's workspaces the active one; the app re-enters on it. */
+export function switchWorkspace(id: string) {
+  return request<WorkspacesPayload & { session: AuthSession }>(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST", body: "{}" });
 }
 
 /** Confirms the address from an emailed link. */
@@ -471,6 +495,38 @@ export function createMaterial(input: CreateMaterialInput) {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+/**
+ * A phase's own dates. The Month calendar's "<phase> Complete" marker writes the finish when it is
+ * dragged; the jobs inside the phase keep theirs.
+ */
+export function updatePhase(id: string, input: UpdatePhaseInput) {
+  return request<Phase>(`/api/phases/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+/**
+ * A project's fields as its PATCH wants them — all of them — so a single change (the Certificate of
+ * Occupancy marker moving, say) carries the rest of the project as it already is.
+ */
+export function projectInput(project: Project, changes: Partial<UpdateProjectInput> = {}): UpdateProjectInput {
+  return {
+    name: project.name,
+    location: project.location,
+    address: project.address,
+    type: project.type,
+    contractType: project.contractType,
+    managerId: project.managerId,
+    targetCompletion: project.targetCompletion,
+    percentComplete: project.percentComplete,
+    status: project.status,
+    scheduleHealth: project.scheduleHealth,
+    value: project.value,
+    ...changes
+  };
 }
 
 export function updateProject(id: string, input: UpdateProjectInput) {

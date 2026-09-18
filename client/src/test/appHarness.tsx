@@ -5,15 +5,38 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import { bootstrapFixture } from "./fixture";
+import type { WorkspacesPayload } from "@buildflow/shared";
 
 // Every test renders the whole app; under a full-suite run the default 5s is not enough.
 vi.setConfig({ testTimeout: 20_000, hookTimeout: 20_000 });
 
 /** What the fake server answers with. Reset before every test by installAppHarness(). */
+/** The person's one workspace, as GET /api/workspaces lists it: home, active, called by its trade. */
+export const workspacesFixture: WorkspacesPayload = {
+  workspaces: [
+    {
+      id: "org-home",
+      name: "Reyes Construction",
+      title: "Asphalt",
+      businessType: "Asphalt",
+      kind: "home",
+      role: "owner",
+      active: true,
+      onboardingCompletedAt: "2026-06-01T00:00:00.000Z",
+      trialEndsAt: null,
+      createdAt: "2026-06-01T00:00:00.000Z"
+    }
+  ],
+  activeId: "org-home",
+  limit: 3,
+  remaining: 3
+};
+
 export const state = {
   bootstrapPayload: bootstrapFixture as typeof bootstrapFixture,
   businessProfilePayload: bootstrapFixture as typeof bootstrapFixture,
-  oauthProviders: { google: false, microsoft: false } as { google: boolean; microsoft: boolean }
+  oauthProviders: { google: false, microsoft: false } as { google: boolean; microsoft: boolean },
+  workspacesPayload: workspacesFixture as WorkspacesPayload
 };
 
 // The workspace a business profile provisions: real people, no production data yet.
@@ -81,6 +104,9 @@ export function respondToBuildflowApi(input: RequestInfo | URL) {
   }
   if (url.includes("/api/bootstrap")) {
     return new Response(JSON.stringify(state.bootstrapPayload), { status: 200 });
+  }
+  if (url.includes("/api/workspaces")) {
+    return new Response(JSON.stringify(state.workspacesPayload), { status: 200 });
   }
   // Everything else (auth, creates, patches) just needs a 200 with a plausible body.
   return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
@@ -217,6 +243,7 @@ export function installAppHarness() {
     state.oauthProviders = { google: false, microsoft: false };
     state.bootstrapPayload = bootstrapFixture;
     state.businessProfilePayload = blankWorkspaceFixture;
+    state.workspacesPayload = workspacesFixture;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => respondToBuildflowApi(input))

@@ -12,14 +12,15 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
-  type ReactNode,
-  type PointerEvent as ReactPointerEvent
+  type ReactNode
 } from "react";
 import { createPortal } from "react-dom";
 import GlyphPortal from "./components/ui/glyph-portal";
+import FrostLanding from "./components/FrostLanding";
 import {
   DndContext,
   DragOverlay,
+  type ClientRect,
   type CollisionDetection,
   closestCenter,
   type DragEndEvent,
@@ -31,6 +32,8 @@ import {
   useSensor,
   useSensors
 } from "@dnd-kit/core";
+import { dragModifiers, unzoomDropFlight, unzoomOverlay } from "./dragZoom";
+import { readRailHidden, writeRailHidden } from "./railHidden";
 import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS, type Transform } from "@dnd-kit/utilities";
 import {
@@ -81,7 +84,6 @@ import {
   Globe,
   Globe2,
   Grid2X2,
-  GripVertical,
   Hammer,
   Handshake,
   HardHat,
@@ -188,7 +190,8 @@ import {
   type Status,
   type Equipment,
   type User,
-  type WeatherAlert
+  type WeatherAlert,
+  type WorkspacesPayload
 } from "@buildflow/shared";
 import {
   forecastIQFinish,
@@ -211,6 +214,9 @@ import {
   resetPassword as apiResetPassword,
   requestEmailVerification as apiRequestEmailVerification,
   verifyEmail as apiVerifyEmail,
+  listWorkspaces as apiListWorkspaces,
+  createWorkspace as apiCreateWorkspace,
+  switchWorkspace as apiSwitchWorkspace,
   fetchTeam as apiFetchTeam,
   sendInvites as apiSendInvites,
   resendInvite as apiResendInvite,
@@ -312,6 +318,10 @@ import { ScheduleLinkMenu, ScheduleLinkTiles } from "./schedule/LinkBookmarkView
 import { hasLinkBookmark, openScheduleLink, scheduleLinkFor, useLinkBookmarks, type ScheduleLink } from "./schedule/linkBookmarks";
 import { scheduleCommands } from "./schedule/commands";
 import { CommandPalette } from "./components/CommandPalette";
+import { SelectMenuLayer } from "./components/ui/selectMenu";
+import { DateMenuLayer } from "./components/ui/dateMenu";
+import { PanelExitLayer } from "./components/ui/panelExit";
+import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
 import { GanttPage } from "./schedule/pages/GanttPage";
 import { WeekPage } from "./schedule/pages/WeekPage";
@@ -326,29 +336,7 @@ import { ScheduleStatusBand } from "./schedule/ScheduleStatusBand";
 import { relativeTime as relativeAlertTime } from "./schedule/alerts";
 import { useHudMotion } from "./useHudMotion";
 import { formatDate } from "./formatDate";
-import {
-  cellSize,
-  compact,
-  DASH_COLS,
-  DASH_GAP,
-  DASH_ROW_UNIT,
-  dragFloor,
-  HALF_COLS,
-  itemRect,
-  layoutRows,
-  layoutsEqual,
-  moveItem,
-  placeItem,
-  reconcileLayout,
-  resizeItem,
-  snapDelta,
-  snapDragCell,
-  sortByPosition,
-  type GridItem,
-  type GridLimits,
-  parseStoredBoard,
-  type StoredBoard
-} from "./dashGrid";
+import { DASH_COLS, sortByPosition, type GridItem, type GridLimits } from "./dashGrid";
 import { LocationMap } from "./components/ui/expand-map";
 import { StaggerCards, type StaggerCardsHandle } from "./components/ui/stagger-cards";
 import { buildTimecardModel, totalsFor } from "./timecardModel";
@@ -365,9 +353,24 @@ import { startPlanCheckout, readCheckoutReturn, type CheckoutPlanId } from "./bi
 import { PreferencesMenu } from "./PreferencesMenu";
 import { SetupStage, useSetupStage } from "./SetupStage";
 import { TutorialStage } from "./TutorialStage";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { AnimatedFigure } from "./components/ui/animated-figure";
+import { readUserSetting, rememberUserSetting, syncUserSettings } from "./userSettings";
+/* The panel board — move / size / remove / "+" / Reset — lives in its own module since 2026-09-15,
+   because the Schedule page hosts it too; the Dashboard tells it its limits and its phone order. */
+import {
+  BoardCustomizeHint,
+  BoardLayoutControls,
+  DashBoard,
+  HiddenPanelChips,
+  usePersistentLayout,
+  type DashPanel
+} from "./board/panelBoard";
 import { MeetingsPanel } from "./MeetingsPanel";
 import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
-import { useRecordFocus, usePanelFocus, type RecordFocusRequest } from "./recordFocus";
+import { FeedbackTab } from "./FeedbackTab";
+import { SectionPicker, type SectionOption } from "./SectionPicker";
+import { useRecordFocus, type RecordFocusRequest } from "./recordFocus";
 import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
 
 type Page =
@@ -594,11 +597,9 @@ function readUpdatesAnchorFromHash(): string | null {
 
 function getWelcomeViewFromHash(): WelcomeView {
   if (typeof window === "undefined") return "home";
-  if (window.location.hash === "#overview") return "overview";
-  if (window.location.hash === "#plans-overview") return "plansOverview";
-  if (window.location.hash === "#resources-overview") return "resourcesOverview";
-  if (window.location.hash === "#company-overview") return "companyOverview";
-  if (window.location.hash === "#ai-overview") return "aiOverview";
+  // 2026-09-16: the marketing pages under Product / Plans / Resources / Company / AI
+  // were removed with the Frost landing rebuild. Their old hashes land on the
+  // landing page. Only sign-in, onboarding, the waitlist and the legal pages route.
   if (window.location.hash === "#create-account") return "createAccount";
   // emailed links carry their token after a "?" inside the hash
   if (window.location.hash.startsWith("#reset-password")) return "resetPassword";
@@ -607,47 +608,9 @@ function getWelcomeViewFromHash(): WelcomeView {
   if (window.location.hash === "#invite-team") return "inviteTeam";
   if (window.location.hash === "#business-type") return "businessType";
   if (window.location.hash === "#additional-products") return "additionalProducts";
-  if (window.location.hash === "#buildflow-ai") return "scheduleAi";
-  if (window.location.hash === "#schedule-ai") return "scheduleAi";
-  if (window.location.hash === "#weather-integration") return "weatherIntegration";
-  if (window.location.hash === "#schedule-suggestions") return "scheduleSuggestions";
-  if (window.location.hash === "#crew-suggestions") return "crewSuggestions";
-  if (window.location.hash === "#delayIQ-detection") return "delayIQDetection";
-  if (window.location.hash === "#route-optimization") return "routeOptimization";
-  if (window.location.hash === "#updates" || window.location.hash.startsWith("#updates/")) return "updates";
-  if (window.location.hash === "#customer-reviews") return "reviews";
-  if (window.location.hash === "#help-center") return "helpCenter";
-  if (window.location.hash === "#about") return "about";
-  if (window.location.hash === "#customers") return "customers";
-  if (window.location.hash === "#careers") return "careers";
-  if (window.location.hash === "#apply") return "apply";
-  if (window.location.hash === "#solutions-schedule") return "solutionSchedule";
-  if (window.location.hash === "#solutions-field-updates-delayIQs") return "solutionField";
-  if (window.location.hash === "#solutions-map-field-ops") return "solutionMap";
-  if (window.location.hash === "#solutions-reports") return "solutionReports";
-  if (window.location.hash === "#solutions-startups") return "businessStartups";
-  if (window.location.hash === "#solutions-small-businesses") return "businessSmallBusinesses";
-  if (window.location.hash === "#solutions-enterprise") return "businessEnterprise";
-  if (window.location.hash === "#product") return "freePlan";
-  if (window.location.hash === "#free-plan") return "freePlan";
-  if (window.location.hash === "#pro-plan") return "proPlan";
-  if (window.location.hash === "#business-plan") return "businessPlan";
-  if (window.location.hash === "#enterprise-plan") return "enterprisePlan";
-  if (window.location.hash === "#tonnage-tracking") return "tonnageTracking";
-  if (window.location.hash === "#crew-scheduling") return "crewScheduling";
-  if (window.location.hash === "#map-field-ops") return "mapFieldOps";
-  if (window.location.hash === "#field-updates-delayIQs") return "fieldUpdatesDelayIQs";
-  if (window.location.hash === "#materials-readiness") return "materialsReadiness";
-  if (window.location.hash === "#equipment-tracking") return "equipmentTracking";
-  if (window.location.hash === "#production-reports") return "productionReports";
-  if (window.location.hash === "#compare-plans") return "comparePlans";
-  if (window.location.hash === "#contact-sales") return "contactSales";
   if (window.location.hash === "#privacy") return "privacy";
   if (window.location.hash === "#terms") return "terms";
   if (window.location.hash === "#security") return "security";
-  if (window.location.hash === "#templates") return "templates";
-  if (window.location.hash === "#partners") return "partners";
-  if (window.location.hash === "#integrations") return "integrations";
   if (window.location.hash === "#waitlist") return "waitlist"; // waitlist (removable)
   return "home";
 }
@@ -891,13 +854,14 @@ const imageThemes: Record<string, string> = {
   "parking-garage": "linear-gradient(135deg, #f2f4f7 0%, #cbd5e1 48%, #64748b 49%, #263445 100%)"
 };
 
+// the project faces read the Colors set's four face gradients (skin §47), so they follow the set
 const projectAvatarThemes: Record<string, string> = {
-  "office-building": "linear-gradient(135deg, #58a7ff, #1d63ff)",
-  apartments: "linear-gradient(135deg, #aa75ff, #7b3ff4)",
-  "medical-center": "linear-gradient(135deg, #22c1a8, #0e9e88)",
-  warehouse: "linear-gradient(135deg, #4ba0ff, #1f6fff)",
-  "parking-garage": "linear-gradient(135deg, #4aa4ff, #1e6dff)",
-  default: "linear-gradient(135deg, #58a7ff, #1d63ff)"
+  "office-building": "var(--bf-color-face-2)",
+  apartments: "var(--bf-color-face-1)",
+  "medical-center": "var(--bf-color-face-3)",
+  warehouse: "var(--bf-color-face-5)",
+  "parking-garage": "var(--bf-color-face-4)",
+  default: "var(--bf-color-face-2)"
 };
 
 const projectStatusOrder: Record<string, number> = {
@@ -969,11 +933,14 @@ function initialProjectInput(project: Project | undefined, users: User[]): Creat
  *
  * It also fixes a slice that was failing outright: the old #f59e0b amber was 2.15.
  */
+// The readiness chart's four slices read the Client Desk semantic set (2026-09-15): ready is
+// the ok pair's ink, ordered the info pair's, waiting the warn pair's, missing the bad pair's —
+// the same four the status pills use, so a colour means one thing everywhere on the board.
 const statusColors = {
-  Ready: "#1f756b",
-  Ordered: "#437c93",
-  "Waiting on Delivery": "#a47d19",
-  Missing: "#e76e50"
+  Ready: "var(--bf-color-ok)",
+  Ordered: "var(--bf-color-info)",
+  "Waiting on Delivery": "var(--bf-color-warn)",
+  Missing: "var(--bf-color-bad)"
 };
 
 const welcomeDemoScenes = [
@@ -1039,6 +1006,8 @@ const WELCOME_MENU_IMAGES: Record<string, string> = {
 /* The desktop dropdowns draw every item as a compact hover link, each with a line
    and a picture of its own (keyed by item title; a section's picture is the fallback). */
 const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=640&q=80`;
+/** The split section's photo — the Crew Scheduling jobsite shot, at panel size. */
+const HERO_SPLIT_PHOTO = "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80";
 const WELCOME_ITEM_BLURBS: Record<string, string> = {
   "Crew Scheduling": "Assign crews across the week",
   "Schedule AI": "Suggestions that keep the plan moving",
@@ -1722,7 +1691,6 @@ type TutorialTargetId =
   | "materials-page-title"
   | "equipment-page-title"
   | "timecard-page-title"
-  | "tutorial-restart-button"
   | ScheduleTourTargetId;
 
 type TutorialStep = {
@@ -1836,26 +1804,41 @@ function tutorialStorageKey(setupKey: string) {
 
 /* Tutorial progress follows the person, not the browser. Bootstrap brings the
    server copy down (`userSettings`); reads prefer it, writes go to the server
-   and to localStorage (instant, and a fallback for the demo store). */
-let serverUserSettings: Record<string, string> = {};
-function syncUserSettings(settings: Record<string, string> | undefined) {
-  serverUserSettings = settings ?? {};
-}
-const tutorialSettingKey = (setupKey: string) => `tutorial:${setupKey}`;
+   and to localStorage (instant, and a fallback for the demo store).
 
-function readStoredTutorialStatus(setupKey: string): Extract<TutorialStatus, "skipped" | "completed"> | null {
-  const remote = serverUserSettings[tutorialSettingKey(setupKey)];
-  if (remote === "skipped" || remote === "completed") return remote;
+   Since 2026-09-15 the tutorial is a ONE-TIME thing: a person who has seen it
+   once is never shown it again, whatever trade, plan or products they set up
+   later — so the record is per person (`tutorial:seen`), not per setup as it
+   was. It is written the moment the tutorial is shown ("started"), so leaving
+   part-way counts as seen, and upgraded to "skipped" / "completed" on the way
+   out. The old per-setup records are still read, so nobody who skipped or
+   finished it before this change is asked twice. */
+type StoredTutorialStatus = Extract<TutorialStatus, "skipped" | "completed"> | "started";
+const TUTORIAL_SEEN_KEY = "seen";
+const tutorialSettingKey = (key: string) => `tutorial:${key}`;
+/* The device copy of the person-level record carries the user id: the server copy is per
+   person by nature, and the device copy must not let one person's tour count for the next
+   person who signs in on the same browser. */
+const tutorialSeenLocalKey = (userId: string) => `${tutorialStorageKey(TUTORIAL_SEEN_KEY)}:${userId}`;
+const isStoredTutorialStatus = (value: string | null | undefined): value is StoredTutorialStatus =>
+  value === "started" || value === "skipped" || value === "completed";
+
+/** Has this person seen the tutorial — under the person-level record, or the setup-level one it replaced? */
+function readStoredTutorialStatus(setupKey: string, userId: string): StoredTutorialStatus | null {
+  const remote = [TUTORIAL_SEEN_KEY, setupKey].map((key) => readUserSetting(tutorialSettingKey(key))).find(isStoredTutorialStatus);
+  if (remote) return remote;
   if (typeof window === "undefined") return null;
-  const stored = window.localStorage.getItem(tutorialStorageKey(setupKey));
-  return stored === "skipped" || stored === "completed" ? stored : null;
+  const local = [tutorialSeenLocalKey(userId), tutorialStorageKey(setupKey)]
+    .map((key) => window.localStorage.getItem(key))
+    .find(isStoredTutorialStatus);
+  return local ?? null;
 }
 
-function writeStoredTutorialStatus(setupKey: string, status: Extract<TutorialStatus, "skipped" | "completed">) {
-  serverUserSettings = { ...serverUserSettings, [tutorialSettingKey(setupKey)]: status };
-  if (typeof window !== "undefined") window.localStorage.setItem(tutorialStorageKey(setupKey), status);
+function writeStoredTutorialStatus(status: StoredTutorialStatus, userId: string) {
+  rememberUserSetting(tutorialSettingKey(TUTORIAL_SEEN_KEY), status);
+  if (typeof window !== "undefined") window.localStorage.setItem(tutorialSeenLocalKey(userId), status);
   // fire-and-forget: a failed save just means this device remembers and the next one asks again
-  apiSetUserSetting(tutorialSettingKey(setupKey), status).catch(() => undefined);
+  apiSetUserSetting(tutorialSettingKey(TUTORIAL_SEEN_KEY), status).catch(() => undefined);
 }
 
 /**
@@ -2000,9 +1983,8 @@ export function buildTutorialSteps({
       id: "wrap-up",
       title: "Tutorial complete",
       shortTitle: "Wrap-up",
-      body: "You can restart this walkthrough any time from the Tutorial button in the top bar.",
-      page: "dashboard",
-      targetId: "tutorial-restart-button"
+      body: "That's the walkthrough. Crews, the Week board and your add-ons are all one click away in the rail on the left.",
+      page: "dashboard"
     }
   ];
 }
@@ -2448,6 +2430,11 @@ const BF_SCOPE = "bf-shell";
 function App() {
   const [data, setData] = useState<BootstrapPayload | null>(null);
   const [page, setPageRaw] = useState<Page>("welcome");
+  // Clicking Home (or Schedule) in the rail while already on that page remounts it, so its
+  // entrance (the panels rising in turn, the figures counting up) plays again — the reference
+  // plays it on the click that opens the page, and a click on the page it is already showing
+  // should too. One nonce serves both: only one of them is mounted at a time.
+  const [pageEntrance, setPageEntrance] = useState(0);
   const [activeUserId, setActiveUserId] = useState("u-matt");
   const [selectedBusinessType, setSelectedBusinessType] = useState<BusinessTypeId | "">(readStoredBusinessType);
   const [selectedPlanId, setSelectedPlanId] = useState<ProductPlanId | "">(readStoredPlan);
@@ -2538,21 +2525,13 @@ function App() {
   );
   const [selectedProjectId, setSelectedProjectId] = useState("p-riverside");
   const [settingsReturnPage, setSettingsReturnPage] = useState<Page>("dashboard");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readRailHidden);
+  useEffect(() => {
+    writeRailHidden(isSidebarCollapsed);
+  }, [isSidebarCollapsed]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tutorialStatus, setTutorialStatus] = useState<TutorialStatus>("idle");
-  const [activeTutorialSetupKey, setActiveTutorialSetupKey] = useState<string | null>(null);
-
-  const currentTutorialSetupKey = useMemo(
-    () =>
-      createTutorialSetupKey({
-        businessType: selectedBusinessType,
-        selectedPlan: selectedPlanId,
-        selectedProducts: selectedProductIds
-      }),
-    [selectedBusinessType, selectedPlanId, selectedProductIds]
-  );
 
   // Returns the payload so callers can branch on the workspace state (see
   // enterAfterAuth). reload() below is the void-returning form used as a prop.
@@ -2704,7 +2683,7 @@ function App() {
      shell's className because App has three early returns below this point --
      a hook after one of them changes the hook order between renders, which is
      exactly the error it produced the first time. */
-  const appPreferences = usePreferences(serverUserSettings[PREFERENCES_SETTING], `bf:prefs:${activeUser?.id ?? "anon"}`, apiSetUserSetting);
+  const appPreferences = usePreferences(readUserSetting(PREFERENCES_SETTING), `bf:prefs:${activeUser?.id ?? "anon"}`, apiSetUserSetting);
   // bookmarked schedule views: a page as it is (week, month, filters), kept as its link
   const { links: linkBookmarks, toggle: toggleLinkBookmark } = useLinkBookmarks(activeUser?.id ?? "anon");
 
@@ -2855,6 +2834,91 @@ function App() {
     }
     return false;
   };
+  /* The top bar's Confirm-email pill reports the confirmation it noticed; the account in the
+     workspace payload is patched so the pill — and anything else keyed on it — updates without
+     a reload. */
+  const markEmailVerified = (verifiedAt: string) => {
+    setData((current) =>
+      current?.account && !current.account.emailVerifiedAt
+        ? { ...current, account: { ...current.account, emailVerifiedAt: verifiedAt } }
+        : current
+    );
+  };
+
+  /* Workspaces (2026-09-15): one login, several BuildFlow programs. The Dashboard's switcher
+     lists them by trade; switching re-enters the app on the other one, and creating one hands
+     off to the same onboarding the first workspace answered (trade, plan, invites), since the
+     new workspace is the active one from the moment it exists. The list is re-read whenever
+     the Dashboard is entered, so a workspace named at onboarding shows its trade on return. */
+  const [workspaces, setWorkspaces] = useState<WorkspacesPayload | null>(null);
+  const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const refreshWorkspaces = useCallback(() => {
+    apiListWorkspaces()
+      // a fake or older server can answer with something else; the switcher then simply stays away
+      .then((payload) => setWorkspaces(Array.isArray(payload?.workspaces) && payload.workspaces.length > 0 ? payload : null))
+      .catch(() => setWorkspaces(null));
+  }, []);
+  const activeWorkspaceUserId = data?.activeUser?.id;
+  useEffect(() => {
+    if (page === "dashboard" && activeWorkspaceUserId) refreshWorkspaces();
+  }, [page, activeWorkspaceUserId, refreshWorkspaces]);
+  /* The trade, the plan and the add-ons are records on the ORG, but this browser also
+     remembers them (the fallback for a tenant database older than those fields). With more
+     than one workspace that memory is the wrong answer the moment the active workspace
+     changes: it would label the workspace being opened with the trade of the one just left --
+     the Dashboard's greeting line saying "Roofing workspace" over the demo's board. So a
+     workspace change drops the device memory and lets the new workspace's own bootstrap
+     repopulate it; a workspace that has not picked a trade yet shows the generic experience,
+     which is what it is. */
+  const forgetWorkspaceScopedSelections = () => {
+    setSelectedBusinessType("");
+    setSelectedPlanId("");
+    setSelectedProductIds([]);
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(businessTypeStorageKey);
+    window.localStorage.removeItem(selectedPlanStorageKey);
+    window.localStorage.removeItem(selectedProductsStorageKey);
+  };
+
+  /* Both resolve false when they fail, so the switcher keeps its menu up with the reason. */
+  const handleSwitchWorkspace = async (id: string) => {
+    if (workspaceBusy || workspaces?.activeId === id) return true;
+    setWorkspaceBusy(true);
+    setWorkspaceError(null);
+    try {
+      const next = await apiSwitchWorkspace(id);
+      setWorkspaces(next);
+      forgetWorkspaceScopedSelections();
+      await enterAfterAuth();
+      return true;
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Could not open that workspace.");
+      return false;
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+  const handleCreateWorkspace = async () => {
+    if (workspaceBusy) return false;
+    setWorkspaceBusy(true);
+    setWorkspaceError(null);
+    try {
+      const next = await apiCreateWorkspace();
+      setWorkspaces(next);
+      // the new workspace is the active one now, and it has its onboarding to do -- starting
+      // from a clean sheet, so the trade step is not pre-answered by the workspace just left
+      forgetWorkspaceScopedSelections();
+      await enterAfterAuth();
+      return true;
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Could not create the workspace.");
+      return false;
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await apiLogout();
@@ -2904,15 +2968,18 @@ function App() {
     ...scheduleCommands((target) => openAppPage(target))
   ];
 
-  const startTutorial = () => {
-    setActiveTutorialSetupKey(currentTutorialSetupKey);
+  /* Shows the tutorial once per person: the first look is recorded as seen right here, so a
+     person who leaves part-way is not shown it again either (there is no restart — the top
+     bar's Tutorial button went with this, 2026-09-15). */
+  const showTutorialOnce = (setupKey: string, userId: string) => {
+    if (readStoredTutorialStatus(setupKey, userId)) return;
+    writeStoredTutorialStatus("started", userId);
     setTutorialStatus("active");
   };
 
   const closeTutorial = (status: Extract<TutorialStatus, "skipped" | "completed">) => {
-    writeStoredTutorialStatus(activeTutorialSetupKey ?? currentTutorialSetupKey, status);
+    writeStoredTutorialStatus(status, activeUserId);
     setTutorialStatus("idle");
-    setActiveTutorialSetupKey(null);
   };
 
   // Settings → Workspace: re-tune the org around another trade. Existing work
@@ -2974,17 +3041,11 @@ function App() {
       // stay on the welcome shell, show the invite step; the tutorial starts when they land
       if (typeof window !== "undefined") window.location.hash = "#invite-team";
       setPage("welcome");
-      if (!readStoredTutorialStatus(setupKey)) {
-        setActiveTutorialSetupKey(setupKey);
-        setTutorialStatus("active");
-      }
+      showTutorialOnce(setupKey, payload.activeUser.id);
       return;
     }
     openAppPage(destinationPage);
-    if (!readStoredTutorialStatus(setupKey)) {
-      setActiveTutorialSetupKey(setupKey);
-      setTutorialStatus("active");
-    }
+    showTutorialOnce(setupKey, payload.activeUser.id);
   };
 
   // "Purchase in Billing" from the add-on prompt deep-links Settings → Billing → Add-ons.
@@ -2998,6 +3059,8 @@ function App() {
 
   const openSettingsPage = () => {
     setSettingsReturnPage(page === "welcome" || page === "settings" ? "dashboard" : page);
+    // opened again while it is already showing: replay its entrance, like the rail pages
+    if (page === "settings") setPageEntrance((count) => count + 1);
     openAppPage("settings");
   };
   /** Open Settings straight on one view (the dashboard's "choose a plan", the Stripe return trip). */
@@ -3099,6 +3162,10 @@ function App() {
   return (
     <div className={`${shellClassName} hs-shell`} {...preferenceAttributes(appPreferences.preferences)}>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={paletteCommands()} />
+      {/* every <select> in the program opens this list instead of the system panel (skin §53) */}
+      <SelectMenuLayer />
+      <DateMenuLayer />
+      <PanelExitLayer />
       {/* HubSpot layout: full-width top bar, then an icon rail + content row.
           APPROVED: Settings renders the top bar again. It had no bar and no rail,
           which made it the one page in the product with no search, no create menu,
@@ -3113,7 +3180,7 @@ function App() {
         onOpenSettings={openSettingsPage}
         onOpenBilling={() => openSettingsView("billing")}
         preferences={appPreferences}
-        onStartTutorial={startTutorial}
+        onEmailVerified={markEmailVerified}
         onLogout={handleLogout}
         setPage={setPage}
         onAskAi={toggleAssistant}
@@ -3134,7 +3201,29 @@ function App() {
             page={page}
             selectedProductIds={selectedProductIds}
             selectedPlanId={selectedPlanId}
-            setPage={setPage}
+            setPage={(target) => {
+              if (
+                target === page &&
+                (target === "dashboard" ||
+                  target === "schedule" ||
+                  target === "projects" ||
+                  target === "crews" ||
+                  target === "contacts" ||
+                  target === "companies" ||
+                  target === "deals" ||
+                  target === "equipment" ||
+                  target === "map" ||
+                  target === "delayIQs" ||
+                  target === "reports" ||
+                  target === "timecard" ||
+                  target === "materials" ||
+                  target === "field" ||
+                  target === "bookmarks")
+              ) {
+                setPageEntrance((count) => count + 1);
+              }
+              setPage(target);
+            }}
             onOpenSettings={openSettingsPage}
             onRequestAddOn={setAddOnPrompt}
             bookmarks={bookmarks}
@@ -3146,6 +3235,7 @@ function App() {
           <section className={page === "settings" ? "settings-content-scroll" : "content-scroll"}>
             {page === "dashboard" && (
               <Dashboard
+                key={pageEntrance}
                 onOpenBilling={() => openSettingsView("billing")}
                 data={data}
                 activeUser={activeUser}
@@ -3155,10 +3245,16 @@ function App() {
                 selectedPlanId={selectedPlanId}
                 selectedProductIds={selectedProductIds}
                 panelFocus={panelFocus}
+                workspaces={workspaces}
+                onSwitchWorkspace={handleSwitchWorkspace}
+                onCreateWorkspace={handleCreateWorkspace}
+                workspaceBusy={workspaceBusy}
+                workspaceError={workspaceError}
               />
             )}
             {page === "bookmarks" && (
               <BookmarksPage
+                key={pageEntrance}
                 bookmarks={bookmarks}
                 onToggleBookmark={toggleBookmark}
                 setPage={openAppPage}
@@ -3169,7 +3265,7 @@ function App() {
                 onToggleLink={toggleLinkBookmark}
               />
             )}
-            {page === "schedule" && <SchedulePage data={data} reload={reload} onOpenPage={openAppPage} />}
+            {page === "schedule" && <SchedulePage key={pageEntrance} data={data} reload={reload} onOpenPage={openAppPage} />}
             {page === "gantt" && (
               <GanttPage
                 data={data}
@@ -3226,6 +3322,7 @@ function App() {
             )}
             {page === "projects" && (
               <ProjectsPage
+                key={pageEntrance}
                 data={data}
                 reload={reload}
                 setPage={setPage}
@@ -3233,9 +3330,10 @@ function App() {
                 setSelectedProjectId={setSelectedProjectId}
               />
             )}
-            {page === "crews" && <CrewsPage data={data} reload={reload} />}
+            {page === "crews" && <CrewsPage key={pageEntrance} data={data} reload={reload} />}
             {page === "contacts" && (
               <ContactsPage
+                key={pageEntrance}
                 data={data}
                 activeUser={activeUser}
                 createSignal={createRequest?.page === "contacts" ? createRequest.nonce : 0}
@@ -3247,6 +3345,7 @@ function App() {
             )}
             {page === "companies" && (
               <CompaniesPage
+                key={pageEntrance}
                 data={data}
                 activeUser={activeUser}
                 createSignal={createRequest?.page === "companies" ? createRequest.nonce : 0}
@@ -3258,6 +3357,7 @@ function App() {
             )}
             {page === "deals" && (
               <DealsPage
+                key={pageEntrance}
                 data={data}
                 activeUser={activeUser}
                 createSignal={createRequest?.page === "deals" ? createRequest.nonce : 0}
@@ -3265,19 +3365,18 @@ function App() {
                 onOpenRecord={openSalesRecord}
               />
             )}
-            {page === "equipment" && <EquipmentPage data={data} reload={reload} focus={recordFocusFor("equipment")} />}
-            {page === "materials" && <MaterialsPage data={data} reload={reload} focus={recordFocusFor("materials")} />}
-            {page === "field" && (
-              <FieldUpdatesPage data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("field")} />
-            )}
-            {page === "map" && <MapOpsPage data={data} />}
+            {page === "equipment" && <EquipmentPage key={pageEntrance} data={data} reload={reload} focus={recordFocusFor("equipment")} />}
+            {page === "materials" && <MaterialsPage key={pageEntrance} data={data} reload={reload} focus={recordFocusFor("materials")} />}
+            {page === "field" && <FieldUpdatesPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("field")} />}
+            {page === "map" && <MapOpsPage key={pageEntrance} data={data} />}
             {page === "delayIQs" && (
-              <DelayIQsPage data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
+              <DelayIQsPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
             )}
-            {page === "reports" && <ReportsPage data={data} />}
-            {page === "timecard" && <TimeCardPage data={data} />}
+            {page === "reports" && <ReportsPage key={pageEntrance} data={data} />}
+            {page === "timecard" && <TimeCardPage key={pageEntrance} data={data} />}
             {page === "settings" && (
               <SettingsPage
+                key={pageEntrance}
                 onClose={closeSettingsPage}
                 initialView={settingsInitialView ?? undefined}
                 focusAddOn={settingsFocusAddOn}
@@ -3374,7 +3473,7 @@ function spotlightUpdateTarget(targetId?: string) {
   window.setTimeout(attempt, 260);
 }
 
-const HS_UPDATE_RAY_COLORS = ["#2f6bff", "#9b72cb", "#d96570", "#4285f4"];
+const HS_UPDATE_RAY_COLORS = ["var(--bf-color-accent)", "var(--bf-color-info)", "var(--bf-color-bad)", "var(--bf-ink-faint)"];
 
 function ProductUpdateModal({
   entry,
@@ -3405,13 +3504,13 @@ function ProductUpdateModal({
           <X size={18} />
         </button>
 
-        {/* starburst illustration in BuildFlow's blue / purple / coral */}
+        {/* starburst illustration in BuildFlow's olive / plum / purple / coral (no blue since 2026-09-16) */}
         <div className="hs-upd-art" aria-hidden="true">
           <svg viewBox="0 0 220 220" width="170" height="170">
             <defs>
               <linearGradient id="hs-upd-grad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="#4285f4" />
-                <stop offset="1" stopColor="#9b72cb" />
+                <stop offset="0" stopColor="var(--bf-color-info)" />
+                <stop offset="1" stopColor="var(--bf-ink-faint)" />
               </linearGradient>
             </defs>
             <g strokeWidth="4" strokeLinecap="round" fill="none">
@@ -3868,7 +3967,12 @@ function WelcomePage({
     let cancelled = false;
     apiFetchSession()
       .then((session) => {
-        if (!cancelled && (!session || session.demo)) showCreateAccountPage();
+        // The demo is turned away too -- except when its active workspace is one it created
+        // beside the demo workspace (a dated trial marks those, 2026-09-15): that one is a
+        // fresh org of its own, so the trade, the plan AND the invite step all belong to it
+        // and none of them can touch the shared demo data.
+        const demoOnItsOwnNewWorkspace = Boolean(session?.demo && data?.workspaceTrial);
+        if (!cancelled && (!session || (session.demo && !demoOnItsOwnNewWorkspace))) showCreateAccountPage();
       })
       .catch(() => {
         if (!cancelled) showCreateAccountPage();
@@ -4027,6 +4131,20 @@ function WelcomePage({
     if (menuId === "solutions" && businessSizePagesByMenuLabel[itemTitle]) return businessSizePagesByMenuLabel[itemTitle].hash;
     return `#${menuId}`;
   };
+
+  // The landing page itself: the Frost hero, with nothing of the marketing shell
+  // around it (no light ground, no mega-menu nav, no footer).
+  if (welcomeView === "home") {
+    return (
+      <FrostLanding
+        logo={<BuildFlowLogoMark />}
+        onLogin={showLoginPage}
+        onJoinWaitlist={() => {
+          if (typeof window !== "undefined") window.location.hash = "#waitlist";
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`welcome-page ${isReskinView ? "welcome-rx" : ""} ${isReskinView ? "" : "updates-open"}`}>
@@ -4403,20 +4521,7 @@ function WelcomePage({
             }
           }}
         />
-      ) : (
-        <WelcomeExperience
-          data={data}
-          activeJobs={activeJobs || 8}
-          crewCount={crewCount || 4}
-          materialReady={materialReady || 68}
-          onGetStarted={showCreateAccountPage}
-          onLogin={onEnterDashboard}
-          onLogIn={showLoginPage}
-          onShowUpdates={showUpdatesPage}
-          onShowHelp={showHelpCenterPage}
-          onExplore={onOpenPage}
-        />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -4690,14 +4795,14 @@ function WxTypewriter({ normal, em }: { normal: string; em: string }) {
   );
 }
 
-// Interchangeable closers for the hero — each finishes "Where crews, projects,
-// and schedules ___" with the same "move together" meaning (stable ref so the
-// rotator effect below doesn't restart on every render).
-const heroTaglinePhrases = ["move together.", "stay in sync.", "flow as one.", "run on time.", "stay on track.", "move as one."];
-
 // Types the static prefix once, then endlessly cycles the emphasis phrase
 // (type → hold → delete → next). Reuses WxTypewriter's ghost/real/caret markup
 // so it inherits the exact hero styling — blue `em`, sizing, and caret.
+// Interchangeable closers for the split section's headline — each finishes "Where
+// crews, projects, and schedules ___" with the same "move together" meaning (stable
+// ref so the rotator effect below doesn't restart on every render).
+const heroTaglinePhrases = ["move together.", "stay in sync.", "flow as one.", "run on time.", "stay on track.", "move as one."];
+
 function WxRotatingHeadline({ prefix, phrases }: { prefix: string; phrases: string[] }) {
   const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const longest = phrases.reduce((a, b) => (b.length > a.length ? b : a), "");
@@ -5162,761 +5267,6 @@ function WxProgramShowcase({ onGetStarted, className = "" }: { onGetStarted: () 
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function WelcomeExperience({
-  activeJobs,
-  crewCount,
-  materialReady,
-  onGetStarted,
-  onLogin,
-  onShowUpdates,
-  onShowHelp,
-  onExplore
-}: {
-  data?: BootstrapPayload;
-  activeJobs: number;
-  crewCount: number;
-  materialReady: number;
-  onGetStarted: () => void;
-  onLogin: () => void;
-  onLogIn: () => void;
-  onShowUpdates: (anchor?: string) => void;
-  onShowHelp: () => void;
-  onExplore: (page: Page) => void;
-}) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const updatesStageRef = useRef<StaggerCardsHandle>(null);
-
-  const scrollUpdates = (direction: number) => {
-    updatesStageRef.current?.move(direction);
-  };
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleMove = (event: PointerEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const nx = event.clientX / window.innerWidth;
-        const ny = event.clientY / window.innerHeight;
-        root.style.setProperty("--mx", `${event.clientX}px`);
-        root.style.setProperty("--my", `${event.clientY}px`);
-        root.style.setProperty("--px", `${(nx - 0.5) * 2}`);
-        root.style.setProperty("--py", `${(ny - 0.5) * 2}`);
-      });
-    };
-    window.addEventListener("pointermove", handleMove);
-    return () => {
-      window.removeEventListener("pointermove", handleMove);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    let raf = 0;
-    const handleScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        root.style.setProperty("--sy", `${window.scrollY}`);
-      });
-    };
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const targets = root.querySelectorAll("[data-reveal]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.16, rootMargin: "0px 0px -6% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  // Teaser cards derive from the real changelog (UPDATE_ENTRIES) so each one links
-  // to the actual update it advertises. tone/icon are presentational accents.
-  const updateAccents = [
-    { tone: "blue", icon: Sparkles },
-    { tone: "green", icon: PackageCheck },
-    { tone: "purple", icon: Map },
-    { tone: "coral", icon: ClipboardList },
-    { tone: "amber", icon: Users },
-    { tone: "blue", icon: LineChart }
-  ];
-  const updates = UPDATE_ENTRIES.slice(0, 6).map((entry, i) => ({
-    title: entry.title,
-    date: entry.dateLabel,
-    tag: entry.version ? `v${entry.version}` : "Update",
-    tone: updateAccents[i % updateAccents.length].tone,
-    icon: updateAccents[i % updateAccents.length].icon,
-    anchor: `update-${entry.dateTime}`
-  }));
-
-  return (
-    <div className="wx" ref={rootRef}>
-      <div className="wx-bg" aria-hidden="true">
-        <div className="wx-aurora wx-aurora-1" />
-        <div className="wx-aurora wx-aurora-2" />
-        <div className="wx-aurora wx-aurora-3" />
-      </div>
-      <div className="wx-cursor" aria-hidden="true" />
-
-      <main className="wx-main">
-        {/* Hero — the same eyebrow, headline, copy, buttons and footnote, composed around a Glyph Portal:
-            "BUILDFLOW" is live type; scrolling flies the camera through a letter into the mesh behind it. */}
-        <section className="wx-hero wx-hero-portal">
-          <GlyphPortal
-            word="BUILDFLOW"
-            fontFamily={'Inter, "Arial Black", Arial, sans-serif'}
-            fontWeight={800}
-            scrollLength={2.2}
-            interactive
-            annotations={false}
-            enterLabel="Scroll to enter BuildFlow"
-            className="wx-portal"
-            style={{
-              "--gp-paper": "var(--wx-bg)",
-              "--gp-ink": "var(--wx-ink)",
-              "--gp-field": "#faf8ee",
-              "--gp-foreground": "var(--wx-ink)"
-            }}
-            background={
-              <div style={{ position: "absolute", inset: 0, isolation: "isolate" }}>
-                <WxBloomField seed={7} />
-              </div>
-            }
-            front={
-              <>
-                <div className="wx-portal-top">
-                  <div className="wx-eyebrow">
-                    <span className="wx-dot" /> Launching {LAUNCH_DATE_LABEL}
-                  </div>
-                  <h1 className="wx-title">
-                    <WxRotatingHeadline prefix="Where crews, projects, and schedules " phrases={heroTaglinePhrases} />
-                  </h1>
-                </div>
-                <div className="wx-portal-bottom">
-                  <p className="wx-sub">
-                    Coordinate crews, project phases, materials, field updates, and delayIQs from one clean command center.
-                  </p>
-                  <div className="wx-cta-row">
-                    {/* Secondary sits first and primary second, so the pair reads
-                        quiet-then-dark left to right. */}
-                    <button
-                      type="button"
-                      className="wx-hero-demo"
-                      onClick={() => {
-                        track(EVENTS.ctaClick, { cta: "preview_demo", location: "hero" });
-                        onLogin();
-                      }}
-                    >
-                      <PlayCircle size={17} /> Preview the live demo
-                    </button>
-                    {/* waitlist (removable feature): primary pre-launch CTA. At go-live, swap
-                        this back to the "Get BuildFlow" / "Login" pair and drop the demo link. */}
-                    <WxMagnetic
-                      className="wx-btn wx-btn-ink"
-                      onClick={() => {
-                        track(EVENTS.ctaClick, { cta: "join_waitlist", location: "hero" });
-                        if (typeof window !== "undefined") window.location.hash = "#waitlist";
-                      }}
-                      ariaLabel="Join the waitlist"
-                    >
-                      <Sparkles size={18} /> Join the waitlist
-                    </WxMagnetic>
-                  </div>
-                  <p className="wx-platform">
-                    Early access &amp; founding-member pricing for waitlist members &middot; built for general contractors, concrete,
-                    roofing, utilities, and more.
-                  </p>
-                </div>
-              </>
-            }
-          >
-            <div className="wx-portal-inside">
-              <h2>Keep crews, materials, and schedules moving together.</h2>
-              <p className="wx-platform">
-                Early access &amp; founding-member pricing for waitlist members &middot; built for general contractors, concrete, roofing,
-                utilities, and more.
-              </p>
-            </div>
-          </GlyphPortal>
-        </section>
-
-        <div className="wx-scroll-cue" aria-hidden="true">
-          <span />
-          Scroll
-        </div>
-
-        {/* The plain-language answer before the proof: what this is, for whom, and what it changes. */}
-        <section className="wx-whatis" id="what-is-buildflow" data-reveal aria-labelledby="wx-whatis-title">
-          <h2 id="wx-whatis-title">What is BuildFlow?</h2>
-          <div className="wx-whatis-copy">
-            <p>
-              BuildFlow is production scheduling software for construction contractors. It puts your projects, crews, equipment and
-              materials on one live schedule, so every assignment, field update and delay lands where the whole team can see it.
-            </p>
-            <p>
-              Crews report from the field. The plan updates itself. DelayIQ flags work that is trending late before it costs overtime, and
-              BuildFlow AI turns blockers into recovery options — for asphalt, concrete, roofing, excavation and every trade in between.
-            </p>
-          </div>
-        </section>
-
-        <WxCompanyWave />
-
-        <section className="wx-section" id="product-features">
-          {/* The program showcase leads the section, in place of the old
-              "Production control / Everything the field needs" heading. */}
-          <WxProgramShowcase onGetStarted={onGetStarted} className="wx-ps-lead-block" />
-          <div className="wx-rows">
-            {/* Crew scheduling — product-page treatment: one centered statement, the
-                board as the hero image, then the same sentence's three ideas as
-                highlight tiles. Same copy, same colours, same type. */}
-            <section className="wx-feature-hero" data-reveal aria-labelledby="wx-crew-title">
-              <div className="wx-feature-hero-head">
-                <span className="wx-row-kicker">Crew scheduling</span>
-                <h3 id="wx-crew-title" className="wx-feature-hero-title">
-                  Assign the week in minutes, not meetings.
-                </h3>
-                <WxTypeIn text="Drag jobs onto crews by day, capacity, and readiness. Double-bookings and capacity limits surface before dispatch — not after." />
-                <button type="button" className="wx-explore" onClick={() => onExplore("schedule")}>
-                  Explore scheduling <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="wx-feature-hero-visual wx-row-visual">
-                <WxBloomField seed={1} />
-                <WxTilt className="wx-mock" max={6}>
-                  <div className="wx-mock-title">
-                    <b>Week board</b>
-                    <span>Jun 15 – 21</span>
-                  </div>
-                  <div className="wx-mock-board">
-                    <i />
-                    <i>MON</i>
-                    <i>TUE</i>
-                    <i>WED</i>
-                    <i>THU</i>
-                    <i>Crew 1</i>
-                    <u className="f1" />
-                    <u />
-                    <u className="f2" />
-                    <u />
-                    <i>Crew 2</i>
-                    <u />
-                    <u className="f3" />
-                    <u />
-                    <u className="f1" />
-                    <i>Crew 3</i>
-                    <u className="f4" />
-                    <u />
-                    <u className="f2" />
-                    <u />
-                  </div>
-                </WxTilt>
-              </div>
-              <ul className="wx-feature-hero-points" aria-label="Crew scheduling highlights">
-                <li>
-                  <CalendarDays size={22} aria-hidden="true" />
-                  <b>Drag jobs onto crews</b>
-                  <span>by day, capacity, and readiness.</span>
-                </li>
-                <li>
-                  <Users size={22} aria-hidden="true" />
-                  <b>Double-bookings</b>
-                  <span>surface before dispatch — not after.</span>
-                </li>
-                <li>
-                  <ShieldAlert size={22} aria-hidden="true" />
-                  <b>Capacity limits</b>
-                  <span>surface before dispatch — not after.</span>
-                </li>
-              </ul>
-            </section>
-
-            <div className="wx-row rev" data-reveal>
-              <div className="wx-row-copy">
-                <span className="wx-row-kicker">Project timelines</span>
-                <h3>Phases, milestones, and handoffs on one line of sight.</h3>
-                <WxTypeIn text="Track every phase from mobilization to closeout, with inspections and handoffs pinned to the dates that matter." />
-                <button type="button" className="wx-explore" onClick={() => onExplore("projects")}>
-                  Explore timelines <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="wx-row-visual">
-                <WxBloomField seed={2} />
-                <WxTilt className="wx-mock" max={6}>
-                  <div className="wx-mock-title">
-                    <b>Riverside Office</b>
-                    <span>62% complete</span>
-                  </div>
-                  <div className="wx-mock-tl">
-                    <div>
-                      <i>Sitework</i>
-                      <span style={{ "--o": "0%", "--w": "38%" } as CSSProperties} />
-                    </div>
-                    <div>
-                      <i>Foundations</i>
-                      <span style={{ "--o": "22%", "--w": "34%" } as CSSProperties} />
-                    </div>
-                    <div>
-                      <i>Framing</i>
-                      <span style={{ "--o": "44%", "--w": "36%" } as CSSProperties} />
-                    </div>
-                    <div>
-                      <i>Inspections</i>
-                      <span style={{ "--o": "68%", "--w": "24%" } as CSSProperties} />
-                    </div>
-                  </div>
-                </WxTilt>
-              </div>
-            </div>
-
-            <div className="wx-row" data-reveal>
-              <div className="wx-row-copy">
-                <span className="wx-row-kicker">Map &amp; field ops</span>
-                <h3>Every job, crew, and route on the map.</h3>
-                <WxTypeIn text="Group work by location and travel time, plan truck routes, and see site status without calling around." />
-                <button type="button" className="wx-explore" onClick={() => onExplore("map")}>
-                  Explore map ops <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="wx-row-visual">
-                <WxBloomField seed={3} />
-                <WxTilt className="wx-mock" max={6}>
-                  <div className="wx-mock-title">
-                    <b>Austin, TX</b>
-                    <span>3 active sites</span>
-                  </div>
-                  <div className="wx-mock-map">
-                    <svg viewBox="0 0 400 210" aria-hidden="true">
-                      <path
-                        d="M 40 170 C 110 150, 150 90, 210 84 S 330 60, 366 38"
-                        fill="none"
-                        stroke="#1a73e8"
-                        strokeWidth="2.5"
-                        strokeDasharray="7 7"
-                        opacity="0.7"
-                      />
-                    </svg>
-                    <span className="wx-pin" style={{ left: "8%", top: "76%" }} />
-                    <span className="wx-pin p2" style={{ left: "50%", top: "36%" }} />
-                    <span className="wx-pin p3" style={{ left: "88%", top: "14%" }} />
-                  </div>
-                </WxTilt>
-              </div>
-            </div>
-
-            <div className="wx-row rev" data-reveal>
-              <div className="wx-row-copy">
-                <span className="wx-row-kicker">Material readiness</span>
-                <h3>Missing materials flagged before they block work.</h3>
-                <WxTypeIn text="Every job is ranked by prerequisites — deliveries, permits, locates, and confirmations — so crews only roll to work that can start." />
-                <button type="button" className="wx-explore" onClick={() => onExplore("materials")}>
-                  Explore materials <ArrowRight size={16} />
-                </button>
-              </div>
-              <div className="wx-row-visual">
-                <WxBloomField seed={4} />
-                <WxTilt className="wx-mock" max={6}>
-                  <div className="wx-mock-title">
-                    <b>Dispatch checks</b>
-                    <span>Tomorrow</span>
-                  </div>
-                  <div className="wx-mock-list">
-                    <div>
-                      <CheckCircle2 size={17} /> Rebar delivery confirmed <em>Ready</em>
-                    </div>
-                    <div>
-                      <CheckCircle2 size={17} /> Utility locates cleared <em>Ready</em>
-                    </div>
-                    <div className="warn">
-                      <AlertTriangle size={17} /> Anchor bolts on order <em>Waiting</em>
-                    </div>
-                  </div>
-                </WxTilt>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="wx-band" data-reveal>
-          <span className="wx-eyebrow-2">BuildFlow AI</span>
-          <h2 className="wx-h2">
-            Conflicts spotted. <WxRotatingWord phrases={aiRecoveryPhrases} className="wx-grad-ai" />
-          </h2>
-          <WxTypeIn text="Schedule AI ranks ready work, flags double-booked crews, and turns weather and delayIQ signals into recovery plans before the morning meeting." />
-          <DisplayCards className="wx-band-cards" cards={aiCaughtCards} />
-        </section>
-
-        <section className="wx-section" id="customers" style={{ paddingTop: 0 }}>
-          <div className="wx-stats" data-reveal>
-            <div className="wx-stat">
-              <div className="wx-stat-num">
-                <WxCounter value={activeJobs} />
-              </div>
-              <div className="wx-stat-label">Active jobs</div>
-              <p>Live visibility across field work, inspections, weather, and backlog.</p>
-            </div>
-            <div className="wx-stat">
-              <div className="wx-stat-num">
-                <WxCounter value={crewCount * 9} />
-              </div>
-              <div className="wx-stat-label">Crew slots</div>
-              <p>Plan the week by crew capacity and spot overbooking early.</p>
-            </div>
-            <div className="wx-stat">
-              <div className="wx-stat-num">
-                <WxCounter value={materialReady} />
-              </div>
-              <div className="wx-stat-label">Ready items</div>
-              <p>Rank work by prerequisites so crews land on jobs that can start.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Switch from your current scheduler — AI migration story */}
-        <section className="wx-section wx-switch" id="switch" style={{ paddingTop: 0 }}>
-          <div className="wx-sec-head" data-reveal>
-            <span className="wx-eyebrow-2">Switch in minutes</span>
-            <h2 className="wx-h2">
-              Already scheduling somewhere else? <em>Bring it with you.</em>
-            </h2>
-            <p>
-              Whiteboard, spreadsheet, or another app — snap a photo or drop a file and BuildFlow&rsquo;s AI rebuilds it as a live,
-              conflict-checked schedule. No manual re-entry, no lost week.
-            </p>
-          </div>
-
-          <div className="wx-switch-stage" data-reveal>
-            <div className="wx-switch-card wx-switch-before">
-              <WxBloomField seed={5} />
-              <span className="wx-switch-tag">Your current scheduler</span>
-              <div className="wx-switch-sheet" aria-hidden="true">
-                <div className="wx-switch-sheet-row wx-switch-sheet-head">
-                  <span>WK 24</span>
-                  <span>Mon</span>
-                  <span>Tue</span>
-                  <span>Wed</span>
-                  <span>Thu</span>
-                </div>
-                <div className="wx-switch-sheet-row">
-                  <span>Crew 1</span>
-                  <span>Pour A</span>
-                  <span>Pour A</span>
-                  <span>—</span>
-                  <span>Insp</span>
-                </div>
-                <div className="wx-switch-sheet-row">
-                  <span>Crew 2</span>
-                  <span>Forms</span>
-                  <span>Forms</span>
-                  <span>Strip</span>
-                  <span>—</span>
-                </div>
-                <div className="wx-switch-sheet-row">
-                  <span>Crew 3</span>
-                  <span className="wx-switch-clash">??</span>
-                  <span>Roof</span>
-                  <span>Roof</span>
-                  <span>Roof</span>
-                </div>
-              </div>
-              <span className="wx-switch-file">
-                <FileText size={13} /> schedule.xlsx
-              </span>
-            </div>
-
-            <div className="wx-switch-mid" aria-hidden="true">
-              <span className="wx-switch-spark">
-                <Sparkles size={20} />
-              </span>
-              <span className="wx-switch-mid-label">BuildFlow AI reads it</span>
-              <ArrowRight className="wx-switch-arrow" size={22} />
-            </div>
-
-            <div className="wx-switch-card wx-switch-after">
-              <WxBloomField seed={6} />
-              <span className="wx-switch-tag wx-switch-tag-blue">Live in BuildFlow</span>
-              <div className="wx-switch-board" aria-hidden="true">
-                <div className="wx-switch-board-row">
-                  <span className="wx-switch-board-crew">Crew 1</span>
-                  <span className="wx-switch-block tone-blue" style={{ gridColumn: "2 / 4" }}>
-                    Concrete pour
-                  </span>
-                  <span className="wx-switch-block tone-slate" style={{ gridColumn: "5 / 6" }}>
-                    Inspect
-                  </span>
-                </div>
-                <div className="wx-switch-board-row">
-                  <span className="wx-switch-board-crew">Crew 2</span>
-                  <span className="wx-switch-block tone-violet" style={{ gridColumn: "2 / 5" }}>
-                    Formwork
-                  </span>
-                </div>
-                <div className="wx-switch-board-row">
-                  <span className="wx-switch-board-crew">Crew 3</span>
-                  <span className="wx-switch-block tone-green" style={{ gridColumn: "3 / 6" }}>
-                    Roofing
-                  </span>
-                </div>
-              </div>
-              <span className="wx-switch-file wx-switch-file-ok">
-                <CheckCircle2 size={13} /> Conflicts resolved &middot; optimized
-              </span>
-            </div>
-          </div>
-
-          <div className="wx-switch-steps" data-reveal>
-            <div className="wx-switch-step">
-              <span className="wx-switch-step-ic">
-                <FileText size={17} />
-              </span>
-              <div>
-                <strong>Upload what you&rsquo;ve got</strong>
-                <p>A photo of the whiteboard, an Excel export, or a screenshot from your old scheduler.</p>
-              </div>
-            </div>
-            <div className="wx-switch-step">
-              <span className="wx-switch-step-ic">
-                <Sparkles size={17} />
-              </span>
-              <div>
-                <strong>AI reads the schedule</strong>
-                <p>It pulls out crews, jobs, dates, and dependencies — and flags conflicts already hiding in your week.</p>
-              </div>
-            </div>
-            <div className="wx-switch-step">
-              <span className="wx-switch-step-ic">
-                <CalendarDays size={17} />
-              </span>
-              <div>
-                <strong>Your live schedule lands</strong>
-                <p>Projects, jobs, and assignments appear in BuildFlow — optimized and ready to run.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="wx-switch-cta" data-reveal>
-            {/* waitlist (removable feature): pre-launch CTA — revert to signup at go-live */}
-            <WxMagnetic
-              className="wx-btn wx-btn-ink"
-              onClick={() => {
-                if (typeof window !== "undefined") window.location.hash = "#waitlist";
-              }}
-              ariaLabel="Join the waitlist"
-            >
-              <Sparkles size={18} /> Join the waitlist
-            </WxMagnetic>
-            <span className="wx-switch-note">Free white-glove migration when you switch &mdash; done for you.</span>
-          </div>
-        </section>
-
-        <section className="wx-section wx-voices" id="testimonials" style={{ paddingTop: 0 }}>
-          <div className="wx-sec-head" data-reveal>
-            <span className="wx-eyebrow-2">Proof from the field</span>
-            <h2 className="wx-h2">Fewer double-bookings, calmer mornings.</h2>
-            <p>
-              Concrete, utility, and site-work teams run their production weeks on BuildFlow — and stopped losing crews to schedule
-              conflicts.
-            </p>
-          </div>
-
-          <div className="wx-proof" data-reveal>
-            <div className="wx-proof-card">
-              <div className="wx-proof-num">
-                37<em>%</em>
-              </div>
-              <p className="wx-proof-cap">fewer double-booked crews within the first 90 days</p>
-              <span className="wx-proof-src">
-                <i />
-                Riverside · concrete
-              </span>
-            </div>
-            <div className="wx-proof-card">
-              <div className="wx-proof-num">
-                22<em className="wx-u">hrs</em>
-              </div>
-              <p className="wx-proof-cap">saved every week on schedule review</p>
-              <span className="wx-proof-src">
-                <i />
-                Pinecrest · inspections
-              </span>
-            </div>
-            <div className="wx-proof-card">
-              <div className="wx-proof-num">
-                18<em>%</em>
-              </div>
-              <p className="wx-proof-cap">higher crew utilization with readiness-first planning</p>
-              <span className="wx-proof-src">
-                <i />
-                Tech Ridge · site work
-              </span>
-            </div>
-          </div>
-
-          <div className="wx-voice-grid" data-reveal>
-            {customerReviewCards
-              .filter((review): review is Extract<CustomerReviewCardData, { kind: "quote" }> => review.kind === "quote")
-              .slice(0, 3)
-              .map((review) => {
-                const initials = review.person
-                  .split(" ")
-                  .map((part) => part[0])
-                  .slice(0, 2)
-                  .join("");
-                return (
-                  <figure className="wx-voice" key={review.company}>
-                    <blockquote className="wx-voice-q">{review.quote}</blockquote>
-                    <figcaption className="wx-voice-cite">
-                      <span className={`wx-voice-ava accent-${review.accent ?? "blue"}`} aria-hidden="true">
-                        {initials}
-                      </span>
-                      <span className="wx-voice-who">
-                        <strong>{review.person}</strong>
-                        <em>
-                          {review.role}, {review.company}
-                        </em>
-                      </span>
-                    </figcaption>
-                  </figure>
-                );
-              })}
-          </div>
-        </section>
-
-        <section className="wx-section wx-updates" id="solutions" style={{ paddingTop: 0 }}>
-          <div className="wx-updates-head" data-reveal>
-            <div>
-              <span className="wx-eyebrow-2">The latest</span>
-              <h2 className="wx-h2">Product updates</h2>
-            </div>
-            <div className="wx-updates-actions">
-              <button type="button" className="wx-explore" onClick={() => onShowUpdates()}>
-                View all <ArrowRight size={16} />
-              </button>
-              <div className="wx-updates-arrows">
-                <button type="button" aria-label="Previous updates" onClick={() => scrollUpdates(-1)}>
-                  <ChevronLeft size={20} />
-                </button>
-                <button type="button" aria-label="Next updates" onClick={() => scrollUpdates(1)}>
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="wx-updates-stage" data-reveal>
-            <StaggerCards
-              ref={updatesStageRef}
-              items={updates}
-              keyOf={(update) => update.title}
-              ariaLabel="Product updates"
-              cardSize={360}
-              mobileCardSize={280}
-              height={560}
-              renderBackdrop={(update) => <WxBloomField seed={10 + updates.indexOf(update)} />}
-              renderCard={(update, isCenter) => {
-                const Icon = update.icon;
-                return (
-                  <article className={`wx-update wx-update-staggered${isCenter ? " is-center" : ""}`}>
-                    <span className={`wx-update-thumb tone-${update.tone}`} aria-hidden="true">
-                      <Icon size={26} />
-                    </span>
-                    <h3>{update.title}</h3>
-                    <div className="wx-update-meta">
-                      <span>{update.date}</span>
-                      <em>{update.tag}</em>
-                    </div>
-                    <button
-                      type="button"
-                      className="wx-update-link"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onShowUpdates(update.anchor);
-                      }}
-                      tabIndex={isCenter ? 0 : -1}
-                    >
-                      Read update <ChevronRight size={15} />
-                    </button>
-                  </article>
-                );
-              }}
-            />
-          </div>
-        </section>
-      </main>
-
-      <footer className="wx-footer" id="resources">
-        <div className="wx-footer-top">
-          <p className="wx-footer-tagline">Keep crews, materials, and schedules moving together.</p>
-          <nav className="wx-footer-links" aria-label="Footer">
-            <div>
-              <h3>Product</h3>
-              <a onClick={() => onExplore("dashboard")}>Dashboard</a>
-              <a onClick={() => onExplore("schedule")}>Schedule</a>
-              <a onClick={() => onExplore("projects")}>Projects</a>
-              <a onClick={() => onExplore("map")}>Map Ops</a>
-              <a onClick={() => onExplore("reports")}>Reports</a>
-            </div>
-            <div>
-              <h3>Resources</h3>
-              <a onClick={() => onShowUpdates()}>Updates</a>
-              <a onClick={onShowHelp}>Help center</a>
-              <a href="#templates">Templates</a>
-              <a href="#partners">Partner programs</a>
-              <a href="#integrations">Integrations</a>
-            </div>
-            <div>
-              <h3>Company</h3>
-              <a href="#about">About us</a>
-              <a href="#customers">Customers</a>
-              <a href="#careers">Careers</a>
-              <a href="#contact-sales">Contact sales</a>
-            </div>
-          </nav>
-        </div>
-
-        <div className="wx-footer-word" aria-hidden="true">
-          {"BuildFlow".split("").map((letter, index) => (
-            <span key={index} style={{ "--i": index } as CSSProperties}>
-              {letter}
-            </span>
-          ))}
-        </div>
-
-        <div className="wx-footer-legal">
-          <div className="wx-footer-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="wx-footer-legal-links">
-            <a href="#about">About BuildFlow</a>
-            <a href="#privacy">Privacy</a>
-            <a href="#terms">Terms</a>
-            <a href="#security">Security</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -6494,7 +5844,6 @@ const OVERVIEW_RELEASE_SHOTS: Record<string, string> = {
   "2026-03-03": "Crew Suggestions" // Crew utilization
 };
 
-/** A release card: the entry's own information, plus what it is and what it costs. */
 function overviewRelease(entry: UpdateEntryData) {
   const product = (entry.page && OVERVIEW_RELEASE_PRODUCT[entry.page]) || { label: "Crew Scheduling" };
   const addOn = product.addOn ? ADD_ON_CATALOG[product.addOn] : null;
@@ -9409,13 +8758,60 @@ function WelcomeVerifyEmailPage({ onContinue, onLogin }: { onContinue: () => Pro
   );
 }
 
-/** Top-bar form of the notice: one small pill that resends the confirmation link in place. */
-function VerifyEmailBadge({ email }: { email: string }) {
+/* How the Confirm-email pill keeps watch after "Sent": every fifteen seconds, for ten minutes. */
+const VERIFY_WATCH_MS = 15_000;
+const VERIFY_WATCH_TICKS = 40;
+
+/** Top-bar form of the notice: one small pill that resends the confirmation link in place.
+    It also watches for the confirmation itself (2026-09-15). The link is almost always opened
+    somewhere else — the mail client's tab, a phone — so this tab's copy of the account went
+    stale the moment the address was confirmed, and the pill sat there until a reload. Now
+    coming back to this tab re-reads the session, and for ten minutes after "Sent" the pill
+    checks on its own as well; the first answer that says confirmed takes it down. */
+function VerifyEmailBadge({ email, onVerified }: { email: string; onVerified: (verifiedAt: string) => void }) {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  const onVerifiedRef = useRef(onVerified);
+  onVerifiedRef.current = onVerified;
+  const recheck = useCallback(() => {
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+    apiFetchSession()
+      .then((session) => {
+        const verifiedAt = session?.account?.emailVerifiedAt;
+        if (verifiedAt) onVerifiedRef.current(verifiedAt);
+      })
+      .catch(() => undefined);
+  }, []);
+  const sent = state === "sent";
+  useEffect(() => {
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", recheck);
+    let ticks = 0;
+    let timer: number | undefined;
+    if (sent) {
+      timer = window.setInterval(() => {
+        if (++ticks > VERIFY_WATCH_TICKS) {
+          window.clearInterval(timer);
+          return;
+        }
+        recheck();
+      }, VERIFY_WATCH_MS);
+    }
+    return () => {
+      window.removeEventListener("focus", recheck);
+      document.removeEventListener("visibilitychange", recheck);
+      window.clearInterval(timer);
+    };
+  }, [sent, recheck]);
   const resend = async () => {
     setState("sending");
     try {
-      await apiRequestEmailVerification();
+      const result = await apiRequestEmailVerification();
+      if (result.alreadyVerified) {
+        // confirmed somewhere else already: nothing to send, and the pill has nothing left to say
+        recheck();
+        setState("idle");
+        return;
+      }
       setState("sent");
     } catch {
       setState("failed");
@@ -21956,8 +21352,8 @@ function WelcomeDemoScene({ sceneId, data }: { sceneId: (typeof welcomeDemoScene
 
 // HubSpot-style left rail: one icon per hub; hovering (or focusing) a hub opens a
 // flyout listing its pages. The brand/search/account now live in the top bar.
-// `collapsed`/`onToggleCollapsed` stay in the props type for the call site but
-// are unused — the rail is always compact.
+// `collapsed` hides the rail (an arrow at its foot; a Show arrow at the screen's
+// edge brings it back) and `onToggleCollapsed` flips it; the choice is kept on the device.
 /**
  * Bookmarks — every starred page in one place, grouped by the category it lives
  * in, plus the full catalogue so a page can be starred without hunting through
@@ -22112,6 +21508,8 @@ function BookmarksPage({
 }
 
 function Sidebar({
+  collapsed = false,
+  onToggleCollapsed,
   page,
   selectedProductIds,
   selectedPlanId,
@@ -22168,7 +21566,13 @@ function Sidebar({
   const flyoutHub = navHubs.find((hub) => hub.id === openHubId);
 
   return (
-    <aside className="sidebar hs-rail" aria-label="Primary navigation" onMouseLeave={scheduleClose}>
+    <>
+      {collapsed && (
+        <button type="button" className="hs-rail-show" aria-label="Show the sidebar" title="Show the sidebar" onClick={onToggleCollapsed}>
+          <ChevronRight size={18} />
+        </button>
+      )}
+      <aside className={`sidebar hs-rail${collapsed ? " is-hidden" : ""}`} aria-label="Primary navigation" onMouseLeave={scheduleClose}>
       <nav className="hs-rail-list" aria-label="Hubs">
         {navHubs.map((hub) => {
           const Icon = hub.icon;
@@ -22216,6 +21620,9 @@ function Sidebar({
           onClick={onOpenSettings}
         >
           <Settings size={20} />
+        </button>
+        <button type="button" className="hs-rail-btn hs-rail-hide" aria-label="Hide the sidebar" title="Hide the sidebar" onClick={onToggleCollapsed}>
+          <ChevronLeft size={20} />
         </button>
       </div>
       {flyoutHub && (
@@ -22292,6 +21699,7 @@ function Sidebar({
         </div>
       )}
     </aside>
+    </>
   );
 }
 
@@ -22571,7 +21979,7 @@ function TopBar({
   onOpenSettings,
   onOpenBilling,
   preferences,
-  onStartTutorial,
+  onEmailVerified,
   onLogout,
   reportsMode = false,
   setPage,
@@ -22592,7 +22000,8 @@ function TopBar({
   onOpenBilling?: () => void;
   /** The shell's layout preferences, rendered by the gear's Preferences panel. */
   preferences: ReturnType<typeof usePreferences>;
-  onStartTutorial: () => void;
+  /** The Confirm-email pill noticed the address is confirmed: patch the account so the pill comes down. */
+  onEmailVerified?: (verifiedAt: string) => void;
   onLogout: () => void;
   reportsMode?: boolean;
   setPage?: (page: Page) => void;
@@ -22625,8 +22034,18 @@ function TopBar({
   const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationItems = useMemo(() => buildNotificationItems(data), [data]);
   const readNotifications = useReadNotifications(data.activeUser.id);
-  // the badge is the UNREAD count now, not the total: a badge that never goes down is noise
-  const notificationCount = notificationItems.filter((item) => !readNotifications.isRead(item.id)).length;
+  /* The badge counts what this person has NOT BEEN SHOWN yet — not the total, which never goes
+     down, and not the unread rows, which stay unread until each is clicked and would leave the
+     badge saying "15" after the drawer had been opened and read top to bottom. Opening the
+     drawer is being shown them (see useReadNotifications), so the badge clears on open and
+     comes back only when something new arrives. Capped at 99+ so the circle never grows past
+     three characters. */
+  const notificationCount = notificationItems.filter((item) => !readNotifications.isSeen(item.id)).length;
+  const notificationBadge = notificationCount > 99 ? "99+" : String(notificationCount);
+  useEffect(() => {
+    if (isNotificationsOpen) readNotifications.markSeen(notificationItems.map((item) => item.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- opening is the moment; the ids are what is listed then
+  }, [isNotificationsOpen, notificationItems]);
   const notificationPanelId = reportsMode ? "reports-notifications-panel" : "notifications-panel";
   const accountMenuId = reportsMode ? "reports-account-menu" : "account-menu";
   const notificationRef = useRef<HTMLDivElement | null>(null);
@@ -22708,8 +22127,8 @@ function TopBar({
 
   return (
     <header className={`${topbarClassName} hs-topbar`}>
+      {/* The word alone: the top row's brand carries no logo mark (asked for 2026-09-16). */}
       <button type="button" className="hs-topbar-brand" onClick={() => goTo("dashboard")} aria-label="BuildFlow home">
-        <BuildFlowLogoMark />
         <span>BuildFlow</span>
       </button>
       <label className="search-box" onClick={onOpenSearch}>
@@ -22869,7 +22288,9 @@ function TopBar({
             </div>
           )}
         </div>
-        {data.account && !data.account.emailVerifiedAt && <VerifyEmailBadge email={data.account.email} />}
+        {data.account && !data.account.emailVerifiedAt && (
+          <VerifyEmailBadge email={data.account.email} onVerified={(verifiedAt) => onEmailVerified?.(verifiedAt)} />
+        )}
         <div className="notification-center" ref={notificationRef}>
           <button
             className="icon-button"
@@ -22888,7 +22309,7 @@ function TopBar({
             }}
           >
             <Bell size={21} />
-            {notificationCount > 0 && <span className="bubble">{notificationCount}</span>}
+            {notificationCount > 0 && <span className="bubble">{notificationBadge}</span>}
           </button>
           {isNotificationsOpen && (
             <NotificationsPanel
@@ -22902,21 +22323,6 @@ function TopBar({
             />
           )}
         </div>
-        <button
-          className="icon-button topbar-help-button"
-          type="button"
-          aria-label="Help and tutorial"
-          title="Help &amp; tutorial"
-          data-tutorial-id="tutorial-restart-button"
-          onClick={() => {
-            setIsNotificationsOpen(false);
-            setIsAccountMenuOpen(false);
-            setIsPreferencesOpen(false);
-            onStartTutorial();
-          }}
-        >
-          <HelpCircle size={20} />
-        </button>
         {/* The gear opens the Preferences panel. It used to jump straight to the
             Settings page, which is still one click away at the foot of the panel. */}
         <div className="hs-prefs-anchor">
@@ -22945,7 +22351,7 @@ function TopBar({
             <PreferencesMenu
               preferences={preferences.preferences}
               onUpdate={preferences.update}
-              onApplyPreset={preferences.applyPreset}
+              onApplyColors={preferences.applyColors}
               onRestoreDefaults={preferences.restoreDefaults}
               isDefault={preferences.isDefault}
               onOpenSettings={onOpenSettings}
@@ -24920,6 +24326,38 @@ const DASH_SECTION_ICONS: Record<string, typeof Sparkles> = {
   today: CalendarClock,
   meetings: CalendarCheck
 };
+/* The picker's cards: where each section belongs on the page and one line on what it shows.
+   Every id in DASH_LAYOUT_DEFAULT has an entry, and a guard test holds that. */
+const DASH_SECTION_GROUPS: Record<string, string> = {
+  today: "Planning",
+  quick: "Planning",
+  alerts: "Attention",
+  approvals: "Attention",
+  recommendations: "Attention",
+  stats: "Performance",
+  kpis: "Performance",
+  apps: "Apps",
+  readiness: "Readiness",
+  weather: "Readiness",
+  conflicts: "Readiness",
+  inspections: "Readiness",
+  meetings: "Meetings"
+};
+const DASH_SECTION_BLURBS: Record<string, string> = {
+  today: "The jobs running today, who is on them, and what has no crew yet.",
+  quick: "Update progress, look ahead, rebalance a crew, check the weather, build a report.",
+  alerts: "DelayIQs, weather and deliveries trending against your projects.",
+  approvals: "Field variances waiting on you, with their drift and severity.",
+  recommendations: "Early warnings from DelayIQ on jobs trending behind.",
+  stats: "Schedule performance, projects on track and labor utilization, week over week.",
+  kpis: "Today's jobs, crews scheduled, equipment in use and DelayIQed projects.",
+  apps: "The BuildFlow apps in this workspace, and the door to each.",
+  readiness: "Materials by status — ready, ordered, waiting, missing — at a glance.",
+  weather: "Forecast alerts that overlap an active job this week.",
+  conflicts: "Equipment assigned to more than one place at once.",
+  inspections: "Inspections coming up, by project and status.",
+  meetings: "Google Calendar and Outlook meetings, with a live countdown to the next one."
+};
 const DASH_STAT_DEFAULT = ["st-sched", "st-ontrack", "st-labor"];
 const DASH_KPI_DEFAULT = ["kpi-jobs", "kpi-crews", "kpi-equip", "kpi-delayIQs"];
 /* ---------------------------------------------------------------------------
@@ -24967,12 +24405,27 @@ const DASH_STACKED_ORDER = [
   "meetings",
   "apps"
 ];
+/* "Reset layout" lays every section out full width, one under the next, the way the Schedule
+   Status band already spans the page — asked for on 2026-09-15 — in the order a superintendent
+   reads them (the phone order above). Heights start from the defaults and then FOLLOW THE
+   CONTENT: a stored board normally keeps the heights the person set, but a three-column height
+   on a six-column row is mostly air, so this board stays fitted until someone drags or resizes
+   a section, at which point it is theirs. */
+const DASH_LAYOUT_FULL_WIDTH: GridItem[] = (() => {
+  // globalThis.Map: `Map` is the lucide icon in this file
+  const heights = new globalThis.Map(DASH_LAYOUT_DEFAULT.map((item) => [item.id, item.h] as const));
+  let y = 0;
+  return DASH_STACKED_ORDER.filter((id) => heights.has(id)).map((id) => {
+    const h = heights.get(id) ?? 4;
+    const item: GridItem = { id, x: 0, y, w: DASH_COLS, h };
+    y += h;
+    return item;
+  });
+})();
 const stackedRank = (id: string) => {
   const index = DASH_STACKED_ORDER.indexOf(id);
   return index === -1 ? DASH_STACKED_ORDER.length : index;
 };
-/** Grid rows a block needs to show `contentPx` of body plus its chrome, on 40px rows with 16px gaps. */
-const rowsForHeight = (px: number) => Math.max(1, Math.ceil((px + DASH_GAP) / (DASH_ROW_UNIT + DASH_GAP)));
 /** The metric rows and Quick Actions hold tiles that stop reading below half width. */
 const dashPanelLimits = (id: string): GridLimits => ({
   minW: id === "stats" || id === "kpis" || id === "quick" ? 3 : 2,
@@ -25047,162 +24500,6 @@ function usePersistentOrder(storageKey: string, defaults: string[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
   return { order, update, reset };
-}
-
-/** The user setting that carries the board, so the arrangement follows the person rather than the browser. */
-const DASH_LAYOUT_SETTING = "dash:layout";
-
-/**
- * The per-user panel board: where every panel sits, how big it is, and which
- * panels are hidden. It lives on the account (the `dash:layout` setting that
- * bootstrap brings down) and is mirrored on this device, so a second device
- * opens the same board and this one keeps it when the API is slow.
- */
-function usePersistentLayout(storageKey: string, defaults: GridItem[]) {
-  type BoardState = { layout: GridItem[]; hidden: string[]; stored: boolean };
-  const visibleDefaults = (hidden: string[]) => defaults.filter((item) => !hidden.includes(item.id));
-  const resolve = (board: StoredBoard | null, stored: boolean): BoardState => {
-    const hidden = (board?.hidden ?? []).filter((id) => defaults.some((item) => item.id === id));
-    return { layout: reconcileLayout(board?.items ?? null, visibleDefaults(hidden), dashPanelLimits), hidden, stored };
-  };
-  // the account copy first — hydrated into this device's key — then the device's own
-  const read = (): { board: StoredBoard | null; source: "account" | "device" | null } => {
-    const remote = serverUserSettings[DASH_LAYOUT_SETTING];
-    if (remote) {
-      try {
-        const board = parseStoredBoard(JSON.parse(remote));
-        if (board) {
-          try {
-            localStorage.setItem(storageKey, remote);
-          } catch {
-            /* private mode: the account copy still stands */
-          }
-          return { board, source: "account" };
-        }
-      } catch {
-        /* an unreadable account copy: fall through to the device copy */
-      }
-    }
-    try {
-      const raw = localStorage.getItem(storageKey);
-      const board = raw ? parseStoredBoard(JSON.parse(raw)) : null;
-      return { board, source: board ? "device" : null };
-    } catch {
-      return { board: null, source: null };
-    }
-  };
-  const [state, setState] = useState<BoardState>(() => {
-    const { board, source } = read();
-    return resolve(board, source !== null);
-  });
-  const stateRef = useRef(state);
-  stateRef.current = state;
-
-  // One save per burst of changes: a drag commits once, but arrow-key nudges
-  // come quickly. The device copy is written at once; the account copy follows.
-  const pending = useRef<string | null>(null);
-  const saveTimer = useRef<number | null>(null);
-  const flush = useCallback(() => {
-    saveTimer.current = null;
-    const value = pending.current;
-    pending.current = null;
-    if (value === null) return;
-    // fire-and-forget: a failed save leaves the device copy, and the next change tries again
-    apiSetUserSetting(DASH_LAYOUT_SETTING, value).catch(() => undefined);
-  }, []);
-  const queueSave = useCallback(
-    (value: string) => {
-      pending.current = value;
-      if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
-      saveTimer.current = window.setTimeout(flush, 600);
-    },
-    [flush]
-  );
-  const persist = useCallback(
-    (layout: GridItem[], hidden: string[]) => {
-      const board: StoredBoard = { items: layout, hidden };
-      const value = JSON.stringify(board);
-      serverUserSettings = { ...serverUserSettings, [DASH_LAYOUT_SETTING]: value };
-      try {
-        localStorage.setItem(storageKey, value);
-      } catch {
-        /* private mode: the board just does not persist on this device */
-      }
-      queueSave(value);
-    },
-    [storageKey, queueSave]
-  );
-  useEffect(
-    () => () => {
-      if (saveTimer.current !== null) {
-        window.clearTimeout(saveTimer.current);
-        flush();
-      }
-    },
-    [flush]
-  );
-  // Re-read when the person changes; a board saved on this device before it could
-  // follow the account goes up once, so their next device starts from it.
-  useEffect(() => {
-    const { board, source } = read();
-    const next = resolve(board, source !== null);
-    setState(next);
-    if (source === "device") persist(next.layout, next.hidden);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
-
-  // Heights fitted to content on a fresh board: in memory only, never saved, so
-  // they do not count as the person having customized anything.
-  const fit = useCallback((next: GridItem[]) => setState((current) => ({ ...current, layout: next })), []);
-  const update = useCallback(
-    (next: GridItem[]) => {
-      const { hidden } = stateRef.current;
-      setState({ layout: next, hidden, stored: true });
-      persist(next, hidden);
-    },
-    [persist]
-  );
-  /** Take a panel off the board; the rest pack up into its place. */
-  const hide = useCallback(
-    (id: string) => {
-      const { layout, hidden } = stateRef.current;
-      if (hidden.includes(id) || !defaults.some((item) => item.id === id)) return;
-      const nextHidden = [...hidden, id];
-      const next = compact(layout.filter((item) => item.id !== id));
-      setState({ layout: next, hidden: nextHidden, stored: true });
-      persist(next, nextHidden);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [persist]
-  );
-  /** Bring a hidden panel back, at its default width under everything else. */
-  const show = useCallback(
-    (id: string) => {
-      const { layout, hidden } = stateRef.current;
-      if (!hidden.includes(id)) return;
-      const nextHidden = hidden.filter((other) => other !== id);
-      const next = reconcileLayout(layout, visibleDefaults(nextHidden), dashPanelLimits);
-      setState({ layout: next, hidden: nextHidden, stored: true });
-      persist(next, nextHidden);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [persist]
-  );
-  const reset = useCallback(() => {
-    setState({ layout: defaults.map((item) => ({ ...item })), hidden: [], stored: false });
-    const rest = { ...serverUserSettings };
-    delete rest[DASH_LAYOUT_SETTING];
-    serverUserSettings = rest;
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {
-      /* ignore */
-    }
-    // an empty value clears the account copy
-    queueSave("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, queueSave]);
-  return { layout: state.layout, hidden: state.hidden, stored: state.stored, update, reset, fit, hide, show };
 }
 
 // Only let a drag collide with drop targets in the SAME scope, so dragging a
@@ -25294,8 +24591,9 @@ type CcKpiItem = {
 // glide out of the way and dropped items settle with the same easeOut curve.
 const DASH_SORT_TRANSITION = { duration: 260, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
 
-// Drop settle for the floating ghost — same curve as the neighbours' reflow.
-const DASH_DROP_ANIMATION = { duration: 260, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
+// Drop settle for the floating ghost — same curve as the neighbours' reflow. Its distance is
+// dnd-kit's, measured on screen and played inside the zoomed shell, so the keyframes divide it back.
+const DASH_DROP_ANIMATION = { duration: 260, easing: "cubic-bezier(0.22, 1, 0.36, 1)", keyframes: unzoomDropFlight };
 
 // Inline style from a useSortable result. Because a DragOverlay hosts the
 // lifted widget, the widget itself stays in the flow as a placeholder and
@@ -25341,12 +24639,22 @@ function DashDragGhost({ activeId }: { activeId: string }) {
 // (e.g. the tab is hidden mid-pickup) resets dnd-kit without firing onDragEnd
 // or onDragCancel, which would otherwise leave the page stuck in drag mode.
 function DashDragLayer({ onActiveChange }: { onActiveChange: (id: string | null) => void }) {
-  const { active } = useDndContext();
+  const { active, activeNodeRect } = useDndContext();
   const activeId = active ? String(active.id) : null;
+  /* The widget's box as it was picked up, which is where the ghost is placed. dnd-kit's own
+     `active.rect` is the OVERLAY's box once there is an overlay, which would move the ghost out
+     from under the hand; and the placement itself is divided by the shell's zoom (dragZoom.ts). */
+  const pickedUpFrom = useRef<ClientRect | null>(null);
+  if (!activeId) pickedUpFrom.current = null;
+  else if (activeNodeRect && !pickedUpFrom.current) pickedUpFrom.current = activeNodeRect;
   useEffect(() => {
     onActiveChange(activeId);
   }, [activeId, onActiveChange]);
-  return <DragOverlay dropAnimation={DASH_DROP_ANIMATION}>{activeId ? <DashDragGhost activeId={activeId} /> : null}</DragOverlay>;
+  return (
+    <DragOverlay dropAnimation={DASH_DROP_ANIMATION} style={unzoomOverlay(pickedUpFrom.current)}>
+      {activeId ? <DashDragGhost activeId={activeId} /> : null}
+    </DragOverlay>
+  );
 }
 
 /**
@@ -25356,424 +24664,14 @@ function DashDragLayer({ onActiveChange }: { onActiveChange: (id: string | null)
  * draw their own heading row inside the body; their right-hand controls arrive as `action`
  * now and the heading itself is DashSection's, so there is one title row and not three.
  */
-type DashPanel = { id: string; title: string; icon?: typeof Sparkles; action?: ReactNode; body: ReactNode };
-
-// One dashboard panel on the board: absolutely positioned by its grid cell, a
-// grip to move it, a dotted corner handle to resize it. The interactive content
-// inside stays clickable because only the grip and the handle start a drag.
-/**
- * The scrollable middle of a panel. When its content overflows it becomes a
- * keyboard-reachable region named after the panel — otherwise a fitted body
- * would still trap keyboard users out of anything past the fold — and it stays
- * out of the tab order when nothing overflows.
- */
-function DashBlockBody({ title, children }: { title: string; children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [scrolls, setScrolls] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const check = () => setScrolls(el.scrollHeight > el.clientHeight + 1);
-    check();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [children]);
-  return (
-    <div
-      ref={ref}
-      className={`dash-block-body${scrolls ? " is-scrollable" : ""}`}
-      role="region"
-      aria-label={`${title} contents`}
-      tabIndex={scrolls ? 0 : -1}
-    >
-      <div className="dash-block-content">{children}</div>
-    </div>
-  );
-}
-
-function DashSection({
-  panel,
-  style,
-  dragging,
-  resizing,
-  landing,
-  focused = false,
-  editable,
-  onDragStart,
-  onResizeStart,
-  onNudge,
-  onHide
-}: {
-  panel: DashPanel;
-  style?: CSSProperties;
-  dragging: boolean;
-  resizing: boolean;
-  landing: boolean;
-  /** Lit for a moment because a notification pointed here. */
-  focused?: boolean;
-  editable: boolean;
-  onDragStart: (event: ReactPointerEvent<HTMLButtonElement>) => void;
-  onResizeStart: (event: ReactPointerEvent<HTMLButtonElement>) => void;
-  /** Arrow keys on the grip: move one cell; with Shift, resize one cell. */
-  onNudge: (dx: number, dy: number, resize: boolean) => void;
-  /** Takes the panel off the board, to wait under Hidden panels. Offered while customizing. */
-  onHide?: () => void;
-}) {
-  const Icon = panel.icon;
-  const onGripKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const step: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-    const delta = step[event.key];
-    if (!delta) return;
-    event.preventDefault();
-    onNudge(delta[0], delta[1], event.shiftKey);
-  };
-  return (
-    <div
-      style={style}
-      className={`dash-block${dragging ? " is-dragging" : ""}${resizing ? " is-resizing" : ""}${landing ? " is-landing" : ""}${focused ? " is-bf-focused" : ""}`}
-      data-dash-drag-id={panel.id}
-    >
-      {editable && (
-        <button
-          type="button"
-          className="dash-drag-handle"
-          aria-label={`Move ${panel.title}. Arrow keys move it one cell; hold Shift to resize.`}
-          aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight"
-          title="Drag to move · arrow keys nudge, Shift + arrows resize"
-          onPointerDown={onDragStart}
-          onKeyDown={onGripKeyDown}
-        >
-          <GripVertical size={16} />
-        </button>
-      )}
-      {editable && onHide && (
-        <button
-          type="button"
-          className="dash-hide"
-          aria-label={`Hide ${panel.title}`}
-          title="Hide this panel — bring it back from Hidden panels"
-          onClick={onHide}
-        >
-          <EyeOff size={14} />
-        </button>
-      )}
-      {/* The one header every box shares: icon + title on the left, the panel's own control on
-          the right (View all, Manage, the approvals switch) — the reference's title row. The
-          glyph is 20px because that is what the reference's is; the sheet sizes it too. */}
-      <div className="hs-widget-head">
-        <h2>
-          {Icon && <Icon size={20} />}
-          {panel.title}
-        </h2>
-        {panel.action && <div className="hs-widget-actions">{panel.action}</div>}
-      </div>
-      <DashBlockBody title={panel.title}>{panel.body}</DashBlockBody>
-      {editable && (
-        <button
-          type="button"
-          className="dash-resize"
-          aria-label={`Resize ${panel.title}`}
-          title="Drag to resize"
-          onPointerDown={onResizeStart}
-        />
-      )}
-    </div>
-  );
-}
-
-type DashDrag = {
-  kind: "move" | "resize";
-  id: string;
-  pointerX: number;
-  pointerY: number;
-  dx: number;
-  dy: number;
-  /** The panel's cell when the drag began; the floating box is drawn from here. */
-  origin: GridItem;
-  /** Width the panel takes while it is carried: a move snaps to half the board. */
-  w: number;
-  /** The layout when the drag began; every step is resolved from it, so nothing drifts. */
-  base: GridItem[];
-  /** Last row the other panels occupy once this one leaves; at or past it the carried panel is "at the bottom". */
-  floor: number;
-  /** Where everything would land if the pointer let go now. */
-  preview: GridItem[];
-};
-
-// The board: measures its own width for the column size, positions every panel
-// from the layout, and runs the move / resize drags. While a drag is under way
-// the other panels animate to where they would settle, the grey cell grid
-// shows through, and a dashed placeholder marks the drop cell.
-function DashBoard({
-  layout,
-  panels,
-  onChange,
-  onFit,
-  fitToContent = false,
-  onEditingChange,
-  onHide,
-  panelFocus
-}: {
-  layout: GridItem[];
-  panels: Record<string, DashPanel>;
-  onChange: (next: GridItem[]) => void;
-  onEditingChange: (editing: boolean) => void;
-  /** Fit default heights to content (in memory). Off once the person has saved a layout. */
-  onFit?: (next: GridItem[]) => void;
-  fitToContent?: boolean;
-  /** Offered while customizing: takes the panel with this id off the board. */
-  onHide?: (id: string) => void;
-  /** A notification pointed at one of these panels: scroll it up and light it. */
-  panelFocus?: { id: string; nonce: number } | null;
-}) {
-  const boardRef = useRef<HTMLDivElement>(null);
-  const litPanel = usePanelFocus(panelFocus ?? null);
-  const [boardWidth, setBoardWidth] = useState(0);
-  const [stacked, setStacked] = useState(false);
-  const [drag, setDrag] = useState<DashDrag | null>(null);
-  // the latest drag, readable from the window listeners without reaching into a state updater
-  const dragRef = useRef<DashDrag | null>(null);
-  dragRef.current = drag;
-  const [landing, setLanding] = useState<string | null>(null);
-  const colW = cellSize(boardWidth, DASH_COLS, DASH_GAP);
-  const colWRef = useRef(colW);
-  colWRef.current = colW;
-
-  useLayoutEffect(() => {
-    const el = boardRef.current;
-    if (!el) return;
-    const measure = () => setBoardWidth(el.clientWidth);
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // below tablet width the grid gives way to a single stacked column
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(max-width: 900px)");
-    const apply = () => setStacked(query.matches);
-    apply();
-    query.addEventListener("change", apply);
-    return () => query.removeEventListener("change", apply);
-  }, []);
-
-  useEffect(() => onEditingChange(drag !== null), [drag, onEditingChange]);
-
-  // On a fresh (unstored) layout, size each block to what it holds so nothing is
-  // clipped on first view. Re-runs when the panels' content or the board width
-  // changes; stops the moment the person saves a layout of their own.
-  const [fitTick, setFitTick] = useState(0);
-  const panelIds = layout.map((item) => item.id).join("|");
-  useEffect(() => {
-    if (!fitToContent || typeof ResizeObserver === "undefined") return;
-    const root = boardRef.current;
-    if (!root) return;
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => setFitTick((tick) => tick + 1));
-    });
-    root.querySelectorAll<HTMLElement>(".dash-block-content").forEach((el) => observer.observe(el));
-    return () => {
-      window.cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitToContent, panelIds]);
-  useEffect(() => {
-    if (!fitToContent || !onFit || stacked || drag || typeof window === "undefined") return;
-    const root = boardRef.current;
-    if (!root) return;
-    const frame = window.requestAnimationFrame(() => {
-      const next = layout.map((item) => {
-        const block = root.querySelector<HTMLElement>(`.dash-block[data-dash-drag-id="${item.id}"]`);
-        const body = block?.querySelector<HTMLElement>(".dash-block-body");
-        const content = body?.querySelector<HTMLElement>(":scope > .dash-block-content");
-        if (!block || !body || !content) return item;
-        // the body is stretched to the block, so its scrollHeight can only ever
-        // grow a panel; the inner wrapper's height is the content's real height
-        const bodyStyle = window.getComputedStyle(body);
-        const padding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
-        const chrome = block.offsetHeight - body.clientHeight;
-        // a grid child can paint past its own box (Quick Actions' last row does); the
-        // wrapper is an unstretched block, so its scrollHeight is the honest content height
-        const contentPx = Math.max(content.offsetHeight, content.scrollHeight);
-        const needed = rowsForHeight(chrome + padding + contentPx + 6);
-        const limits = dashPanelLimits(item.id);
-        const h = Math.min(Math.max(needed, limits.minH ?? 1), 14);
-        return h === item.h ? item : { ...item, h };
-      });
-      const fitted = compact(next);
-      if (!layoutsEqual(fitted, layout)) onFit(fitted);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [fitToContent, onFit, stacked, drag, layout, panels, boardWidth, fitTick]);
-
-  const startDrag = (kind: DashDrag["kind"], id: string) => (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0 || stacked) return;
-    const origin = layout.find((item) => item.id === id);
-    if (!origin) return;
-    event.preventDefault();
-    // a carried panel is half the board wide, so it drops beside a neighbour in one move
-    const w = kind === "move" ? Math.max(dashPanelLimits(id).minW ?? 1, HALF_COLS) : origin.w;
-    const floor = dragFloor(layout, id);
-    setDrag({ kind, id, pointerX: event.clientX, pointerY: event.clientY, dx: 0, dy: 0, origin, w, floor, base: layout, preview: layout });
-  };
-
-  useEffect(() => {
-    if (!drag) return;
-    const onMove = (event: PointerEvent) => {
-      setDrag((current) => {
-        if (!current) return current;
-        const dx = event.clientX - current.pointerX;
-        const dy = event.clientY - current.pointerY;
-        const dCol = snapDelta(dx, colWRef.current, DASH_GAP);
-        const dRow = snapDelta(dy, DASH_ROW_UNIT, DASH_GAP);
-        const limits = dashPanelLimits(current.id);
-        let preview: GridItem[];
-        if (current.kind === "move") {
-          // the column is read from where the pointer is over the board, unrounded: over
-          // an outer third, half width in that half; over the middle third or past a side
-          // edge, the full width; shoved past the top or the bottom, half width on the first
-          // or the floor row whatever the columns say. Dropping back on the same cell at the
-          // same width leaves the panel as it was.
-          const halfW = Math.max(limits.minW ?? 1, HALF_COLS);
-          const rawCol = current.origin.x + dx / (colWRef.current + DASH_GAP);
-          const zone = snapDragCell(rawCol, current.origin.y + dRow, halfW, current.floor);
-          const edged = zone.full || zone.top || zone.bottom;
-          const moved = zone.x !== current.origin.x || zone.y !== current.origin.y || (edged && current.origin.w !== zone.w);
-          preview = moved ? placeItem(current.base, current.id, zone.x, zone.y, zone.w, limits) : current.base;
-          return { ...current, dx, dy, w: zone.w, preview };
-        } else {
-          preview = resizeItem(current.base, current.id, current.origin.w + dCol, current.origin.h + dRow, limits);
-        }
-        return { ...current, dx, dy, preview };
-      });
-    };
-    const onUp = () => {
-      // commit from the ref, not inside a state updater: updating the parent from
-      // an updater is a state change during render, which React rejects
-      const current = dragRef.current;
-      if (current) {
-        if (!layoutsEqual(current.preview, current.base)) onChange(current.preview);
-        setLanding(current.id);
-      }
-      setDrag(null);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    };
-    // the listeners only need re-binding when a drag starts or ends
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drag !== null]);
-
-  useEffect(() => {
-    if (!landing) return;
-    const timer = window.setTimeout(() => setLanding(null), 900);
-    return () => window.clearTimeout(timer);
-  }, [landing]);
-
-  // keyboard: one cell per press, announced for screen readers
-  const [announcement, setAnnouncement] = useState("");
-  const nudge = (id: string) => (dx: number, dy: number, resize: boolean) => {
-    const item = layout.find((entry) => entry.id === id);
-    if (!item || stacked) return;
-    const title = panels[id]?.title ?? id;
-    const limits = dashPanelLimits(id);
-    const next = resize ? resizeItem(layout, id, item.w + dx, item.h + dy, limits) : moveItem(layout, id, item.x + dx, item.y + dy, limits);
-    const after = next.find((entry) => entry.id === id);
-    if (!after || layoutsEqual(next, layout)) {
-      const direction = dx < 0 ? "left" : dx > 0 ? "right" : dy < 0 ? "up" : "down";
-      setAnnouncement(
-        resize ? `${title} cannot get any ${dx < 0 || dy < 0 ? "smaller" : "larger"} here` : `${title} cannot move further ${direction}`
-      );
-      return;
-    }
-    onChange(next);
-    setLanding(id);
-    setAnnouncement(
-      resize
-        ? `${title} is now ${after.w} of ${DASH_COLS} columns wide and ${after.h} rows tall`
-        : `${title} moved to column ${after.x + 1}, row ${after.y + 1}`
-    );
-  };
-
-  const shown = drag ? drag.preview : layout;
-  const rows = layoutRows(shown) + (drag ? 3 : 0);
-  const boardHeight = rows * DASH_ROW_UNIT + Math.max(0, rows - 1) * DASH_GAP;
-  const placeholder = drag ? shown.find((item) => item.id === drag.id) : undefined;
-  const px = (item: { x: number; y: number; w: number; h: number }) => itemRect(item, colW, DASH_ROW_UNIT, DASH_GAP);
-
-  return (
-    <div
-      ref={boardRef}
-      className={`dash-board${stacked ? " is-stacked" : ""}${drag ? ` is-editing is-${drag.kind}` : ""}`}
-      style={stacked ? undefined : { height: boardHeight }}
-    >
-      {drag && !stacked && (
-        <div className="dash-cells" aria-hidden="true">
-          {Array.from({ length: rows * DASH_COLS }).map((_, index) => (
-            <span key={index} className="dash-cell" style={px({ x: index % DASH_COLS, y: Math.floor(index / DASH_COLS), w: 1, h: 1 })} />
-          ))}
-        </div>
-      )}
-      {placeholder && !stacked && <div className="dash-placeholder" style={px(placeholder)} aria-hidden="true" />}
-      {(stacked ? [...layout].sort((a, b) => stackedRank(a.id) - stackedRank(b.id) || a.y - b.y || a.x - b.x) : shown).map((item) => {
-        const panel = panels[item.id];
-        if (!panel) return null;
-        const active = drag?.id === item.id ? drag : null;
-        let style: CSSProperties | undefined;
-        if (!stacked) {
-          const rect = px(active ? { ...active.origin, w: active.w } : item);
-          style = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-          if (active?.kind === "move") style.transform = `translate(${active.dx}px, ${active.dy}px)`;
-          if (active?.kind === "resize") {
-            const limits = dashPanelLimits(item.id);
-            const min = px({ x: 0, y: 0, w: limits.minW ?? 1, h: limits.minH ?? 1 });
-            style.width = Math.max(min.width, rect.width + active.dx);
-            style.height = Math.max(min.height, rect.height + active.dy);
-          }
-        }
-        return (
-          <DashSection
-            key={item.id}
-            panel={panel}
-            style={style}
-            dragging={active?.kind === "move"}
-            resizing={active?.kind === "resize"}
-            landing={landing === item.id}
-            focused={litPanel === item.id}
-            editable={!stacked}
-            onDragStart={startDrag("move", item.id)}
-            onResizeStart={startDrag("resize", item.id)}
-            onNudge={nudge(item.id)}
-            onHide={onHide ? () => onHide(item.id) : undefined}
-          />
-        );
-      })}
-      <div className="dash-board-live" role="status" aria-live="polite">
-        {announcement}
-      </div>
-    </div>
-  );
-}
-
 // A single Performance stat card — the whole card is draggable (side to side).
-function DashStatCard({ stat }: { stat: CcStatItem }) {
+function DashStatCard({ stat, editable = true }: { stat: CcStatItem; editable?: boolean }) {
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({
     id: stat.id,
     data: { scope: "stats" },
-    transition: DASH_SORT_TRANSITION
+    transition: DASH_SORT_TRANSITION,
+    // a card moves only while the board is being customized, like the panels around it
+    disabled: !editable
   });
   const Icon = stat.icon;
   const TrendIcon =
@@ -25794,7 +24692,7 @@ function DashStatCard({ stat }: { stat: CcStatItem }) {
       </div>
       <div className="cc-stat-mid">
         <span className="cc-stat-value">
-          {stat.value}
+          <AnimatedFigure text={stat.value} />
           {stat.small && <small> {stat.small}</small>}
         </span>
         {stat.spark && stat.spark.length > 1 && <Sparkline data={stat.spark} tone={stat.tone} />}
@@ -25816,11 +24714,22 @@ function DashStatCard({ stat }: { stat: CcStatItem }) {
 
 // A single Operational KPI card — the whole card is draggable (side to side);
 // a click (no drag) still opens its detail feed.
-function DashKpiCard({ kpi, active, onOpen }: { kpi: CcKpiItem; active: boolean; onOpen: () => void }) {
+function DashKpiCard({
+  kpi,
+  active,
+  onOpen,
+  editable = true
+}: {
+  kpi: CcKpiItem;
+  active: boolean;
+  onOpen: () => void;
+  editable?: boolean;
+}) {
   const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({
     id: kpi.id,
     data: { scope: "kpis" },
-    transition: DASH_SORT_TRANSITION
+    transition: DASH_SORT_TRANSITION,
+    disabled: !editable
   });
   return (
     <div
@@ -25849,7 +24758,7 @@ function DashKpiCard({ kpi, active, onOpen }: { kpi: CcKpiItem; active: boolean;
 type AiAttachment = { id: string; name: string; url: string; kind: "image" | "video" };
 
 type AiAnswer = { text: string; bullets?: string[]; suggestions?: string[] };
-type AiMessage = { id: string; role: "user" | "assistant"; text: string; bullets?: string[]; suggestions?: string[] };
+type AiMessage = { id: string; role: "user" | "assistant"; text: string; bullets?: string[]; suggestions?: string[]; proposal?: AiProposal };
 
 const GENERIC_AI_STARTERS = ["What's at risk this week?", "How's crew capacity?", "Any material shortages?"];
 /** Starter chips in the trade's own language when a trade is set, generic otherwise. */
@@ -26666,12 +25575,19 @@ function BreezeAssistant({
       threadRef.current.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [messages, thinking]);
-  useEffect(() => {
+  // Auto-size the composer to its content. The panel is ALWAYS MOUNTED and is
+  // `display: none` while closed, and a textarea with no layout box measures 0 — so
+  // this ran once at mount and wrote `height: 0px`, which is why the first open
+  // showed a sliver of the placeholder instead of the field, and why the first
+  // keystroke healed it. Re-measure when the panel opens, and never keep a height
+  // measured without a box: clearing it leaves the `rows={1}` height.
+  useLayoutEffect(() => {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
-  }, [input]);
+    const fit = Math.min(el.scrollHeight, 120);
+    el.style.height = fit > 0 ? `${fit}px` : "";
+  }, [input, open]);
 
   const ask = (raw: string) => {
     const question = raw.trim();
@@ -26809,6 +25725,59 @@ function BreezeAssistant({
       }
     }
     if (!plan) plan = buildScheduleImportPlan(data);
+
+    /* THE PROPOSAL. Reading the photo is safe; writing the workspace is not, and until
+       2026-09-17 this went straight on to create the projects, jobs and bookings it had
+       found. Now the plan is shown first — what the schedule holds today beside what the
+       import would add — and `commitImportPlan` runs only if the reader accepts. */
+    const jobCount = plan.reduce((total, spec) => total + spec.jobs.length, 0);
+    const planNames = plan.map((spec) => spec.input.name);
+    setImporting(false);
+    setImportStep("");
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `m-${Date.now()}-a`,
+        role: "assistant",
+        text: `I read ${fileCount === 1 ? "your file" : `your ${fileCount} files`} and this is the schedule I found. Nothing is added until you accept it.`,
+        proposal: {
+          id: `import-${Date.now()}`,
+          before: {
+            label: "Your schedule now",
+            runs: [
+              {
+                text: `${data.projects.length} project${data.projects.length === 1 ? "" : "s"} and ${data.jobs.length} job${
+                  data.jobs.length === 1 ? "" : "s"
+                } across ${data.crews.length} crew${data.crews.length === 1 ? "" : "s"}.`
+              }
+            ]
+          },
+          after: {
+            label: "AI suggested import",
+            runs: [
+              { text: "Add " },
+              { text: `${plan.length} project${plan.length === 1 ? "" : "s"} and ${jobCount} job${jobCount === 1 ? "" : "s"}`, mark: "added" },
+              { text: " read from your schedule — " },
+              { text: planNames.join(", "), mark: "added" },
+              { text: " — booking each job to a crew where the day is free." }
+            ]
+          },
+          acceptLabel: "Accept import",
+          apply: () => commitImportPlan(plan!),
+          onEdit: () => {
+            setInput(`Change the import: keep ${planNames[0] ?? "the first project"} and `);
+            inputRef.current?.focus();
+          }
+        }
+      }
+    ]);
+  };
+
+  /** The write half of the import, which runs only once a proposal has been accepted. */
+  const commitImportPlan = async (plan: ImportProjectSpec[]) => {
+    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    setImporting(true);
+    setImportStep("Adding jobs and projects to your BuildFlow schedule…");
     const importedNames: string[] = [];
     let createdProjects = 0;
     let createdJobs = 0;
@@ -26836,15 +25805,11 @@ function BreezeAssistant({
     } catch {
       if (createdJobs === 0) {
         setImporting(false);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `m-${Date.now()}-a`,
-            role: "assistant",
-            text: "I couldn't reach the schedule service to finish the import. Make sure BuildFlow's backend is running, then try again."
-          }
-        ]);
-        return;
+        /* Nothing was created, so this goes back on the proposal, which stays open for
+           another try — rather than into the thread under a card claiming it was done. */
+        throw new ProposalFailed(
+          "I couldn't reach the schedule service to finish the import. Make sure BuildFlow's backend is running, then try again."
+        );
       }
     }
 
@@ -27254,6 +26219,8 @@ function BreezeAssistant({
                         ))}
                       </ul>
                     )}
+                    {/* A change the assistant wants to make waits here until it is accepted. */}
+                    {message.proposal && <AiProposalCard proposal={message.proposal} />}
                     {message.suggestions && message.suggestions.length > 0 && (
                       <div className="bf-breeze-chips">
                         {message.suggestions.map((suggestion) => (
@@ -27487,7 +26454,12 @@ function Dashboard({
   selectedBusinessType,
   selectedPlanId,
   selectedProductIds,
-  panelFocus
+  panelFocus,
+  workspaces = null,
+  onSwitchWorkspace,
+  onCreateWorkspace,
+  workspaceBusy = false,
+  workspaceError = null
 }: {
   /** Opens Settings › Billing; the dashboard shows the way there when a trial has ended. */
   onOpenBilling?: () => void;
@@ -27500,8 +26472,22 @@ function Dashboard({
   selectedProductIds: OnboardingProductId[];
   /** A notification pointed at a panel on this board (weather, inspections). */
   panelFocus?: { id: string; nonce: number } | null;
+  /** The person's workspaces for the switcher (2026-09-15); null until loaded, or when the server has none to offer. */
+  workspaces?: WorkspacesPayload | null;
+  onSwitchWorkspace?: (id: string) => Promise<boolean | void> | boolean | void;
+  onCreateWorkspace?: () => Promise<boolean | void> | boolean | void;
+  workspaceBusy?: boolean;
+  workspaceError?: string | null;
 }) {
   const [activeFeed, setActiveFeed] = useState<DashboardFeedKey | null>(null);
+  /* "Customize": the explicit mode for rearranging the board — drag by the grip, resize from
+     the corner, hide from the corner, put hidden panels back from the chips. Removed 2026-09-14
+     at the user's request; asked back 2026-09-15, this time as the button UNDER Reset layout. */
+  const [customizing, setCustomizing] = useState(false);
+  /* "+": the Add-a-section drawer. A section hidden from Customize waits there until it is
+     wanted again; adding one puts it back on the board and lights it, so the eye lands on it. */
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [addedFocus, setAddedFocus] = useState<{ id: string; nonce: number } | null>(null);
   const [approvalView, setApprovalView] = useState<"open" | "resolved">("open");
   // Accept / Reject go to the server; an unresolved variance is the safe failure.
   const [resolvingVarianceId, setResolvingVarianceId] = useState<string | null>(null);
@@ -27590,7 +26576,10 @@ function Dashboard({
   // Per-user, drag-to-rearrange layout. Keyed by the active user's id so the
   // arrangement is saved only on this user's device (localStorage), never to the
   // shared company data.
-  const panelLayout = usePersistentLayout(`bf:dash:layout:${activeUser.id}`, DASH_LAYOUT_DEFAULT);
+  const panelLayout = usePersistentLayout(`bf:dash:layout:${activeUser.id}`, DASH_LAYOUT_DEFAULT, DASH_LAYOUT_FULL_WIDTH, {
+    limits: dashPanelLimits,
+    settingKey: "dash:layout"
+  });
   // true while a panel is being moved or resized on the board
   const [boardEditing, setBoardEditing] = useState(false);
   const statLayout = usePersistentOrder(`bf:dash:stats:${activeUser.id}`, DASH_STAT_DEFAULT);
@@ -27994,8 +26983,6 @@ function Dashboard({
     if (scope === "stats") statLayout.update(moveId(statLayout.order, activeId, overId));
     else if (scope === "kpis") kpiLayout.update(moveId(kpiLayout.order, activeId, overId));
   };
-  const layoutCustomized =
-    panelLayout.stored || statLayout.order.join() !== DASH_STAT_DEFAULT.join() || kpiLayout.order.join() !== DASH_KPI_DEFAULT.join();
   const resetDashLayout = () => {
     panelLayout.reset();
     statLayout.reset();
@@ -28049,7 +27036,7 @@ function Dashboard({
         <div className="cc-stat-grid" data-reveal-stagger>
           {statLayout.order.map((id) => {
             const stat = ccStatsById[id];
-            return stat ? <DashStatCard key={id} stat={stat} /> : null;
+            return stat ? <DashStatCard key={id} stat={stat} editable={customizing} /> : null;
           })}
         </div>
       </SortableContext>
@@ -28064,6 +27051,7 @@ function Dashboard({
                 <DashKpiCard
                   key={id}
                   kpi={kpi}
+                  editable={customizing}
                   active={activeFeed === kpi.feed}
                   onOpen={() => setActiveFeed((current) => (current === kpi.feed ? null : kpi.feed))}
                 />
@@ -28507,7 +27495,7 @@ function Dashboard({
 
   return (
     <div
-      className={`dash-rx hs-home${dashActiveId || boardEditing ? " is-rearranging" : ""}`}
+      className={`dash-rx hs-home${customizing ? " is-customizing" : ""}${dashActiveId || boardEditing ? " is-rearranging" : ""}`}
       ref={rootRef}
     >
       <div className="dx-bg" aria-hidden="true">
@@ -28516,6 +27504,24 @@ function Dashboard({
         <span className="dx-aurora dx-aurora-3" />
       </div>
       <div className="dx-cursor" aria-hidden="true" />
+      {/* "Give feedback", pinned to the viewport's right edge the way the reference places it */}
+      <FeedbackTab data={data} />
+      <SectionPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        options={DASH_PANEL_IDS.map((id): SectionOption => ({
+          id,
+          title: panelTitles[id] ?? id,
+          group: DASH_SECTION_GROUPS[id] ?? "Sections",
+          blurb: DASH_SECTION_BLURBS[id] ?? "",
+          icon: DASH_SECTION_ICONS[id],
+          onBoard: !panelLayout.hidden.includes(id)
+        }))}
+        onAdd={(id) => {
+          panelLayout.show(id);
+          setAddedFocus({ id, nonce: Date.now() + Math.random() });
+        }}
+      />
 
       <div className="dx-inner">
         {/* two-column command center: main flow (left) + approvals / alerts / recs rail (right).
@@ -28526,29 +27532,37 @@ function Dashboard({
               <span className="dx-dot" />
               {hsHomeDate}
             </span>
-            <div className="hs-home-topline-actions">
-              {/* Reset layout is the way back from a stored board, hidden panels included. It is
-                  the last of the layout controls: the "Customize" button beside it was removed on
-                  2026-09-14 at the user's request, and the drag-to-rearrange mode it opened went
-                  with it, since it was the only door. */}
-              {!stackedBoard && layoutCustomized && (
-                <button
-                  type="button"
-                  className="dash-reset"
-                  onClick={resetDashLayout}
-                  disabled={!layoutCustomized}
-                  title="Restore the default layout and bring back any hidden panels"
-                >
-                  <RotateCcw size={14} />
-                  Reset layout
-                </button>
-              )}
-            </div>
+            {/* The workspace switcher (2026-09-15): the person's BuildFlow programs, by trade. */}
+            {workspaces && onSwitchWorkspace && onCreateWorkspace && (
+              <WorkspaceSwitcher
+                workspaces={workspaces}
+                onSwitch={onSwitchWorkspace}
+                onCreate={onCreateWorkspace}
+                busy={workspaceBusy}
+                error={workspaceError}
+              />
+            )}
           </div>
           <h1 className="hs-home-greeting">
             {hsGreeting}, {hsFirstName}
           </h1>
-          <p className="hs-home-sub">Your AI-powered hub for construction scheduling, insights, and execution.</p>
+          <div className="hs-home-subline">
+            <p className="hs-home-sub">Your AI-powered hub for construction scheduling, insights, and execution.</p>
+            {/* The layout controls, stacked: Reset layout on top — every section full width, one
+                under the next, removed ones back, saved to the account — then "+" and Customize
+                underneath. They sit beside the lede, level with its first line (moved down off the
+                date line on 2026-09-15). None show on a phone, where the board is already a column.
+                The same controls stand on the Schedule page (board/panelBoard.tsx). */}
+            {!stackedBoard && (
+              <BoardLayoutControls
+                customizing={customizing}
+                pickerOpen={pickerOpen}
+                onToggleCustomize={() => setCustomizing((current) => !current)}
+                onReset={resetDashLayout}
+                onAdd={() => setPickerOpen(true)}
+              />
+            )}
+          </div>
           <p className="hs-home-meta" aria-label="Selected BuildFlow setup" data-tutorial-id="dashboard-setup-banner">
             {[
               selectedBusinessType ? `${selectedBusinessType} workspace` : "BuildFlow workspace",
@@ -28565,6 +27579,10 @@ function Dashboard({
                 </span>
               ))}
           </p>
+          {customizing && <BoardCustomizeHint />}
+          {customizing && panelLayout.hidden.length > 0 && (
+            <HiddenPanelChips hidden={panelLayout.hidden} titles={panelTitles} onShow={panelLayout.show} />
+          )}
           {promoOpen && data.billingStatus !== "trial_expired" && (
             <section className="hs-home-promo" aria-label="Product announcement">
               <h2>Try the new Gantt Chart</h2>
@@ -28596,7 +27614,7 @@ function Dashboard({
 
         <ScheduleStatusBand onOpenProjects={() => setPage("projects")} projects={data.projects} />
 
-        <DndContext sensors={dragSensors} collisionDetection={dashCollisionDetection} onDragEnd={handleDashDragEnd}>
+        <DndContext sensors={dragSensors} collisionDetection={dashCollisionDetection} modifiers={dragModifiers} onDragEnd={handleDashDragEnd}>
           <div className="cc-grid">
             <div className="cc-main" data-tutorial-id="dashboard-production-context">
               {/* the panel board: move any panel anywhere, resize it from its corner; the
@@ -28604,11 +27622,15 @@ function Dashboard({
               <DashBoard
                 layout={panelLayout.layout}
                 panels={dashPanels}
+                limits={dashPanelLimits}
+                stackedRank={stackedRank}
                 onChange={panelLayout.update}
                 onFit={panelLayout.fit}
-                fitToContent={!panelLayout.stored}
+                fitToContent={!panelLayout.stored || panelLayout.fitting}
                 onEditingChange={setBoardEditing}
-                panelFocus={panelFocus}
+                panelFocus={addedFocus ?? panelFocus}
+                editable={customizing}
+                onHide={customizing ? panelLayout.hide : undefined}
               />
             </div>
           </div>
@@ -29369,9 +28391,11 @@ function ProjectsPage({
 
   const healthPct = (count: number) => (totalProjects ? Math.round((count / totalProjects) * 100) : 0);
   const healthSlices = [
-    { name: "On Track", value: onTrackCount, pct: healthPct(onTrackCount), color: "#188038" },
-    { name: "At Risk", value: atRiskCount, pct: healthPct(atRiskCount), color: "#b45309" },
-    { name: "Completed", value: completedCount, pct: healthPct(completedCount), color: "#6d28d9" }
+    // the Client Desk semantic set (2026-09-15): ok, bad, and the second ink for done — the same
+    // three the table's health pills and the Gantt's group dots read
+    { name: "On Track", value: onTrackCount, pct: healthPct(onTrackCount), color: "var(--bf-color-ok)" },
+    { name: "At Risk", value: atRiskCount, pct: healthPct(atRiskCount), color: "var(--bf-color-bad)" },
+    { name: "Completed", value: completedCount, pct: healthPct(completedCount), color: "var(--bf-ink-muted)" }
   ];
   const healthDonut = healthSlices.filter((slice) => slice.value > 0);
 
@@ -29541,9 +28565,11 @@ function ProjectsPage({
               </span>
               <div className="hs-kpi-body">
                 <span className="hs-kpi-label">{stat.label}</span>
-                <span className="hs-kpi-value">{stat.value}</span>
+                <span className="hs-kpi-value">
+                  <AnimatedFigure text={stat.value} />
+                </span>
                 <span className="hs-kpi-note">
-                  {stat.delta} {stat.note}
+                  <b className={`hs-kpi-delta ${stat.delta.startsWith("-") ? "is-down" : "is-up"}`}>{stat.delta}</b> {stat.note}
                 </span>
               </div>
             </div>
@@ -30110,19 +29136,20 @@ function mapSiteAccent(status: Status) {
   switch (status) {
     case "DelayIQed":
     case "At Risk":
-      return "#c62828";
+      return "var(--bf-color-bad)";
     case "In Progress":
-      return "#1f52e0";
+      return "var(--bf-color-accent)";
     case "Confirmed":
     case "On Site":
     case "Complete":
     case "Ready":
-      return "#138a42";
+      return "var(--bf-color-ok)";
     case "Planned":
+      return "var(--bf-ink-muted)";
     case "Ready to Start":
-      return "#0032af";
+      return "var(--bf-color-info)";
     default:
-      return "#8a92a6";
+      return "var(--bf-ink-faint)";
   }
 }
 
@@ -31306,7 +30333,9 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
               <div className="map-weather-card">
                 <CloudSun size={58} />
                 <div className="map-weather-primary">
-                  <strong>{weather.temperature}</strong>
+                  <strong>
+                    <AnimatedFigure text={String(weather.temperature)} />
+                  </strong>
                   <span>Partly Cloudy</span>
                 </div>
                 <div className="map-weather-details">
@@ -31578,7 +30607,9 @@ function MapOpsPage({ data }: { data: BootstrapPayload }) {
                     <button type="button" key={crew.id} onClick={() => updateFilter("crew", crew.name)}>
                       <Truck size={18} />
                       <span>{crew.name}</span>
-                      <strong>{[18, 24, 32, 16][index] ?? 22} min</strong>
+                      <strong>
+                        <AnimatedFigure text={`${[18, 24, 32, 16][index] ?? 22} min`} />
+                      </strong>
                       <Badge status={index === 2 ? "Medium" : "Ready"} />
                     </button>
                   ))}
@@ -32261,7 +31292,9 @@ function ContactsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total contacts</span>
-            <span className="hs-kpi-value">{leads.length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(leads.length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -32270,7 +31303,9 @@ function ContactsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">New this month</span>
-            <span className="hs-kpi-value">{newThisMonth}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(newThisMonth)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -32279,7 +31314,9 @@ function ContactsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Open leads</span>
-            <span className="hs-kpi-value">{leads.filter(isOpenLead).length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(leads.filter(isOpenLead).length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -32288,7 +31325,9 @@ function ContactsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Customers</span>
-            <span className="hs-kpi-value">{leads.filter((lead) => lead.status === "Won").length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(leads.filter((lead) => lead.status === "Won").length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -32297,7 +31336,9 @@ function ContactsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Unassigned</span>
-            <span className="hs-kpi-value">{leads.filter((lead) => !lead.owner).length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(leads.filter((lead) => !lead.owner).length)} />
+            </span>
           </div>
         </div>
       </div>
@@ -34338,7 +33379,9 @@ function CompaniesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total companies</span>
-            <span className="hs-kpi-value">{rollups.length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(rollups.length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -34347,7 +33390,9 @@ function CompaniesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">New this month</span>
-            <span className="hs-kpi-value">{rollups.filter((row) => withinDaysOf(row.company.createdAt, 30)).length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(rollups.filter((row) => withinDaysOf(row.company.createdAt, 30)).length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -34356,7 +33401,9 @@ function CompaniesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">With open deals</span>
-            <span className="hs-kpi-value">{rollups.filter((row) => row.openDeals.length > 0).length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(rollups.filter((row) => row.openDeals.length > 0).length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -34365,7 +33412,9 @@ function CompaniesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Customers</span>
-            <span className="hs-kpi-value">{rollups.filter((row) => row.wonAmount > 0).length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(rollups.filter((row) => row.wonAmount > 0).length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -34374,7 +33423,9 @@ function CompaniesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Open pipeline</span>
-            <span className="hs-kpi-value">{formatDealValue(openPipeline)}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={formatDealValue(openPipeline)} />
+            </span>
           </div>
         </div>
       </div>
@@ -35575,7 +34626,9 @@ function DealsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Open pipeline</span>
-            <span className="hs-kpi-value">{formatDealValue(sumAmounts(openDeals))}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={formatDealValue(sumAmounts(openDeals))} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -35584,7 +34637,9 @@ function DealsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Weighted pipeline</span>
-            <span className="hs-kpi-value">{formatDealValue(Math.round(weighted))}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={formatDealValue(Math.round(weighted))} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -35604,7 +34659,9 @@ function DealsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Closed won</span>
-            <span className="hs-kpi-value">{formatDealValue(sumAmounts(wonDeals))}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={formatDealValue(sumAmounts(wonDeals))} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -35613,7 +34670,7 @@ function DealsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Win rate</span>
-            <span className="hs-kpi-value">{winRate === null ? "--" : `${winRate}%`}</span>
+            <span className="hs-kpi-value">{winRate === null ? "--" : <AnimatedFigure text={`${winRate}%`} />}</span>
           </div>
         </div>
       </div>
@@ -35839,7 +34896,7 @@ function DealsPage({
               )}
             </div>
           ) : layout === "board" ? (
-            <DndContext sensors={dragSensors} collisionDetection={pointerWithin} onDragEnd={handleDealDragEnd}>
+            <DndContext sensors={dragSensors} collisionDetection={pointerWithin} modifiers={dragModifiers} onDragEnd={handleDealDragEnd}>
               <div className="hs-board" role="list" aria-label="Deal pipeline">
                 {DEAL_STAGES.map((stage) => (
                   <DealBoardColumn
@@ -36393,7 +35450,7 @@ function DealBoardCard({
 // The floating card: lifts with a spring on pick-up, follows the pointer, and
 // flies into its new column on drop (dnd-kit's drop animation targets the
 // card's new position because the stage moves optimistically).
-const DEAL_DROP_ANIMATION = { duration: 340, easing: "cubic-bezier(0.22, 1, 0.36, 1)" };
+const DEAL_DROP_ANIMATION = { duration: 340, easing: "cubic-bezier(0.22, 1, 0.36, 1)", keyframes: unzoomDropFlight };
 function DealDragLayer({
   deals,
   companyById,
@@ -36405,10 +35462,17 @@ function DealDragLayer({
   leadById: Record<string, SalesLead>;
   closeLabel: (deal: SalesDeal) => { text: string; overdue: boolean };
 }) {
-  const { active } = useDndContext();
+  const { active, activeNodeRect } = useDndContext();
   const deal = active ? (deals.find((item) => item.id === String(active.id)) ?? null) : null;
+  /* The card's box as it was picked up — see DashDragLayer for why dnd-kit's own `active.rect`
+     will not do, and dragZoom.ts for why the shell's zoom has to come out of the placement. */
+  const pickedUpFrom = useRef<ClientRect | null>(null);
+  if (!active) pickedUpFrom.current = null;
+  else if (activeNodeRect && !pickedUpFrom.current) pickedUpFrom.current = activeNodeRect;
   return (
-    <DragOverlay dropAnimation={DEAL_DROP_ANIMATION}>
+    /* The class is the board's word for "this is the lifted card, not part of the page": the
+       overlay's box is a bare child of the index card, which the entrance cascade claimed. */
+    <DragOverlay className="hs-drag-overlay" dropAnimation={DEAL_DROP_ANIMATION} style={unzoomOverlay(pickedUpFrom.current)}>
       {deal ? (
         <article className="hs-deal-card hs-deal-overlay" aria-hidden="true">
           <DealCardFace
@@ -36964,7 +36028,9 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total Crews</span>
-            <span className="hs-kpi-value">{data.crews.length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={data.crews.length} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -36973,7 +36039,9 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Available Now</span>
-            <span className="hs-kpi-value">{data.crews.filter((crew) => crew.status === "Available").length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={data.crews.filter((crew) => crew.status === "Available").length} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -36982,7 +36050,9 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total Workers</span>
-            <span className="hs-kpi-value">{data.crews.reduce((total, crew) => total + crew.size, 0)}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={data.crews.reduce((total, crew) => total + crew.size, 0)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -36991,7 +36061,9 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Avg Utilization</span>
-            <span className="hs-kpi-value">{averageUtilization}%</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={`${averageUtilization}%`} />
+            </span>
           </div>
         </div>
       </div>
@@ -37786,7 +36858,9 @@ function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total Equipment</span>
-            <span className="hs-kpi-value">{data.equipment.length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(data.equipment.length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -37795,7 +36869,9 @@ function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Available Now</span>
-            <span className="hs-kpi-value">{availableEquipment}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(availableEquipment)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -37804,7 +36880,9 @@ function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">In Use</span>
-            <span className="hs-kpi-value">{inUseEquipment}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(inUseEquipment)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -37813,7 +36891,9 @@ function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Maintenance</span>
-            <span className="hs-kpi-value">{maintenanceEquipment}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(maintenanceEquipment)} />
+            </span>
           </div>
         </div>
       </div>
@@ -38505,7 +37585,7 @@ function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total Materials</span>
-            <span className="hs-kpi-value">{data.materials.length}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(data.materials.length)} /></span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -38514,7 +37594,7 @@ function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Ready Now</span>
-            <span className="hs-kpi-value">{readyMaterials}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(readyMaterials)} /></span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -38523,7 +37603,7 @@ function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Ordered</span>
-            <span className="hs-kpi-value">{orderedMaterials}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(orderedMaterials)} /></span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -38532,7 +37612,7 @@ function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Needs Attention</span>
-            <span className="hs-kpi-value">{attentionMaterials}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(attentionMaterials)} /></span>
           </div>
         </div>
       </div>
@@ -39362,7 +38442,7 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total Updates</span>
-            <span className="hs-kpi-value">{data.fieldUpdates.length}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(data.fieldUpdates.length)} /></span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -39371,7 +38451,7 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">On Site</span>
-            <span className="hs-kpi-value">{onSiteUpdates}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(onSiteUpdates)} /></span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -39380,7 +38460,7 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">DelayIQed</span>
-            <span className="hs-kpi-value">{delayIQedUpdates}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(delayIQedUpdates)} /></span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -39389,7 +38469,7 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">With Photos</span>
-            <span className="hs-kpi-value">{updatesWithPhotos}</span>
+            <span className="hs-kpi-value"><AnimatedFigure text={String(updatesWithPhotos)} /></span>
           </div>
         </div>
       </div>
@@ -40266,7 +39346,9 @@ function DelayIQsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total DelayIQs</span>
-            <span className="hs-kpi-value">{data.delayIQs.length}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(data.delayIQs.length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -40275,7 +39357,9 @@ function DelayIQsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Open</span>
-            <span className="hs-kpi-value">{openDelayIQs}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(openDelayIQs)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -40284,7 +39368,9 @@ function DelayIQsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">High Impact</span>
-            <span className="hs-kpi-value">{highSeverityDelayIQs}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(highSeverityDelayIQs)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -40293,7 +39379,9 @@ function DelayIQsPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Days Lost</span>
-            <span className="hs-kpi-value">{totalImpactDays}</span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(totalImpactDays)} />
+            </span>
           </div>
         </div>
       </div>
@@ -40642,7 +39730,7 @@ function DelayIQsPage({
                   <XAxis dataKey="name" tickLine={false} axisLine={false} />
                   <YAxis tickLine={false} axisLine={false} />
                   <Tooltip />
-                  <Bar dataKey="days" fill="#d96570" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="days" fill="var(--bf-color-bad)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -40794,7 +39882,9 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
         {reportMetrics.map((metric) => (
           <article className="reports-kpi-card" key={metric.label}>
             <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
+            <strong>
+              <AnimatedFigure text={String(metric.value)} />
+            </strong>
             {/* what the figure counted, in place of the old hardcoded trend arrow —
                 these metrics have no stored history to trend against yet */}
             <em className="reports-kpi-basis">{metric.basis}</em>
@@ -40810,18 +39900,18 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
           <div className="reports-chart-canvas">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={plannedActualHours} barGap={8} margin={{ top: 10, right: 18, bottom: 4, left: -8 }}>
-                <CartesianGrid stroke="#dde6ef" strokeDasharray="4 6" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "#94a4b8", fontSize: 12 }} />
+                <CartesianGrid stroke="var(--bf-line-solid)" strokeDasharray="4 6" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }} />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   ticks={[0, 1500, 3000, 4500, 6000]}
                   domain={[0, 6500]}
-                  tick={{ fill: "#94a4b8", fontSize: 12 }}
+                  tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }}
                 />
-                <Tooltip cursor={{ fill: "rgba(9, 32, 56, 0.04)" }} />
-                <Bar dataKey="planned" fill="#0a233a" radius={[5, 5, 0, 0]} barSize={22} />
-                <Bar dataKey="actual" fill="#2f6bff" radius={[5, 5, 0, 0]} barSize={22} />
+                <Tooltip cursor={{ fill: "var(--bf-hover)" }} />
+                <Bar dataKey="planned" fill="var(--bf-color-series-1)" radius={[5, 5, 0, 0]} barSize={22} />
+                <Bar dataKey="actual" fill="var(--bf-color-series-2)" radius={[5, 5, 0, 0]} barSize={22} />
               </BarChart>
             </ResponsiveContainer>
             <div className="reports-legend" aria-hidden="true">
@@ -40844,23 +39934,23 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
           <div className="reports-chart-canvas">
             <ResponsiveContainer width="100%" height={260}>
               <RechartsLineChart data={backlogForecastIQ} margin={{ top: 10, right: 18, bottom: 6, left: -8 }}>
-                <CartesianGrid stroke="#dde6ef" strokeDasharray="4 6" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "#94a4b8", fontSize: 12 }} />
+                <CartesianGrid stroke="var(--bf-line-solid)" strokeDasharray="4 6" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }} />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   ticks={[0, 2000, 4000, 6000, 8000]}
                   domain={[0, 8200]}
-                  tick={{ fill: "#94a4b8", fontSize: 12 }}
+                  tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }}
                 />
                 <Tooltip content={<ReportsBacklogTooltip />} cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
                 <Line
                   type="monotone"
                   dataKey="backlog"
-                  stroke="#2f7df6"
+                  stroke="var(--bf-color-series-2)"
                   strokeWidth={3}
-                  dot={{ fill: "#2f7df6", r: 5, stroke: "#2f7df6" }}
-                  activeDot={{ fill: "#2f7df6", r: 6, stroke: "#ffffff", strokeWidth: 3 }}
+                  dot={{ fill: "var(--bf-color-series-2)", r: 5, stroke: "var(--bf-color-series-2)" }}
+                  activeDot={{ fill: "var(--bf-color-series-2)", r: 6, stroke: "#ffffff", strokeWidth: 3 }}
                 />
               </RechartsLineChart>
             </ResponsiveContainer>
@@ -40879,7 +39969,9 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
               <span>
                 <i style={{ "--crew-efficiency": `${crew.value}%` } as CSSProperties} />
               </span>
-              <em>{crew.value}%</em>
+              <em>
+                <AnimatedFigure text={`${crew.value}%`} />
+              </em>
             </div>
           ))}
         </div>
