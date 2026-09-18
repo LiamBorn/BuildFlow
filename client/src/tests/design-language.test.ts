@@ -245,20 +245,31 @@ describe("the ink ladder holds against every ground the design uses", () => {
         const toneWash = tok(`${tone}-wash`)!;
         expect(round(contrast(hex(ink), hex(toneWash))), `${name}: the ${tone} tone on its wash`).toBeGreaterThanOrEqual(4.5);
       }
-      /* AND THE ACCENT HAS TO BE TELLABLE FROM THE ALARM (added 2026-09-18 with the Red set).
-         Nothing above asks this, and it is the question a coloured set lives or dies on: a
-         primary chip and an error pill sit inches apart on the same board. There are three ways
-         to separate them and a set needs ONE — Default separates by CHROMA (its accent has
-         none), Blue by HUE (142 degrees, at a contrast of only 1.53), and Red, which has neither
-         lever, by LIGHTNESS. So the rule is conditional, and asked of ALL FOUR tones: an accent
-         that is chromatic AND within 30 degrees of a tone must clear Default's own accent-to-bad
-         contrast of 2.16.
+      /* AND THE ACCENT HAS TO BE TELLABLE FROM EVERY STATUS TONE (added 2026-09-18 with Red,
+         widened to all four with Green). Nothing above asks this, and it is the question a
+         coloured set lives or dies on: a primary chip and a status pill sit inches apart on the
+         same board. There are three ways to separate them and a set needs ONE — Default separates
+         by CHROMA (its accent has none), Blue by HUE (142 degrees from the red alarm, at a
+         contrast of only 1.53), and a set that shares a hue family with a tone has only LIGHTNESS.
+         So the rule is conditional: an accent that is chromatic AND within 30 degrees of a tone
+         must clear Default's own accent-to-bad contrast of 2.16.
 
-         It is what forced both coloured sets into a specific value, in opposite directions. Red
-         moves the TONE — its `bad` drops a rung to #700700 (2.17). Green moves the ACCENT — a
-         deep #00471f against the untouched `ok` (2.17), which is the better trade whenever it is
-         available, because it leaves the meaning of "on track" alone. Take either away and this
-         is the test that notices. */
+         It is what forced all three coloured sets into a specific value, and each answered it
+         differently:
+
+           Red     its `bad` drops a rung to #700700 (2.17). The accent could not move instead —
+                   a red dark enough to clear the alarm stops being a brand red.
+           Green   its `ok` drops to #15452a (2.16), the accent staying the vibrant #1b7f3b.
+                   BUILT THE OTHER WAY FIRST and reversed: a deep #00471f accent against an
+                   untouched `ok` also passed here, and leaving a status colour's meaning alone is
+                   normally the better trade — but on screen that accent was too dark to be a
+                   brand, its fills reading near-black. The arithmetic cannot tell you that, so
+                   look at a deep accent before assuming it is the better half.
+           Yellow  both move: the accent splits from the fill AND `warn` drops to #573400. It has
+                   no choice — the accent is capped at L 0.157 by the "reads on its own tint" gate
+                   above, so a tone 2.16 away has to sit at L 0.046, and Default's amber is 0.122.
+
+         Take any of those overrides away and this is the test that notices. */
       const chromatic = sat(hex(accent)) >= 0.2;
       for (const tone of ["info", "ok", "warn", "bad"]) {
         const value = tok(tone)!;
