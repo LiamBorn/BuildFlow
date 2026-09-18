@@ -224,8 +224,9 @@
   min-width: 0;
   color: var(--wx-ink);
   font-weight: 600;
-  /* staggered entrance, mirroring the page reveal cadence */
-  animation: pdx-field-in 0.6s var(--pdx-ease) both;
+  /* The entrance is the skin's listing now (app-shell-client-desk.css section 67), which times it
+     to the drawer these fields arrive in. This rule used to carry `animation: pdx-field-in 0.6s
+     var(--pdx-ease) both` and the nine `:nth-child` delays below it. */
 }
 /* --wx-mut, not --wx-faint: at 11px/700 these labels do not qualify for the
    WCAG large-text exemption, and --wx-faint on white measures 3.59:1 (below the
@@ -247,37 +248,6 @@
     opacity: 1;
     transform: none;
   }
-}
-
-.pdx .pdx-form > label:nth-child(1) {
-  animation-delay: 0.06s;
-}
-.pdx .pdx-form > label:nth-child(2) {
-  animation-delay: 0.1s;
-}
-.pdx .pdx-form > label:nth-child(3) {
-  animation-delay: 0.14s;
-}
-.pdx .pdx-form > label:nth-child(4) {
-  animation-delay: 0.18s;
-}
-.pdx .pdx-form > label:nth-child(5) {
-  animation-delay: 0.22s;
-}
-.pdx .pdx-form > label:nth-child(6) {
-  animation-delay: 0.26s;
-}
-.pdx .pdx-form > label:nth-child(7) {
-  animation-delay: 0.3s;
-}
-.pdx .pdx-form > label:nth-child(8) {
-  animation-delay: 0.34s;
-}
-.pdx .pdx-form > label:nth-child(9) {
-  animation-delay: 0.38s;
-}
-.pdx .pdx-form > label:nth-child(n + 10) {
-  animation-delay: 0.42s;
 }
 
 .pdx .pdx-form input,

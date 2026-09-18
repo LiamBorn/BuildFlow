@@ -210,6 +210,14 @@
   --hsc-line: #e6e8f0;
   --hsc-blue: #2f6bff;
   position: absolute;
+  /* THE FULL HEIGHT OF THE PAGE (2026-09-18), matching the editing drawers.
+     History worth keeping: this used to be `top: 0`, and the record's back button, name and
+     actions row sat BEHIND the opaque top bar with no overflow to scroll to them — so on
+     2026-09-17 it was moved to `top: var(--hs-topbar-h)`. That was the wrong fix for the right
+     bug: the layer is `z-index: 95` and the bar is 5, so the panel paints OVER the bar and always
+     could. What was actually missing was the sticky header (skin section 66), which keeps that row
+     reachable however far the record scrolls. With that in place the offset is just a band of
+     dead page above a modal panel, so it is gone. */
   top: 0;
   right: 0;
   bottom: 0;
