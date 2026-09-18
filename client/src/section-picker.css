@@ -1,0 +1,271 @@
+/* ---------------------------------------------------------------------------
+   "Add a section": the drawer the Dashboard's "+" opens.
+
+   The placement is the reference's Widget Center — a panel from the right edge
+   over a scrim, a two-column grid of cards, a "+" at each card's corner that
+   fills when the card is hovered. The chrome is the notifications drawer's:
+   --bf-surface on --bf-line-solid at --bf-radius-panel under --bf-shadow-float,
+   the app's font, the panel duration and ease. z-index 70: above the bell's
+   drawer and the Ask AI dock (60), below the assistant panel (80).
+   --------------------------------------------------------------------------- */
+.bfsp {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+.bfsp-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(28, 28, 26, 0.32);
+  cursor: default;
+  animation: bfsp-scrim-in var(--bf-dur-panel, 0.3s) ease both;
+}
+.bfsp-drawer {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(600px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-panel, 8px);
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink, #1c1c1a);
+  box-shadow: var(--bf-shadow-float, 0 24px 70px rgba(28, 28, 26, 0.14));
+  font-family: var(--bf-font-active, Inter, ui-sans-serif, system-ui, sans-serif);
+  text-align: left;
+  animation: bfsp-drawer-in var(--bf-dur-panel, 0.3s) var(--bf-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+@keyframes bfsp-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes bfsp-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ---- the header ------------------------------------------------------------ */
+.bfsp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--bf-line-soft, #eef0f4);
+}
+.bfsp-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 24px;
+  color: var(--bf-ink, #1c1c1a);
+}
+.bfsp-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--bf-ink-muted, #575550);
+}
+.bfsp-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--bf-radius-control, 6px);
+  background: transparent;
+  color: var(--bf-ink-muted, #575550);
+  cursor: pointer;
+  transition: background var(--bf-dur-hover, 0.16s) ease;
+}
+.bfsp-close:hover {
+  background: var(--bf-hover, #f5f5f5);
+}
+.bfsp-close:focus-visible,
+.bfsp-add:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 2px;
+}
+
+/* ---- the cards -------------------------------------------------------------- */
+.bfsp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px 20px 24px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.bfsp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 176px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-panel, 8px);
+  background: var(--bf-surface, #ffffff);
+  transition:
+    border-color var(--bf-dur-hover, 0.16s) ease,
+    box-shadow var(--bf-dur-hover, 0.16s) ease;
+}
+.bfsp-card:not(.is-on-board):hover {
+  border-color: var(--bf-accent, #2f6bff);
+  box-shadow: 0 0 0 1px var(--bf-accent, #2f6bff);
+}
+.bfsp-card.is-on-board {
+  color: var(--bf-ink-muted, #575550);
+}
+.bfsp-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bfsp-eyebrow {
+  padding-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--bf-ink-muted, #575550);
+}
+.bfsp-tile {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--bf-radius-control, 8px);
+  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.12);
+  color: var(--bf-accent-dark, #1f57e0);
+}
+.bfsp-card.is-on-board .bfsp-tile {
+  background: var(--bf-hover, #f5f5f5);
+  color: var(--bf-ink-muted, #575550);
+}
+.bfsp-card h3 {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--bf-ink, #1c1c1a);
+}
+.bfsp-card.is-on-board h3 {
+  color: var(--bf-ink-muted, #575550);
+}
+.bfsp-card p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--bf-ink-muted, #575550);
+}
+.bfsp-card-foot {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.bfsp-add {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--bf-line-solid, #e6e8f0);
+  border-radius: var(--bf-radius-control, 6px);
+  background: var(--bf-surface, #ffffff);
+  color: var(--bf-ink, #1c1c1a);
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.16s) ease,
+    color var(--bf-dur-hover, 0.16s) ease,
+    border-color var(--bf-dur-hover, 0.16s) ease;
+}
+/* the reference fills the "+" when its card is hovered, not only the button */
+.bfsp-card:hover .bfsp-add,
+.bfsp-add:hover,
+.bfsp-add:focus-visible {
+  border-color: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #2563eb);
+  color: var(--bf-on-accent, #ffffff);
+}
+.bfsp-on-board {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #138a42;
+}
+
+/* ---- the "+" beside Customize, in the header's control stack ------------- */
+.bf-shell .dash-rx.hs-home .hs-home-topline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bf-shell .dash-rx.hs-home .hs-home-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--wx-line);
+  border-radius: 999px;
+  background: var(--wx-card);
+  color: var(--wx-mut);
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(var(--bf-line-rgb), 0.06);
+  transition:
+    color 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+.bf-shell .dash-rx.hs-home .hs-home-add:hover,
+.bf-shell .dash-rx.hs-home .hs-home-add[aria-expanded="true"] {
+  color: var(--cc-blue);
+  border-color: var(--cc-blue);
+}
+.bf-shell .dash-rx.hs-home .hs-home-add svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 640px) {
+  .bfsp-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bfsp-scrim,
+  .bfsp-drawer {
+    animation: none;
+  }
+  .bfsp-card,
+  .bfsp-add,
+  .bfsp-close,
+  .bf-shell .dash-rx.hs-home .hs-home-add {
+    transition: none;
+  }
+}
