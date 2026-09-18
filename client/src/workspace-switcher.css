@@ -56,7 +56,11 @@
 .bf-shell .dash-rx.hs-home .bfws.is-open .bfws-chevron {
   transform: rotate(180deg);
 }
-/* the trade's initial on an accent tile, the reference's workspace glyph */
+/* The trade's initial on an accent tile, the reference's workspace glyph.
+   The FILL, not the text accent: this tile carries ink on it, and the two are different colours in
+   the Yellow set (skin 47d). In practice the skin paints it with a face gradient at a higher
+   specificity so neither reaches it — but a dead declaration that would be wrong if it ever won is
+   worth correcting, and design-language.test.ts now refuses the pairing outright. */
 .bf-shell .dash-rx.hs-home .bfws-tile {
   display: inline-grid;
   place-items: center;
@@ -64,7 +68,7 @@
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background: var(--bf-accent);
+  background: var(--bf-accent-fill);
   color: var(--bf-on-accent, #fff);
   font-size: 12px;
   font-weight: 700;

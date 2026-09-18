@@ -160,6 +160,21 @@ describe("the Material Readiness slices are legible in every Colors set and both
       "Blue",
       'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"])',
       'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"][data-bf-mode="dark"])'
+    ],
+    [
+      "Red",
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"])',
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"][data-bf-mode="dark"])'
+    ],
+    [
+      "Green",
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="green"])',
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="green"][data-bf-mode="dark"])'
+    ],
+    [
+      "Yellow",
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="yellow"])',
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="yellow"][data-bf-mode="dark"])'
     ]
   ] as const;
 

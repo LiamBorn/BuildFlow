@@ -16,7 +16,7 @@
    surfaces and the ink stay the same. It is carried on `data-bf-colors`, and the
    skin (app-shell-client-desk.css, section 47) declares every hint token per set.
    "Default" is white, gray and black, no colour at all; "Blue" turns the black
-   hints blue.
+   hints blue, "Red" red, "Green" green and "Yellow" a bright gold on a dark olive-gold for text.
    Light / Dark / System stays a separate control (Theme Mode, `data-bf-mode`).
 
    ALL EIGHT ARE LIVE. Theme Mode and Fonts each shipped disabled, with the
@@ -28,7 +28,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /** The colour sets: the hints of colour a workspace shows. */
-export type ColorPreset = "default" | "blue";
+export type ColorPreset = "default" | "blue" | "red" | "green" | "yellow";
 export type FontId =
   | "geist"
   | "inter"
@@ -94,7 +94,21 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 export const COLOR_PRESETS: Array<{ id: ColorPreset; label: string; swatch: [string, string, string] }> = [
   { id: "default", label: "Default", swatch: ["#ffffff", "#9b9b9b", "#1c1c1c"] },
   // Blue: every hint that is black in Default is blue here; the grays stay gray
-  { id: "blue", label: "Blue", swatch: ["#ffffff", "#9b9b9b", "#2563eb"] }
+  { id: "blue", label: "Blue", swatch: ["#ffffff", "#9b9b9b", "#2563eb"] },
+  /* Red: the same, plus the one thing Blue never had to do — the `bad` tone moves out of the
+     accent's way in the light reading, because a red accent cannot separate from a red alarm by
+     hue the way blue does. Skin section 47b carries the numbers and the reasoning. */
+  { id: "red", label: "Red", swatch: ["#ffffff", "#9b9b9b", "#c62828"] },
+  /* Green: the collision is with `ok` rather than `bad`, and it is the worst of the four (the
+     natural green accent IS "on track"). A first pass moved the accent deep instead of the tone;
+     that read as near-black in fills, so the accent is vibrant and `ok` moves. Skin section 47c. */
+  { id: "green", label: "Green", swatch: ["#ffffff", "#9b9b9b", "#1b7f3b"] },
+  /* Yellow is the only set whose TEXT accent and FILL are different colours: a yellow light enough
+     to look yellow cannot be text on white, so marks take a dark olive-gold and solids take
+     #f2c200 with dark ink. The swatch shows the FILL, because that is the colour a person means
+     when they pick "Yellow". It is also the one set where the arithmetic leaves no choice about a
+     status tone — `warn` has to move. Skin 47d carries all of it. */
+  { id: "yellow", label: "Yellow", swatch: ["#ffffff", "#9b9b9b", "#f2c200"] }
 ];
 
 /** The picker's three-colour swatch for one set. */

@@ -19,7 +19,7 @@
  */
 import { describe, expect, it } from "vitest";
 import postcss, { type Declaration, type Rule } from "postcss";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -156,6 +156,37 @@ describe("the ink ladder holds against every ground the design uses", () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * THE TEXT ACCENT AND THE FILL ARE NOT INTERCHANGEABLE (2026-09-18, with Yellow).
+   *
+   * Every set until Yellow had `--bf-color-accent` and `--bf-color-accent-fill` set to the same
+   * value, so using either as a background looked identical and the distinction never mattered.
+   * Yellow breaks that on purpose: a yellow that can be TEXT on white is a dark olive-gold, and a
+   * yellow that looks yellow can only be a FILL with dark ink on it. From that set onwards, a
+   * background painted from the text accent while the label is `--bf-on-accent` is dark-on-dark.
+   *
+   * Every sheet is read, not just the skin, because the pairing can be split across two files —
+   * which is exactly how `.bfws-tile` was written (background in workspace-switcher.css, ink in
+   * the same rule, and the skin overriding both from somewhere else entirely).
+   */
+  it("never pairs a background from the text accent with the ink meant for the fill", () => {
+    const offenders: string[] = [];
+    const sheets = readdirSync(SRC, { recursive: true }).filter((name) => name.endsWith(".css"));
+    expect(sheets.length, "no stylesheets found — the pattern must have changed").toBeGreaterThan(5);
+    for (const name of sheets) {
+      postcss.parse(read(name)).walkRules((rule: Rule) => {
+        const body = rule.nodes
+          .filter((n): n is Declaration => n.type === "decl")
+          .map((d) => `${d.prop}:${d.value}`)
+          .join(";");
+        const paintsFromTextAccent = /background(-color)?:[^;]*var\(--bf-accent\)/.test(body);
+        const labelIsOnAccent = /color:[^;]*var\(--bf-(color-)?on-accent/.test(body);
+        if (paintsFromTextAccent && labelIsOnAccent) offenders.push(`${name}: ${rule.selector.slice(0, 70)}`);
+      });
+    }
+    expect(offenders, "use --bf-accent-fill for a background that carries on-accent ink").toEqual([]);
+  });
+
   it("gives every Colors set an accent trio and four tones that hold their own contrast", () => {
     /* The five whole-palette themes this used to measure were removed on 2026-09-16: the
        Preferences panel offers COLOUR SETS now, which supply only the hints (skin §47), so
@@ -177,10 +208,23 @@ describe("the ink ladder holds against every ground the design uses", () => {
     };
     const base = blockWith("body:has(.app-shell.hs-shell.bf-shell)", "--bf-color-accent:");
     const blue = blockWith('body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"])', "--bf-color-accent:");
+    const red = blockWith('body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"])', "--bf-color-accent:");
+    const green = blockWith('body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="green"])', "--bf-color-accent:");
+    const yellow = blockWith('body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="yellow"])', "--bf-color-accent:");
     const pick = (block: string, name: string) => block.match(new RegExp(`--bf-color-${name}:\\s*([^;]+)`))?.[1]?.trim();
     const sets: Array<[string, string]> = [
       ["Default", ""],
-      ["Blue", blue]
+      ["Blue", blue],
+      /* Red (2026-09-18) is the first set to override a TONE as well as the accent — its `bad`
+         drops a rung so the alarm does not read as the brand. The four-tone loop below therefore
+         measures Red's own bad on Red's own bad-wash, which is what that override has to keep. */
+      ["Red", red],
+      /* Green overrides no tone at all — it solves the same collision from the other side, by
+         moving its own accent deep enough to clear the untouched `ok`. */
+      ["Green", green],
+      /* Yellow is the one set where the arithmetic leaves no choice: the accent is capped by the
+         "reads on its own tint" gate, so `warn` has to move. Both halves are measured below. */
+      ["Yellow", yellow]
     ];
     for (const [name, override] of sets) {
       const tok = (key: string) => pick(override, key) ?? pick(base, key);
@@ -200,6 +244,29 @@ describe("the ink ladder holds against every ground the design uses", () => {
         const ink = tok(tone)!;
         const toneWash = tok(`${tone}-wash`)!;
         expect(round(contrast(hex(ink), hex(toneWash))), `${name}: the ${tone} tone on its wash`).toBeGreaterThanOrEqual(4.5);
+      }
+      /* AND THE ACCENT HAS TO BE TELLABLE FROM THE ALARM (added 2026-09-18 with the Red set).
+         Nothing above asks this, and it is the question a coloured set lives or dies on: a
+         primary chip and an error pill sit inches apart on the same board. There are three ways
+         to separate them and a set needs ONE — Default separates by CHROMA (its accent has
+         none), Blue by HUE (142 degrees, at a contrast of only 1.53), and Red, which has neither
+         lever, by LIGHTNESS. So the rule is conditional, and asked of ALL FOUR tones: an accent
+         that is chromatic AND within 30 degrees of a tone must clear Default's own accent-to-bad
+         contrast of 2.16.
+
+         It is what forced both coloured sets into a specific value, in opposite directions. Red
+         moves the TONE — its `bad` drops a rung to #700700 (2.17). Green moves the ACCENT — a
+         deep #00471f against the untouched `ok` (2.17), which is the better trade whenever it is
+         available, because it leaves the meaning of "on track" alone. Take either away and this
+         is the test that notices. */
+      const chromatic = sat(hex(accent)) >= 0.2;
+      for (const tone of ["info", "ok", "warn", "bad"]) {
+        const value = tok(tone)!;
+        if (!chromatic || apart(hue(hex(accent)), hue(hex(value))) >= 30) continue;
+        expect(
+          round(contrast(hex(accent), hex(value))),
+          `${name}: the accent is the same hue family as the ${tone} tone, so it has to separate from it by lightness`
+        ).toBeGreaterThanOrEqual(2.16);
       }
     }
   });

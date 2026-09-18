@@ -190,10 +190,10 @@ describe("the top bar's Preferences panel", () => {
     );
   });
 
-  it("offers the colour sets — Default (white, gray, black) and Blue — and carries the choice on data-bf-colors, never a theme", async () => {
+  it("offers the colour sets — Default (white, gray, black), Blue, Red, Green and Yellow — and carries the choice on data-bf-colors, never a theme", async () => {
     const panel = await openPreferences();
     const picker = within(panel).getByLabelText("Colors") as HTMLSelectElement;
-    expect([...picker.options].map((option) => option.textContent)).toEqual(["Default", "Blue"]);
+    expect([...picker.options].map((option) => option.textContent)).toEqual(["Default", "Blue", "Red", "Green", "Yellow"]);
     expect(shell().dataset.bfColors).toBe("default");
     // picking Blue recolours the hints and nothing else: the layout choices stay put
     fireEvent.change(picker, { target: { value: "blue" } });

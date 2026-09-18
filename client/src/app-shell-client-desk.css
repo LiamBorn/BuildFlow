@@ -362,6 +362,231 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"][data-bf-mode="dark"
   }
 }
 /* END blue set */
+/* ---- 47c. Green (2026-09-18, with Red; reversed the same day at the user's word) ----
+   Green collides harder than any other set: its natural accent sits on `ok` almost exactly —
+   measured 1.00 contrast at 5 degrees of hue, the same colour by any reading.
+
+   THE FIRST PASS MOVED THE ACCENT instead of the tone, to a deep forest #00471f, because leaving
+   the meaning of "on track" alone is normally the better trade. Shown on screen, that accent was
+   too dark to be a brand: its fills read nearly black in the progress bars. Asked for the other
+   arrangement — "make Green vibrant with ok moved instead" — so the accent is now the vibrant
+   #1b7f3b (5.07 on the white card, white on it at 5.07) and `ok` drops to a deep forest #15452a,
+   which is the LIGHTEST value that clears the accent by Default's own 2.16 (it measures 2.16) and
+   still reads 10.96 on the card and 4.5 on its own tint.
+
+   TWO MARGINS HERE ARE THIN and worth knowing before anything in this block is nudged: the accent
+   reads 4.56 on its wash against a gate of 4.5, so the wash cannot get any deeper; and the ring's
+   weakest pair becomes info/ok at 1.17 against a floor of 1.15. Both are measured in
+   design-language.test.ts and dashboard-admin-kit.test.ts, which will say so if either slips.
+
+   The other arrangement is one value away if this ever reads as the wrong trade: accent #00471f
+   with the `ok` override below deleted.
+
+   DARK has the trapped band all the coloured sets share (see 47b) — every tone must clear 3:1 on
+   the #1b1b19 card, so a green accent and a green `ok` are stuck in one lightness range and moving
+   the tone buys nothing. The accent takes #a8e9be (12.37 on the card, 12.22 carrying dark ink)
+   against `ok`'s untouched #80d19b, which is 1.31. Same compromise and the same lever as Red: the
+   accent goes paler if it needs to be more, never the status tone dimmer. */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="green"]) {
+  --bf-color-accent: #1b7f3b;
+  --bf-color-accent-rgb: 27, 127, 59;
+  --bf-color-accent-fill: #1b7f3b;
+  --bf-color-accent-fill-rgb: 27, 127, 59;
+  --bf-color-accent-fill-2: #15642e;
+  --bf-color-accent-gradient: linear-gradient(135deg, #24a34c, #15642e);
+  --bf-color-on-accent: #ffffff;
+  /* the lightest tint the accent still reads on: 4.56 against a gate of 4.5 */
+  --bf-color-accent-wash: #eaf6ed;
+  --bf-color-accent-wash-2: #d9eede;
+  --bf-color-accent-wash-3: #c4e5cd;
+  --bf-color-trade-milestone: #1b7f3b;
+  --bf-color-selection: rgba(27, 127, 59, 0.18);
+  /* the tone that moves so the brand can be vibrant — see the note above */
+  --bf-color-ok: #15452a;
+  --bf-color-ok-wash: #d3f5e1;
+  --bf-color-ok-edge: #a9dcbb;
+}
+body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="green"][data-bf-mode="dark"]) {
+  --bf-color-accent: #a8e9be;
+  --bf-color-accent-rgb: 168, 233, 190;
+  --bf-color-accent-fill: #a8e9be;
+  --bf-color-accent-fill-rgb: 168, 233, 190;
+  --bf-color-accent-fill-2: #86d3a0;
+  --bf-color-accent-gradient: linear-gradient(135deg, #c2f2d3, #86d3a0);
+  --bf-color-on-accent: #1c1c1c;
+  --bf-color-accent-wash: #17301f;
+  --bf-color-accent-wash-2: #1e3d28;
+  --bf-color-accent-wash-3: #254a31;
+  --bf-color-trade-milestone: #a8e9be;
+  --bf-color-selection: rgba(168, 233, 190, 0.25);
+}
+@media (prefers-color-scheme: dark) {
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="green"][data-bf-mode="system"]) {
+    --bf-color-accent: #a8e9be;
+    --bf-color-accent-rgb: 168, 233, 190;
+    --bf-color-accent-fill: #a8e9be;
+    --bf-color-accent-fill-rgb: 168, 233, 190;
+    --bf-color-accent-fill-2: #86d3a0;
+    --bf-color-accent-gradient: linear-gradient(135deg, #c2f2d3, #86d3a0);
+    --bf-color-on-accent: #1c1c1c;
+    --bf-color-accent-wash: #17301f;
+    --bf-color-accent-wash-2: #1e3d28;
+    --bf-color-accent-wash-3: #254a31;
+    --bf-color-trade-milestone: #a8e9be;
+    --bf-color-selection: rgba(168, 233, 190, 0.25);
+  }
+}
+/* ---- 47d. Yellow (2026-09-18, with Green) ----
+   THE HARD ONE, and the reason is physical rather than a matter of taste. Three gates squeeze a
+   yellow from both sides: it has to carry a white label as a fill (4.5), read as an indicator on
+   the white card (3), and read as TEXT on its own tint (4.5). The last one is the binding
+   constraint — a tint is not white, so the accent has to be dark enough to sit on one — and it
+   caps a yellow accent at about L 0.157. Everything lighter than that fails, which is why this set
+   caps the TEXT accent at an olive-gold #7d6e0c (on the card 5.11, on its own wash 4.52). So this
+   is the one set where `accent` and `accent-fill` are DIFFERENT COLOURS: text and small marks take
+   the dark gold, solids take #f2c200 with dark ink on it at 10.14.
+
+   THE SPLIT TURNED OUT TO NEED NO REFACTORING, against the estimate. Eleven rules paint a
+   background from the text accent, and the worry was that they would become bright-gold-on-white.
+   Looked at one by one: NINE are small marks on white — dots, legend swatches, the 1px today line —
+   which correctly want the dark accent, since that is the contrast the 3:1 gate exists to protect;
+   `.map-pin svg`'s background is inert; and `.bfws-tile`'s is dead, because this sheet repaints it
+   with a face gradient at higher specificity. Then measured rather than reasoned: every page walked
+   in Yellow and in Default, comparing each element's text against its background, and the two
+   contrast-1 hits were the same in BOTH sets — gradient-painted avatars that a `backgroundColor`
+   read cannot see. Nothing regressed.
+
+   AND `warn` HAS TO MOVE, which the arithmetic forces: with the accent capped at L 0.157, a tone
+   2.16 away has to sit at L 0.046 or below, and Default's amber is at 0.122. There is no
+   arrangement where both stay put — keeping `warn` would need an accent at L 0.322, which fails
+   the two gates above. So `warn` becomes #573400, the LIGHTEST value the gates allow (accent/warn
+   2.17, still 11.07 on the card and 4.5 on its own tint). For scale, that is the same size of move
+   Red made for its alarm: L 0.083 -> 0.036 there, 0.122 -> 0.045 here.
+
+   DARK is the trapped band again (see 47b): accent #efdc85 against the untouched amber #e0a64a is
+   1.57, and the lever if it needs to be more is the accent going paler, not the tone dimmer. */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="yellow"]) {
+  /* THE ONE SET WHERE THE TEXT ACCENT AND THE FILL ARE DIFFERENT COLOURS. Text and small marks
+     take the dark gold, because they have to hold 3:1 on the white card and 4.5 on their own
+     tint; solids take the bright one, which carries dark ink at 10.14. Everything else in the
+     product keeps them equal, so this is the only set that exercises the split. */
+  --bf-color-accent: #7d6e0c;
+  --bf-color-accent-rgb: 125, 110, 12;
+  --bf-color-accent-fill: #f2c200;
+  --bf-color-accent-fill-rgb: 242, 194, 0;
+  --bf-color-accent-fill-2: #d9ae00;
+  --bf-color-accent-gradient: linear-gradient(135deg, #ffd633, #d9ae00);
+  --bf-color-on-accent: #1c1c1c;
+  --bf-color-accent-wash: #f7f2d0;
+  --bf-color-accent-wash-2: #efe7b6;
+  --bf-color-accent-wash-3: #e4d99b;
+  --bf-color-trade-milestone: #7d6e0c;
+  --bf-color-selection: rgba(125, 110, 12, 0.18);
+  /* the tone the arithmetic forces out of the way — see the note above */
+  --bf-color-warn: #573400;
+  --bf-color-warn-wash: #f5e9d7;
+  --bf-color-warn-edge: #e0c9a8;
+}
+body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="yellow"][data-bf-mode="dark"]) {
+  --bf-color-accent: #efdc85;
+  --bf-color-accent-rgb: 239, 220, 133;
+  --bf-color-accent-fill: #efdc85;
+  --bf-color-accent-fill-rgb: 239, 220, 133;
+  --bf-color-accent-fill-2: #d6c26a;
+  --bf-color-accent-gradient: linear-gradient(135deg, #f5e8ab, #d6c26a);
+  --bf-color-on-accent: #1c1c1c;
+  --bf-color-accent-wash: #33300f;
+  --bf-color-accent-wash-2: #3f3b13;
+  --bf-color-accent-wash-3: #4b4617;
+  --bf-color-trade-milestone: #efdc85;
+  --bf-color-selection: rgba(239, 220, 133, 0.25);
+}
+@media (prefers-color-scheme: dark) {
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="yellow"][data-bf-mode="system"]) {
+    --bf-color-accent: #efdc85;
+    --bf-color-accent-rgb: 239, 220, 133;
+    --bf-color-accent-fill: #efdc85;
+    --bf-color-accent-fill-rgb: 239, 220, 133;
+    --bf-color-accent-fill-2: #d6c26a;
+    --bf-color-accent-gradient: linear-gradient(135deg, #f5e8ab, #d6c26a);
+    --bf-color-on-accent: #1c1c1c;
+    --bf-color-accent-wash: #33300f;
+    --bf-color-accent-wash-2: #3f3b13;
+    --bf-color-accent-wash-3: #4b4617;
+    --bf-color-trade-milestone: #efdc85;
+    --bf-color-selection: rgba(239, 220, 133, 0.25);
+  }
+}
+/* ---- 47b. Red (2026-09-18: "start with the Red color") ----
+   Built from Blue's shape, with one difference that the hue forces.
+
+   BLUE NEVER HAD TO MOVE A TONE. It separates from the red `bad` by HUE — 142 degrees apart,
+   at a contrast of 1.53 light and 1.07 dark, and that is legible because nothing about it is
+   red. Default separates by CHROMA: its accent has none. Red has neither lever, so the only
+   one left is LIGHTNESS, and `bad` has to get out of the accent's way.
+
+   LIGHT is where that works. The accent is #c62828 (5.62 on white, 4.99 on its own wash, white
+   on it at 5.62) and `bad` drops to a deep oxblood #700700, which is the LIGHTEST value that
+   clears Default's own accent-to-bad separation of 2.16 — it measures 2.17 — while keeping the
+   ring's four tones at least 1.15 apart and still reading 9.52 on its own wash. Searched, not
+   picked by eye.
+
+   DARK cannot be solved the same way, and the reason is structural: every ring tone has to
+   clear 3:1 on the #1b1b19 card, which confines all four to the light end, so a red accent and
+   an alarming red `bad` are stuck in one band. `bad` therefore stays exactly as it is (#eb8178
+   — the alarm colour is the last thing to compromise) and the accent takes the lightest red
+   that still reads as red, #ffb5ab. That measures 1.57 from `bad`: short of Default's 2.40, and
+   better than the 1.07 Blue ships with. If the two ever need to be told apart harder in dark,
+   the lever is the accent going paler (#ffccbf reaches 1.84 and starts to look washed out),
+   not the alarm going quieter. */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"]) {
+  --bf-color-accent: #c62828;
+  --bf-color-accent-rgb: 198, 40, 40;
+  --bf-color-accent-fill: #c62828;
+  --bf-color-accent-fill-rgb: 198, 40, 40;
+  --bf-color-accent-fill-2: #a71f1f;
+  --bf-color-accent-gradient: linear-gradient(135deg, #e04343, #a71f1f);
+  --bf-color-on-accent: #ffffff;
+  --bf-color-accent-wash: #fdeeee;
+  --bf-color-accent-wash-2: #f9dcdc;
+  --bf-color-accent-wash-3: #f3c9c9;
+  --bf-color-trade-milestone: #c62828;
+  --bf-color-selection: rgba(198, 40, 40, 0.18);
+  /* the one tone that moves, and only in this reading — see the note above */
+  --bf-color-bad: #700700;
+  --bf-color-bad-wash: #f5dedc;
+  --bf-color-bad-edge: #e8b3ad;
+}
+body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"][data-bf-mode="dark"]) {
+  --bf-color-accent: #ffb5ab;
+  --bf-color-accent-rgb: 255, 181, 171;
+  --bf-color-accent-fill: #ffb5ab;
+  --bf-color-accent-fill-rgb: 255, 181, 171;
+  --bf-color-accent-fill-2: #f2938a;
+  --bf-color-accent-gradient: linear-gradient(135deg, #ffcdc6, #f2938a);
+  --bf-color-on-accent: #1c1c1c;
+  --bf-color-accent-wash: #3a1d1f;
+  --bf-color-accent-wash-2: #482426;
+  --bf-color-accent-wash-3: #562b2d;
+  --bf-color-trade-milestone: #ffb5ab;
+  --bf-color-selection: rgba(255, 181, 171, 0.25);
+}
+@media (prefers-color-scheme: dark) {
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"][data-bf-mode="system"]) {
+    --bf-color-accent: #ffb5ab;
+    --bf-color-accent-rgb: 255, 181, 171;
+    --bf-color-accent-fill: #ffb5ab;
+    --bf-color-accent-fill-rgb: 255, 181, 171;
+    --bf-color-accent-fill-2: #f2938a;
+    --bf-color-accent-gradient: linear-gradient(135deg, #ffcdc6, #f2938a);
+    --bf-color-on-accent: #1c1c1c;
+    --bf-color-accent-wash: #3a1d1f;
+    --bf-color-accent-wash-2: #482426;
+    --bf-color-accent-wash-3: #562b2d;
+    --bf-color-trade-milestone: #ffb5ab;
+    --bf-color-selection: rgba(255, 181, 171, 0.25);
+  }
+}
 /* dark mode's own accent (daylight §29) gives way to the set, in either dark reading */
 .app-shell.hs-shell.bf-shell[data-bf-mode="dark"],
 .app-shell.hs-shell.bf-shell[data-bf-mode="system"] {
