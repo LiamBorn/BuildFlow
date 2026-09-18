@@ -42,38 +42,64 @@ const TABS: Array<{ id: NotificationTab; label: string }> = [
 const needsAttention = (item: NotificationItem) => item.tone === "red" || item.tone === "amber";
 
 const readKey = (userId: string) => `bf:notifications:read:${userId}`;
+const seenKey = (userId: string) => `bf:notifications:seen:${userId}`;
 
-function readIds(userId: string): Set<string> {
+function storedIds(key: string): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
-    const raw = window.localStorage.getItem(readKey(userId));
+    const raw = window.localStorage.getItem(key);
     const parsed = raw ? (JSON.parse(raw) as unknown) : null;
     return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
   } catch {
-    // private mode, or a corrupt value: everything simply reads as unread
+    // private mode, or a corrupt value: everything simply reads as new
     return new Set();
   }
 }
 
-/** Read ids for this person, and the two ways they change. */
+/**
+ * Two things a notification can be, kept apart because they answer different questions.
+ *
+ * SEEN is what the bell's badge counts: has this person been shown it yet? Opening the drawer
+ * shows them everything in it, so opening marks the lot seen and the badge clears — which is
+ * what a badge that says "15" has to mean, or it says 15 forever. READ is per row: has this
+ * one been opened? It is the dot on the row and the "Unread only" switch, and it only changes
+ * when the row is clicked or "Mark all as read" is used. Marking read implies seen; seeing does
+ * not imply read. Both are kept per person.
+ */
 export function useReadNotifications(userId: string) {
-  const [ids, setIds] = useState<Set<string>>(() => readIds(userId));
-  useEffect(() => setIds(readIds(userId)), [userId]);
-  const persist = (next: Set<string>) => {
-    setIds(next);
+  const [read, setRead] = useState<Set<string>>(() => storedIds(readKey(userId)));
+  const [seen, setSeen] = useState<Set<string>>(() => storedIds(seenKey(userId)));
+  useEffect(() => {
+    setRead(storedIds(readKey(userId)));
+    setSeen(storedIds(seenKey(userId)));
+  }, [userId]);
+  const persist = (key: string, next: Set<string>) => {
     try {
-      window.localStorage.setItem(readKey(userId), JSON.stringify([...next]));
+      window.localStorage.setItem(key, JSON.stringify([...next]));
     } catch {
       /* the in-memory copy still stands for this session */
     }
   };
+  const addSeen = (ids: string[]) => {
+    if (ids.every((id) => seen.has(id))) return;
+    const next = new Set([...seen, ...ids]);
+    setSeen(next);
+    persist(seenKey(userId), next);
+  };
+  const addRead = (ids: string[]) => {
+    if (ids.every((id) => read.has(id))) return;
+    const next = new Set([...read, ...ids]);
+    setRead(next);
+    persist(readKey(userId), next);
+    addSeen(ids);
+  };
   return {
-    isRead: (id: string) => ids.has(id),
-    markRead: (id: string) => {
-      if (ids.has(id)) return;
-      persist(new Set([...ids, id]));
-    },
-    markAllRead: (all: string[]) => persist(new Set([...ids, ...all]))
+    isRead: (id: string) => read.has(id),
+    isSeen: (id: string) => seen.has(id),
+    markRead: (id: string) => addRead([id]),
+    markAllRead: (all: string[]) => addRead(all),
+    /** The drawer has been opened on these: the badge stops counting them. */
+    markSeen: (all: string[]) => addSeen(all)
   };
 }
 

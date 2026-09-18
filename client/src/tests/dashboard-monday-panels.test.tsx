@@ -104,6 +104,101 @@ describe("the monday card sheet", () => {
     }
   });
 
+  /**
+   * The remove control shows on hover, and ONLY hover. It once also showed on focus-within (any
+   * click inside a section) and, through a width-keyed media rule, on every section at once in a
+   * window under 1024px — the user's own. Width says nothing about a pointer; `hover: none` does.
+   */
+  it("shows the remove control only on hover, and forces it only where nothing can hover", () => {
+    // at rest: the top-level rule only, not the media blocks that share its selector
+    let restOpacity = "";
+    sheet.walkRules((rule: Rule) => {
+      if (rule.parent?.type === "atrule") return;
+      if (rule.selector === ".bf-shell .dash-rx.hs-home .dash-board .dash-block > .dash-hide") {
+        rule.walkDecls("opacity", (decl) => {
+          restOpacity = decl.value;
+        });
+      }
+    });
+    expect(restOpacity).toBe("0");
+    let selectorsShowingIt = "";
+    sheet.walkRules((rule: Rule) => {
+      const decls: Record<string, string> = {};
+      rule.walkDecls((decl) => {
+        decls[decl.prop] = decl.value;
+      });
+      if (rule.selector.includes(".dash-hide") && decls.opacity === "1") selectorsShowingIt += rule.selector + "\n";
+    });
+    expect(selectorsShowingIt).toContain(".dash-block:hover > .dash-hide");
+    expect(selectorsShowingIt).not.toContain("focus-within");
+    // the forced-visible block is keyed on the pointer, never on the width
+    const forcing: string[] = [];
+    sheet.walkAtRules("media", (at) => {
+      at.walkRules((rule: Rule) => {
+        if (rule.selector.includes(".dash-hide") && rule.toString().includes("opacity: 1")) forcing.push(at.params);
+      });
+    });
+    expect(forcing).toEqual(["(hover: none)"]);
+  });
+
+  /** In Customize, sections are dashed at rest and the one under the pointer goes solid. */
+  it("turns the hovered section's dashed outline solid while customizing", () => {
+    const hovered = declsOf(".bf-shell .dash-rx.hs-home.is-customizing .dash-board .dash-block:hover");
+    expect(hovered["outline-style"]).toBe("solid");
+    expect(hovered["outline-color"]).toContain("--bf-accent");
+    // and the rest of the mode's sections are left on hs-home's dashed outline: no rule here
+    // makes an un-hovered section solid
+    let restSolid = false;
+    sheet.walkRules((rule: Rule) => {
+      if (rule.selector.includes("is-customizing") && rule.selector.includes(".dash-block") && !/:hover|:focus-within|is-dragging/.test(rule.selector)) {
+        rule.walkDecls("outline-style", (decl) => {
+          if (decl.value === "solid") restSolid = true;
+        });
+      }
+    });
+    expect(restSolid).toBe(false);
+  });
+
+  /**
+   * A carried panel rides the pointer through an inline transform. Two things can stop it:
+   * an entrance animation that keeps filling forwards (a filled animation outranks an inline
+   * style, so `both` held `transform: none` over the drag), and a transition on transform while
+   * dragging, which would make the follow lag the hand. And on the drop, `transform` must be in
+   * the resting transition or the panel snaps back to its old cell before sliding.
+   */
+  it("lets a carried panel ride the pointer and settle in one path", () => {
+    const adminKit = readFileSync(join(SRC, "dashboard-admin-kit.css"), "utf8");
+    const entrance = adminKit.match(/animation:\s*bfak-rise[^;]*;/);
+    expect(entrance?.[0]).toBeDefined();
+    expect(entrance![0]).not.toMatch(/\b(both|forwards)\b/);
+    // the resting rule at the top level, not the reduced-motion block that shares its selector
+    let restingTransition = "";
+    sheet.walkRules((rule: Rule) => {
+      if (rule.parent?.type === "atrule") return;
+      if (rule.selector === ".bf-shell .dash-rx.hs-home .dash-board .dash-block") {
+        rule.walkDecls("transition", (decl) => {
+          restingTransition = decl.value;
+        });
+      }
+    });
+    expect(restingTransition).toMatch(/(^|,)\s*transform 0\.26s/);
+    const carried = declsOf(".bf-shell .dash-rx.hs-home .dash-board .dash-block.is-dragging");
+    expect(carried.transition).toBe("none");
+  });
+
+  it("seats the layout controls beside the lede, top-aligned, at the right edge", () => {
+    /* Asked for on 2026-09-15: the stack moved down off the date line. App.test.tsx proves the
+       markup puts the lede and the stack in one row; this proves the row IS a row — without
+       display: flex the stack would simply fall under the lede — and that the stack keeps the
+       right edge on its own (margin-left: auto), whatever the row wraps to. */
+    const row = declsOf(".bf-shell .dash-rx.hs-home .hs-home-subline");
+    expect(row.display).toBe("flex");
+    expect(row["align-items"]).toBe("flex-start");
+    const stack = declsOf(".bf-shell .dash-rx.hs-home .hs-home-topline-actions");
+    expect(stack["flex-direction"]).toBe("column");
+    expect(stack["margin-left"]).toBe("auto");
+  });
+
   it("never pins a surface, which belongs to the Theme Presets", () => {
     const all = sheet.toString();
     for (const token of ["--bf-surface", "--bf-ground", "--bf-hover"]) expect(all).not.toContain(`${token}:`);

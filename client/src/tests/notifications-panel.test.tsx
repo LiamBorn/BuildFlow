@@ -32,6 +32,16 @@ const thirteenNotifications = () => ({
   ]
 });
 
+/** How many notifications the default fixture yields: one per source, added up from the fixture itself. */
+const bootstrapNotificationCount = () =>
+  bootstrapFixture.fieldUpdates.length +
+  bootstrapFixture.weatherAlerts.length +
+  bootstrapFixture.delayIQs.length +
+  bootstrapFixture.assignments.length +
+  bootstrapFixture.inspections.length +
+  bootstrapFixture.materials.length +
+  bootstrapFixture.equipment.length;
+
 const openBell = () => {
   fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
   return screen.getByRole("region", { name: "Recent BuildFlow activity" });
@@ -50,8 +60,8 @@ const badge = () => screen.getByRole("button", { name: "Notifications" }).queryS
 describe("the notifications drawer", () => {
   installAppHarness();
   beforeEach(() => {
-    // read state is per person and persisted, so each test starts with everything unread
-    for (const key of Object.keys(window.localStorage)) if (key.startsWith("bf:notifications:read:")) window.localStorage.removeItem(key);
+    // read and seen state are per person and persisted, so each test starts with everything new
+    for (const key of Object.keys(window.localStorage)) if (key.startsWith("bf:notifications:")) window.localStorage.removeItem(key);
   });
 
   it("is laid out like the reference: a title, three tabs with counts, search and an unread toggle", async () => {
@@ -112,15 +122,51 @@ describe("the notifications drawer", () => {
     expect(within(panel).getByText("No notifications to show")).toBeInTheDocument();
   });
 
-  it("marks a notification read when it is opened, and the badge counts what is left", async () => {
+  /**
+   * The badge means "not shown to you yet". Before the drawer is opened that is all of them;
+   * opening it is being shown them, so the badge clears — and stays clear when the drawer is
+   * closed and reopened, because nothing new has arrived. Read is a different thing: the rows
+   * are still unread (no dot has gone) until each is clicked.
+   */
+  it("counts what has not been seen, and opening the drawer is seeing it", async () => {
+    render(<App />);
+    await enterDashboard();
+    const total = bootstrapNotificationCount();
+    expect(badge()).toBe(String(total));
+
+    const panel = openBell();
+    expect(rows(panel).length).toBe(total);
+    expect(badge()).toBeNull();
+    // seen is not read: every row still carries its unread dot
+    expect(within(panel).getAllByLabelText("Unread").length).toBe(total);
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Close notifications" }));
+    expect(badge()).toBeNull();
+    expect(rows(openBell()).length).toBe(total);
+  });
+
+  /** What was seen is remembered, so only what arrives later counts again. */
+  it("brings the badge back for what arrives after the drawer was last opened", async () => {
+    const first = render(<App />);
+    await enterDashboard();
+    openBell();
+    expect(badge()).toBeNull();
+    first.unmount();
+
+    state.bootstrapPayload = thirteenNotifications();
+    render(<App />);
+    await enterDashboard();
+    // the seven already seen stay quiet; the six new pieces of equipment are the news
+    expect(badge()).toBe("6");
+  });
+
+  it("marks a notification read when it is opened", async () => {
     render(<App />);
     await enterDashboard();
     const panel = openBell();
     const total = rows(panel).length;
-    expect(badge()).toBe(String(total));
 
     fireEvent.click(rows(panel)[0]);
-    expect(badge()).toBe(String(total - 1));
     // clicking a row is also a navigation, so the drawer gets out of the way
     expect(screen.queryByRole("region", { name: "Recent BuildFlow activity" })).toBeNull();
 
@@ -130,12 +176,11 @@ describe("the notifications drawer", () => {
     expect(rows(reopened).length).toBe(total - 1);
   });
 
-  it("marks the lot read from the more menu, and the badge goes", async () => {
+  it("marks the lot read from the more menu", async () => {
     render(<App />);
     await enterDashboard();
     const panel = openBell();
     const before = rows(panel).length;
-    expect(badge()).not.toBeNull();
 
     fireEvent.click(within(panel).getByRole("button", { name: "More notification actions" }));
     fireEvent.click(within(panel).getByRole("menuitem", { name: /Mark all as read/ }));

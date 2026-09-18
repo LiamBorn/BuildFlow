@@ -18,8 +18,12 @@ import {
    - "keeps the schedule job tutorial gate locked until a job is created and assigned"
    - "opens recent BuildFlow activity from the notifications bell"
    Since 2026-09-09 a skipped/completed tutorial is remembered per USER on the
-   server (`userSettings` in bootstrap, PUT /api/me/settings/tutorial:<setupKey>)
-   with localStorage as the local mirror. */
+   server (`userSettings` in bootstrap) with localStorage as the local mirror.
+   Since 2026-09-15 the record is per PERSON, not per setup — PUT
+   /api/me/settings/tutorial:seen, written the moment the tutorial is shown —
+   because the tutorial is now a one-time thing: seen once, never shown again,
+   and the top bar's restart button is gone. The old per-setup record
+   (tutorial:<setupKey>) is still honoured for people who saw it before. */
 
 // Mirrors App.tsx's createTutorialSetupKey: slug parts joined by "--", products sorted and "+"-joined.
 const slug = (value: string) =>
@@ -38,6 +42,9 @@ const ASPHALT_SETUP = {
 };
 const ASPHALT_KEY = setupKeyFor("asphalt", "business", ["map-field-ops", "equipment-tracking"]);
 const TUTORIAL_TITLE = "Your BuildFlow workspace is ready";
+/** The device copy of the person-level record, keyed by the signed-in user so a shared
+    browser cannot hand one person's tour to the next. */
+const seenKey = () => `buildflow.tutorial.status:seen:${state.bootstrapPayload.activeUser.id}`;
 
 /** The tutorial overlay: a labelled region wrapping the step dialog. Both the
     landing's gallery rail and the tutorial render a "Next" button, so every
@@ -115,47 +122,65 @@ async function createCrewThroughTutorial() {
 describe("BuildFlow onboarding tutorial", () => {
   installAppHarness();
 
-  it("remembers a skipped tutorial for this setup on the server and locally, and does not auto-repeat it", async () => {
+  it("records the tutorial as seen for this PERSON the moment it shows, and never repeats it — not even for another setup", async () => {
     const writes = stubSettingsWrites();
     const view = render(<App />);
 
     await completeOnboarding(ASPHALT_SETUP);
     const dialog = await screen.findByRole("dialog", { name: TUTORIAL_TITLE });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Skip Tutorial" }));
+    // showing it is what records it: the first write lands before anyone clicks
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(decodeURIComponent(writes[0].url)).toBe("/api/me/settings/tutorial:seen");
+    expect(writes[0].method).toBe("PUT");
+    expect(writes[0].body).toEqual({ value: "started" });
 
+    fireEvent.click(within(dialog).getByRole("button", { name: "Skip Tutorial" }));
     expect(screen.queryByRole("dialog", { name: TUTORIAL_TITLE })).not.toBeInTheDocument();
     // local mirror …
-    expect(window.localStorage.getItem(`buildflow.tutorial.status:${ASPHALT_KEY}`)).toBe("skipped");
-    // … and the per-user server copy
-    await waitFor(() => expect(writes).toHaveLength(1));
-    expect(decodeURIComponent(writes[0].url)).toBe(`/api/me/settings/tutorial:${ASPHALT_KEY}`);
-    expect(writes[0].method).toBe("PUT");
-    expect(writes[0].body).toEqual({ value: "skipped" });
+    expect(window.localStorage.getItem(seenKey())).toBe("skipped");
+    // … and the per-user server copy, upgraded on the way out
+    await waitFor(() => expect(writes).toHaveLength(2));
+    expect(decodeURIComponent(writes[1].url)).toBe("/api/me/settings/tutorial:seen");
+    expect(writes[1].body).toEqual({ value: "skipped" });
+    // nothing is filed under the setup any more
+    expect(window.localStorage.getItem(`buildflow.tutorial.status:${ASPHALT_KEY}`)).toBeNull();
 
-    // The same person setting up the same trade/plan/products again is not asked twice.
+    // The same person setting up a different product mix is not asked twice: seen is seen.
     view.unmount();
     render(<App />);
-    await completeOnboarding(ASPHALT_SETUP);
+    await completeOnboarding({ ...ASPHALT_SETUP, products: ["Map & Field Ops"] });
     expect(screen.queryByRole("dialog", { name: TUTORIAL_TITLE })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "BuildFlow tutorial" })).not.toBeInTheDocument();
   });
 
-  it("does not auto-start a tutorial the server already records as skipped for this person", async () => {
-    // Another device: nothing in localStorage, but bootstrap carries the user's settings.
-    state.businessProfilePayload = {
-      ...blankWorkspaceFixture,
-      userSettings: { [`tutorial:${ASPHALT_KEY}`]: "skipped" }
-    };
+  it("keeps one person's tour from counting for the next person on the same browser", async () => {
+    // What a device-wide record would look like — and what someone else's looks like.
+    window.localStorage.setItem("buildflow.tutorial.status:seen", "completed");
+    window.localStorage.setItem("buildflow.tutorial.status:seen:u-someone-else", "completed");
     render(<App />);
 
     await completeOnboarding(ASPHALT_SETUP);
 
-    expect(window.localStorage.getItem(`buildflow.tutorial.status:${ASPHALT_KEY}`)).toBeNull();
+    expect(await screen.findByRole("dialog", { name: TUTORIAL_TITLE })).toBeInTheDocument();
+  });
+
+  const SERVER_RECORDS: Array<[string, Record<string, string>]> = [
+    ["the person-level record", { "tutorial:seen": "completed" }],
+    ["the setup-level record it replaced", { [`tutorial:${ASPHALT_KEY}`]: "skipped" }]
+  ];
+  it.each(SERVER_RECORDS)("does not auto-start a tutorial the server holds under %s, and offers no way to restart it", async (_label, userSettings) => {
+    // Another device: nothing in localStorage, but bootstrap carries the user's settings.
+    state.businessProfilePayload = { ...blankWorkspaceFixture, userSettings };
+    render(<App />);
+
+    await completeOnboarding(ASPHALT_SETUP);
+
+    expect(window.localStorage.getItem(seenKey())).toBeNull();
     expect(screen.queryByRole("dialog", { name: TUTORIAL_TITLE })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "BuildFlow tutorial" })).not.toBeInTheDocument();
-
-    // It is still one click away from the top bar.
-    fireEvent.click(screen.getByRole("button", { name: "Help and tutorial" }));
-    expect(await screen.findByRole("dialog", { name: TUTORIAL_TITLE })).toBeInTheDocument();
+    // The top bar's Help-and-tutorial button went with the one-time rule (2026-09-15).
+    expect(screen.queryByRole("button", { name: "Help and tutorial" })).not.toBeInTheDocument();
+    expect(document.querySelector(".topbar-help-button")).toBeNull();
   });
 
   it("keeps the crew tutorial gate locked until a crew is created", async () => {

@@ -8,23 +8,27 @@
    account copy and the save function and renders the panel; nothing else about
    it needs to change.
 
-   WHAT IS REAL AND WHAT IS NOT. Six of the eight preferences take effect the
-   moment they change, because each has a live target in the shell.
+   COLORS, NOT THEMES (2026-09-16). The panel used to offer five THEMES — whole
+   palettes (Default, Dark, Red, Purple, Green) that repainted the product. That
+   is gone: the first control is now "Colors", and a colour set only ever
+   supplies the HINTS of colour spread through the program — the accent, the
+   information / ok / warn / bad tones, the faces, the chart series — while the
+   surfaces and the ink stay the same. It is carried on `data-bf-colors`, and the
+   skin (app-shell-client-desk.css, section 47) declares every hint token per set.
+   "Default" is white, gray and black, no colour at all; "Blue" turns the black
+   hints blue.
+   Light / Dark / System stays a separate control (Theme Mode, `data-bf-mode`).
 
-   ALL EIGHT ARE LIVE NOW. Theme Mode and Fonts each shipped disabled, with the
+   ALL EIGHT ARE LIVE. Theme Mode and Fonts each shipped disabled, with the
    reason on the control, because the product had no dark palette and one font
    family. Both have since been built: the fonts load from Google Fonts, and dark
    mode redefines a semantic surface/ink layer (section 29 of the daylight sheet).
-
-   Dark mode covers the app shell, the Dashboard, the index pages and everything
-   the redesign sheet owns. A page the redesign has not reached keeps light
-   patches until its stylesheet is converted the same way -- a known edge, agreed
-   before it was built rather than discovered afterwards.
    ========================================================================= */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type ThemePreset = "default" | "dark" | "red" | "purple" | "green";
+/** The colour sets: the hints of colour a workspace shows. */
+export type ColorPreset = "default" | "blue";
 export type FontId =
   | "geist"
   | "inter"
@@ -51,7 +55,8 @@ export type SidebarStyle = "inset" | "sidebar" | "floating";
 export type SidebarCollapse = "icon" | "offcanvas";
 
 export type AppPreferences = {
-  preset: ThemePreset;
+  /** Which set of colour hints the program shows. */
+  colors: ColorPreset;
   /** The typeface the whole product is set in. */
   font: FontId;
   /** Light, dark, or whatever the operating system is asking for. */
@@ -66,7 +71,7 @@ export type AppPreferences = {
 export const PREFERENCES_SETTING = "app:preferences";
 
 export const DEFAULT_PREFERENCES: AppPreferences = {
-  preset: "default",
+  colors: "default",
   font: "inter",
   mode: "light",
   layout: "centered",
@@ -76,30 +81,25 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 };
 
 /**
- * The five themes, named as the reference names them.
+ * The colour sets the picker offers. `swatch` is what the control shows for one:
+ * the three colours a set is made of, so the choice reads before it is made.
  *
- * `dot` is the swatch the picker shows, and it is each theme's PAGE accent — the
- * colour a reader actually sees on buttons, pills and charts.
- *
- * Two of them also change the CHROME (the top bar and the rail): Dark is dark
- * throughout, and Green (Earth) is a forest-green rail over a cream dashboard.
- * The other three leave the chrome light. Every value was measured rather than
- * matched by eye; the numbers live beside each theme in section 27 of
- * app-shell-daylight.css.
- *
- * Note that Dark is a THEME, not Theme Mode: it pins the dark surfaces itself,
- * so selecting it darkens the product whatever the mode says.
+ * "Default" is deliberately no colour at all — white, gray and black — so that
+ * every hint in the program (the accent, the tones, the faces, the charts) is
+ * monochrome. "Blue" (2026-09-16) turns the hints that are black in Default —
+ * the accent, its fill and washes, the bad tone, the framing and milestone
+ * trades, the selection — blue, and leaves every gray alone. A set is one
+ * entry here and one token block in the skin's section 47.
  */
-export const THEME_PRESETS: Array<{ id: ThemePreset; label: string; dot: string }> = [
-  { id: "default", label: "Default (Clean)", dot: "#3b82f6" },
-  { id: "dark", label: "Dark", dot: "#34d399" },
-  { id: "red", label: "Red (Bold)", dot: "#ef4444" },
-  { id: "purple", label: "Purple (Modern)", dot: "#8b5cf6" },
-  { id: "green", label: "Green (Earth)", dot: "#4d7c0f" }
+export const COLOR_PRESETS: Array<{ id: ColorPreset; label: string; swatch: [string, string, string] }> = [
+  { id: "default", label: "Default", swatch: ["#ffffff", "#9b9b9b", "#1c1c1c"] },
+  // Blue: every hint that is black in Default is blue here; the grays stay gray
+  { id: "blue", label: "Blue", swatch: ["#ffffff", "#9b9b9b", "#2563eb"] }
 ];
 
-/** The picker's swatch for one theme. */
-export const themeDot = (id: ThemePreset): string => THEME_PRESETS.find((theme) => theme.id === id)?.dot ?? "#1c1c1a";
+/** The picker's three-colour swatch for one set. */
+export const colorSwatch = (id: ColorPreset): [string, string, string] =>
+  COLOR_PRESETS.find((preset) => preset.id === id)?.swatch ?? COLOR_PRESETS[0].swatch;
 
 /* ── the fonts ───────────────────────────────────────────────────────────────
    The eighteen from the reference recording, in its order and its grouping.
@@ -163,7 +163,8 @@ export function parsePreferences(raw: unknown): AppPreferences {
   if (!raw || typeof raw !== "object") return DEFAULT_PREFERENCES;
   const input = raw as Record<string, unknown>;
   return {
-    preset: isOneOf(input.preset, ["default", "dark", "red", "purple", "green"] as const) ? input.preset : DEFAULT_PREFERENCES.preset,
+    // a copy saved before 2026-09-16 carries `preset` (a theme); it is ignored, there are no themes
+    colors: isOneOf(input.colors, ["default", "blue"] as const) ? input.colors : DEFAULT_PREFERENCES.colors,
     font: "inter",
     mode: isOneOf(input.mode, ["light", "dark", "system"] as const) ? input.mode : DEFAULT_PREFERENCES.mode,
     layout: isOneOf(input.layout, ["centered", "full"] as const) ? input.layout : DEFAULT_PREFERENCES.layout,
@@ -180,7 +181,7 @@ export function parsePreferences(raw: unknown): AppPreferences {
  */
 export function preferenceAttributes(preferences: AppPreferences): Record<string, string> {
   return {
-    "data-bf-theme": preferences.preset,
+    "data-bf-colors": preferences.colors,
     "data-bf-font": preferences.font,
     "data-bf-mode": preferences.mode,
     "data-bf-layout": preferences.layout,
@@ -333,10 +334,10 @@ export function usePreferences(remote: string | undefined, storageKey: string, s
     [commit, preferences]
   );
 
-  /** A theme recolours; it deliberately leaves the layout choices alone. */
-  const applyPreset = useCallback(
-    (id: ThemePreset) => {
-      commit({ ...preferences, preset: id });
+  /** A colour set recolours the hints; it deliberately leaves the layout choices alone. */
+  const applyColors = useCallback(
+    (id: ColorPreset) => {
+      commit({ ...preferences, colors: id });
     },
     [commit, preferences]
   );
@@ -348,5 +349,5 @@ export function usePreferences(remote: string | undefined, storageKey: string, s
     [preferences]
   );
 
-  return { preferences, update, applyPreset, restoreDefaults, isDefault };
+  return { preferences, update, applyColors, restoreDefaults, isDefault };
 }

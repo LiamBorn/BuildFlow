@@ -20,7 +20,8 @@
 import { useEffect, useRef, useState } from "react";
 
 /** The status colours the miniature's last column uses — the palette the real board uses. */
-const STATUS_BLOCKS = ["#138a42", "#0032af", "#b45309", "#c62828"];
+// the four status blocks in the Default Colors set — grays, since the overlay plays outside the shell where the hint tokens do not reach
+const STATUS_BLOCKS = ["#4a4a4a", "#8f8f8f", "#626262", "#1c1c1c"];
 /** How far along each row reads. Fixed, not random, so every play of the loop is the same. */
 const ROW_PROGRESS = [38, 54, 70, 86];
 

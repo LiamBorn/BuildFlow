@@ -32,6 +32,46 @@ describe("the top bar's Preferences panel", () => {
     localStorage.clear();
   });
 
+  /* The gear is a toggle, and the panel's own "a click outside closes me" listener used to
+     fight it: the gear sits OUTSIDE the panel, so pressing it closed the panel on mousedown
+     and the button's click then toggled the state straight back to open. The panel looked
+     stuck open and could only be dismissed by clicking elsewhere, which is what was
+     reported. Scoping the listener to the gear's anchor — the wrapper holding both, the way
+     the account menu beside it already does — is the fix.
+
+     The press has to be fired as a real sequence: `fireEvent.click` alone never dispatches
+     the mousedown the listener reads, so a click-only test passes even with the bug. */
+  const press = (element: Element) => {
+    fireEvent.mouseDown(element);
+    fireEvent.click(element);
+  };
+
+  it("closes from the same gear that opens it, and still closes from outside and Escape", async () => {
+    render(<App />);
+    await enterDashboard();
+    const gear = await screen.findByRole("button", { name: "Layout preferences" });
+    const panel = () => screen.queryByRole("dialog", { name: "Preferences" });
+
+    press(gear);
+    expect(panel()).toBeInTheDocument();
+    expect(gear).toHaveAttribute("aria-expanded", "true");
+
+    press(gear);
+    expect(panel()).toBeNull();
+    expect(gear).toHaveAttribute("aria-expanded", "false");
+
+    press(gear);
+    expect(panel()).toBeInTheDocument();
+
+    /* And a press ANYWHERE ELSE still closes it, which is what that listener is for.
+       (Escape is the panel's third way out; it is left to the browser, where it was
+       checked with a real key press — a keydown fired in this environment does not
+       reach a document-level listener, so a case here would prove nothing.) */
+    press(document.body);
+    await waitFor(() => expect(panel()).toBeNull());
+    expect(gear).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("carries all eight topics from the reference, in its order", async () => {
     const panel = await openPreferences();
 
@@ -41,15 +81,7 @@ describe("the top bar's Preferences panel", () => {
     // The seven labelled topics, in the order the reference puts them in, and
     // then the eighth: the button at the foot.
     const labels = [...panel.querySelectorAll(".pref-label")].map((node) => node.textContent?.trim());
-    expect(labels).toEqual([
-      "Theme Preset",
-      "Fonts",
-      "Theme Mode",
-      "Page Layout",
-      "Navbar Behavior",
-      "Sidebar Style",
-      "Sidebar Collapse Mode"
-    ]);
+    expect(labels).toEqual(["Colors", "Fonts", "Theme Mode", "Page Layout", "Navbar Behavior", "Sidebar Style", "Sidebar Collapse Mode"]);
     expect(within(panel).getByRole("button", { name: /Restore Defaults|Already the defaults/ })).toBeInTheDocument();
 
     // Every option the reference shows, by name.
@@ -74,7 +106,7 @@ describe("the top bar's Preferences panel", () => {
       for (const radio of within(radios).getAllByRole("radio")) expect(radio).toBeEnabled();
     }
     expect(within(panel).getByLabelText("Fonts")).toBeEnabled();
-    expect(within(panel).getByLabelText("Theme Preset")).toBeEnabled();
+    expect(within(panel).getByLabelText("Colors")).toBeEnabled();
     expect(within(panel).queryByText(/no dark palette yet/i)).not.toBeInTheDocument();
     expect(within(panel).queryByText(/One family ships today/i)).not.toBeInTheDocument();
   });
@@ -158,39 +190,42 @@ describe("the top bar's Preferences panel", () => {
     );
   });
 
-  it("offers the four themes, and picking one recolours without moving the layout", async () => {
+  it("offers the colour sets — Default (white, gray, black) and Blue — and carries the choice on data-bf-colors, never a theme", async () => {
     const panel = await openPreferences();
-    const picker = within(panel).getByLabelText("Theme Preset") as HTMLSelectElement;
-    expect([...picker.options].map((option) => option.textContent)).toEqual([
-      "Default (Clean)",
-      "Dark",
-      "Red (Bold)",
-      "Purple (Modern)",
-      "Green (Earth)"
-    ]);
-
-    fireEvent.change(picker, { target: { value: "red" } });
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe("red"));
-    /* A theme is a theme: it must NOT move the four layout choices. That separation is
-       the whole reason the preset stopped being a bundle of them. */
+    const picker = within(panel).getByLabelText("Colors") as HTMLSelectElement;
+    expect([...picker.options].map((option) => option.textContent)).toEqual(["Default", "Blue"]);
+    expect(shell().dataset.bfColors).toBe("default");
+    // picking Blue recolours the hints and nothing else: the layout choices stay put
+    fireEvent.change(picker, { target: { value: "blue" } });
+    await waitFor(() => expect(shell().dataset.bfColors).toBe("blue"));
     expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout);
     expect(shell().dataset.bfSidebar).toBe(DEFAULT_PREFERENCES.sidebar);
-
-    fireEvent.change(picker, { target: { value: "green" } });
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe("green"));
+    fireEvent.change(picker, { target: { value: "default" } });
+    await waitFor(() => expect(shell().dataset.bfColors).toBe("default"));
+    /* The themes are gone: a colour set only supplies hints of colour, so the shell no
+       longer carries a theme at all. */
+    expect(shell().dataset.bfTheme).toBeUndefined();
+    // the swatch shows the set's three colours
+    const swatch = panel.querySelector(".pref-select-dot.is-colors") as HTMLElement;
+    expect(swatch.style.background).toContain("conic-gradient");
+    expect(swatch.style.background).toContain("#ffffff");
+    expect(swatch.style.background).toContain("#1c1c1c");
   });
 
-  it("puts a theme and the layout back with Restore Defaults", async () => {
+  it("puts the layout and the colour set back with Restore Defaults", async () => {
     const panel = await openPreferences();
 
-    fireEvent.change(within(panel).getByLabelText("Theme Preset"), { target: { value: "purple" } });
+    fireEvent.change(within(panel).getByLabelText("Colors"), { target: { value: "blue" } });
+    await waitFor(() => expect(shell().dataset.bfColors).toBe("blue"));
     choose(panel, "Page Layout", "Full Width");
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe("purple"));
-    expect(shell().dataset.bfLayout).toBe("full");
+    choose(panel, "Sidebar Style", "Floating");
+    await waitFor(() => expect(shell().dataset.bfLayout).toBe("full"));
+    expect(shell().dataset.bfSidebar).toBe("floating");
 
     fireEvent.click(within(panel).getByRole("button", { name: "Restore Defaults" }));
-    await waitFor(() => expect(shell().dataset.bfTheme).toBe(DEFAULT_PREFERENCES.preset));
-    expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout);
+    await waitFor(() => expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout));
+    expect(shell().dataset.bfSidebar).toBe(DEFAULT_PREFERENCES.sidebar);
+    expect(shell().dataset.bfColors).toBe(DEFAULT_PREFERENCES.colors);
     // Nothing left to restore, so the button says so instead of pretending.
     expect(within(panel).getByRole("button", { name: "Already the defaults" })).toBeDisabled();
   });

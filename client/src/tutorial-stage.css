@@ -45,7 +45,7 @@
   justify-content: flex-end;
   height: 112px;
   padding: 12px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
 }
 .bftu-close {
   display: grid;
@@ -110,7 +110,7 @@
 .bftu-scene-line.is-sm {
   width: 20%;
   height: 6px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.5);
 }
 .bftu-scene-body {
   position: relative;
@@ -156,7 +156,7 @@
   flex: none;
   width: 56px;
   height: 7px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.5);
 }
 
 /* ---- TILES: the dashboard's KPI cards --------------------------------- */
@@ -178,7 +178,7 @@
   width: 15px;
   height: 15px;
   border-radius: 5px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.22);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.22);
 }
 .bftu-tile-label {
   display: block;
@@ -192,7 +192,7 @@
   width: 34%;
   height: 11px;
   border-radius: 3px;
-  background: var(--bf-accent, #2f6bff);
+  background: var(--bf-accent, #7d7d7d);
   animation: bftu-rise 4.4s ease-in-out infinite both;
 }
 .bftu-tile:nth-child(2) .bftu-tile-figure {
@@ -293,7 +293,7 @@
 .bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(5),
 .bftu-board-row:nth-child(4) .bftu-board-cell:nth-child(4),
 .bftu-board-row:nth-child(5) .bftu-board-cell:nth-child(6) {
-  background: var(--bf-accent, #2f6bff);
+  background: var(--bf-accent, #7d7d7d);
   animation: bftu-pop 4.4s ease-out infinite both;
 }
 .bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(2) {
@@ -357,7 +357,7 @@
 .bftu-cal-cell:nth-child(17),
 .bftu-cal-cell:nth-child(23) {
   border-color: transparent;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.42);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.42);
 }
 
 /* ---- LANES: kanban columns ------------------------------------------- */
@@ -380,7 +380,7 @@
   width: 70%;
   height: 5px;
   border-radius: 999px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.45);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.45);
 }
 .bftu-lane-card {
   display: block;
@@ -417,7 +417,7 @@
   display: block;
   height: 11px;
   border-radius: 3px;
-  background: var(--bf-accent, #2f6bff);
+  background: var(--bf-accent, #7d7d7d);
   animation: bftu-rise 4.4s ease-in-out infinite both;
 }
 .bftu-time-row:nth-child(2) .bftu-time-bar {
@@ -467,7 +467,7 @@
   width: 16px;
   height: 16px;
   border-radius: 5px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.2);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.2);
   animation: bftu-pop 4.4s ease-out infinite both;
 }
 .bftu-list-row:nth-child(2) .bftu-list-mark {
@@ -535,7 +535,7 @@
   }
   14%,
   86% {
-    background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.4);
+    background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.4);
   }
   96%,
   100% {
@@ -600,7 +600,7 @@
   width: 30px;
   height: 26px;
   border-radius: 4px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
 }
 .bftu-status-row {
   display: flex;
@@ -629,7 +629,7 @@
   margin-right: 16px;
   overflow: hidden;
   border-radius: 6px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.05);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.05);
 }
 .bftu-map-grid {
   position: absolute;
@@ -644,8 +644,8 @@
   left: 28px;
   width: 58%;
   height: 44px;
-  border-top: 2px dashed rgba(var(--bf-accent-rgb, 47, 107, 255), 0.55);
-  border-right: 2px dashed rgba(var(--bf-accent-rgb, 47, 107, 255), 0.55);
+  border-top: 2px dashed rgba(var(--bf-accent-rgb, 111, 134, 11), 0.55);
+  border-right: 2px dashed rgba(var(--bf-accent-rgb, 111, 134, 11), 0.55);
   border-top-right-radius: 14px;
 }
 .bftu-map-pin {
@@ -654,7 +654,7 @@
   height: 11px;
   border: 2px solid var(--bf-surface, #ffffff);
   border-radius: 999px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   animation: bftu-pop 4.4s ease-out infinite both;
 }
 .bftu-map-pin:nth-child(3) {
@@ -704,7 +704,7 @@
   width: 62px;
   height: 19px;
   border-radius: 999px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   animation: bftu-press 4.4s ease-out infinite both;
 }
 .bftu-hit.is-cell {
@@ -714,7 +714,7 @@
   width: 42px;
   height: 17px;
   border-radius: 4px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   animation: bftu-press 4.4s ease-out infinite both;
 }
 .bftu-hit.is-submit {
@@ -722,7 +722,7 @@
   width: 58px;
   height: 17px;
   border-radius: 999px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   animation: bftu-press 4.4s ease-out infinite both;
   animation-delay: 1.4s;
 }
@@ -733,23 +733,23 @@
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   animation: bftu-press 4.4s ease-out infinite both;
 }
 @keyframes bftu-press {
   0%,
   40% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb, 111, 134, 11), 0.5);
   }
   48% {
     transform: scale(0.93);
-    box-shadow: 0 0 0 9px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+    box-shadow: 0 0 0 9px rgba(var(--bf-accent-rgb, 111, 134, 11), 0);
   }
   58%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+    box-shadow: 0 0 0 0 rgba(var(--bf-accent-rgb, 111, 134, 11), 0);
   }
 }
 
@@ -761,8 +761,8 @@
   width: 48px;
   height: 20px;
   border-radius: 4px;
-  background: var(--bf-accent, #2f6bff);
-  box-shadow: 0 8px 18px rgba(var(--bf-accent-rgb, 47, 107, 255), 0.42);
+  background: var(--bf-accent, #7d7d7d);
+  box-shadow: 0 8px 18px rgba(var(--bf-accent-rgb, 111, 134, 11), 0.42);
   animation: bftu-carry 4.4s cubic-bezier(0.22, 1, 0.36, 1) infinite both;
 }
 @keyframes bftu-carry {
@@ -899,8 +899,8 @@
   margin-top: 10px;
   padding: 8px 11px;
   border-radius: 8px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.08);
-  color: var(--bf-accent-dark, #1f57e0);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.08);
+  color: var(--bf-accent-dark, #7d7d7d);
   font-size: 13px;
   font-weight: 600;
 }
@@ -924,7 +924,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   transition: width 0.26s var(--bf-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 .bftu-steps {
@@ -958,7 +958,7 @@
   padding: 10px 20px;
   border: 0;
   border-radius: 8px;
-  background: var(--bf-accent-fill, #2563eb);
+  background: var(--bf-accent-fill, #e5e5e5);
   color: var(--bf-on-accent, #ffffff);
   font-size: 14px;
   font-weight: 650;
@@ -968,7 +968,7 @@
     opacity 0.16s ease;
 }
 .bftu-next:hover:not(:disabled) {
-  background: var(--bf-accent-dark, #1f57e0);
+  background: var(--bf-accent-dark, #7d7d7d);
 }
 .bftu-next:disabled {
   opacity: 0.5;
@@ -997,6 +997,6 @@
   /* the fields are left FILLED rather than blank: a still of a finished screen still shows
      what the step is about, and the heading and body carry the rest */
   .bftu-field {
-    background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.4);
+    background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.4);
   }
 }

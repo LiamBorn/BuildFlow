@@ -182,7 +182,7 @@
   height: 18px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.18);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.18);
 }
 .bfsu-avatar::before {
   content: "";
@@ -192,7 +192,7 @@
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.72);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.72);
   transform: translateX(-50%);
 }
 .bfsu-avatar::after {
@@ -203,21 +203,21 @@
   width: 13px;
   height: 10px;
   border-radius: 999px 999px 0 0;
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.72);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.72);
   transform: translateX(-50%);
 }
 /* four crews, four tints — the same accent at four strengths, so it still follows the theme */
 .bfsu-panel.is-crews .bfsu-row:nth-child(2) .bfsu-avatar::before,
 .bfsu-panel.is-crews .bfsu-row:nth-child(2) .bfsu-avatar::after {
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.5);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.5);
 }
 .bfsu-panel.is-crews .bfsu-row:nth-child(3) .bfsu-avatar::before,
 .bfsu-panel.is-crews .bfsu-row:nth-child(3) .bfsu-avatar::after {
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.86);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.86);
 }
 .bfsu-panel.is-crews .bfsu-row:nth-child(4) .bfsu-avatar::before,
 .bfsu-panel.is-crews .bfsu-row:nth-child(4) .bfsu-avatar::after {
-  background: rgba(var(--bf-accent-rgb, 47, 107, 255), 0.62);
+  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.62);
 }
 
 /* progress sits in a track, with the stub where its figure would be */
@@ -234,7 +234,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: var(--bf-accent, #2f6bff);
+  background: var(--bf-accent, #7d7d7d);
 }
 .bfsu-figure {
   flex: none;
@@ -283,26 +283,26 @@
   0% {
     opacity: 0;
     transform: translate(18px, -14px) scale(0.92);
-    box-shadow: 0 0 0 1.5px var(--bf-accent, #2f6bff);
+    box-shadow: 0 0 0 1.5px var(--bf-accent, #7d7d7d);
   }
   9% {
     opacity: 1;
     transform: none;
-    box-shadow: 0 0 0 1.5px var(--bf-accent, #2f6bff);
+    box-shadow: 0 0 0 1.5px var(--bf-accent, #7d7d7d);
   }
   22% {
-    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 111, 134, 11), 0);
   }
   88% {
     opacity: 1;
     transform: none;
-    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 111, 134, 11), 0);
   }
   97%,
   100% {
     opacity: 0;
     transform: none;
-    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 47, 107, 255), 0);
+    box-shadow: 0 0 0 1.5px rgba(var(--bf-accent-rgb, 111, 134, 11), 0);
   }
 }
 

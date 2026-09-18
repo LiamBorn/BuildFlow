@@ -1,20 +1,22 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import {
   clampItem,
+  DASH_GAP,
   collides,
   compact,
-  dragFloor,
   itemRect,
   layoutRows,
   moveItem,
+  parseStoredBoard,
   placeItem,
   reconcileLayout,
   resizeItem,
   snapDelta,
-  snapDragCell,
-  snapDragColumn,
-  snapToHalf,
-  type GridItem, parseStoredBoard
+  snapDragSameShape,
+  type GridItem
 } from "./dashGrid";
 
 const item = (id: string, x: number, y: number, w: number, h: number): GridItem => ({ id, x, y, w, h });
@@ -118,72 +120,9 @@ describe("dashGrid", () => {
     expect(at(layout, "c")).toMatchObject({ x: 3, y: 2, w: 3 });
   });
 
-  it("puts a dragged panel in the half its pointer is over", () => {
-    expect(snapToHalf(0, 3)).toBe(0);
-    expect(snapToHalf(1, 3)).toBe(0);
-    expect(snapToHalf(2.9, 3)).toBe(0);
-    expect(snapToHalf(3, 3)).toBe(3);
-    expect(snapToHalf(5, 3)).toBe(3);
-    expect(snapToHalf(-2, 3)).toBe(0);
-  });
 
-  it("a carried panel is full width past either edge or over the middle third, half width over an outer third", () => {
-    // half a column beyond the left edge
-    expect(snapDragColumn(-0.5, 3)).toEqual({ x: 0, w: 6, full: true });
-    expect(snapDragColumn(-4, 3)).toEqual({ x: 0, w: 6, full: true });
-    // the left third
-    expect(snapDragColumn(-0.4, 3)).toEqual({ x: 0, w: 3, full: false });
-    expect(snapDragColumn(0, 3)).toEqual({ x: 0, w: 3, full: false });
-    expect(snapDragColumn(1.9, 3)).toEqual({ x: 0, w: 3, full: false });
-    // the middle third, where the board's centre is
-    expect(snapDragColumn(2, 3)).toEqual({ x: 0, w: 6, full: true });
-    expect(snapDragColumn(2.85, 3)).toEqual({ x: 0, w: 6, full: true });
-    expect(snapDragColumn(3.9, 3)).toEqual({ x: 0, w: 6, full: true });
-    // the right third
-    expect(snapDragColumn(4, 3)).toEqual({ x: 3, w: 3, full: false });
-    expect(snapDragColumn(5.4, 3)).toEqual({ x: 3, w: 3, full: false });
-    // within half a column of the right edge, and beyond it
-    expect(snapDragColumn(5.5, 3)).toEqual({ x: 0, w: 6, full: true });
-    expect(snapDragColumn(7, 3)).toEqual({ x: 0, w: 6, full: true });
-  });
 
-  it("past the top edge a carried panel is half width on the first row, whatever the column rules say", () => {
-    expect(snapDragCell(-1, -1, 3, 10)).toEqual({ x: 0, y: 0, w: 3, full: false, top: true, bottom: false });
-    expect(snapDragCell(5, -2, 3, 10)).toEqual({ x: 3, y: 0, w: 3, full: false, top: true, bottom: false });
-    expect(snapDragCell(3.2, -1, 3, 10)).toEqual({ x: 3, y: 0, w: 3, full: false, top: true, bottom: false });
-    // inside the board the column rules still apply: edges and the middle third take the row, an outer third stays half
-    expect(snapDragCell(-1, 2, 3, 10)).toEqual({ x: 0, y: 2, w: 6, full: true, top: false, bottom: false });
-    expect(snapDragCell(6, 0, 3, 10)).toEqual({ x: 0, y: 0, w: 6, full: true, top: false, bottom: false });
-    expect(snapDragCell(1, 3, 3, 10)).toEqual({ x: 0, y: 3, w: 3, full: false, top: false, bottom: false });
-    expect(snapDragCell(3, 3, 3, 10)).toEqual({ x: 0, y: 3, w: 6, full: true, top: false, bottom: false });
-    expect(snapDragCell(4.5, 3, 3, 10)).toEqual({ x: 3, y: 3, w: 3, full: false, top: false, bottom: false });
-    // the top and bottom zones ignore the middle: half width in the half the pointer is over
-    expect(snapDragCell(2.5, -1, 3, 10)).toEqual({ x: 0, y: 0, w: 3, full: false, top: true, bottom: false });
-    expect(snapDragCell(3.5, 10, 3, 10)).toEqual({ x: 3, y: 10, w: 3, full: false, top: false, bottom: true });
-  });
 
-  it("past the bottom a carried panel is half width on the floor row, whatever the side edges say", () => {
-    // the floor is where the others end once the carried panel is gone and the rest pack upward
-    const items = [
-      { id: "a", x: 0, y: 0, w: 3, h: 6 },
-      { id: "b", x: 3, y: 0, w: 3, h: 4 },
-      { id: "c", x: 0, y: 6, w: 6, h: 5 }
-    ];
-    expect(dragFloor(items, "b")).toBe(11);
-    expect(dragFloor(items, "c")).toBe(6);
-    // its top at or below the floor: half width on the floor row, even past a side edge
-    expect(snapDragCell(-1, 11, 3, 11)).toEqual({ x: 0, y: 11, w: 3, full: false, top: false, bottom: true });
-    expect(snapDragCell(5, 14, 3, 11)).toEqual({ x: 3, y: 11, w: 3, full: false, top: false, bottom: true });
-    // still overlapping the last row, the side edges still win
-    expect(snapDragCell(-1, 10, 3, 11)).toEqual({ x: 0, y: 10, w: 6, full: true, top: false, bottom: false });
-    // dropped there it packs under the full-width panel in its half
-    const zone = snapDragCell(5, 14, 3, dragFloor(items, "b"));
-    expect(placeItem(items, "b", zone.x, zone.y, zone.w, {})).toEqual([
-      { id: "a", x: 0, y: 0, w: 3, h: 6 },
-      { id: "c", x: 0, y: 6, w: 6, h: 5 },
-      { id: "b", x: 3, y: 11, w: 3, h: 4 }
-    ]);
-  });
 
   it("placing a panel at half width beside another lands them side by side and settles the rest", () => {
     const start = [item("a", 0, 0, 6, 4), item("b", 0, 4, 6, 4), item("c", 0, 8, 6, 2)];
@@ -217,5 +156,35 @@ describe("dashGrid", () => {
     expect(snapDelta(-60, 100, 16)).toBe(-1);
     expect(itemRect(item("a", 1, 2, 3, 2), 100, 40, 16)).toEqual({ left: 116, top: 112, width: 332, height: 96 });
     expect(clampItem(item("a", -2, -2, 9, 0), { minH: 1 }, 6)).toMatchObject({ x: 0, y: 0, w: 6, h: 1 });
+  });
+});
+
+describe("snapDragSameShape", () => {
+  /* A carried panel keeps the shape it was lifted with (2026-09-15, on the reference): the
+     column is the nearest it still fits in at its own width, the rows are clamped to the board. */
+  it("keeps the width and snaps to the nearest column the panel fits in", () => {
+    expect(snapDragSameShape(0.4, 2, 3, 10)).toEqual({ x: 0, y: 2 });
+    expect(snapDragSameShape(2.6, 2, 3, 10)).toEqual({ x: 3, y: 2 });
+    // a three-wide panel cannot start past column 3 on a six-column board
+    expect(snapDragSameShape(5, 2, 3, 10)).toEqual({ x: 3, y: 2 });
+    // a full-width panel always sits at 0
+    expect(snapDragSameShape(2, 4, 6, 10)).toEqual({ x: 0, y: 4 });
+  });
+  it("takes the first row past the top and the floor row past the bottom", () => {
+    expect(snapDragSameShape(1, -3, 3, 10)).toEqual({ x: 1, y: 0 });
+    expect(snapDragSameShape(1, 14, 3, 10)).toEqual({ x: 1, y: 10 });
+  });
+});
+
+describe("the board's gap", () => {
+  /* The sections sit as far apart as the Schedule Status band sits from the first of them:
+     that band is a child of the page stack `.dx-inner`, so its gap and DASH_GAP must agree. */
+  it("equals the page stack's gap, so panels sit as far apart as the band sits from them", () => {
+    const sheet = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "hs-home.css"), "utf8");
+    // the sheet declares this selector twice (22px, then 30px); the later one is the one that wins
+    const rules = [...sheet.matchAll(/\.dash-rx\.hs-home \.dx-inner \{[^}]*\}/g)];
+    expect(rules.length, ".dx-inner rules").toBeGreaterThan(0);
+    const gap = rules[rules.length - 1][0].match(/gap:\s*(\d+)px/);
+    expect(gap?.[1]).toBe(String(DASH_GAP));
   });
 });

@@ -16,7 +16,12 @@ export type GridLimits = { minW?: number; minH?: number; maxW?: number; maxH?: n
 export const DASH_COLS = 6;
 /** One grid row in px, and the gutter between cells. */
 export const DASH_ROW_UNIT = 40;
-export const DASH_GAP = 16;
+/* 30, not 16 (2026-09-15): the user asked for the sections to sit as far apart as the
+   Schedule Status band sits from the first of them, and that band is a child of the page's
+   `.dx-inner` stack, whose gap is 30px (hs-home.css). A test keeps the two equal. Layouts are
+   stored in grid units, so a saved board is untouched by the change; only the air between
+   cells grows, on both axes. */
+export const DASH_GAP = 30;
 
 const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
 
@@ -85,29 +90,6 @@ export function moveItem(items: GridItem[], id: string, x: number, y: number, li
   return settle([moved, ...items.filter((item) => item.id !== id)], id);
 }
 
-/** Half the board: the width a dragged panel snaps to. */
-export const HALF_COLS = DASH_COLS / 2;
-
-/**
- * The half of the board a carried panel belongs to for a raw column — the
- * unrounded column its left side (where the grip, and so the pointer, sits) is
- * over: the left half while that is left of the middle, else the right.
- */
-export const snapToHalf = (x: number, w: number, cols = DASH_COLS) => (x < cols / 2 ? 0 : cols - w);
-
-/**
- * Where a carried panel lands for a raw column, read as where the pointer is
- * over the board: past either edge — half a column beyond the left edge, or
- * within half a column of the right edge and beyond — or over the middle third,
- * it takes the full width; over an outer third it is half width in that half.
- */
-export const snapDragColumn = (rawX: number, halfW: number, cols = DASH_COLS): { x: number; w: number; full: boolean } => {
-  const third = cols / 3;
-  const pastEdge = rawX <= -0.5 || rawX >= cols - 0.5;
-  const middle = rawX >= third && rawX < cols - third;
-  return pastEdge || middle ? { x: 0, w: cols, full: true } : { x: snapToHalf(rawX, halfW, cols), w: halfW, full: false };
-};
-
 /**
  * The row a carried panel counts as "past the bottom" from: the last row the
  * other panels occupy once `id` leaves and the rest pack upward into its space.
@@ -115,25 +97,19 @@ export const snapDragColumn = (rawX: number, halfW: number, cols = DASH_COLS): {
 export const dragFloor = (items: GridItem[], id: string): number => layoutRows(compact(items.filter((item) => item.id !== id)));
 
 /**
- * Where a carried panel lands for a raw cell. Pushed past the top edge it is
- * half width, in the half the pointer is over, on the first row; pushed past
- * the bottom — its top at or below `floor` — the same on the floor row. Top and
- * bottom win over the column rules, so a panel dragged up or down never flips
- * to full width on the way. Anywhere between, the column rules apply.
+ * Where a carried panel lands, keeping the shape it was picked up with (2026-09-15, on the
+ * reference recording: a widget looks the same wherever it is moved to; only the resize handle
+ * changes its size). The column is the nearest one the panel still fits in at its own width;
+ * pushed past the top it takes the first row, pushed past the bottom the floor row.
  */
-export const snapDragCell = (
-  rawX: number,
-  rawY: number,
-  halfW: number,
-  floor: number,
-  cols = DASH_COLS
-): { x: number; y: number; w: number; full: boolean; top: boolean; bottom: boolean } => {
-  if (rawY < 0) return { x: snapToHalf(rawX, halfW, cols), y: 0, w: halfW, full: false, top: true, bottom: false };
-  if (rawY >= floor) return { x: snapToHalf(rawX, halfW, cols), y: floor, w: halfW, full: false, top: false, bottom: true };
-  return { ...snapDragColumn(rawX, halfW, cols), y: rawY, top: false, bottom: false };
+export const snapDragSameShape = (rawX: number, rawY: number, w: number, floor: number, cols = DASH_COLS): { x: number; y: number } => {
+  const width = Math.max(1, Math.min(w, cols));
+  const x = Math.max(0, Math.min(cols - width, Math.round(rawX)));
+  const y = rawY < 0 ? 0 : Math.min(Math.round(rawY), Math.max(0, floor));
+  return { x, y };
 };
 
-/** Put a panel at a cell with a given width (a drag lands it at half width), then settle the rest. */
+/** Put a panel at a cell with a given width, then settle the rest. */
 export function placeItem(
   items: GridItem[],
   id: string,
@@ -224,7 +200,8 @@ export function reconcileLayout(
 }
 
 /** What the board saves: where every shown panel sits, and which panels the person has hidden. */
-export type StoredBoard = { items: unknown; hidden: string[] };
+/** `fit` marks a board whose heights follow the content (the Reset layout) rather than the person's own. */
+export type StoredBoard = { items: unknown; hidden: string[]; fit?: boolean };
 
 /**
  * Reads a saved board. The current form is `{ items, hidden }`; a board saved
@@ -234,10 +211,10 @@ export type StoredBoard = { items: unknown; hidden: string[] };
 export function parseStoredBoard(raw: unknown): StoredBoard | null {
   if (Array.isArray(raw)) return { items: raw, hidden: [] };
   if (!raw || typeof raw !== "object") return null;
-  const candidate = raw as { items?: unknown; hidden?: unknown };
+  const candidate = raw as { items?: unknown; hidden?: unknown; fit?: unknown };
   if (!Array.isArray(candidate.items)) return null;
   const hidden = Array.isArray(candidate.hidden) ? candidate.hidden.filter((id): id is string => typeof id === "string") : [];
-  return { items: candidate.items, hidden: Array.from(new Set(hidden)) };
+  return { items: candidate.items, hidden: Array.from(new Set(hidden)), ...(candidate.fit === true ? { fit: true } : {}) };
 }
 
 /** How many whole cells a pointer travelled. */

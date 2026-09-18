@@ -1,4 +1,5 @@
 import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { AnimatedFigure } from "./components/ui/animated-figure";
 import {
   AlertTriangle,
   ArrowRight,
@@ -132,7 +133,9 @@ function TcStat({
       </span>
       <div>
         <p>{label}</p>
-        <strong>{value}</strong>
+        <strong>
+        <AnimatedFigure text={String(value)} />
+      </strong>
         <em>{hint}</em>
       </div>
     </article>
@@ -171,8 +174,8 @@ function SectionCard({
   );
 }
 
-const chartGrid = "#dde6ef";
-const chartTick = { fill: "#94a4b8", fontSize: 12 };
+const chartGrid = "var(--bf-line-solid)";
+const chartTick = { fill: "var(--bf-ink-faint)", fontSize: 12 };
 
 // ---------------------------------------------------------------------------
 // TimeCard page
@@ -1230,17 +1233,17 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
               <CartesianGrid stroke={chartGrid} strokeDasharray="4 6" vertical={false} />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} />
-              <Tooltip cursor={{ fill: "rgba(9, 32, 56, 0.04)" }} />
-              <Bar dataKey="planned" name="Planned" fill="#0a233a" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
-              <Bar dataKey="actual" name="Actual" fill="#fb8500" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
+              <Tooltip cursor={{ fill: "rgba(28, 28, 28, 0.04)" }} />
+              <Bar dataKey="planned" name="Planned" fill="var(--bf-color-series-1)" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
+              <Bar dataKey="actual" name="Actual" fill="var(--bf-color-series-2)" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
             </BarChart>
           </ResponsiveContainer>
           <div className="tc-legend">
             <span>
-              <i style={{ background: "#0a233a" }} /> Planned
+              <i style={{ background: "var(--bf-color-series-1)" }} /> Planned
             </span>
             <span>
-              <i style={{ background: "#fb8500" }} /> Actual
+              <i style={{ background: "var(--bf-color-warn)" }} /> Actual
             </span>
           </div>
         </div>
@@ -1327,9 +1330,9 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <CartesianGrid stroke={chartGrid} strokeDasharray="4 6" vertical={false} />
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} />
-              <Tooltip cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="planned" stroke="#0a233a" strokeWidth={2} dot={{ r: 3 }} animationDuration={600} />
-              <Line type="monotone" dataKey="actual" stroke="#fb8500" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
+              <Tooltip cursor={{ stroke: "var(--bf-line-solid)", strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="planned" stroke="var(--bf-color-series-1)" strokeWidth={2} dot={{ r: 3 }} animationDuration={600} />
+              <Line type="monotone" dataKey="actual" stroke="var(--bf-color-series-2)" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1341,16 +1344,16 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
             <AreaChart data={laborForecastIQ} margin={{ top: 10, right: 16, bottom: 4, left: -14 }}>
               <defs>
                 <linearGradient id="tcForecastIQ" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1568c9" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#1568c9" stopOpacity={0} />
+                  <stop offset="0%" stopColor="var(--bf-color-accent)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--bf-color-accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke={chartGrid} strokeDasharray="4 6" vertical={false} />
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} domain={[1200, 1800]} />
-              <Tooltip cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
-              <Area type="monotone" dataKey="forecastIQ" stroke="#1568c9" strokeWidth={3} fill="url(#tcForecastIQ)" animationDuration={600} />
-              <Line type="monotone" dataKey="actual" stroke="#20b15a" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
+              <Tooltip cursor={{ stroke: "var(--bf-line-solid)", strokeWidth: 2 }} />
+              <Area type="monotone" dataKey="forecastIQ" stroke="var(--bf-color-series-1)" strokeWidth={3} fill="url(#tcForecastIQ)" animationDuration={600} />
+              <Line type="monotone" dataKey="actual" stroke="var(--bf-color-series-2)" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1363,10 +1366,10 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <CartesianGrid stroke={chartGrid} strokeDasharray="4 6" vertical={false} />
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} domain={[0, 1.1]} />
-              <Tooltip cursor={{ fill: "rgba(9, 32, 56, 0.04)" }} />
-              <Bar dataKey="value" fill="#20b15a" radius={[5, 5, 0, 0]} barSize={26} animationDuration={400}>
+              <Tooltip cursor={{ fill: "rgba(28, 28, 28, 0.04)" }} />
+              <Bar dataKey="value" fill="var(--bf-color-ok)" radius={[5, 5, 0, 0]} barSize={26} animationDuration={400}>
                 {productivityTrend.map((point) => (
-                  <Cell key={point.week} fill={point.value >= 0.9 ? "#20b15a" : "#7cc39a"} />
+                  <Cell key={point.week} fill={point.value >= 0.9 ? "var(--bf-color-ok)" : "var(--bf-color-ok-edge)"} />
                 ))}
               </Bar>
             </BarChart>
@@ -1422,9 +1425,9 @@ function ComplianceTab({ model, entries }: { model: Model; entries: TcEntry[] })
     return acc;
   }, {});
   const classData = [
-    { name: "Employee", value: classCounts.Employee ?? 0, color: "#1568c9" },
-    { name: "Subcontractor", value: classCounts.Subcontractor ?? 0, color: "#6d45d8" },
-    { name: "Apprentice", value: classCounts.Apprentice ?? 0, color: "#fb8500" }
+    { name: "Employee", value: classCounts.Employee ?? 0, color: "var(--bf-color-accent)" },
+    { name: "Subcontractor", value: classCounts.Subcontractor ?? 0, color: "var(--bf-color-info)" },
+    { name: "Apprentice", value: classCounts.Apprentice ?? 0, color: "var(--bf-color-warn)" }
   ];
 
   const certifiedRows = model.workers
@@ -1690,7 +1693,7 @@ export function TimeCardDashboardCards({
           <span className="tc-spark">
             <ResponsiveContainer width="100%" height={40}>
               <LineChart data={laborCostTrend} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
-                <Line type="monotone" dataKey="actual" stroke="#fb8500" strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="actual" stroke="var(--bf-color-series-1)" strokeWidth={2} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </span>

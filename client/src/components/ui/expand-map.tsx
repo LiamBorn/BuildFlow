@@ -53,7 +53,7 @@ export function LocationMap({
   coordinates = "37.7749° N, 122.4194° W",
   jobCount,
   meta,
-  accent = "#2f6bff",
+  accent = "var(--bf-color-accent, #1c1c1c)",
   live = true,
   selected = false,
   className,

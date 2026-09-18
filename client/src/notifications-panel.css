@@ -444,3 +444,31 @@
     transition: none;
   }
 }
+
+/* ---- the bell's badge --------------------------------------------------------
+   Four sheets already shape .bubble (styles, topbar-redesign, app-shell-hubspot,
+   daylight) and between them it was a 16px box with 2px borders around an 11px
+   figure -- 12px of room for the digits, which is why "16" sat off its centre.
+   Declared once more here, one class up, as a flex box that centres its text on
+   both axes by construction: an 18px circle that widens for two digits, the
+   figure on a line box exactly its own size, tabular digits so "11" and "16"
+   are the same width, and a ring in the top bar's own surface so the badge cuts
+   out of the bell instead of wearing a navy outline on a white bar. */
+.hs-shell.bf-shell .topbar.hs-topbar .notification-center .bubble {
+  top: 3px;
+  right: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--bf-surface, #ffffff);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

@@ -16,10 +16,10 @@ import { Check, ChevronDown, RotateCcw, Settings } from "lucide-react";
 import {
   FONT_GROUP_LABELS,
   FONT_OPTIONS,
-  THEME_PRESETS,
+  COLOR_PRESETS,
   fontStack,
   loadFontPreviews,
-  themeDot,
+  colorSwatch,
   type AppPreferences,
   type FontGroup,
   type FontId,
@@ -28,7 +28,7 @@ import {
   type SidebarCollapse,
   type SidebarStyle,
   type ThemeMode,
-  type ThemePreset
+  type ColorPreset
 } from "./preferences";
 
 /** One labelled block: the topic name over its control. */
@@ -111,7 +111,7 @@ const COLLAPSE_OPTIONS: Array<{ id: SidebarCollapse; label: string }> = [
 export function PreferencesMenu({
   preferences,
   onUpdate,
-  onApplyPreset,
+  onApplyColors,
   onRestoreDefaults,
   isDefault,
   onOpenSettings,
@@ -119,7 +119,7 @@ export function PreferencesMenu({
 }: {
   preferences: AppPreferences;
   onUpdate: (patch: Partial<AppPreferences>) => void;
-  onApplyPreset: (preset: ThemePreset) => void;
+  onApplyColors: (colors: ColorPreset) => void;
   onRestoreDefaults: () => void;
   isDefault: boolean;
   onOpenSettings: () => void;
@@ -127,7 +127,7 @@ export function PreferencesMenu({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const ids = useId();
-  const presetId = `${ids}-preset`;
+  const colorsId = `${ids}-colors`;
   const fontId = `${ids}-font`;
 
   // The eighteen preview faces are only needed once this panel exists, so they
@@ -143,7 +143,13 @@ export function PreferencesMenu({
       if (event.key === "Escape") onClose();
     };
     const onPointerDown = (event: MouseEvent) => {
-      if (!panelRef.current?.contains(event.target as Node)) onClose();
+      /* "Outside" means outside the whole ANCHOR — the gear that opens this panel sits
+         in it too. Measuring only the panel made the gear a one-way switch: its press
+         closed the panel here, and then its own click toggled the state back to open, so
+         the panel appeared stuck and could only be dismissed by clicking elsewhere. The
+         account menu beside it scopes its dismiss to its wrapper for the same reason. */
+      const anchor = panelRef.current?.parentElement ?? panelRef.current;
+      if (!anchor?.contains(event.target as Node)) onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("mousedown", onPointerDown);
@@ -160,13 +166,21 @@ export function PreferencesMenu({
         <p>Customize your dashboard layout preferences.</p>
       </header>
 
-      <Field label="Theme Preset" htmlFor={presetId}>
+      <Field label="Colors" htmlFor={colorsId}>
         <div className="pref-select">
-          {/* The swatch carries the selected theme's own accent, the way the
-              reference's picker does, so the control shows the colour it sets. */}
-          <span className="pref-select-dot" style={{ background: themeDot(preferences.preset) }} aria-hidden="true" />
-          <select id={presetId} value={preferences.preset} onChange={(event) => onApplyPreset(event.target.value as ThemePreset)}>
-            {THEME_PRESETS.map((preset) => (
+          {/* The swatch shows the three colours the selected set is made of — for the
+              Default set, white, gray and black — so the control shows what it sets. */}
+          <span
+            className="pref-select-dot is-colors"
+            style={{
+              background: `conic-gradient(${colorSwatch(preferences.colors)
+                .map((tone, index) => `${tone} ${index * 120}deg ${(index + 1) * 120}deg`)
+                .join(", ")})`
+            }}
+            aria-hidden="true"
+          />
+          <select id={colorsId} value={preferences.colors} onChange={(event) => onApplyColors(event.target.value as ColorPreset)}>
+            {COLOR_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
                 {preset.label}
               </option>

@@ -313,8 +313,9 @@
   color: var(--bf-ink-muted, #575550);
   font-size: 12px;
 }
+/* the program's bad tone (#9e1f18 light, #eb8178 dark); it named --bf-danger, which nothing declares */
 .bfmt-note.is-error {
-  color: var(--bf-danger, #c5221f);
+  color: var(--bf-color-bad);
 }
 
 /* the pitch stacks below half width, where two columns stop reading */

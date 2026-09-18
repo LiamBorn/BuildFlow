@@ -148,16 +148,63 @@ describe("the Dashboard skin cannot shadow the palette it sits inside", () => {
   });
 });
 
-describe("the Material Readiness slices are legible in both modes", () => {
-  /** The four hexes App.tsx hands the chart AND its legend dots. */
-  const sliceColours = () => {
+describe("the Material Readiness slices are legible in every Colors set and both modes", () => {
+  /* The ring's four slices used to be four hexes in App.tsx. Since the Colors pass
+     (2026-09-16) they are the set's four semantic tones, read as `var(--bf-color-*)`, so
+     the question is asked of each SET: the tones are resolved out of the skin, in the
+     light reading and the dark one, and the same three measurements follow. A set's tones
+     are a ladder, and the ring is the one place all four are compared at once. */
+  const SETS = [
+    ["Default", "body:has(.app-shell.hs-shell.bf-shell)", 'body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"])'],
+    [
+      "Blue",
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"])',
+      'body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="blue"][data-bf-mode="dark"])'
+    ]
+  ] as const;
+
+  /** The four tones App.tsx hands the chart AND its legend dots, in order. */
+  const sliceTokens = () => {
     const block = read("App.tsx").match(/const statusColors = \{([\s\S]*?)\};/);
     expect(block, "statusColors not found in App.tsx").toBeTruthy();
-    return [...block![1].matchAll(/"(#[0-9a-f]{6})"/g)].map((m) => m[1]);
+    return [...block![1].matchAll(/var\((--bf-color-[a-z-]+)\)/g)].map((m) => m[1]);
   };
 
-  it("draws four of them", () => {
-    expect(sliceColours()).toHaveLength(4);
+  const skin = read("app-shell-client-desk.css");
+  /** A set's block, found by the selector that actually carries the tones. */
+  const blockOf = (selector: string) => {
+    let from = 0;
+    for (;;) {
+      const i = skin.indexOf(selector, from);
+      expect(i, `${selector} carrying the tones`).toBeGreaterThan(-1);
+      const open = skin.indexOf("{", i);
+      const body = skin.slice(open + 1, skin.indexOf("}", open));
+      if (body.includes("--bf-color-accent:")) return body;
+      from = i + 1;
+    }
+  };
+  const pick = (block: string, token: string) => block.match(new RegExp(`${token}:\\s*(#[0-9a-fA-F]{6})`))?.[1];
+  /* A set overrides only the tones it colours, so a value is resolved the way the cascade
+     resolves it: the set's own reading for this mode first, then the mode's base, then the
+     set's light reading, then the base. More attributes in the :has() = higher specificity,
+     and they are declared in that order. */
+  const four = (setIndex: number, mode: "light" | "dark") => {
+    const [name, lightSel, darkSel] = SETS[setIndex];
+    const chain = (
+      mode === "dark"
+        ? [blockOf(darkSel), blockOf(SETS[0][2]), blockOf(lightSel), blockOf(SETS[0][1])]
+        : [blockOf(lightSel), blockOf(SETS[0][1])]
+    ).filter((block, index, all) => all.indexOf(block) === index);
+    return sliceTokens().map((token) => {
+      const value = chain.reduce<string | undefined>((found, block) => found ?? pick(block, token), undefined);
+      expect(value, `${name} ${mode}: ${token}`).toBeTruthy();
+      return value!;
+    });
+  };
+
+  it("draws four of them, as the set's four tones", () => {
+    expect(sliceTokens()).toHaveLength(4);
+    expect(new Set(sliceTokens()).size, "the four are four different tones").toBe(4);
   });
 
   /**
@@ -165,27 +212,36 @@ describe("the Material Readiness slices are legible in both modes", () => {
    * the 3:1 floor for a non-text indicator. Asked of both cards, which is what
    * caught the reference's own chart-3: 9.93 on white, 2.00 on a dark card.
    */
-  it("clears the indicator floor on the light card and the dark one", () => {
-    for (const colour of sliceColours()) {
-      expect(contrast(colour, LIGHT_CARD), `${colour} on the light card`).toBeGreaterThanOrEqual(3);
-      expect(contrast(colour, DARK_CARD), `${colour} on the dark card`).toBeGreaterThanOrEqual(3);
+  it("clears the indicator floor on the card each reading is drawn against", () => {
+    for (let i = 0; i < SETS.length; i += 1) {
+      for (const colour of four(i, "light")) {
+        expect(contrast(colour, LIGHT_CARD), `${SETS[i][0]} light: ${colour} on the light card`).toBeGreaterThanOrEqual(3);
+      }
+      for (const colour of four(i, "dark")) {
+        expect(contrast(colour, DARK_CARD), `${SETS[i][0]} dark: ${colour} on the dark card`).toBeGreaterThanOrEqual(3);
+      }
     }
   });
 
   /**
    * And apart from EACH OTHER, because four slices on one ring are compared to a
    * legend. 1.15 is not a round number picked for comfort: holding 3:1 against
-   * both a white card and a dark one confines each of the reference's hues to a
-   * band about twelve lightness steps wide, and a search over those bands puts
-   * the best achievable weakest-pair at 1.19. So 1.15 sits just under the ceiling
-   * and well over the 1.10 of the green/blue/amber/red set that shipped here
-   * before. A stricter bar is not reachable without giving up one of the floors.
+   * both a white card and a dark one confines each hue to a band about twelve
+   * lightness steps wide, and a search over those bands puts the best achievable
+   * weakest-pair at 1.19. The monochrome Default reaches 1.28 light and 1.24 dark
+   * because its four tones ARE a ladder; Blue's bad tone takes the same rung
+   * rather than the accent's, which is the only way it keeps up (it measured 1.10
+   * against the information gray when it was a mid-lightness blue).
    */
   it("keeps the four apart from each other, so the legend can be read off the ring", () => {
-    const colours = sliceColours();
-    for (let i = 0; i < colours.length; i += 1) {
-      for (let j = i + 1; j < colours.length; j += 1) {
-        expect(contrast(colours[i], colours[j]), `${colours[i]} vs ${colours[j]}`).toBeGreaterThanOrEqual(1.15);
+    for (let i = 0; i < SETS.length; i += 1) {
+      for (const mode of ["light", "dark"] as const) {
+        const colours = four(i, mode);
+        for (let x = 0; x < colours.length; x += 1) {
+          for (let y = x + 1; y < colours.length; y += 1) {
+            expect(contrast(colours[x], colours[y]), `${SETS[i][0]} ${mode}: ${colours[x]} vs ${colours[y]}`).toBeGreaterThanOrEqual(1.15);
+          }
+        }
       }
     }
   });
@@ -215,7 +271,7 @@ describe("the skin moves no box and stops at this page", () => {
   it("scopes every rule to the Dashboard", () => {
     const stray: string[] = [];
     sheet.walkRules((rule) => {
-      let p = rule.parent as { type?: string; name?: string } | undefined;
+      const p = rule.parent as { type?: string; name?: string } | undefined;
       if (p?.type === "atrule" && p.name === "keyframes") return;
       if (p?.type === "atrule" && p.name === "property") return;
       for (const sel of rule.selectors) if (!sel.includes(".dash-rx")) stray.push(sel);
@@ -238,7 +294,12 @@ describe("the skin moves no box and stops at this page", () => {
     sheet.walkDecls((d) => {
       if (!/^animation(-name)?$/.test(d.prop)) return;
       const base = (d.parent as Rule).selectors
-        .map((s) => s.replace(/:nth-child\([^)]*\)/g, "").replace(/\s+/g, " ").trim())
+        .map((s) =>
+          s
+            .replace(/:nth-child\([^)]*\)/g, "")
+            .replace(/\s+/g, " ")
+            .trim()
+        )
         .filter(Boolean);
       for (const sel of base) (inReduce(d) && /^none\b/.test(d.value) ? stopped : moving).add(sel);
     });
