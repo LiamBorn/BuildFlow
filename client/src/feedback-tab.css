@@ -1,0 +1,192 @@
+/* ---------------------------------------------------------------------------
+   "Give feedback": the tab on the Dashboard's right edge, and the parts of its
+   dialog the shared .pdx system does not already draw (the kind chips, the
+   textarea, the sender line, the thanks state).
+
+   The placement is monday.com's — a dark vertical tab pinned mid-height to the
+   viewport's right edge, reading bottom-to-top with its glyph at the foot. The
+   look is BuildFlow's: --bf-ink on --bf-surface (which is also what makes it
+   invert correctly in dark mode and follow the Theme Presets), the app font
+   through `font: inherit`, the control radius, the raised shadow, and the same
+   hover duration and ease every other control here uses.
+
+   z-index 55: above the top bar (40), below the notifications drawer and the
+   Ask AI dock (60) so those cover it when open rather than the reverse. The dock
+   sits at the bottom-right corner; this sits at the middle of the edge, so the
+   two never meet.
+   --------------------------------------------------------------------------- */
+.bffb-tab {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px 14px 11px;
+  border: 0;
+  border-radius: var(--bf-radius-control, 12px) 0 0 var(--bf-radius-control, 12px);
+  background: var(--bf-ink, #1c1c1a);
+  color: var(--bf-surface, #ffffff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  /* rotate(180deg) turns vertical-rl's top-to-bottom into the reference's bottom-to-top;
+     translateY centres on the viewport's midline, applied in the page's frame */
+  transform: translateY(-50%) rotate(180deg);
+  box-shadow: var(--bf-shadow-raised, 0 4px 12px rgba(28, 28, 26, 0.08));
+  cursor: pointer;
+  animation: bffb-tab-in 0.6s var(--bf-ease, cubic-bezier(0.22, 1, 0.36, 1)) 240ms both;
+  transition:
+    right var(--bf-dur-hover, 0.25s) var(--bf-ease, ease),
+    box-shadow var(--bf-dur-hover, 0.25s) var(--bf-ease, ease);
+}
+/* the glyph rode the rotation too; turn it back upright */
+.bffb-tab svg {
+  flex: none;
+  transform: rotate(180deg);
+}
+.bffb-tab:hover,
+.bffb-tab:focus-visible {
+  right: 3px;
+  box-shadow: 0 8px 20px rgba(28, 28, 26, 0.16);
+}
+.bffb-tab:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 2px;
+}
+@keyframes bffb-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) rotate(180deg) translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) rotate(180deg) translateX(0);
+  }
+}
+
+/* ---- the dialog: one column, the kind chips first ------------------------- */
+.pdx .bffb-form {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.pdx .bffb-form > label > textarea {
+  min-height: 132px;
+  padding: 12px 14px;
+  border: 1px solid var(--wx-line, rgba(28, 28, 26, 0.13));
+  border-radius: var(--bf-radius-control, 12px);
+  background: var(--wx-card, #fff);
+  color: var(--wx-ink, #1c1c1a);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.pdx .bffb-form > label > textarea:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 1px;
+}
+.bffb-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  animation: pdx-field-in 0.6s var(--pdx-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+.bffb-kind {
+  padding: 7px 13px;
+  border: 1px solid var(--wx-line, rgba(28, 28, 26, 0.13));
+  border-radius: 999px;
+  background: var(--wx-card, #fff);
+  color: var(--wx-ink, #1c1c1a);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.25s) ease,
+    color var(--bf-dur-hover, 0.25s) ease,
+    border-color var(--bf-dur-hover, 0.25s) ease;
+}
+.bffb-kind:hover {
+  background: var(--wx-bg, #f5f6fa);
+}
+.bffb-kind[aria-checked="true"] {
+  border-color: var(--wx-ink, #1c1c1a);
+  background: var(--wx-ink, #1c1c1a);
+  color: var(--wx-card, #fff);
+}
+.bffb-kind:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 2px;
+}
+.bffb-sender {
+  margin: -4px 0 0;
+  color: var(--wx-mut, #575550);
+  font-size: 12.5px;
+}
+.bffb-sender strong {
+  color: var(--wx-ink, #1c1c1a);
+  font-weight: 600;
+}
+.pdx .bffb-form .pdx-actions {
+  margin-top: 2px;
+}
+
+/* ---- the thanks state ------------------------------------------------------ */
+.bffb-sent {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: clamp(22px, 3.4vw, 32px) clamp(22px, 3.4vw, 34px) clamp(24px, 3vw, 30px);
+  animation: pdx-field-in 0.6s var(--pdx-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+.bffb-sent-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  background: rgba(19, 138, 66, 0.12);
+  color: #138a42;
+}
+.bffb-sent strong {
+  color: var(--wx-ink, #1c1c1a);
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.bffb-sent p {
+  margin: 0;
+  color: var(--wx-mut, #575550);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bffb-sent b {
+  color: var(--wx-ink, #1c1c1a);
+  font-weight: 600;
+}
+.bffb-sent .pdx-actions {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* ---- less motion: the tab is simply there, the chips simply appear --------- */
+@media (prefers-reduced-motion: reduce) {
+  .bffb-tab,
+  .bffb-kinds,
+  .bffb-sent {
+    animation: none;
+  }
+  .bffb-tab,
+  .bffb-kind {
+    transition: none;
+  }
+}
