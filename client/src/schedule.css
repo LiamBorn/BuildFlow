@@ -2060,7 +2060,7 @@
 .sched-rx .crew-row.is-lazy .schedule-cell {
   background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(var(--bf-line-rgb), 0.03) 10px 20px);
 }
-.gantt-page.hs-index .gantt-cap-note {
+.gantt-page.gantt-chart .gantt-cap-note {
   margin-bottom: 8px;
 }
 
@@ -2453,8 +2453,17 @@
   background: var(--wx-card);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  animation: schedCellIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* 4px, not 6: the gaps between chips belong to the DAY, and a click on the day adds a job — so
+     every pixel of gap is a pixel where a grab that missed opens the new-job form instead. */
+  gap: 4px;
+  /* BACKWARDS, not both (2026-09-17): a fill that outlasts the animation keeps its last
+     keyframe's transform, and any transform makes the day a stacking context. Every day
+     was one, so a job dragged out of its day was painted UNDER the next day's tile and
+     vanished the moment it left home: the drop still worked, but nothing followed the
+     hand. The carried card rides an overlay above the page now, but a day that is its own
+     stacking context still traps anything drawn out of it, so the fill stays backwards --
+     it holds each day hidden through its delay, then lets go. */
+  animation: schedCellIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   animation-delay: calc(var(--d, 0) * 55ms);
 }
 @keyframes schedCellIn {
@@ -2467,18 +2476,13 @@
     transform: none;
   }
 }
-/* The three washes, weakest LAST-WINS first: all three are one class on the same
-   element, so source order is the whole of the decision. A day outside the month
-   has to read as outside it whether or not it is also a non-working day, which is
-   why out-month now sits after is-weekend and not before it. */
+/* The two washes, weakest LAST-WINS first: both are one class on the same element, so source
+   order is the whole of the decision between them. (There were three until 2026-09-17: the grid
+   also drew the days either side of the month, and `out-month` had to sit after `is-weekend` or a
+   Sunday outside the month read lighter than a Tuesday outside it. The grid now ends on the
+   month's last day and pads with `.sched-cal-blank`, which is not a day and carries no wash.) */
 .sched-rx .sched-cal-cell.is-weekend {
   background: color-mix(in srgb, var(--wx-bg) 38%, var(--wx-card));
-}
-.sched-rx .sched-cal-cell.out-month {
-  background: color-mix(in srgb, var(--wx-bg) 70%, var(--wx-card));
-}
-.sched-rx .sched-cal-cell.out-month .sched-cal-daynum {
-  color: var(--wx-faint);
 }
 .sched-rx .sched-cal-cell.is-holiday {
   background: color-mix(in srgb, var(--sc-holiday) 9%, var(--wx-card));
@@ -2489,6 +2493,11 @@
    the legend names. An image layers over the colour instead of replacing it. */
 .sched-rx .sched-cal-cell.is-addable:hover {
   background-image: linear-gradient(rgba(var(--bf-line-rgb), 0.035), rgba(var(--bf-line-rgb), 0.035));
+}
+/* The places padding the month's first and last week: a column's width of nothing, so the days
+   below stay under their weekday without printing dates the page is not showing. */
+.sched-rx .sched-cal-blank {
+  background: transparent;
 }
 .sched-rx .sched-cal-daynum {
   font-family: var(--cc-sans, Inter, sans-serif);
@@ -2615,8 +2624,17 @@
 .sched-rx .sched-act.is-milestone .sched-act-dot {
   border-radius: 2px;
 }
+/* "+N more" / "Show fewer": the control that opens a busy day up so the jobs it is holding can be
+   picked up. It used to be a 14px-tall scrap of text aligned left; it is the way to reach those
+   jobs, so it is a row of its own now — the chips' full width, a chip's own corners, and a target
+   a hand can hit without aiming. */
 .sched-rx .sched-act-more {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 26px;
   border: 0;
+  border-radius: 9px;
   background: none;
   color: var(--wx-mut);
   font-family: var(--cc-sans, Inter, sans-serif);
@@ -2624,11 +2642,11 @@
   font-weight: 600;
   cursor: pointer;
   text-align: left;
-  padding: 0 2px;
-  align-self: flex-start;
+  padding: 0 8px;
 }
 .sched-rx .sched-act-more:hover {
-  color: var(--sc-concrete);
+  background: color-mix(in srgb, var(--wx-bg) 60%, var(--wx-card));
+  color: var(--wx-ink);
 }
 
 /* ============================ trade legend ============================ */
@@ -2889,12 +2907,110 @@
 .sched-rx .schedule-list-view button {
   cursor: grab;
 }
+/* A milestone is carried the same way (2026-09-17 pm): it opens nothing on a click, but dropping it
+   on another day moves the date it marks — a phase's finish, or a project's completion — so it
+   keeps the grab of the rule above rather than sitting there looking inert. */
 .sched-rx .sched-act.dragging,
 .sched-rx .schedule-list-view button.dragging {
   cursor: grabbing;
 }
-.sched-rx .sched-act.dragging {
-  box-shadow: 0 14px 30px rgba(var(--bf-line-rgb), 0.18);
+/* PICKING A CARD UP, on every board in the category (Month 2026-09-17, then the rest of them the
+   same day). The card under the hand is a clone on a DragOverlay -- one fixed layer over the page
+   (schedule/parts/carry.tsx) -- so the card it came from stays where it is as the dashed SLOT it
+   is leaving, the same way a Dashboard panel and a Deals card behave. The slot's box is the card's
+   own, so nothing around it moves: no day reflows, no crew row jumps, no lane closes up. */
+.sched-rx .sched-act.dragging,
+.sched-rx .schedule-job.dragging,
+.sched-rx .unassigned-card.dragging,
+.sched-rx .sched-kan-card.dragging,
+.sched-rx .schedule-list-view button.dragging {
+  /* an outline, not a border: a border would have to replace the card's own and the 1px
+     difference would nudge everything below it */
+  outline: 2px dashed color-mix(in srgb, var(--wx-ink) 24%, var(--wx-card));
+  outline-offset: -2px;
+  border-color: transparent;
+  background: color-mix(in srgb, var(--wx-bg) 55%, var(--wx-card));
+  box-shadow: none;
+  /* the lifted looks these cards used to wear while they were the thing being moved */
+  opacity: 1;
+  cursor: grabbing;
+}
+/* the slot is empty: what was on the card is up in the air */
+.sched-rx .sched-act.dragging > *,
+.sched-rx .schedule-job.dragging > *,
+.sched-rx .unassigned-card.dragging > *,
+.sched-rx .sched-kan-card.dragging > *,
+.sched-rx .schedule-list-view button.dragging > * {
+  visibility: hidden;
+}
+/* ...and the card that has it: the clone, lifted off the page and tilted under the hand. The
+   wrapper is the carrier (it takes the lift and the lean); the card inside it is whatever board
+   this is, at the size it was picked up. */
+.sched-rx .sched-carry {
+  width: 100%;
+  height: 100%;
+  cursor: grabbing;
+  /* `transform` belongs to the LEAN — schedule/parts/carry.tsx writes it on every frame, banking
+     the card the way the hand is moving — so the lift below may only use `rotate` and `scale`,
+     which compose with a transform instead of replacing it. (A CSS animation outranks an inline
+     style, so an animation on `transform` here would simply erase the lean.) */
+  will-change: transform;
+  animation: sched-chip-lift 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.sched-rx .sched-carry > * {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--wx-card);
+  box-shadow:
+    0 20px 40px rgba(var(--bf-line-rgb), 0.24),
+    0 4px 12px rgba(var(--bf-line-rgb), 0.12);
+}
+/* The lift: up off the page, a little past the angle it settles at. That resting angle is
+   deliberately shallow -- the LEAN adds up to 8deg either side of it, and a steeper rest would
+   leave a card carried leftward looking square while a card carried right looked thrown. */
+@keyframes sched-chip-lift {
+  from {
+    scale: 1;
+    rotate: 0deg;
+  }
+  60% {
+    scale: 1.07;
+    rotate: 3.2deg;
+  }
+  to {
+    scale: 1.04;
+    rotate: 2.5deg;
+  }
+}
+/* While a job is carried the whole calendar says so: the closed hand everywhere, and the
+   day's "+" stays down -- it would otherwise pop up under the card as the hand crosses a day.
+   `visibility`, because the rule that shows it on hover wins on `opacity` at four classes. */
+/* While a chip is in the air the whole calendar shows the closed hand. `cursor` INHERITS, so the
+   grid alone covers everything that does not set its own — this used to say `.is-carrying *` with
+   `!important`, a universal selector over every element in the grid, and adding that class the
+   moment a chip was picked up made the browser re-resolve style for the entire subtree. Measured
+   2026-09-18: a 130ms stall 20ms after the drag began, which is the hitch reported as "it lags a
+   little" when a job is picked up. Only the four things below declare a cursor of their own. */
+.sched-rx .sched-cal.is-carrying {
+  cursor: grabbing;
+}
+.sched-rx .sched-cal.is-carrying .sched-act,
+.sched-rx .sched-cal.is-carrying .sched-act-more,
+.sched-rx .sched-cal.is-carrying .sched-cal-add,
+.sched-rx .sched-cal.is-carrying .sched-cal-cell.is-addable {
+  cursor: grabbing;
+}
+.sched-rx .sched-cal.is-carrying .sched-cal-add {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* the card still lifts -- a shadow is not motion -- it just does not tilt, swell or lean
+     (carry.tsx leaves the lean's frame loop unstarted under the same question) */
+  .sched-rx .sched-carry {
+    animation: none;
+  }
 }
 
 /* month calendar cell: highlight as a drop target while a job hovers over it */
@@ -3149,13 +3265,12 @@
   border-radius: 14px;
   background: color-mix(in srgb, var(--wx-bg-2) 55%, var(--wx-card));
   padding: 10px;
-  transition:
-    background 0.18s ease,
-    box-shadow 0.18s ease;
+  /* only the fill moves now: the drop-over ring is gone (below) */
+  transition: background 0.18s ease;
 }
+/* the fill alone marks the lane being carried into; the ring is gone (skin section 12g) */
 .sched-rx .sched-kan-lane.drop-over {
   background: color-mix(in srgb, var(--sc-concrete) 8%, var(--wx-card));
-  box-shadow: inset 0 0 0 2px var(--sc-concrete);
 }
 
 /* lane accent — keyed to the stage */
@@ -3248,10 +3363,6 @@
   transform: translateY(-2px);
   box-shadow: 0 14px 28px rgba(var(--bf-line-rgb), 0.12);
   border-color: var(--wx-line);
-}
-.sched-rx .sched-kan-card.dragging {
-  cursor: grabbing;
-  box-shadow: 0 18px 34px rgba(var(--bf-line-rgb), 0.2);
 }
 .sched-rx .sched-kan-card.focused {
   box-shadow: inset 0 0 0 2px var(--sc-concrete);
@@ -3545,14 +3656,32 @@
 
    Sits on the program's existing dialog shell (.project-dialog-backdrop /
    .project-dialog in styles.css) and reuses .primary-button /
-   .icon-button, so only the import-specific pieces live here. Tokens (--line,
-   --muted, --ink, --brand) come from styles.css.
+   .icon-button, so only the import-specific pieces live here.
+
+   COLOURS COME FROM THE SEMANTIC --bf-* LAYER (2026-09-17). The first step used to
+   read --line and --muted from styles.css, and --ink and --brand, which nothing
+   declares, so their fallbacks (#141922, #2f6bff) were the value in every mode;
+   with the dialog's white panel, dark mode showed a white dialog with light text
+   and a Cancel button with dark text on dark. The first step (panel, header,
+   drop zone, format cards, error box, footer) now resolves through --bf-* and
+   follows Light, Dark and System. The preview and health-report steps still
+   carry light literals.
    ========================================================================= */
 
 .sim-dialog {
   width: min(860px, 100%);
   display: flex;
   flex-direction: column;
+  /* .project-dialog in styles.css is #fff in every mode */
+  background: var(--bf-surface);
+}
+.sim-dialog .project-dialog-header p {
+  color: var(--bf-ink-muted);
+}
+.sim-dialog .project-dialog-header .icon-button {
+  border-color: var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
 }
 
 .sim-body {
@@ -3569,27 +3698,27 @@
   justify-items: center;
   gap: 8px;
   padding: 34px 20px;
-  border: 2px dashed var(--line);
+  border: 2px dashed var(--bf-line-solid);
   border-radius: 12px;
-  background: #fafbfc;
+  background: color-mix(in srgb, var(--bf-hover) 35%, var(--bf-surface));
   text-align: center;
   transition:
     border-color 0.16s ease,
     background 0.16s ease;
 }
 .sim-drop.dragging {
-  border-color: var(--brand, #2f6bff);
-  background: #f2f7ff;
+  border-color: var(--bf-accent);
+  background: color-mix(in srgb, var(--bf-accent) 6%, var(--bf-surface));
 }
 .sim-drop svg {
-  color: var(--brand, #2f6bff);
+  color: var(--bf-accent);
 }
 .sim-drop strong {
   font-size: 15px;
 }
 .sim-drop span {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--bf-ink-muted);
 }
 .sim-drop .primary-button {
   margin-top: 6px;
@@ -3607,9 +3736,9 @@
   justify-items: center;
   gap: 8px;
   padding: 34px 20px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--bf-line-solid);
   border-radius: 12px;
-  background: #fafbfc;
+  background: color-mix(in srgb, var(--bf-hover) 35%, var(--bf-surface));
   text-align: center;
 }
 .sim-working strong {
@@ -3617,7 +3746,7 @@
 }
 .sim-working span {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--bf-ink-muted);
 }
 
 .sim-formats {
@@ -3629,7 +3758,7 @@
   display: grid;
   gap: 3px;
   padding: 11px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--bf-line-solid);
   border-radius: 9px;
   background: var(--bf-surface);
 }
@@ -3639,7 +3768,7 @@
 .sim-formats span {
   font-size: 12px;
   line-height: 1.45;
-  color: var(--muted);
+  color: var(--bf-ink-muted);
 }
 
 /* ── errors (message + what to do about it) ──────────────────────────────── */
@@ -3648,10 +3777,10 @@
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid #fecdc9;
+  border: 1px solid var(--bf-color-bad-edge);
   border-radius: 10px;
-  background: #fef3f2;
-  color: #912018;
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
 }
 .sim-error svg {
   flex: none;
@@ -3664,7 +3793,7 @@
   margin: 4px 0 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #b42318;
+  color: var(--bf-color-bad);
 }
 
 /* ── preview ─────────────────────────────────────────────────────────────── */
@@ -3812,7 +3941,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--bf-line-solid);
   padding: 14px 20px;
 }
 .sim-actions-right {
@@ -3833,10 +3962,10 @@
   gap: 8px;
   min-height: 40px;
   padding: 0 16px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--bf-line-solid);
   border-radius: 8px;
   background: var(--bf-surface);
-  color: var(--ink, #141922);
+  color: var(--bf-ink);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -3845,8 +3974,8 @@
     border-color 0.16s ease;
 }
 .sim-ghost:hover:not(:disabled) {
-  background: #f5f7fa;
-  border-color: #c3c9d4;
+  background: var(--bf-hover);
+  border-color: color-mix(in srgb, var(--bf-ink) 22%, var(--bf-surface));
 }
 .sim-ghost:disabled {
   opacity: 0.55;
@@ -4366,25 +4495,21 @@
    the record panel's slide-in for the job drawer. No new colours.
    ======================================================================== */
 
-/* ------------------------------- page ---------------------------------- */
-.gantt-page.hs-index .hs-index-card.gantt-card {
-  padding: 16px 18px 14px;
-}
-.gantt-page.hs-index .gantt-toolbar {
+.gantt-page.gantt-chart .gantt-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 14px;
   margin-bottom: 12px;
 }
-.gantt-page.hs-index .gantt-seg {
+.gantt-page.gantt-chart .gantt-seg {
   display: inline-flex;
   overflow: hidden;
   border: 1px solid var(--hsx-line);
   border-radius: 10px;
   background: var(--hsx-card);
 }
-.gantt-page.hs-index .gantt-seg button {
+.gantt-page.gantt-chart .gantt-seg button {
   min-height: 34px;
   padding: 0 12px;
   border: 0;
@@ -4396,29 +4521,29 @@
     background 0.16s ease,
     color 0.16s ease;
 }
-.gantt-page.hs-index .gantt-seg button + button {
+.gantt-page.gantt-chart .gantt-seg button + button {
   border-left: 1px solid var(--hsx-line);
 }
-.gantt-page.hs-index .gantt-seg button:hover {
+.gantt-page.gantt-chart .gantt-seg button:hover {
   background: var(--hsx-hover);
 }
-.gantt-page.hs-index .gantt-seg button.active {
+.gantt-page.gantt-chart .gantt-seg button.active {
   background: var(--hsx-blue-soft);
   color: var(--hsx-blue);
 }
-.gantt-page.hs-index .gantt-zoom {
+.gantt-page.gantt-chart .gantt-zoom {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.gantt-page.hs-index .gantt-zoom-value {
+.gantt-page.gantt-chart .gantt-zoom-value {
   min-width: 46px;
   text-align: center;
   color: var(--hsx-mut);
   font: 600 12.5px var(--hsx-sans);
   font-variant-numeric: tabular-nums;
 }
-.gantt-page.hs-index .gantt-legend {
+.gantt-page.gantt-chart .gantt-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
@@ -4426,12 +4551,12 @@
   color: var(--hsx-mut);
   font: 600 12px var(--hsx-sans);
 }
-.gantt-page.hs-index .gantt-legend span {
+.gantt-page.gantt-chart .gantt-legend span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.gantt-page.hs-index .gantt-legend i {
+.gantt-page.gantt-chart .gantt-legend i {
   width: 9px;
   height: 9px;
   border-radius: 999px;
@@ -4454,7 +4579,7 @@
 .gantt-page .gantt-status.is-error {
   color: var(--hsx-red, var(--wx-red));
 }
-.gantt-page.hs-index .gantt-frame {
+.gantt-page.gantt-chart .gantt-frame {
   height: clamp(420px, calc(100vh - 336px), 900px);
   overflow: hidden;
   border: 1px solid var(--hsx-line);
@@ -4462,7 +4587,7 @@
   background: var(--hsx-paper);
   animation: hsg-rise 0.5s var(--hsx-ease) both;
 }
-.gantt-page.hs-index .gantt-empty {
+.gantt-page.gantt-chart .gantt-empty {
   display: grid;
   place-items: center;
   height: 100%;
@@ -4471,13 +4596,13 @@
   color: var(--hsx-mut);
   font: 500 13.5px/1.5 var(--hsx-sans);
 }
-.gantt-page.hs-index .gantt-empty strong {
+.gantt-page.gantt-chart .gantt-empty strong {
   display: block;
   margin-bottom: 4px;
   color: var(--hsx-ink);
   font-weight: 700;
 }
-.gantt-page.hs-index .gantt-note {
+.gantt-page.gantt-chart .gantt-note {
   margin: 10px 0 0;
   color: var(--hsx-faint);
   font: 500 12.5px var(--hsx-sans);
@@ -4500,7 +4625,8 @@
   height: 100%;
   width: 100%;
   overflow: auto;
-  overscroll-behavior: contain;
+  /* the wheel CHAINS out of this region: containment swallows it even with nothing left
+     to scroll, which is what stuck the page on a section. */
   background: var(--hsx-paper, #f5f6fa);
   color: var(--hsx-ink, #14203a);
   font-family: var(--hsx-sans, Inter, ui-sans-serif, system-ui, sans-serif);
@@ -5178,14 +5304,25 @@
   backdrop-filter: blur(2px);
   animation: hsg-fade 0.2s ease-out both;
 }
+/* The panel's BODY is the scroller, not the panel (2026-09-17). It used to run with `overflow-y:
+   auto` on itself, so a job's name and the close button could scroll away; now the header keeps
+   its place and everything under it moves.
+
+   It no longer starts below the top bar: asked on 2026-09-18 to run the full height of the page,
+   it goes from edge to edge and skin section 70d lifts the page over the bar so the header is not
+   hidden behind it. Do not put the `top: var(--hs-topbar-h)` offset back without reading that. */
 .gantt-page .gantt-drawer {
   position: absolute;
+  /* the full height of the page (2026-09-18), matching the editing drawers — the layer is
+     z-index 95 against the top bar's 5, so it paints over it */
   top: 0;
   right: 0;
   bottom: 0;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   width: min(440px, 100%);
-  overflow-y: auto;
+  overflow: hidden;
   padding: 18px 22px 28px;
   background: var(--bf-surface);
   color: var(--hsx-ink, var(--wx-ink));
@@ -5212,10 +5349,19 @@
 }
 .gantt-page .gantt-drawer-top {
   display: flex;
+  flex: none;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+}
+/* everything under the header. `min-height: 0` is what lets a flex child shrink far enough to
+   scroll at all; `contain` keeps a flick at the end of the list off the page behind. */
+.gantt-page .gantt-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .gantt-page .gantt-drawer h2 {
   margin: 0;
@@ -5435,7 +5581,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gantt-page.hs-index .gantt-frame,
+  .gantt-page.gantt-chart .gantt-frame,
   .gantt-page .gantt-status,
   .gantt-page .gantt-drawer,
   .gantt-page .gantt-drawer-backdrop,
@@ -5576,7 +5722,7 @@
 }
 
 /* the CPM readout above the chart (the landing's, in this page's tokens) */
-.gantt-page.hs-index .sched-cpm {
+.gantt-page.gantt-chart .sched-cpm {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -5587,10 +5733,10 @@
   border-radius: 12px;
   background: var(--hsx-card);
 }
-.gantt-page.hs-index .sched-cpm-error {
+.gantt-page.gantt-chart .sched-cpm-error {
   border-color: var(--hsx-red);
 }
-.gantt-page.hs-index .sched-cpm-ico {
+.gantt-page.gantt-chart .sched-cpm-ico {
   display: grid;
   place-items: center;
   width: 30px;
@@ -5600,50 +5746,50 @@
   background: var(--hsx-blue-soft);
   color: var(--hsx-blue);
 }
-.gantt-page.hs-index .sched-cpm-error .sched-cpm-ico {
+.gantt-page.gantt-chart .sched-cpm-error .sched-cpm-ico {
   background: rgba(197, 34, 31, 0.1);
   color: var(--hsx-red);
 }
-.gantt-page.hs-index .sched-cpm-stat {
+.gantt-page.gantt-chart .sched-cpm-stat {
   display: grid;
   gap: 1px;
 }
-.gantt-page.hs-index .sched-cpm-stat em {
+.gantt-page.gantt-chart .sched-cpm-stat em {
   font: 700 10.5px var(--hsx-sans);
   font-style: normal;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--hsx-mut);
 }
-.gantt-page.hs-index .sched-cpm-stat strong {
+.gantt-page.gantt-chart .sched-cpm-stat strong {
   font: 700 14px var(--hsx-sans);
   color: var(--hsx-ink);
   font-variant-numeric: tabular-nums;
 }
-.gantt-page.hs-index .sched-cpm-stat strong small {
+.gantt-page.gantt-chart .sched-cpm-stat strong small {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--hsx-mut);
 }
-.gantt-page.hs-index .sched-cpm-stat strong.is-late {
+.gantt-page.gantt-chart .sched-cpm-stat strong.is-late {
   color: var(--hsx-red);
 }
-.gantt-page.hs-index .sched-cpm-stat strong.is-early {
+.gantt-page.gantt-chart .sched-cpm-stat strong.is-early {
   color: #188038;
 }
-.gantt-page.hs-index .sched-cpm-stat strong.is-on {
+.gantt-page.gantt-chart .sched-cpm-stat strong.is-on {
   color: var(--hsx-mut);
 }
-.gantt-page.hs-index .sched-cpm-error strong {
+.gantt-page.gantt-chart .sched-cpm-error strong {
   font: 600 13px var(--hsx-sans);
   color: var(--hsx-ink);
 }
-.gantt-page.hs-index .sched-cpm-error em {
+.gantt-page.gantt-chart .sched-cpm-error em {
   display: block;
   font: 500 12px var(--hsx-sans);
   color: var(--hsx-mut);
 }
-.gantt-page.hs-index .sched-cpm-baseline {
+.gantt-page.gantt-chart .sched-cpm-baseline {
   min-height: 32px;
   margin-left: auto;
   padding: 0 12px;
@@ -5654,31 +5800,31 @@
   font: 600 12.5px var(--hsx-sans);
   cursor: pointer;
 }
-.gantt-page.hs-index .sched-cpm-baseline:hover {
+.gantt-page.gantt-chart .sched-cpm-baseline:hover {
   background: var(--hsx-hover);
 }
-.gantt-page.hs-index .sched-cpm-baseline:disabled {
+.gantt-page.gantt-chart .sched-cpm-baseline:disabled {
   opacity: 0.6;
   cursor: default;
 }
 
 /* the shared week stepper, in this page's toolbar */
-.gantt-page.hs-index .gantt-week {
+.gantt-page.gantt-chart .gantt-week {
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
-.gantt-page.hs-index .gantt-week strong {
+.gantt-page.gantt-chart .gantt-week strong {
   min-width: 160px;
   text-align: center;
   font: 600 12.5px var(--hsx-sans);
   color: var(--hsx-ink);
   font-variant-numeric: tabular-nums;
 }
-.gantt-page.hs-index .gantt-week .previous-week {
+.gantt-page.gantt-chart .gantt-week .previous-week {
   transform: rotate(90deg);
 }
-.gantt-page.hs-index .gantt-week .next-week {
+.gantt-page.gantt-chart .gantt-week .next-week {
   transform: rotate(-90deg);
 }
 

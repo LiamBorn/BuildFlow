@@ -1,0 +1,88 @@
+/* ============================================================================
+   The Schedule page's sections on the Dashboard's panel board (2026-09-15)
+
+   Asked for: "the customize feature for the Schedule page, the same way as the
+   Dashboard" — the same moving, the same "+", the same removing, every section
+   full width by default, the same spacing between them. The board itself
+   (board/panelBoard.tsx) and its look live under the Dashboard's scope classes
+   — `.dash-rx.hs-home` in hs-home.css, dashboard-admin-kit.css and
+   dashboard-monday-panels.css — so the Schedule page hosts it by carrying those
+   two classes on an inner wrapper, and THIS sheet takes back what those classes
+   mean for a page root (padding, height, ground, type) so the schedule page
+   keeps its own frame around the board. Tokens only: the theme presets own
+   every surface.
+   ============================================================================ */
+
+/* ---- 1. the host: the Dashboard's scope, minus its page-root duties ------- */
+.bf-shell .sched-rx .sched-board-host {
+  display: grid;
+  /* the Dashboard's stack gap (DASH_GAP): title row, band, controls and board keep the same
+     distance from one another as the Dashboard's header keeps from its board */
+  gap: 30px;
+  padding: 0;
+  min-height: 0;
+  background: transparent;
+  font-family: inherit;
+}
+/* the page stack around it steps up from its 18px to the same gap, so the footer and the
+   dialogs sit at the Dashboard's distance too */
+.bf-shell .sched-rx.page-stack.has-board {
+  gap: 30px;
+}
+
+/* ---- 2. the title row and the layout controls share one row -------------
+   Reset layout, "+" and Customize sit at the right of the title, the way the Dashboard's
+   sit beside its lede. The controls keep the Dashboard's classes (monday-panels §5 draws
+   them); this only seats them. */
+.bf-shell .sched-rx .sched-board-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 24px;
+}
+.bf-shell .sched-rx .sched-board-topline .schedule-title-row {
+  flex: 1 1 320px;
+  margin-bottom: 0;
+}
+.bf-shell .sched-rx .sched-board-topline .hs-home-topline-actions {
+  margin-left: auto;
+  margin-top: 6px;
+}
+
+/* ---- 3. a section inside a panel ------------------------------------------
+   Each section keeps its own element — its label and its tour anchor — but hands its card
+   and its title row to the panel: one card, one heading, the Dashboard's. */
+.bf-shell .sched-rx .sched-board-host .dash-block .is-headless {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* the line a section's title row used to carry beside its heading, now a note at the top of
+   the body (or the panel's action slot, where the page puts it) */
+.bf-shell .sched-rx .sched-board-host .sched-section-note {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .sched-rx .sched-board-host .hs-widget-actions .sched-section-note {
+  margin: 0;
+  text-align: right;
+}
+/* the frame's own blocks sit flush in their panels */
+.bf-shell .sched-rx .sched-board-host .dash-block .sched-filters,
+.bf-shell .sched-rx .sched-board-host .dash-block .sched-views-bar,
+.bf-shell .sched-rx .sched-board-host .dash-block .kpi-grid {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .bf-shell .sched-rx .sched-board-topline {
+    flex-direction: column;
+  }
+  .bf-shell .sched-rx .sched-board-topline .hs-home-topline-actions {
+    margin-left: 0;
+  }
+}

@@ -98,126 +98,131 @@ export function JobDrawer({
             <X size={18} />
           </button>
         </div>
-        <dl className="gantt-drawer-facts">
-          <div>
-            <dt>Crews</dt>
-            <dd title={crews || undefined}>{crews || "Unassigned"}</dd>
-          </div>
-          <div>
-            <dt>Progress</dt>
-            <dd>{job.percentComplete ?? 0}% complete</dd>
-          </div>
-          <div>
-            <dt>Materials</dt>
-            <dd>{job.materialsStatus}</dd>
-          </div>
-          <div>
-            <dt>Duration</dt>
-            <dd>
-              {days} day{days === 1 ? "" : "s"}
-            </dd>
-          </div>
-        </dl>
-        {(links || onLink) && (
-          <section className="gantt-drawer-links" aria-label="Dependencies">
-            <div className="gantt-drawer-links-head">
-              <h3>Links</h3>
-              {onLink && (
-                <button className="hs-btn" type="button" onClick={onLink}>
-                  <Link2 size={14} /> Link to another job…
-                </button>
-              )}
+        {/* The header stays; everything under it scrolls (the notifications drawer's shape). The
+            panel used to be the scroller itself AND start at the top of the window, so its title
+            and close button sat behind the top bar with no way to reach them. */}
+        <div className="gantt-drawer-body">
+          <dl className="gantt-drawer-facts">
+            <div>
+              <dt>Crews</dt>
+              <dd title={crews || undefined}>{crews || "Unassigned"}</dd>
             </div>
-            {links && links.length > 0 ? (
-              <ul>
-                {links.map((link) => {
-                  // this job follows the other, or leads to it
-                  const follows = link.successorId === job.id;
-                  const otherId = follows ? link.predecessorId : link.successorId;
-                  const other = jobsById?.get(otherId)?.name ?? otherId;
-                  return (
-                    <li key={link.id}>
-                      <span>
-                        {follows ? "Follows" : "Leads to"} <b>{other}</b>{" "}
-                        <em>
-                          ({link.type}
-                          {link.lagDays ? `, ${link.lagDays}d lag` : ""})
-                        </em>
-                      </span>
-                      {onUnlink && (
-                        <button className="hs-btn" type="button" aria-label={`Unlink ${other}`} onClick={() => onUnlink(link)}>
-                          <Unlink size={14} /> Unlink
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="gantt-drawer-links-empty">No links yet. A link makes the other job wait for this one.</p>
-            )}
-          </section>
-        )}
-        <form className="gantt-drawer-form" onSubmit={submit}>
-          <div className="gantt-drawer-row">
-            <label>
-              <span>Status</span>
-              <select autoFocus value={status} onChange={(event) => setStatus(event.target.value as Status)}>
-                {STATUSES.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Priority</span>
-              <select value={priority} onChange={(event) => setPriority(event.target.value as Job["priority"])}>
-                {PRIORITIES.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="gantt-drawer-row">
-            <label>
-              <span>Start</span>
-              <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required />
-            </label>
-            <label>
-              <span>Finish</span>
-              <input
-                type="date"
-                value={endDate}
-                min={startDate || undefined}
-                onChange={(event) => setEndDate(event.target.value)}
-                required
-              />
-            </label>
-          </div>
-          <label>
-            <span>Notes</span>
-            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Anything the crew should know" />
-          </label>
-          {error && (
-            <p className="gantt-drawer-error" role="alert">
-              {error}
-            </p>
+            <div>
+              <dt>Progress</dt>
+              <dd>{job.percentComplete ?? 0}% complete</dd>
+            </div>
+            <div>
+              <dt>Materials</dt>
+              <dd>{job.materialsStatus}</dd>
+            </div>
+            <div>
+              <dt>Duration</dt>
+              <dd>
+                {days} day{days === 1 ? "" : "s"}
+              </dd>
+            </div>
+          </dl>
+          {(links || onLink) && (
+            <section className="gantt-drawer-links" aria-label="Dependencies">
+              <div className="gantt-drawer-links-head">
+                <h3>Links</h3>
+                {onLink && (
+                  <button className="hs-btn" type="button" onClick={onLink}>
+                    <Link2 size={14} /> Link to another job…
+                  </button>
+                )}
+              </div>
+              {links && links.length > 0 ? (
+                <ul>
+                  {links.map((link) => {
+                    // this job follows the other, or leads to it
+                    const follows = link.successorId === job.id;
+                    const otherId = follows ? link.predecessorId : link.successorId;
+                    const other = jobsById?.get(otherId)?.name ?? otherId;
+                    return (
+                      <li key={link.id}>
+                        <span>
+                          {follows ? "Follows" : "Leads to"} <b>{other}</b>{" "}
+                          <em>
+                            ({link.type}
+                            {link.lagDays ? `, ${link.lagDays}d lag` : ""})
+                          </em>
+                        </span>
+                        {onUnlink && (
+                          <button className="hs-btn" type="button" aria-label={`Unlink ${other}`} onClick={() => onUnlink(link)}>
+                            <Unlink size={14} /> Unlink
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="gantt-drawer-links-empty">No links yet. A link makes the other job wait for this one.</p>
+              )}
+            </section>
           )}
-          <div className="gantt-drawer-actions">
-            <button className="hs-btn hs-btn-primary" type="submit" disabled={busy}>
-              {busy ? "Saving…" : "Save changes"}
-            </button>
-            <button className="hs-btn" type="button" onClick={onClose}>
-              Cancel
-            </button>
-            <button className="hs-btn hs-btn-link" type="button" onClick={onOpenSchedule}>
-              <ExternalLink size={15} /> Open in Schedule
-            </button>
-          </div>
-        </form>
+          <form className="gantt-drawer-form" onSubmit={submit}>
+            <div className="gantt-drawer-row">
+              <label>
+                <span>Status</span>
+                <select autoFocus value={status} onChange={(event) => setStatus(event.target.value as Status)}>
+                  {STATUSES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Priority</span>
+                <select value={priority} onChange={(event) => setPriority(event.target.value as Job["priority"])}>
+                  {PRIORITIES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="gantt-drawer-row">
+              <label>
+                <span>Start</span>
+                <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required />
+              </label>
+              <label>
+                <span>Finish</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  required
+                />
+              </label>
+            </div>
+            <label>
+              <span>Notes</span>
+              <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Anything the crew should know" />
+            </label>
+            {error && (
+              <p className="gantt-drawer-error" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="gantt-drawer-actions">
+              <button className="hs-btn hs-btn-primary" type="submit" disabled={busy}>
+                {busy ? "Saving…" : "Save changes"}
+              </button>
+              <button className="hs-btn" type="button" onClick={onClose}>
+                Cancel
+              </button>
+              <button className="hs-btn hs-btn-link" type="button" onClick={onOpenSchedule}>
+                <ExternalLink size={15} /> Open in Schedule
+              </button>
+            </div>
+          </form>
+        </div>
       </aside>
     </div>
   );

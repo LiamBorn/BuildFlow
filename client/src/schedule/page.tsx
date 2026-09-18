@@ -9,9 +9,10 @@
  * notice, the alerts panel, the dialogs and the drawer. A page keeps its board and its
  * drop rules.
  */
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
-import { CalendarDays, ChevronDown, Crosshair } from "lucide-react";
-import { useCallback, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { DndContext, type DragEndEvent, type DragOverEvent } from "@dnd-kit/core";
+import { dragModifiers } from "../dragZoom";
+import { AlertTriangle, Bookmark, CalendarDays, ChevronDown, Crosshair, Gauge, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import {
   holidayMap,
   type BootstrapPayload,
@@ -23,6 +24,16 @@ import {
 } from "@buildflow/shared";
 import { assignJob, createDependency, createJob, deleteDependency, setScheduleBaseline } from "../api";
 import { addDays, parseIsoDate, toIsoDate } from "../components/ui/gantt";
+import {
+  BoardCustomizeHint,
+  BoardLayoutControls,
+  DashBoard,
+  HiddenPanelChips,
+  usePersistentLayout,
+  type DashPanel
+} from "../board/panelBoard";
+import { DASH_COLS, compact, type GridItem, type GridLimits } from "../dashGrid";
+import { SectionPicker, type SectionOption } from "../SectionPicker";
 import { useHudMotion } from "../useHudMotion";
 import { ScheduleAlertsPanel, deriveScheduleAlerts, type ScheduleAlert } from "./alerts";
 import { useBenchData } from "./bench";
@@ -533,8 +544,79 @@ export function BackToScheduleButton({ onOpenSchedule }: { onOpenSchedule: () =>
   );
 }
 
+/* ---- the panel board on a schedule page (2026-09-15) -----------------------
+   "Set up the customize feature for the Schedule page, the same way as the Dashboard": a page
+   hands the frame its sections and the frame lays them — with its own blocks: the KPIs, the
+   filters, the saved views, the alerts — on the Dashboard's board (board/panelBoard.tsx): move
+   by the grip, size from the corner, remove to the "+" drawer, Reset layout. Every section is
+   full width, one under the next, until someone customizes; the board follows the person (the
+   `schedule:layout:<page>` account setting, mirrored on the device). The status band stays
+   above the board, as it does on the Dashboard. */
+export type ScheduleSection = {
+  id: string;
+  title: string;
+  icon?: LucideIcon;
+  /** Where the "+" drawer files it, and the line it shows there. */
+  group: string;
+  blurb: string;
+  /** The panel's own control, at the right of its title row (View all, a note). */
+  action?: ReactNode;
+  body: ReactNode;
+  /** Its height in grid rows to start with; the board fits it to the content until someone resizes it. */
+  h?: number;
+};
+
+/** Every section full width, one under the next — the default, and what Reset layout returns to. */
+const fullWidthLayout = (sections: ScheduleSection[]): GridItem[] => {
+  let y = 0;
+  return sections.map((section) => {
+    const h = section.h ?? 5;
+    const item: GridItem = { id: section.id, x: 0, y, w: DASH_COLS, h };
+    y += h;
+    return item;
+  });
+};
+/** The KPI tiles and the filter strip stop reading below half width. */
+const scheduleSectionLimits = (id: string): GridLimits => ({ minW: id === "kpis" || id === "filters" ? 3 : 2, minH: 2, maxW: DASH_COLS });
+
+function useScheduleBoard(userId: string, pageId: SchedulePageId, sections: ScheduleSection[]) {
+  // a section list that changes (the first-run panel comes and goes) changes the defaults
+  const signature = sections.map((section) => `${section.id}:${section.h ?? 5}`).join("|");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const defaults = useMemo(() => fullWidthLayout(sections), [signature]);
+  const board = usePersistentLayout(`bf:schedule:layout:${pageId}:${userId}`, defaults, defaults, {
+    limits: scheduleSectionLimits,
+    settingKey: `schedule:layout:${pageId}`
+  });
+  const [customizing, setCustomizing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [addedFocus, setAddedFocus] = useState<{ id: string; nonce: number } | null>(null);
+  const [editing, setEditing] = useState(false);
+  // below tablet width the board is a column and the controls step aside, as on the Dashboard
+  const [stacked, setStacked] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(max-width: 900px)");
+    const apply = () => setStacked(query.matches);
+    apply();
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
+  }, []);
+  // a saved board can name a section the page is not showing right now (first run, once the
+  // week is booked); the board shows what exists, packed up
+  const present = new Set(sections.map((section) => section.id));
+  const shown = useMemo(
+    () => compact(board.layout.filter((item) => present.has(item.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [board.layout, signature]
+  );
+  return { board, shown, customizing, setCustomizing, pickerOpen, setPickerOpen, addedFocus, setAddedFocus, editing, setEditing, stacked };
+}
+
 export type SchedulePageFrameProps = {
   page: SchedulePageState;
+  /** The page's own sections, as panels on the board (see ScheduleSection); without them the page lays itself out. */
+  sections?: ScheduleSection[];
   /** The page's own root class, e.g. "week-page". */
   pageClass?: string;
   eyebrow: ReactNode;
@@ -558,7 +640,14 @@ export type SchedulePageFrameProps = {
   alerts?: boolean;
   onOpenSchedule?: () => void;
   /** The page's drop rule and its announcements; with them the board stands in a DndContext. */
-  drag?: { accessibility: ComponentProps<typeof DndContext>["accessibility"]; onDragEnd: (event: DragEndEvent) => void | Promise<void> };
+  drag?: {
+    accessibility: ComponentProps<typeof DndContext>["accessibility"];
+    onDragEnd: (event: DragEndEvent) => void | Promise<void>;
+    /** For a board that shows where the card would land while it is still in the air (the Kanban). */
+    onDragOver?: (event: DragOverEvent) => void;
+    /** Escape, or a drag that never landed: take that preview back down. */
+    onDragCancel?: () => void;
+  };
   /** After the picker creates and books a job (the landing goes to the Week board on that week). */
   onBooked?: (booking: { job: Job; booked: boolean; date: string }) => void;
   /** The page's own dialogs (a day summary, an import). */
@@ -586,6 +675,7 @@ export function SchedulePageFrame({
   drag,
   onBooked,
   dialogs,
+  sections,
   children
 }: SchedulePageFrameProps) {
   const {
@@ -625,9 +715,96 @@ export function SchedulePageFrame({
   // the landing's motion only; without the ref the hook does nothing
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
+
+  /* The board: the frame's own blocks first — they read the same on every page — then the
+     page's sections, then the alerts where the page leaves them to the frame. */
+  const boardSections: ScheduleSection[] = sections
+    ? [
+        {
+          id: "kpis",
+          title: "Schedule KPIs",
+          icon: Gauge,
+          group: "Performance",
+          blurb: "Working days, bookings, crew utilisation and what is still unbooked this week.",
+          body: <ScheduleKpiGrid kpis={kpis} />,
+          h: 4
+        },
+        {
+          id: "filters",
+          title: "Filters",
+          icon: SlidersHorizontal,
+          group: "Tools",
+          blurb: "Narrow every schedule view by project, crew type, crew and status.",
+          body: <ScheduleFilters data={data} context={context} onChange={updateContext} {...filters} />,
+          h: 3
+        },
+        {
+          id: "savedViews",
+          title: "Saved views",
+          icon: Bookmark,
+          group: "Tools",
+          blurb: "Name the filters on screen and apply them again with one click.",
+          body: (
+            <SavedViewsBar
+              data={data}
+              context={context}
+              page={page.page}
+              onChange={updateContext}
+              onOpenPage={onOpenPage}
+              reload={reload}
+            />
+          ),
+          h: 3
+        },
+        ...sections,
+        ...(showAlerts
+          ? [
+              {
+                id: "alerts",
+                title: "Schedule Alerts",
+                icon: AlertTriangle,
+                group: "Attention",
+                blurb: "Conflicts, unbooked work and slips in what the filters show.",
+                body: <ScheduleAlertsPanel headless alerts={alerts} onOpen={openAlert} />,
+                h: 5
+              }
+            ]
+          : [])
+      ]
+    : [];
+  const boardHost = useScheduleBoard(data.activeUser.id, page.page, boardSections);
+  const panels: Record<string, DashPanel> = Object.fromEntries(
+    boardSections.map((section) => [
+      section.id,
+      { id: section.id, title: section.title, icon: section.icon, action: section.action, body: section.body }
+    ])
+  );
+  const panelTitles: Record<string, string> = Object.fromEntries(boardSections.map((section) => [section.id, section.title]));
+
+  const titleRow = (
+    <div className="schedule-title-row dx-hero" data-reveal={motion || undefined}>
+      <span className="dx-eyebrow">
+        <span className="dx-dot" />
+        {eyebrow}
+      </span>
+      <h1 className="dx-title" data-tutorial-id={titleTutorialId}>
+        {title}
+        {releaseTag}
+      </h1>
+      <p className="dx-sub">{sub}</p>
+    </div>
+  );
+  const controlRow = (
+    <div className="schedule-control-row" data-reveal={motion || undefined}>
+      {controls}
+    </div>
+  );
+
   const body = (
     <div
-      className={["schedule-page", pageClass, "page-stack", "sched-rx", "gantt-page"].filter(Boolean).join(" ")}
+      className={["schedule-page", pageClass, "page-stack", "sched-rx", "gantt-page", sections ? "has-board" : ""]
+        .filter(Boolean)
+        .join(" ")}
       ref={motion ? rootRef : undefined}
     >
       <div className="dx-bg" aria-hidden="true">
@@ -636,37 +813,87 @@ export function SchedulePageFrame({
         <span className="dx-aurora dx-aurora-3" />
       </div>
       {motion && <div className="dx-cursor" aria-hidden="true" />}
-      <div className="schedule-title-row dx-hero" data-reveal={motion || undefined}>
-        <span className="dx-eyebrow">
-          <span className="dx-dot" />
-          {eyebrow}
-        </span>
-        <h1 className="dx-title" data-tutorial-id={titleTutorialId}>
-          {title}
-          {releaseTag}
-        </h1>
-        <p className="dx-sub">{sub}</p>
-      </div>
-
-      {band}
-      <div className="schedule-control-row" data-reveal={motion || undefined}>
-        {controls}
-      </div>
-
-      <ScheduleFilters data={data} context={context} onChange={updateContext} {...filters} />
-      <SavedViewsBar data={data} context={context} page={page.page} onChange={updateContext} onOpenPage={onOpenPage} reload={reload} />
-
-      <ScheduleKpiGrid kpis={kpis} />
-
-      {board ? (
-        <section className="schedule-board" aria-label={boardLabel} data-tutorial-id={boardTutorialId}>
+      {sections ? (
+        /* The board's scope classes are the Dashboard's — that is where its sheets look — and
+           schedule-board.css takes back what they mean for a page root. */
+        <div
+          className={`dash-rx hs-home sched-board-host${boardHost.customizing ? " is-customizing" : ""}${boardHost.editing ? " is-rearranging" : ""}`}
+        >
+          <div className="sched-board-topline">
+            {titleRow}
+            {!boardHost.stacked && (
+              <BoardLayoutControls
+                customizing={boardHost.customizing}
+                pickerOpen={boardHost.pickerOpen}
+                onToggleCustomize={() => boardHost.setCustomizing((current) => !current)}
+                onReset={() => {
+                  boardHost.board.reset();
+                  boardHost.setCustomizing(false);
+                }}
+                onAdd={() => boardHost.setPickerOpen(true)}
+              />
+            )}
+          </div>
+          {boardHost.customizing && <BoardCustomizeHint />}
+          {boardHost.customizing && boardHost.board.hidden.length > 0 && (
+            <HiddenPanelChips hidden={boardHost.board.hidden} titles={panelTitles} onShow={boardHost.board.show} />
+          )}
+          {band}
+          {controlRow}
           <ScheduleNotice notice={notice} news={news} />
+          <DashBoard
+            layout={boardHost.shown}
+            panels={panels}
+            limits={scheduleSectionLimits}
+            onChange={boardHost.board.update}
+            onFit={boardHost.board.fit}
+            fitToContent={!boardHost.board.stored || boardHost.board.fitting}
+            onEditingChange={boardHost.setEditing}
+            panelFocus={boardHost.addedFocus}
+            editable={boardHost.customizing}
+            onHide={boardHost.customizing ? boardHost.board.hide : undefined}
+          />
+          <SectionPicker
+            open={boardHost.pickerOpen}
+            onClose={() => boardHost.setPickerOpen(false)}
+            options={boardSections.map((section): SectionOption => ({
+              id: section.id,
+              title: section.title,
+              group: section.group,
+              blurb: section.blurb,
+              icon: section.icon,
+              onBoard: !boardHost.board.hidden.includes(section.id)
+            }))}
+            onAdd={(id) => {
+              boardHost.board.show(id);
+              boardHost.setAddedFocus({ id, nonce: Date.now() + Math.random() });
+            }}
+          />
           {children}
-        </section>
+        </div>
       ) : (
-        children
+        <>
+          {titleRow}
+
+          {band}
+          {controlRow}
+
+          <ScheduleFilters data={data} context={context} onChange={updateContext} {...filters} />
+          <SavedViewsBar data={data} context={context} page={page.page} onChange={updateContext} onOpenPage={onOpenPage} reload={reload} />
+
+          <ScheduleKpiGrid kpis={kpis} />
+
+          {board ? (
+            <section className="schedule-board" aria-label={boardLabel} data-tutorial-id={boardTutorialId}>
+              <ScheduleNotice notice={notice} news={news} />
+              {children}
+            </section>
+          ) : (
+            children
+          )}
+          {showAlerts && <ScheduleAlertsPanel alerts={alerts} onOpen={openAlert} under />}
+        </>
       )}
-      {showAlerts && <ScheduleAlertsPanel alerts={alerts} onOpen={openAlert} under />}
       {linkFrom && (
         <GanttLinkDialog
           from={linkFrom}
@@ -722,11 +949,16 @@ export function SchedulePageFrame({
     <DndContext
       sensors={sensors}
       collisionDetection={scheduleCollision}
+      modifiers={dragModifiers}
       accessibility={drag.accessibility}
       onDragStart={() => {
         suppressClick.current = true;
       }}
-      onDragCancel={releaseClick}
+      onDragOver={drag.onDragOver}
+      onDragCancel={() => {
+        releaseClick();
+        drag.onDragCancel?.();
+      }}
       onDragEnd={(event) => void drag.onDragEnd(event)}
     >
       {body}

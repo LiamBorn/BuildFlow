@@ -33,6 +33,9 @@ export const scheduleCollision: CollisionDetection = (args) => {
   return underPointer.length > 0 ? underPointer : rectIntersection(args);
 };
 
+/** The window-scale drag modifier lives in ../dragZoom; re-exported here for the pages and the test that import it from the hooks. */
+export { unzoomDrag } from "../dragZoom";
+
 /** The one thing a notice offers: Undo after a change, Refresh after a board that could not reload. */
 export type ScheduleNoticeAction = { label: string; busy: string; run: () => Promise<void> };
 export type ScheduleNoticeState = { text: string; error?: boolean; action?: ScheduleNoticeAction };

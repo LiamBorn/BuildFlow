@@ -9,12 +9,9 @@
  * hs-gantt.css with the index pages' tokens.
  */
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { CalendarDays, CheckCircle2, Crosshair, ExternalLink, Link2, Minus, PencilLine, Plus, Unlink, ChevronDown } from "lucide-react";
+import { CheckCircle2, Crosshair, ExternalLink, Link2, Minus, PencilLine, Plus, Unlink, ChevronDown } from "lucide-react";
 import type { BootstrapPayload, Job, Status } from "@buildflow/shared";
-import { GanttLinkDialog } from "../GanttLinkDialog";
-import { ScheduleFilters } from "../ScheduleFilters";
-import { JobDrawer, ScheduleKpiGrid, ScheduleNotice, mondayOf } from "../parts";
-import { ScheduleAlertsPanel } from "../alerts";
+import { mondayOf } from "../parts";
 import { STATUSES, STATUS_PALETTE } from "../statusPalette";
 import { ScheduleCpmSummary } from "../cpm";
 import { ScheduleExportMenu } from "../ExportMenu";
@@ -44,8 +41,7 @@ import {
   type Range
 } from "../../components/ui/gantt";
 import type { ScheduleTarget } from "../links";
-import { SavedViewsBar } from "../SavedViewsBar";
-import { useSchedulePage } from "../page";
+import { BackToScheduleButton, SchedulePageFrame, useSchedulePage } from "../page";
 import { narrowViewport, useNarrowViewport } from "../hooks";
 
 /** The chart's own ranges plus "week": a fitted seven-day window on the shared schedule week. */
@@ -101,17 +97,18 @@ type Group = {
 /**
  * The colour of a group's dot and of its summary rule. Four values, all of them already in
  * the app's vocabulary, all measured against the white card for the 3:1 a non-text indicator
- * carries: on track 4.43, monitor 5.02, at risk 5.62, complete 3.11.
+ * carries (the Client Desk semantic set since 2026-09-15): on track 5.43, monitor 5.09, at risk 6.60,
+ * complete 5.63.
  *
  * The reference dashboard's dot is a plain group marker with no meaning. This one reports the
  * project's health, because a coloured dot that says nothing is a wasted channel and this is
  * exactly where the eye already goes.
  */
 const GROUP_HEALTH_COLOUR: Record<string, string> = {
-  "On Track": "#138a42",
-  Monitor: "#b45309",
-  "At Risk": "#c62828",
-  Complete: "#8a92a6"
+  "On Track": "var(--bf-color-ok)",
+  Monitor: "var(--bf-color-warn)",
+  "At Risk": "var(--bf-color-bad)",
+  Complete: "var(--bf-ink-muted)"
 };
 const groupColour = (health: string) => GROUP_HEALTH_COLOUR[health] ?? GROUP_HEALTH_COLOUR["On Track"];
 
@@ -207,35 +204,24 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
   const page = useSchedulePage({ data: liveData, reload, onOpenPage, page: "gantt", overrides, cpm: true });
   const {
     data,
-    context,
-    updateContext,
     filters,
     scope,
     weekStart,
     setWeekStart,
     weekIso,
+    weekRange,
     isThisWeek,
     holidays,
-    kpis,
     cpm,
-    alerts,
-    openAlert,
     jobsById,
     projectsById,
     crewNamesForJob,
-    notice,
-    news,
     say,
-    conflictDialog,
     patchJob: saveJob,
     selectedJob,
     openJob,
-    closeDrawer,
     dependencies,
-    linksOf,
-    linkFrom,
     setLinkFrom,
-    linkJobs,
     unlinkJobs,
     busy,
     saveBaseline
@@ -449,49 +435,19 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
   };
 
   return (
-    <div className="page-stack gantt-page hs-index">
-      {/* the same KPIs as every schedule page, for the shared week; .sched-rx scopes their styles on this index-style page */}
-      <div className="sched-rx gantt-shared">
-        <ScheduleKpiGrid kpis={kpis} />
-      </div>
-
-      <div className="hs-index-main">
-        <section className="hs-index-card gantt-card" aria-labelledby="gantt-index-title">
-          <div className="hs-index-head">
-            <h1 className="hs-index-title" id="gantt-index-title" data-tutorial-id="gantt-page-title">
-              Gantt Chart
-              {releaseTag}
-            </h1>
-            <div className="hs-index-actions">
-              <button
-                className="hs-btn"
-                type="button"
-                onClick={() => setScrollRequest({ date: startOfDay(new Date()), nonce: Date.now() })}
-                title="Scroll to today"
-              >
-                <Crosshair size={15} /> Today
-              </button>
-              <ScheduleExportMenu
-                scope={{
-                  jobs: visibleJobs,
-                  assignments: data.assignments,
-                  crews: data.crews,
-                  projects: data.projects,
-                  includeUnbooked: true
-                }}
-                weekDays={weekIso}
-                sheetTitle="Crew week sheets"
-                filename="buildflow-gantt"
-                buttonClassName="hs-btn"
-                onNotice={say}
-              />
-              <button className="hs-btn" type="button" onClick={onOpenSchedule} title="Back to the Schedule overview">
-                <CalendarDays size={16} /> Schedule
-              </button>
-            </div>
-          </div>
-
-          <div className="gantt-toolbar">
+    <SchedulePageFrame
+      page={page}
+      pageClass="gantt-chart"
+      eyebrow={<>Crew Scheduling · {weekRange}</>}
+      title="Gantt Chart"
+      titleTutorialId="gantt-page-title"
+      sub="Every job as a bar on one calendar, grouped by project. Drag a bar to move it, drag an edge to change its dates, or open one for its status and notes."
+      releaseTag={releaseTag}
+      onOpenSchedule={onOpenSchedule}
+      band={cpm ? <ScheduleCpmSummary cpm={cpm} busy={busy} onSetBaseline={() => void saveBaseline()} /> : undefined}
+      controls={
+        <>
+          <div className="filter-strip gantt-range">
             <div className="gantt-seg" role="group" aria-label="Timeline range">
               {RANGES.map((option) => (
                 <button
@@ -530,6 +486,8 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                 </button>
               </div>
             )}
+          </div>
+          <div className="filter-strip gantt-actions">
             <div className="gantt-zoom" role="group" aria-label="Zoom">
               <button
                 className="hs-btn hs-btn-icon"
@@ -553,191 +511,172 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                 <Plus size={15} />
               </button>
             </div>
-            <ScheduleFilters data={data} context={context} onChange={updateContext} />
-            <SavedViewsBar data={data} context={context} page="gantt" onChange={updateContext} onOpenPage={onOpenPage} reload={reload} />
-            {legend.length > 0 && (
-              <div className="gantt-legend" aria-label="Status legend">
-                {legend.map((status) => (
-                  <span key={status}>
-                    <i style={{ background: STATUS_PALETTE[status].color }} aria-hidden="true" />
-                    {status}
-                  </span>
-                ))}
-              </div>
-            )}
+            <button
+              className="hs-btn"
+              type="button"
+              onClick={() => setScrollRequest({ date: startOfDay(new Date()), nonce: Date.now() })}
+              title="Scroll to today"
+            >
+              <Crosshair size={15} /> Today
+            </button>
+            <ScheduleExportMenu
+              scope={{
+                jobs: visibleJobs,
+                assignments: data.assignments,
+                crews: data.crews,
+                projects: data.projects,
+                includeUnbooked: true
+              }}
+              weekDays={weekIso}
+              sheetTitle="Crew week sheets"
+              filename="buildflow-gantt"
+              buttonClassName="hs-btn"
+              onNotice={say}
+            />
+            <BackToScheduleButton onOpenSchedule={onOpenSchedule} />
           </div>
-
-          <ScheduleNotice notice={notice} news={news} />
-
-          {cpm && <ScheduleCpmSummary cpm={cpm} busy={busy} onSetBaseline={() => void saveBaseline()} />}
-          {hiddenRows > 0 && (
-            <p className="gantt-status gantt-cap-note" role="status">
-              Showing the {GANTT_ROW_CAP} jobs nearest today of {visibleJobs.length} — filter by project, crew or week to see the rest.
-            </p>
-          )}
-          <div className="gantt-frame" data-tutorial-id="gantt-timeline">
-            {groups.length === 0 ? (
-              <div className="gantt-empty">
-                <div>
-                  <strong>Nothing to chart yet.</strong>
-                  {data.jobs.length === 0
-                    ? "Add jobs from the Schedule page and they show up here as bars."
-                    : "No jobs match these filters."}
-                </div>
-              </div>
-            ) : (
-              <GanttProvider
-                range={chartRange}
-                zoom={zoom}
-                span={span}
-                initialDate={initialDate}
-                scrollRequest={scrollRequest}
-                sidebarWidth={phone ? 104 : 300}
-                rowHeight={phone ? 46 : 36}
-                fit={fit}
-              >
-                {/* The reference's left pane is [name][date range], with the duration carried by
-                    the summary rule over each group instead of a column of its own. */}
-                <GanttSidebar title="Jobs" trailing="Dates">
-                  <WindowedGroups
-                    groups={groups}
-                    layout={layout}
-                    group={(group, children) => (
-                      <GanttSidebarGroup name={group.name} dot={groupColour(group.health)} trailing={String(group.rows.length)}>
-                        {children}
-                      </GanttSidebarGroup>
-                    )}
-                    row={(row) => (
-                      <GanttSidebarItem
-                        key={row.job.id}
-                        feature={row.feature}
-                        selected={row.job.id === selectedJob?.id}
-                        onSelectItem={openJob}
-                        meta={
-                          [row.crews, row.critical ? "critical" : row.float != null ? `${row.float}d float` : ""]
-                            .filter(Boolean)
-                            .join(" · ") || undefined
-                        }
-                        trailing={ganttRange(row.feature.startAt, row.feature.endAt)}
-                      />
-                    )}
-                  />
-                </GanttSidebar>
-                <GanttTimeline>
-                  <GanttHeader />
-                  <GanttFeatureList>
-                    <WindowedGroups
-                      groups={groups}
-                      layout={layout}
-                      group={(group, children) => (
-                        <GanttFeatureListGroup>
-                          <GanttFeatureGroupSummary
-                            startAt={group.startAt}
-                            endAt={group.endAt}
-                            colour={groupColour(group.health)}
-                            label={
-                              <>
-                                <strong>{group.name}</strong>
-                                <i aria-hidden="true">·</i>
-                                {ganttRange(group.startAt, group.endAt)}
-                                <i aria-hidden="true">·</i>
-                                {group.days} {group.days === 1 ? "day" : "days"}
-                              </>
-                            }
-                          />
-                          {children}
-                        </GanttFeatureListGroup>
-                      )}
-                      row={(row) => (
-                        <GanttContextMenu
-                          key={row.job.id}
-                          items={[
-                            { label: "Open details", icon: <PencilLine size={16} />, onSelect: () => openJob(row.job.id) },
-                            {
-                              label: "Mark complete",
-                              icon: <CheckCircle2 size={16} />,
-                              disabled: row.job.status === "Complete",
-                              onSelect: () => void patchJob(row.job, { status: "Complete" }, `${row.job.name} marked complete`)
-                            },
-                            { label: "Link to another job…", icon: <Link2 size={16} />, onSelect: () => setLinkFrom(row.job) },
-                            ...dependencies
-                              .filter((link) => link.predecessorId === row.job.id || link.successorId === row.job.id)
-                              .slice(0, 4)
-                              .map((link) => ({
-                                label: `Unlink ${jobName(link.predecessorId === row.job.id ? link.successorId : link.predecessorId)} (${link.type})`,
-                                icon: <Unlink size={16} />,
-                                danger: true,
-                                onSelect: () => void unlinkJobs(link)
-                              })),
-                            { label: "Open in Schedule", icon: <ExternalLink size={16} />, onSelect: onOpenSchedule }
-                          ]}
-                        >
-                          <GanttFeatureItem
-                            {...row.feature}
-                            onMove={handleMove}
-                            onSelect={openJob}
-                            selected={row.job.id === selectedJob?.id}
-                            barClassName={row.critical ? "is-critical" : undefined}
-                            ghost={row.ghost}
-                          />
-                        </GanttContextMenu>
-                      )}
-                    />
-                  </GanttFeatureList>
-                  <GanttDependencyLinks links={chartLinks} rows={linkRows} critical={criticalIds} />
-                  {markers.map((marker) => (
-                    <GanttMarker key={marker.id} {...marker} />
-                  ))}
-                  {holidayMarkers.map((marker) => (
-                    <GanttMarker key={marker.id} {...marker} />
-                  ))}
-                  <GanttToday />
-                </GanttTimeline>
-              </GanttProvider>
-            )}
-          </div>
-          <p className="gantt-note">
-            Drag a bar to move a job, drag either edge to change its dates, right-click a bar for actions — including linking it to the job
-            that follows it. Arrows are dependencies — red on the critical path; a faint striped bar behind a job is its baseline. Flags
-            mark each project's target completion and the workspace's holidays.
-          </p>
-        </section>
-        <div className="sched-rx gantt-shared">
-          <ScheduleAlertsPanel alerts={alerts} onOpen={openAlert} under />
+        </>
+      }
+      boardLabel="Job timeline"
+    >
+      {legend.length > 0 && (
+        <div className="gantt-legend" aria-label="Status legend">
+          {legend.map((status) => (
+            <span key={status}>
+              <i style={{ background: STATUS_PALETTE[status].color }} aria-hidden="true" />
+              {status}
+            </span>
+          ))}
         </div>
-      </div>
-
-      {conflictDialog}
-      {linkFrom && (
-        <GanttLinkDialog
-          from={linkFrom}
-          jobs={visibleJobs}
-          existing={dependencies}
-          onClose={() => setLinkFrom(null)}
-          onLink={async (successor, type, lagDays) => {
-            setLinkFrom(null);
-            await linkJobs(linkFrom, successor, type, lagDays);
-          }}
-        />
       )}
-      {selectedJob && (
-        <JobDrawer
-          job={selectedJob}
-          projectName={projectsById.get(selectedJob.projectId)?.name ?? "Unfiled"}
-          crews={crewNamesForJob(selectedJob.id)}
-          links={linksOf(selectedJob.id)}
-          jobsById={jobsById}
-          onLink={() => setLinkFrom(selectedJob)}
-          onUnlink={(link) => void unlinkJobs(link)}
-          onClose={closeDrawer}
-          onOpenSchedule={onOpenSchedule}
-          onSave={async (patch) => {
-            const result = await patchJob(selectedJob, patch, `${selectedJob.name} saved`);
-            if (result.saved) closeDrawer();
-            return result;
-          }}
-        />
+      {hiddenRows > 0 && (
+        <p className="gantt-status gantt-cap-note" role="status">
+          Showing the {GANTT_ROW_CAP} jobs nearest today of {visibleJobs.length} — filter by project, crew or week to see the rest.
+        </p>
       )}
-    </div>
+      <div className="gantt-frame" data-tutorial-id="gantt-timeline">
+        {groups.length === 0 ? (
+          <div className="gantt-empty">
+            <div>
+              <strong>Nothing to chart yet.</strong>
+              {data.jobs.length === 0 ? "Add jobs from the Schedule page and they show up here as bars." : "No jobs match these filters."}
+            </div>
+          </div>
+        ) : (
+          <GanttProvider
+            range={chartRange}
+            zoom={zoom}
+            span={span}
+            initialDate={initialDate}
+            scrollRequest={scrollRequest}
+            sidebarWidth={phone ? 104 : 300}
+            rowHeight={phone ? 46 : 36}
+            fit={fit}
+          >
+            {/* The reference's left pane is [name][date range], with the duration carried by
+                the summary rule over each group instead of a column of its own. */}
+            <GanttSidebar title="Jobs" trailing="Dates">
+              <WindowedGroups
+                groups={groups}
+                layout={layout}
+                group={(group, children) => (
+                  <GanttSidebarGroup name={group.name} dot={groupColour(group.health)} trailing={String(group.rows.length)}>
+                    {children}
+                  </GanttSidebarGroup>
+                )}
+                row={(row) => (
+                  <GanttSidebarItem
+                    key={row.job.id}
+                    feature={row.feature}
+                    selected={row.job.id === selectedJob?.id}
+                    onSelectItem={openJob}
+                    meta={
+                      [row.crews, row.critical ? "critical" : row.float != null ? `${row.float}d float` : ""].filter(Boolean).join(" · ") ||
+                      undefined
+                    }
+                    trailing={ganttRange(row.feature.startAt, row.feature.endAt)}
+                  />
+                )}
+              />
+            </GanttSidebar>
+            <GanttTimeline>
+              <GanttHeader />
+              <GanttFeatureList>
+                <WindowedGroups
+                  groups={groups}
+                  layout={layout}
+                  group={(group, children) => (
+                    <GanttFeatureListGroup>
+                      <GanttFeatureGroupSummary
+                        startAt={group.startAt}
+                        endAt={group.endAt}
+                        colour={groupColour(group.health)}
+                        label={
+                          <>
+                            <strong>{group.name}</strong>
+                            <i aria-hidden="true">·</i>
+                            {ganttRange(group.startAt, group.endAt)}
+                            <i aria-hidden="true">·</i>
+                            {group.days} {group.days === 1 ? "day" : "days"}
+                          </>
+                        }
+                      />
+                      {children}
+                    </GanttFeatureListGroup>
+                  )}
+                  row={(row) => (
+                    <GanttContextMenu
+                      key={row.job.id}
+                      items={[
+                        { label: "Open details", icon: <PencilLine size={16} />, onSelect: () => openJob(row.job.id) },
+                        {
+                          label: "Mark complete",
+                          icon: <CheckCircle2 size={16} />,
+                          disabled: row.job.status === "Complete",
+                          onSelect: () => void patchJob(row.job, { status: "Complete" }, `${row.job.name} marked complete`)
+                        },
+                        { label: "Link to another job…", icon: <Link2 size={16} />, onSelect: () => setLinkFrom(row.job) },
+                        ...dependencies
+                          .filter((link) => link.predecessorId === row.job.id || link.successorId === row.job.id)
+                          .slice(0, 4)
+                          .map((link) => ({
+                            label: `Unlink ${jobName(link.predecessorId === row.job.id ? link.successorId : link.predecessorId)} (${link.type})`,
+                            icon: <Unlink size={16} />,
+                            danger: true,
+                            onSelect: () => void unlinkJobs(link)
+                          })),
+                        { label: "Open in Schedule", icon: <ExternalLink size={16} />, onSelect: onOpenSchedule }
+                      ]}
+                    >
+                      <GanttFeatureItem
+                        {...row.feature}
+                        onMove={handleMove}
+                        onSelect={openJob}
+                        selected={row.job.id === selectedJob?.id}
+                        barClassName={row.critical ? "is-critical" : undefined}
+                        ghost={row.ghost}
+                      />
+                    </GanttContextMenu>
+                  )}
+                />
+              </GanttFeatureList>
+              <GanttDependencyLinks links={chartLinks} rows={linkRows} critical={criticalIds} />
+              {markers.map((marker) => (
+                <GanttMarker key={marker.id} {...marker} />
+              ))}
+              {holidayMarkers.map((marker) => (
+                <GanttMarker key={marker.id} {...marker} />
+              ))}
+              <GanttToday />
+            </GanttTimeline>
+          </GanttProvider>
+        )}
+      </div>{" "}
+      <p className="gantt-note">
+        Drag a bar to move a job, drag either edge to change its dates, right-click a bar for actions — including linking it to the job that
+        follows it. Arrows are dependencies — red on the critical path; a faint striped bar behind a job is its baseline. Flags mark each
+        project's target completion and the workspace's holidays.
+      </p>{" "}
+    </SchedulePageFrame>
   );
 }

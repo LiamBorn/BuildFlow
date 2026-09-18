@@ -139,6 +139,17 @@ export type Range = "daily" | "monthly" | "quarterly";
 /** Where a drag ended, and the bar that was dragged (so hit-tests can look past it). */
 export type GanttPointer = { clientX: number; clientY: number; target: HTMLElement };
 
+/**
+ * The effective CSS zoom on an element, or 1 where the browser reports none (jsdom, older engines).
+ * The Dashboard family of pages scales with the window (app-shell-client-desk.css section 42 puts a
+ * CSS zoom on the shell): pointer coordinates arrive in screen pixels while the chart lays out in its
+ * own, so every screen distance that becomes a chart distance is divided by this.
+ */
+export const cssZoomOf = (el: Element | null | undefined): number => {
+  const zoom = (el as (Element & { currentCSSZoom?: number }) | null | undefined)?.currentCSSZoom;
+  return typeof zoom === "number" && zoom > 0 ? zoom : 1;
+};
+
 /** The element under a point, ignoring `ignore` (typically the bar being dragged, which sits under the pointer). */
 export const elementUnderPointer = (clientX: number, clientY: number, ignore: HTMLElement | null) => {
   const previous = ignore?.style.visibility;
@@ -527,8 +538,9 @@ export const GanttColumn: FC<GanttColumnProps> = ({ index, isColumnSecondary }) 
     if (!gantt.onAddItem || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const timelineRect = gantt.timelineRef.current?.getBoundingClientRect();
-    const x = event.clientX - (timelineRect?.left ?? rect.left);
-    setHover({ top: event.clientY - rect.top, date: getDateByMousePosition(gantt, x) });
+    const zoom = cssZoomOf(ref.current);
+    const x = (event.clientX - (timelineRect?.left ?? rect.left)) / zoom;
+    setHover({ top: (event.clientY - rect.top) / zoom, date: getDateByMousePosition(gantt, x) });
   };
 
   return (
@@ -696,7 +708,8 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
     []
   );
 
-  const timelineX = (clientX: number) => clientX - (gantt.timelineRef.current?.getBoundingClientRect().left ?? 0);
+  const timelineX = (clientX: number) =>
+    (clientX - (gantt.timelineRef.current?.getBoundingClientRect().left ?? 0)) / cssZoomOf(gantt.timelineRef.current);
 
   const onPointerDown = (dragZone: DragZone) => (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) return;
@@ -717,7 +730,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
     }
     const delta =
       gantt.range === "daily"
-        ? Math.round((event.clientX - p.x0) / columnWidthPx(gantt))
+        ? Math.round((event.clientX - p.x0) / cssZoomOf(gantt.timelineRef.current) / columnWidthPx(gantt))
         : differenceInDays(getDateByMousePosition(gantt, timelineX(event.clientX)), getDateByMousePosition(gantt, timelineX(p.x0)));
     let next: { start: Date; end: Date };
     if (p.zone === "move") {
@@ -765,7 +778,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   const palette = {
     "--gantt-bar-fill": feature.status.fill ?? feature.status.color,
     "--gantt-bar-edge": feature.status.edge ?? feature.status.color,
-    "--gantt-bar-ink": feature.status.ink ?? "#14203a",
+    "--gantt-bar-ink": feature.status.ink ?? "var(--bf-ink)",
     "--gantt-bar-dot": feature.status.color
   } as CSSProperties;
   const progress = Math.max(0, Math.min(100, feature.progress ?? 0));
@@ -938,7 +951,7 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({ on
           setX(null);
           return;
         }
-        setX(event.clientX - rect.left);
+        setX((event.clientX - rect.left) / cssZoomOf(gantt.timelineRef.current));
       });
     };
     const onLeave = () => setX(null);

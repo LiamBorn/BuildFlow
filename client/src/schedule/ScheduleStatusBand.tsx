@@ -2,6 +2,7 @@
  * The Schedule Status band: the portfolio's forecast against the plan, from
  * GET /api/schedule/status — on the Dashboard, the Projects page and the Schedule landing.
  */
+import { AnimatedFigure } from "../components/ui/animated-figure";
 import type { Project } from "@buildflow/shared";
 import { AlertTriangle, CalendarDays, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -75,6 +76,7 @@ export function ScheduleStatusBand({
   if (failed) {
     return (
       <div
+        key="failed"
         className={`ss-strip ss-failed${compact ? " is-compact" : ""}`}
         role="status"
         aria-label="Schedule status"
@@ -92,7 +94,7 @@ export function ScheduleStatusBand({
     // the Schedule landing keeps the band's place (and the tour's anchor) while it loads or has nothing to compare yet
     if (!compact) return null;
     return (
-      <div className="ss-strip ss-empty is-compact" role="status" aria-label="Schedule status" data-tutorial-id="schedule-status-band">
+      <div key="empty" className="ss-strip ss-empty is-compact" role="status" aria-label="Schedule status" data-tutorial-id="schedule-status-band">
         <span>{status ? "No dated projects yet — the status band fills in as work is planned." : "Checking where the plan stands…"}</span>
       </div>
     );
@@ -114,6 +116,13 @@ export function ScheduleStatusBand({
     );
     return (
       <div
+        /* The key is load-bearing. The reveal-on-scroll hook adds `.in` imperatively and only
+           watches nodes that are ADDED; without a key React reuses the placeholder's <div> for
+           this one (same type, same position), just rewriting its class and adding data-reveal,
+           so nothing ever observed it and the loaded strip stayed at opacity 0. A key per
+           state (and per trend, since a class change would drop `.in` too) makes each a fresh
+           node the hook sees. */
+        key={`ready-${ahead ? "ahead" : "behind"}`}
         className={`ss-strip ${ahead ? "is-ahead" : "is-behind"}`}
         data-reveal
         aria-label="Schedule status"
@@ -122,7 +131,7 @@ export function ScheduleStatusBand({
         <span className="ss-strip-figure">
           <strong>
             {ahead ? "+" : "−"}
-            {magnitude}d
+            <AnimatedFigure text={magnitude} />d
           </strong>
           {ahead ? "ahead of plan" : "behind plan"}
         </span>
@@ -152,6 +161,7 @@ export function ScheduleStatusBand({
 
   return (
     <section
+      key={`band-${ahead ? "ahead" : "behind"}`}
       className={`ss-band ${ahead ? "is-ahead" : "is-behind"}`}
       data-reveal
       aria-label="Schedule status"
@@ -167,7 +177,9 @@ export function ScheduleStatusBand({
 
       <div className="ss-headline">
         <div className="ss-figure">
-          <strong>{magnitude}</strong>
+          <strong>
+            <AnimatedFigure text={magnitude} />
+          </strong>
           <span>
             {magnitude === 1 ? "day" : "days"} {ahead ? "ahead" : "behind"}
           </span>

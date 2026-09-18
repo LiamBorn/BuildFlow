@@ -5,7 +5,7 @@
  * call carrying the data a real drag would.
  */
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { DragEndEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import type { ReactElement, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapPayload, Crew, Job, Project, ScheduleAssignment } from "@buildflow/shared";
@@ -16,13 +16,25 @@ import type * as ExportModule from "./export";
 // whole-page renders take seconds when the machine is busy; the default 5 s is too tight for them
 vi.setConfig({ testTimeout: 20000 });
 
-const drops = vi.hoisted(() => ({ onDragEnd: undefined as ((event: DragEndEvent) => void) | undefined }));
+const drops = vi.hoisted(() => ({
+  onDragEnd: undefined as ((event: DragEndEvent) => void) | undefined,
+  onDragOver: undefined as ((event: DragOverEvent) => void) | undefined
+}));
 vi.mock("@dnd-kit/core", async (importOriginal) => {
   const actual = await importOriginal<typeof DndKit>();
   return {
     ...actual,
-    DndContext: ({ children, onDragEnd }: { children?: ReactNode; onDragEnd?: (event: DragEndEvent) => void }) => {
+    DndContext: ({
+      children,
+      onDragEnd,
+      onDragOver
+    }: {
+      children?: ReactNode;
+      onDragEnd?: (event: DragEndEvent) => void;
+      onDragOver?: (event: DragOverEvent) => void;
+    }) => {
       drops.onDragEnd = onDragEnd;
+      drops.onDragOver = onDragOver;
       return <>{children}</>;
     }
   };
@@ -38,6 +50,8 @@ vi.mock("../api", async (importOriginal) => {
     ...actual,
     rebookSchedule: vi.fn(async () => ({ assignments: [{ id: "as-new" }], removed: [], jobs: [] })),
     updateJob: vi.fn(async (id: string, patch: object) => ({ id, ...patch })),
+    updatePhase: vi.fn(async (id: string, patch: object) => ({ id, ...patch })),
+    updateProject: vi.fn(async (id: string, patch: object) => ({ id, ...patch })),
     assignJob: vi.fn(),
     createJob: vi.fn(),
     setScheduleBaseline: vi.fn(),
@@ -82,6 +96,8 @@ import {
   createCrew,
   createDependency,
   createProject,
+  updatePhase,
+  updateProject,
   deleteDependency,
   loadSampleData,
   rebookSchedule,
@@ -151,6 +167,22 @@ const drop = async (source: Record<string, unknown>, over: Record<string, unknow
     drops.onDragEnd?.(dragEnd(source, over));
   });
 };
+/** A card still in the air, held over `over` — what the board draws before the drop. */
+const dragOver = async (source: Record<string, unknown>, over: Record<string, unknown> | null) => {
+  expect(drops.onDragOver).toBeTypeOf("function");
+  await act(async () => {
+    drops.onDragOver?.({
+      active: { id: "drag", data: { current: source } },
+      over: over ? { id: "drop", data: { current: over } } : null
+    } as unknown as DragOverEvent);
+  });
+};
+/** The arrangement a board just saved, by section — every board keeps one under its own key. */
+const savedFor = (key: string) => {
+  const call = vi.mocked(setUserSetting).mock.calls.at(-1);
+  expect(call?.[0], `the board saved ${key}`).toBe(key);
+  return JSON.parse(String(call?.[1])) as Record<string, string[]>;
+};
 const notice = () => document.querySelector(".gantt-status");
 const cell = (crewId: string, date: string) => document.querySelector(`[data-crew-id="${crewId}"][data-date="${date}"]`) as HTMLElement;
 
@@ -158,6 +190,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
   drops.onDragEnd = undefined;
+  drops.onDragOver = undefined;
   resetSavedViews();
 });
 
@@ -224,6 +257,46 @@ describe("Week page", () => {
 });
 
 describe("List page", () => {
+  /* A CELL IS A LIST THE PLANNER ARRANGES (2026-09-18, the Kanban's arrangement asked for on the
+     other Schedule boards): carry a card between two others in a crew's day and it goes there.
+     Inside the cell that is an arrangement and nothing is asked of the server; across cells it
+     still re-books, and the card keeps the place it landed in. */
+  const twoInACell: BootstrapPayload = {
+    ...data,
+    assignments: [...data.assignments, { ...pinecrestBooking, id: "as-3", jobId: "j-riverside-concrete" }]
+  };
+  const FRAMING_JUN17 = "crew-framing|2026-06-17";
+
+  it("places a card between two in its own cell and writes only the arrangement, but still re-books across cells", async () => {
+    render(<WeekPage {...pageProps} data={twoInACell} />);
+    // both bookings sit in Framing Crew 2's 17th; the later one takes the earlier one's place
+    await drop(
+      { assignmentId: "as-3", jobId: "j-riverside-concrete", crewId: "crew-framing", date: "2026-06-17", cell: FRAMING_JUN17 },
+      { assignmentId: "as-2", cell: FRAMING_JUN17 }
+    );
+    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
+    const cellOrder = savedFor("schedule:week-order")[FRAMING_JUN17];
+    expect(cellOrder.indexOf("as-3")).toBeLessThan(cellOrder.indexOf("as-2"));
+    // an arrangement is the planner's own: no booking moved
+    expect(rebookSchedule).not.toHaveBeenCalled();
+    // and released on its OWN slot the cell is left alone, not sent to the end
+    vi.mocked(setUserSetting).mockClear();
+    await drop(
+      { assignmentId: "as-3", jobId: "j-riverside-concrete", crewId: "crew-framing", date: "2026-06-17", cell: FRAMING_JUN17 },
+      { assignmentId: "as-3", cell: FRAMING_JUN17 }
+    );
+    expect(setUserSetting).not.toHaveBeenCalled();
+
+    // and onto another crew's day it re-books, keeping the place it was dropped in
+    await drop(
+      { assignmentId: "as-3", jobId: "j-riverside-concrete", crewId: "crew-framing", date: "2026-06-17", cell: FRAMING_JUN17 },
+      { assignmentId: "as-1", cell: "crew-concrete|2026-06-15", crewId: "crew-concrete", date: "2026-06-15" }
+    );
+    await waitFor(() => expect(rebookSchedule).toHaveBeenCalled());
+    const moved = savedFor("schedule:week-order")["crew-concrete|2026-06-15"];
+    expect(moved[moved.indexOf("as-1") - 1]).toBe("as-3");
+  });
+
   it("shows the week as seven day sections, quiet days included", () => {
     render(<ListPage {...pageProps} />);
     expect(screen.getByRole("heading", { level: 1, name: /List/ })).toBeInTheDocument();
@@ -231,6 +304,27 @@ describe("List page", () => {
     expect(screen.getByRole("button", { name: "Open Riverside Office Building for Concrete Crew 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open Pinecrest Foundations for Framing Crew 2" })).toBeInTheDocument();
     expect(screen.getAllByText("Nothing booked — drop a booking here")).toHaveLength(5);
+  });
+
+  /* A DAY IS A LIST THE PLANNER ARRANGES, the same arrangement the Kanban and the Week board have.
+     Time order is what a day starts in; a row carried between two others stays where it was put. */
+  it("places a row between two in its own day and writes only the arrangement", async () => {
+    // the fixture books one crew on the 17th; a second booking that day is what there is to arrange
+    const twoOnADay: BootstrapPayload = {
+      ...data,
+      assignments: [...data.assignments, { ...pinecrestBooking, id: "as-3", jobId: "j-riverside-concrete", crewId: "crew-concrete" }]
+    };
+    render(<ListPage {...pageProps} data={twoOnADay} />);
+    await drop({ assignmentId: "as-3", date: "2026-06-17" }, { assignmentId: "as-2", date: "2026-06-17" });
+    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
+    const day = savedFor("schedule:list-order")["2026-06-17"];
+    expect(day.indexOf("as-3")).toBeLessThan(day.indexOf("as-2"));
+    expect(rebookSchedule, "an arrangement moves no booking").not.toHaveBeenCalled();
+    // and released on its OWN slot the day is left alone, not sent to the end
+    vi.mocked(setUserSetting).mockClear();
+    await drop({ assignmentId: "as-3", date: "2026-06-17" }, { assignmentId: "as-3", date: "2026-06-17" });
+    expect(setUserSetting).not.toHaveBeenCalled();
+    expect(notice(), "an arrangement needs no notice and nothing to undo").toBeNull();
   });
 
   it("re-books a row dropped on another day, and leaves one dropped on its own day alone", async () => {
@@ -261,6 +355,99 @@ describe("Kanban page", () => {
     expect(within(lane("Complete")).getByText("Drop a job here")).toBeInTheDocument();
   });
 
+  /* A lane is a list a planner arranges, not just a bucket (2026-09-17): "if a user grabs a job and
+     wants to put it between 2 jobs they can". Inside its own lane a drop writes the ARRANGEMENT and
+     nothing else; into another lane it still writes the status, and keeps the place it landed in. */
+  const readyBoard: BootstrapPayload = {
+    ...data,
+    jobs: [
+      ...data.jobs,
+      { ...pinecrestJob, id: "j-ready-1", name: "Ready One", status: "Ready" },
+      { ...pinecrestJob, id: "j-ready-2", name: "Ready Two", status: "Ready" }
+    ]
+  };
+  /** The lane order the board just saved, by lane key. */
+  const savedOrder = () => {
+    const call = vi.mocked(setUserSetting).mock.calls.at(-1);
+    expect(call?.[0], "the board saved an order").toBe("schedule:kanban-order");
+    return JSON.parse(String(call?.[1])) as Record<string, string[]>;
+  };
+
+  it("places a card between two others in its own lane, and writes only the arrangement", async () => {
+    render(<KanbanPage {...pageProps} data={readyBoard} />);
+    // Ready holds three: the Confirmed job the fixture books, then the two above
+    await drop({ jobId: "j-ready-2", status: "Ready", lane: "ready" }, { jobId: "j-riverside-concrete", lane: "ready" });
+    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
+    const ready = savedOrder().ready;
+    expect(ready).toHaveLength(3);
+    // it took the place of the card it was dropped on, which closed up behind it
+    expect(ready.indexOf("j-ready-2")).toBeLessThan(ready.indexOf("j-riverside-concrete"));
+    // an order is the planner's own: nothing about the job changed
+    expect(updateJob).not.toHaveBeenCalled();
+    /* Released on its OWN slot — picked up and put straight back — the lane is left alone. Read as
+       "no target" it used to mean the lane's own space, which sent the card to the end. */
+    vi.mocked(setUserSetting).mockClear();
+    await drop({ jobId: "j-ready-2", status: "Ready", lane: "ready" }, { jobId: "j-ready-2", lane: "ready" });
+    expect(setUserSetting).not.toHaveBeenCalled();
+    expect(notice(), "an arrangement needs no notice and nothing to undo").toBeNull();
+  });
+
+  it("keeps the place a card lands in when it comes from another lane, and still moves its status", async () => {
+    render(<KanbanPage {...pageProps} data={readyBoard} />);
+    await drop({ jobId: "j-pinecrest", status: "In Progress", lane: "progress" }, { jobId: "j-ready-1", lane: "ready" });
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "Ready" }, pinecrestJob.version));
+    const ready = savedOrder().ready;
+    expect(ready[ready.indexOf("j-ready-1") - 1]).toBe("j-pinecrest");
+    await waitFor(() => expect(notice()).toHaveTextContent("Pinecrest Foundations moved to Ready"));
+  });
+
+  /* CROSSING LANES used to show nothing moving aside — dnd-kit's sortable only opens a gap inside
+     the list the card belongs to. While the hand holds it over another lane the board now draws it
+     THERE, at the place it would take; and because it is drawn there, the pointer at the drop is
+     often on its own slot, so the drop has to read the preview rather than what is under it. */
+  const cardNames = (name: string) =>
+    within(lane(name))
+      .queryAllByText(/./, { selector: ".sched-kan-card strong" })
+      .map((node) => node.textContent);
+
+  it("opens the lane a card is held over, and drops it into the place that opened", async () => {
+    render(<KanbanPage {...pageProps} data={readyBoard} />);
+    const carried = { jobId: "j-pinecrest", status: "In Progress" as const, lane: "progress" };
+    expect(cardNames("In Progress")).toContain("Pinecrest Foundations");
+    const readyBefore = cardNames("Ready");
+
+    // held over the second card in Ready: it is drawn in front of it, and leaves In Progress
+    await dragOver(carried, { jobId: "j-ready-1", lane: "ready" });
+    const held = cardNames("Ready");
+    expect(held).toHaveLength(readyBefore.length + 1);
+    expect(held[held.indexOf("Ready One") - 1]).toBe("Pinecrest Foundations");
+    expect(cardNames("In Progress")).not.toContain("Pinecrest Foundations");
+    expect(within(lane("Ready")).getByRole("heading", { level: 3 }).nextElementSibling, "the count follows the cards").toHaveTextContent(
+      String(held.length)
+    );
+    // nothing has been written: it is still in the air
+    expect(setUserSetting).not.toHaveBeenCalled();
+    expect(updateJob).not.toHaveBeenCalled();
+
+    // let go with the pointer on the slot the card itself now fills — where the preview put it
+    await drop({ ...carried, lane: "ready" }, { jobId: "j-pinecrest", lane: "ready" });
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "Ready" }, pinecrestJob.version));
+    const saved = savedOrder().ready;
+    expect(saved[saved.indexOf("j-ready-1") - 1], "it landed where the gap was, not at the end").toBe("j-pinecrest");
+  });
+
+  it("takes the preview back down when the card comes home, or the drag is called off", async () => {
+    render(<KanbanPage {...pageProps} data={readyBoard} />);
+    const carried = { jobId: "j-pinecrest", status: "In Progress" as const, lane: "progress" };
+    await dragOver(carried, { jobId: "j-ready-1", lane: "ready" });
+    expect(cardNames("Ready")).toContain("Pinecrest Foundations");
+    // back over its own lane: the sortable takes over from here, so the preview stands down
+    await dragOver({ ...carried, lane: "ready" }, { jobId: "j-pinecrest", lane: "progress" });
+    await dragOver(carried, { status: "In Progress", lane: "progress" });
+    expect(cardNames("Ready")).not.toContain("Pinecrest Foundations");
+    expect(cardNames("In Progress")).toContain("Pinecrest Foundations");
+  });
+
   it("moves a dropped card to the lane's status, ignores its own lane, and can take the move back", async () => {
     render(<KanbanPage {...pageProps} />);
     await drop({ jobId: "j-riverside-concrete", status: "Confirmed" }, { status: "Ready" });
@@ -278,9 +465,148 @@ describe("Month page", () => {
     render(<MonthPage {...pageProps} />);
     expect(screen.getByRole("heading", { level: 1, name: /Month/ })).toBeInTheDocument();
     expect(screen.getAllByText("June 2026").length).toBeGreaterThan(0);
-    expect(document.querySelectorAll(".sched-cal-cell")).toHaveLength(42);
+    // June 2026 only: 30 day cells over five weeks, and five places padding the first and last
+    expect(document.querySelectorAll(".sched-cal-cell")).toHaveLength(30);
+    expect(document.querySelectorAll(".sched-cal-blank")).toHaveLength(5);
+    expect(screen.queryByText("31")).not.toBeInTheDocument(); // no 31 May before it, no 31 July after
+    expect(document.querySelector('.sched-cal-cell[data-date="2026-07-01"]')).toBeNull();
     expect(screen.getAllByTitle("Riverside Office Building · Concrete - Level 3 Slab").length).toBeGreaterThan(0);
     expect(screen.getAllByTitle("Pinecrest Foundations · Foundations").length).toBeGreaterThan(0);
+  });
+
+  it("keeps every job on a busy day in reach: the day opens where it stands", async () => {
+    /* Three chips is all a day shows, and what it was holding back used to be answered with a
+       dialog that LISTED the rest — the one thing a planner cannot pick up. Five jobs here, and a
+       marker on the same day to prove the jobs are the ones that get the room. */
+    const busy: BootstrapPayload = {
+      ...data,
+      phases: [...data.phases, { ...data.phases[0], id: "phase-busy", name: "Tear-Off", endDate: "2026-06-17" }],
+      jobs: [
+        ...data.jobs,
+        ...Array.from({ length: 4 }, (_, index) => ({
+          ...pinecrestJob,
+          id: `j-busy-${index}`,
+          name: `Busy Job ${index + 1}`,
+          startDate: "2026-06-17",
+          endDate: "2026-06-17"
+        }))
+      ]
+    };
+    render(<MonthPage {...pageProps} data={busy} />);
+    const day = document.querySelector('.sched-cal-cell[data-date="2026-06-17"]') as HTMLElement;
+    /* Everything on the day a planner can pick up. A job chip is SORTABLE since the day became a
+       list they arrange (2026-09-18), a marker is still only draggable — dnd-kit gives each its own
+       `aria-roledescription`, and both are grabbable, which is what this is counting. */
+    const grabbable = () =>
+      [...day.querySelectorAll('[aria-roledescription="draggable"] strong, [aria-roledescription="sortable"] strong')].map(
+        (name) => name.textContent
+      );
+
+    // collapsed: three chips, all of them jobs — the marker is what waits
+    expect(grabbable()).toEqual(["Pinecrest Foundations", "Busy Job 1", "Busy Job 2"]);
+    expect(day.querySelector(".sched-act.is-milestone")).toBeNull();
+    const opener = within(day).getByRole("button", { name: "+3 more" });
+    expect(opener).toHaveAttribute("aria-expanded", "false");
+
+    // opened: every job on the day is a chip like any other, and the marker is one too
+    fireEvent.click(opener);
+    expect(grabbable()).toEqual(["Pinecrest Foundations", "Busy Job 1", "Busy Job 2", "Busy Job 3", "Busy Job 4", "Tear-Off Complete"]);
+    const closer = within(day).getByRole("button", { name: "Show fewer" });
+    expect(closer).toHaveAttribute("aria-expanded", "true");
+
+    // and it closes again
+    fireEvent.click(closer);
+    expect(grabbable()).toHaveLength(3);
+    expect(within(day).getByRole("button", { name: "+3 more" })).toBeInTheDocument();
+  });
+
+  /* Every chip on the calendar can be carried, and each moves the date it stands for. The report
+     that asked for this said "it only lets me move the last job listed on the day" — the first
+     three were the phase markers, which looked exactly like jobs and moved nothing. */
+  /* A DAY IS A LIST THE PLANNER ARRANGES, the same arrangement the other Schedule boards have
+     (2026-09-18). A MARKER is not in it — it is a date, read and not ordered — so it keeps moving
+     the thing it stands for and never takes part in an order. */
+  const twoOnADay: BootstrapPayload = {
+    ...data,
+    jobs: [
+      ...data.jobs,
+      { ...pinecrestJob, id: "j-second", name: "Second On The Day" },
+      // a day keys on the job's START date, so a chip on the 18th has to start there
+      { ...pinecrestJob, id: "j-third", name: "Third Next Day", startDate: "2026-06-18", endDate: "2026-06-19" }
+    ]
+  };
+
+  it("places a chip between two in its own day, and keeps the place it lands in on another day", async () => {
+    render(<MonthPage {...pageProps} data={twoOnADay} />);
+    // both jobs start on the 17th; the second takes the first's place, and no date moves
+    await drop({ jobId: "j-second", date: "2026-06-17" }, { jobId: "j-pinecrest", date: "2026-06-17" });
+    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
+    const day = savedFor("schedule:month-order")["2026-06-17"];
+    expect(day.indexOf("j-second")).toBeLessThan(day.indexOf("j-pinecrest"));
+    expect(rebookSchedule, "an arrangement moves no date").not.toHaveBeenCalled();
+    // and released on its OWN slot the day is left alone, not sent to the end
+    vi.mocked(setUserSetting).mockClear();
+    await drop({ jobId: "j-second", date: "2026-06-17" }, { jobId: "j-second", date: "2026-06-17" });
+    expect(setUserSetting).not.toHaveBeenCalled();
+
+    // carried onto another day it moves the job, and keeps the place it was dropped in
+    await drop({ jobId: "j-second", date: "2026-06-17" }, { jobId: "j-third", date: "2026-06-18" });
+    await waitFor(() => expect(rebookSchedule).toHaveBeenCalled());
+    const next = savedFor("schedule:month-order")["2026-06-18"];
+    expect(next[next.indexOf("j-third") - 1]).toBe("j-second");
+  });
+
+  it("draws a chip held over another day in that day, and drops it into the place that opened", async () => {
+    render(<MonthPage {...pageProps} data={twoOnADay} />);
+    const chipsOn = (date: string) =>
+      [...document.querySelectorAll(`.sched-cal-cell[data-date="${date}"] .sched-act strong`)].map((node) => node.textContent);
+    expect(chipsOn("2026-06-17")).toContain("Second On The Day");
+
+    // held over the 18th: it is drawn THERE, and leaves the day it came from
+    await dragOver({ jobId: "j-second", date: "2026-06-17" }, { jobId: "j-third", date: "2026-06-18" });
+    expect(chipsOn("2026-06-18"), "drawn where it would land").toContain("Second On The Day");
+    expect(chipsOn("2026-06-17"), "and its own day closed up").not.toContain("Second On The Day");
+    expect(setUserSetting, "nothing is written while it is in the air").not.toHaveBeenCalled();
+
+    // let go with the pointer on the slot the chip itself now fills — where the preview put it
+    await drop({ jobId: "j-second", date: "2026-06-18" }, { jobId: "j-second", date: "2026-06-18" });
+    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
+    const landed = savedFor("schedule:month-order")["2026-06-18"];
+    expect(landed[landed.indexOf("j-third") - 1], "it landed where the gap was, not at the end").toBe("j-second");
+  });
+
+  it("moves a phase's finish when its marker is dropped, and puts it back on Undo", async () => {
+    render(<MonthPage {...pageProps} />);
+    // the fixture's one phase ends 2026-07-14, which is the marker's day
+    await drop({ milestoneId: "ms-phase-phase-1", date: "2026-07-14" }, { date: "2026-07-20" });
+    await waitFor(() => expect(updatePhase).toHaveBeenCalledWith("phase-1", { endDate: "2026-07-20" }));
+    await waitFor(() => expect(notice()).toHaveTextContent("Foundation Complete moved to Jul 20"));
+    // the work inside the phase is not touched: moving a milestone says when the phase is DUE
+    expect(rebookSchedule).not.toHaveBeenCalled();
+    expect(updateJob).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(updatePhase).toHaveBeenLastCalledWith("phase-1", { endDate: "2026-07-14" }));
+  });
+
+  it("refuses a phase finish dropped before the phase starts, and writes nothing", async () => {
+    render(<MonthPage {...pageProps} />);
+    // phase-1 runs 2026-06-17 → 2026-07-14; the 10th of June is before it begins
+    await drop({ milestoneId: "ms-phase-phase-1", date: "2026-07-14" }, { date: "2026-06-10" });
+    await waitFor(() => expect(notice()).toHaveTextContent("Foundation Complete cannot land before its phase starts on Jun 17"));
+    expect(updatePhase).not.toHaveBeenCalled();
+  });
+
+  it("moves a project's completion when its own marker is dropped", async () => {
+    render(<MonthPage {...pageProps} />);
+    await drop({ milestoneId: "ms-co-p-riverside", date: data.projects[0].targetCompletion }, { date: "2026-08-31" });
+    // the project's PATCH wants every field, so the change rides with the project as it stands
+    await waitFor(() =>
+      expect(updateProject).toHaveBeenCalledWith(
+        "p-riverside",
+        expect.objectContaining({ targetCompletion: "2026-08-31", name: data.projects[0].name, managerId: data.projects[0].managerId })
+      )
+    );
+    await waitFor(() => expect(notice()).toHaveTextContent("Certificate of Occupancy moved to Aug 31"));
   });
 
   it("moves the job and its bookings together on a drop", async () => {

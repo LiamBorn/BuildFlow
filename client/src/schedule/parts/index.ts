@@ -2,6 +2,7 @@
  * The schedule pages' shared pieces, one import away: the view parts (shared, week,
  * month, kanban, matrix), the hooks, and the pure helpers the pages read through here.
  */
+export * from "./carry";
 export * from "./shared";
 export * from "./week";
 export * from "./month";

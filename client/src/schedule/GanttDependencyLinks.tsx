@@ -6,7 +6,7 @@
  */
 import { useLayoutEffect, useState } from "react";
 import type { JobDependency } from "@buildflow/shared";
-import { getOffset, useGantt } from "../components/ui/gantt";
+import { cssZoomOf, getOffset, useGantt } from "../components/ui/gantt";
 import { linkAnchors, linkPath, type BarGeometry } from "./ganttLinks";
 
 // jsdom has no CSS.escape; job ids are plain, so a quote-safe fallback is enough
@@ -27,6 +27,8 @@ export function GanttDependencyLinks({ links, rows, critical }: { links: JobDepe
     if (!timeline || !list) return;
     const measure = () => {
       const listRect = list.getBoundingClientRect();
+      // rects are screen px; the chart (and this svg) lay out in their own, so the rows' y comes down by the zoom
+      const zoom = cssZoomOf(list);
       const bars = new Map<string, BarGeometry>();
       for (const row of rows) {
         const el = list.querySelector<HTMLElement>(`.gantt-feature[data-feature-id="${escapeId(row.id)}"]`);
@@ -35,7 +37,7 @@ export function GanttDependencyLinks({ links, rows, critical }: { links: JobDepe
         bars.set(row.id, {
           left: getOffset(row.startAt, gantt),
           right: getOffset(row.endAt, gantt),
-          y: rect.top - listRect.top + rect.height / 2
+          y: (rect.top - listRect.top + rect.height / 2) / zoom
         });
       }
       const names = new Map(rows.map((row) => [row.id, row.name]));

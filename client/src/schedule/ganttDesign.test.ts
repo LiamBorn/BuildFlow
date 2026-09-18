@@ -25,6 +25,26 @@ import { STATUS_PALETTE } from "./statusPalette";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/* The palette carries the Colors set's hint tokens (`var(--bf-color-ok)`), not literals, so
+   the numbers below come from resolving each token against the skin's Default set — the first
+   declaration of a token in app-shell-client-desk.css is the light Default value. */
+const SKIN = readFileSync(join(HERE, "..", "app-shell-client-desk.css"), "utf8");
+const TOKENS: Record<string, string> = {};
+for (const match of SKIN.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)) {
+  if (!(match[1] in TOKENS)) TOKENS[match[1]] = match[2].toLowerCase();
+}
+const resolve = (value: string): string => {
+  let out = value.trim();
+  for (let hops = 0; hops < 8; hops += 1) {
+    const ref = out.match(/^var\(--([a-z0-9-]+)\)$/);
+    if (!ref) break;
+    const next = TOKENS[ref[1]];
+    if (!next) throw new Error(`no Default value for --${ref[1]} in the skin`);
+    out = next;
+  }
+  return out;
+};
+
 type RGB = [number, number, number];
 const hex = (h: string): RGB => {
   const s = h.replace("#", "");
@@ -36,8 +56,8 @@ const channel = (v: number) => {
 };
 const luminance = (c: RGB) => 0.2126 * channel(c[0]) + 0.7152 * channel(c[1]) + 0.0722 * channel(c[2]);
 const contrast = (a: string, b: string) => {
-  const l1 = luminance(hex(a));
-  const l2 = luminance(hex(b));
+  const l1 = luminance(hex(resolve(a)));
+  const l2 = luminance(hex(resolve(b)));
   return Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100;
 };
 
@@ -73,7 +93,7 @@ describe("a group's dot and rule report its project's health", () => {
       /const GROUP_HEALTH_COLOUR: Record<string, string> = \{([\s\S]*?)\};/
     );
     expect(block, "GROUP_HEALTH_COLOUR not found in GanttPage.tsx").toBeTruthy();
-    return Object.fromEntries([...block![1].matchAll(/"?([A-Za-z ]+)"?:\s*"(#[0-9a-f]{6})"/g)].map((m) => [m[1].trim(), m[2]]));
+    return Object.fromEntries([...block![1].matchAll(/"?([A-Za-z ]+)"?:\s*"(var\(--[a-z0-9-]+\)|#[0-9a-f]{6})"/g)].map((m) => [m[1].trim(), m[2]]));
   };
 
   it("covers all four values the shared Project type can hold", () => {
@@ -88,7 +108,7 @@ describe("a group's dot and rule report its project's health", () => {
   });
 
   it("keeps the four apart, so a dot says which health it means", () => {
-    const colours = Object.values(healthColours());
+    const colours = Object.values(healthColours()).map(resolve);
     expect(new Set(colours).size).toBe(colours.length);
   });
 });

@@ -38,9 +38,12 @@
     background: var(--wx-card);
     box-shadow: 1px 0 0 var(--wx-line-soft);
   }
-  .sched-rx .schedule-week-scroll .schedule-header > span:first-child {
-    background: #ffffff;
-  }
+  /* The corner cell used to re-declare `background: #ffffff` here, overriding the `var(--wx-card)`
+     the rule above gives it and every sibling. Redundant in light mode (the card IS #ffffff) and
+     wrong in dark, where it painted a pure-white 112x65 block over the board — measured on the
+     Week page in dark mode, and the only reason nobody had seen it is that this rule lives under
+     `max-width: 900px`. The token is opaque in both modes (#ffffff / #1b1b19), which is all the
+     override was ever providing for a cell that has to stay solid while the board scrolls under it. */
   .sched-rx .schedule-week-scroll .crew-label,
   .sched-rx .schedule-week-scroll .schedule-cell {
     min-height: 124px;
@@ -214,24 +217,6 @@
   }
 }
 
-/* The Gantt Chart's index-style header: the title above its actions and the actions wrapping, so the
-   page never scrolls sideways on a phone (P4.1). Wrapping only happens when the row does not fit. */
-.gantt-page.hs-index .hs-index-head {
-  flex-wrap: wrap;
-}
-.gantt-page.hs-index .hs-index-actions {
-  flex-wrap: wrap;
-  row-gap: 8px;
-  max-width: 100%;
-}
-/* the shared KPI grid above the chart and the alerts panel under it, spaced like the strip they replace */
-.gantt-page.hs-index > .gantt-shared {
-  margin-bottom: 12px;
-}
-.gantt-page.hs-index .hs-index-main > .gantt-shared {
-  margin-top: 12px;
-}
-
 /* ============================================================================
    Tap targets (P4.4). At ≤ 640 px every schedule control is at least 40 px tall,
    and the square ones 40 px wide: the week steppers, the filter selects (the
@@ -259,7 +244,7 @@
   .sched-rx .sched-book,
   .sched-rx .sched-rail-foot-btn,
   .sched-rx .sched-cpm-baseline,
-  .gantt-page.hs-index .sched-cpm-baseline,
+  .gantt-page.gantt-chart .sched-cpm-baseline,
   .sched-rx .sched-today-btn,
   .sched-rx .sched-kan-more,
   .sched-export-menu button,
@@ -297,34 +282,25 @@
   /* The chart needs the width (P4.9): on the Gantt page the scroller and the card give up most of
      their side padding, so a fitted week is seven readable days instead of a 64 px sliver. The
      padding goes from the scroller itself rather than a negative margin, which would overflow it. */
-  .hs-shell .content-scroll:has(.gantt-page.hs-index) {
+  .hs-shell .content-scroll:has(.gantt-page.gantt-chart) {
     padding-left: 8px;
     padding-right: 8px;
   }
-  .hs-shell .gantt-page.hs-index .hs-index-card {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
   /* the chart's own week stepper carries four controls; on a phone they wrap instead of pushing the page wide */
-  .gantt-page.hs-index .gantt-toolbar .gantt-week {
+  .gantt-page.gantt-chart .gantt-toolbar .gantt-week {
     flex-wrap: wrap;
     max-width: 100%;
     min-width: 0;
   }
-  .gantt-page.hs-index .gantt-toolbar .gantt-week strong {
+  .gantt-page.gantt-chart .gantt-toolbar .gantt-week strong {
     min-width: 0;
   }
-  .gantt-page.hs-index .gantt-toolbar .gantt-week > .hs-btn {
+  .gantt-page.gantt-chart .gantt-toolbar .gantt-week > .hs-btn {
     flex: none;
     min-width: 92px;
   }
-  /* the reskin root bleeds by the scroller's usual 28 px; with 8 px of it left, that would overflow */
-  .gantt-page.hs-index > .gantt-shared,
-  .gantt-page.hs-index .hs-index-main > .gantt-shared {
-    margin-inline: 0;
-  }
   /* the alert rows shrink with the panel rather than pushing past it */
-  .gantt-page.hs-index .sched-alert2 {
+  .gantt-page.gantt-chart .sched-alert2 {
     min-width: 0;
   }
   .gantt-page .hs-btn {
@@ -333,7 +309,7 @@
   .gantt-page .hs-btn-icon {
     width: 40px;
   }
-  .gantt-page.hs-index .gantt-seg button {
+  .gantt-page.gantt-chart .gantt-seg button {
     min-height: 40px;
   }
   .sched-rx .gantt-drawer-close,

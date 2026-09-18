@@ -4,15 +4,22 @@
  */
 import type { CreateJobInput, Crew, Job, Project, ScheduleAssignment, Status } from "@buildflow/shared";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useModalDialog } from "../hooks";
 import { GripVertical, Plus, Users, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
-import { statusTone } from "../scheduleUtils";
+import { createPortal } from "react-dom";
+import type { FormEvent } from "react";
+import { cellKey, statusTone } from "../scheduleUtils";
+import { orderGroupItems, placeInGroup } from "../boardOrder";
+import { useHoverFor, type HoverStore } from "../useBoardOrder";
+import type { CSSProperties } from "react";
 import { formatScheduleDate } from "../week";
 import { ScheduleBadge, scheduleStatusFilterOptions } from "./shared";
 import { liveChangeLabel, useLiveChange } from "../live";
+
+const bookingId = (one: ScheduleAssignment) => one.id;
 
 export function ScheduleCell({
   holiday,
@@ -20,6 +27,9 @@ export function ScheduleCell({
   crew,
   date,
   assignments,
+  allAssignments,
+  order,
+  hoverStore,
   jobs,
   jobsById,
   focusedJobId,
@@ -30,7 +40,12 @@ export function ScheduleCell({
 }: {
   crew: Crew;
   date: string;
+  /** The bookings whose own cell this is. What it SHOWS may differ while a card is carried over it. */
   assignments: ScheduleAssignment[];
+  /** Every booking in the week, so the one being carried in can be drawn whole. */
+  allAssignments?: ScheduleAssignment[];
+  order?: Record<string, string[]>;
+  hoverStore?: HoverStore;
   jobs: Job[];
   /** Jobs by id, built once by the page; without it the cell looks each booking's job up in `jobs`. */
   jobsById?: Map<string, Job>;
@@ -46,11 +61,21 @@ export function ScheduleCell({
   /** A day the workspace does not work. */
   off?: boolean;
 }) {
-  const hasAssignments = assignments.length > 0;
   const { setNodeRef, isOver } = useDroppable({
     id: `${crew.id}-${date}`,
     data: { crewId: crew.id, date }
   });
+  /* The cell arranges ITSELF: the planner's order, plus the card being carried over it, drawn
+     where it would land. Subscribed here rather than read on the page, so a card crossing cells
+     re-renders the cells and not the page above them — the page's own re-render is what made a
+     crossing lag (../useBoardOrder). */
+  const key = cellKey(crew.id, date);
+  const hover = useHoverFor(hoverStore, key);
+  const carried = hover ? allAssignments?.find((one) => one.id === hover.itemId) : undefined;
+  const mine = assignments.filter((one) => !carried || one.id !== carried.id);
+  const ordered = orderGroupItems(mine, order?.[key], bookingId);
+  const shown = carried && hover?.section === key ? placeInGroup(ordered, carried, hover.overId, bookingId) : ordered;
+  const hasAssignments = shown.length > 0;
 
   return (
     <div
@@ -60,21 +85,26 @@ export function ScheduleCell({
       data-crew-id={crew.id}
       data-date={date}
     >
-      {assignments.map((assignment) => {
-        const job = jobsById ? jobsById.get(assignment.jobId) : jobs.find((item) => item.id === assignment.jobId);
-        if (!job) return null;
-        return (
-          <ScheduleJobCard
-            key={assignment.id}
-            job={job}
-            assignment={assignment}
-            isFocused={focusedJobId === job.id}
-            onOpenProject={onOpenProject}
-            onOpenJob={onOpenJob}
-            pending={pendingId === assignment.id}
-          />
-        );
-      })}
+      {/* the gap that opens while a card is carried over these is dnd-kit's own sortable preview,
+          and the drop keeps what it showed (../boardOrder) */}
+      <SortableContext items={shown.map((assignment) => assignment.id)} strategy={verticalListSortingStrategy}>
+        {shown.map((assignment) => {
+          const job = jobsById ? jobsById.get(assignment.jobId) : jobs.find((item) => item.id === assignment.jobId);
+          if (!job) return null;
+          return (
+            <ScheduleJobCard
+              key={assignment.id}
+              job={job}
+              assignment={assignment}
+              cell={key}
+              isFocused={focusedJobId === job.id}
+              onOpenProject={onOpenProject}
+              onOpenJob={onOpenJob}
+              pending={pendingId === assignment.id}
+            />
+          );
+        })}
+      </SortableContext>
       <button
         type="button"
         className={`schedule-add-job-button${hasAssignments ? " compact" : ""}`}
@@ -92,6 +122,7 @@ export function ScheduleCell({
 export function ScheduleJobCard({
   job,
   assignment,
+  cell,
   isFocused,
   onOpenProject,
   onOpenJob,
@@ -99,30 +130,37 @@ export function ScheduleJobCard({
 }: {
   job: Job;
   assignment: ScheduleAssignment;
+  /** The crew-day cell this card is drawn in — its own, or the one it is being carried over. */
+  cell?: string;
   isFocused: boolean;
   onOpenProject: (projectId: string) => void;
   onOpenJob?: (job: Job, assignment: ScheduleAssignment) => void;
   pending?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `assignment-${assignment.id}`,
+  /* A sortable item, keyed on the BOOKING's id: that is what a cell's order is written in and what
+     a drop reads off `over`. `cell` names the section it is drawn in, so a drop on a CARD resolves
+     to that card's cell the way a drop on the cell itself does. */
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: assignment.id,
     data: {
       assignmentId: assignment.id,
       jobId: job.id,
       crewId: assignment.crewId,
-      date: assignment.date
+      date: assignment.date,
+      cell: cell ?? cellKey(assignment.crewId, assignment.date)
     }
   });
-  const style: CSSProperties = { transform: CSS.Translate.toString(transform) };
   const live = useLiveChange(assignment.id, job.id);
 
   return (
     <button
       type="button"
       ref={setNodeRef}
+      /* `dragging` is the slot this card leaves behind: the one in the air is the carry layer's
+         (parts/carry.tsx), so this stays in its cell, dashed and empty, until the drop lands. */
       className={`schedule-job ${statusTone(job.status)}${isDragging ? " dragging" : ""}${isFocused ? " focused" : ""}${pending ? " is-pending" : ""}${live ? " is-live" : ""}`}
+      style={{ transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       aria-busy={pending || undefined}
-      style={style}
       data-assignment-id={assignment.id}
       data-job-id={job.id}
       // the name has to match the destination: this card opens the job drawer wherever one is
@@ -236,7 +274,13 @@ export function ScheduleJobPickerDialog({
     );
   }
 
-  return (
+  /* A PORTAL TO THE BODY, for the same reason the project dialog is one. `.sched-rx` sets
+     `isolation: isolate`, so this backdrop's z-index was scoped INSIDE the page's stacking
+     context and the page itself sits at `z-index: auto` under the sticky top bar — measured
+     2026-09-18, with the panel at z-index 45 against the bar's 40 and the bar's buttons still
+     hit-testing above the panel's own header. A z-index cannot climb out of a trapped context;
+     only leaving it can. The skin scopes this panel's rules from the body to match. */
+  return createPortal(
     <div className="schedule-dialog-backdrop" role="presentation">
       <section
         className="schedule-dialog schedule-job-picker"
@@ -374,7 +418,8 @@ export function ScheduleJobPickerDialog({
           </form>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -388,11 +433,10 @@ export function DraggableJob({
   /** Opens the job's project; without it the card is only there to be dragged. */
   onOpenProject?: (projectId: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `drag-${job.id}`,
     data: { jobId: job.id }
   });
-  const style = { transform: CSS.Translate.toString(transform) };
   const dateRange =
     job.startDate === job.endDate
       ? formatScheduleDate(job.startDate)
@@ -403,7 +447,6 @@ export function DraggableJob({
       type="button"
       ref={setNodeRef}
       className={`unassigned-card ${statusTone(job.status)}${isDragging ? " dragging" : ""}${isFocused ? " focused" : ""}`}
-      style={style}
       aria-label={onOpenProject ? `Open ${job.name} project` : `${job.name} — drag onto the board to book it`}
       onClick={() => onOpenProject?.(job.projectId)}
       {...listeners}

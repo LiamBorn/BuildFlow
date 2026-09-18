@@ -19,6 +19,7 @@ export function firstRunNeeded(data: Pick<BootstrapPayload, "crews" | "projects"
 }
 
 export function FirstRunPanel({
+  headless = false,
   data,
   reload,
   onNotice,
@@ -26,6 +27,8 @@ export function FirstRunPanel({
   onImport,
   onOpenPage
 }: {
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
   data: BootstrapPayload;
   reload: () => Promise<void>;
   onNotice?: (text: string, options?: { error?: boolean }) => void;
@@ -129,13 +132,21 @@ export function FirstRunPanel({
 
   if (data.sampleData) {
     return (
-      <section className="sched-home-section sched-firstrun is-sample" aria-label="Sample data" data-tutorial-id="schedule-first-run">
-        <header>
-          <h2>
-            <Sparkles size={16} aria-hidden="true" /> Exploring with sample data
-          </h2>
-          <span>Every view is showing the starter workspace for your trade. Remove it when you are ready for your own work.</span>
-        </header>
+      <section
+        className={`sched-home-section sched-firstrun is-sample${headless ? " is-headless" : ""}`}
+        aria-label="Sample data"
+        data-tutorial-id="schedule-first-run"
+      >
+        {headless ? (
+          <p className="sched-section-note">Every view is showing the starter workspace for your trade. Remove it when you are ready for your own work.</p>
+        ) : (
+          <header>
+            <h2>
+              <Sparkles size={16} aria-hidden="true" /> Exploring with sample data
+            </h2>
+            <span>Every view is showing the starter workspace for your trade. Remove it when you are ready for your own work.</span>
+          </header>
+        )}
         <footer className="sched-firstrun-foot">
           <button type="button" className="sched-rail-link" disabled={busy !== null} onClick={removeSample}>
             {busy === "sample" ? "Removing…" : "Remove sample data"}
@@ -152,11 +163,19 @@ export function FirstRunPanel({
   );
 
   return (
-    <section className="sched-home-section sched-firstrun" aria-label="Set up your schedule" data-tutorial-id="schedule-first-run">
-      <header>
-        <h2>Set up your schedule</h2>
-        <span>Four steps from an empty workspace to a booked week — all from here.</span>
-      </header>
+    <section
+      className={`sched-home-section sched-firstrun${headless ? " is-headless" : ""}`}
+      aria-label="Set up your schedule"
+      data-tutorial-id="schedule-first-run"
+    >
+      {headless ? (
+        <p className="sched-section-note">Four steps from an empty workspace to a booked week — all from here.</p>
+      ) : (
+        <header>
+          <h2>Set up your schedule</h2>
+          <span>Four steps from an empty workspace to a booked week — all from here.</span>
+        </header>
+      )}
       <ol className="sched-firstrun-steps">
         <li className={hasCrew ? "is-done" : ""}>
           {step(hasCrew, "1")}

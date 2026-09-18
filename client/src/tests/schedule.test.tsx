@@ -67,7 +67,13 @@ describe("Schedule pages", () => {
 
     const queue = screen.getByRole("region", { name: "Unassigned jobs" });
     expect(within(queue).getByText("Downtown Retail Buildout")).toBeInTheDocument();
-    expect(within(queue).getByText("Book them on the Week board")).toBeInTheDocument();
+    /* The note lives in the PANEL's header row, not inside the region: since the landing moved onto
+       the panel board (2026-09-15) each section is rendered headless and the panel draws its title
+       and note above it. Still asserted, and still asserted to be THIS panel's — a board of a dozen
+       panels would otherwise let any one of them satisfy it. */
+    const panel = queue.closest(".dash-block");
+    expect(panel, "the queue sits in a board panel").not.toBeNull();
+    expect(within(panel as HTMLElement).getByText("Book them on the Week board")).toBeInTheDocument();
     // the booked job is not waiting for a crew
     expect(within(queue).queryByText("Riverside Office Building")).not.toBeInTheDocument();
 

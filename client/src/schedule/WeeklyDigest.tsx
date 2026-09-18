@@ -25,7 +25,14 @@ export function isWeeklyDigest(value: unknown): value is WeeklyDigest {
   );
 }
 
-export function WeeklyDigestPanel({ onNotice }: { onNotice?: (text: string, options?: { error?: boolean }) => void }) {
+export function WeeklyDigestPanel({
+  onNotice,
+  headless = false
+}: {
+  onNotice?: (text: string, options?: { error?: boolean }) => void;
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
+}) {
   const [digest, setDigest] = useState<WeeklyDigest | null>(null);
   const [failed, setFailed] = useState(false);
   const [sending, setSending] = useState(false);
@@ -66,20 +73,27 @@ export function WeeklyDigestPanel({ onNotice }: { onNotice?: (text: string, opti
     ? `${plural(digest.totals.jobs, "job")}, ${plural(digest.totals.bookings, "booking")}, ${plural(digest.totals.conflicts, "crew conflict")}`
     : "";
 
+  const digestNote = digest
+    ? digest.previousWeekOf
+      ? `Since the snapshot of ${formatScheduleDate(digest.previousWeekOf)}`
+      : "First snapshot — next Monday compares against it"
+    : failed
+      ? "The digest could not load"
+      : "Comparing snapshots…";
   return (
-    <section className="sched-home-section sched-digest" aria-label="What changed this week" data-tutorial-id="schedule-digest">
-      <header>
-        <h2>What changed this week</h2>
-        <span>
-          {digest
-            ? digest.previousWeekOf
-              ? `Since the snapshot of ${formatScheduleDate(digest.previousWeekOf)}`
-              : "First snapshot — next Monday compares against it"
-            : failed
-              ? "The digest could not load"
-              : "Comparing snapshots…"}
-        </span>
-      </header>
+    <section
+      className={`sched-home-section sched-digest${headless ? " is-headless" : ""}`}
+      aria-label="What changed this week"
+      data-tutorial-id="schedule-digest"
+    >
+      {headless ? (
+        <p className="sched-section-note">{digestNote}</p>
+      ) : (
+        <header>
+          <h2>What changed this week</h2>
+          <span>{digestNote}</span>
+        </header>
+      )}
       {digest && changes === 0 && (
         <p className="helper-text">
           {digest.previousWeekOf ? "Nothing moved. " : ""}The plan now: {totals}.

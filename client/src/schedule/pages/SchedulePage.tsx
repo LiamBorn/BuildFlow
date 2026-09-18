@@ -6,14 +6,18 @@
 import type { SchedulePage as SchedulePageId } from "../useScheduleContext";
 import type { BootstrapPayload, Crew, FieldUpdate, Job, Project, ScheduleAssignment, ScheduleVariance, User } from "@buildflow/shared";
 import {
+  AlertTriangle,
   ArrowRight,
   CalendarDays,
   Check,
   Clock,
   GanttChartSquare,
+  LayoutGrid,
   List,
+  ListChecks,
   Plus,
   ShieldAlert,
+  Sparkles,
   SquareKanban,
   Table2,
   TrendingUp,
@@ -29,7 +33,6 @@ import { ScheduleCpmSummary } from "../cpm";
 import {
   ScheduleBadge,
   ScheduleDialogPanel,
-  ScheduleNotice,
   crewAvailability,
   crewScheduleOrder,
   crewWeekUtilization,
@@ -47,30 +50,35 @@ import { startOfScheduleWeek } from "../week";
 import type { ScheduleTarget } from "../links";
 import { viewKeyFor } from "../viewKeys";
 import { WeeklyDigestPanel } from "../WeeklyDigest";
-import { FirstRunPanel } from "../FirstRun";
+import { FirstRunPanel, firstRunNeeded } from "../FirstRun";
 import { ScheduleExportMenu } from "../ExportMenu";
 import { ScheduleImportDialog } from "../ScheduleImportDialog";
-import { SchedulePageFrame, useSchedulePage } from "../page";
+import { SchedulePageFrame, useSchedulePage, type ScheduleSection } from "../page";
 
 export function CrewAvailabilityPanel({
   crews,
   utilizationById,
-  onManage
+  onManage,
+  headless = false
 }: {
   crews: Crew[];
   /** This week's booked-days percent per crew; a crew missing here shows its stored figure. */
   utilizationById?: Map<string, number>;
   onManage: () => void;
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
 }) {
   const rows = [...crews].sort((left, right) => crewScheduleOrder(left) - crewScheduleOrder(right)).slice(0, 5);
   return (
-    <section className="sched-rail-panel">
-      <div className="sched-rail-head">
-        <h2>Crew Availability</h2>
-        <button type="button" className="sched-rail-link" onClick={onManage}>
-          View all
-        </button>
-      </div>
+    <section className={`sched-rail-panel${headless ? " is-headless" : ""}`}>
+      {!headless && (
+        <div className="sched-rail-head">
+          <h2>Crew Availability</h2>
+          <button type="button" className="sched-rail-link" onClick={onManage}>
+            View all
+          </button>
+        </div>
+      )}
       {rows.length > 0 ? (
         <div className="sched-avail-list">
           {rows.map((crew) => {
@@ -94,16 +102,27 @@ export function CrewAvailabilityPanel({
   );
 }
 
-export function UpcomingMilestonesPanel({ milestones, onViewAll }: { milestones: ScheduleMilestone[]; onViewAll: () => void }) {
+export function UpcomingMilestonesPanel({
+  milestones,
+  onViewAll,
+  headless = false
+}: {
+  milestones: ScheduleMilestone[];
+  onViewAll: () => void;
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
+}) {
   const rows = milestones.slice(0, 4);
   return (
-    <section className="sched-rail-panel">
-      <div className="sched-rail-head">
-        <h2>Upcoming Milestones</h2>
-        <button type="button" className="sched-rail-link" onClick={onViewAll}>
-          View all
-        </button>
-      </div>
+    <section className={`sched-rail-panel${headless ? " is-headless" : ""}`}>
+      {!headless && (
+        <div className="sched-rail-head">
+          <h2>Upcoming Milestones</h2>
+          <button type="button" className="sched-rail-link" onClick={onViewAll}>
+            View all
+          </button>
+        </div>
+      )}
       {rows.length > 0 ? (
         <div className="sched-miles-list">
           {rows.map((milestone) => (
@@ -254,12 +273,15 @@ export function ScheduleViewCards({
   crews,
   weekAssignments,
   monthAnchor,
-  onOpen
+  onOpen,
+  headless = false
 }: {
   jobs: Job[];
   crews: Crew[];
   weekAssignments: ScheduleAssignment[];
   monthAnchor: string;
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
   onOpen: (page: SchedulePageId) => void;
 }) {
   const monthKey = monthAnchor.slice(0, 7);
@@ -310,11 +332,17 @@ export function ScheduleViewCards({
     }
   ];
   return (
-    <section className="sched-home-section" aria-label="Schedule views" data-tutorial-id="schedule-views">
-      <header>
-        <h2>Open a view</h2>
-        <span>The week and filters follow you · keys 1–6 open a view</span>
-      </header>
+    <section
+      className={`sched-home-section${headless ? " is-headless" : ""}`}
+      aria-label="Schedule views"
+      data-tutorial-id="schedule-views"
+    >
+      {!headless && (
+        <header>
+          <h2>Open a view</h2>
+          <span>The week and filters follow you · keys 1–6 open a view</span>
+        </header>
+      )}
       <div className="sched-views">
         {views.map((view) => {
           const Icon = view.icon;
@@ -338,13 +366,24 @@ export function ScheduleViewCards({
 }
 
 /** Jobs with no crew booked yet; each opens the Week board on the job's week, where the queue can be dragged onto a cell. */
-export function ScheduleQueuePanel({ jobs, onBook }: { jobs: Job[]; onBook: (job: Job) => void }) {
+export function ScheduleQueuePanel({
+  jobs,
+  onBook,
+  headless = false
+}: {
+  jobs: Job[];
+  onBook: (job: Job) => void;
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
+}) {
   return (
-    <section className="sched-home-section" aria-label="Unassigned jobs">
-      <header>
-        <h2>Unassigned Jobs</h2>
-        <span>{jobs.length === 0 ? "Every job in view has a crew booked" : "Book them on the Week board"}</span>
-      </header>
+    <section className={`sched-home-section${headless ? " is-headless" : ""}`} aria-label="Unassigned jobs">
+      {!headless && (
+        <header>
+          <h2>Unassigned Jobs</h2>
+          <span>{jobs.length === 0 ? "Every job in view has a crew booked" : "Book them on the Week board"}</span>
+        </header>
+      )}
       {jobs.length > 0 ? (
         <div className="sched-queue">
           {jobs.slice(0, 6).map((job) => (
@@ -406,8 +445,6 @@ export function SchedulePage({
     cpm,
     alerts,
     openAlert,
-    notice,
-    news,
     say,
     busy,
     saveBaseline
@@ -467,10 +504,177 @@ export function SchedulePage({
     }
   }
 
+  /* The page's sections, as panels on the board (2026-09-15): the same order the page read in —
+     get started (while there is setting up to do), the views, what changed, the variances, the
+     unbooked queue — then the rail's three. The frame adds the KPIs, the filters and the saved
+     views ahead of them. Every one starts full width, one under the next. */
+  const showFirstRun = firstRunNeeded(data) || Boolean(data.sampleData);
+  /* `label` is what it SAYS and `names` is what it IS. Three panels on this page carry a "View
+     all" — alerts, crew availability, milestones — and read out by their visible text alone they
+     are three buttons called "View all" with nothing to tell them apart; the panel title that
+     distinguishes them is not part of the button's accessible name. The spoken name says which,
+     and keeps the visible words inside it (WCAG 2.5.3), so "View all" still selects it by voice. */
+  const viewAllButton = (label: string, onClick: () => void, names?: string) => (
+    <button type="button" className="sched-rail-link" aria-label={names ?? label} onClick={onClick}>
+      {label}
+    </button>
+  );
+  const sections: ScheduleSection[] = [
+    ...(showFirstRun
+      ? [
+          {
+            id: "firstRun",
+            title: data.sampleData ? "Exploring with sample data" : "Set up your schedule",
+            icon: Sparkles,
+            group: "Planning",
+            blurb: "Four steps from an empty workspace to a booked week, or the starter workspace for your trade while you look around.",
+            body: (
+              <FirstRunPanel
+                headless
+                data={data}
+                reload={reload}
+                onNotice={say}
+                onAddJob={newActivity}
+                onImport={() => setImportOpen(true)}
+                onOpenPage={onOpenPage}
+              />
+            ),
+            h: 6
+          }
+        ]
+      : []),
+    {
+      id: "views",
+      title: "Open a view",
+      icon: LayoutGrid,
+      group: "Planning",
+      blurb: "The six schedule views — Week, Month, List, Kanban, Matrix, Gantt — one click each, on the week and filters you have here.",
+      action: <span className="sched-section-note">The week and filters follow you · keys 1–6 open a view</span>,
+      body: (
+        <ScheduleViewCards
+          headless
+          jobs={jobs}
+          crews={crews}
+          weekAssignments={weekAssignments}
+          monthAnchor={monthAnchor}
+          onOpen={(target) => openView(target)}
+        />
+      ),
+      h: 5
+    },
+    {
+      id: "digest",
+      title: "What changed this week",
+      icon: TrendingUp,
+      group: "Performance",
+      blurb: "What moved since last Monday's snapshot, and the digest email on request.",
+      body: <WeeklyDigestPanel headless onNotice={say} />,
+      h: 4
+    },
+    {
+      id: "variances",
+      title: "Field variances",
+      icon: ShieldAlert,
+      group: "Attention",
+      blurb: "Field reports that disagree with the plan, waiting on an accept or a reject.",
+      body: (
+        <div className="sv-drawer is-headless" aria-label="Field variance review">
+          <p className="sched-section-note">
+            The field reported progress that disagrees with the plan. Nothing has changed yet — accepting applies the forecastIQ and its
+            knock-ons to the master schedule.
+          </p>
+          {pendingVariances.length > 0 ? (
+            <div className="sv-drawer-list">
+              {pendingVariances.map((variance) => (
+                <VarianceReviewCard
+                  key={variance.id}
+                  variance={variance}
+                  job={data.jobs.find((job) => job.id === variance.jobId)}
+                  project={data.projects.find((project) => project.id === variance.projectId)}
+                  update={data.fieldUpdates.find((item) => item.id === variance.fieldUpdateId)}
+                  reporter={data.users.find(
+                    (user) => user.id === data.fieldUpdates.find((item) => item.id === variance.fieldUpdateId)?.userId
+                  )}
+                  busy={resolvingVarianceId === variance.id}
+                  onAccept={() => void resolveVariance(variance.id, "accept")}
+                  onReject={() => void resolveVariance(variance.id, "reject")}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="helper-text">No field variances waiting on you.</p>
+          )}
+        </div>
+      ),
+      h: 4
+    },
+    {
+      id: "queue",
+      title: "Unassigned Jobs",
+      icon: ListChecks,
+      group: "Planning",
+      blurb: "Jobs in view with no crew booked yet, each one click from the Week board.",
+      action: (
+        <span className="sched-section-note">
+          {unassigned.length === 0 ? "Every job in view has a crew booked" : "Book them on the Week board"}
+        </span>
+      ),
+      body: (
+        <ScheduleQueuePanel
+          headless
+          jobs={unassigned}
+          onBook={(job) => openView("week", { weekStart: startOfScheduleWeek(job.startDate) })}
+        />
+      ),
+      h: 5
+    },
+    {
+      id: "alerts",
+      title: "Schedule Alerts",
+      icon: AlertTriangle,
+      group: "Attention",
+      blurb: "Conflicts, unbooked work and slips in what the filters show.",
+      action: viewAllButton("View all", viewAllAlerts, "View all alerts"),
+      body: <ScheduleAlertsPanel headless alerts={alerts} onOpen={openAlert} />,
+      h: 5
+    },
+    {
+      id: "crews",
+      title: "Crew Availability",
+      icon: Users,
+      group: "Performance",
+      blurb: "Each crew's booked days this week, and who has room.",
+      action: viewAllButton("View all", () => openView("matrix"), "View all crew availability"),
+      body: <CrewAvailabilityPanel headless crews={crews} utilizationById={utilizationById} onManage={() => openView("matrix")} />,
+      h: 5
+    },
+    {
+      id: "milestones",
+      title: "Upcoming Milestones",
+      icon: CalendarDays,
+      group: "Attention",
+      blurb: "The next project milestones, by date.",
+      action: viewAllButton(
+        "View all",
+        () => openView("month", milestones[0] ? { monthAnchor: firstOfScheduleMonth(milestones[0].date) } : {}),
+        "View all upcoming milestones"
+      ),
+      body: (
+        <UpcomingMilestonesPanel
+          headless
+          milestones={milestones}
+          onViewAll={() => openView("month", milestones[0] ? { monthAnchor: firstOfScheduleMonth(milestones[0].date) } : {})}
+        />
+      ),
+      h: 4
+    }
+  ];
+
   return (
     <SchedulePageFrame
       page={page}
       motion
+      sections={sections}
       eyebrow={<>Schedule · {weekRange}</>}
       title={
         <>
@@ -518,69 +722,6 @@ export function SchedulePage({
         </>
       }
     >
-      <ScheduleNotice notice={notice} news={news} />
-      <div className="schedule-layout" data-reveal>
-        <div className="sched-home-main">
-          <FirstRunPanel
-            data={data}
-            reload={reload}
-            onNotice={say}
-            onAddJob={newActivity}
-            onImport={() => setImportOpen(true)}
-            onOpenPage={onOpenPage}
-          />
-          <ScheduleViewCards
-            jobs={jobs}
-            crews={crews}
-            weekAssignments={weekAssignments}
-            monthAnchor={monthAnchor}
-            onOpen={(target) => openView(target)}
-          />
-          <WeeklyDigestPanel onNotice={say} />
-          {pendingVariances.length > 0 && (
-            <section className="sv-drawer" aria-label="Field variance review">
-              <header className="sv-drawer-head">
-                <div>
-                  <h2>
-                    <ShieldAlert size={18} /> Field variances
-                  </h2>
-                  <p>
-                    The field reported progress that disagrees with the plan. Nothing has changed yet — accepting applies the forecastIQ and
-                    its knock-ons to the master schedule.
-                  </p>
-                </div>
-              </header>
-              <div className="sv-drawer-list">
-                {pendingVariances.map((variance) => (
-                  <VarianceReviewCard
-                    key={variance.id}
-                    variance={variance}
-                    job={data.jobs.find((job) => job.id === variance.jobId)}
-                    project={data.projects.find((project) => project.id === variance.projectId)}
-                    update={data.fieldUpdates.find((item) => item.id === variance.fieldUpdateId)}
-                    reporter={data.users.find(
-                      (user) => user.id === data.fieldUpdates.find((item) => item.id === variance.fieldUpdateId)?.userId
-                    )}
-                    busy={resolvingVarianceId === variance.id}
-                    onAccept={() => void resolveVariance(variance.id, "accept")}
-                    onReject={() => void resolveVariance(variance.id, "reject")}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-          <ScheduleQueuePanel jobs={unassigned} onBook={(job) => openView("week", { weekStart: startOfScheduleWeek(job.startDate) })} />
-        </div>
-        <aside className="side-stack schedule-side-rail">
-          <ScheduleAlertsPanel alerts={alerts} onOpen={openAlert} onViewAll={viewAllAlerts} />
-          <CrewAvailabilityPanel crews={crews} utilizationById={utilizationById} onManage={() => openView("matrix")} />
-          <UpcomingMilestonesPanel
-            milestones={milestones}
-            onViewAll={() => openView("month", milestones[0] ? { monthAnchor: firstOfScheduleMonth(milestones[0].date) } : {})}
-          />
-        </aside>
-      </div>
-
       <footer className="schedule-page-footer" data-reveal>
         <span>© 2026 BuildFlow HUD, Inc. All rights reserved.</span>
         <nav aria-label="Schedule footer links">

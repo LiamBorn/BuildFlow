@@ -10,7 +10,7 @@
  * and rail, and its drop rule.
  */
 import { useMemo, useRef, useState, type ReactNode, useEffect } from "react";
-import type { DragEndEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import type { Crew, ScheduleAssignment, BootstrapPayload } from "@buildflow/shared";
 import { rebookSchedule } from "../../api";
@@ -23,8 +23,11 @@ import {
   workingDays,
   formatScheduleDate,
   plural,
-  ScheduleNotice
+  ScheduleNotice,
+  ScheduleCarryLayer
 } from "../parts";
+import { insertInGroup, moveInGroup, orderGroupItems, placeInGroup } from "../boardOrder";
+import { useBoardOrder } from "../useBoardOrder";
 import { ScheduleAlertsPanel } from "../alerts";
 import { scheduleAccessibility, spokenDay } from "../dragKeyboard";
 import { isWorkingDay } from "@buildflow/shared";
@@ -32,6 +35,10 @@ import { ScheduleExportMenu } from "../ExportMenu";
 import { weekRebook, type WeekDragSource, type WeekDropTarget } from "../rebook";
 import type { ScheduleTarget } from "../links";
 import { BackToScheduleButton, SchedulePageFrame, ThisWeekButton, WeekStepper, useSchedulePage } from "../page";
+
+/** The planner's own order for each crew-day cell, kept per person (../boardOrder). */
+const WEEK_ORDER_KEY = "schedule:week-order";
+const assignmentId = (one: ScheduleAssignment) => one.id;
 
 export type WeekPageProps = {
   data: BootstrapPayload;
@@ -133,7 +140,29 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
   const queueShown = queueJobs.length > queueLimit ? queueJobs.slice(0, queueLimit) : queueJobs;
   const workingDayCount = workingDays(weekIso, calendar).length;
   // the board reads each of its crews × days cells from this index instead of scanning the week's bookings per cell
+  /* A CELL IS A LIST THE PLANNER ARRANGES, not just a drop target (the Kanban's arrangement, asked
+     for on the other Schedule boards 2026-09-18): carry a card between two others in a crew's day
+     and it goes there, the rest moving aside. The arrangement is the person's own setting. */
+  const {
+    order,
+    persist: persistOrder,
+    hoverStore,
+    readHover,
+    trackHover,
+    clearHover
+  } = useBoardOrder({
+    settingKey: WEEK_ORDER_KEY,
+    raw: data.userSettings?.[WEEK_ORDER_KEY] ?? null
+  });
   const bookingsByCell = useMemo(() => indexAssignmentsByCell(weekAssignments), [weekAssignments]);
+
+  /** A cell's cards in the order it is showing them, which is what a drop rearranges. */
+  const cellIds = (key: string) =>
+    orderGroupItems(
+      weekAssignments.filter((one) => cellKey(one.crewId, one.date) === key),
+      order[key],
+      assignmentId
+    ).map(assignmentId);
 
   // the live announcements name the job, the crew and the day
   const accessibility = useMemo(
@@ -148,13 +177,56 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
       }),
     [data.jobs, crewsById]
   );
-  // A card dropped on another cell re-books that assignment; a queued job dropped on a cell books it.
-  // One request either way, and the server asks before it double-books a crew.
+  /* A card held over another cell is drawn there while it is in the air; inside its own cell
+     dnd-kit's sortable opens the gap itself, so the preview stays null there. A job from the
+     unbooked queue has no booking yet, so it has nothing to arrange and never previews. */
+  const onDragOver = (event: DragOverEvent) => {
+    const dragged = event.active.data.current as { assignmentId?: string; cell?: string } | undefined;
+    const dropped = event.over?.data.current as { assignmentId?: string; cell?: string; crewId?: string; date?: string } | undefined;
+    const section = dropped?.cell ?? (dropped?.crewId && dropped?.date ? cellKey(dropped.crewId, dropped.date) : undefined);
+    trackHover({ itemId: dragged?.assignmentId, section, overId: dropped?.assignmentId ?? null, ownSection: dragged?.cell });
+  };
+
+  /**
+   * A drop is one of two things. Inside the cell it came from it is an ORDER — the card takes the
+   * place of the one it was dropped on and nothing is asked of the server, because the arrangement
+   * is the planner's. Onto another cell it re-books, as it always did, and the card keeps the place
+   * it was dropped in. A card dropped on another cell re-books that assignment; a queued job
+   * dropped on a cell books it — one request either way, and the server asks before it
+   * double-books a crew.
+   */
   const onDragEnd = async (event: DragEndEvent) => {
     releaseClick();
-    const source = (event.active.data.current ?? {}) as WeekDragSource;
-    const plan = busy ? null : weekRebook(source, (event.over?.data.current ?? {}) as WeekDropTarget, data.assignments);
+    const held = readHover();
+    clearHover();
+    const source = (event.active.data.current ?? {}) as WeekDragSource & { cell?: string };
+    const dropped = (event.over?.data.current ?? {}) as WeekDropTarget & { assignmentId?: string; cell?: string };
+    const target = dropped.cell ?? (dropped.crewId && dropped.date ? cellKey(dropped.crewId, dropped.date) : undefined);
+    const carriedId = source.assignmentId;
+    /* While a preview is up the card is drawn in the cell it is held over, so `over` can be its own
+       slot there and its own cell prop has moved with it: the preview is then the only thing that
+       knows where it came from and where it was going. What you saw is where it goes. */
+    const previewing = carriedId && held?.itemId === carriedId && held.section === target ? held : null;
+    const fromCell = carriedId && held?.itemId === carriedId ? held.from : source.cell;
+    /* `over` CAN be the card itself — released without having moved, or on the slot it left.
+       That is not "no target", it is "this one", which the rules answer by leaving the cell
+       alone; nulling it here meant the cell's own space, which sent it to the END. */
+    const overId = previewing ? previewing.overId : (dropped.assignmentId ?? null);
+
+    // inside its own cell: the arrangement, and nothing else
+    if (carriedId && target && fromCell && target === fromCell && !busy) {
+      const next = moveInGroup(cellIds(fromCell), carriedId, overId);
+      if (next.join() === cellIds(fromCell).join()) return; // dropped back where it was
+      await persistOrder({ ...order, [fromCell]: next });
+      return;
+    }
+
+    const plan = busy ? null : weekRebook(source, dropped as WeekDropTarget, data.assignments);
     if (!plan) return;
+    // where it lands in the new cell is the planner's too, saved before the booking moves
+    if (carriedId && target && target !== fromCell) {
+      await persistOrder({ ...order, [target]: insertInGroup(cellIds(target), carriedId, overId) });
+    }
     const { assignmentId, jobId, crewId, date, moves } = plan;
     const { crewId: fromCrewId, date: fromDate } = source;
     const name = data.jobs.find((candidate) => candidate.id === jobId)?.name ?? "Job";
@@ -224,8 +296,10 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
       }
       board={false}
       alerts={false}
-      drag={{ accessibility, onDragEnd }}
+      drag={{ accessibility, onDragEnd, onDragOver, onDragCancel: clearHover }}
     >
+      {/* the card under the hand, for both the board's cards and the queue's (parts/carry.tsx) */}
+      <ScheduleCarryLayer />
       <div className="schedule-layout">
         <section className="schedule-board" aria-label="Crew schedule for the week" data-tutorial-id="schedule-board">
           <ScheduleNotice notice={notice} news={news} />
@@ -259,6 +333,9 @@ export function WeekPage({ data: liveData, reload, onOpenSchedule, onOpenPage, r
                           holiday={holidays[day.date]}
                           off={!isWorkingDay(day.date, calendar)}
                           assignments={bookingsByCell.get(cellKey(crew.id, day.date)) ?? NO_BOOKINGS}
+                          allAssignments={weekAssignments}
+                          order={order}
+                          hoverStore={hoverStore}
                           jobsById={jobsById}
                           jobs={jobs}
                           focusedJobId={selectedJob?.id ?? null}

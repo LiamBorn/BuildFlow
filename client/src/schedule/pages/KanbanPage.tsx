@@ -9,12 +9,14 @@
  * pages share comes from the one page hook; this file is the board and its
  * drop rule.
  */
-import { useMemo, type ReactNode } from "react";
-import type { DragEndEvent } from "@dnd-kit/core";
+import { useCallback, useMemo, type ReactNode } from "react";
+import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import type { BootstrapPayload, Status } from "@buildflow/shared";
 import { updateJob } from "../../api";
-import { KANBAN_LANES, ScheduleKanbanView, plural } from "../parts";
+import { KANBAN_LANES, ScheduleCarryLayer, ScheduleKanbanView, plural } from "../parts";
 import { scheduleAccessibility } from "../dragKeyboard";
+import { KANBAN_ORDER_KEY, insertInLane, moveInLane, orderLaneJobs, type KanbanOrder } from "../kanbanOrder";
+import { useBoardOrder } from "../useBoardOrder";
 import { kanbanLaneOf, kanbanMove } from "../lanes";
 import { ScheduleExportMenu } from "../ExportMenu";
 import type { ScheduleTarget } from "../links";
@@ -37,6 +39,46 @@ export function KanbanPage({ data: liveData, reload, onOpenSchedule, onOpenPage,
   const page = useSchedulePage({ data: liveData, reload, onOpenPage, page: "kanban", filterOptions: KANBAN_FILTERS });
   const { data, scope, jobs, weekIso, selectedJob, openJob, suppressClick, releaseClick, busy, pendingId, runChange, say } = page;
 
+  /* THE PLANNER'S OWN ORDER for each lane, and the preview while a card is between lanes. Both
+     live in ../useBoardOrder, which the Week, Month and List boards share — the Kanban had them
+     first and they moved there when the same arrangement was asked for on the other pages. */
+  const {
+    order,
+    persist: persistOrder,
+    hoverStore,
+    readHover,
+    trackHover,
+    clearHover
+  } = useBoardOrder({
+    settingKey: KANBAN_ORDER_KEY,
+    raw: data.userSettings?.[KANBAN_ORDER_KEY] ?? null
+  });
+  /** A lane's cards in the order it is showing them, which is what a drop rearranges. */
+  const laneIds = useCallback(
+    (laneKey: string, current: KanbanOrder) => {
+      const lane = KANBAN_LANES.find((candidate) => candidate.key === laneKey);
+      if (!lane) return [];
+      return orderLaneJobs(
+        jobs.filter((job) => lane.match.includes(job.status)),
+        current[laneKey]
+      ).map((job) => job.id);
+    },
+    [jobs]
+  );
+
+  /** The lane under the pointer: a card names its own, the lane's own space names itself. */
+  const laneUnder = (dropped: { status?: Status; lane?: string } | undefined) =>
+    dropped?.lane ?? KANBAN_LANES.find((lane) => lane.status === dropped?.status)?.key;
+
+  /* WHERE IT WOULD LAND, while it is still in the air — held over ANOTHER lane, the card is drawn
+     in that lane at the place it would take (parts/kanban.tsx), those cards move aside and its own
+     lane closes up. The rule is the shared one; all this page does is say what a lane is called. */
+  const onDragOver = (event: DragOverEvent) => {
+    const dragged = event.active.data.current as { jobId?: string; lane?: string } | undefined;
+    const dropped = event.over?.data.current as { jobId?: string; status?: Status; lane?: string } | undefined;
+    trackHover({ itemId: dragged?.jobId, section: laneUnder(dropped), overId: dropped?.jobId ?? null, ownSection: dragged?.lane });
+  };
+
   // the live announcements name the job and the lane
   const accessibility = useMemo(
     () =>
@@ -46,15 +88,46 @@ export function KanbanPage({ data: liveData, reload, onOpenSchedule, onOpenPage,
       }),
     [data.jobs]
   );
-  // A card dropped into another lane takes that lane's status.
+  /**
+   * A drop on the board is one of two things. Inside its own lane it is an ORDER: the card takes
+   * the place of the one it was dropped on and nothing is written to the server — the arrangement
+   * is the planner's, kept in their setting. Into another lane it is a STATUS, as it always was,
+   * and the card also keeps the place it was dropped in.
+   */
   const onDragEnd = async (event: DragEndEvent) => {
     releaseClick();
-    const jobId = event.active.data.current?.jobId as string | undefined;
-    const sourceStatus = event.active.data.current?.status as Status | undefined;
-    const targetStatus = kanbanMove(sourceStatus, event.over?.data.current?.status as Status | undefined);
-    if (!jobId || !targetStatus || busy) return; // no lane under the card, or its own lane
+    const held = readHover();
+    clearHover();
+    const dragged = event.active.data.current as { jobId?: string; status?: Status; lane?: string } | undefined;
+    const dropped = event.over?.data.current as { jobId?: string; status?: Status; lane?: string } | undefined;
+    const jobId = dragged?.jobId;
+    const sourceStatus = dragged?.status;
+    if (!jobId || !event.over || busy) return;
+    const targetLane = laneUnder(dropped);
+    if (!targetLane) return;
+    /* While a preview is up the card is drawn in the lane it is held over, so `over` can be its own
+       slot there and its own lane prop has moved with it: the preview is then the only thing that
+       still knows where the card came from and where it was going. What you saw is where it goes. */
+    const previewing = held?.itemId === jobId && held.section === targetLane ? held : null;
+    const sourceLane = held?.itemId === jobId ? held.from : dragged?.lane;
+    /* `over` CAN be the card itself — released without having moved, or on the slot it left. That
+       is not "no target", it is "this one", and the rules answer it by leaving the lane alone;
+       nulling it here used to mean the lane's own space, which sent the card to the END. */
+    const overJobId = previewing ? previewing.overId : (dropped?.jobId ?? null);
+
+    if (targetLane === sourceLane) {
+      const next = moveInLane(laneIds(targetLane, order), jobId, overJobId);
+      if (next.join() === laneIds(targetLane, order).join()) return; // dropped back where it was
+      await persistOrder({ ...order, [targetLane]: next });
+      return;
+    }
+
+    const targetStatus = kanbanMove(sourceStatus, KANBAN_LANES.find((lane) => lane.key === targetLane)?.status);
+    if (!targetStatus) return; // the lane it already sits in
     const job = data.jobs.find((candidate) => candidate.id === jobId);
     const name = job?.name ?? "Job";
+    // where it lands in the new lane is the planner's too, saved before the status goes over
+    await persistOrder({ ...order, [targetLane]: insertInLane(laneIds(targetLane, order), jobId, overJobId) });
     await runChange({
       id: jobId,
       name,
@@ -75,7 +148,7 @@ export function KanbanPage({ data: liveData, reload, onOpenSchedule, onOpenPage,
       eyebrow={<>Crew Scheduling · {plural(jobs.length, "job")} by status</>}
       title="Kanban"
       titleTutorialId="kanban-page-title"
-      sub="Every job by status. Drag a card into another lane to move it along, or open one for the details."
+      sub="Every job by status. Drag a card into another lane to move it along, or between two cards to place it there; open one for the details."
       releaseTag={releaseTag}
       onOpenSchedule={onOpenSchedule}
       controls={
@@ -85,9 +158,13 @@ export function KanbanPage({ data: liveData, reload, onOpenSchedule, onOpenPage,
       }
       filters={{ statuses: false, note: "The Kanban is the status view: every status stays on the board." }}
       boardLabel="Jobs by status"
-      drag={{ accessibility, onDragEnd }}
+      drag={{ accessibility, onDragEnd, onDragOver, onDragCancel: clearHover }}
     >
+      {/* the card under the hand (parts/carry.tsx) */}
+      <ScheduleCarryLayer />
       <ScheduleKanbanView
+        order={order}
+        hoverStore={hoverStore}
         jobs={jobs}
         projects={data.projects}
         focusedJobId={selectedJob?.id ?? null}

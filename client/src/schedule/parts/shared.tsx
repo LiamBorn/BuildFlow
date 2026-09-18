@@ -3,6 +3,7 @@
  * the info dialog, crew availability and ordering. View-specific pieces live beside
  * this file (week, month, kanban, matrix).
  */
+import { AnimatedFigure } from "../../components/ui/animated-figure";
 import type { Crew, Status } from "@buildflow/shared";
 import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -43,7 +44,9 @@ export function KpiCard({
       </span>
       <div>
         <p>{label}</p>
-        <strong>{value}</strong>
+        <strong>
+          <AnimatedFigure text={value} />
+        </strong>
         <span>{delta}</span>
       </div>
     </>

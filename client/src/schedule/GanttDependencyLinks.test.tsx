@@ -39,6 +39,36 @@ afterEach(async () => {
 });
 
 describe("GanttDependencyLinks", () => {
+  it("brings each row's y down by the shell's zoom: rects are screen px, the chart lays out in its own", async () => {
+    const tree = (critical: Set<string>) => (
+      <GanttProvider range="daily" sidebarWidth={0}>
+        <GanttTimeline>
+          <GanttFeatureList>
+            {rows.map((row) => (
+              <GanttFeatureItem key={row.id} {...row} />
+            ))}
+          </GanttFeatureList>
+          <GanttDependencyLinks
+            links={links}
+            rows={rows.map((row) => ({ id: row.id, name: row.name, startAt: row.startAt, endAt: row.endAt }))}
+            critical={critical}
+          />
+        </GanttTimeline>
+      </GanttProvider>
+    );
+    await act(async () => root.render(tree(new Set())));
+    const list = container.querySelector(".gantt-feature-list") as HTMLElement & { currentCSSZoom?: number };
+    const rect = (top: number, height: number) => () => ({ top, height, left: 0, right: 0, bottom: top + height, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+    list.getBoundingClientRect = rect(100, 400);
+    for (const [id, top] of [["a", 120], ["b", 160]] as const) {
+      (container.querySelector(`.gantt-feature[data-feature-id="${id}"]`) as HTMLElement).getBoundingClientRect = rect(top, 20);
+    }
+    // the shell is drawn at 50%: a's centre sits 30 screen px under the list's top, which is 60 of the chart's own; b's 70 → 140
+    list.currentCSSZoom = 0.5;
+    await act(async () => root.render(tree(new Set(["nobody"]))));
+    expect(container.querySelector(".gantt-links > path")?.getAttribute("d")).toMatch(/^M\d+(?:\.\d+)? 60 H\d+(?:\.\d+)? V140 H/);
+  });
+
   it("draws one arrow per link whose both ends are on the chart, red on the critical path", async () => {
     await act(async () => {
       root.render(

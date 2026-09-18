@@ -164,27 +164,32 @@ export function ScheduleAlertsPanel({
   alerts,
   onOpen,
   onViewAll,
-  under = false
+  under = false,
+  headless = false
 }: {
   alerts: ScheduleAlert[];
   onOpen: (alert: ScheduleAlert) => void;
   onViewAll?: () => void;
   under?: boolean;
+  /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
+  headless?: boolean;
 }) {
   return (
     <section
-      className={`sched-rail-panel${under ? " sched-alerts-under" : ""}`}
+      className={`sched-rail-panel${under ? " sched-alerts-under" : ""}${headless ? " is-headless" : ""}`}
       data-tutorial-id="schedule-alerts"
       aria-label="Schedule alerts"
     >
-      <div className="sched-rail-head">
-        <h2>Schedule Alerts</h2>
-        {onViewAll && (
-          <button type="button" className="sched-rail-link" onClick={onViewAll}>
-            View all
-          </button>
-        )}
-      </div>
+      {!headless && (
+        <div className="sched-rail-head">
+          <h2>Schedule Alerts</h2>
+          {onViewAll && (
+            <button type="button" className="sched-rail-link" onClick={onViewAll}>
+              View all
+            </button>
+          )}
+        </div>
+      )}
       {alerts.length > 0 ? (
         <div className="cc-list">
           {alerts.map((alert) => {

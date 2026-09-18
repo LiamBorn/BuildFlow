@@ -58,8 +58,19 @@ describe("schedule folder boundary", () => {
       const text = read(`schedule/pages/${pageComponent(id)}.tsx`);
       expect(text, `${id} stands on useSchedulePage`).toMatch(/const page = useSchedulePage\(/);
       expect(text, `${id} derives what the hook derives`).not.toMatch(hookOnly);
-      // the Gantt keeps the index pages' card chrome; the six others stand in the shared frame
-      if (id !== "gantt") expect(text, `${id} stands in the page frame`).toMatch(/<SchedulePageFrame/);
+      /* ALL SEVEN stand in the shared frame. The Gantt was the exception until 2026-09-17:
+         it wore the index pages' card chrome (`.hs-index`, `.hs-index-main`, an
+         `.hs-index-card`) and rendered its own copies of the filters, the saved views, the
+         KPIs, the notice, the alerts, the link dialog and the job drawer — which is why it
+         was the one Schedule page that did not look like the rest. */
+      expect(text, `${id} stands in the page frame`).toMatch(/<SchedulePageFrame/);
+      /* And no page renders what the frame renders for it: a second copy would mean two
+         filter rows and two job drawers on the same page. */
+      /* The alerts are not on this list: the landing places them as a board section and the
+         Week board keeps its own beside the grid, both on purpose. */
+      for (const shared of ["<ScheduleFilters", "<SavedViewsBar", "<ScheduleKpiGrid", "<JobDrawer", "<GanttLinkDialog"]) {
+        expect(text, `${id} leaves ${shared.slice(1)} to the frame`).not.toContain(shared);
+      }
     }
   });
 
