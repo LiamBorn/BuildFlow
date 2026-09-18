@@ -1,0 +1,288 @@
+/* ============================================================================
+   The Dashboard's workspace switcher (2026-09-15)
+   One login, several BuildFlow programs. Sits at the right of the Dashboard's
+   date line, on the reference's pattern: a control naming the active workspace
+   by its trade, and a menu with a search box, the person's workspaces and
+   "+ Add workspace" at the foot. Tokens only — the theme presets own every
+   surface, so this draws nothing a preset cannot repaint.
+   ============================================================================ */
+.bf-shell .dash-rx.hs-home .bfws {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.bf-shell .dash-rx.hs-home .bfws-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px 0 6px;
+  border: 1px solid var(--bf-line-solid);
+  border-radius: 8px;
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(var(--bf-line-rgb), 0.08);
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.bf-shell .dash-rx.hs-home .bfws-trigger:hover,
+.bf-shell .dash-rx.hs-home .bfws-trigger[aria-expanded="true"] {
+  border-color: var(--bf-accent);
+  box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.14);
+}
+.bf-shell .dash-rx.hs-home .bfws-trigger:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.bf-shell .dash-rx.hs-home .bfws-chevron {
+  color: var(--bf-ink-muted);
+  transition: transform 0.18s ease;
+}
+.bf-shell .dash-rx.hs-home .bfws.is-open .bfws-chevron {
+  transform: rotate(180deg);
+}
+/* the trade's initial on an accent tile, the reference's workspace glyph */
+.bf-shell .dash-rx.hs-home .bfws-tile {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--bf-accent);
+  color: var(--bf-on-accent, #fff);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* ---- the menu ------------------------------------------------------------ */
+.bf-shell .dash-rx.hs-home .bfws-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(340px, calc(100vw - 32px));
+  padding: 10px;
+  border: 1px solid var(--bf-line-solid);
+  border-radius: var(--bf-radius-card, 12px);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow:
+    0 18px 40px rgba(var(--bf-line-rgb), 0.18),
+    0 2px 6px rgba(var(--bf-line-rgb), 0.08);
+  animation: bfws-drop 0.18s ease-out;
+  text-align: left;
+}
+@keyframes bfws-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.bf-shell .dash-rx.hs-home .bfws-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--bf-line-solid);
+  border-radius: 8px;
+  background: var(--bf-ground);
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-search:focus-within {
+  border-color: var(--bf-accent);
+}
+.bf-shell .dash-rx.hs-home .bfws-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 13.5px;
+  outline: 0;
+}
+.bf-shell .dash-rx.hs-home .bfws-heading {
+  margin: 12px 6px 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.bf-shell .dash-rx.hs-home .bfws-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.bf-shell .dash-rx.hs-home .bfws-item:hover,
+.bf-shell .dash-rx.hs-home .bfws-item:focus-visible {
+  background: var(--bf-hover, rgba(var(--bf-line-rgb), 0.08));
+  outline: 0;
+}
+.bf-shell .dash-rx.hs-home .bfws-item.is-active {
+  background: rgba(47, 107, 255, 0.08);
+}
+.bf-shell .dash-rx.hs-home .bfws-item:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.bf-shell .dash-rx.hs-home .bfws-item-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.bf-shell .dash-rx.hs-home .bfws-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.bf-shell .dash-rx.hs-home .bfws-item-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-standing {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(var(--bf-line-rgb), 0.08);
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-standing.is-trial {
+  background: rgba(47, 107, 255, 0.12);
+  color: var(--bf-accent);
+}
+.bf-shell .dash-rx.hs-home .bfws-standing.is-ended {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+}
+.bf-shell .dash-rx.hs-home .bfws-standing.is-setup {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+.bf-shell .dash-rx.hs-home .bfws-check {
+  flex: none;
+  color: var(--bf-accent);
+}
+.bf-shell .dash-rx.hs-home .bfws-empty {
+  padding: 10px 8px;
+  font-size: 13px;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-error {
+  margin: 6px 6px 0;
+  font-size: 12.5px;
+  color: #b91c1c;
+}
+.bf-shell .dash-rx.hs-home .bfws-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 1px dashed var(--bf-line-solid);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease;
+}
+.bf-shell .dash-rx.hs-home .bfws-add:hover:not(:disabled) {
+  border-color: var(--bf-accent);
+  color: var(--bf-accent);
+}
+.bf-shell .dash-rx.hs-home .bfws-add:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.bf-shell .dash-rx.hs-home .bfws-add-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 10px 4px 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--bf-ink-muted);
+}
+.bf-shell .dash-rx.hs-home .bfws-foot svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+@media (max-width: 720px) {
+  .bf-shell .dash-rx.hs-home .bfws {
+    width: 100%;
+    margin-left: 0;
+  }
+  .bf-shell .dash-rx.hs-home .bfws-menu {
+    right: auto;
+    left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bf-shell .dash-rx.hs-home .bfws-menu {
+    animation: none;
+  }
+  .bf-shell .dash-rx.hs-home .bfws-chevron,
+  .bf-shell .dash-rx.hs-home .bfws-trigger,
+  .bf-shell .dash-rx.hs-home .bfws-item,
+  .bf-shell .dash-rx.hs-home .bfws-add {
+    transition: none;
+  }
+}
