@@ -13,7 +13,7 @@ import postcss, { type Declaration, type Rule } from "postcss";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { BEAT, DUR, OPENING, STAGGER, ms } from "../motion/tokens";
+import { BEAT, DUR, EASE, OPENING, STAGGER, cssEase, ms } from "../motion/tokens";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sheet = postcss.parse(readFileSync(join(SRC, "app-shell-client-desk.css"), "utf8"));
@@ -177,6 +177,39 @@ describe("every page opens on the shared beats", () => {
   it("does not animate a Gantt bar the pointer is holding", () => {
     // an animation's transform outranks the inline one a drag rewrites each frame
     expect(declsFor(".gantt-feature.is-dragging").animation).toBe("none");
+  });
+
+  it("lets the selected pill travel, and only once it has somewhere to travel from", () => {
+    // skin §78. The pill is the group's ::before, moved by two custom properties
+    // motion/SegmentPill.tsx writes on the group.
+    const pill = declsFor(".hs-home-seg[data-bfm-pill]::before");
+    expect(pill.transform).toBe("translate(var(--bfm-pill-x), var(--bfm-pill-y))");
+    expect(pill.width).toBe("var(--bfm-pill-w)");
+    expect(pill.background, "the pill IS the selected option's background").toBe("var(--bfm-pill-fill)");
+    expect(declsFor(".hs-home-seg")["--bfm-pill-fill"], "which defaults to the ink every group but one uses").toBe("var(--bf-ink)");
+    // the rail is a column of discs, and says so for itself
+    expect(declsFor(".hs-rail-list")["--bfm-pill-fill"]).toBe("var(--bf-rail-fill)");
+    expect(declsFor(".hs-rail-list")["--bfm-pill-radius"]).toBe("50%");
+    expect(pill["pointer-events"], "it must never eat a click meant for an option").toBe("none");
+
+    // BOTH edges animate: a pill that only slid would be the wrong width for a
+    // wider option all the way across, which is the half of this the reference does
+    // and every group that has one is on the same mechanism, not just the Dashboard's
+    for (const g of [".hs-views", ".tc-tabs", ".gantt-seg", ".bfnt-tabs", ".bf-breeze-nav", ".route-goal-control", ".hs-rail-list"]) {
+      expect(declsFor(g + "[data-bfm-pill]::before").background, g).toBe("var(--bfm-pill-fill)");
+    }
+
+    const live = declsFor('.hs-home-seg[data-bfm-pill="live"]::before').transition;
+    expect(live).toContain("transform var(--bfm-dur-pill) var(--bfm-ease-pill)");
+    expect(live).toContain("width var(--bfm-dur-pill) var(--bfm-ease-pill)");
+
+    // and the FIRST placement has nowhere to come from, so `placed` carries no
+    // transition at all — otherwise the pill flies in from the group's left edge
+    expect(declsFor(".hs-home-seg[data-bfm-pill]::before").transition).toBeUndefined();
+
+    // the values were measured off the reference clip, not chosen
+    expect(ms(DUR.pill)).toBe(470);
+    expect(cssEase(EASE.pill)).toBe("cubic-bezier(0.3, 1, 0.6, 0.85)");
   });
 
   it("puts every menu and dialog on one pair, and never on a page's beats", () => {

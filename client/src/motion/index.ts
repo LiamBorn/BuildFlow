@@ -30,4 +30,5 @@ export { TextReveal, charStep } from "./TextReveal";
 export { CountUp } from "./CountUp";
 export { useCountUp, canCountUp } from "./useCountUp";
 export { AppFrame, useShellOpened, openingRunning, __resetOpeningGate } from "./AppFrame";
+export { SegmentPill, PILL_GROUPS } from "./SegmentPill";
 export { useOpening } from "./useOpening";

@@ -229,7 +229,21 @@ Departures from §4, each deliberate:
 | Route transition: outgoing `opacity → 0, y: -8` | **Not built.** Incoming replays the content beats, as specified | The outgoing half needs the page switch wrapped in `AnimatePresence` so the old page stays mounted while it fades. Any cheaper version delays the swap, and §9.6 forbids motion delaying interactivity. |
 | Gantt bars in `STAGGER.bar` order **by start date** | Staggered by **row**, capped at 6 bands | A bar is placed and dragged by an inline `left`/`width`; threading an order through `GanttFeatureList`'s render prop would put another inline property on the element the drag owns. Rows are already ordered by project then date, so down the page ≈ across it. Six bands because the arrows and markers wait for the last bar to *finish drawing* — every extra band costs the settle twice, and twelve put the marker at 3.1s. |
 | Crew / list views: first **12** rows | First **8** | The cap already in the sheet; tighter than the spec, same effect. |
-| `layoutId` nav pill | Not built | The rail's active button is the pill here, and moving it to `layoutId` means rendering the rail through framer — a §5 micro-interaction, not a page entrance. |
+| `layoutId` nav pill | **Built 2026-09-19, without `layoutId`** — see below | |
+
+### §5's travelling pill (2026-09-19)
+
+Built from a second reference clip, and MEASURED off it rather than taken from §5's row: tracking the pill's own pixels frame by frame through one move gives ~470ms on `cubic-bezier(0.3, 1, 0.6, 0.85)` — a spring, which is faster off the line and slower through the middle than any of §1's four curves (`EASE.out`, the closest, is about twice as far from the data). `DUR.pill` and `EASE.pill` are that measurement; §5's `DUR.fast` + `EASE.soft` is less than half the duration and visibly snappier than the reference.
+
+Both edges interpolate, so the pill changes WIDTH to fit its target rather than sliding at a fixed size — the half that makes a narrow option beside a wide one look right.
+
+Not `layoutId`, which needs the indicator rendered inside the active child — a change at every call site in a 40k-line `App.tsx` another session is editing. `motion/SegmentPill.tsx` writes two custom properties onto the group element instead and the group's own `::before` is the pill (skin §78). React owns nothing it touches, it serves any group named in `PILL_GROUPS` including ones inside body portals, and with no JS the selected option simply keeps the background it always had.
+
+Selection only, not hover: the reference never moves the pill on hover, and the pill IS the dark background the selected option's light text sits on — parked under a merely-hovered option it would put that option's muted ink on its own fill.
+
+**Rolled out to ten groups (2026-09-19):** the Dashboard's approval toggle, Preferences' radio rows, the view switcher on nine index pages, Timecards' sections and its breakdown, the Gantt's range, the notifications filters, BuildFlow AI's nav, the map's optimisation goal, and the icon rail. Two shapes the mechanism had to grow for: the rail marks the **button inside its slot**, so the selected element is found at any depth and measured itself (a slot-sized pill would be wrong in both size and place); and the rail is a **column of discs**, which needed only `--bfm-pill-fill` and `--bfm-pill-radius` per group. Measuring walks the offsetParent chain rather than `getBoundingClientRect`, because the shell carries a CSS `zoom` (skin §42) that scales a client rect but not an offset.
+
+Groups deliberately left out: the command palette (keyboard-driven rows that scroll under the selection), Settings' navigation (items split across sections, so a pill would have to jump a heading), and anything whose "active" is a button's own state rather than one option out of several.
 
 ---
 

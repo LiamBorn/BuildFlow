@@ -16308,10 +16308,12 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   --bfm-dur-slow: 600ms;
   --bfm-dur-chart: 900ms;
   --bfm-dur-count: 1400ms;
+  --bfm-dur-pill: 470ms;
   --bfm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --bfm-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
   --bfm-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
   --bfm-ease-bar: cubic-bezier(0.16, 1, 0.3, 1);
+  --bfm-ease-pill: cubic-bezier(0.3, 1, 0.6, 0.85);
   --bfm-stagger-icon: 40ms;
   --bfm-stagger-char: 35ms;
   --bfm-stagger-card: 90ms;
@@ -16893,3 +16895,144 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   }
 }
 
+/* ============================================================================
+   78. THE SELECTED OPTION IS A PILL THAT TRAVELS (2026-09-19)
+   ----------------------------------------------------------------------------
+   docs/motion-spec.md §5's last unbuilt row, built from its own reference clip.
+   Choosing another option used to cross-fade one background out and another in
+   -- nothing moved, and the options read as separate lamps rather than as one
+   selection that has a place.
+
+   The pill is the GROUP's own `::before`, put where it belongs by custom
+   properties motion/SegmentPill.tsx writes on the group. Position and size are
+   animated together, so it changes shape to fit its target instead of sliding at
+   a fixed one -- what makes a narrow option beside a wide one look right.
+   `--bfm-dur-pill` and `--bfm-ease-pill` were MEASURED off the clip rather than
+   chosen; the note in motion/tokens.ts has the frames.
+
+   Ten groups share it, across every page that has one: the Dashboard's approval
+   toggle, Preferences' radio rows, the view switcher on nine index pages,
+   Timecards' sections and its breakdown, the Gantt's range, the notifications
+   filters, BuildFlow AI's nav, the map's optimisation goal, and the icon rail --
+   a column of discs rather than a row of pills, which needs nothing but its own
+   fill and radius to be the same mechanism.
+
+   `position: relative` here is load-bearing twice over: it is what the pill is
+   placed against, and the layer measures by walking the offsetParent chain up to
+   the group, which only reaches it if it is positioned.
+
+   Nothing fires until the layer has marked the group, so with no JS every one of
+   them simply keeps the background it always had.
+   ========================================================================= */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg,
+.app-shell.hs-shell.bf-shell .pref-segmented,
+.app-shell.hs-shell.bf-shell .hs-index .hs-views,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg,
+.app-shell.hs-shell.bf-shell .bfnt-tabs,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav,
+.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control,
+.app-shell.hs-shell.bf-shell .hs-rail-list {
+  position: relative;
+  /* what the pill is made of; a group with its own answer says so below */
+  --bfm-pill-fill: var(--bf-ink);
+  --bfm-pill-radius: 999px;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--bfm-pill-w);
+  height: var(--bfm-pill-h);
+  transform: translate(var(--bfm-pill-x), var(--bfm-pill-y));
+  border-radius: var(--bfm-pill-radius);
+  background: var(--bfm-pill-fill);
+  pointer-events: none;
+}
+/* The first placement has nowhere to travel from, so the layer holds the group at
+   `placed` for that one write; only then does it become `live` and start animating.
+   Without it the pill flew in from the group's left edge whenever a panel mounted. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before {
+  transition:
+    transform var(--bfm-dur-pill) var(--bfm-ease-pill),
+    width var(--bfm-dur-pill) var(--bfm-ease-pill),
+    height var(--bfm-dur-pill) var(--bfm-ease-pill);
+}
+/* the options ride on top of it... */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] > * {
+  position: relative;
+  z-index: 1;
+}
+/* ...and the chosen one gives up its own background to the pill: the same shape,
+   in the same place, now able to move. Its ink is untouched, so the text it was
+   carrying still reads. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill] button.active,
+.app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] .pref-seg[aria-checked="true"],
+.app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill] .hs-view.active,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill] button.active,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill] .tc-tab.active,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] button.active,
+.app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active,
+.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] button.active,
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] .hs-rail-btn.active,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill] button.active:hover,
+.app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] .pref-seg[aria-checked="true"]:hover,
+.app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill] .hs-view.active:hover,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill] button.active:hover,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill] .tc-tab.active:hover,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] button.active:hover,
+.app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active:hover,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active:hover,
+.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] button.active:hover,
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] .hs-rail-btn.active:hover {
+  background: transparent;
+}
+/* the rail is a column of discs, and its fill is its own */
+.app-shell.hs-shell.bf-shell .hs-rail-list {
+  --bfm-pill-fill: var(--bf-rail-fill);
+  --bfm-pill-radius: 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before {
+    transition: none;
+  }
+}

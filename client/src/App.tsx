@@ -321,7 +321,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { SelectMenuLayer } from "./components/ui/selectMenu";
 import { DateMenuLayer } from "./components/ui/dateMenu";
 import { PanelExitLayer } from "./components/ui/panelExit";
-import { AppFrame, TextReveal } from "./motion";
+import { AppFrame, SegmentPill, TextReveal } from "./motion";
 import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
 import { GanttPage } from "./schedule/pages/GanttPage";
@@ -3169,6 +3169,8 @@ function App() {
       <PanelExitLayer />
       {/* the opening: the shell arrives, then the chrome assembles (skin §74) */}
       <AppFrame />
+      {/* the selected option in a button group is a pill that travels (skin §78) */}
+      <SegmentPill />
       {/* HubSpot layout: full-width top bar, then an icon rail + content row.
           APPROVED: Settings renders the top bar again. It had no bar and no rail,
           which made it the one page in the product with no search, no create menu,

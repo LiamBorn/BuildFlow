@@ -22,7 +22,17 @@ export const DUR = {
   base: 0.4, // standard element entrance
   slow: 0.6, // card / panel entrance
   chart: 0.9, // path draw, bar growth
-  count: 1.4 // number count-up
+  count: 1.4, // number count-up
+  /**
+   * How long the selected pill takes to travel between the options in a group.
+   *
+   * MEASURED off the reference clip (2026-09-19), tracking the pill's own pixels
+   * frame by frame through one Monthly -> Yearly move: it leaves at 3.317s and
+   * settles at 3.868s, 47% of the way across at 83ms and 92% at 334ms. Both
+   * edges interpolate together, so it changes WIDTH to fit its target rather
+   * than sliding at a fixed size, and it never overshoots.
+   */
+  pill: 0.47
 } as const;
 
 /** Cubic-bezier control points. */
@@ -34,7 +44,15 @@ export const EASE = {
   /** symmetric, for exits and cross-fades */
   inOut: [0.65, 0, 0.35, 1],
   /** bars / values landing */
-  bar: [0.16, 1, 0.3, 1]
+  bar: [0.16, 1, 0.3, 1],
+  /**
+   * The pill's travel. Fitted to those measurements rather than chosen: the
+   * reference is a spring, which is faster off the line and slower through the
+   * middle than any of the curves above. EASE.out is the closest of them and is
+   * still about twice as far out, arriving visibly early through the middle of
+   * the move.
+   */
+  pill: [0.3, 1, 0.6, 0.85]
 } as const;
 
 /** Seconds between one sibling and the next. */
