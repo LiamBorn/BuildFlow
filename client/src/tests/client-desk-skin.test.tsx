@@ -60,7 +60,11 @@ describe("the Client Desk skin", () => {
     expect(shell["--bf-radius-stage"]).toBe("28px");
     expect(shell["--bf-shadow-card"]).toBe("var(--cd-sh-1)");
     expect(shell["--cd-sh-1"]).toBe("0 1px 2px rgba(23, 21, 15, 0.05)");
-    expect(shell["--bf-ease"]).toBe("cubic-bezier(0.16, 1, 0.3, 1)");
+    // 2026-09-19: the settling curve and the durations are motion/tokens.ts now
+    // (docs/motion-spec.md §9.1). The --bf- names stay because six hundred
+    // declarations in this sheet read them, and they resolve to the same values.
+    expect(shell["--bf-ease"]).toBe("var(--bfm-ease-bar)");
+    expect(declsOf(".bf-shell")["--bfm-ease-bar"]).toBe("cubic-bezier(0.16, 1, 0.3, 1)");
     expect(shell["--bf-page-display-weight"]).toBe("600");
     // surfaces are set on the shell only, so dark mode and the themes still repaint them
     expect(sheet.toString()).not.toMatch(/\.(dash|sched|crew|proj)-rx[^{]*\{[^}]*--bf-(surface|ground):/);
@@ -415,35 +419,50 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .gantt-page.gantt-chart .schedule-select`)["border-radius"]).toBe("999px");
   });
 
-  it("plays the reference's entrance when the Dashboard opens: panels in reading order, rows after them", () => {
+  it("plays the reference's entrance when the Dashboard opens: panels by row, rows after them", () => {
+    // 2026-09-19: re-cut to docs/motion-spec.md (skin §74). The panel board is ONE
+    // board now — the Dashboard's and the Schedule's — so neither carries a rank or
+    // a base of its own; both read the beats, staggered by the panel's place in the grid.
     const S = ".app-shell.hs-shell.bf-shell";
     const panel = declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block`);
-    expect(panel["animation-name"]).toBe("bfe-rise");
-    expect(panel["animation-fill-mode"]).toBe("backwards"); // so a drag's inline transform and the hover lift stay free afterwards
-    expect(panel["animation-delay"]).toBe("calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms)");
+    expect(panel.animation).toContain("bfe-lift");
+    expect(panel.animation).toContain("backwards"); // so a drag's inline transform and the hover lift stay free afterwards
+    expect(panel["animation-delay"]).toContain("var(--bfm-beat-board)");
+    expect(panel["animation-delay"]).toContain("var(--bfe-row, 0) * var(--bfm-row)");
+    expect(panel["animation-delay"]).toContain("var(--bfe-col, 0) * var(--bfm-stagger-card)");
     const row = declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block .cc-list > *`);
-    expect(row.animation).toContain("bfe-row");
-    expect(row["animation-delay"]).toBe("calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms + 220ms + var(--bfe-r, 0) * 60ms)");
-    // the Schedule page: its frame first, part by part, then its board 360ms in
-    expect(declsOf(`${S} .sched-rx .sched-board-host`)["--bfe-base"]).toBe("360ms");
-    expect(declsOf(`${S} .sched-rx.dx-ready .ss-strip[data-reveal]`)["transition-delay"]).toBe("120ms");
-    expect(declsOf(`${S} .sched-rx.dx-ready .schedule-control-row[data-reveal]`)["transition-delay"]).toBe("240ms");
-    expect(declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block .sched-queue > *`).animation).toContain("bfe-row");
+    expect(row.animation).toContain("bfe-lift");
+    expect(row["animation-delay"]).toContain("var(--bfm-beat-board-content)");
+    // the old flat rank and per-page base are gone, and nothing reads them
+    expect(sheet.toString()).not.toContain("var(--bfe-i");
+    expect(sheet.toString()).not.toContain("var(--bfe-base");
+    // 2026-09-19: the Schedule reads the shared beats now (skin §76), not two numbers of its own
+    expect(declsOf(`${S} .sched-rx.dx-ready .ss-strip[data-reveal]`)["transition-delay"]).toBe(
+      "max(0ms, calc(var(--bfm-beat-kpi) - var(--bfm-shift)))"
+    );
+    expect(declsOf(`${S} .sched-rx.dx-ready .schedule-control-row[data-reveal]`)["transition-delay"]).toBe(
+      "max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)))"
+    );
+    expect(declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block .sched-queue > *`).animation).toContain("bfe-lift");
     expect(declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block .cc-spark-line`).animation).toContain("bfe-draw");
   });
 
   it("plays the same entrance on the Projects and Crews pages: KPI tiles, then the card, then its rows", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     const tile = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpis > .hs-kpi`);
-    expect(tile.animation).toContain("bfe-rise");
-    expect(tile["animation-delay"]).toBe("calc(80ms + var(--bfe-r, 0) * 70ms)");
+    // 2026-09-19: the figures beat, not a pair of numbers this page owned (skin §75)
+    expect(tile.animation).toContain("bfe-lift");
+    expect(tile["animation-delay"]).toBe(
+      "max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)))"
+    );
     expect(
       declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-index-main > .hs-index-card`)[
         "animation-delay"
       ]
-    ).toBe("360ms");
+    ).toBe("max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)))");
     const row = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr`);
-    expect(row.animation).toContain("bfe-row");
+    expect(row.animation).toContain("bfe-lift");
+    expect(row["animation-delay"]).toContain("var(--bfm-beat-board-content)");
     expect(row.animation).toContain("backwards");
     expect(
       declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr:nth-child(3)`)[
@@ -668,7 +687,7 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .field-rx .field-dropzone`).border).toBe("1px dashed var(--bf-line-solid)");
     expect(declsOf(`${S} .field-rx .field-dropzone.dragging`).background).toBe("var(--bf-color-accent-wash)");
     expect(declsOf(`${S} .field-rx .field-entry-body .primary-button`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .field-rx > .field-entry-card`)["animation-delay"]).toBe("620ms");
+    expect(declsOf(`${S} .field-rx > .field-entry-card`)["animation-delay"]).toContain("var(--bfm-beat-board)");
   });
 
   it("gives Settings the card language: a rail card with ink nav pills, display heads, ink switches, a pill-track plan switch", () => {
@@ -693,11 +712,11 @@ describe("the Client Desk skin", () => {
   it("gives Bookmarks the entrance: the two cards rise, the groups and tiles follow, fills backwards", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     const card = declsOf(`${S} .bookmarks-page .hs-index-main > .hs-index-card`);
-    expect(card.animation).toContain("bfe-rise");
+    expect(card.animation).toContain("bfe-lift");
     expect(card.animation).toContain("backwards");
     expect(card["animation-delay"]).toContain("var(--bfe-r, 0)");
     expect(declsOf(`${S} .bookmarks-page .hs-index-main > .hs-index-card:nth-child(2)`)["--bfe-r"]).toBe("1");
-    expect(declsOf(`${S} .bookmarks-page .bm-tiles > .bm-tile`).animation).toContain("bfe-row");
+    expect(declsOf(`${S} .bookmarks-page .bm-tiles > .bm-tile`).animation).toContain("bfe-lift");
     expect(declsOf(`${S} .bookmarks-page .bm-tiles > .bm-tile:nth-child(n + 7)`)["--bfe-r"]).toBe("6");
   });
 
@@ -1142,7 +1161,7 @@ describe("the Client Desk skin", () => {
     const listing = declsOf(`body:has(${S}) .pdx .pdx-form > label`);
     expect(listing["animation-name"]).toBe("bfe-row");
     expect(listing["animation-duration"]).toBe("var(--bf-dur-panel)");
-    expect(listing["animation-delay"]).toBe("calc(70ms + var(--bfe-r, 0) * 38ms)");
+    expect(listing["animation-delay"]).toBe("calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon))");
     expect(listing.animation, "no shorthand here, on purpose").toBeUndefined();
     /* AND NOTHING MAY KILL IT ON THE LABELS. A mode-fenced `> label { animation: none }` sat here
        to suppress the base sheet's own `pdx-field-in` — but `> label` out-specifies the `> *` that
@@ -2174,7 +2193,7 @@ describe("the Client Desk skin", () => {
     const row = declsOf(`body:has(${S}) .bfsp .bfsp-grid > *`);
     expect(row["animation-name"]).toBe("bfe-row");
     expect(row["animation-duration"]).toBe("var(--bf-dur-panel)");
-    expect(row["animation-delay"]).toBe("calc(70ms + var(--bfe-r, 0) * 38ms)");
+    expect(row["animation-delay"]).toBe("calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon))");
     expect(row.animation, "no shorthand here, on purpose").toBeUndefined();
     for (const [nth, r] of [
       [2, "1"],

@@ -76,16 +76,22 @@
   --bf-shadow-float: var(--cd-sh-4);
   --bf-shadow-stage: var(--cd-sh-4);
 
-  /* motion: out settles, spring overshoots, smooth is symmetric */
-  --bf-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* motion: out settles, spring overshoots, smooth is symmetric.
+     2026-09-19: the durations and the settling curve are motion/tokens.ts now
+     (docs/motion-spec.md §9.1 — one place, no second set of numbers). These names
+     stay because six hundred declarations in this sheet read them, and because
+     the reduce block below still flattens all of them to 1ms by name. The two
+     easings with no counterpart in the spec — the symmetric one for sizes and
+     the overshoot for a spring — are this sheet's own and keep their values. */
+  --bf-ease: var(--bfm-ease-bar);
   --bf-ease-size: cubic-bezier(0.4, 0, 0.2, 1);
   --bf-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --bf-dur-press: 0.14s;
-  --bf-dur-hover: 0.24s;
-  --bf-dur-move: 0.24s;
-  --bf-dur-panel: 0.24s;
-  --bf-dur-enter: 0.52s;
-  --bf-dur-reveal: 0.9s;
+  --bf-dur-press: var(--bfm-dur-instant);
+  --bf-dur-hover: var(--bfm-dur-fast);
+  --bf-dur-move: var(--bfm-dur-fast);
+  --bf-dur-panel: var(--bfm-dur-fast);
+  --bf-dur-enter: var(--bfm-dur-slow);
+  --bf-dur-reveal: var(--bfm-dur-chart);
   --bf-lift: -3px;
   --bf-lift-small: -2px;
 
@@ -4857,53 +4863,12 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 .app-shell.hs-shell.bf-shell .sched-rx.dx-ready .schedule-title-row[data-reveal] {
   transition-delay: 0ms;
 }
-.app-shell.hs-shell.bf-shell .sched-rx.dx-ready .ss-strip[data-reveal] {
-  transition-delay: 120ms;
-}
-.app-shell.hs-shell.bf-shell .sched-rx.dx-ready .schedule-control-row[data-reveal] {
-  transition-delay: 240ms;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-board-host {
-  --bfe-base: 360ms;
-}
-/* the panels, in reading order */
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block {
-  animation-name: bfe-rise;
-  animation-duration: var(--bf-dur-enter);
-  animation-timing-function: var(--bf-ease);
-  animation-fill-mode: backwards;
-  animation-delay: calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms);
-}
+/* the panels, in reading order.
+   The DASHBOARD no longer opens this way — skin §74 re-cut it to the motion spec
+   and out-specifies these two rules with `:not(.sched-board-host)`. What is left
+   reaching them is the Schedule page, whose board shares this host class and keeps
+   its entrance exactly as it was until its own turn comes. */
 /* the rows inside a panel, after it */
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today-group ul > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-stat-grid > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .kpi-grid > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-apps-grid > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-quick > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .legend-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-legacy-panel > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-pitch > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-queue > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-avail-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-miles-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sv-drawer-list > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-steps > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-filters .filter-strip > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-chips > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views-bar > *,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today-group,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-panel > .hs-home-empty,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-foot,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-foot,
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-section-note {
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms + 220ms + var(--bfe-r, 0) * 60ms);
-}
 .app-shell.hs-shell.bf-shell
   .dash-rx.hs-home
   .dash-board
@@ -5085,24 +5050,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   --bfe-r: 6;
 }
 /* the sparkline draws, its fill arrives, the chart pops */
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-line {
-  stroke-dasharray: 600;
-  animation: bfe-draw var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms + 300ms);
-}
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-fill {
-  animation: bfe-fade var(--bf-dur-enter) var(--bf-ease-size) backwards;
-  animation-delay: calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms + 700ms);
-}
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .recharts-responsive-container {
-  transform-origin: 50% 50%;
-  animation: bfe-pop var(--bf-dur-reveal) var(--bf-ease-spring) backwards;
-  animation-delay: calc(var(--bfe-base, 160ms) + var(--bfe-i, 0) * 90ms + 240ms);
-}
 /* the status band's bars grow once the band itself has risen */
-.app-shell.hs-shell.bf-shell .dash-rx.hs-home .ss-band .ss-project-track > i {
-  animation-delay: 360ms;
-}
 @media (prefers-reduced-motion: reduce) {
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-list > *,
@@ -5158,8 +5106,9 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    ============================================================================ */
 .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpis > .hs-kpi {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 70ms);
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell
   :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
@@ -5189,13 +5138,16 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
   .hs-index-main
   > .hs-index-card {
-  animation: bfe-rise var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: 360ms;
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-index-card > * {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(480ms + var(--bfe-r, 0) * 80ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell
   :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
@@ -5238,8 +5190,9 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 /* the table's rows, top to bottom, once the table itself is in */
 .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(800ms + var(--bfe-r, 0) * 50ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell
   :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
@@ -7824,8 +7777,10 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 .app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel,
 .app-shell.hs-shell.bf-shell .map-ops-page .map-ops-right > .panel {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(120ms + var(--bfe-r, 0) * 90ms);
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel:nth-child(1) {
   --bfe-r: 1;
@@ -7843,8 +7798,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
   :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
   > * {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(520ms + var(--bfe-r, 0) * 60ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell
   .map-ops-page
@@ -8298,8 +8254,10 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 /* ---- 27c. the rail's entrance: after the card, its rows after it ---- */
 .app-shell.hs-shell.bf-shell .delayIQ-rx .hs-index-rail > * {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(440ms + var(--bfe-r, 0) * 90ms);
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .delayIQ-rx .hs-index-rail > :nth-child(2) {
   --bfe-r: 1;
@@ -8312,8 +8270,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 }
 .app-shell.hs-shell.bf-shell .delayIQ-rx :is(.diq-list, .panel) > :is(.diq-risk, .resource-row) {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(760ms + var(--bfe-r, 0) * 60ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .delayIQ-rx :is(.diq-list, .panel) > :is(.diq-risk, .resource-row):nth-child(2) {
   --bfe-r: 1;
@@ -8587,8 +8546,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 .app-shell.hs-shell.bf-shell .reports-page .reports-chart-grid > .reports-card,
 .app-shell.hs-shell.bf-shell .reports-page > .reports-efficiency-card {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 70ms);
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .reports-page .reports-kpi-grid > .reports-kpi-card:nth-child(2) {
   --bfe-r: 1;
@@ -8615,13 +8575,14 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
   --bfe-r: 8;
 }
 .app-shell.hs-shell.bf-shell .reports-page .recharts-responsive-container {
-  animation: bfe-pop var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: 760ms;
+  animation: bfe-pop var(--bfm-dur-chart) var(--bfm-ease-soft) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .reports-page .reports-efficiency-list > .reports-efficiency-row {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(960ms + var(--bfe-r, 0) * 60ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .reports-page .reports-efficiency-list > .reports-efficiency-row:nth-child(2) {
   --bfe-r: 1;
@@ -9306,8 +9267,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 .app-shell.hs-shell.bf-shell .tc-page .tc-tabs,
 .app-shell.hs-shell.bf-shell .tc-page .tc-body > * {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 70ms);
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat:nth-child(2) {
   --bfe-r: 1;
@@ -9344,8 +9306,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
   :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
   > * {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(1000ms + var(--bfe-r, 0) * 50ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell
   .tc-page
@@ -9728,8 +9691,10 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 }
 /* ---- 30c. the entry card rises after the log ---- */
 .app-shell.hs-shell.bf-shell .field-rx > .field-entry-card {
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: 620ms;
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -10426,13 +10391,16 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 }
 /* ---- 31h. the entrance: the rail rises first, the panel's blocks follow ---- */
 .app-shell.hs-shell.bf-shell .settings-rx .settings-rail {
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: 40ms;
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > * {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(160ms + var(--bfe-r, 0) * 90ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > :nth-child(2) {
   --bfe-r: 1;
@@ -10477,16 +10445,19 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
    ============================================================================ */
 .app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card {
   --bfe-r: 0;
-  animation: bfe-rise var(--bf-dur-reveal) var(--bf-ease) backwards;
-  animation-delay: calc(120ms + var(--bfe-r, 0) * 180ms);
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:nth-child(2) {
   --bfe-r: 1;
 }
 .app-shell.hs-shell.bf-shell .bookmarks-page .bm-groups > .bm-group {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(420ms + var(--bfe-r, 0) * 70ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .bookmarks-page .bm-groups > .bm-group:nth-child(2) {
   --bfe-r: 1;
@@ -10503,8 +10474,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 .app-shell.hs-shell.bf-shell .bookmarks-page .bm-tiles > .bm-tile,
 .app-shell.hs-shell.bf-shell .bookmarks-page .bm-empty {
   --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(560ms + var(--bfe-r, 0) * 50ms);
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
 .app-shell.hs-shell.bf-shell .bookmarks-page .bm-tiles > .bm-tile:nth-child(2) {
   --bfe-r: 1;
@@ -10746,7 +10718,7 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .bfws-foot {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 50ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .bfws-list > .bfws-item:nth-child(2) {
   --bfe-r: 1;
@@ -11333,7 +11305,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-composer,
 body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-note {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(120ms + var(--bfe-r, 0) * 70ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-suggested {
   --bfe-r: 1;
@@ -11622,7 +11594,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-quick button {
 .app-shell.hs-shell.bf-shell .bfnt-list > .bfnt-row {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(100ms + var(--bfe-r, 0) * 40ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .bfnt-list > .bfnt-row:nth-child(2) {
   --bfe-r: 1;
@@ -11769,7 +11741,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-quick button {
 .app-shell.hs-shell.bf-shell .hs-bookmarks-menu > .hs-bookmarks-empty {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 40ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .hs-bookmarks-menu > .hs-bookmark-row:nth-child(3) {
   --bfe-r: 1;
@@ -11894,7 +11866,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-quick button {
 .app-shell.hs-shell.bf-shell .user-settings-menu > * {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 50ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .user-settings-menu > :nth-child(2) {
   --bfe-r: 1;
@@ -11965,7 +11937,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-quick button {
 .app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 40ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item:nth-child(3) {
   --bfe-r: 1;
@@ -12191,7 +12163,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > label {
   animation-duration: var(--bf-dur-panel);
   animation-timing-function: var(--bf-ease-size);
   animation-fill-mode: backwards;
-  animation-delay: calc(70ms + var(--bfe-r, 0) * 38ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > :nth-child(2) {
   --bfe-r: 1;
@@ -12368,7 +12340,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .cmdk-list > .cmdk-item {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(60ms + var(--bfe-r, 0) * 30ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .cmdk-list > .cmdk-item:nth-child(2) {
   --bfe-r: 1;
@@ -12582,7 +12554,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .hs-upgrade-menu > * {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(80ms + var(--bfe-r, 0) * 40ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .hs-upgrade-menu > :nth-child(2) {
   --bfe-r: 1;
@@ -12762,7 +12734,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-menu > * {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(60ms + var(--bfe-r, 0) * 30ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 .app-shell.hs-shell.bf-shell .pref-menu > :nth-child(2) {
   --bfe-r: 1;
@@ -15606,7 +15578,7 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-se
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > * {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-panel) var(--bf-ease-size) backwards;
-  animation-delay: calc(70ms + var(--bfe-r, 0) * 38ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(2),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(2) {
@@ -15776,7 +15748,7 @@ body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker .sch
   animation-duration: var(--bf-dur-panel);
   animation-timing-function: var(--bf-ease-size);
   animation-fill-mode: backwards;
-  animation-delay: calc(70ms + var(--bfe-r, 0) * 38ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker .schedule-job-create-form > :nth-child(2) {
   --bfe-r: 1;
@@ -16263,7 +16235,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > * {
   animation-duration: var(--bf-dur-panel);
   animation-timing-function: var(--bf-ease-size);
   animation-fill-mode: backwards;
-  animation-delay: calc(70ms + var(--bfe-r, 0) * 38ms);
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
 body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(2) {
   --bfe-r: 1;
@@ -16287,3 +16259,637 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(7) {
 body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   --bfe-r: 7;
 }
+
+/* ============================================================================
+   74. THE OPENING (2026-09-19)
+   ----------------------------------------------------------------------------
+   docs/motion-spec.md, built from the reference clip the spec was written off.
+   What the reference does, in order: the shell itself arrives — a breath of
+   scale and a blur clearing — then the chrome assembles, brand first; the page
+   title sharpens character by character; the controls beside it follow; the
+   figures strip lands and counts up from zero; then the board, row by row, each
+   card rising out of a blur with its contents a beat behind it.
+
+   THREE THINGS DECIDE THE SHAPE OF THIS SECTION.
+
+   1. The numbers are not written here. They are `motion/tokens.ts`, printed
+      into 74a by `cssVariables()`; tests/motion-tokens.test.ts compares the two
+      and fails on a drift. The Dashboard's panels are placed and dragged by an
+      inline `style.transform` (board/panelBoard.tsx), so a framer `motion.div`
+      entrance would fight the drag — the defect already on record against the
+      deal board's DragOverlay. Panels therefore animate in CSS, the title and
+      the figures in framer, and both halves read one set of numbers.
+
+   2. The chrome assembles ONCE A SESSION, the page beats on EVERY mount (§3's
+      first-load gating, §4's route transition). `bfm-open` is the session's
+      first open, put on the shell by motion/AppFrame.tsx and taken off once the
+      cascade has settled. Everything under `.dash-rx` runs unconditionally —
+      the page remounts when you click Home, which is what replays it — and
+      shifts by `--bfm-shift` so that, with the chrome already up, the title
+      leads instead of waiting out a rail cascade that has already happened.
+
+   3. This section touches the Dashboard and the chrome, nothing else. The
+      pages that share `bfe-rise` keep it exactly as it was, so the eleven other
+      screens that animate through it are untouched until their own turn.
+   ========================================================================= */
+
+/* 74a. the tokens — motion/tokens.ts, printed. Do not hand-edit: regenerate.
+   Declared on `.bf-shell`, which is on the BODY as well as on the shell element
+   (App.tsx puts it there), because nine of this program's layers are portals to
+   document.body — the dropdown, the calendar, the dialogs, the record panel.
+   A custom property inherits down the tree and a portal is the shell's SIBLING,
+   so a block scoped to the shell element alone would leave every one of them
+   reading an undefined property: the `calc()` would be invalid and the delay
+   silently dropped. This is where `--bf-*` lives, for the same reason. */
+.bf-shell {
+  --bfm-dur-instant: 120ms;
+  --bfm-dur-fast: 220ms;
+  --bfm-dur-base: 400ms;
+  --bfm-dur-slow: 600ms;
+  --bfm-dur-chart: 900ms;
+  --bfm-dur-count: 1400ms;
+  --bfm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --bfm-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
+  --bfm-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --bfm-ease-bar: cubic-bezier(0.16, 1, 0.3, 1);
+  --bfm-stagger-icon: 40ms;
+  --bfm-stagger-char: 35ms;
+  --bfm-stagger-card: 90ms;
+  --bfm-stagger-row: 140ms;
+  --bfm-stagger-bar: 55ms;
+  --bfm-stagger-cell: 12ms;
+  --bfm-rise: 16px;
+  --bfm-rise-l: 24px;
+  --bfm-blur: 10px;
+  --bfm-blur-t: 6px;
+  --bfm-scale: 0.97;
+  --bfm-frame-scale: 0.985;
+  --bfm-beat-frame: 0ms;
+  --bfm-beat-brand: 130ms;
+  --bfm-beat-nav-pill: 180ms;
+  --bfm-beat-nav-icons: 220ms;
+  --bfm-beat-topbar-right: 300ms;
+  --bfm-beat-rail: 360ms;
+  --bfm-beat-title: 440ms;
+  --bfm-beat-controls: 560ms;
+  --bfm-beat-kpi: 640ms;
+  --bfm-beat-kpi-cols: 700ms;
+  --bfm-beat-board: 740ms;
+  --bfm-beat-board-content: 820ms;
+  --bfm-row: 90ms;
+  --bfm-overlay: 70ms;
+  --bfm-trail: 350ms;
+  --bfm-opening: 2400ms;
+  --bfm-rank-cap: 2;
+  --bfm-reduced: 150ms;
+}
+
+/* 74b. one keyframe for the whole opening. Distance and blur come in as custom
+   properties, so "a card rising 24px out of a 10px blur" and "an icon lifting
+   8px out of nothing" are the same animation read twice — which keeps the
+   sheet's keyframe list short and every entrance on one curve. A var resolves
+   before interpolation, so `from` is a real length by the time it animates. */
+@keyframes bfe-lift {
+  from {
+    opacity: 0;
+    transform: translateY(var(--bfe-y, 16px));
+    filter: blur(var(--bfe-blur, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0px);
+  }
+}
+/* the shell's own arrival: §2.1's scale and blur, and no translate */
+@keyframes bfe-frame {
+  from {
+    opacity: 0;
+    transform: scale(var(--bfm-frame-scale));
+    filter: blur(var(--bfm-blur));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0px);
+  }
+}
+/* the page you are on, arriving as a pill rather than a lift (§3's nav pill) */
+@keyframes bfe-pill {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 74c. THE SHELL. `backwards` and nothing else: when it ends there is no
+   residual filter or transform on the shell, which matters because either one
+   would make it the containing block for the rail's fixed "Show the sidebar"
+   tab. This is also why it is a CSS animation and not a framer one — framer
+   leaves the finished value in the style attribute. */
+.app-shell.hs-shell.bf-shell.bfm-open {
+  animation: bfe-frame var(--bfm-dur-slow) var(--bfm-ease-out) var(--bfm-beat-frame) backwards;
+}
+
+/* 74d. THE CHROME, once a session. The reference's horizontal nav is this
+   program's icon rail — both are how you change page — so the rail takes the
+   nav beats and the top bar's utility cluster takes the top-right beat. */
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .hs-topbar-brand {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) var(--bfm-beat-brand) backwards;
+}
+/* the page you are on pops; the rest of the rail lifts */
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-btn.active {
+  animation: bfe-pill var(--bfm-dur-base) var(--bfm-ease-soft) var(--bfm-beat-nav-pill) backwards;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  /* §3 asks the rail for STAGGER.icon x1.5 — 60ms, written as the token and a half */
+  animation-delay: calc(var(--bfm-beat-nav-icons) + var(--bfe-r, 0) * (var(--bfm-stagger-icon) * 1.5));
+}
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .search-box,
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .hs-ai-button,
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > * {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: calc(var(--bfm-beat-topbar-right) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
+}
+/* Settings and the hide arrow, at the rail's foot, last */
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-bottom > * {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: calc(var(--bfm-beat-rail) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
+}
+/* the place in a row, for the three cascades above. Past the eighth nobody is
+   waiting for a stagger, so they land together (§4's long-list rule). */
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(2),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(2),
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-bottom > :nth-child(2) {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(3),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(3),
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-bottom > :nth-child(3) {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(4),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(4) {
+  --bfe-r: 3;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(5),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(5) {
+  --bfe-r: 4;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(6),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(6) {
+  --bfe-r: 5;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(7),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(7) {
+  --bfe-r: 6;
+}
+.app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot:nth-child(n + 8),
+.app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > :nth-child(n + 8) {
+  --bfe-r: 7;
+}
+
+/* 74e. THE PAGE'S BEATS run on every mount, because the page remounts when you
+   click Home. `--bfm-shift` is the difference between the session's first open
+   and every one after it: with the chrome already up there is nothing to wait
+   for, so the title leads and the whole cascade slides forward by its beat.
+   Every shifted delay is clamped at 0 — a negative animation-delay would start
+   an animation already part-played, which reads as a card appearing half-risen. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) {
+  --bfm-shift: var(--bfm-beat-title);
+}
+.app-shell.hs-shell.bf-shell.bfm-open .dash-rx.hs-home:not(.sched-board-host) {
+  --bfm-shift: 0ms;
+}
+
+/* 74f. THE HEAD. The header is one `[data-reveal]` block, which fades the whole
+   thing in together — right for a scroll reveal, wrong for an opening, where
+   the title has to be able to lead. So the block's own reveal is stood down
+   here and its parts take the beats instead. The greeting itself is not in this
+   list: its characters are animated one at a time by motion/TextReveal.tsx. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host).dx-ready .hs-home-head[data-reveal] {
+  transform: none;
+  transition: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-topline {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-topbar-right) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-subline,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-meta {
+  --bfe-y: var(--bfm-rise);
+  --bfe-blur: var(--bfm-blur-t);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .business-context-verify {
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-controls) + var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+
+/* 74g. THE FIGURES STRIP — the reference's KPI card. The band lands, then its
+   columns, and each figure counts up from zero as its own column arrives
+   (components/ui/animated-figure.tsx, on the same tokens). */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band {
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-head,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-headline,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-facts,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-projects {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-headline {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-facts {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-projects {
+  --bfe-r: 3;
+}
+
+/* 74h. THE BOARD. The reference staggers by ROW and then across the row, which
+   is what a person actually reads; the flat reading-order rank this replaces
+   made a thirteen-panel board take 1.2s just to deal itself out. The board
+   writes `--bfe-row` and `--bfe-col` (board/panelBoard.tsx) from each panel's
+   place in the grid, capped at --bfm-rank-cap rows: past the fold nobody is
+   watching a panel arrive, and waiting on rank 13 would put the settle a full
+   second past budget (§4's long-list rule, applied to a board).
+
+   These two rules replace §20's — see the note there. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block {
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(
+    0ms,
+    calc(var(--bfm-beat-board) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift))
+  );
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today-group ul > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-stat-grid > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .kpi-grid > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-apps-grid > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-quick > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .legend-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-legacy-panel > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-pitch > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-queue > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-avail-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-miles-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sv-drawer-list > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-steps > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-filters .filter-strip > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-chips > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views-bar > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today-group,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-panel > .hs-home-empty,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-foot,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-foot,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-section-note {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(
+    0ms,
+    calc(
+      var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) + var(--bfe-r, 0) *
+        var(--bfm-stagger-icon) - var(--bfm-shift)
+    )
+  );
+}
+
+/* 74i. PHONES DROP THE BLUR (§6). Fade and rise only — the blur is the
+   expensive half, and a phone is where it shows. */
+@media (max-width: 767px) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-subline,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-meta {
+    --bfe-blur: 0px;
+  }
+  .app-shell.hs-shell.bf-shell.bfm-open {
+    animation-name: bfe-lift;
+    --bfe-y: 0px;
+    --bfe-blur: 0px;
+  }
+}
+
+/* 74j. LESS MOTION. §1: the whole opening collapses to a fade, no transform, no
+   blur, no stagger — and the figures land finished rather than counting
+   (animated-figure.tsx reads the same query). The selectors here are at least
+   as specific as the ones above, so this cannot lose the cascade to them. */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell.bfm-open,
+  .app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .hs-topbar-brand,
+  .app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .search-box,
+  .app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .hs-ai-button,
+  .app-shell.hs-shell.bf-shell.bfm-open .topbar.hs-topbar .topbar-actions > *,
+  .app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-btn.active,
+  .app-shell.hs-shell.bf-shell.bfm-open .hs-rail-list .hs-rail-slot,
+  .app-shell.hs-shell.bf-shell.bfm-open .hs-rail-bottom > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-topline,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-subline,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-meta,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .business-context-verify,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-head,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-headline,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-facts,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band > .ss-projects,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today-group ul > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-stat-grid > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .kpi-grid > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-apps-grid > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-quick > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .legend-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-legacy-panel > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-pitch > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-queue > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-avail-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-miles-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sv-drawer-list > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-steps > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-filters .filter-strip > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-chips > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views-bar > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-today-group,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-panel > .hs-home-empty,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-foot,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-foot,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-section-note {
+    animation: bfe-lift var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+    --bfe-y: 0px;
+    --bfe-blur: 0px;
+  }
+}
+
+/* 74k. THE CHART INSIDE A PANEL. §20 drew these off the flat rank, which is no
+   longer when a panel arrives — left alone, a sparkline would draw before its own
+   card had landed. Same beats as the card's contents, so the drawing starts as the
+   panel settles; the fill trails the line by --bfm-trail (§2.7), arriving under a
+   line already drawn rather than racing it. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-line {
+  stroke-dasharray: 600;
+  animation: bfe-draw var(--bfm-dur-chart) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-fill {
+  animation: bfe-fade var(--bfm-dur-base) var(--bfm-ease-inout) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfm-trail) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .recharts-responsive-container {
+  transform-origin: 50% 50%;
+  animation: bfe-pop var(--bfm-dur-chart) var(--bfm-ease-soft) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+/* the band's per-project bars grow once the band's own columns have landed */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-track > i {
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfm-stagger-card) * 3 - var(--bfm-shift)));
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-line,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-fill,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .recharts-responsive-container {
+    animation: bfe-fade var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+  }
+}
+
+/* ============================================================================
+   75. EVERY OTHER PAGE, ON THE SAME BEATS (2026-09-19)
+   ----------------------------------------------------------------------------
+   docs/motion-spec.md §4: every page is the same three beats — title, then the
+   figures, then the content — and "no page implements its own entrance timing".
+
+   Before this, fifteen pages each had a cascade of its own: 80+70, 120+90,
+   440+90, 520+60, 620, 40, 160+90, 120+180, 420+70, 560+50, 760, 800+50,
+   960+60, 1000+50. Nineteen of them now read the beats in 74a instead, so the
+   Schedule, Projects, Crews, Timecards, Reports, Settings and the rest open the
+   way the Dashboard does. The numbers did not move to this file — they moved to
+   motion/tokens.ts, and the rules that used to hold them were re-pointed where
+   they stand rather than replaced, so nothing here is a second copy of them.
+
+   What this section still has to own is `--bfm-shift`: every one of those
+   delays subtracts it, and a `calc()` naming a property that was never declared
+   is invalid — the delay would be dropped and the whole page would land in one
+   frame. So it is declared for every page root, exactly as 74e does for the
+   Dashboard: the title's beat normally, and zero on the session's first open,
+   when the chrome is still assembling and there is something to wait for.
+   ========================================================================= */
+.app-shell.hs-shell.bf-shell :is(
+    .proj-rx,
+    .crew-rx,
+    .contacts-page,
+    .companies-page,
+    .deals-page,
+    .equip-rx,
+    .delayIQ-rx,
+    .mat-rx,
+    .field-rx,
+    .reports-page,
+    .tc-page,
+    .bookmarks-page,
+    .map-ops-page,
+    .settings-rx,
+    .sched-rx,
+    .gantt-page
+  ) {
+  --bfm-shift: var(--bfm-beat-title);
+}
+.app-shell.hs-shell.bf-shell.bfm-open :is(
+    .proj-rx,
+    .crew-rx,
+    .contacts-page,
+    .companies-page,
+    .deals-page,
+    .equip-rx,
+    .delayIQ-rx,
+    .mat-rx,
+    .field-rx,
+    .reports-page,
+    .tc-page,
+    .bookmarks-page,
+    .map-ops-page,
+    .settings-rx,
+    .sched-rx,
+    .gantt-page
+  ) {
+  --bfm-shift: 0ms;
+}
+
+/* ============================================================================
+   76. THE SCHEDULE'S FRAME, AND THE TWO BEATS IT STILL HELD (2026-09-19)
+   ----------------------------------------------------------------------------
+   The Schedule page arrives in parts — title row, figures strip, control row —
+   and those three were the last literal timings in this sheet (0 / 120 / 240ms,
+   written as `transition-delay` rather than an animation, because they ride the
+   scroll-reveal's `.in` class rather than a keyframe). They are the same three
+   beats every other page now uses, so they read them.
+
+   The title row itself stands down, exactly as the Dashboard's header does in
+   74f: it used to fade in as one block, which is right for a scroll reveal and
+   wrong for an opening, where the title has to be able to lead. Its parts take
+   the beats instead, and the heading's characters are framer's (TextReveal).
+   ========================================================================= */
+.app-shell.hs-shell.bf-shell .sched-rx.dx-ready .schedule-title-row[data-reveal] {
+  transform: none;
+  transition: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row .dx-eyebrow {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-topbar-right) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row .dx-sub {
+  --bfe-y: var(--bfm-rise);
+  --bfe-blur: var(--bfm-blur-t);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .sched-rx.dx-ready .ss-strip[data-reveal] {
+  transition-delay: max(0ms, calc(var(--bfm-beat-kpi) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .sched-rx.dx-ready .schedule-control-row[data-reveal] {
+  transition-delay: max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)));
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row .dx-eyebrow,
+  .app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row .dx-sub {
+    animation: bfe-lift var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+    --bfe-y: 0px;
+    --bfe-blur: 0px;
+  }
+  .app-shell.hs-shell.bf-shell .sched-rx.dx-ready .ss-strip[data-reveal],
+  .app-shell.hs-shell.bf-shell .sched-rx.dx-ready .schedule-control-row[data-reveal] {
+    transition-delay: 0ms;
+  }
+}
+
+/* ============================================================================
+   77. THE GANTT'S BARS (2026-09-19)
+   ----------------------------------------------------------------------------
+   docs/motion-spec.md §4: "bars draw left-to-right in STAGGER.bar order by
+   start date; dependency arrows fade in after all bars land; today-line wipes
+   down last. Do not animate on zoom or pan."
+
+   The page's frame is already done — the Gantt is a Schedule page, so §75 and
+   §76 give it the title, the strip and the control row. What it had no
+   entrance for at all was the chart.
+
+   BY ROW, NOT BY START DATE, AND THE REASON IS THE DRAG. A bar is placed by an
+   inline `left`/`width` and dragged by rewriting them, so its order would have
+   to be threaded through GanttFeatureList's render prop as another inline
+   property on the very element the drag owns — the arrangement this sheet has
+   twice been bitten by. The rows are already laid out by project and then by
+   date inside it, so their order down the page is very nearly the order across
+   it, and the eye reads the same sweep. Six bands, and then they land together:
+   the arrows and the markers both wait for the LAST bar to finish drawing, so
+   every extra band costs the settle twice over — at twelve the marker landed at
+   3.1s, which is 700ms past the budget §3 sets for the whole opening.
+
+   The bars grow from their left edge rather than lifting: a Gantt bar means a
+   span of time, and a span of time reads as something that extends.
+   ========================================================================= */
+@keyframes bfe-span {
+  from {
+    opacity: 0;
+    transform: scaleX(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row .gantt-feature {
+  transform-origin: left center;
+  animation: bfe-span var(--bfm-dur-chart) var(--bfm-ease-bar) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-bar) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row:nth-child(2) {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row:nth-child(3) {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row:nth-child(4) {
+  --bfe-r: 3;
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row:nth-child(5) {
+  --bfe-r: 4;
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row:nth-child(6) {
+  --bfe-r: 5;
+}
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row:nth-child(n + 7) {
+  --bfe-r: 5;
+}
+/* the arrows between bars, once every bar has landed */
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-links {
+  animation: bfe-fade var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + 5 * var(--bfm-stagger-bar) + var(--bfm-dur-chart) - var(--bfm-shift)));
+}
+/* and the markers last of all, wiping down the chart */
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-marker {
+  transform-origin: top center;
+  animation: bfe-wipe var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + 5 * var(--bfm-stagger-bar) + var(--bfm-dur-chart) + var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+@keyframes bfe-wipe {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* A drag, a zoom or a pan is not the page arriving (§4). While the board is
+   being dragged the bars carry no entrance at all, so an animation's transform
+   can never outrank the inline one the pointer is rewriting each frame. */
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature.is-dragging,
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-feature.is-landing,
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-ghost {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .gantt-page .gantt-feature-row .gantt-feature,
+  .app-shell.hs-shell.bf-shell .gantt-page .gantt-links,
+  .app-shell.hs-shell.bf-shell .gantt-page .gantt-marker {
+    animation: bfe-fade var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+  }
+}
+

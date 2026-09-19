@@ -23,6 +23,7 @@ import {
 } from "react";
 import { Eye, EyeOff, GripVertical, Plus, RotateCcw, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
 import { setUserSetting } from "../api";
+import { BOARD_RANK_CAP } from "../motion";
 import { usePanelFocus } from "../recordFocus";
 import { readUserSetting, rememberUserSetting } from "../userSettings";
 import {
@@ -632,6 +633,21 @@ export function DashBoard({
   // panel rises in turn, in reading order, and its rows follow it. The order is a CSS variable
   // on the panel so the sheet can stagger by it; a phone's stacked column plays in its own order.
   const entranceRank = new Map(sortByPosition(layout).map((item, index) => [item.id, index]));
+  // docs/motion-spec.md §3: the reference deals its cards out a ROW at a time and then
+  // across the row, which is the order a person actually reads them in. The flat rank
+  // above stays for the Schedule page's board (skin §20); the Dashboard's opening
+  // (skin §74) reads these two. Distinct y values are the rows, x order is the place
+  // in one, and past --bfm-rank-cap rows they all land together — below the fold
+  // nobody is watching a panel arrive, and waiting on rank 13 would overrun the budget.
+  const ordered = sortByPosition(layout);
+  const bands = [...new Set(ordered.map((item) => item.y))].sort((a, b) => a - b);
+  const filled = new Map<number, number>();
+  const entrancePlace = new Map<string, { row: number; col: number }>();
+  for (const item of ordered) {
+    const col = filled.get(item.y) ?? 0;
+    filled.set(item.y, col + 1);
+    entrancePlace.set(item.id, { row: Math.min(bands.indexOf(item.y), BOARD_RANK_CAP), col });
+  }
   return (
     <div
       ref={boardRef}
@@ -664,7 +680,14 @@ export function DashBoard({
             style.height = Math.max(min.height, rect.height + active.dy);
           }
         }
-        style = { ...style, "--bfe-i": stacked ? index : (entranceRank.get(item.id) ?? 0) } as CSSProperties;
+        const place = entrancePlace.get(item.id);
+        style = {
+          ...style,
+          "--bfe-i": stacked ? index : (entranceRank.get(item.id) ?? 0),
+          // stacked is a phone: one column, so every panel is its own row
+          "--bfe-row": stacked ? Math.min(index, BOARD_RANK_CAP) : (place?.row ?? 0),
+          "--bfe-col": stacked ? 0 : (place?.col ?? 0)
+        } as CSSProperties;
         return (
           <DashSection
             key={item.id}

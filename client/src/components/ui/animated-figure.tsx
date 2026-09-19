@@ -6,43 +6,21 @@
    It animates only in a real browser with motion allowed. jsdom has no `document.fonts`, and a
    reader who asked for less motion gets the finished value on the first paint — which is also
    what keeps the tests reading the figure they always read. */
-import { useEffect, useState } from "react";
+import { DUR } from "../../motion/tokens";
+import { useCountUp } from "../../motion/useCountUp";
 
 const FIGURE = /^([^\d]*?)(-?\d[\d,]*(?:\.\d+)?)([\s\S]*)$/;
 
-const canAnimate = () =>
-  typeof document !== "undefined" &&
-  "fonts" in document &&
-  typeof window !== "undefined" &&
-  typeof window.requestAnimationFrame === "function" &&
-  !(typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-
-export function AnimatedFigure({ text, duration = 1100 }: { text: string | number; duration?: number }) {
+/** Seconds; DUR.count. The engine is motion/useCountUp.ts — one roll for the program. */
+export function AnimatedFigure({ text, duration = DUR.count }: { text: string | number; duration?: number }) {
   const source = String(text);
   const match = FIGURE.exec(source);
   const target = match ? Number(match[2].replace(/,/g, "")) : Number.NaN;
   const decimals = match && match[2].includes(".") ? match[2].split(".")[1].length : 0;
   const grouped = Boolean(match && match[2].includes(","));
-  const animated = match !== null && Number.isFinite(target) && canAnimate();
-  const [value, setValue] = useState(animated ? 0 : target);
-
-  useEffect(() => {
-    if (!animated) {
-      setValue(target);
-      return;
-    }
-    let frame = 0;
-    const started = performance.now();
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - started) / duration);
-      // easeOutExpo — fast off the line, long settle
-      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      setValue(target * eased);
-      if (progress < 1) frame = window.requestAnimationFrame(tick);
-    };
-    frame = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frame);
-  }, [target, duration, animated]);
+  // Hooks run for every figure, animated or not — `useCountUp` hands back the
+  // finished number where it cannot roll, so the order never changes.
+  const value = useCountUp(target, { duration });
 
   if (!match || !Number.isFinite(target)) return <>{source}</>;
   const shown = value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: grouped });

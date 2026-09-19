@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import App from "../App";
 import { bootstrapFixture } from "../test/fixture";
 import { enterDashboard, installAppHarness, state } from "../test/appHarness";
+import { BOARD_RANK_CAP, __resetOpeningGate } from "../motion";
 
 describe("the Dashboard's entrance", () => {
   installAppHarness();
@@ -317,5 +318,90 @@ describe("the Dashboard's entrance", () => {
     const after = document.querySelector(".bookmarks-page");
     expect(after).not.toBeNull();
     expect(after).not.toBe(before);
+  });
+});
+
+/**
+ * The opening, re-cut to docs/motion-spec.md (2026-09-19). The numbers are in
+ * motion/tokens.ts and skin §74; what is wired in React is here — the board's place
+ * in the cascade, the title's per-character reveal, and the once-a-session gate.
+ */
+describe("the Dashboard's opening", () => {
+  installAppHarness();
+
+  it("gives every panel a row and a column, so the board deals itself out a row at a time", async () => {
+    render(<App />);
+    await enterDashboard();
+
+    const panels = [...document.querySelectorAll<HTMLElement>(".dash-block")];
+    expect(panels.length).toBe(13);
+    const placed = panels.map((panel) => ({
+      row: Number(panel.style.getPropertyValue("--bfe-row")),
+      col: Number(panel.style.getPropertyValue("--bfe-col")),
+      top: parseFloat(panel.style.top),
+      left: parseFloat(panel.style.left)
+    }));
+
+    // every panel carries both, and neither is left blank
+    expect(placed.every((p) => Number.isFinite(p.row) && Number.isFinite(p.col))).toBe(true);
+    // no panel waits longer than the cap — §4's long-list rule, applied to a board
+    expect(Math.max(...placed.map((p) => p.row))).toBeLessThanOrEqual(BOARD_RANK_CAP);
+
+    // panels sharing a row band share a row number, and their columns run left to right
+    const byTop = new Map<number, typeof placed>();
+    for (const panel of placed) byTop.set(panel.top, [...(byTop.get(panel.top) ?? []), panel]);
+    for (const [, row] of byTop) {
+      expect(new Set(row.map((p) => p.row)).size, "one band, one row number").toBe(1);
+      const across = [...row].sort((a, b) => a.left - b.left);
+      expect(across.map((p) => p.col)).toEqual([...Array(across.length).keys()]);
+    }
+    // and a band lower down the page never opens before one above it
+    const bands = [...byTop.entries()].sort((a, b) => a[0] - b[0]);
+    for (let i = 1; i < bands.length; i += 1) {
+      expect(bands[i][1][0].row).toBeGreaterThanOrEqual(bands[i - 1][1][0].row);
+    }
+  });
+
+  it("writes the greeting one character at a time, and still reads as one line", async () => {
+    render(<App />);
+    await enterDashboard();
+
+    const greeting = document.querySelector<HTMLElement>(".hs-home-greeting");
+    expect(greeting).not.toBeNull();
+    // a screen reader gets the whole line once...
+    const label = greeting!.querySelector<HTMLElement>("[aria-label]");
+    expect(label?.getAttribute("aria-label")).toMatch(/^Good (morning|afternoon|evening), \w+$/);
+    // ...and never the letters, which are hidden from it
+    const chars = [...label!.children] as HTMLElement[];
+    expect(chars.length).toBe(label!.getAttribute("aria-label")!.length);
+    expect(chars.every((c) => c.getAttribute("aria-hidden") === "true")).toBe(true);
+    // the text itself is unchanged — the page still says what it said
+    expect(greeting!.textContent).toBe(label!.getAttribute("aria-label"));
+  });
+
+  it("assembles the chrome once a session, not on every page", async () => {
+    // the gate is decided once per module load, so a case that wants the session's
+    // FIRST open has to say so — an earlier case in this file has already spent it
+    window.sessionStorage.clear();
+    __resetOpeningGate();
+    render(<App />);
+    await enterDashboard();
+
+    expect(document.querySelector(".app-shell.hs-shell")).not.toBeNull();
+    // The DURABLE facts, not the transient class. `bfm-open` comes off on a real
+    // 2.4s timer, and signing in through the form takes longer than that under a
+    // loaded full-suite run — asserting the class here made this case fail on
+    // machine speed rather than on behaviour. motion/AppFrame.test.tsx holds the
+    // class and the settle to fake timers, where they can be checked exactly.
+    // Only the durable fact. `bfm-open` and openingRunning() are both cleared by a
+    // real 2.4s timer, and signing in through the form takes longer than that under
+    // a loaded full-suite run — asserting either here fails on machine speed rather
+    // than on behaviour. motion/AppFrame.test.tsx holds both to fake timers.
+    expect(window.sessionStorage.getItem("bf:shell-opened"), "the session is spent").toBe("1");
+
+    // leaving the Dashboard and coming back does not spend a second opening
+    fireEvent.click(screen.getByRole("button", { name: "Home" }));
+    expect(window.sessionStorage.getItem("bf:shell-opened")).toBe("1");
+    expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
   });
 });

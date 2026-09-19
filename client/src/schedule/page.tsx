@@ -62,6 +62,7 @@ import { SavedViewsBar } from "./SavedViewsBar";
 import { ScheduleFilters } from "./ScheduleFilters";
 import { useScheduleContext, type SchedulePage as SchedulePageId } from "./useScheduleContext";
 import { useScheduleViewKeys } from "./viewKeys";
+import { TextReveal } from "../motion";
 import { WEEK_DAYS, dayOf, formatScheduleDate, formatScheduleWeekRange, initialWeekStart, mondayOf, scheduleWeekDays } from "./week";
 
 export type SchedulePageInput = {
@@ -788,7 +789,10 @@ export function SchedulePageFrame({
         {eyebrow}
       </span>
       <h1 className="dx-title" data-tutorial-id={titleTutorialId}>
-        {title}
+        {/* the title sharpens character by character — docs/motion-spec.md §2.4.
+            Every page here passes a plain string; a node goes through untouched
+            rather than being flattened into characters. */}
+        {typeof title === "string" ? <TextReveal text={title} /> : title}
         {releaseTag}
       </h1>
       <p className="dx-sub">{sub}</p>

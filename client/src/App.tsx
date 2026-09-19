@@ -321,6 +321,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { SelectMenuLayer } from "./components/ui/selectMenu";
 import { DateMenuLayer } from "./components/ui/dateMenu";
 import { PanelExitLayer } from "./components/ui/panelExit";
+import { AppFrame, TextReveal } from "./motion";
 import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
 import { GanttPage } from "./schedule/pages/GanttPage";
@@ -3166,6 +3167,8 @@ function App() {
       <SelectMenuLayer />
       <DateMenuLayer />
       <PanelExitLayer />
+      {/* the opening: the shell arrives, then the chrome assembles (skin §74) */}
+      <AppFrame />
       {/* HubSpot layout: full-width top bar, then an icon rail + content row.
           APPROVED: Settings renders the top bar again. It had no bar and no rail,
           which made it the one page in the product with no search, no create menu,
@@ -21428,7 +21431,7 @@ function BookmarksPage({
         <section className="hs-index-card" aria-labelledby="bookmarks-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="bookmarks-title" data-tutorial-id="bookmarks-page-title">
-              Bookmarks
+              <TextReveal text="Bookmarks" nested />
               <PageReleaseTag page="bookmarks" />
             </h1>
             <p className="bm-count">
@@ -21481,7 +21484,7 @@ function BookmarksPage({
         <section className="hs-index-card" aria-labelledby="bookmarks-all-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="bookmarks-all-title">
-              All pages
+              <TextReveal text="All pages" nested />
             </h1>
             <p className="bm-count">Star a page to pin it to quick access</p>
           </div>
@@ -27544,7 +27547,8 @@ function Dashboard({
             )}
           </div>
           <h1 className="hs-home-greeting">
-            {hsGreeting}, {hsFirstName}
+            {/* the title sharpens character by character — docs/motion-spec.md §2.4 */}
+            <TextReveal text={`${hsGreeting}, ${hsFirstName}`} />
           </h1>
           <div className="hs-home-subline">
             <p className="hs-home-sub">Your AI-powered hub for construction scheduling, insights, and execution.</p>
@@ -28582,7 +28586,7 @@ function ProjectsPage({
           <section className="hs-index-card" aria-labelledby="projects-index-title">
             <div className="hs-index-head">
               <h1 className="hs-index-title" id="projects-index-title">
-                Projects
+                <TextReveal text="Projects" nested />
                 <button type="button" aria-label="Show all projects" title="All projects" onClick={() => setProjectView("all")}>
                   <ChevronDown size={16} />
                 </button>
@@ -31347,7 +31351,7 @@ function ContactsPage({
         <section className="hs-index-card" aria-labelledby="contacts-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="contacts-index-title" data-tutorial-id="contacts-page-title">
-              Contacts
+              <TextReveal text="Contacts" nested />
               <PageReleaseTag page="contacts" />
               <button type="button" aria-label="Show all contacts" title="All contacts" onClick={() => setContactView("all")}>
                 <ChevronDown size={16} />
@@ -33434,7 +33438,7 @@ function CompaniesPage({
         <section className="hs-index-card" aria-labelledby="companies-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="companies-index-title" data-tutorial-id="companies-page-title">
-              Companies
+              <TextReveal text="Companies" nested />
               <PageReleaseTag page="companies" />
               <button type="button" aria-label="Show all companies" title="All companies" onClick={() => setCompanyView("all")}>
                 <ChevronDown size={16} />
@@ -34679,7 +34683,7 @@ function DealsPage({
         <section className="hs-index-card" aria-labelledby="deals-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="deals-index-title" data-tutorial-id="deals-page-title">
-              Deals
+              <TextReveal text="Deals" nested />
               <PageReleaseTag page="deals" />
               <button type="button" aria-label="Show all deals" title="All deals" onClick={() => setDealView("all")}>
                 <ChevronDown size={16} />
@@ -36072,7 +36076,7 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
         <section className="hs-index-card" aria-labelledby="crews-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="crews-index-title" data-tutorial-id="crews-page-title">
-              Crews
+              <TextReveal text="Crews" nested />
               <button type="button" aria-label="Show all crews" title="All crews" onClick={() => setCrewView("all")}>
                 <ChevronDown size={16} />
               </button>
@@ -36902,7 +36906,7 @@ function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload
         <section className="hs-index-card" aria-labelledby="equipment-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="equipment-index-title" data-tutorial-id="equipment-page-title">
-              Equipment
+              <TextReveal text="Equipment" nested />
               <button type="button" aria-label="Show all equipment" title="All equipment" onClick={() => setEquipmentView("all")}>
                 <ChevronDown size={16} />
               </button>
@@ -37621,7 +37625,7 @@ function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload
         <section className="hs-index-card" aria-labelledby="materials-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="materials-index-title" data-tutorial-id="materials-page-title">
-              Materials
+              <TextReveal text="Materials" nested />
               <button type="button" aria-label="Show all materials" title="All materials" onClick={() => setMaterialView("all")}>
                 <ChevronDown size={16} />
               </button>
@@ -38478,7 +38482,7 @@ function FieldUpdatesPage({
         <section className="hs-index-card" aria-labelledby="field-index-title">
           <div className="hs-index-head">
             <h1 className="hs-index-title" id="field-index-title" data-tutorial-id="field-page-title">
-              Field Updates
+              <TextReveal text="Field Updates" nested />
               <button type="button" aria-label="Show all field updates" title="All updates" onClick={() => setFieldView("all")}>
                 <ChevronDown size={16} />
               </button>
@@ -39391,7 +39395,7 @@ function DelayIQsPage({
           <section className="hs-index-card" aria-labelledby="delayiqs-index-title">
             <div className="hs-index-head">
               <h1 className="hs-index-title" id="delayiqs-index-title" data-tutorial-id="delayIQs-page-title">
-                DelayIQs
+                <TextReveal text="DelayIQs" nested />
                 <button type="button" aria-label="Show all delayIQs" title="All delayIQs" onClick={() => setDelayView("all")}>
                   <ChevronDown size={16} />
                 </button>
