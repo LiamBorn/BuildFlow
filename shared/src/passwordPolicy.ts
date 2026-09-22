@@ -49,13 +49,49 @@ const COMMON_PASSWORDS = new Set([
 ]);
 
 /**
+ * Fold the characters people swap for one another, so a substituted spelling of a listed
+ * password lands on the same string the listed one does.
+ *
+ * Stripping punctuation — which is what this used to rely on alone — only removes
+ * characters, so it catches punctuation ADDED to a common password ("p-a-s-s-w-o-r-d") and
+ * never a SUBSTITUTION: "P@ssword" strips to "pssword", because the @ stands in for the a
+ * rather than being extra. The list worked around that by naming a handful of substituted
+ * forms by hand, which caught those exact strings and left "P@ssword", "Dr@gon123" and
+ * "M0nkey123" accepted.
+ *
+ * The ambiguous ones are folded in BOTH directions — i, l, 1, ! and | all become "i" — so it
+ * does not matter which way round the swap was made. Mapping happens BEFORE stripping,
+ * because stripping would delete the @ first and there would be nothing left to map.
+ */
+function foldConfusables(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[@4]/g, "a")
+    .replace(/0/g, "o")
+    .replace(/[1!|l]/g, "i")
+    .replace(/3/g, "e")
+    .replace(/[$5]/g, "s")
+    .replace(/7/g, "t")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/* The same folding applied to the list, so the two can be compared. Entries that fold down
+   to almost nothing are left out: "!@#$%^&*" becomes "ias", and a three-character target is
+   one an unrelated password could collide with. Those are still caught exactly, above. */
+const COMMON_FOLDED = new Set([...COMMON_PASSWORDS].map(foldConfusables).filter((f) => f.length >= 6));
+
+/**
  * Why a password is not acceptable, or null when it is. Messages are written
  * for the person typing, and the same string is what the server returns.
  */
 export function passwordProblem(password: string, email = ""): string | null {
   if (password.length < PASSWORD_MIN_LENGTH) return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
   const lowered = password.toLowerCase();
-  if (COMMON_PASSWORDS.has(lowered) || COMMON_PASSWORDS.has(lowered.replace(/[^a-z0-9]/g, ""))) {
+  if (
+    COMMON_PASSWORDS.has(lowered) ||
+    COMMON_PASSWORDS.has(lowered.replace(/[^a-z0-9]/g, "")) ||
+    COMMON_FOLDED.has(foldConfusables(password))
+  ) {
     return "That password is too common. Pick something harder to guess.";
   }
   const local = email.trim().toLowerCase().split("@")[0] ?? "";

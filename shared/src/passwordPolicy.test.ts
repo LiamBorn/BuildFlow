@@ -34,26 +34,48 @@ describe("what the policy refuses", () => {
   });
 
   /**
-   * KNOWN GAP, pinned deliberately so it is visible rather than assumed closed.
-   *
-   * Stripping only removes characters — it does not undo a SUBSTITUTION. "P@ssword" strips
-   * to "pssword", not "password", because the @ stands in for the a rather than being extra.
-   * The list works around this by naming a few substituted forms by hand ("passw0rd",
-   * "p@ssw0rd", "qwerty123"), which catches those exact strings and nothing else.
-   *
-   * So these three, all of which are ordinary breach-corpus passwords, are currently
-   * accepted. Closing it means normalising the common substitutions (@→a, 0→o, 1→i, 3→e)
-   * on BOTH the candidate and the list before comparing — and mapping before stripping,
-   * since stripping would delete the @ first. If that is done, this test should fail and be
-   * rewritten as the opposite assertion.
+   * Substitution, which stripping cannot undo on its own: "P@ssword" strips to "pssword",
+   * not "password", because the @ stands in for the a rather than being extra. Closed by
+   * folding the confusable characters on BOTH the candidate and the list before comparing.
+   * All three of these were accepted until 2026-09-22.
    */
-  it("does NOT yet see through letter-for-symbol substitution", () => {
-    expect(passwordProblem("P@ssword"), "@ for a").toBeNull();
-    expect(passwordProblem("Dr@gon123"), "@ for a").toBeNull();
-    expect(passwordProblem("M0nkey123"), "0 for o").toBeNull();
-    // The hand-listed substituted forms are caught, which is why the gap is easy to miss.
-    expect(passwordProblem("passw0rd")).toMatch(/too common/i);
-    expect(passwordProblem("p@ssw0rd")).toMatch(/too common/i);
+  it("sees through letter-for-symbol substitution", () => {
+    expect(passwordProblem("P@ssword"), "@ for a").toMatch(/too common/i);
+    expect(passwordProblem("Dr@gon123"), "@ for a").toMatch(/too common/i);
+    expect(passwordProblem("M0nkey123"), "0 for o").toMatch(/too common/i);
+    expect(passwordProblem("passw0rd"), "the hand-listed forms still work").toMatch(/too common/i);
+    expect(passwordProblem("5unshine"), "5 for s").toMatch(/too common/i);
+    expect(passwordProblem("l3tmein1"), "3 for e").toMatch(/too common/i);
+  });
+
+  /** The ambiguous ones fold both ways, so it does not matter which direction the swap went. */
+  it("does not care which way round an i / l / 1 swap was made", () => {
+    expect(passwordProblem("1etmein1")).toMatch(/too common/i);
+    expect(passwordProblem("letmeinl")).toMatch(/too common/i);
+    expect(passwordProblem("!etmein1")).toMatch(/too common/i);
+  });
+
+  /**
+   * The risk folding introduces is the opposite one: refusing a password that is fine. The
+   * comparison is a whole-string match against forty terrible passwords, so a collision
+   * needs the WHOLE candidate to fold onto one of them — but it is worth holding down,
+   * because a signup form that rejects good passwords is its own kind of broken.
+   */
+  it("still accepts passwords that merely contain the same letters", () => {
+    for (const good of [
+      "quiet-harbour-41",
+      "Quiet-Harbour-4141",
+      "asphalt-yard-north",
+      "concrete-pour-tuesday",
+      "my-password-is-long",
+      "dragonfly-season-9",
+      "monkeybars-and-swings",
+      "Tr0ubador&3",
+      "sunshine-on-the-yard",
+      "footballs-in-a-crate"
+    ]) {
+      expect(passwordProblem(good), `"${good}" is not a common password`).toBeNull();
+    }
   });
 
   it("refuses a password built out of the person's own address", () => {
@@ -131,9 +153,7 @@ describe("the meter and the gate never disagree", () => {
     ];
     for (const email of emails) {
       for (const candidate of candidates) {
-        expect(passwordStrength(candidate, email).problem, `"${candidate}" with "${email}"`).toBe(
-          passwordProblem(candidate, email)
-        );
+        expect(passwordStrength(candidate, email).problem, `"${candidate}" with "${email}"`).toBe(passwordProblem(candidate, email));
       }
     }
   });
