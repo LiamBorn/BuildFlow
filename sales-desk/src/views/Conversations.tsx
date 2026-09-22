@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Send, Building2, CheckCheck, CircleDot, Clock } from "lucide-react";
 import type { Desk } from "../SalesApp";
-import type { Conversation, ConversationStatus, Message } from "../api";
+import type { ConversationStatus, Message } from "../api";
 import { fetchMessages, sendMessage } from "../api";
 import { priorityTone, initials, timeAgo } from "../util";
 
