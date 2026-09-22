@@ -88,17 +88,6 @@
 }
 
 /* ============================ bar chart ============================ */
-.welcome-rx .pr-bars-wrap {
-  margin-top: 4px;
-}
-.welcome-rx .pr-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  height: 128px;
-  padding: 0 2px;
-  border-bottom: 1px solid var(--wx-line-soft);
-}
 .welcome-rx .pr-bar-group {
   flex: 1;
   display: flex;
@@ -122,18 +111,6 @@
 }
 .welcome-rx .pr-bar.actual {
   background: linear-gradient(180deg, #8b5cf6, #7c3aed);
-}
-.welcome-rx .pr-bars-x {
-  display: flex;
-  gap: 10px;
-  margin-top: 7px;
-}
-.welcome-rx .pr-bars-x span {
-  flex: 1;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--wx-faint);
 }
 .welcome-rx .pr-legend {
   display: flex;
@@ -162,16 +139,6 @@
 }
 
 /* ============================ area / line chart ============================ */
-.welcome-rx .pr-line {
-  position: relative;
-  width: 100%;
-}
-.welcome-rx .pr-line svg {
-  width: 100%;
-  height: auto;
-  display: block;
-  overflow: visible;
-}
 .welcome-rx .pr-grid-line {
   stroke: var(--wx-line-soft);
   stroke-width: 1;
@@ -184,19 +151,6 @@
 .welcome-rx [data-reveal].in .pr-area {
   opacity: 1;
 }
-.welcome-rx .pr-line-path {
-  fill: none;
-  stroke: var(--pr-purple);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
-.welcome-rx [data-reveal].in .pr-line-path {
-  transition: stroke-dashoffset 1.7s cubic-bezier(0.4, 0, 0.2, 1);
-  stroke-dashoffset: 0;
-}
 .welcome-rx .pr-dot {
   fill: #fff;
   stroke: var(--pr-purple);
@@ -206,17 +160,6 @@
 }
 .welcome-rx [data-reveal].in .pr-dot {
   opacity: 1;
-}
-.welcome-rx .pr-line-x {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-  padding: 0 4px;
-}
-.welcome-rx .pr-line-x span {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--wx-faint);
 }
 
 /* ============================ efficiency bars ============================ */
@@ -316,9 +259,6 @@
   .welcome-rx .pr-bar,
   .welcome-rx .pr-eff-fill {
     transition: none;
-  }
-  .welcome-rx .pr-line-path {
-    stroke-dashoffset: 0;
   }
   .welcome-rx .pr-area,
   .welcome-rx .pr-dot {

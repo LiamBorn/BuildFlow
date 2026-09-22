@@ -1624,84 +1624,7 @@
   text-transform: uppercase;
   color: var(--wx-faint);
 }
-.welcome-rx .wx-company-viewport {
-  --wx-marquee-fade: clamp(48px, 9vw, 140px);
-  width: min(100%, 1180px);
-  margin: 0 auto;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 var(--wx-marquee-fade),
-    #000 calc(100% - var(--wx-marquee-fade)),
-    transparent
-  );
-  mask-image: linear-gradient(to right, transparent, #000 var(--wx-marquee-fade), #000 calc(100% - var(--wx-marquee-fade)), transparent);
-}
-.welcome-rx .wx-company-track {
-  display: flex;
-  align-items: center;
-  width: max-content;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  animation: wx-company-scroll 40s linear infinite; /* ≈80px/s — the reference's pace */
-  will-change: transform;
-}
-.welcome-rx .wx-company-viewport:hover .wx-company-track {
-  animation-play-state: paused;
-}
-.welcome-rx .wx-company {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  height: 44px;
-  padding: 0 clamp(26px, 3.4vw, 52px);
-  white-space: nowrap;
-}
-.welcome-rx .wx-company-mark {
-  color: #5f5e58;
-  opacity: 0.82;
-  transition:
-    opacity 0.25s ease,
-    color 0.25s ease;
-}
-.welcome-rx .wx-company:hover .wx-company-mark {
-  opacity: 1;
-  color: var(--wx-ink);
-}
 /* five typographic "logo" treatments so the strip has rhythm without images */
-.welcome-rx .wx-company-serif .wx-company-mark {
-  font-family: var(--wx-serif);
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.welcome-rx .wx-company-sans .wx-company-mark {
-  font-family: var(--wx-sans, Inter, sans-serif);
-  font-size: 21px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-.welcome-rx .wx-company-caps .wx-company-mark {
-  font-family: var(--wx-sans, Inter, sans-serif);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-.welcome-rx .wx-company-mono .wx-company-mark {
-  font-family: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, monospace;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.welcome-rx .wx-company-wide .wx-company-mark {
-  font-family: var(--wx-sans, Inter, sans-serif);
-  font-size: 19px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-}
 @keyframes wx-company-scroll {
   from {
     transform: translateX(0);
@@ -1717,37 +1640,8 @@
   .welcome-rx .wx-companies-lead {
     margin-bottom: 22px;
   }
-  .welcome-rx .wx-company {
-    height: 36px;
-    padding: 0 18px;
-  }
-  .welcome-rx .wx-company-serif .wx-company-mark {
-    font-size: 21px;
-  }
-  .welcome-rx .wx-company-sans .wx-company-mark {
-    font-size: 17px;
-  }
-  .welcome-rx .wx-company-caps .wx-company-mark {
-    font-size: 12.5px;
-  }
-  .welcome-rx .wx-company-mono .wx-company-mark {
-    font-size: 15px;
-  }
-  .welcome-rx .wx-company-wide .wx-company-mark {
-    font-size: 16px;
-  }
-  .welcome-rx .wx-company-track {
-    animation-duration: 34s;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .welcome-rx .wx-company-track {
-    animation: none;
-  }
-  .welcome-rx .wx-company-viewport {
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
 }
 
 /* ============================ sections ================================= */
@@ -3999,9 +3893,6 @@
   filter: none;
 }
 /* the mesh inside a stagger card: the component's backdrop box is the positioned parent */
-.welcome-rx .stagger-card-backdrop .wx-bloom {
-  inset: -12%;
-}
 
 /* ── Crew scheduling as a product-page feature (Apple-style) ────────────────
    One centered statement in the landing's own type, the Week board as the

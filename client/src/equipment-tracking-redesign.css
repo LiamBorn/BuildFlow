@@ -130,46 +130,11 @@
   display: grid;
   gap: 10px;
 }
-.welcome-rx .eq-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  padding: 11px 12px;
-  border-radius: 12px;
-  background: #fbfaf7;
-  border: 1px solid var(--wx-line-soft);
-}
-.welcome-rx .eq-row .eq-ic {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: rgba(217, 119, 6, 0.1);
-  color: var(--eq-amber-ink);
-  margin-top: 1px;
-}
 .welcome-rx .eq-body {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 6px;
-}
-.welcome-rx .eq-row-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.welcome-rx .eq-row-top strong {
-  flex: 1;
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--wx-ink);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .welcome-rx .eq-sub {
   font-size: 11px;

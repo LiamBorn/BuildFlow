@@ -52,52 +52,6 @@
   padding-bottom: 14px;
   border-bottom: 1px solid var(--wx-line-soft);
 }
-.welcome-rx .mat-ring {
-  position: relative;
-  width: 78px;
-  height: 78px;
-  flex: none;
-}
-.welcome-rx .mat-ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-.welcome-rx .mat-ring-track {
-  fill: none;
-  stroke: #eeece5;
-  stroke-width: 8;
-}
-.welcome-rx .mat-ring-fill {
-  fill: none;
-  stroke: var(--mat-teal);
-  stroke-width: 8;
-  stroke-linecap: round;
-  stroke-dashoffset: var(--c, 189);
-  transition: stroke-dashoffset 1.3s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.welcome-rx [data-reveal].in .mat-ring-fill {
-  stroke-dashoffset: var(--off, 60);
-}
-.welcome-rx .mat-ring-label {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  text-align: center;
-}
-.welcome-rx .mat-ring-label strong {
-  font-size: 20px;
-  line-height: 1;
-  color: var(--wx-ink);
-}
-.welcome-rx .mat-ring-label span {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--wx-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 .welcome-rx .mat-head-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -127,46 +81,11 @@
   display: grid;
   gap: 10px;
 }
-.welcome-rx .mat-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  padding: 11px 12px;
-  border-radius: 12px;
-  background: #fbfaf7;
-  border: 1px solid var(--wx-line-soft);
-}
-.welcome-rx .mat-row .mat-ic {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  background: rgba(13, 148, 136, 0.1);
-  color: var(--mat-teal);
-  margin-top: 1px;
-}
 .welcome-rx .mat-body {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 6px;
-}
-.welcome-rx .mat-row-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.welcome-rx .mat-row-top strong {
-  flex: 1;
-  min-width: 0;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--wx-ink);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .welcome-rx .mat-sub {
   font-size: 11px;
