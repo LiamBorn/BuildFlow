@@ -22,14 +22,6 @@
 .welcome-rx #field-updates-delayIQs .wx-eyebrow .wx-dot {
   background: var(--fud-rose);
 }
-.welcome-rx #field-updates-delayIQs .cs-hero-title em {
-  color: var(--fud-rose);
-}
-.welcome-rx #field-updates-delayIQs .cs-icon {
-  color: var(--fud-rose);
-  background: rgba(208, 90, 102, 0.1);
-  border-color: rgba(208, 90, 102, 0.18);
-}
 .welcome-rx #field-updates-delayIQs .cs-item .cs-ic {
   background: rgba(208, 90, 102, 0.1);
   color: var(--fud-rose);
@@ -39,15 +31,3 @@
   color: var(--fud-rose);
   border-color: rgba(208, 90, 102, 0.28);
 }
-
-/* ============================ stat tiles ============================ */
-
-/* ============================ field feed ============================ */
-
-/* photo evidence grid (feature card) */
-
-/* attach strip */
-
-/* ======================= delayIQ impact forecastIQ ======================= */
-
-/* impact total footer */

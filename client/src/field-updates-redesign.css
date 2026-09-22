@@ -133,18 +133,6 @@
 .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(n + 7) {
   transition-delay: 0.4s;
 }
-
-/* ============================ hero header =============================== */
-.field-rx .field-hero {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 28px;
-  flex-wrap: wrap;
-}
-.field-rx .dx-hero-copy {
-  max-width: 48ch;
-}
 .field-rx .dx-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -221,84 +209,12 @@
   box-shadow: 0 14px 32px rgba(28, 28, 26, 0.28);
   transform: translateY(-1px);
 }
-
-/* ============================ stat cards =============================== */
-.field-rx .crew-stat-grid {
-  gap: 18px;
-}
 .field-rx .dx-tilt {
   perspective: 1100px;
   display: flex;
 }
 .field-rx .dx-tilt > * {
   width: 100%;
-}
-.field-rx .crew-stat-card {
-  min-height: 120px;
-  padding: 22px;
-  border: 1px solid var(--wx-line-soft);
-  border-radius: var(--wx-radius);
-  background: var(--wx-card);
-  box-shadow: 0 18px 44px rgba(28, 28, 26, 0.07);
-  transform-style: preserve-3d;
-  transform: translateY(var(--lift, 0px)) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg));
-  transition:
-    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.34s ease,
-    border-color 0.34s ease;
-}
-.field-rx .dx-tilt:hover .crew-stat-card {
-  --lift: -6px;
-  border-color: var(--wx-line);
-  box-shadow: 0 30px 62px rgba(28, 28, 26, 0.14);
-}
-.field-rx .crew-stat-card span {
-  color: var(--wx-blue);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-.field-rx .crew-stat-card strong {
-  color: var(--wx-ink);
-  font-family: var(--wx-serif);
-  font-size: 44px;
-  font-weight: 500;
-  line-height: 0.95;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-}
-.field-rx .crew-stat-card strong.green {
-  color: var(--wx-green);
-}
-.field-rx .crew-stat-card strong.red {
-  color: var(--wx-red);
-}
-
-/* ============================ search box ============================= */
-.field-rx .crew-search-box {
-  min-height: 46px;
-  border: 1px solid var(--wx-line);
-  border-radius: 999px;
-  background: #fffdf9;
-  color: var(--wx-faint);
-  transition: border-color 0.2s ease;
-}
-.field-rx .crew-search-box:focus-within {
-  border-color: rgba(28, 28, 26, 0.25);
-}
-.field-rx .crew-search-box input {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.field-rx .crew-search-box input::placeholder {
-  color: var(--wx-faint);
-  font-weight: 500;
-}
-
-/* ============================ update + entry cards ==================== */
-.field-rx .crew-directory-grid {
-  gap: 20px;
 }
 .field-rx .crew-directory-card {
   padding: 24px;
@@ -329,12 +245,6 @@
   color: var(--wx-blue);
   box-shadow: inset 0 0 0 1px var(--wx-line-soft);
 }
-.field-rx .field-update-avatar {
-  border-radius: 14px;
-  background: var(--wx-bg-2);
-  color: var(--wx-ink);
-  box-shadow: inset 0 0 0 1px var(--wx-line-soft);
-}
 .field-rx .crew-card-header h2 {
   font-family: var(--wx-serif);
   font-size: 22px;
@@ -345,18 +255,6 @@
 .field-rx .crew-card-header p {
   color: var(--wx-faint);
   font-weight: 500;
-}
-.field-rx .field-card-message {
-  color: var(--wx-mut);
-  font-weight: 500;
-  /* The base rule's `-webkit-line-clamp: 3` never applies here: the message is a
-     grid item of `.crew-directory-card`, so its `display: -webkit-box` gets
-     blockified to `flow-root` and the clamp is dropped. All that was left was
-     `min-height: 70px` + `overflow: hidden`, which cut a long update mid-line.
-     Pinning min AND max to exactly three lines gives a clean cut at the line
-     boundary and a uniform card height, like the Materials grid. */
-  min-height: calc(1.45em * 3);
-  max-height: calc(1.45em * 3);
 }
 
 /* status pills — field statuses (On Site / Ready to Start / DelayIQed / Complete) */
@@ -390,41 +288,9 @@
   background: #ebedfb;
   color: var(--wx-mut);
 }
-
-/* detail list */
-.field-rx .crew-detail-list svg,
-.field-rx .crew-detail-list dt {
-  color: var(--wx-faint);
-}
-.field-rx .crew-detail-list dd {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-
-/* photo strip */
-.field-rx .field-card-photo-strip .field-photo-image,
-.field-rx .field-card-photo-strip .field-photo-file,
-.field-rx .photo-strip .field-photo-image,
-.field-rx .photo-strip .field-photo-file {
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 10px;
-}
 .field-rx .field-photo-file {
   background: var(--wx-bg-2);
   color: var(--wx-blue);
-}
-
-/* current-job / photos footer */
-.field-rx .crew-current-job {
-  border-top: 1px solid var(--wx-line-soft);
-}
-.field-rx .crew-current-job span {
-  color: var(--wx-faint);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.field-rx .crew-current-job strong {
-  color: var(--wx-ink);
 }
 
 /* ============================ entry form ============================= */
@@ -525,23 +391,11 @@
 }
 
 /* ============================ empty state ============================= */
-.field-rx .empty-state,
-.field-rx .field-search-empty {
+.field-rx .empty-state {
   border: 1px dashed var(--wx-line);
   border-radius: var(--wx-radius);
   background: #fffdf9;
   color: var(--wx-mut);
-}
-.field-rx .field-search-empty svg {
-  color: var(--wx-faint);
-}
-.field-rx .field-search-empty strong {
-  color: var(--wx-ink);
-  font-family: var(--wx-serif);
-  font-weight: 500;
-}
-.field-rx .field-search-empty p {
-  color: var(--wx-faint);
 }
 
 /* ==========================================================================
@@ -577,59 +431,6 @@
 /* ---- hero: gradient icon tile + sans-serif title (was serif + gradient em) ---- */
 .field-rx .cc-hero {
   max-width: none;
-}
-.field-rx .dx-hero-copy {
-  display: grid;
-  gap: 14px;
-}
-.field-rx .cc-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  width: fit-content;
-  padding: 6px 14px 6px 11px;
-  border: 1px solid var(--wx-line);
-  border-radius: 999px;
-  background: rgba(var(--bf-surface-rgb), 0.7);
-  color: var(--wx-mut);
-  font-family: var(--cc-sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-.field-rx .cc-hero-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-}
-.field-rx .cc-hero-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
-  box-shadow: 0 12px 26px rgba(66, 92, 244, 0.32);
-}
-.field-rx .cc-hero-title {
-  margin: 2px 0 0;
-  font-family: var(--cc-sans);
-  font-size: clamp(26px, 3vw, 34px);
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  color: var(--wx-ink);
-}
-.field-rx .cc-hero-sub {
-  margin: 8px 0 0;
-  max-width: 54ch;
-  font-family: var(--cc-sans);
-  font-size: 15px;
-  line-height: 1.5;
-  font-weight: 500;
-  color: var(--wx-mut);
 }
 
 /* Add Field Update — ink pill at the Dashboard chip height */
@@ -792,41 +593,6 @@
   color: #fff;
   box-shadow: 0 10px 22px rgba(66, 92, 244, 0.28);
 }
-.field-rx .crew-search-box {
-  min-height: 40px;
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 11px;
-  background: var(--wx-card);
-  box-shadow: 0 4px 12px rgba(28, 28, 26, 0.04);
-}
-.field-rx .crew-search-box input {
-  font-family: var(--cc-sans);
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--wx-ink);
-}
-
-/* Click-anywhere-to-edit overlay. These rules live in crews-redesign.css scoped
-   to `.crew-rx`, so on this page the button was inheriting the UA default and
-   painting a grey bar across the top of every card. */
-/* the overlay positions against the card, which the shared base rule leaves static */
-.field-rx .field-update-directory-card {
-  position: relative;
-}
-.field-rx .crew-card-open {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: inherit;
-  background: none;
-  cursor: pointer;
-}
-.field-rx .crew-card-open:focus-visible {
-  outline: 0;
-}
 .field-rx .crew-directory-card:has(.crew-card-open:focus-visible) {
   border-color: var(--wx-blue);
   box-shadow:
@@ -834,45 +600,22 @@
     0 26px 52px rgba(28, 28, 26, 0.12);
   transform: translateY(-4px);
 }
-/* the card's own content has to sit above the overlay to stay clickable */
-.field-rx .field-update-directory-card > *:not(.crew-card-open) {
-  position: relative;
-  z-index: 1;
-}
 
 /* the entry form + empty state read as the same panel as the cards */
 .field-rx .field-entry-card {
   border-radius: 18px !important;
   box-shadow: 0 14px 34px rgba(28, 28, 26, 0.06);
 }
-.field-rx .field-upload-title,
-.field-rx .field-search-empty strong {
+.field-rx .field-upload-title {
   font-family: var(--cc-sans);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 /* ============================ responsive ============================= */
-@media (max-width: 1080px) {
-  .field-rx .crew-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .field-rx .crew-directory-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 @media (max-width: 720px) {
   .field-rx {
     padding: 24px clamp(14px, 4vw, 24px) 56px;
-  }
-  .field-rx .crew-stat-grid {
-    grid-template-columns: 1fr;
-  }
-  .field-rx .crew-directory-grid {
-    grid-template-columns: 1fr;
-  }
-  .field-rx .field-hero {
-    align-items: flex-start;
   }
 }
 
@@ -885,7 +628,6 @@
   .field-rx.dx-ready [data-reveal-stagger] > * {
     transition-duration: 0.3s;
   }
-  .field-rx .crew-stat-card,
   .field-rx .crew-directory-card {
     transition-duration: 0.2s;
   }

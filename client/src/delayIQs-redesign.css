@@ -101,11 +101,6 @@
   opacity: 1;
   transform: none;
 }
-
-/* ============================ hero header =============================== */
-.delayIQ-rx .delayIQs-hero {
-  max-width: 46ch;
-}
 .delayIQ-rx .dx-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -160,11 +155,6 @@
   line-height: 1.6;
   color: var(--wx-mut);
 }
-
-/* ============================ panels =================================== */
-.delayIQ-rx .dashboard-grid {
-  gap: 20px;
-}
 .delayIQ-rx .panel {
   border: 1px solid var(--wx-line-soft);
   border-radius: var(--wx-radius);
@@ -213,31 +203,6 @@
   background: var(--wx-ink);
   color: #f9fafd;
   border-color: var(--wx-ink);
-}
-
-/* ============================ delayIQ rows ============================== */
-.delayIQ-rx .delayIQ-row {
-  border-bottom: 1px solid var(--wx-line-soft);
-  border-radius: 10px;
-  transition: background 0.18s ease;
-}
-.delayIQ-rx .delayIQ-row:hover {
-  background: var(--wx-bg-2);
-}
-.delayIQ-rx .delayIQ-row svg {
-  color: var(--wx-g-coral);
-}
-.delayIQ-rx .delayIQ-row strong {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.delayIQ-rx .delayIQ-row em {
-  color: var(--wx-faint);
-}
-.delayIQ-rx .delayIQ-row b {
-  color: var(--wx-ink);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 /* resource rows (delayIQ categories) */
@@ -405,59 +370,6 @@
 .delayIQ-rx .cc-hero {
   max-width: none;
 }
-.delayIQ-rx .dx-hero-copy {
-  display: grid;
-  gap: 14px;
-}
-.delayIQ-rx .cc-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  width: fit-content;
-  padding: 6px 14px 6px 11px;
-  border: 1px solid var(--wx-line);
-  border-radius: 999px;
-  background: rgba(var(--bf-surface-rgb), 0.7);
-  color: var(--wx-mut);
-  font-family: var(--cc-sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-.delayIQ-rx .cc-hero-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-}
-.delayIQ-rx .cc-hero-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--wx-g-blue), var(--wx-g-purple));
-  box-shadow: 0 12px 26px rgba(66, 92, 244, 0.32);
-}
-.delayIQ-rx .cc-hero-title {
-  margin: 2px 0 0;
-  font-family: var(--cc-sans);
-  font-size: clamp(26px, 3vw, 34px);
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  color: var(--wx-ink);
-}
-.delayIQ-rx .cc-hero-sub {
-  margin: 8px 0 0;
-  max-width: 54ch;
-  font-family: var(--cc-sans);
-  font-size: 15px;
-  line-height: 1.5;
-  font-weight: 500;
-  color: var(--wx-mut);
-}
 
 /* ---- KPI tiles: the Dashboard cc-stat shape ---- */
 .delayIQ-rx .cc-stat-grid {
@@ -611,7 +523,6 @@
   letter-spacing: -0.01em;
   color: var(--wx-ink);
 }
-.delayIQ-rx .delayIQ-row strong,
 .delayIQ-rx .resource-row strong {
   font-family: var(--cc-sans);
   font-size: 14.5px;
@@ -619,18 +530,11 @@
   letter-spacing: -0.01em;
   color: var(--wx-ink);
 }
-.delayIQ-rx .delayIQ-row em,
 .delayIQ-rx .resource-row em {
   font-family: var(--cc-sans);
   font-size: 13px;
   font-weight: 500;
   color: var(--wx-mut);
-}
-.delayIQ-rx .delayIQ-row b {
-  font-family: var(--cc-sans);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--wx-ink);
 }
 
 /* "Add DelayIQ" — the ink pill the other pages use for their primary action */

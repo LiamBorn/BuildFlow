@@ -4,10 +4,10 @@
    "explore the features" title, aurora panels, 2/3-col grids, dark globe CTA,
    wordmark footer — so it reads as a sibling of Crew Scheduling & Schedule AI.
 
-   Adds a signature "live dispatch map" visual: a topographic surface with
-   animated marching-dash routes and pulsing crew / truck / job pins. Map tone
-   is green (matching the Map & Field Ops program tone) while the layout,
-   motion, and chrome are inherited from welcome-redesign.css + the .cs-* system.
+   What is left is the page's green identity on the shared chrome; the "live
+   dispatch map" visual it once added left with its markup (its rules went on
+   2026-09-22), while the layout, motion and chrome are inherited from
+   welcome-redesign.css + the .cs-* system.
    ========================================================================= */
 
 .welcome-rx #map-field-ops {
@@ -21,25 +21,10 @@
 .welcome-rx #map-field-ops .wx-eyebrow .wx-dot {
   background: var(--mfo-green);
 }
-.welcome-rx #map-field-ops .cs-hero-title em {
-  color: var(--mfo-green);
-}
-.welcome-rx #map-field-ops .cs-icon {
-  color: var(--mfo-green);
-  background: rgba(47, 151, 96, 0.1);
-  border-color: rgba(47, 151, 96, 0.18);
-}
 .welcome-rx #map-field-ops .cs-item .cs-ic {
   background: rgba(47, 151, 96, 0.1);
   color: var(--mfo-green);
 }
-
-/* =============================== LIVE MAP =============================== */
-/* parcel / block grid, faded at the edges */
-
-
-
-/* route summary card (route-optimization map) */
 
 /* small "goal" chips reused inside a cs-mock for route optimization */
 .welcome-rx #map-field-ops .cs-tab.on {
@@ -47,5 +32,3 @@
   color: var(--mfo-green);
   border-color: rgba(47, 151, 96, 0.28);
 }
-
-/* weather strip inside a cs-mock */

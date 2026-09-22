@@ -10,51 +10,6 @@
 .welcome-rx .itx-hero {
   max-width: 820px;
 }
-.welcome-rx .itx-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 13px;
-  margin-top: 28px;
-}
-.welcome-rx .itx-hero-note {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 22px;
-  font-size: 13px;
-  color: var(--wx-faint);
-}
-.welcome-rx .itx-hero-note svg {
-  color: var(--wx-blue);
-  flex: none;
-}
-
-/* shared section head */
-.welcome-rx .itx-sec-head {
-  max-width: 660px;
-  margin: clamp(46px, 8vh, 92px) 0 28px;
-}
-.welcome-rx .itx-sec-head h2 {
-  font-family: var(--wx-serif);
-  font-weight: 500;
-  font-size: clamp(24px, 3vw, 34px);
-  letter-spacing: -0.015em;
-  margin: 12px 0 0;
-  color: var(--wx-ink);
-}
-.welcome-rx .itx-sec-head p {
-  margin: 12px 0 0;
-  font-size: 15.5px;
-  line-height: 1.6;
-  color: var(--wx-mut);
-}
-
-/* ===================== FEATURED INTEGRATIONS ===================== */
-.welcome-rx .itx-featured {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
 .welcome-rx .itx-card {
   --itx-accent: var(--wx-blue);
   position: relative;
@@ -180,13 +135,6 @@
 .welcome-rx .itx-learn:hover {
   gap: 9px;
 }
-
-/* ===================== CATEGORY BREADTH GRID ===================== */
-.welcome-rx .itx-cats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
-  gap: 16px;
-}
 .welcome-rx .itx-cat {
   border-radius: 16px;
   border: 1px solid var(--wx-line-soft);
@@ -248,24 +196,6 @@
   box-shadow: 0 40px 80px -52px rgba(28, 28, 26, 0.5);
   padding: clamp(26px, 3vw, 42px);
 }
-.welcome-rx .itx-trust-head {
-  max-width: 620px;
-  margin-bottom: 26px;
-}
-.welcome-rx .itx-trust-head h2 {
-  font-family: var(--wx-serif);
-  font-weight: 500;
-  font-size: clamp(21px, 2.4vw, 28px);
-  letter-spacing: -0.015em;
-  margin: 10px 0 0;
-  color: var(--wx-ink);
-}
-.welcome-rx .itx-trust-head p {
-  margin: 10px 0 0;
-  font-size: 14.5px;
-  line-height: 1.6;
-  color: var(--wx-mut);
-}
 .welcome-rx .itx-trust-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -326,30 +256,15 @@
   line-height: 1.6;
   color: var(--wx-mut);
 }
-.welcome-rx .itx-cta-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 13px;
-}
 
 /* ===================== responsive ===================== */
 @media (max-width: 900px) {
-  .welcome-rx .itx-featured {
-    grid-template-columns: 1fr;
-  }
   .welcome-rx .itx-trust-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (max-width: 560px) {
-  .welcome-rx .itx-cats {
-    grid-template-columns: 1fr;
-  }
   .welcome-rx .itx-trust-grid {
     grid-template-columns: 1fr;
-  }
-  .welcome-rx .itx-cta-actions {
-    flex-direction: column;
   }
 }

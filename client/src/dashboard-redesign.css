@@ -205,55 +205,6 @@
   color: var(--wx-mut);
 }
 
-/* business-context banner -> soft paper pill row */
-.dash-rx .business-context-banner {
-  margin-top: 22px;
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 16px;
-  padding: 14px 18px;
-  background: var(--bf-surface-raised);
-  color: var(--wx-ink);
-  box-shadow: 0 12px 30px rgba(var(--bf-line-rgb), 0.05);
-}
-.dash-rx .business-context-banner span {
-  background: #e8f0fe;
-  color: var(--wx-blue);
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-}
-.dash-rx .business-context-banner strong {
-  color: var(--wx-mut);
-  font-weight: 600;
-  font-size: 13.5px;
-}
-
-/* ============================ section headers ========================== */
-.dash-rx .dx-sec-head {
-  margin-bottom: 2px;
-}
-.dash-rx .dx-eyebrow-2 {
-  display: inline-block;
-  margin-bottom: 10px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--wx-blue);
-}
-.dash-rx .dx-h2 {
-  margin: 0;
-  font-family: var(--wx-serif);
-  font-size: clamp(24px, 2.8vw, 34px);
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  font-weight: 500;
-  color: var(--wx-ink);
-}
-.dash-rx .dx-h2 em {
-  font-style: italic;
-}
-
 /* ============================ shared card look ========================== */
 .dash-rx .kpi-card,
 .dash-rx .dashboard-feed-panel,
@@ -430,11 +381,6 @@
   color: var(--wx-faint);
   font-weight: 500;
 }
-
-/* ============================ panels =================================== */
-.dash-rx .dashboard-grid {
-  gap: 20px;
-}
 .dash-rx .panel {
   padding: 24px;
   transition:
@@ -481,77 +427,21 @@
   border-color: var(--wx-ink);
 }
 
-/* mini weekly schedule */
-.dash-rx .mini-schedule {
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 14px;
-  background: var(--bf-surface-raised);
-}
-.dash-rx .mini-schedule > b {
-  border-left: 1px solid var(--wx-line-soft);
-  background: var(--wx-bg-2);
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.dash-rx .mini-schedule > b span {
-  color: var(--wx-faint);
-}
-.dash-rx .mini-label {
-  background: transparent;
-  border-top: 1px solid var(--wx-line-soft);
-}
-.dash-rx .mini-label strong {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.dash-rx .mini-label span {
-  color: var(--wx-faint);
-}
-.dash-rx .mini-row > span {
-  border-top: 1px solid var(--wx-line-soft);
-  border-left: 1px solid var(--wx-line-soft);
-}
-.dash-rx .mini-row .bar::before {
-  height: 18px;
-  border-radius: 6px;
-  background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple));
-  opacity: 0.9;
-}
-
 /* compact job list + resource rows */
-.dash-rx .compact-job,
 .dash-rx .resource-row {
   border-bottom: 1px solid var(--wx-line-soft);
   border-radius: 10px;
   transition: background 0.18s ease;
 }
-.dash-rx .compact-job {
-  padding: 8px;
-  margin: 0 -8px;
-}
-.dash-rx .compact-job:hover {
-  background: var(--wx-bg-2);
-}
-.dash-rx .compact-job strong,
 .dash-rx .resource-row strong {
   color: var(--wx-ink);
   font-weight: 600;
 }
-.dash-rx .compact-job em,
 .dash-rx .resource-row em {
   color: var(--wx-faint);
 }
-.dash-rx .compact-job b {
-  color: var(--wx-mut);
-  font-weight: 600;
-  font-size: 12px;
-}
 .dash-rx .resource-row svg {
   color: var(--wx-blue);
-}
-.dash-rx .project-thumb {
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 9px;
 }
 
 /* material readiness legend */
@@ -609,36 +499,6 @@
 }
 .dash-rx .inline-empty-state em {
   color: var(--wx-faint);
-}
-
-/* ============================ project table ============================= */
-.dash-rx .table-head {
-  color: var(--wx-faint);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-.dash-rx .table-row {
-  border-top: 1px solid var(--wx-line-soft);
-  transition: background 0.18s ease;
-  border-radius: 10px;
-}
-.dash-rx .table-row:hover {
-  background: var(--wx-bg-2);
-}
-.dash-rx .table-project strong {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.dash-rx .progress-line b {
-  color: var(--wx-ink);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.dash-rx .progress-line i {
-  background: var(--wx-bg-2);
-}
-.dash-rx .progress-line em {
-  background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple));
 }
 .dash-rx .health.green {
   color: var(--wx-green);

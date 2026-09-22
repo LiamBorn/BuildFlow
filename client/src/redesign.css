@@ -74,10 +74,7 @@ html {
 /* ---- Cards & panels: unified refined depth -------------------------------- */
 .kpi-card,
 .dashboard-feed-panel,
-.panel,
-.resource-card,
-.project-hero,
-.project-switcher {
+.panel {
   border-color: var(--line-soft);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-card);
@@ -88,8 +85,7 @@ html {
 }
 
 .dashboard-feed-panel:hover,
-.panel:hover,
-.resource-card:hover {
+.panel:hover {
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -124,35 +120,10 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
-.kpi-icon,
-.large-icon {
+.kpi-icon {
   box-shadow:
     0 10px 22px rgba(15, 35, 58, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-/* ---- Sidebar (keep navy identity, refine interactions) -------------------- */
-.nav-item {
-  border-radius: var(--r-sm);
-  transition:
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease,
-    transform 120ms ease;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.nav-item:active {
-  transform: translateX(1px);
-}
-
-.sidebar-card {
-  border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* ---- Topbar & search ------------------------------------------------------ */
@@ -179,9 +150,7 @@ html {
 /* ---- Buttons -------------------------------------------------------------- */
 .icon-button,
 .outline-button,
-.export-button,
-.toggle-button,
-.tutorial-start-button {
+.export-button {
   border-radius: var(--r-sm);
   border-color: var(--line-soft);
   transition:
@@ -194,8 +163,7 @@ html {
 
 .icon-button:hover,
 .outline-button:hover,
-.export-button:hover,
-.toggle-button:hover {
+.export-button:hover {
   border-color: #c6d5e8;
   box-shadow: var(--shadow-xs);
   transform: translateY(-1px);
@@ -203,8 +171,7 @@ html {
 
 .icon-button:active,
 .outline-button:active,
-.export-button:active,
-.toggle-button:active {
+.export-button:active {
   transform: translateY(0);
 }
 
@@ -241,36 +208,6 @@ html {
   box-shadow: 0 0 0 3px rgba(15, 35, 58, 0.04);
 }
 
-/* ---- Tables --------------------------------------------------------------- */
-.table-head {
-  color: var(--ink-soft);
-  letter-spacing: 0.04em;
-}
-
-.table-row {
-  transition: background 140ms ease;
-}
-
-.table-row:hover {
-  background: rgba(21, 104, 201, 0.04);
-}
-
-/* ---- Project cards -------------------------------------------------------- */
-.project-card {
-  border-color: var(--line-soft);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  transition:
-    box-shadow 200ms ease,
-    transform 200ms ease,
-    border-color 200ms ease;
-}
-
-.project-card:hover {
-  box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
-}
-
 /* ---- Empty states (calmer, more refined) ---------------------------------- */
 .empty-state {
   color: var(--ink-soft);
@@ -292,30 +229,14 @@ html {
    ============================================================================ */
 
 /* ---- Every module's stat / directory / content cards --------------------- */
-.crew-stat-card,
 .crew-directory-card,
 .crew-review-panel,
-.equipment-directory-card,
-.material-directory-card,
-.field-stat-card,
 .field-entry-card,
-.field-update-directory-card,
 .reports-card,
 .reports-chart-card,
 .reports-efficiency-card,
 .reports-kpi-card,
-.forecastIQ-card,
-.fuel-efficiency-card,
-.optimization-result-card,
-.review-card,
-.weather-card,
 .schedule-filter-panel,
-.schedule-ai-profile-panel,
-.map-today-jobs-panel,
-.map-field-updates-panel,
-.map-route-card,
-.map-weather-card,
-.live-tracking-panel,
 .settings-panel,
 .settings-account-card {
   border-radius: var(--r-md) !important;
@@ -328,19 +249,12 @@ html {
 
 /* Interactive directory cards get a subtle lift */
 .crew-directory-card:hover,
-.equipment-directory-card:hover,
-.material-directory-card:hover,
-.field-update-directory-card:hover,
-.reports-card:hover,
-.review-card:hover,
-.map-route-card:hover {
+.reports-card:hover {
   box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
 }
 
 /* Stat number crispness across modules */
-.crew-stat-card strong,
-.field-stat-card strong,
 .reports-kpi-card strong {
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -399,8 +313,7 @@ html {
 }
 
 /* ---- Notifications / popover panels: refined depth ----------------------- */
-.notifications-panel,
-.support-chat-panel {
+.notifications-panel {
   border-radius: var(--r-md);
   border-color: var(--line-soft);
   box-shadow: var(--shadow-pop);
