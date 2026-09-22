@@ -58,11 +58,8 @@ export type BusinessTypeId = (typeof businessTypeOptions)[number];
  * (both in client/src/App.tsx) and this list. TypeScript enforces all three.
  */
 export const onboardingProductOptions = [
-  {
-    id: "map-field-ops",
-    label: "Map & Field Ops",
-    description: "Track vehicles, equipment, and design traffic routes."
-  },
+  // "map-field-ops" (Map & Field Ops) was here until 2026-09-22; the page is in the backlog
+  // (docs/backlog.md). A selection stored under its id is filtered out on both sides.
   {
     id: "equipment-tracking",
     label: "Equipment Tracking",

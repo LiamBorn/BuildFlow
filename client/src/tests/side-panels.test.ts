@@ -52,10 +52,8 @@ describe("the panels that open from the right", () => {
      below is necessary and was never sufficient. What makes it sufficient is that the drawer is
      portalled out of the page entirely, which is job-drawer-overlay.test.tsx's to keep. */
   it("runs each one the full height of the page, with its header held by something other than an offset", () => {
-    for (const [sheet, selector] of [
-      ["schedule.css", ".gantt-page .gantt-drawer"],
-      ["hs-contacts.css", ".hs-record"]
-    ] as const) {
+    // (the Sales record panel was the other one until 2026-09-22; docs/backlog.md)
+    for (const [sheet, selector] of [["schedule.css", ".gantt-page .gantt-drawer"]] as const) {
       const panel = declsIn(sheet, selector);
       expect(panel.top, selector).toBe("0");
       // the layer is the whole window, so the panel's own height comes from top + bottom
@@ -63,7 +61,6 @@ describe("the panels that open from the right", () => {
       expect(panel.position, selector).toBe("absolute");
     }
     // the layers really do sit above the bar; without that, full height would hide both headers
-    expect(declsIn("hs-contacts.css", ".hs-record-layer")["z-index"]).toBe("95");
     expect(declsIn("schedule.css", ".gantt-page .gantt-drawer-layer")["z-index"]).toBe("95");
   });
 
@@ -110,8 +107,4 @@ describe("the panels that open from the right", () => {
     expect(declsIn(SKIN, ".app-shell.hs-shell.bf-shell .sidebar.hs-rail.is-hidden").display).toBe("none");
   });
 
-  it("leaves the record panel scrolling as one piece", () => {
-    // its three copies live in App.tsx, so this one keeps the shape it had rather than being restructured
-    expect(declsIn("hs-contacts.css", ".hs-record")["overflow-y"]).toBe("auto");
-  });
 });

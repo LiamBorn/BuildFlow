@@ -2,7 +2,7 @@
  * The job drawer every schedule view opens: status, priority, dates and notes for
  * one job, saved through the page's own PATCH, and the job's links — with the way
  * to draw or remove one — so a dependency needs no mouse. One implementation shared by the
- * Week, List, Kanban, Month, Matrix and Gantt pages; styled by hs-gantt.css.
+ * Month, Kanban and Gantt pages; styled by hs-gantt.css.
  *
  * The frame it opens in — the layer, where it is painted, the focus trap — is ScheduleDrawer's.
  */

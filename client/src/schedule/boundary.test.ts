@@ -82,7 +82,7 @@ describe("schedule folder boundary", () => {
   it("lets no page reach into a sibling page, and nothing but App.tsx import the pages", () => {
     for (const [file, text] of Object.entries(sources)) {
       if (!file.startsWith("/src/schedule/pages/")) continue;
-      expect(text, file).not.toMatch(/from "\.\/(Schedule|Week|List|Kanban|Month|Matrix|Gantt)Page"/);
+      expect(text, file).not.toMatch(/from "\.\/(Schedule|Kanban|Month|Gantt)Page"/);
     }
     const importers = Object.entries(sources)
       .filter(([file, text]) => !file.startsWith("/src/schedule/") && /schedule\/pages\//.test(text))

@@ -1,173 +1,16 @@
 /*
- * The Schedule category's one stylesheet: the landing and its six views (Week, List, Gantt Chart,
- * Kanban, Month, Matrix), the status band, the job dialogs, the import dialog and the ported Gantt.
+ * The Schedule category's one stylesheet: the landing and its three views (Month, Kanban, Gantt
+ * Chart — the Week, List and Matrix pages left on 2026-09-22, docs/backlog.md), the status band,
+ * the job dialogs, the import dialog and the ported Gantt.
  * Folded on 9 September 2026 from eleven sheets, kept in their old load order; the rules for phones
  * live in schedule-phone.css, which loads right after this file.
  */
 
 /* ============================== schedule-job-overrides.css ============================== */
 
-.schedule-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.32fr);
-  align-items: start;
-  overflow-x: visible;
-  padding-bottom: 0;
-}
-
 .schedule-board {
   min-width: 0;
   overflow-x: hidden;
-}
-
-.schedule-side-rail {
-  grid-template-columns: 1fr;
-  min-width: 0;
-}
-
-.schedule-header,
-.crew-row {
-  grid-template-columns: clamp(112px, 11%, 150px) repeat(7, minmax(0, 1fr));
-}
-
-.schedule-cell {
-  display: grid;
-  align-content: start;
-  gap: 6px;
-  padding: 5px;
-}
-
-.schedule-cell.empty {
-  align-content: stretch;
-}
-
-.schedule-add-job-button {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 96px;
-  border: 1px dashed #cbd8e8;
-  border-radius: 8px;
-  background: var(--bf-ground);
-  color: #6d7e95;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.schedule-add-job-button.compact {
-  grid-template-columns: auto auto;
-  min-height: 34px;
-  justify-content: center;
-  padding: 6px 8px;
-  background: var(--bf-surface);
-}
-
-.schedule-add-job-button svg {
-  color: #2f6bff;
-}
-
-.schedule-add-job-button:hover,
-.schedule-add-job-button:focus-visible {
-  border-color: #2f6bff;
-  background: #eef0fd;
-  color: #1d4ed8;
-  /* No `outline: 0` here. The tint below is the same one hover gives, so removing the ring left
-     a keyboard user unable to tell where they were on a board with 63 of these buttons. */
-}
-
-.schedule-job {
-  align-content: start;
-  height: auto;
-  overflow: visible;
-  gap: 5px;
-  padding: 8px 5px;
-}
-
-.schedule-job > * {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.schedule-job strong,
-.schedule-job span,
-.schedule-job em,
-.schedule-job p,
-.schedule-job footer span {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: normal;
-  word-break: normal;
-  hyphens: none;
-}
-
-.schedule-job footer {
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 5px;
-  justify-content: flex-start;
-}
-
-.schedule-job .badge {
-  flex: 0 0 auto;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 23px;
-  padding-inline: 5px;
-  white-space: nowrap;
-  overflow-wrap: normal;
-  word-break: normal;
-  font-size: 11px;
-  line-height: 1.15;
-}
-
-.schedule-job strong {
-  font-size: 13px;
-  line-height: 1.17;
-}
-
-.schedule-job span,
-.schedule-job em,
-.schedule-job footer span {
-  font-size: 12px;
-  line-height: 1.3;
-}
-
-.unassigned-card {
-  grid-template-columns: 18px minmax(0, 1fr);
-  align-items: start;
-  overflow: visible;
-}
-
-.unassigned-card .drag-grip {
-  grid-row: 1 / span 2;
-}
-
-.unassigned-card > span {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.unassigned-card strong,
-.unassigned-card em,
-.unassigned-card b {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  overflow-wrap: normal;
-  word-break: normal;
-  hyphens: none;
-}
-
-.unassigned-card > .badge {
-  grid-column: 2;
-  justify-self: start;
-  max-width: 100%;
-  white-space: nowrap;
 }
 
 .schedule-job-picker {
@@ -257,43 +100,15 @@
   min-width: 132px;
 }
 
-@media (max-width: 1500px) {
-  .schedule-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.3fr);
-  }
-
-  .schedule-side-rail {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 1180px) {
-  .schedule-layout {
-    grid-template-columns: 1fr;
-  }
-
   .schedule-board {
     min-width: 0;
-  }
-
-  .schedule-side-rail {
-    min-width: 0;
-    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 680px) {
-  .schedule-layout {
-    grid-template-columns: 1fr;
-  }
-
   .schedule-board {
     min-width: 0;
-  }
-
-  .schedule-side-rail {
-    min-width: 0;
-    grid-template-columns: 1fr;
   }
 
   .schedule-job-picker-content,
@@ -976,8 +791,7 @@
 
 /* ============================ shared card look ========================== */
 .sched-rx .kpi-card,
-.sched-rx .schedule-board,
-.sched-rx .schedule-side-panel {
+.sched-rx .schedule-board {
   border: 1px solid var(--wx-line-soft);
   border-radius: var(--wx-radius);
   background: var(--wx-card);
@@ -1075,120 +889,11 @@
 }
 
 /* ============================ board ==================================== */
-.sched-rx .schedule-layout {
-  gap: 22px;
-}
 .sched-rx .schedule-board {
   overflow: hidden;
 }
-.sched-rx .schedule-header {
-  background: var(--bf-surface);
-  border-bottom: 1px solid var(--wx-line-soft);
-}
-.sched-rx .schedule-header > span,
-.sched-rx .schedule-header strong {
-  border-left: 1px solid var(--wx-line-soft);
-}
-.sched-rx .schedule-header > span {
-  border-left: 0;
-  color: var(--wx-mut);
-  font-weight: 700;
-}
-.sched-rx .schedule-header strong {
-  color: var(--wx-ink);
-  font-weight: 700;
-}
-.sched-rx .schedule-header em {
-  color: var(--wx-faint);
-}
-.sched-rx .crew-row {
-  border-bottom: 1px solid var(--wx-line-soft);
-}
-.sched-rx .crew-label {
-  border-right: 1px solid var(--wx-line-soft);
-}
-.sched-rx .crew-label strong {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.sched-rx .crew-label span {
-  color: var(--wx-faint);
-}
-.sched-rx .crew-label em {
-  color: var(--wx-blue);
-  font-weight: 700;
-}
-.sched-rx .schedule-cell {
-  border-right: 1px solid var(--wx-line-soft);
-  background: transparent;
-}
-.sched-rx .schedule-cell.over {
-  box-shadow: inset 0 0 0 2px var(--wx-blue);
-  background: #e8f0fe;
-}
-.sched-rx .schedule-add-job-button {
-  color: var(--wx-faint);
-  border-radius: 12px;
-}
-.sched-rx .schedule-add-job-button:hover,
-.sched-rx .schedule-add-job-button:focus-visible {
-  color: var(--wx-blue);
-  background: var(--wx-bg-2);
-}
 
 /* job cards — soft paper status tints */
-.sched-rx .schedule-job {
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(var(--bf-line-rgb), 0.05);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-.sched-rx .schedule-job:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(var(--bf-line-rgb), 0.12);
-}
-.sched-rx .schedule-job.confirmed,
-.sched-rx .schedule-job.on-site,
-.sched-rx .schedule-job.complete {
-  border-color: #b7ddc2;
-  background: #eef7f0;
-}
-.sched-rx .schedule-job.ready,
-.sched-rx .schedule-job.ready-to-start {
-  border-color: #9ab1ec;
-  background: #e3eafb;
-}
-.sched-rx .schedule-job.delayIQed,
-.sched-rx .schedule-job.at-risk {
-  border-color: #eeb4b1;
-  background: #fbeceb;
-}
-.sched-rx .schedule-job.in-progress {
-  border-color: #b3ccf5;
-  background: #eaf1fd;
-}
-.sched-rx .schedule-job.planned {
-  border-color: var(--wx-line);
-  background: var(--bf-surface);
-}
-.sched-rx .schedule-job strong {
-  color: var(--wx-ink);
-  font-weight: 700;
-}
-.sched-rx .schedule-job span,
-.sched-rx .schedule-job em,
-.sched-rx .schedule-job footer span {
-  color: var(--wx-mut);
-}
-.sched-rx .schedule-job p {
-  color: var(--wx-red);
-}
-.sched-rx .schedule-job.focused,
-.sched-rx .unassigned-card.focused,
-.sched-rx .schedule-list-view button.focused {
-  box-shadow: inset 0 0 0 2px var(--wx-blue);
-}
 
 /* board footer */
 .sched-rx .schedule-board-footer {
@@ -1199,26 +904,7 @@
   color: var(--wx-faint);
   font-size: 13px;
 }
-/* the Matrix says how booked a crew's day is, so its legend carries the same bands as its cells */
-.sched-rx .sched-load-legend i {
-  border: 1px solid var(--wx-line-soft);
-}
-.sched-rx .sched-load-legend .load-0 {
-  background: var(--wx-card);
-}
-.sched-rx .sched-load-legend .load-1 {
-  background: color-mix(in srgb, var(--sc-concrete) 8%, var(--wx-card));
-}
-.sched-rx .sched-load-legend .load-2 {
-  background: color-mix(in srgb, var(--sc-concrete) 17%, var(--wx-card));
-}
-.sched-rx .sched-load-legend .load-3 {
-  background: color-mix(in srgb, var(--sc-concrete) 28%, var(--wx-card));
-}
-.sched-rx .sched-load-legend .is-conflict {
-  background: color-mix(in srgb, var(--sc-milestone) 15%, var(--wx-card));
-  border-color: color-mix(in srgb, var(--sc-milestone) 55%, transparent);
-}
+/* the legend's dots carry the same status tones as the cards */
 .sched-rx .schedule-legend .confirmed {
   background: var(--wx-green);
 }
@@ -1254,100 +940,19 @@
 }
 
 /* list view */
-.sched-rx .schedule-list-view header {
-  background: var(--bf-surface);
-  border-bottom: 1px solid var(--wx-line-soft);
-  color: var(--wx-faint);
-}
-.sched-rx .schedule-list-view button {
-  border-bottom: 1px solid var(--wx-line-soft);
-  background: transparent;
-}
-.sched-rx .schedule-list-view button:hover {
-  background: var(--wx-bg-2);
-  box-shadow: inset 0 0 0 2px var(--wx-blue);
-}
-.sched-rx .schedule-list-view strong {
-  color: var(--wx-ink);
-}
-.sched-rx .schedule-list-view em {
-  color: var(--wx-faint);
-}
 
 /* empty states */
-.sched-rx .schedule-empty-state,
-.sched-rx .schedule-list-empty {
+.sched-rx .schedule-empty-state {
   color: var(--wx-mut);
 }
-.sched-rx .schedule-empty-state strong,
-.sched-rx .schedule-list-empty strong {
+.sched-rx .schedule-empty-state strong {
   color: var(--wx-ink);
   font-family: var(--cc-sans);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
-/* ============================ side rail =============================== */
-.sched-rx .side-stack {
-  gap: 22px;
-}
-.sched-rx .schedule-side-panel {
-  overflow: hidden;
-}
-.sched-rx .schedule-panel-header {
-  border-bottom: 1px solid var(--wx-line-soft);
-}
-.sched-rx .schedule-panel-header h2 {
-  font-family: var(--cc-sans);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--wx-ink);
-}
-.sched-rx .schedule-panel-header > span {
-  background: #e8f0fe;
-  color: var(--wx-blue);
-  font-weight: 700;
-}
-
-/* unassigned job cards */
-.sched-rx .unassigned-card {
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 14px;
-  background: var(--bf-surface);
-  box-shadow: 0 4px 14px rgba(var(--bf-line-rgb), 0.04);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-}
-.sched-rx .unassigned-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(var(--bf-line-rgb), 0.1);
-}
-.sched-rx .unassigned-card.ready,
-.sched-rx .unassigned-card.ready-to-start {
-  border-color: #9ab1ec;
-  background: #e3eafb;
-}
-.sched-rx .unassigned-card.delayIQed,
-.sched-rx .unassigned-card.at-risk {
-  border-color: #eeb4b1;
-  background: #fbeceb;
-}
-.sched-rx .unassigned-card strong {
-  color: var(--wx-ink);
-  font-weight: 700;
-}
-.sched-rx .unassigned-card em,
-.sched-rx .unassigned-card b {
-  color: var(--wx-faint);
-  font-weight: 500;
-}
-.sched-rx .drag-grip {
-  color: var(--wx-faint);
-}
+/* helper lines */
 .sched-rx .helper-text {
   color: var(--wx-faint);
 }
@@ -1443,9 +1048,7 @@
   .sched-rx.dx-ready [data-reveal-stagger] > * {
     transition-duration: 0.3s;
   }
-  .sched-rx .schedule-kpis .kpi-card,
-  .sched-rx .schedule-job,
-  .sched-rx .unassigned-card {
+  .sched-rx .schedule-kpis .kpi-card {
     transition-duration: 0.2s;
   }
   .sched-rx .dx-aurora {
@@ -1482,10 +1085,8 @@
   opacity: 0.6;
   cursor: default;
 }
-.sched-rx .schedule-job.is-pending,
 .sched-rx .sched-act.is-pending,
-.sched-rx .sched-kan-card.is-pending,
-.sched-rx .schedule-list-view button.is-pending {
+.sched-rx .sched-kan-card.is-pending {
   opacity: 0.5;
   pointer-events: none;
   animation: sched-pending 0.9s ease-in-out infinite alternate;
@@ -2050,16 +1651,7 @@
   border-color: var(--wx-blue);
   color: var(--wx-blue);
 }
-.sched-rx .crew-row.is-lazy {
-  min-height: 84px;
-}
 /* a lazy row's single placeholder stands in for all seven days */
-.sched-rx .crew-row .schedule-cell.is-week {
-  grid-column: 2 / -1;
-}
-.sched-rx .crew-row.is-lazy .schedule-cell {
-  background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(var(--bf-line-rgb), 0.03) 10px 20px);
-}
 .gantt-page.gantt-chart .gantt-cap-note {
   margin-bottom: 8px;
 }
@@ -2161,57 +1753,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-/* ── the Matrix's detail, readable without a mouse: the cell's name for assistive tech, a tooltip on hover and keyboard focus ── */
-.sched-rx .sched-matrix-cell {
-  position: relative;
-}
-.sched-rx .sched-matrix-tip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 6px);
-  z-index: 5;
-  max-width: 240px;
-  padding: 6px 9px;
-  border-radius: 8px;
-  background: var(--wx-ink);
-  color: var(--bf-on-accent);
-  font: 500 12px/1.35 var(--cc-sans);
-  text-align: left;
-  white-space: normal;
-  width: max-content;
-  transform: translateX(-50%);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.12s ease,
-    visibility 0.12s ease;
-}
-.sched-rx .sched-matrix-cell:hover .sched-matrix-tip,
-.sched-rx .sched-matrix-cell:focus-visible .sched-matrix-tip {
-  opacity: 1;
-  visibility: visible;
-}
-.sched-rx .sched-matrix-cell:focus-visible {
-  outline: 2px solid var(--wx-blue);
-  outline-offset: 1px;
-  z-index: 4;
-}
-@media (prefers-reduced-motion: reduce) {
-  .sched-rx .sched-matrix-tip {
-    transition: none;
-  }
-}
-/* The grid clipped its own tooltips: rounded corners without overflow: hidden. The doubled class beats
-   the card's own `overflow: hidden` further down this file; schedule-phone.css matches the weight to give
-   phones a sideways scroller instead, and hides the tooltip that would be clipped by it (P5.1). */
-.sched-rx .sched-matrix.sched-matrix {
-  overflow: visible;
-}
-.sched-rx .sched-matrix.sched-matrix .sched-matrix-head {
-  border-radius: 16px 16px 0 0;
 }
 
 /* ============================== schedule-calendar.css ============================== */
@@ -2526,7 +2067,7 @@
   margin-top: -2px;
 }
 
-/* Click-to-add: an in-month day is a target for a new job (Week board parity).
+/* Click-to-add: an in-month day is a target for a new job.
    The whole empty area is clickable; this "+" is the discoverable hint. */
 .sched-rx .sched-cal-cell.is-addable {
   cursor: pointer;
@@ -2903,15 +2444,13 @@
 /* ============================ drag & drop ============================= */
 /* draggable job chips / rows advertise themselves with a grab cursor */
 .sched-rx .sched-act[draggable],
-.sched-rx .sched-act,
-.sched-rx .schedule-list-view button {
+.sched-rx .sched-act {
   cursor: grab;
 }
 /* A milestone is carried the same way (2026-09-17 pm): it opens nothing on a click, but dropping it
    on another day moves the date it marks — a phase's finish, or a project's completion — so it
    keeps the grab of the rule above rather than sitting there looking inert. */
-.sched-rx .sched-act.dragging,
-.sched-rx .schedule-list-view button.dragging {
+.sched-rx .sched-act.dragging {
   cursor: grabbing;
 }
 /* PICKING A CARD UP, on every board in the category (Month 2026-09-17, then the rest of them the
@@ -2920,10 +2459,7 @@
    is leaving, the same way a Dashboard panel and a Deals card behave. The slot's box is the card's
    own, so nothing around it moves: no day reflows, no crew row jumps, no lane closes up. */
 .sched-rx .sched-act.dragging,
-.sched-rx .schedule-job.dragging,
-.sched-rx .unassigned-card.dragging,
-.sched-rx .sched-kan-card.dragging,
-.sched-rx .schedule-list-view button.dragging {
+.sched-rx .sched-kan-card.dragging {
   /* an outline, not a border: a border would have to replace the card's own and the 1px
      difference would nudge everything below it */
   outline: 2px dashed color-mix(in srgb, var(--wx-ink) 24%, var(--wx-card));
@@ -2937,10 +2473,7 @@
 }
 /* the slot is empty: what was on the card is up in the air */
 .sched-rx .sched-act.dragging > *,
-.sched-rx .schedule-job.dragging > *,
-.sched-rx .unassigned-card.dragging > *,
-.sched-rx .sched-kan-card.dragging > *,
-.sched-rx .schedule-list-view button.dragging > * {
+.sched-rx .sched-kan-card.dragging > * {
   visibility: hidden;
 }
 /* ...and the card that has it: the clone, lifted off the page and tilted under the hand. The
@@ -3020,27 +2553,6 @@
 }
 
 /* list view grouped by day — each day block is a reschedule drop target */
-.sched-rx .sched-list-day {
-  display: block;
-}
-.sched-rx .sched-list-dayhead {
-  padding: 8px 20px;
-  background: var(--wx-bg-2);
-  border-bottom: 1px solid var(--wx-line-soft);
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--wx-mut);
-}
-.sched-rx .sched-list-day.drop-over {
-  box-shadow: inset 0 0 0 2px var(--sc-concrete);
-}
-.sched-rx .sched-list-day.drop-over .sched-list-dayhead {
-  background: color-mix(in srgb, var(--sc-concrete) 16%, var(--wx-card));
-  color: var(--sc-concrete);
-}
 
 /* ============================ responsive ============================== */
 @media (max-width: 1180px) {
@@ -3073,24 +2585,6 @@
 }
 
 /* every day of the week is a List section: a free day stays quiet but still takes a drop */
-.sched-rx .sched-list-day.is-empty .sched-list-dayhead {
-  color: var(--wx-faint);
-}
-.sched-rx .sched-list-day.is-today .sched-list-dayhead {
-  color: var(--sc-concrete);
-}
-.sched-rx .sched-list-quiet {
-  margin: 0;
-  padding: 7px 20px;
-  border-bottom: 1px solid var(--wx-line-soft);
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--wx-faint);
-}
-.sched-rx .sched-list-day.drop-over .sched-list-quiet {
-  color: var(--sc-concrete);
-}
 
 /* Schedule Alerts under a board: the rail panel as a full-width strip, alerts side by side */
 .sched-rx .sched-alerts-under {
@@ -3107,32 +2601,12 @@
 }
 
 /* Holidays and days off come from Settings › Work calendar — on every board, not only the Month. */
-.sched-rx .schedule-header strong.is-holiday,
-.sched-rx .sched-matrix-col.is-holiday,
-.sched-rx .sched-list-day.is-holiday .sched-list-dayhead {
-  color: var(--sc-holiday);
-}
-.sched-rx .schedule-header strong .sched-holiday-tag,
-.sched-rx .sched-matrix-col .sched-holiday-tag {
-  display: block;
-  margin-top: 0;
-  white-space: normal;
-  line-height: 1.15;
-}
-.sched-rx .schedule-cell.is-holiday,
-.sched-rx .sched-matrix-cell.is-holiday {
-  background: color-mix(in srgb, var(--sc-holiday) 9%, var(--wx-card));
-}
-.sched-rx .schedule-header strong.is-off,
-.sched-rx .sched-matrix-col.is-off {
-  opacity: 0.72;
-}
 
 /* ============================== schedule-views.css ============================== */
 
 /* ============================================================================
-   schedule-views.css — Gantt / Kanban / Scheduling Matrix
-   Three additional Schedule layouts in the Command Center language: white
+   schedule-views.css — Gantt / Kanban
+   Two additional Schedule layouts in the Command Center language: white
    cards, --wx-* + --sc-* tokens, Inter, soft shadows, blue accents. Scoped to
    `.sched-rx` and reusing the same trade palette + motion as the calendar.
    ========================================================================== */
@@ -3447,182 +2921,6 @@
   color: var(--wx-faint);
 }
 
-/* ============================ Matrix =================================== */
-.sched-rx .sched-matrix {
-  border: 1px solid var(--wx-line-soft);
-  border-radius: 16px;
-  overflow: hidden;
-  background: var(--wx-card);
-}
-.sched-rx .sched-matrix-head,
-.sched-rx .sched-matrix-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1.1fr) repeat(var(--matrix-cols, 7), minmax(0, 1fr)) 84px;
-  align-items: stretch;
-}
-.sched-rx .sched-matrix-head {
-  background: var(--wx-bg-2);
-  border-bottom: 1px solid var(--wx-line-soft);
-}
-.sched-rx .sched-matrix-corner,
-.sched-rx .sched-matrix-col {
-  display: grid;
-  place-items: center;
-  gap: 1px;
-  padding: 8px 6px;
-  border-left: 1px solid var(--wx-line-soft);
-  font-family: var(--cc-sans, Inter, sans-serif);
-}
-.sched-rx .sched-matrix-corner {
-  border-left: 0;
-  justify-items: start;
-  padding-left: 14px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--wx-mut);
-}
-.sched-rx .sched-matrix-col b {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--wx-ink);
-  letter-spacing: 0.03em;
-}
-.sched-rx .sched-matrix-col em {
-  font-style: normal;
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--wx-faint);
-}
-.sched-rx .sched-matrix-col.is-total {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--wx-mut);
-}
-
-.sched-rx .sched-matrix-row {
-  border-top: 1px solid var(--wx-line-soft);
-}
-.sched-rx .sched-matrix-row:first-of-type {
-  border-top: 0;
-}
-.sched-rx .sched-matrix-crew {
-  display: grid;
-  align-content: center;
-  padding: 10px 14px;
-  min-width: 0;
-}
-.sched-rx .sched-matrix-crew strong {
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--wx-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.sched-rx .sched-matrix-crew em {
-  font-style: normal;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--wx-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* load heat — how many activities that crew has that day */
-.sched-rx .sched-matrix-cell {
-  display: grid;
-  place-items: center;
-  min-height: 52px;
-  border: 0;
-  border-left: 1px solid var(--wx-line-soft);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background 0.16s ease,
-    box-shadow 0.16s ease;
-}
-.sched-rx .sched-matrix-cell b {
-  display: inline-grid;
-  place-items: center;
-  min-width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 11.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.sched-rx .sched-matrix-cell.load-0 {
-  background: transparent;
-}
-.sched-rx .sched-matrix-cell.load-1 {
-  background: color-mix(in srgb, var(--sc-concrete) 8%, transparent);
-}
-.sched-rx .sched-matrix-cell.load-2 {
-  background: color-mix(in srgb, var(--sc-concrete) 17%, transparent);
-}
-.sched-rx .sched-matrix-cell.load-3 {
-  background: color-mix(in srgb, var(--sc-concrete) 28%, transparent);
-}
-.sched-rx .sched-matrix-cell.load-1 b,
-.sched-rx .sched-matrix-cell.load-2 b,
-.sched-rx .sched-matrix-cell.load-3 b {
-  background: color-mix(in srgb, var(--sc-concrete) 18%, var(--wx-card));
-  color: var(--sc-concrete);
-}
-.sched-rx .sched-matrix-cell.is-conflict {
-  background: color-mix(in srgb, var(--sc-milestone) 15%, transparent);
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--sc-milestone) 55%, transparent);
-}
-.sched-rx .sched-matrix-cell.is-conflict b {
-  background: color-mix(in srgb, var(--sc-milestone) 18%, var(--wx-card));
-  color: var(--sc-milestone);
-}
-.sched-rx .sched-matrix-cell:hover {
-  box-shadow: inset 0 0 0 2px var(--sc-concrete);
-}
-
-.sched-rx .sched-matrix-total {
-  display: grid;
-  place-items: center;
-  gap: 2px;
-  padding: 8px;
-  border-left: 1px solid var(--wx-line-soft);
-  background: color-mix(in srgb, var(--wx-bg-2) 40%, transparent);
-}
-.sched-rx .sched-matrix-total b {
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 14px;
-  font-weight: 750;
-  color: var(--wx-ink);
-  font-variant-numeric: tabular-nums;
-}
-.sched-rx .sched-matrix-util {
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-family: var(--cc-sans, Inter, sans-serif);
-  font-size: 10.5px;
-  font-weight: 700;
-}
-.sched-rx .sched-matrix-util.available {
-  background: var(--cc-green-soft, #e2f1e6);
-  color: var(--sc-finishes);
-}
-.sched-rx .sched-matrix-util.limited {
-  background: #fdf0dc;
-  color: var(--sc-framing);
-}
-.sched-rx .sched-matrix-util.busy {
-  background: #efe8f8;
-  color: var(--sc-mep);
-}
-
 /* ============================ responsive =============================== */
 @media (max-width: 1100px) {
   .sched-rx .sched-kanban {
@@ -3630,15 +2928,6 @@
     grid-auto-flow: column;
     grid-auto-columns: minmax(184px, 1fr);
     overflow-x: auto;
-  }
-}
-@media (max-width: 900px) {
-  .sched-rx .sched-matrix-head,
-  .sched-rx .sched-matrix-row {
-    grid-template-columns: 110px repeat(var(--matrix-cols, 7), minmax(0, 1fr)) 64px;
-  }
-  .sched-rx .sched-matrix-col em {
-    display: none;
   }
 }
 
@@ -5840,20 +5129,6 @@
   opacity: 0.6;
 }
 
-/* ============================== hs-week.css ============================== */
-
-/* ============================================================================
-   hs-week.css — the Week page: the Schedule hub's crew-by-day board on a page
-   of its own (WeekPage.tsx). It wears the Schedule page's reskin (.sched-rx),
-   so only the page specifics live here.
-   ========================================================================== */
-.week-page .week-actions {
-  justify-content: flex-end;
-}
-.week-page .schedule-board .gantt-status {
-  margin: 12px 18px 0;
-}
-
 /* ============================== hs-kanban.css ============================== */
 
 /* ============================================================================
@@ -5865,20 +5140,6 @@
   justify-content: flex-end;
 }
 .kanban-page .schedule-board .gantt-status {
-  margin: 12px 18px 0;
-}
-
-/* ============================== hs-matrix.css ============================== */
-
-/* ============================================================================
-   hs-matrix.css — the Matrix page: the Schedule hub's crew × day load grid on a
-   page of its own (MatrixPage.tsx). It wears the Schedule page's reskin
-   (.sched-rx), so only the page specifics live here.
-   ========================================================================== */
-.matrix-page .matrix-actions {
-  justify-content: flex-end;
-}
-.matrix-page .schedule-board .gantt-status {
   margin: 12px 18px 0;
 }
 

@@ -269,16 +269,16 @@ export function FirstRunPanel({
         <li className={hasBooking ? "is-done" : ""}>
           {step(hasBooking, "4")}
           <div>
-            <strong>Book it on the Week board</strong>
+            <strong>Book it on the Month calendar</strong>
             <em>
               {hasBooking
-                ? "Booked — the week is on the board."
-                : "A job added here is booked on its crew the same day; a queued job can be dragged onto any crew's day on the Week board."}
+                ? "Booked — the week is on the calendar."
+                : "A job added here is booked on its crew the same day; a queued job is booked from its day on the Month calendar — open the day and pick the job and the crew."}
             </em>
             {hasJob && !hasBooking && (
               <div className="sched-firstrun-actions">
-                <button type="button" className="sched-book" onClick={() => onOpenPage("week")}>
-                  Open the Week board
+                <button type="button" className="sched-book" onClick={() => onOpenPage("month")}>
+                  Open the Month calendar
                 </button>
               </div>
             )}

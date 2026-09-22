@@ -261,53 +261,7 @@
 }
 
 /* ---- BOARD: crew rows by day columns --------------------------------- */
-.bftu-board {
-  display: grid;
-  gap: 5px;
-  padding-right: 16px;
-}
-.bftu-board-days,
-.bftu-board-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.bftu-board-days {
-  padding-left: 57px;
-}
-.bftu-board-days i {
-  flex: 1;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
-}
-.bftu-board-cell {
-  flex: 1;
-  height: 17px;
-  border-radius: 4px;
-  background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.05);
-}
 /* five of the cells carry work, and they land one after another */
-.bftu-board-row:nth-child(2) .bftu-board-cell:nth-child(3),
-.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(2),
-.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(5),
-.bftu-board-row:nth-child(4) .bftu-board-cell:nth-child(4),
-.bftu-board-row:nth-child(5) .bftu-board-cell:nth-child(6) {
-  background: var(--bf-accent, #7d7d7d);
-  animation: bftu-pop 4.4s ease-out infinite both;
-}
-.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(2) {
-  animation-delay: 0.16s;
-}
-.bftu-board-row:nth-child(3) .bftu-board-cell:nth-child(5) {
-  animation-delay: 0.32s;
-}
-.bftu-board-row:nth-child(4) .bftu-board-cell:nth-child(4) {
-  animation-delay: 0.48s;
-}
-.bftu-board-row:nth-child(5) .bftu-board-cell:nth-child(6) {
-  animation-delay: 0.64s;
-}
 @keyframes bftu-pop {
   0%,
   4% {
@@ -445,7 +399,7 @@
   animation-delay: 0.72s;
 }
 
-/* ---- LIST: alerts, inspections, the List view ------------------------ */
+/* ---- LIST: alerts, inspections (the AI lesson's scene) ------------------ */
 .bftu-list {
   display: grid;
   gap: 0;
@@ -623,64 +577,6 @@
 }
 
 /* ---- MAP: the field-ops plane --------------------------------------- */
-.bftu-map {
-  position: relative;
-  height: 100%;
-  margin-right: 16px;
-  overflow: hidden;
-  border-radius: 6px;
-  background: rgba(var(--bf-accent-rgb, 111, 134, 11), 0.05);
-}
-.bftu-map-grid {
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(0deg, rgba(var(--bf-line-rgb, 28, 28, 26), 0.06) 0 1px, transparent 1px 26px),
-    repeating-linear-gradient(90deg, rgba(var(--bf-line-rgb, 28, 28, 26), 0.06) 0 1px, transparent 1px 30px);
-}
-.bftu-map-route {
-  position: absolute;
-  top: 34px;
-  left: 28px;
-  width: 58%;
-  height: 44px;
-  border-top: 2px dashed rgba(var(--bf-accent-rgb, 111, 134, 11), 0.55);
-  border-right: 2px dashed rgba(var(--bf-accent-rgb, 111, 134, 11), 0.55);
-  border-top-right-radius: 14px;
-}
-.bftu-map-pin {
-  position: absolute;
-  width: 11px;
-  height: 11px;
-  border: 2px solid var(--bf-surface, #ffffff);
-  border-radius: 999px;
-  background: var(--bf-accent-fill, #e5e5e5);
-  animation: bftu-pop 4.4s ease-out infinite both;
-}
-.bftu-map-pin:nth-child(3) {
-  top: 28px;
-  left: 24px;
-}
-.bftu-map-pin:nth-child(4) {
-  top: 72px;
-  left: 82px;
-  animation-delay: 0.18s;
-}
-.bftu-map-pin:nth-child(5) {
-  top: 40px;
-  left: 168px;
-  animation-delay: 0.36s;
-}
-.bftu-map-pin:nth-child(6) {
-  top: 92px;
-  left: 214px;
-  animation-delay: 0.54s;
-}
-.bftu-map-pin:nth-child(7) {
-  top: 20px;
-  left: 262px;
-  animation-delay: 0.72s;
-}
 
 /* ---- the two action props: what gets clicked, and what gets dragged -- */
 /* `.bftu-hit` is the control the cursor is travelling to; it presses when the
@@ -982,13 +878,11 @@
 @media (prefers-reduced-motion: reduce) {
   .bftu-tile-figure,
   .bftu-table-row .bftu-cell,
-  .bftu-board-row .bftu-board-cell,
   .bftu-time-bar,
   .bftu-list-mark,
   .bftu-field,
   .bftu-switch-panel .bftu-cell,
   .bftu-status-row .bftu-cell,
-  .bftu-map-pin,
   .bftu-hit,
   .bftu-mover,
   .bftu-scene-cursor {

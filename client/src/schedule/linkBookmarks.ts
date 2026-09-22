@@ -20,7 +20,7 @@ const PAGE_LABELS: Record<SchedulePage, string> = {
   schedule: "Schedule"
 };
 /** The pages whose link carries the week (the Month carries its month; Kanban and Gantt carry filters only). */
-const WEEK_PAGES = new Set<SchedulePage>(["schedule", "week", "list", "matrix"]);
+const WEEK_PAGES = new Set<SchedulePage>(["schedule"]);
 
 /** The view on screen as a link: the page, the week or month it shows, and its filters. */
 export function scheduleLinkFor(

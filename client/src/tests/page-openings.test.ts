@@ -23,12 +23,7 @@ const sheet = postcss.parse(readFileSync(join(SRC, "app-shell-client-desk.css"),
    selector begins `.app-shell.hs-shell.bf-shell`, so the skin cannot reach them. The invariant
    the case below protects is unchanged (nothing marked and unpainted, nothing painted for a group
    that is never marked); it just has two places to look now. */
-const pillSheets = [
-  sheet,
-  postcss.parse(readFileSync(join(SRC, "onboarding/onboarding.css"), "utf8")),
-  // Map & Field Ops' optimisation goal switch (2026-09-22), painted by the page's own sheet
-  postcss.parse(readFileSync(join(SRC, "mapops/mapops.css"), "utf8"))
-];
+const pillSheets = [sheet, postcss.parse(readFileSync(join(SRC, "onboarding/onboarding.css"), "utf8"))];
 const pillDecls = (selector: string) => {
   const found: Record<string, string> = {};
   for (const one of pillSheets) {
@@ -131,8 +126,6 @@ const declsOf = (selector: string) => {
 const PAGE_ROOTS = [
   ".proj-rx",
   ".crew-rx",
-  ".contacts-page",
-  ".deals-page",
   ".equip-rx",
   ".delayIQ-rx",
   ".mat-rx",
@@ -140,7 +133,6 @@ const PAGE_ROOTS = [
   ".reports-page",
   ".tc-page",
   ".bookmarks-page",
-  ".map-ops-page",
   ".settings-rx",
   ".sched-rx",
   ".gantt-page"

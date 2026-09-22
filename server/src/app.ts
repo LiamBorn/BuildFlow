@@ -2655,9 +2655,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       const notice = assignment.conflicts.length
         ? conflictNotice({ ...ctx, conflicts: assignment.conflicts })
         : assignmentNotice({ ...ctx, foreman: crew?.lead });
-      // every week has a URL: the email opens the Week board on that week, that crew
+      // every booking has a URL: the email opens the Month calendar on that month, filtered to that crew
       notice.lines.push(
-        `Open the Week board: ${clientUrl.replace(/\/?$/, "/")}#schedule/week?w=${mondayOf(assignment.date)}&crew=${assignment.crewId}`
+        `Open the Month calendar: ${clientUrl.replace(/\/?$/, "/")}#schedule/month?m=${assignment.date.slice(0, 7)}-01&crew=${assignment.crewId}`
       );
       if (req.org) void sendOpsNotice(notice, opsRecipients(req.org.id));
     } catch (notifyErr) {

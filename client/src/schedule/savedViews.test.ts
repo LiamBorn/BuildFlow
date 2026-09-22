@@ -15,7 +15,7 @@ import {
 const view = (extra: Partial<SavedView> = {}): SavedView => ({
   id: "view-1",
   name: "Concrete crews, Pinecrest",
-  page: "week",
+  page: "month",
   filters: { projectId: "p-1", crewType: "Concrete", crewId: null, region: null, statuses: null },
   ...extra
 });
@@ -66,7 +66,7 @@ describe("saved views", () => {
       JSON.stringify({ ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-09-07", region: "Downtown" })
     );
     openSavedView("u-1", view(), open);
-    expect(open).toHaveBeenCalledWith("week");
+    expect(open).toHaveBeenCalledWith("month");
     expect(readScheduleContext("u-1")).toMatchObject({ weekStart: "2026-09-07", projectId: "p-1", crewType: "Concrete", region: null });
   });
 });

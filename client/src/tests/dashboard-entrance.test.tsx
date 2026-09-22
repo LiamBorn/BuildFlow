@@ -107,57 +107,6 @@ describe("the Dashboard's entrance", () => {
     expect(after).not.toBe(before);
   });
 
-  it("plays again on the Contacts page when Sales is clicked while it is already showing", async () => {
-    render(<App />);
-    await enterDashboard();
-    fireEvent.click(screen.getByRole("button", { name: /^Sales/ }));
-    await screen.findByRole("heading", { name: /^Contacts/ });
-    const before = document.querySelector(".contacts-page");
-    expect(before).not.toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: /^Sales/ }));
-
-    const after = document.querySelector(".contacts-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
-  });
-
-  it("plays again on the Companies page when its flyout entry is clicked while it is already showing", async () => {
-    render(<App />);
-    await enterDashboard();
-    const sales = screen.getByRole("button", { name: /^Sales/ });
-    fireEvent.mouseEnter(sales.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Companies/ }));
-    await screen.findByRole("heading", { name: /^Companies/ });
-    const before = document.querySelector(".companies-page");
-    expect(before).not.toBeNull();
-
-    fireEvent.mouseEnter(sales.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Companies/ }));
-
-    const after = document.querySelector(".companies-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
-  });
-
-  it("plays again on the Deals page when its flyout entry is clicked while it is already showing", async () => {
-    render(<App />);
-    await enterDashboard();
-    const sales = screen.getByRole("button", { name: /^Sales/ });
-    fireEvent.mouseEnter(sales.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Deals/ }));
-    await screen.findByRole("heading", { name: /^Deals/ });
-    const before = document.querySelector(".deals-page");
-    expect(before).not.toBeNull();
-
-    fireEvent.mouseEnter(sales.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Deals/ }));
-
-    const after = document.querySelector(".deals-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
-  });
-
   it("plays again on the Equipment page when its flyout entry is clicked while it is already showing", async () => {
     // Equipment is an add-on page: without the product the rail opens the "Get Equipment Tracking" prompt
     state.bootstrapPayload = { ...bootstrapFixture, selectedProducts: ["equipment-tracking"] };
@@ -174,26 +123,6 @@ describe("the Dashboard's entrance", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /^Equipment/ }));
 
     const after = document.querySelector(".equipment-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
-  });
-
-  it("plays again on Map & Field Ops when its flyout entry is clicked while it is already showing", async () => {
-    // an add-on page too: without the product the rail opens the "Get Map & Field Ops" prompt
-    state.bootstrapPayload = { ...bootstrapFixture, selectedProducts: ["map-field-ops"] };
-    render(<App />);
-    await enterDashboard();
-    const field = screen.getByRole("button", { name: /^Field( \(.*\))?$/ });
-    fireEvent.mouseEnter(field.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Map & Field Ops/ }));
-    await screen.findByRole("heading", { name: /^Job sites/ });
-    const before = document.querySelector(".map-ops-page");
-    expect(before).not.toBeNull();
-
-    fireEvent.mouseEnter(field.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Map & Field Ops/ }));
-
-    const after = document.querySelector(".map-ops-page");
     expect(after).not.toBeNull();
     expect(after).not.toBe(before);
   });

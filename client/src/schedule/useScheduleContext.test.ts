@@ -52,8 +52,8 @@ describe("schedule deep links", () => {
       region: "East Austin",
       statuses: ["Planned", "Confirmed"] as ScheduleContext["statuses"]
     };
-    expect(scheduleHash("week", context)).toBe(
-      "#schedule/week?w=2026-07-13&project=p-1&crewType=Concrete&crew=c-1&region=East+Austin&status=Planned%2CConfirmed"
+    expect(scheduleHash("schedule", context)).toBe(
+      "#schedule?w=2026-07-13&project=p-1&crewType=Concrete&crew=c-1&region=East+Austin&status=Planned%2CConfirmed"
     );
     expect(scheduleHash("month", context)).toBe(
       "#schedule/month?m=2026-07-01&project=p-1&crewType=Concrete&crew=c-1&region=East+Austin&status=Planned%2CConfirmed"
@@ -64,10 +64,14 @@ describe("schedule deep links", () => {
   });
 
   it("reads a link back, ignoring what is malformed", () => {
-    expect(parseScheduleHash("#schedule/week?w=2026-07-13&project=p-1&region=East+Austin&status=Planned,Confirmed,Nope")).toEqual({
-      page: "week",
+    expect(parseScheduleHash("#schedule/month?w=2026-07-13&project=p-1&region=East+Austin&status=Planned,Confirmed,Nope")).toEqual({
+      page: "month",
       patch: { weekStart: "2026-07-13", projectId: "p-1", region: "East Austin", statuses: ["Planned", "Confirmed"] }
     });
+    // a link to a page that has left the product (the Week board, the List, the Matrix — 2026-09-22) still
+    // lands: on the Month, which the week it carries brings to the right month
+    expect(parseScheduleHash("#schedule/week?w=2026-07-13&crew=c-1")).toEqual({ page: "month", patch: { weekStart: "2026-07-13", crewId: "c-1" } });
+    expect(parseScheduleHash("#schedule/matrix")).toEqual({ page: "month", patch: {} });
     expect(parseScheduleHash("#schedule?w=not-a-day&status=Nope")).toEqual({ page: "schedule", patch: {} });
     // the board's old view links open the page that view became
     expect(parseScheduleHash("#schedule?view=Kanban&project=p-1")).toEqual({ page: "kanban", patch: { projectId: "p-1" } });

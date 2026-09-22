@@ -62,7 +62,7 @@ const isEnhanceable = (input: HTMLInputElement): boolean => {
   if (input.type !== "date") return false;
   if (input.disabled || input.readOnly) return false;
   if (input.dataset.bfDateNative === "true") return false;
-  return Boolean(input.closest(".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop"));
+  return Boolean(input.closest(".app-shell.hs-shell, .pdx, .bf-breeze, .schedule-dialog-backdrop"));
 };
 
 /**

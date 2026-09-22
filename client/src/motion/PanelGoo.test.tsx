@@ -199,12 +199,11 @@ describe("the assistant's gooey open", () => {
     expect(read(surface)).toEqual({ mark: "true", dx: "-360px", y: "-92px", x: "0.0750", h: "0.0514" });
   });
 
-  it("gives all five of them the same treatment", async () => {
+  it("gives all four of them the same treatment", async () => {
     const { spark } = world();
     render(<PanelGoo />);
     const each: Array<[string, string]> = [
       ["pdx", "pdx-dialog"],
-      ["hs-record-layer", "hs-record"],
       ["gantt-drawer-layer", "gantt-drawer"],
       ["schedule-dialog-backdrop", "schedule-job-picker"],
       ["bfsp", "bfsp-drawer"]

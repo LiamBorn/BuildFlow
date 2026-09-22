@@ -1,5 +1,5 @@
 /**
- * Keys 1–6 switch views from anywhere in Schedule, in the order the landing lists
+ * Keys 1–3 switch views from anywhere in Schedule, in the order the landing lists
  * them. Not while typing in a field, not with a modifier held, not inside a dialog.
  */
 import { useEffect } from "react";
@@ -7,11 +7,8 @@ import type { SchedulePage } from "./useScheduleContext";
 
 export const SCHEDULE_VIEW_KEYS: ReadonlyArray<{ key: string; page: SchedulePage; label: string }> = [
   { key: "1", page: "month", label: "Month" },
-  { key: "2", page: "week", label: "Week" },
-  { key: "3", page: "list", label: "List" },
-  { key: "4", page: "gantt", label: "Gantt Chart" },
-  { key: "5", page: "kanban", label: "Kanban" },
-  { key: "6", page: "matrix", label: "Matrix" }
+  { key: "2", page: "gantt", label: "Gantt Chart" },
+  { key: "3", page: "kanban", label: "Kanban" }
 ];
 
 /** The key that opens a view, if it has one. */
@@ -41,7 +38,7 @@ export function scheduleViewForKey(event: Pick<KeyboardEvent, "key" | "altKey" |
   return SCHEDULE_VIEW_KEYS.find((view) => view.key === event.key)?.page ?? null;
 }
 
-/** Keys 1–6 open the views while a schedule page is on screen; `current` is the one already open. */
+/** Keys 1–3 open the views while a schedule page is on screen; `current` is the one already open. */
 export function useScheduleViewKeys(onOpen: ((page: SchedulePage) => void) | undefined, current?: SchedulePage) {
   useEffect(() => {
     if (!onOpen) return;

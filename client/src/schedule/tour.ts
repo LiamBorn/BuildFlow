@@ -1,7 +1,7 @@
 /**
  * The guided tour of the Schedule category: the landing, the filters, and one stop
  * per view. It slots into the app tutorial (App.tsx buildTutorialSteps) after the
- * Week board lessons; each stop names the page it lives on and the anchor it
+ * Month calendar lessons; each stop names the page it lives on and the anchor it
  * spotlights (a data-tutorial-id on that page).
  */
 import type { SchedulePage } from "./useScheduleContext";
@@ -9,14 +9,11 @@ import type { SchedulePage } from "./useScheduleContext";
 export type ScheduleTourTargetId =
   | "schedule-views"
   | "schedule-status-band"
-  | "schedule-board"
   | "schedule-filters-button"
   | "schedule-alerts"
   | "month-calendar"
-  | "list-days"
   | "gantt-timeline"
-  | "kanban-lanes"
-  | "matrix-grid";
+  | "kanban-lanes";
 
 export type ScheduleTourStep = {
   id: string;
@@ -32,7 +29,7 @@ export const scheduleTourSteps: ScheduleTourStep[] = [
     id: "schedule-landing",
     title: "The whole plan, at a glance",
     shortTitle: "Schedule",
-    body: "Schedule is the landing: status, alerts, field variances, the unbooked queue, and a card for each view. Press 1 to 6 anywhere in Schedule to jump between the views; ⌘K finds any page.",
+    body: "Schedule is the landing: status, alerts, field variances, the unbooked queue, and a card for each view. Press 1 to 3 anywhere in Schedule to jump between the views; ⌘K finds any page.",
     page: "schedule",
     targetId: "schedule-views"
   },
@@ -48,8 +45,8 @@ export const scheduleTourSteps: ScheduleTourStep[] = [
     id: "schedule-filters",
     title: "Filters that follow you",
     shortTitle: "Filters",
-    body: "Project, crew type, crew, region and statuses filter every schedule view the same way, and the week you pick travels with you from view to view.",
-    page: "week",
+    body: "Project, crew type, crew, region and statuses filter every schedule view the same way, and the month you pick travels with you from view to view.",
+    page: "month",
     targetId: "schedule-filters-button"
   },
   {
@@ -59,14 +56,6 @@ export const scheduleTourSteps: ScheduleTourStep[] = [
     body: "The calendar shows jobs, milestones and holidays. Drag a chip to another day and the job's bookings move with it.",
     page: "month",
     targetId: "month-calendar"
-  },
-  {
-    id: "list-view",
-    title: "List: the week in time order",
-    shortTitle: "List",
-    body: "Seven day sections, quiet days included. Drag a row to another day to re-book it.",
-    page: "list",
-    targetId: "list-days"
   },
   {
     id: "gantt-view",
@@ -83,13 +72,5 @@ export const scheduleTourSteps: ScheduleTourStep[] = [
     body: "Five lanes from Planned to Complete. Drag a card into another lane to move the job along; Undo takes it back.",
     page: "kanban",
     targetId: "kanban-lanes"
-  },
-  {
-    id: "matrix-view",
-    title: "Matrix: how booked each crew is",
-    shortTitle: "Matrix",
-    body: "Crews by row, days by column: one cell per crew-day with its load and conflicts, and a Load column with each crew's utilisation.",
-    page: "matrix",
-    targetId: "matrix-grid"
   }
 ];

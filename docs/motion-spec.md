@@ -470,7 +470,10 @@ block for it — full, and labelled "Last step" — instead of the solo offset; 
 same y=192. Sending swaps to the answer on the same exit/gap/enter, and each invitee's row on the
 card's tray arrives on the beats' own focus-in.
 
-### Map & Field Ops, on the Schedule pages' board (2026-09-22)
+### Map & Field Ops, on the Schedule pages' board (2026-09-22) — in the backlog since the same day
+
+_The page was removed on request the day it shipped; the section is kept as the record of how it
+opens, for its return. Last working version: commit `4669d61`; restore notes in `docs/backlog.md`._
 
 Redesigned from a reference recording of a dispatch map. The page hosts the panel board the way
 the seven Schedule pages do (`mapops/MapOpsPage.tsx` renders `dash-rx hs-home sched-board-host`

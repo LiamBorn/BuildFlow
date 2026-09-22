@@ -1,13 +1,13 @@
 /**
- * Month — the Schedule hub's calendar as its own sub-page beside Week, List,
- * Kanban, Matrix and Gantt Chart: the Schedule page's Month view. Every job sits
+ * Month — the Schedule hub's calendar as its own sub-page beside Kanban and
+ * Gantt Chart: the Schedule page's Month view. Every job sits
  * on its start day as a trade-coloured card, with milestone diamonds and
  * holidays. Drag a card to another day to move the job (its dates and its crew
  * bookings shift together), click an empty day to add a job there or start one
  * from the header, open a busy day for its full list, and click a card for the
  * job drawer the other sub-pages use. Export writes the month's jobs to CSV.
  *
- * Stands in the shared page frame (schedule/page.tsx): everything the seven
+ * Stands in the shared page frame (schedule/page.tsx): everything the four
  * pages share comes from the one page hook; this file is the calendar and its
  * drop rule.
  */
@@ -47,7 +47,7 @@ export type MonthPageProps = {
   data: BootstrapPayload;
   reload: () => Promise<void>;
   onOpenSchedule: () => void;
-  /** Opens the page an alert points at (the Week board, DelayIQs, Materials, the Map). */
+  /** Opens the page an alert points at (the Month calendar, DelayIQs, Materials). */
   onOpenPage?: (page: ScheduleTarget) => void;
   /** The "New" pill the navigation shows for a fresh release. */
   releaseTag?: ReactNode;
@@ -142,7 +142,7 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
     ? data.projects.find((project) => project.id === (openPhase ? openPhase.projectId : openMarker.refId))
     : undefined;
   const monthJobs = useMemo(() => jobs.filter((job) => job.startDate.slice(0, 7) === monthKey), [jobs, monthKey]);
-  // the span the calendar covers, in the same shape the Week board prints its own
+  // the span the calendar covers, in the same shape the landing prints the week
   const monthRange = formatScheduleWeekRange([
     { date: `${monthKey}-01` },
     { date: shiftScheduleDate(shiftScheduleMonth(monthAnchor, 1), -1) }

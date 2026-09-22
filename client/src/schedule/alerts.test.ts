@@ -31,7 +31,7 @@ describe("schedule alerts", () => {
     );
     expect(alerts.map((alert) => alert.title)).toEqual(["Double-booked crew", "Permit slipped", "Missing materials"]);
     expect(alerts[0].detail).toBe("Trenching Crew 2 conflicts on Sep 9.");
-    expect(alerts[0].link).toEqual({ page: "week", weekStart: "2026-09-07" });
+    expect(alerts[0].link).toEqual({ page: "month", weekStart: "2026-09-07" });
     expect(alerts[1].link).toEqual({ page: "delayIQs" });
     expect(alerts[2].link).toEqual({ page: "materials" });
   });
@@ -100,7 +100,7 @@ describe("schedule alerts", () => {
     expect(alerts[0].title).toBe("A booking has no crew");
     expect(alerts[0].detail).toBe("j-1 on Sep 9 is booked to a crew this workspace no longer has — no board can show it.");
     expect(alerts[0].tone).toBe("danger");
-    expect(alerts[0].link).toEqual({ page: "week", weekStart: "2026-09-07" });
+    expect(alerts[0].link).toEqual({ page: "month", weekStart: "2026-09-07" });
 
     // and it is still raised when the page is filtered somewhere else entirely
     const filteredAway = deriveScheduleAlerts(withStray, [], [], now);

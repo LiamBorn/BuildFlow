@@ -31,7 +31,7 @@ import { useEffect } from "react";
  * the rail, which is why the copy goes back to the node's own parent (see below) rather than to
  * the body, and why the observer needs `subtree`.
  */
-const PANELS = ".pdx, .hs-record-layer, .gantt-drawer-layer, .schedule-dialog-backdrop, .bfsp, .hs-flyout";
+const PANELS = ".pdx, .gantt-drawer-layer, .schedule-dialog-backdrop, .bfsp, .hs-flyout"; // (the Sales record panel's layer left with its hub, 2026-09-22)
 const EXIT_CLASS = "bf-panel-exit";
 /** Long enough for the CSS to finish; the copy goes whatever happens, so this is a backstop. */
 const EXIT_MS = 420;

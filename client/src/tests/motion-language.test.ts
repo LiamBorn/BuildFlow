@@ -403,20 +403,6 @@ describe("app-shell-daylight.css keeps the redesign's motion contract", () => {
 });
 
 describe("the motion numbers that live in two places at once", () => {
-  it("keeps the deal board's land ring behind its own flight", () => {
-    // hs-deal-land used a hardcoded animation-delay of 0.32s against a 340ms flight, so
-    // the ring began 20ms BEFORE the card arrived and on a slow frame drew beside it
-    // rather than around it. The delay now reads --bf-dur-drop-lane; this asserts the
-    // token and the JS constant still agree.
-    const app = read("App.tsx");
-    const dealDrop = app.match(/DEAL_DROP_ANIMATION\s*=\s*\{\s*duration:\s*(\d+)/);
-    expect(dealDrop, "DEAL_DROP_ANIMATION is declared in App.tsx").not.toBeNull();
-    const token = read(TOKENS).match(/--bf-dur-drop-lane:\s*([\d.]+)s/);
-    expect(token, "--bf-dur-drop-lane is declared").not.toBeNull();
-    expect(Math.round(parseFloat(token![1]) * 1000)).toBe(Number(dealDrop![1]));
-    expect(read(SHEET)).toMatch(/animation-delay:\s*var\(--bf-dur-drop-lane\)/);
-  });
-
   it("keeps the panel board's drag and drop durations on their tokens", () => {
     const app = read("App.tsx");
     const tokens = read(TOKENS);
@@ -479,20 +465,6 @@ describe("the card a DragOverlay carries", () => {
   /* `:is(a, b, c)` counts as its MOST specific argument, not the sum of them; the helper
      above adds them up, which over-counts a seven-trade `:is()` sevenfold. Reduce each
      one to its heaviest argument first and the numbers are the browser's. */
-  const isMax = (selector: string) =>
-    selector.replace(/:is\(([^)]*)\)/g, (_m, inner: string) => {
-      const best = inner
-        .split(",")
-        .map((one) => one.trim())
-        .sort((a, b) => {
-          const [ab, ac] = specificity(a);
-          const [bb, bc] = specificity(b);
-          return bb - ab || bc - ac;
-        })[0];
-      return `:is(${best})`;
-    });
-  const specOf = (selector: string) => specificity(isMax(selector));
-
   it("takes the window scale out of every overlay in App.tsx", () => {
     /* dragZoom.ts was written and unit-tested while both of App.tsx's overlays still ran
        on dnd-kit's own numbers: a correct helper is not a corrected layer. dnd-kit
@@ -514,37 +486,6 @@ describe("the card a DragOverlay carries", () => {
     }
   });
 
-  it("keeps the index pages' entrance cascade off it", () => {
-    /* dnd-kit draws the lifted card in a box of its own -- a bare child of the index
-       card -- so `.hs-index-card > *` claimed it, and an animation's transform outranks
-       the inline one dnd-kit rewrites every frame. `backwards` then pinned the Deals
-       ghost at the first keyframe for the whole 880ms delay: the card stopped following
-       the hand entirely (2026-09-17). The exemption has to outrank the cascade, come
-       after it, and name the class App.tsx actually puts on the overlay. */
-    const DESK = "app-shell-client-desk.css";
-    const claiming: Rule[] = [];
-    const exempting: Rule[] = [];
-    parse(DESK).walkRules((rule) => {
-      if (inKeyframes(rule) || isReduce(rule)) return;
-      const moves = rule.nodes.some((n) => n.type === "decl" && n.prop === "animation" && !nullsMotion(n));
-      if (moves && rule.selectors.some((one) => /\.hs-index-card\s*>\s*\*$/.test(norm(one)))) claiming.push(rule);
-      if (rule.selectors.some((one) => /\.hs-drag-overlay$/.test(norm(one)))) exempting.push(rule);
-    });
-    expect(claiming.length, "the index cards' row cascade is declared").toBeGreaterThan(0);
-    expect(exempting.length, "the drag layer is exempted from it").toBe(1);
-    const exempt = exempting[0];
-    expect(exempt.nodes.filter((n): n is Declaration => n.type === "decl").every(nullsMotion)).toBe(true);
-    const mine = Math.max(...exempt.selectors.map((one) => specOf(one)[0]));
-    for (const rule of claiming) {
-      for (const one of rule.selectors) {
-        expect(atLeast(specOf(exempt.selectors[0]), specOf(one)), `the exemption loses to ${norm(one)}`).toBe(true);
-      }
-      // and on a tie, source order decides: the exemption must be the later rule
-      expect(exempt.source!.start!.line, "the exemption is declared before the cascade").toBeGreaterThan(rule.source!.start!.line);
-    }
-    expect(mine).toBeGreaterThan(0);
-    expect(read("App.tsx"), "no overlay wears the class the sheet exempts").toContain('className="hs-drag-overlay"');
-  });
 });
 
 describe("the reduced-motion branches the suite cannot execute", () => {
@@ -569,16 +510,6 @@ describe("the reduced-motion branches the suite cannot execute", () => {
     const shimmer = read("components/ui/text-shimmer.tsx");
     expect(shimmer).toContain("prefers-reduced-motion");
     expect(shimmer).toMatch(/reduceMotion\s*\?/);
-  });
-
-  it("gates the map's framer choreography, which framer does not gate itself", () => {
-    // BUG 6: about twenty springs, pathLength draws and staggered fades, against a
-    // stylesheet whose only reduce block killed one transition.
-    const map = read("components/ui/expand-map.tsx");
-    expect(map).toContain("useReducedMotion");
-    const transitions = map.match(/transition=\{/g)?.length ?? 0;
-    const gated = map.match(/transition=\{reduceMotion \? zero :/g)?.length ?? 0;
-    expect(gated).toBe(transitions);
   });
 
   it("leaves recharts' own reduced-motion gate in place", () => {

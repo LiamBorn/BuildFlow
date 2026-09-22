@@ -1,6 +1,6 @@
 /**
  * The week the Schedule pages share: Monday-based weeks, the seven day headers,
- * and which week to open on. Pure functions — the Week, List, Matrix and Month
+ * and which week to open on. Pure functions — the landing, the Gantt and the Month
  * pages import them through schedule/parts.
  */
 import type { ScheduleAssignment } from "@buildflow/shared";

@@ -331,7 +331,7 @@ describe("BuildFlow app", () => {
     await completeOnboarding({
       email: "ops@asphalt.test",
       businessType: "Asphalt",
-      products: ["Map & Field Ops", "Equipment Tracking"],
+      products: ["Equipment Tracking"],
       plan: "Business"
     });
 
@@ -356,16 +356,17 @@ describe("BuildFlow app", () => {
       buildTutorialSteps({ selectedBusinessType: "Asphalt", selectedPlanId: "business", selectedProductIds }).map((step) => step.title);
 
     const core = titlesFor([]);
-    const withTwo = titlesFor(["map-field-ops", "equipment-tracking"]);
+    // (Map & Field Ops was the third add-on until 2026-09-22; it is in the backlog, docs/backlog.md)
+    const withTwo = titlesFor(["equipment-tracking", "time-cards"]);
 
-    expect(withTwo).toContain("Map & Field Ops lesson");
     expect(withTwo).toContain("Equipment Tracking lesson");
-    expect(withTwo).not.toContain("Time Cards lesson");
-    expect(core).not.toContain("Map & Field Ops lesson");
+    expect(withTwo).toContain("Time Cards lesson");
+    expect(titlesFor(["equipment-tracking"])).not.toContain("Time Cards lesson");
+    expect(core).not.toContain("Equipment Tracking lesson");
     expect(withTwo).toHaveLength(core.length + 2);
 
     // and a product chosen twice still earns one lesson
-    expect(titlesFor(["map-field-ops", "map-field-ops"])).toHaveLength(core.length + 1);
+    expect(titlesFor(["equipment-tracking", "equipment-tracking"])).toHaveLength(core.length + 1);
   });
 
   /**
@@ -383,7 +384,7 @@ describe("BuildFlow app", () => {
 
     view.unmount();
     render(<App />);
-    await completeOnboarding({ email: "ops@asphalt.test", businessType: "Asphalt", products: ["Map & Field Ops"], plan: "Business" });
+    await completeOnboarding({ email: "ops@asphalt.test", businessType: "Asphalt", products: [], plan: "Business" });
     expect(screen.queryByRole("dialog", { name: "Your BuildFlow workspace is ready" })).not.toBeInTheDocument();
   });
 
@@ -1424,7 +1425,7 @@ describe("BuildFlow app", () => {
     // and the day leads the board
     const heads = [...document.querySelectorAll(".dash-block h2")].map((h) => h.textContent?.trim());
     expect(heads[0]).toBe("Today's plan");
-    expect(today.getByRole("button", { name: "Open the Week board" })).toBeInTheDocument();
+    expect(today.getByRole("button", { name: "Open the Month calendar" })).toBeInTheDocument();
   });
 
   it("lists active jobs with no crew under Unassigned today instead of hiding them", async () => {

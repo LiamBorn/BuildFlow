@@ -41,11 +41,8 @@ vi.mock("../api", async (importOriginal) => {
 import { makeLargeWorkspace } from "./bench";
 import { DEFAULT_VISIBLE_ROWS } from "../components/ui/gantt";
 import { SchedulePage } from "./pages/SchedulePage";
-import { WeekPage } from "./pages/WeekPage";
-import { ListPage } from "./pages/ListPage";
 import { KanbanPage } from "./pages/KanbanPage";
 import { MonthPage } from "./pages/MonthPage";
-import { MatrixPage } from "./pages/MatrixPage";
 import { GanttPage } from "./pages/GanttPage";
 
 if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => {};
@@ -71,11 +68,8 @@ describe("a 2,000-job workspace", () => {
 
   const pages: Array<[string, () => ReactNode, string]> = [
     ["Schedule", () => <SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />, ".sched-views"],
-    ["Week", () => <WeekPage {...props} />, ".schedule-cell"],
-    ["List", () => <ListPage {...props} />, ".sched-list-day"],
     ["Kanban", () => <KanbanPage {...props} />, ".sched-kanban"],
     ["Month", () => <MonthPage {...props} />, ".sched-cal"],
-    ["Matrix", () => <MatrixPage {...props} />, ".sched-matrix"],
     ["Gantt", () => <GanttPage {...props} />, ".gantt-frame"]
   ];
   /** Rounds of every page, interleaved; a page's figure is its best round. */
@@ -86,11 +80,8 @@ describe("a 2,000-job workspace", () => {
    */
   const NODE_BUDGET: Record<string, number> = {
     Schedule: 700,
-    Week: 2700,
-    List: 2800,
     Kanban: 3800,
     Month: 1400,
-    Matrix: 1600,
     Gantt: 1500
   };
   /** How much dearer than the cheapest page the dearest one may be. */
@@ -160,16 +151,5 @@ describe("what the pages draw at scale", () => {
     const spacers = [...document.querySelectorAll(".gantt-row-spacer")].map((el) => (el as HTMLElement).style.height);
     expect(spacers.length).toBeGreaterThan(0);
     expect(spacers.every((height) => /^\d+px$/.test(height))).toBe(true);
-  });
-  it("renders the first crew rows of the Week board eagerly and the rest as placeholders until scrolled near", () => {
-    render(<WeekPage {...props} />);
-    expect(document.querySelectorAll(".crew-row")).toHaveLength(40);
-    expect(document.querySelectorAll(".crew-row.is-lazy")).toHaveLength(28);
-    // a lazy row is its crew and one placeholder, not seven day cells
-    expect(document.querySelectorAll(".crew-row.is-lazy .schedule-cell")).toHaveLength(28);
-    expect(document.querySelectorAll(".schedule-job").length).toBeGreaterThan(0);
-    expect(document.querySelectorAll(".unassigned-list .schedule-queue-job, .unassigned-list [data-job-id]").length).toBeLessThanOrEqual(
-      30
-    );
   });
 });

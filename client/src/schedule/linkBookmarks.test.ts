@@ -17,11 +17,12 @@ beforeEach(() => window.localStorage.clear());
 
 describe("scheduleLinkFor", () => {
   it("names the page, the week or month it shows, and its filters — the link is the identity", () => {
-    const week = scheduleLinkFor("week", { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22", projectId: "p-riverside" }, data);
+    // the landing is the page whose link carries the week (the Week board's did too, until 2026-09-22)
+    const week = scheduleLinkFor("schedule", { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22", projectId: "p-riverside" }, data);
     expect(week).toEqual({
-      page: "week",
-      hash: "#schedule/week?w=2026-06-22&project=p-riverside",
-      label: "Week · week of Jun 22",
+      page: "schedule",
+      hash: "#schedule?w=2026-06-22&project=p-riverside",
+      label: "Schedule · week of Jun 22",
       detail: "Riverside Office Building"
     });
     const month = scheduleLinkFor("month", { ...EMPTY_SCHEDULE_CONTEXT, monthAnchor: "2026-06-01", crewType: "Concrete" }, data);
@@ -38,7 +39,7 @@ describe("scheduleLinkFor", () => {
 
 describe("link bookmarks", () => {
   it("pin and unpin by their link, per person, and survive a reload", () => {
-    const week = scheduleLinkFor("week", { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22" }, data);
+    const week = scheduleLinkFor("schedule", { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22" }, data);
     const month = scheduleLinkFor("month", { ...EMPTY_SCHEDULE_CONTEXT, monthAnchor: "2026-06-01" }, data);
     expect(toggleLinkBookmark("u-1", week)).toEqual([week]);
     expect(toggleLinkBookmark("u-1", month)).toEqual([week, month]);
@@ -48,13 +49,13 @@ describe("link bookmarks", () => {
     expect(toggleLinkBookmark("u-1", week)).toEqual([month]);
     window.localStorage.setItem(
       "bf:nav:links:u-3",
-      JSON.stringify([{ page: "mars" }, { page: "week", hash: "#elsewhere", label: "x" }, month])
+      JSON.stringify([{ page: "mars" }, { page: "schedule", hash: "#elsewhere", label: "x" }, { page: "week", hash: "#schedule/week", label: "old" }, month])
     );
-    expect(readLinkBookmarks("u-3")).toEqual([month]); // only real schedule links survive
+    expect(readLinkBookmarks("u-3")).toEqual([month]); // only real schedule links survive — a retired page's pin is dropped too
   });
 
   it("keep every star menu in step through the hook", () => {
-    const week = scheduleLinkFor("week", { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22" }, data);
+    const week = scheduleLinkFor("schedule", { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22" }, data);
     const menu = renderHook(() => useLinkBookmarks("u-1"));
     const page = renderHook(() => useLinkBookmarks("u-1"));
     act(() => menu.result.current.toggle(week));
@@ -64,8 +65,8 @@ describe("link bookmarks", () => {
   });
 
   it("open by putting the link on the address bar, which the app routes on", () => {
-    openScheduleLink({ hash: "#schedule/week?w=2026-06-22" });
-    expect(window.location.hash).toBe("#schedule/week?w=2026-06-22");
+    openScheduleLink({ hash: "#schedule/month?m=2026-06-01" });
+    expect(window.location.hash).toBe("#schedule/month?m=2026-06-01");
     window.location.hash = "";
   });
 });

@@ -156,8 +156,8 @@ export function ScheduleMonthView({
 const DAY_ROOM = 3;
 const jobKey = (job: Job) => job.id;
 
-// A calendar day cell: a drop target for rescheduling jobs to this day (drag-drop
-// parity with the Week board), holding milestone + draggable job chips.
+// A calendar day cell: a drop target for rescheduling jobs to this day, holding
+// milestone + draggable job chips.
 function MonthDayCell({
   cell,
   jobs,
@@ -307,8 +307,7 @@ function MonthDayCell({
         holiday ? " is-holiday" : ""
       }${isOver ? " drop-over" : ""}${cell.inMonth ? " is-addable" : ""}${open ? " is-open" : ""}`}
       style={{ "--d": cell.weekIndex } as CSSProperties}
-      // Click the empty part of an in-month day to add a job there — the Week
-      // board's click-to-add, brought to the calendar. `target === currentTarget`
+      // Click the empty part of an in-month day to add a job there. `target === currentTarget`
       // keeps chip/button clicks (and drags) from triggering it.
       onClick={
         cell.inMonth

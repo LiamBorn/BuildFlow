@@ -133,7 +133,7 @@ const nameOf = (select: HTMLSelectElement): string | undefined =>
 const isEnhanceable = (select: HTMLSelectElement): boolean => {
   if (select.disabled || select.multiple || select.size > 1) return false;
   if (select.dataset.bfSelectNative === "true") return false;
-  return Boolean(select.closest(".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop, .onb"));
+  return Boolean(select.closest(".app-shell.hs-shell, .pdx, .bf-breeze, .schedule-dialog-backdrop, .onb"));
 };
 
 const choicesOf = (select: HTMLSelectElement): Choice[] =>

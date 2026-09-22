@@ -111,8 +111,9 @@ describe("dark mode's missing pieces", () => {
       .filter((line) => line.includes(FENCE) && /\.bf-breeze|\.bfai-|\.hs-record/.test(line))
       .map((line) => line.trim())
       .sort();
-    expect(fenced).toEqual([`${FENCE} .bf-breeze {`, `${FENCE} .hs-record-layer {`].sort());
-    for (const portal of [".bf-breeze", ".hs-record-layer"]) {
+    // (the Sales record panel's `.hs-record-layer` was the other one until 2026-09-22; docs/backlog.md)
+    expect(fenced).toEqual([`${FENCE} .bf-breeze {`]);
+    for (const portal of [".bf-breeze"]) {
       // the dark palette each portal could not inherit is declared for it, by mode and by system
       for (const mode of ["dark", "system"]) {
         expect(skin, `${portal} @ ${mode}`).toContain(`body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="${mode}"]) ${portal}`);

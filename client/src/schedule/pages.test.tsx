@@ -1,5 +1,7 @@
 /**
- * The six schedule sub-pages against one small workspace: what each shows, that the
+ * The landing and the three schedule sub-pages against one small workspace (the Week
+ * board's, the List's and the Matrix's cases left with those pages on 2026-09-22 —
+ * docs/backlog.md; the shared behaviour they carried is proved on the Month now): what each shows, that the
  * shared filters narrow it, and what a drop sends to the API. dnd-kit's DndContext is
  * replaced by a shim that hands each page's onDragEnd to the test, so a drop is one
  * call carrying the data a real drag would.
@@ -110,11 +112,8 @@ import {
 } from "../api";
 import { bootstrapFixture } from "../test/fixture";
 import { EXPORT_COLUMNS, downloadCsv, printHtml } from "./export";
-import { WeekPage } from "./pages/WeekPage";
-import { ListPage } from "./pages/ListPage";
 import { KanbanPage } from "./pages/KanbanPage";
 import { MonthPage } from "./pages/MonthPage";
-import { MatrixPage } from "./pages/MatrixPage";
 import { GanttPage } from "./pages/GanttPage";
 import { SchedulePage } from "./pages/SchedulePage";
 import { scheduleTourSteps } from "./tour";
@@ -186,7 +185,12 @@ const savedFor = (key: string) => {
   return JSON.parse(String(call?.[1])) as Record<string, string[]>;
 };
 const notice = () => document.querySelector(".gantt-status");
-const cell = (crewId: string, date: string) => document.querySelector(`[data-crew-id="${crewId}"][data-date="${date}"]`) as HTMLElement;
+/** A job's chip on the Month calendar: the button titled "name · phase". */
+const chip = (title: string) => screen.getAllByTitle(title).find((element) => element.tagName === "BUTTON") as HTMLElement;
+const RIVERSIDE = "Riverside Office Building · Concrete - Level 3 Slab";
+const PINECREST = "Pinecrest Foundations · Foundations";
+/** The chip's job carried onto another day, the way dnd-kit reports it. */
+const riversideTo = (date: string) => drop({ jobId: "j-riverside-concrete", date: "2026-06-15" }, { date });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -194,149 +198,6 @@ beforeEach(() => {
   drops.onDragEnd = undefined;
   drops.onDragOver = undefined;
   resetSavedViews();
-});
-
-describe("Week page", () => {
-  it("shows every crew's row with its bookings in the right day cells, and the queue", () => {
-    render(<WeekPage {...pageProps} />);
-    expect(screen.getByRole("heading", { level: 1, name: /Week/ })).toBeInTheDocument();
-    expect(screen.getByText("Concrete Crew 1", { selector: "strong" })).toBeInTheDocument(); // the crew filter lists it too
-    expect(screen.getByText("Framing Crew 2", { selector: "strong" })).toBeInTheDocument();
-    expect(within(cell("crew-concrete", "2026-06-15")).getByText("Riverside Office Building")).toBeInTheDocument();
-    expect(within(cell("crew-framing", "2026-06-17")).getByText("Pinecrest Foundations")).toBeInTheDocument();
-    expect(cell("crew-concrete", "2026-06-16").querySelectorAll(".schedule-job")).toHaveLength(0);
-    expect(screen.getAllByText("Downtown Retail Buildout").length).toBeGreaterThan(0); // unbooked, so in the queue
-  });
-
-  it("narrows to the shared filters' project", () => {
-    writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, projectId: "p-pinecrest" });
-    render(<WeekPage {...pageProps} />);
-    expect(within(cell("crew-framing", "2026-06-17")).getByText("Pinecrest Foundations")).toBeInTheDocument();
-    expect(screen.queryAllByText("Riverside Office Building", { selector: "strong" })).toHaveLength(0); // no card anywhere
-    expect(screen.getByLabelText("Active filters")).toHaveTextContent("Pinecrest Medical");
-  });
-
-  it("re-books a dropped card in one request and offers the way back", async () => {
-    render(<WeekPage {...pageProps} />);
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-framing", date: "2026-06-17" }
-    );
-    await waitFor(() =>
-      expect(rebookSchedule).toHaveBeenCalledWith([{ op: "move", id: "as-1", crewId: "crew-framing", date: "2026-06-17" }], {
-        force: false
-      })
-    );
-    await waitFor(() => expect(reload).toHaveBeenCalled());
-    await waitFor(() => expect(notice()).toHaveTextContent("Riverside Office Building moved to Framing Crew 2 on Jun 17"));
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    // not forced: the crew-day it is going home to may have been taken while the notice was up
-    await waitFor(() =>
-      expect(rebookSchedule).toHaveBeenLastCalledWith([{ op: "move", id: "as-1", crewId: "crew-concrete", date: "2026-06-15" }], {
-        force: false
-      })
-    );
-    await waitFor(() => expect(notice()).toHaveTextContent("Riverside Office Building back with Concrete Crew 1 on Jun 15"));
-  });
-
-  it("books a queued job on the cell it lands on, and ignores a drop on the card's own cell", async () => {
-    render(<WeekPage {...pageProps} />);
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-concrete", date: "2026-06-15" }
-    );
-    expect(rebookSchedule).not.toHaveBeenCalled();
-    await drop({ jobId: "j-unassigned" }, { crewId: "crew-framing", date: "2026-06-16" });
-    await waitFor(() =>
-      expect(rebookSchedule).toHaveBeenCalledWith([{ op: "book", jobId: "j-unassigned", crewId: "crew-framing", date: "2026-06-16" }], {
-        force: false
-      })
-    );
-    await waitFor(() => expect(notice()).toHaveTextContent("Downtown Retail Buildout booked with Framing Crew 2 on Jun 16"));
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    await waitFor(() => expect(rebookSchedule).toHaveBeenLastCalledWith([{ op: "unbook", id: "as-new" }], { force: false }));
-  });
-});
-
-describe("List page", () => {
-  /* A CELL IS A LIST THE PLANNER ARRANGES (2026-09-18, the Kanban's arrangement asked for on the
-     other Schedule boards): carry a card between two others in a crew's day and it goes there.
-     Inside the cell that is an arrangement and nothing is asked of the server; across cells it
-     still re-books, and the card keeps the place it landed in. */
-  const twoInACell: BootstrapPayload = {
-    ...data,
-    assignments: [...data.assignments, { ...pinecrestBooking, id: "as-3", jobId: "j-riverside-concrete" }]
-  };
-  const FRAMING_JUN17 = "crew-framing|2026-06-17";
-
-  it("places a card between two in its own cell and writes only the arrangement, but still re-books across cells", async () => {
-    render(<WeekPage {...pageProps} data={twoInACell} />);
-    // both bookings sit in Framing Crew 2's 17th; the later one takes the earlier one's place
-    await drop(
-      { assignmentId: "as-3", jobId: "j-riverside-concrete", crewId: "crew-framing", date: "2026-06-17", cell: FRAMING_JUN17 },
-      { assignmentId: "as-2", cell: FRAMING_JUN17 }
-    );
-    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
-    const cellOrder = savedFor("schedule:week-order")[FRAMING_JUN17];
-    expect(cellOrder.indexOf("as-3")).toBeLessThan(cellOrder.indexOf("as-2"));
-    // an arrangement is the planner's own: no booking moved
-    expect(rebookSchedule).not.toHaveBeenCalled();
-    // and released on its OWN slot the cell is left alone, not sent to the end
-    vi.mocked(setUserSetting).mockClear();
-    await drop(
-      { assignmentId: "as-3", jobId: "j-riverside-concrete", crewId: "crew-framing", date: "2026-06-17", cell: FRAMING_JUN17 },
-      { assignmentId: "as-3", cell: FRAMING_JUN17 }
-    );
-    expect(setUserSetting).not.toHaveBeenCalled();
-
-    // and onto another crew's day it re-books, keeping the place it was dropped in
-    await drop(
-      { assignmentId: "as-3", jobId: "j-riverside-concrete", crewId: "crew-framing", date: "2026-06-17", cell: FRAMING_JUN17 },
-      { assignmentId: "as-1", cell: "crew-concrete|2026-06-15", crewId: "crew-concrete", date: "2026-06-15" }
-    );
-    await waitFor(() => expect(rebookSchedule).toHaveBeenCalled());
-    const moved = savedFor("schedule:week-order")["crew-concrete|2026-06-15"];
-    expect(moved[moved.indexOf("as-1") - 1]).toBe("as-3");
-  });
-
-  it("shows the week as seven day sections, quiet days included", () => {
-    render(<ListPage {...pageProps} />);
-    expect(screen.getByRole("heading", { level: 1, name: /List/ })).toBeInTheDocument();
-    expect(document.querySelectorAll(".sched-list-day")).toHaveLength(7);
-    expect(screen.getByRole("button", { name: "Open Riverside Office Building for Concrete Crew 1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Pinecrest Foundations for Framing Crew 2" })).toBeInTheDocument();
-    expect(screen.getAllByText("Nothing booked — drop a booking here")).toHaveLength(5);
-  });
-
-  /* A DAY IS A LIST THE PLANNER ARRANGES, the same arrangement the Kanban and the Week board have.
-     Time order is what a day starts in; a row carried between two others stays where it was put. */
-  it("places a row between two in its own day and writes only the arrangement", async () => {
-    // the fixture books one crew on the 17th; a second booking that day is what there is to arrange
-    const twoOnADay: BootstrapPayload = {
-      ...data,
-      assignments: [...data.assignments, { ...pinecrestBooking, id: "as-3", jobId: "j-riverside-concrete", crewId: "crew-concrete" }]
-    };
-    render(<ListPage {...pageProps} data={twoOnADay} />);
-    await drop({ assignmentId: "as-3", date: "2026-06-17" }, { assignmentId: "as-2", date: "2026-06-17" });
-    await waitFor(() => expect(setUserSetting).toHaveBeenCalled());
-    const day = savedFor("schedule:list-order")["2026-06-17"];
-    expect(day.indexOf("as-3")).toBeLessThan(day.indexOf("as-2"));
-    expect(rebookSchedule, "an arrangement moves no booking").not.toHaveBeenCalled();
-    // and released on its OWN slot the day is left alone, not sent to the end
-    vi.mocked(setUserSetting).mockClear();
-    await drop({ assignmentId: "as-3", date: "2026-06-17" }, { assignmentId: "as-3", date: "2026-06-17" });
-    expect(setUserSetting).not.toHaveBeenCalled();
-    expect(notice(), "an arrangement needs no notice and nothing to undo").toBeNull();
-  });
-
-  it("re-books a row dropped on another day, and leaves one dropped on its own day alone", async () => {
-    render(<ListPage {...pageProps} />);
-    await drop({ assignmentId: "as-1" }, { date: "2026-06-18" });
-    await waitFor(() => expect(rebookSchedule).toHaveBeenCalledWith([{ op: "move", id: "as-1", date: "2026-06-18" }], { force: false }));
-    await waitFor(() => expect(notice()).toHaveTextContent("Concrete Crew 1 on Riverside Office Building moved to Jun 18"));
-    await drop({ assignmentId: "as-2" }, { date: "2026-06-17" });
-    expect(rebookSchedule).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe("Kanban page", () => {
@@ -784,27 +645,6 @@ describe("Month page", () => {
   });
 });
 
-describe("Matrix page", () => {
-  it("shows each crew's load across the week with a totals column", () => {
-    render(<MatrixPage {...pageProps} />);
-    expect(screen.getByRole("heading", { level: 1, name: /Matrix/ })).toBeInTheDocument();
-    // the detail is the cell's accessible name and a tooltip that shows on hover and keyboard focus — not a title attribute
-    const booked = screen.getByRole("button", { name: "Concrete Crew 1 · Jun 15: Riverside Office Building" });
-    expect(booked.querySelector("[role='tooltip']")).toHaveTextContent("Concrete Crew 1 · Jun 15: Riverside Office Building");
-    expect(booked).toHaveAttribute("aria-describedby", booked.querySelector("[role='tooltip']")?.id);
-    expect(booked).not.toHaveAttribute("title");
-    expect(screen.getByRole("button", { name: "Framing Crew 2 · Jun 17: Pinecrest Foundations" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Concrete Crew 1 · Jun 16: open" })).toBeInTheDocument();
-    const row = screen.getByText("Concrete Crew 1", { selector: "strong" }).closest(".sched-matrix-row") as HTMLElement;
-    expect(row.querySelector(".sched-matrix-total b")).toHaveTextContent("1");
-    expect(row.querySelector(".sched-matrix-util")).toHaveTextContent("%");
-    expect(row.querySelector(".sched-matrix-util")).toHaveAttribute(
-      "aria-label",
-      expect.stringMatching(/^\d+% of working days booked this week$/)
-    );
-  });
-});
-
 describe("Gantt page", () => {
   const barOf = (name: string) => {
     const bar = screen
@@ -821,7 +661,7 @@ describe("Gantt page", () => {
     for (const job of data.jobs) expect(screen.getAllByText(job.name).length).toBeGreaterThan(0);
   });
 
-  it("shares the KPI grid and the Schedule Alerts panel with the other six pages", () => {
+  it("shares the KPI grid and the Schedule Alerts panel with the other three pages", () => {
     render(<GanttPage {...pageProps} />);
     expect(document.querySelectorAll(".schedule-kpis .kpi-card").length).toBeGreaterThan(0);
     const alerts = screen.getByRole("region", { name: "Schedule alerts" });
@@ -879,30 +719,20 @@ describe("Schedule landing", () => {
     render(<SchedulePage data={data} reload={reload} onOpenPage={onOpenPage} />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("The whole plan");
     const cards = within(screen.getByLabelText("Schedule views")).getAllByRole("button");
-    expect(cards.map((card) => card.querySelector("strong")?.textContent)).toEqual([
-      "Month",
-      "Week",
-      "List",
-      "Gantt Chart",
-      "Kanban",
-      "Matrix"
-    ]);
+    expect(cards.map((card) => card.querySelector("strong")?.textContent)).toEqual(["Month", "Gantt Chart", "Kanban"]);
     expect(within(screen.getByLabelText("Unassigned jobs")).getByText("Downtown Retail Buildout")).toBeInTheDocument();
     expect(screen.getByText("Concrete Crew 1", { selector: ".sched-avail-name" })).toBeInTheDocument();
     fireEvent.click(cards[1]);
-    expect(onOpenPage).toHaveBeenCalledWith("week");
+    expect(onOpenPage).toHaveBeenCalledWith("gantt");
   });
 });
 
 describe("Guided tour", () => {
   const pageFor: Record<string, () => ReactElement> = {
     schedule: () => <SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />,
-    week: () => <WeekPage {...pageProps} />,
     month: () => <MonthPage {...pageProps} />,
-    list: () => <ListPage {...pageProps} />,
     gantt: () => <GanttPage {...pageProps} />,
-    kanban: () => <KanbanPage {...pageProps} />,
-    matrix: () => <MatrixPage {...pageProps} />
+    kanban: () => <KanbanPage {...pageProps} />
   };
   it("has its anchor on the page for every stop", () => {
     for (const step of scheduleTourSteps) {
@@ -916,14 +746,14 @@ describe("Guided tour", () => {
   });
   it("shows the view keys on the landing cards", () => {
     render(<SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />);
-    expect([...document.querySelectorAll(".sched-view-key")].map((key) => key.textContent)).toEqual(["1", "2", "3", "4", "5", "6"]);
+    expect([...document.querySelectorAll(".sched-view-key")].map((key) => key.textContent)).toEqual(["1", "2", "3"]);
   });
 });
 
 describe("Saved views", () => {
   it("saves the filters on screen under a name, shows the pin, and applies it again on one click", async () => {
     writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, projectId: "p-pinecrest" });
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     const bar = screen.getByLabelText("Saved views");
     fireEvent.click(within(bar).getByRole("button", { name: "+ Save view" }));
     fireEvent.change(within(bar).getByLabelText("View name"), { target: { value: "Pinecrest crews" } });
@@ -932,7 +762,7 @@ describe("Saved views", () => {
     const [key, raw] = vi.mocked(setUserSetting).mock.calls[0];
     expect(key).toBe("schedule:views");
     expect(JSON.parse(raw)).toEqual([
-      expect.objectContaining({ name: "Pinecrest crews", page: "week", filters: { projectId: "p-pinecrest" } })
+      expect.objectContaining({ name: "Pinecrest crews", page: "month", filters: { projectId: "p-pinecrest" } })
     ]);
     await waitFor(() => expect(reload).toHaveBeenCalled());
     const chip = within(bar).getByRole("button", { name: "Pinecrest crews" });
@@ -947,16 +777,16 @@ describe("Saved views", () => {
   });
 
   it("cannot save a view with no filters", () => {
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     expect(within(screen.getByLabelText("Saved views")).getByRole("button", { name: "+ Save view" })).toBeDisabled();
   });
 
   it("opens a view from the Schedule flyout with its filters and its page", () => {
-    const stored = JSON.stringify([{ id: "view-1", name: "Morning board", page: "matrix", filters: { crewType: "Framing" } }]);
+    const stored = JSON.stringify([{ id: "view-1", name: "Morning board", page: "kanban", filters: { crewType: "Framing" } }]);
     const open = vi.fn();
     render(<SavedViewsFlyout data={{ ...data, userSettings: { "schedule:views": stored } }} onOpenPage={open} />);
     fireEvent.click(screen.getByRole("menuitem", { name: /Morning board/ }));
-    expect(open).toHaveBeenCalledWith("matrix");
+    expect(open).toHaveBeenCalledWith("kanban");
     expect(readScheduleContext(userId)).toMatchObject({ crewType: "Framing", projectId: null });
   });
 });
@@ -1022,7 +852,7 @@ describe("First run", () => {
     const guide = screen.getByLabelText("Set up your schedule");
     expect(guide.querySelectorAll(".sched-firstrun-steps li.is-done")).toHaveLength(3);
     expect(within(guide).getByRole("button", { name: "Add a job" })).toBeEnabled();
-    expect(within(guide).getByRole("button", { name: "Open the Week board" })).toBeInTheDocument();
+    expect(within(guide).getByRole("button", { name: "Open the Month calendar" })).toBeInTheDocument();
     expect(within(guide).getByRole("button", { name: "Load sample data" })).toBeDisabled(); // the workspace has projects
   });
 
@@ -1047,25 +877,22 @@ describe("Continuity", () => {
   it("names a week that crosses New Year with both of its years", () => {
     // The label is what a planner reads, and it was built inline from the first day's year —
     // so the helper that knows better had a test, no caller, and the screen kept saying 2026.
-    window.location.hash = "#schedule/week";
+    window.location.hash = "#schedule";
     writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-12-28" });
-    render(<WeekPage {...pageProps} />);
-    expect(screen.getByLabelText("Selected week Dec 28, 2026 - Jan 3, 2027")).toBeInTheDocument();
+    render(<SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />);
+    expect(screen.getByText(/Dec 28, 2026 - Jan 3, 2027/)).toBeInTheDocument();
+    window.location.hash = "";
   });
 
-  it("carries the week, the month and the filters across all seven pages, and survives a reload", () => {
-    window.location.hash = "#schedule/week";
+  it("carries the week, the month and the filters across all four pages, and survives a reload", () => {
+    window.location.hash = "#schedule/month";
     writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22", projectId: "p-pinecrest", crewType: "Framing" });
-    const expectWeek = (label: string) => expect(screen.getByLabelText(`Selected week ${label}`)).toBeInTheDocument();
     const expectChips = () => {
       const chips = screen.getByLabelText("Active filters");
       expect(chips).toHaveTextContent("Pinecrest Medical");
       expect(chips).toHaveTextContent("Framing");
     };
     const pages: Array<[string, () => ReactElement, () => void]> = [
-      ["Week", () => <WeekPage {...pageProps} />, () => expectWeek("Jun 22 - Jun 28, 2026")],
-      ["List", () => <ListPage {...pageProps} />, () => expectWeek("Jun 22 - Jun 28, 2026")],
-      ["Matrix", () => <MatrixPage {...pageProps} />, () => expectWeek("Jun 22 - Jun 28, 2026")],
       [
         "Gantt",
         () => <GanttPage {...pageProps} />,
@@ -1089,21 +916,21 @@ describe("Continuity", () => {
       expectChips();
       view.unmount();
     }
-    // a step on the Week board: the List, the Month and the landing follow
-    let view = render(<WeekPage {...pageProps} />);
+    // a step on the Gantt's fitted week: the Month and the landing follow (the chart remembers the
+    // Week fit the loop above chose, so it is pressed already here)
+    let view = render(<GanttPage {...pageProps} />);
+    const weekFit = screen.getByRole("button", { name: "Week" });
+    if (weekFit.getAttribute("aria-pressed") !== "true") fireEvent.click(weekFit);
     fireEvent.click(screen.getByRole("button", { name: "Next week" }));
-    expectWeek("Jun 29 - Jul 5, 2026");
-    view.unmount();
-    view = render(<ListPage {...pageProps} />);
-    expectWeek("Jun 29 - Jul 5, 2026");
+    expect(screen.getByLabelText(/^Selected week Jun 29/)).toBeInTheDocument();
     view.unmount();
     view = render(<MonthPage {...pageProps} />);
     expect(screen.getAllByText("June 2026").length).toBeGreaterThan(0); // Monday 29 June is still June
     fireEvent.click(screen.getByRole("button", { name: "Next month" }));
     expect(screen.getAllByText("July 2026").length).toBeGreaterThan(0);
     view.unmount();
-    view = render(<WeekPage {...pageProps} />);
-    expectWeek("Jun 29 - Jul 5, 2026"); // the week that holds 1 July was already on screen
+    view = render(<SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />);
+    expect(screen.getByText(/Jun 29 - Jul 5, 2026/)).toBeInTheDocument(); // the week that holds 1 July was already on screen
     view.unmount();
     // a reload keeps only what is stored — and it is all there, in the link too
     expect(readScheduleContext(userId)).toMatchObject({
@@ -1112,8 +939,9 @@ describe("Continuity", () => {
       projectId: "p-pinecrest",
       crewType: "Framing"
     });
+    // the link is the Month's, so it carries the month (the landing's would carry the week)
     expect(parseScheduleHash(window.location.hash)?.patch).toMatchObject({
-      weekStart: "2026-06-29",
+      monthAnchor: "2026-07-01",
       projectId: "p-pinecrest",
       crewType: "Framing"
     });
@@ -1125,13 +953,13 @@ describe("Copy link", () => {
   it("puts the address of this view — this week, these filters — on the clipboard", async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    window.location.hash = "#schedule/week";
+    window.location.hash = "#schedule/month";
     writeScheduleContext(userId, { ...EMPTY_SCHEDULE_CONTEXT, weekStart: "2026-06-22", projectId: "p-pinecrest" });
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     fireEvent.click(screen.getByRole("button", { name: /Export/ }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Copy link to this view/ }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(window.location.href));
-    expect(window.location.hash).toBe("#schedule/week?w=2026-06-22&project=p-pinecrest");
+    expect(window.location.hash).toBe("#schedule/month?m=2026-06-01&project=p-pinecrest");
     await waitFor(() => expect(notice()).toHaveTextContent("Link copied"));
     window.location.hash = "";
   });
@@ -1152,10 +980,10 @@ describe("Conflicts ask before saving", () => {
         }
       ]
     });
-  /** Opens Pinecrest's drawer from its Week card and moves the job a week later, the same length. */
+  /** Opens Pinecrest's drawer from its Month chip and moves the job a week later, the same length. */
   const moveFromDrawer = async () => {
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Start"), { target: { value: "2026-06-24" } });
     fireEvent.change(within(drawer).getByLabelText("Finish"), { target: { value: "2026-06-25" } });
@@ -1198,8 +1026,8 @@ describe("Conflicts ask before saving", () => {
   });
 
   it("edits a job in place when only its status changes, and offers the way back", async () => {
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
@@ -1241,11 +1069,8 @@ describe("News from another tab", () => {
   });
 
   it("announces a change from another tab without taking away the Undo", async () => {
-    render(<WeekPage {...pageProps} />);
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-framing", date: "2026-06-17" }
-    );
+    render(<MonthPage {...pageProps} />);
+    await riversideTo("2026-06-17");
     const undo = await screen.findByRole("button", { name: "Undo" });
     expect(undo).toBeInTheDocument();
 
@@ -1259,31 +1084,12 @@ describe("News from another tab", () => {
     expect(await screen.findByText("Dana Brooks changed a booking in another tab.")).toBeInTheDocument();
     // …beside the way back, not over it. One notice slot meant this click disappeared mid-decision.
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
-    expect(screen.getByText(/Riverside Office Building moved to Framing Crew 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Riverside Office Building moved to Jun 17/)).toBeInTheDocument();
 
     // both sit inside the one live region, so a screen reader hears them in order
     const region = document.querySelector(".gantt-status-live")!;
-    expect(region).toHaveTextContent("Riverside Office Building moved to Framing Crew 2");
+    expect(region).toHaveTextContent("Riverside Office Building moved to Jun 17");
     expect(region).toHaveTextContent("Dana Brooks changed a booking in another tab.");
-  });
-});
-
-describe("What a control says it will do", () => {
-  it("names a board card for the drawer it opens, not the project it does not", () => {
-    render(<WeekPage {...pageProps} />);
-    // the card opened the job drawer while announcing itself as the way to the project record
-    const card = screen.getByRole("button", { name: "Open Pinecrest Foundations" });
-    expect(screen.queryByRole("button", { name: "Open Pinecrest Foundations project" })).toBeNull();
-    fireEvent.click(card);
-    expect(screen.getByRole("dialog", { name: "Pinecrest Foundations" })).toBeInTheDocument();
-  });
-
-  it("leaves no control on the board promising a project it will not open", () => {
-    render(<WeekPage {...pageProps} />);
-    const promisesAProject = screen.queryAllByRole("button", { name: /\bproject$/ });
-    expect(promisesAProject).toHaveLength(0);
-    // the queue's cards are not a way into anything: they say what they are for
-    expect(screen.getByRole("button", { name: "Downtown Retail Buildout — drag onto the board to book it" })).toBeInTheDocument();
   });
 });
 
@@ -1298,13 +1104,10 @@ describe("Undoing into a day somebody else took", () => {
     vi.mocked(rebookSchedule).mockResolvedValue({ assignments: [{ id: "as-new" }], removed: [], jobs: [] } as never);
   });
 
-  it("asks before double-booking on the way back, and leaves the card where it is on a no", async () => {
-    render(<WeekPage {...pageProps} />);
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-framing", date: "2026-06-17" }
-    );
-    await waitFor(() => expect(notice()).toHaveTextContent("moved to Framing Crew 2"));
+  it("asks before double-booking on the way back, and leaves the chip where it is on a no", async () => {
+    render(<MonthPage {...pageProps} />);
+    await riversideTo("2026-06-17");
+    await waitFor(() => expect(notice()).toHaveTextContent("moved to Jun 17"));
 
     // while the notice is up, somebody takes the crew-day it came from
     vi.mocked(rebookSchedule).mockRejectedValueOnce(clashOnTheWayBack());
@@ -1315,18 +1118,15 @@ describe("Undoing into a day somebody else took", () => {
     expect(ask).toHaveTextContent("Concrete Crew 1 is on Slab pour that day");
     fireEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
 
-    // a no leaves the move where it is — the card does not go home over somebody else
+    // a no leaves the move where it is — the chip does not go home over somebody else
     await waitFor(() => expect(notice()).toHaveTextContent("stays where it is"));
     expect(vi.mocked(rebookSchedule).mock.calls.filter((call) => call[1]?.force === true)).toHaveLength(0);
   });
 
   it("goes home on a yes, and only then forces it", async () => {
-    render(<WeekPage {...pageProps} />);
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-framing", date: "2026-06-17" }
-    );
-    await waitFor(() => expect(notice()).toHaveTextContent("moved to Framing Crew 2"));
+    render(<MonthPage {...pageProps} />);
+    await riversideTo("2026-06-17");
+    await waitFor(() => expect(notice()).toHaveTextContent("moved to Jun 17"));
 
     vi.mocked(rebookSchedule).mockRejectedValueOnce(clashOnTheWayBack());
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
@@ -1335,7 +1135,7 @@ describe("Undoing into a day somebody else took", () => {
 
     // the retry is the forced one, and it is the planner who forced it
     await waitFor(() => expect(vi.mocked(rebookSchedule).mock.calls.some((call) => call[1]?.force === true)).toBe(true));
-    await waitFor(() => expect(notice()).toHaveTextContent("back with Concrete Crew 1"));
+    await waitFor(() => expect(notice()).toHaveTextContent("back on Jun 15"));
   });
 });
 
@@ -1360,8 +1160,8 @@ describe("When somebody else got there first", () => {
 
   it("says who moved what, refreshes the board, and does not offer to force it", async () => {
     vi.mocked(updateJob).mockRejectedValueOnce(stale());
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
@@ -1379,8 +1179,8 @@ describe("When somebody else got there first", () => {
   });
 
   it("sends the version it read, so the server can tell", async () => {
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
@@ -1403,15 +1203,12 @@ describe("When the write lands but the board cannot refresh", () => {
 
   it("says the board may be out of date instead of claiming the change failed", async () => {
     reload.mockRejectedValueOnce(new Error("Could not reach the BuildFlow API"));
-    render(<WeekPage {...pageProps} />);
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-framing", date: "2026-06-17" }
-    );
+    render(<MonthPage {...pageProps} />);
+    await riversideTo("2026-06-17");
     // the re-book itself went through: the server has the move
     await waitFor(() => expect(rebookSchedule).toHaveBeenCalled());
     await waitFor(() => expect(notice()).toHaveTextContent("The board could not refresh, so what you see may be out of date"));
-    expect(notice()).toHaveTextContent("Riverside Office Building moved to Framing Crew 2 on Jun 17");
+    expect(notice()).toHaveTextContent("Riverside Office Building moved to Jun 17");
     expect(notice()).not.toHaveTextContent("Could not move");
     expect(notice()).toHaveClass("is-error");
     // no Undo against a board that is already behind — the way out is to refresh
@@ -1423,8 +1220,8 @@ describe("When the write lands but the board cannot refresh", () => {
 
   it("offers the refresh again when it still cannot reach the API", async () => {
     reload.mockRejectedValue(new Error("Could not reach the BuildFlow API"));
-    render(<WeekPage {...pageProps} />);
-    await drop({ jobId: "j-unassigned" }, { crewId: "crew-framing", date: "2026-06-16" });
+    render(<MonthPage {...pageProps} />);
+    await drop({ jobId: "j-unassigned", date: "2026-06-16" }, { date: "2026-06-18" });
     await waitFor(() => expect(notice()).toHaveTextContent("may be out of date"));
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() => expect(notice()).toHaveTextContent("Still could not reach the API"));
@@ -1433,8 +1230,8 @@ describe("When the write lands but the board cannot refresh", () => {
 
   it("closes the drawer on a save that landed, and keeps it open on one that did not", async () => {
     reload.mockRejectedValueOnce(new Error("Could not reach the BuildFlow API"));
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
@@ -1445,7 +1242,7 @@ describe("When the write lands but the board cannot refresh", () => {
 
     // a write that genuinely fails still says so, in the drawer, which stays open
     vi.mocked(updateJob).mockRejectedValueOnce(new Error("nope"));
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    fireEvent.click(chip(PINECREST));
     const again = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(again).getByLabelText("Status"), { target: { value: "Complete" } });
     fireEvent.click(within(again).getByRole("button", { name: "Save changes" }));
@@ -1461,8 +1258,8 @@ describe("Transactional writes", () => {
   });
 
   it("saves a move with its other changes as one re-book request, and takes it back with one", async () => {
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Pinecrest Foundations" }));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Start"), { target: { value: "2026-06-24" } });
     fireEvent.change(within(drawer).getByLabelText("Finish"), { target: { value: "2026-06-25" } });
@@ -1504,31 +1301,22 @@ describe("Correct anywhere", () => {
     workCalendar: { workingDays: [1, 2, 3, 4, 5, 6], holidays: [{ date: "2026-06-17", name: "Juneteenth (observed)" }] }
   };
 
-  it("marks the workspace's holiday on the Week board, the Matrix and the List", () => {
-    const week = render(<WeekPage {...pageProps} data={withHoliday} />);
-    expect(screen.getByText("Juneteenth (observed)")).toBeInTheDocument();
-    expect(cell("crew-framing", "2026-06-17")).toHaveClass("is-holiday");
-    week.unmount();
-    const matrix = render(<MatrixPage {...pageProps} data={withHoliday} />);
-    expect(screen.getByText("Juneteenth (observed)")).toBeInTheDocument();
-    matrix.unmount();
-    render(<ListPage {...pageProps} data={withHoliday} />);
-    expect(screen.getByText(/Juneteenth \(observed\)/)).toBeInTheDocument();
+  it("marks the workspace's holiday on the Month calendar", () => {
+    render(<MonthPage {...pageProps} data={withHoliday} />);
+    expect(screen.getAllByText("Juneteenth (observed)").length).toBeGreaterThan(0);
+    expect(document.querySelector('.sched-cal-cell[data-date="2026-06-17"]')).toHaveClass("is-holiday");
   });
 });
 
 describe("Same export everywhere", () => {
   const pages: Array<[string, () => ReactElement]> = [
     ["Schedule landing", () => <SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />],
-    ["Week", () => <WeekPage {...pageProps} />],
-    ["List", () => <ListPage {...pageProps} />],
     ["Kanban", () => <KanbanPage {...pageProps} />],
     ["Month", () => <MonthPage {...pageProps} />],
-    ["Matrix", () => <MatrixPage {...pageProps} />],
     ["Gantt", () => <GanttPage {...pageProps} />]
   ];
 
-  it("offers the same menu — CSV, link, crew week sheets, calendar feeds — on all seven pages", () => {
+  it("offers the same menu — CSV, link, crew week sheets, calendar feeds — on all four pages", () => {
     for (const [name, page] of pages) {
       const view = render(page());
       fireEvent.click(screen.getByRole("button", { name: /Export/ }));
@@ -1539,7 +1327,7 @@ describe("Same export everywhere", () => {
     }
   });
 
-  it("writes the same columns and the same rows for the same week from the landing and the Week board", () => {
+  it("writes the same columns from the landing and the Month, each under its own name", () => {
     vi.mocked(downloadCsv).mockClear();
     const csvOf = (page: ReactElement) => {
       const view = render(page);
@@ -1551,21 +1339,14 @@ describe("Same export everywhere", () => {
       return { filename: call[0], csv: call[1] };
     };
     const landing = csvOf(<SchedulePage data={data} reload={reload} onOpenPage={vi.fn()} />);
-    const week = csvOf(<WeekPage {...pageProps} />);
+    const month = csvOf(<MonthPage {...pageProps} />);
     expect(landing.filename).toBe("buildflow-schedule-2026-06-15");
-    expect(week.filename).toBe("buildflow-week-2026-06-15");
-    expect(landing.csv.split("\n")[0]).toBe(EXPORT_COLUMNS.map((column) => `"${column}"`).join(","));
-    expect(landing.csv.split("\n").sort()).toEqual(week.csv.split("\n").sort());
+    expect(month.filename).toBe("buildflow-month-2026-06");
+    const header = EXPORT_COLUMNS.map((column) => `"${column}"`).join(",");
+    expect(landing.csv.split("\n")[0]).toBe(header);
+    expect(month.csv.split("\n")[0]).toBe(header);
     expect(landing.csv).toContain("Pinecrest Foundations");
-  });
-});
-
-describe("One job, one crew-day, one booking", () => {
-  it("says a queued job dropped on the crew-day it already has is booked there, and writes nothing", async () => {
-    render(<WeekPage {...pageProps} />);
-    await drop({ jobId: "j-riverside-concrete" }, { crewId: "crew-concrete", date: "2026-06-15" });
-    expect(notice()).toHaveTextContent("Riverside Office Building is already booked with Concrete Crew 1 on Jun 15.");
-    expect(rebookSchedule).not.toHaveBeenCalled();
+    expect(month.csv).toContain("Pinecrest Foundations");
   });
 });
 
@@ -1612,9 +1393,9 @@ describe("Links from the drawer", () => {
     await waitFor(() => expect(notice()).toHaveTextContent("Riverside Office Building and Pinecrest Foundations unlinked"));
   });
 
-  it("carries the same links in the drawer on the Week board", async () => {
-    render(<WeekPage {...pageProps} data={linked} />);
-    fireEvent.click(within(cell("crew-concrete", "2026-06-15")).getByText("Riverside Office Building"));
+  it("carries the same links in the drawer on the Month calendar", async () => {
+    render(<MonthPage {...pageProps} data={linked} />);
+    fireEvent.click(chip(RIVERSIDE));
     const drawer = await screen.findByRole("dialog", { name: "Riverside Office Building" });
     const links = within(drawer).getByRole("region", { name: "Dependencies" });
     expect(links).toHaveTextContent("Leads to Pinecrest Foundations (FS)");
@@ -1631,9 +1412,9 @@ describe("Dialogs that behave like dialogs", () => {
     )
   ];
 
-  it("keeps Tab inside the job drawer and gives focus back to the card that opened it", async () => {
-    render(<WeekPage {...pageProps} />);
-    const card = within(cell("crew-concrete", "2026-06-15")).getByText("Riverside Office Building").closest("button") as HTMLElement;
+  it("keeps Tab inside the job drawer and gives focus back to the chip that opened it", async () => {
+    render(<MonthPage {...pageProps} />);
+    const card = chip(RIVERSIDE);
     card.focus();
     fireEvent.click(card);
     const drawer = await screen.findByRole("dialog", { name: "Riverside Office Building" });
@@ -1655,8 +1436,8 @@ describe("Dialogs that behave like dialogs", () => {
 
   it("says a failed save inside the drawer, where the eye already is", async () => {
     vi.mocked(updateJob).mockRejectedValueOnce(new Error("Could not reach the BuildFlow API."));
-    render(<WeekPage {...pageProps} />);
-    fireEvent.click(within(cell("crew-concrete", "2026-06-15")).getByText("Riverside Office Building"));
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(chip(RIVERSIDE));
     const drawer = await screen.findByRole("dialog", { name: "Riverside Office Building" });
     fireEvent.change(within(drawer).getByLabelText("Notes"), { target: { value: "a note that cannot be saved" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
@@ -1666,15 +1447,12 @@ describe("Dialogs that behave like dialogs", () => {
   });
 
   it("keeps a live region on the page before there is anything to announce", async () => {
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     const region = screen.getByRole("status");
     expect(region).toBeEmptyDOMElement();
     expect(region).toHaveAttribute("aria-live", "polite");
     // the message lands inside the region that was already there
-    await drop(
-      { assignmentId: "as-1", jobId: "j-riverside-concrete", crewId: "crew-concrete", date: "2026-06-15" },
-      { crewId: "crew-concrete", date: "2026-06-17" }
-    );
+    await riversideTo("2026-06-17");
     await waitFor(() => expect(region).toHaveTextContent("moved to"));
   });
 });
@@ -1682,7 +1460,7 @@ describe("Dialogs that behave like dialogs", () => {
 describe("An export says what happened", () => {
   it("tells the planner when the browser would not save the file, instead of claiming it did", async () => {
     vi.mocked(downloadCsv).mockReturnValueOnce(false);
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     fireEvent.click(screen.getByRole("button", { name: /Export/ }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Download CSV/ }));
     await waitFor(() => expect(notice()).toHaveTextContent("This browser would not save the file"));
@@ -1691,30 +1469,20 @@ describe("An export says what happened", () => {
 
   it("still says what it wrote when the file goes out", async () => {
     vi.mocked(downloadCsv).mockReturnValueOnce(true);
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     fireEvent.click(screen.getByRole("button", { name: /Export/ }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Download CSV/ }));
-    await waitFor(() => expect(notice()).toHaveTextContent(/Exported \d+ rows to buildflow-week-/));
+    await waitFor(() => expect(notice()).toHaveTextContent(/Exported \d+ rows to buildflow-month-/));
   });
 
   it("tells the planner when the print view would not open", async () => {
     vi.mocked(printHtml).mockReturnValueOnce(false);
-    render(<WeekPage {...pageProps} />);
+    render(<MonthPage {...pageProps} />);
     fireEvent.click(screen.getByRole("button", { name: /Export/ }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Print week sheets/ }));
     await waitFor(() => expect(notice()).toHaveTextContent("This browser would not open the print view"));
   });
 
-  it("gives the Matrix a legend for the colours it actually uses", () => {
-    render(<MatrixPage {...pageProps} />);
-    const legend = screen.getByLabelText("What the cells mean");
-    for (const band of ["Open", "1 booking", "2 bookings", "3 or more", "Clash to settle"]) {
-      expect(legend).toHaveTextContent(band);
-    }
-    // the status words belong to the boards that colour by status
-    expect(legend).not.toHaveTextContent("DelayIQed");
-    expect(screen.queryByLabelText("Schedule statuses")).toBeNull();
-  });
 });
 
 describe("What a phone gets", () => {

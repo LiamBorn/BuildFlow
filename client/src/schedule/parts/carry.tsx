@@ -4,12 +4,12 @@
  * One layer per page — dnd-kit's DragOverlay, a fixed layer over the page — holding a STATIC CLONE
  * of the card that was picked up: lifted off the page, tilted, and leaning the way the hand is
  * moving, while the card it came from stays where it is as the dashed slot it is leaving. The Month
- * calendar was built this way first; cloning rather than re-rendering is what let the other four
- * boards have the same gesture without a second copy of every card's face to keep in step — the
- * Week board's tile, the unbooked queue's strip, a Kanban card and a List row all carry themselves.
+ * calendar was built this way first; cloning rather than re-rendering is what let the other
+ * boards have the same gesture without a second copy of every card's face to keep in step — a
+ * Month chip, a Kanban card and a marker all carry themselves.
  *
- * A board whose card is styled through an ancestor (`.schedule-list-view button`) passes that
- * class as `host`, so the clone still matches the rules that dress it.
+ * A board whose card is styled through an ancestor passes that class as `host`, so the clone
+ * still matches the rules that dress it.
  */
 import { DragOverlay, defaultDropAnimationSideEffects, useDndContext, type ClientRect } from "@dnd-kit/core";
 import { useEffect, useLayoutEffect, useRef } from "react";

@@ -203,19 +203,6 @@ export function crewAvailability(crew: Crew, utilization: number = crew.utilizat
 
 export const scheduleStatusFilterOptions: Status[] = SCHEDULE_STATUSES;
 
-export function CrewLabel({ crew, utilization = crew.utilization }: { crew: Crew; utilization?: number }) {
-  return (
-    <div className="crew-label">
-      <strong>{crew.name}</strong>
-      <span>
-        <Users size={15} />
-        {crew.size}
-      </span>
-      <em title="Booked days this week over working days">{utilization}%</em>
-    </div>
-  );
-}
-
 export function ScheduleKpiGrid({ kpis }: { kpis: ScheduleKpis }) {
   return (
     <div className="kpi-grid schedule-kpis">

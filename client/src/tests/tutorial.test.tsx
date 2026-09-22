@@ -40,7 +40,7 @@ const ASPHALT_SETUP = {
   /* Add-ons stopped being an onboarding question on 2026-09-22 (they are bought in Settings ›
      Billing), so every setup's key is its trade and plan over "core" — the harness accepts the
      list for the call sites that still name one and records none. */
-  products: ["Map & Field Ops", "Equipment Tracking"],
+  products: ["Equipment Tracking"],
   plan: "Business" as const
 };
 const ASPHALT_KEY = setupKeyFor("asphalt", "business", []);
@@ -151,7 +151,7 @@ describe("BuildFlow onboarding tutorial", () => {
     // The same person setting up a different product mix is not asked twice: seen is seen.
     view.unmount();
     render(<App />);
-    await completeOnboarding({ ...ASPHALT_SETUP, products: ["Map & Field Ops"] });
+    await completeOnboarding({ ...ASPHALT_SETUP, products: [] });
     expect(screen.queryByRole("dialog", { name: TUTORIAL_TITLE })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "BuildFlow tutorial" })).not.toBeInTheDocument();
   });
@@ -285,8 +285,8 @@ describe("BuildFlow onboarding tutorial", () => {
     await createCrewThroughTutorial();
     fireEvent.click(tutorialNext());
 
-    // The Week board step is informational …
-    expect(await tutorial().findByRole("heading", { name: "Read the Week board" })).toBeInTheDocument();
+    // The Month calendar step is informational …
+    expect(await tutorial().findByRole("heading", { name: "Read the Month calendar" })).toBeInTheDocument();
     expect(tutorialNext()).toBeEnabled();
     fireEvent.click(tutorialNext());
 
@@ -294,8 +294,10 @@ describe("BuildFlow onboarding tutorial", () => {
     expect(await tutorial().findByRole("heading", { name: "Add a job to the schedule" })).toBeInTheDocument();
     expect(tutorialNext()).toBeDisabled();
     expect(tutorial().getByRole("status")).toHaveTextContent("Open the Add job to schedule form to continue.");
-    fireEvent.click(await screen.findByRole("button", { name: "Add job to Tutorial Crew 1 on Jun 16" }));
+    // the day's "+" on the calendar opens the picker on the first crew — the one just created
+    fireEvent.click(await screen.findByRole("button", { name: "Add a job on Jun 16" }));
     const jobDialog = await screen.findByRole("dialog", { name: "Add job to schedule" });
+    expect(within(jobDialog).getByText("Tutorial Crew 1 · Jun 16")).toBeInTheDocument();
     await waitFor(() => expect(tutorialNext()).toBeEnabled());
     fireEvent.click(tutorialNext());
 

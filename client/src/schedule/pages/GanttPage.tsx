@@ -200,7 +200,7 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
   const [zoom, setZoom] = useState<number>(() => readPreference<number>("gantt:zoom", 100));
   // a moved bar shows at once; fresh server data — or a refused save — settles it
   const [overrides, setOverrides] = useState<Record<string, Partial<Job>>>({});
-  // everything the seven schedule pages share, with the page's own moves on the jobs and the CPM readout built
+  // everything the four schedule pages share, with the page's own moves on the jobs and the CPM readout built
   const page = useSchedulePage({ data: liveData, reload, onOpenPage, page: "gantt", overrides, cpm: true });
   const {
     data,

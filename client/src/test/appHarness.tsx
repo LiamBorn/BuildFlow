@@ -135,13 +135,9 @@ export async function openCreateAccount() {
 export const HUB_OF: Record<string, string> = {
   Projects: "Operations",
   Crews: "Operations",
-  Contacts: "Sales",
-  Companies: "Sales",
-  Deals: "Sales",
   Equipment: "Resources",
   Materials: "Resources",
   "Field Updates": "Field",
-  "Map & Field Ops": "Field",
   DelayIQs: "Field"
 };
 /** Open an app page from the rail: hover its hub (React listens to mouseover, not mouseenter), then pick it from the flyout. */
@@ -153,13 +149,12 @@ export async function openAppPage(item: string) {
   fireEvent.click(await screen.findByRole("menuitem", { name: new RegExp(`^${item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) }));
 }
 
-/** Open the Schedule page from the app sidebar. The board opens on Month, so the
-    crew-by-day grid, its queue, and the week controls need an explicit view. */
-export async function openSchedule(view?: "Month" | "Week" | "List" | "Gantt" | "Kanban" | "Matrix") {
+/** Open the Schedule page from the app sidebar: the landing, or one of its three views. */
+export async function openSchedule(view?: "Month" | "Gantt" | "Kanban") {
   const hub = await screen.findByRole("button", { name: /^Schedule( \(.*\))?$/i });
   if (!view) {
     fireEvent.click(hub);
-    // the Schedule page is a landing since 2026-09-08; the six views live on their own pages
+    // the Schedule page is a landing since 2026-09-08; the views live on their own pages
     await screen.findByRole("heading", { name: "The whole plan, at a glance." });
     return;
   }
@@ -215,7 +210,7 @@ export async function chooseSizeAndPlan(plan: "Free" | "Pro" | "Business") {
 export async function completeOnboarding({
   email = ACCOUNT.email,
   businessType = "Concrete",
-  products = ["Map & Field Ops"],
+  products = [],
   plan = "Pro"
 }: {
   email?: string;
@@ -238,20 +233,6 @@ export async function completeOnboarding({
   fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
   // Onboarding completes straight into the Dashboard now.
   await screen.findByLabelText("Search BuildFlow");
-}
-
-/** Reach Map & Field Ops from the app sidebar (it used to be a HUD launch tile). */
-export async function openMapFieldOps() {
-  await signUp({ email: "route@buildflow.test" });
-  await chooseBusinessType("Asphalt");
-  state.bootstrapPayload = state.businessProfilePayload;
-  // Business bundles Map & Field Ops; add-ons are not an onboarding question any more (2026-09-22)
-  await chooseSizeAndPlan("Business");
-  fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Skip Tutorial" }));
-  await openAppPage("Map & Field Ops");
-  // the page opens on the Schedule pages' board since 2026-09-22 (mapops/MapOpsPage.tsx)
-  await screen.findByRole("heading", { name: "Every site, live." });
 }
 
 /** beforeEach/afterEach for a describe block: fresh fake server, clean storage, clean URL. */

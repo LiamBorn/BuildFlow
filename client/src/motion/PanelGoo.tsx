@@ -66,7 +66,7 @@ const SURFACE = ".bf-breeze-main";
  * these MOUNT when they open, so there is no class to watch: they are measured
  * as they arrive.
  */
-const RIGHT_PANELS = ".pdx, .hs-record-layer, .gantt-drawer-layer, .schedule-dialog-backdrop, .bfsp";
+const RIGHT_PANELS = ".pdx, .gantt-drawer-layer, .schedule-dialog-backdrop, .bfsp"; // (the Sales record panel's layer left with its hub, 2026-09-22)
 /**
  * The icon rail's flyout, which is the one panel here opened by HOVER rather
  * than by a click — so it is measured from the rail button the pointer is on,
@@ -85,7 +85,7 @@ const HOVER_TRIGGERS = ".hs-rail-slot, .hs-rail-btn";
  * confirmation, it is a panel opened from a button at the screen's edge, and it
  * was asked for by name (2026-09-19).
  */
-const RIGHT_SURFACE = ".pdx-dialog:not(.pdx-confirm), .bffb-dialog, .hs-record, .gantt-drawer, .schedule-job-picker, .bfsp-drawer";
+const RIGHT_SURFACE = ".pdx-dialog:not(.pdx-confirm), .bffb-dialog, .gantt-drawer, .schedule-job-picker, .bfsp-drawer";
 /** Anything a person could plausibly have opened a panel with. */
 const CLICKABLE = "button, [role='button'], a[href], tr, [role='row'], summary, [role='menuitem'], label";
 

@@ -1,13 +1,12 @@
 /**
- * The schedule pages' shared pieces, one import away: the view parts (shared, week,
- * month, kanban, matrix), the hooks, and the pure helpers the pages read through here.
+ * The schedule pages' shared pieces, one import away: the view parts (shared, the
+ * "Add job" picker, month, kanban), the hooks, and the pure helpers the pages read through here.
  */
 export * from "./carry";
 export * from "./shared";
 export * from "./week";
 export * from "./month";
 export * from "./kanban";
-export * from "./matrix";
 export * from "./ScheduleDrawer";
 export * from "./JobDrawer";
 export * from "./MilestoneDrawer";

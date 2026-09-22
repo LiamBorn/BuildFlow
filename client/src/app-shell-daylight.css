@@ -778,8 +778,7 @@
 }
 /* the primary cell carries the row's identity */
 .bf-shell .hs-index .hs-table tbody td:first-of-type,
-.bf-shell .hs-index .hs-table tbody td .hs-cell-strong,
-.bf-shell .hs-index .hs-table tbody td .hs-link-plain {
+.bf-shell .hs-index .hs-table tbody td .hs-cell-strong {
   font-size: var(--bf-app-row-strong);
   font-weight: 600;
   color: var(--bf-ink);
@@ -1478,22 +1477,18 @@
    - schedule-phone.css:235-305 names 21 selectors at a 40px minimum tap target
      and loads BEFORE this sheet, so any height or vertical padding here would
      silently shrink a phone tap target.
-   - touch-action on .schedule-job and .sched-act is owned by schedule-phone.css;
+   - touch-action on .sched-act and .sched-kan-card is owned by schedule-phone.css;
      re-declaring it changes whether a swipe scrolls or lifts a card.
-   - the Matrix's doubled `.sched-matrix.sched-matrix { overflow: visible }`:
-     re-introducing overflow:hidden for rounded corners kills every Matrix
-     tooltip and fails pages.test.tsx's Matrix case.
-   - the four grid templates (the Week header and rows, declared three times
-     across styles.css, schedule.css and schedule-phone.css with a sticky crew
-     column, and the Month's four cell min-heights).
+   - the Month's grid template and its four cell min-heights.
+   (The Week board's grid templates and the Matrix's doubled overflow rule were
+   on this list until those pages left on 2026-09-22 — docs/backlog.md.)
    - .gantt-frame's height clamp. Step 0 measured it: the 336px is not a chrome
      sum, the frame is not viewport-pinned, and nothing clips it.
    - the landing h1 string, which appHarness.openSchedule() awaits, so it is
      load-bearing for every test in every area that opens Schedule.
 
    ALREADY ON THE LANGUAGE and deliberately left: .schedule-board at 20px on the
-   soft shadow, .kpi-card at 20px, .schedule-job at 14px (its border is the job's
-   STATUS colour, which is data, not decoration), and every 999px control -
+   soft shadow, .kpi-card at 20px, and every 999px control -
    .week-stepper, .select-box, .outline-button, .sched-views-add, .sched-book.
    ============================================================================ */
 
@@ -1547,8 +1542,9 @@
   box-shadow: var(--bf-shadow-card-hover);
 }
 /* CORRECTED after step 6 shipped. My first version also set border-radius here,
-   and that declaration was INERT: redesign.css pins .schedule-side-panel and
-   .unassigned-card with `border-radius: var(--r-md) !important`, and !important
+   and that declaration was INERT: redesign.css pinned .schedule-side-panel and
+   .unassigned-card (both gone with the Week board, 2026-09-22) with
+   `border-radius: var(--r-md) !important`, and !important
    beats any specificity. It only looked right because --r-md is 12px, the same
    value I had written — so the rule was a no-op that happened to agree.
    My cascade audit missed it because it compared specificity and ignored
@@ -1556,10 +1552,6 @@
    12px is on the ladder, so the correct fix is to stop declaring a radius that
    something else owns rather than to fight it with a counter-!important.
    .sched-queue-row is not in that pinned list, so it keeps its radius. */
-.bf-shell .sched-rx .schedule-side-panel,
-.bf-shell .sched-rx .unassigned-card {
-  border-color: rgba(var(--bf-line-rgb), 0.07);
-}
 .bf-shell .sched-rx .sched-queue-row {
   border-color: rgba(var(--bf-line-rgb), 0.07);
   border-radius: var(--bf-radius-control);
@@ -1584,8 +1576,7 @@
   border-color: var(--bf-accent-dark);
   box-shadow: 0 8px 22px rgba(var(--bf-accent-rgb), 0.28);
 }
-.bf-shell .sched-rx .sched-rail-foot-btn,
-.bf-shell .sched-rx .schedule-add-job-button {
+.bf-shell .sched-rx .sched-rail-foot-btn {
   border-radius: var(--bf-radius-control);
   /* rgb(203,216,232) was a navy-era line colour */
   border-color: rgba(var(--bf-line-rgb), 0.13);
@@ -1602,10 +1593,11 @@
   color: var(--bf-ink-muted);
 }
 
-/* ---- 11d. the board's day heads are deliberately NOT made eyebrows -----
+/* ---- 11d. (history — the Week board and the Matrix left on 2026-09-22)
+   the board's day heads were deliberately NOT made eyebrows -----
    My first pass tried to give them the eyebrow, against `.day-label` and
-   `.sched-matrix thead th`. Both match nothing: the Week board's day heads are
-   `.schedule-header > strong` and the Matrix is not a table. Having found the
+   `.sched-matrix thead th`. Both matched nothing: the Week board's day heads were
+   `.schedule-header > strong` and the Matrix was not a table. Having found the
    real selectors I am choosing not to use them. Those heads are already 13px
    uppercase, and they are the board's primary date axis rather than a repeated
    secondary label - shrinking a date to 11.5px #8a877e on the densest surface
@@ -1777,60 +1769,9 @@
 /* ---- 14a. the record drawer -------------------------------------------- */
 /* .hs-record carried rgba(20, 32, 58, 0.22) — a navy-tinted side shadow. Kept
    directional, since it is a drawer, but on the ink ladder's float alpha. */
-.bf-shell .hs-record {
-  box-shadow: -24px 0 70px rgba(var(--bf-line-rgb), 0.14);
-}
-.bf-shell .hs-record-backdrop {
-  background: rgba(var(--bf-line-rgb), 0.28);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-.bf-shell .hs-record-card,
-.bf-shell .hs-timeline-body {
-  border-color: rgba(var(--bf-line-rgb), 0.07);
-  border-radius: var(--bf-radius-control);
-}
 /* The drawer's controls were the one place in the product still shipping 8px
    rectangles, because section 7 is scoped to .hs-index and the drawer is not
    inside it. Same grammar as everywhere else now. */
-.bf-shell .hs-record .hs-btn {
-  border-radius: 999px;
-  border: 1px solid rgba(var(--bf-line-rgb), 0.13);
-  background: transparent;
-  color: var(--bf-ink);
-  font-size: var(--bf-app-row);
-  font-weight: 600;
-  transition:
-    background var(--bf-dur-hover) ease,
-    color var(--bf-dur-hover) ease,
-    border-color var(--bf-dur-hover) ease;
-}
-.bf-shell .hs-record .hs-btn:hover {
-  background: var(--bf-ink);
-  border-color: var(--bf-ink);
-  color: var(--bf-on-accent);
-}
-.bf-shell .hs-record .hs-btn.hs-btn-primary {
-  background: var(--bf-accent-fill);
-  border-color: var(--bf-accent);
-  color: var(--bf-on-accent);
-  box-shadow: 0 4px 12px rgba(var(--bf-accent-rgb), 0.2);
-}
-.bf-shell .hs-record .hs-btn.hs-btn-primary:hover {
-  background: var(--bf-accent-dark);
-  border-color: var(--bf-accent-dark);
-}
-.bf-shell .hs-record .hs-search,
-.bf-shell .hs-record .hs-qf {
-  border-radius: 999px;
-  border-color: rgba(var(--bf-line-rgb), 0.13);
-}
-.bf-shell .hs-record .hs-btn:focus-visible,
-.bf-shell .hs-record .hs-search:focus-within,
-.bf-shell .hs-record .hs-qf:focus-visible {
-  outline: 2px solid var(--bf-focus-ink);
-  outline-offset: 2px;
-}
 
 /* ---- 14b. the AI panel -------------------------------------------------
    Surface only. rgba(20,32,58,0.26) was navy; the two marks were
@@ -2377,8 +2318,8 @@
    BANDS rather than 42 steps. Retimed from 0.5s/55ms to 0.4s/40ms so the last
    band starts at 200ms instead of 275ms. It is also the one animation in
    schedule.css that no reduce block covers -- the seven blocks there cover
-   .ss-band, .dx-dot, [data-reveal], .kpi-card, .schedule-job, .unassigned-card,
-   .dx-aurora, .is-pending, .is-live, .sched-matrix-tip, .sched-kan-card and the
+   .ss-band, .dx-dot, [data-reveal], .kpi-card, .dx-aurora, .is-pending,
+   .is-live, .sched-kan-card and the
    Gantt family, and .sched-cal-cell is in none of them. So opening Month with
    reduced motion on slides the whole grid. Guarded in 16k. */
 .bf-shell .sched-rx .sched-cal-cell {
@@ -2436,14 +2377,6 @@
 .bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing {
   animation: bf-land-ring var(--bf-dur-flash) var(--bf-ease) both;
 }
-.bf-shell .hs-deal-card.is-landing {
-  animation: bf-land-card var(--bf-dur-flash) var(--bf-ease) both;
-  /* 0.32s fired 20ms BEFORE the flight it is supposed to follow, because
-     DEAL_DROP_ANIMATION is 340ms. On a slow frame the ring appeared beside the
-     card instead of around it. The token mirrors the JS constant so the pair
-     cannot drift again. */
-  animation-delay: var(--bf-dur-drop-lane);
-}
 /* the real selector puts .is-landing on the FEATURE and the ring on the bar
    inside it; `.gantt-bar.is-landing` matches zero elements */
 .bf-shell .sched-rx .gantt-feature.is-landing .gantt-bar {
@@ -2468,9 +2401,6 @@
    .hs-deal-card, where a lane is bounded. Nothing else changes: the rows are
    already at full opacity without the animation, because the hidden state is
    the keyframe's own `from`, not a rest-state rule. */
-.bf-shell .contacts-page .hs-table tbody tr {
-  animation: none;
-}
 /* The plan said to KEEP hsc-row-in on .hs-deal-card "with the index capped at
    8". Checked: the deal card's rule (hs-contacts.css:1365) carries no
    animation-delay at all and the card is never given --i, so there is no
@@ -2668,7 +2598,6 @@
      name, and the board's aria-live announcer still speaks every keyboard
      nudge. Removing the animation must never remove the announcement. */
   .bf-shell .dash-rx.hs-home .dash-board .dash-block.is-landing,
-  .bf-shell .hs-deal-card.is-landing,
   .bf-shell .sched-rx .gantt-feature.is-landing .gantt-bar,
   .bf-shell .sched-rx .is-live {
     animation: none;

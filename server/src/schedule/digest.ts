@@ -179,8 +179,8 @@ const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ?
 const later = (days: number) =>
   days === 0 ? "same start" : `${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} ${days > 0 ? "later" : "earlier"}`;
 
-/** The Week board on a week, as a link into the app. */
-export const weekLink = (appUrl: string, weekOf: string) => `${appUrl.replace(/\/?$/, "/")}#schedule/week?w=${weekOf}`;
+/** The Schedule landing on a week, as a link into the app (its status, alerts and queue are the week's). */
+export const weekLink = (appUrl: string, weekOf: string) => `${appUrl.replace(/\/?$/, "/")}#schedule?w=${weekOf}`;
 
 /** The email: a line per change, in the order a planner reads them; with `appUrl`, a link to the week. */
 export function digestNotice(digest: WeeklyDigest, orgName: string, appUrl?: string): OpsNotice {

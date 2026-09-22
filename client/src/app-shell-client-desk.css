@@ -121,7 +121,7 @@
    bad), the orange, the four faces, the tile, the trades, the chart series and
    the selection. Every rule in this sheet reads these tokens; nothing carries a
    colour of its own any more. The set is declared on the BODY so the portals
-   (.pdx, .hs-record-layer, .bf-breeze, the update modal) inherit it too, and it
+   (.pdx, .bf-breeze, the update modal) inherit it too, and it
    has a dark-mode reading so Theme Mode keeps working on top of it.
    "Default" is the base every set starts from, and it is deliberately no colour
    at all: white, gray and black. A set is a block that overrides the hints it
@@ -1010,8 +1010,7 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) {
 .app-shell.hs-shell.bf-shell .ss-band,
 .app-shell.hs-shell.bf-shell .hs-index .hs-kpi,
 .app-shell.hs-shell.bf-shell .bm-tile,
-.app-shell.hs-shell.bf-shell .tc-dash-card,
-.app-shell.hs-shell.bf-shell .hs-record-card {
+.app-shell.hs-shell.bf-shell .tc-dash-card {
   border: 0;
   border-radius: var(--bf-radius-card);
   background: var(--bf-surface);
@@ -3265,199 +3264,16 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 }
 
 /* ============================================================================
-   15. THE WEEK PAGE, INSIDE: the crew × day board
+   15. THE SCHEDULE BOARDS' SHARED PIECES: the live chip, the badges, the legend
    ----------------------------------------------------------------------------
-   The Week page is the schedule frame (section 12) around the board card —
-   seven day columns by the crews — with the unassigned queue and the alerts
-   beside it. What its own sheets still drew their own way: the day heads
-   (13px/850 uppercase on a blue-white band), the crew labels, the dashed
-   "Add job" boxes, the status-tinted job cards on literal blues, the queue's
-   header count and cards, the five-dot legend and the empty state. Here the
-   board is the card; its heads are eyebrows over a 15px display date; the grid
-   keeps its hairlines (a 7-column board needs them) in the reference's line
-   colour; "Add job" is a surface-2 tile; a job card carries its status as the
-   semantic wash — ok for confirmed / on site / complete, info for ready and
-   ready-to-start, the lime wash for in progress (the reference's lime says
-   "now"), bad for delayIQed / at risk, surface-2 for planned — with a 13px
-   title, 11.5px phase and 10.5px hours; the queue's cards are surface-2 tiles;
-   the legend a row of tiny chips whose dots read the same five tones. The
-   sticky crew column on phones (schedule-phone.css) sets its own background
-   and padding, so neither is touched here. The 12px radius redesign.css pins
-   with !important on the side panel and the queue card is left as it is.
+   This section dressed the Week page's crew × day board — its day heads, crew
+   labels, "Add job" tiles, status-washed job cards and the unbooked queue. The
+   board left the product on 2026-09-22 (docs/backlog.md) and those rules went
+   with it. What stays is what every schedule board shares: the "edited by …"
+   chip (15b), the status badge and a lane's "show more" (15c), the badges'
+   five tones (15e), and the legend and empty state (15d).
    ============================================================================ */
-/* ---- 15a. the board card and its heads ---- */
-.app-shell.hs-shell.bf-shell .sched-rx.week-page .schedule-board {
-  border: 0;
-  border-radius: var(--bf-radius-card);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-header {
-  background: var(--bf-surface);
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-header > span {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-header strong {
-  gap: 2px;
-  min-height: 64px;
-  border-left: 1px solid var(--bf-line-solid);
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  text-transform: none;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-header strong em {
-  font-family: var(--bf-font-active, inherit);
-  font-size: 10.5px;
-  font-style: normal;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-header strong.is-off {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-header strong.is-holiday {
-  color: var(--sc-holiday);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .crew-row {
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .crew-label {
-  gap: 6px;
-  border-right: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .crew-label strong {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .crew-label span {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-/* the crew's booked share for the week: the small pill */
-.app-shell.hs-shell.bf-shell .sched-rx .crew-label em {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-cell {
-  border-right: 1px solid var(--bf-line-solid);
-}
-/* a drop target while a card is carried: the lime, ringed in ink */
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-cell.over {
-  background: color-mix(in srgb, var(--bf-accent-fill) 38%, var(--bf-surface));
-  box-shadow: inset 0 0 0 2px var(--bf-ink);
-}
-/* "Add job": a surface-2 tile, not a dashed box */
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-add-job-button {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-add-job-button svg {
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-add-job-button:hover {
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-add-job-button:focus-visible {
-  border-color: transparent;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  box-shadow: 0 0 0 2px var(--bf-focus-ink);
-}
-
-/* ---- 15b. the job cards: a status is the semantic wash ---- */
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job {
-  gap: 4px;
-  padding: 10px;
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.focused {
-  box-shadow: 0 0 0 2px var(--bf-focus-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.confirmed,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.on-site,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.complete,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.confirmed,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.on-site,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.complete {
-  background: var(--cc-green-soft);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.ready,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.ready-to-start,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.ready,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.ready-to-start {
-  background: var(--cc-violet-soft);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.in-progress,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.in-progress {
-  background: var(--cc-blue-soft);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.delayIQed,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.at-risk,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.delayIQed,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.at-risk {
-  background: var(--cc-red-soft);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.planned,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.not-started,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.planned,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.not-started {
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job strong,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card strong {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job > span,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job em,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card b {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
+/* ---- 15b. a job somebody else is moving ---- */
 /* "edited by …" while another planner moves it: the lime chip */
 .app-shell.hs-shell.bf-shell .sched-rx .sched-live-by {
   padding: 2px 8px;
@@ -3467,53 +3283,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-weight: 600;
 }
 
-/* ---- 15c. the queue beside the board ---- */
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-side-panel {
-  border: 0;
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-panel-header {
-  min-height: 56px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-panel-header h2 {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-panel-header > span {
-  min-width: 0;
-  height: auto;
-  padding: 3px 8px;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-list {
-  gap: 8px;
-  padding: 12px 14px 14px;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card {
-  gap: 10px;
-  padding: 10px 12px;
-  border: 0;
-  background: var(--bf-hover);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card:hover {
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-  transform: translateY(-2px);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card .drag-grip {
-  color: var(--bf-ink-faint);
-}
+/* ---- 15c. the badge, and a lane's "show more" ---- */
 .app-shell.hs-shell.bf-shell .sched-rx .badge {
   display: inline-flex;
   align-items: center;
@@ -3641,132 +3411,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-weight: 500;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell .sched-rx .schedule-job:hover,
-  .app-shell.hs-shell.bf-shell .sched-rx .unassigned-card:hover {
-    transform: none;
-  }
-}
-
-/* ============================================================================
-   16. THE LIST PAGE, INSIDE: the week as day-grouped rows
-   ----------------------------------------------------------------------------
-   The List page is the schedule frame around one card holding a column head
-   (Time · Job · Crew · Status), then a section per day — a day head, its
-   bookings as rows, or one quiet line when nothing is booked — and the same
-   five-dot legend at the foot. Here the column head is a row of eyebrows, the
-   day head a 13px display date on the second surface (today's carries the
-   lime, the reference's mark for now; a holiday keeps its colour), the rows
-   hairline rows in the reference's line colour with a 13px title and an
-   11.5px detail, a hover on the second surface instead of a blue inset ring,
-   the carried row lifted on the deepest card shadow, a day taking a drop
-   washed lime with an ink ring. Badges and the legend are sections 15d/15e.
-   The phone layout of a row (schedule-phone.css ≤640px re-templates the grid)
-   is not touched: nothing here sets a grid.
-   ============================================================================ */
-.app-shell.hs-shell.bf-shell .sched-rx.list-page .schedule-board {
-  border: 0;
-  border-radius: var(--bf-radius-card);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view header {
-  min-height: 48px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--bf-line-solid);
-  background: var(--bf-surface);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-dayhead {
-  padding: 9px 20px;
-  border-bottom: 1px solid var(--bf-line-solid);
-  background: var(--bf-hover);
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-day.is-empty .sched-list-dayhead {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-day.is-today .sched-list-dayhead {
-  background: color-mix(in srgb, var(--bf-accent-fill) 38%, var(--bf-hover));
-  color: var(--bf-color-on-accent);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-day.is-holiday .sched-list-dayhead {
-  color: var(--sc-holiday);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-day.drop-over {
-  box-shadow: inset 0 0 0 2px var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-day.drop-over .sched-list-dayhead {
-  background: color-mix(in srgb, var(--bf-ink) 12%, var(--bf-hover));
-  color: var(--bf-color-on-accent);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view button {
-  min-height: 64px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--bf-line-solid);
-  background: transparent;
-  transition:
-    background var(--bf-dur-hover) var(--bf-ease-size),
-    box-shadow var(--bf-dur-hover) var(--bf-ease);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view button:hover {
-  background: var(--bf-hover);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view button.focused {
-  box-shadow: inset 0 0 0 2px var(--bf-focus-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view button > span:first-child strong {
-  font-family: var(--bf-font-display);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-quiet {
-  padding: 8px 20px;
-  border-bottom: 1px solid var(--bf-line-solid);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-list-day.drop-over .sched-list-quiet {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-empty {
-  margin: 14px 18px;
-  padding: 24px;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-empty strong {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-
 /* ============================================================================
    17. THE KANBAN PAGE, INSIDE: five lanes of cards
    ----------------------------------------------------------------------------
@@ -3812,10 +3456,10 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
       called an outline. It is now a 12% tint of the ink, #d7d7d7 on #f1f1f1: plainly the target,
       plainly not black, and it follows the mode because both halves of the mix are mode-owned.
 
-   The Month cell and the List day head carried the identical declaration and went identically
-   black, so all three drop targets were re-mixed together. The two `is-today` markers keep the
-   fill they were designed with — they are not drop targets. The card's own dashed slot still
-   says where it will land. */
+   The Month cell carried the identical declaration and went identically black, so both drop
+   targets were re-mixed together (the List day head's went with the List page, 2026-09-22).
+   The two `is-today` markers keep the fill they were designed with — they are not drop targets.
+   The card's own dashed slot still says where it will land. */
 .app-shell.hs-shell.bf-shell .sched-rx .sched-kan-lane.drop-over {
   background: color-mix(in srgb, var(--bf-ink) 12%, var(--bf-hover));
 }
@@ -3908,198 +3552,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   .app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card:hover {
     transform: none;
   }
-}
-
-/* ============================================================================
-   18. THE MATRIX PAGE, INSIDE: the crew × day load grid
-   ----------------------------------------------------------------------------
-   The Matrix page is the schedule frame around one card holding the grid —
-   a head (Crew · seven days · Load), a row per crew whose cells shade by how
-   many bookings the crew has that day, a conflict ringed, a Load column with
-   the week's total and an availability pill — and the load legend at the
-   foot. Here the board is the card; the grid keeps its hairlines in the
-   reference's line colour (a matrix is its lines); Crew and Load are
-   eyebrows, a day head a 13px display name over its date; the load bands are
-   the reference's own lime ramp (accent-50 → 100 → 200) instead of a blue
-   mixed three ways, the count a small white chip on the wash, a conflict the
-   bad pair with its ring, a hover an ink ring; the Load column's total a 15px
-   display figure and the availability the small pill on ok / warn / info; the
-   legend's swatches the same ramp. UNTOUCHED, because the guard and the phone
-   sheet depend on them: the grid's `overflow: visible` (its tooltip escapes
-   it), the tooltip's visibility and display rules, the phone's sticky Crew
-   column (its background and shadow are the phone sheet's), and every grid
-   template.
-   ============================================================================ */
-.app-shell.hs-shell.bf-shell .sched-rx.matrix-page .schedule-board {
-  padding: 18px 20px 0;
-  border: 0;
-  border-radius: var(--bf-radius-card);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix {
-  margin-bottom: 18px;
-  border: 1px solid var(--bf-line-solid);
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-surface);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix.sched-matrix .sched-matrix-head {
-  border-radius: var(--bf-radius-panel) var(--bf-radius-panel) 0 0;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-head {
-  background: var(--bf-hover);
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-corner,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-col {
-  border-left: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-corner,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-col.is-total {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-col b {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-col em {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-row {
-  border-top: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-crew strong {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-crew em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-/* the cells: the lime ramp says how loaded a day is */
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell {
-  border-left: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell b {
-  min-width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  box-shadow: var(--bf-shadow-card);
-  font-family: var(--bf-font-display);
-  font-size: 11.5px;
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-0 {
-  background: transparent;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.is-holiday {
-  background: color-mix(in srgb, var(--sc-holiday) 9%, var(--bf-surface));
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-1 {
-  background: var(--bf-color-accent-wash);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-2 {
-  background: var(--bf-color-accent-wash-2);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-3 {
-  background: var(--bf-color-accent-wash-3);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-1 b,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-2 b,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.load-3 b {
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.is-conflict {
-  background: var(--cc-red-soft);
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cc-red) 55%, transparent);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell.is-conflict b {
-  background: var(--bf-surface);
-  color: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell:hover {
-  box-shadow: inset 0 0 0 2px var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-cell:focus-visible {
-  outline: 2px solid var(--bf-focus-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-tip {
-  padding: 6px 10px;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-/* the Load column */
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-total {
-  border-left: 1px solid var(--bf-line-solid);
-  background: color-mix(in srgb, var(--bf-hover) 60%, var(--bf-surface));
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-total b {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-util {
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-util.available {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-util.limited {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-matrix-util.busy {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-/* the legend's swatches carry the cells' own ramp */
-.app-shell.hs-shell.bf-shell .sched-rx .sched-load-legend i {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  border: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-load-legend .load-0 {
-  background: var(--bf-surface);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-load-legend .load-1 {
-  background: var(--bf-color-accent-wash);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-load-legend .load-2 {
-  background: var(--bf-color-accent-wash-2);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-load-legend .load-3 {
-  background: var(--bf-color-accent-wash-3);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-load-legend .is-conflict {
-  background: var(--cc-red-soft);
-  border-color: color-mix(in srgb, var(--cc-red) 55%, transparent);
 }
 
 /* ============================================================================
@@ -5094,7 +4546,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 }
 
 /* ============================================================================
-   21. THE INDEX PAGES' ENTRANCE (Projects, Crews, the Sales pages, Equipment, Materials, DelayIQs, Field Updates): the same cascade
+   21. THE INDEX PAGES' ENTRANCE (Projects, Crews, Equipment, Materials, DelayIQs, Field Updates): the same cascade
    ----------------------------------------------------------------------------
    The Projects and Crews pages are the KPI strip over one index card (title row, views,
    toolbar, the table, the pager). On the click that opens it: the four KPI
@@ -5180,14 +4632,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   > :nth-child(n + 6) {
   --bfe-r: 5;
 }
-/* ...but never the lifted card. dnd-kit draws a dragged card in a box of its own, a bare child
-   of the index card, so the row cascade above claimed it — and an animation's transform outranks
-   the inline one dnd-kit rewrites every frame, so `backwards` pinned the ghost at the first
-   keyframe for the whole delay and the card stopped following the hand (2026-09-17). The drag
-   layer is not part of the page arriving. */
-.app-shell.hs-shell.bf-shell .hs-index-main .hs-index-card > .hs-drag-overlay {
-  animation: none;
-}
 /* the table's rows, top to bottom, once the table itself is in */
 .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr {
   --bfe-r: 0;
@@ -5264,7 +4708,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 }
 
 /* ============================================================================
-   22. THE INDEX PAGES, INSIDE (Projects, Crews, the Sales pages, Equipment, Materials, DelayIQs, Field Updates): the KPI strip and the index card
+   22. THE INDEX PAGES, INSIDE (Projects, Crews, Equipment, Materials, DelayIQs, Field Updates): the KPI strip and the index card
    ----------------------------------------------------------------------------
    The Projects page (and the Crews page, the same shape) is four KPI tiles over one card: its title row with
    actions, the views, a toolbar (search · Filter · Sort · the count), the
@@ -5827,48 +5271,16 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 }
 
 /* ============================================================================
-   23. THE CONTACTS AND COMPANIES PAGES, INSIDE: the extra tones, and the record panels
+   23. THE INDEX TABLE'S EXTRA TONES, AND THE PORTALS' DARK PALETTE
    ----------------------------------------------------------------------------
-   The Contacts page is the index shape sections 21-22 already cover (five KPI
-   tiles, the card, the table with email / phone / status / owner / activity
-   columns and three row actions). What it adds: two tones the contact list
-   uses (teal, slate), the plain email and phone links in the rows, and the
-   record panel that slides in from the right — a header (avatar, name, title,
-   contact links, tags, owner), HubSpot's row of round actions (email · text ·
-   call · task · meeting), a composer, then sections: highlights, properties,
-   the activity timeline, associated records, tasks and meetings, notices.
-   Here it is the reference's card language: the panel on the stage radius
-   with the deepest shadow, the avatar one of the gradient faces, a 20px
-   display name, contact links as tiny pills, tags on the semantic pairs, the
-   actions 40px white discs (ink when active) with 11.5px labels, the composer
-   and every tile on the second surface, eyebrow labels over figures, chip
-   rows for the timeline, tasks, meetings and associations, and the HubSpot
-   blues gone.
+   This section dressed the Contacts and Companies pages and their record
+   panel; the Sales category left the product on 2026-09-22 (docs/backlog.md)
+   and those rules went with it. What stays: the two extra tones the index
+   table can wear (23a), and the dark palette every body portal — the editing
+   dialogs, the dropdown and calendar layers, the update modal, the section
+   picker — takes from the shell (23b).
    ============================================================================ */
-/* ---- 23a. the list's extra tones and plain links ---- */
-.app-shell.hs-shell.bf-shell .contacts-page .hs-badge.tone-teal {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-badge.tone-slate {
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-link-plain {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bf-ink);
-  text-decoration: none;
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-link-plain:hover {
-  color: var(--bf-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-cell-none {
-  font-style: normal;
-  color: var(--bf-ink-faint);
-}
+/* ---- 23a. the index table's extra tones ---- */
 .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th button {
   font: inherit;
   letter-spacing: inherit;
@@ -5885,90 +5297,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink);
 }
 
-/* ---- 23b. the record panel ---- */
-/* the panel is a portal to document.body — outside the shell, so it takes the shell's tokens here */
-body:has(.app-shell.hs-shell.bf-shell:not([data-bf-mode="dark"]):not([data-bf-theme="dark"])) .hs-record-layer {
-  --cd-ground: #e8e8e8;
-  --cd-panel: #f4f4f4;
-  --cd-sh-1: 0 1px 2px rgba(23, 21, 15, 0.05);
-  --cd-sh-2: 0 2px 4px rgba(23, 21, 15, 0.04), 0 6px 14px rgba(23, 21, 15, 0.05);
-  --cd-sh-3: 0 4px 10px rgba(23, 21, 15, 0.05), 0 16px 34px rgba(23, 21, 15, 0.07);
-  --cd-sh-4: 0 8px 20px rgba(23, 21, 15, 0.07), 0 30px 60px rgba(23, 21, 15, 0.1);
-  --bf-ground: var(--cd-panel);
-  --bf-surface: #ffffff;
-  --bf-surface-rgb: 255, 255, 255;
-  --bf-surface-raised: #ffffff;
-  --bf-hover: #f1f1f1;
-  --bf-ink: #1c1c1c;
-  --bf-ink-muted: #626262;
-  --bf-ink-faint: #9b9b9b;
-  --bf-line-rgb: 28, 28, 28;
-  --bf-line-solid: #e4e4e4;
-  --bf-line-soft: #ededed;
-  --bf-chrome: var(--cd-panel);
-  --bf-chrome-rgb: 244, 244, 244;
-  --bf-chrome-ink: #1c1c1c;
-  --bf-chrome-muted: #626262;
-  --bf-chrome-line-rgb: 28, 28, 28;
-  --bf-radius-stage: 28px;
-  --bf-radius-card: 20px;
-  --bf-radius-panel: 14px;
-  --bf-radius-control: 10px;
-  --bf-radius-chip: 6px;
-  --bf-shadow-card: var(--cd-sh-1);
-  --bf-shadow-raised: var(--cd-sh-2);
-  --bf-shadow-pill: var(--cd-sh-2);
-  --bf-shadow-card-hover: var(--cd-sh-3);
-  --bf-shadow-pill-hover: var(--cd-sh-3);
-  --bf-shadow-float: var(--cd-sh-4);
-  --bf-shadow-stage: var(--cd-sh-4);
-  --bf-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --bf-ease-size: cubic-bezier(0.4, 0, 0.2, 1);
-  --bf-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --bf-dur-press: 0.14s;
-  --bf-dur-hover: 0.24s;
-  --bf-dur-move: 0.24s;
-  --bf-dur-panel: 0.24s;
-  --bf-dur-enter: 0.52s;
-  --bf-dur-reveal: 0.9s;
-  --bf-lift: -3px;
-  --bf-lift-small: -2px;
-  /* NOT re-declared here (2026-09-18). This block is the record layer's copy of the shell's
-     tokens — the layer is a body portal, outside `.app-shell` — and it copied
-     `--bf-font-display: var(--bf-font-active)` without the default that follows it up there
-     (`.bf-shell:not([data-bf-font])` pins the display face to Inter Tight). So with no font
-     preference set, the display face inside this panel collapsed to the BODY face, and the
-     person's name at the top of the record measured in Inter beside every other panel's Inter
-     Tight. Left undeclared it inherits `body.bf-shell`, which resolves correctly in both
-     states — with a preference set, that is the chosen face, exactly as before. */
-  --bf-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --bf-page-display: clamp(34px, 3.4vw, 48px);
-  --bf-page-display-weight: 600;
-  --bf-page-display-track: -0.038em;
-  --bf-page-display-lead: 1.08;
-  --cc-blue: var(--bf-color-accent);
-  --cc-blue-soft: var(--bf-color-accent-wash);
-  --wx-blue: var(--bf-color-accent);
-  --hsh-blue: var(--bf-color-accent);
-  --hsh-blue-soft: var(--bf-color-accent-wash);
-  --hsx-blue: var(--bf-color-accent);
-  --hsx-blue-soft: var(--bf-color-accent-wash);
-
-  /* the Dashboard's tone pairs, for the tags, timeline discs and notices */
-  --cc-green: var(--bf-color-ok);
-  --cc-green-soft: var(--bf-color-ok-wash);
-  --cc-amber: var(--bf-color-warn);
-  --cc-amber-soft: var(--bf-color-warn-wash);
-  --cc-red: var(--bf-color-bad);
-  --cc-red-soft: var(--bf-color-bad-wash);
-  --cc-violet: var(--bf-color-info);
-  --cc-violet-soft: var(--bf-color-info-wash);
-  --cc-orange: var(--bf-color-orange);
-  --cc-orange-soft: var(--bf-color-orange-wash);
-  --wx-green: var(--bf-color-ok);
-  --wx-amber: var(--bf-color-warn);
-  --wx-red: var(--bf-color-bad);
-}
+/* ---- 23b. the portals' dark palette ---- */
+/* a portal to document.body is outside the shell, so it takes the shell's tokens here */
 
 /* ...AND THE SAME IN DARK MODE (2026-09-17, asked for right after the assistant's panel had the
    identical defect). A portal cannot see `.bf-shell[data-bf-mode="dark"]`, where daylight section
@@ -6002,14 +5332,12 @@ body:has(.app-shell.hs-shell.bf-shell:not([data-bf-mode="dark"]):not([data-bf-th
    section 69) and the checklist for that move did not include this list; `.pdx` had been one all
    along. Only the DARK sets are shared: in light mode all three already inherit the right values
    from `body.bf-shell`, so there is nothing to restate and nothing to risk. */
-body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .hs-record-layer,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .pdx,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .schedule-dialog-backdrop,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .bfsel,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .bfdate,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .hs-upd-backdrop,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) .bfsp,
-body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .hs-record-layer,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .pdx,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .schedule-dialog-backdrop,
 body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsel,
@@ -6037,7 +5365,6 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
   --bf-chrome-line-rgb: 244, 243, 240;
 }
 @media (prefers-color-scheme: dark) {
-  body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"]) .hs-record-layer,
   body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"]) .pdx,
   body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"]) .schedule-dialog-backdrop,
   body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"]) .bfsel,
@@ -6065,806 +5392,6 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
     --bf-chrome-line-rgb: 244, 243, 240;
   }
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record {
-  padding: 20px 22px 28px;
-  border-radius: var(--bf-radius-stage) 0 0 var(--bf-radius-stage);
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  box-shadow: var(--bf-shadow-float);
-  font-family: var(--bf-font-active, inherit);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-backdrop {
-  background: rgba(var(--bf-line-rgb), 0.28);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-back {
-  height: 30px;
-  padding: 0 12px 0 8px;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-back:hover {
-  background: var(--bf-hover);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn {
-  height: 36px;
-  min-height: 36px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn:hover {
-  background: var(--bf-surface);
-  transform: translateY(-1px);
-  box-shadow: var(--bf-shadow-raised);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn.hs-btn-primary {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  box-shadow: none;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn.hs-btn-primary:hover {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn-icon {
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn-icon:hover {
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-qf {
-  min-height: 30px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-hover);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-qf select {
-  min-height: 30px;
-  padding: 0 26px 0 12px;
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-qf > svg {
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-head {
-  padding: 4px 0 18px;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar {
-  width: 56px;
-  height: 56px;
-  background: var(--bf-color-face-2);
-  color: #fff;
-  font-family: var(--bf-font-display);
-  font-size: 18px;
-  font-weight: 700;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar.tone-green,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar.tone-teal {
-  background: var(--bf-color-face-3);
-  color: #fff;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar.tone-amber,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar.tone-orange {
-  background: var(--bf-color-face-1);
-  color: #fff;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar.tone-violet,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-avatar.tone-red {
-  background: var(--bf-color-face-2);
-  color: #fff;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-id h2 {
-  font-family: var(--bf-font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-sub {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meta {
-  gap: 6px 8px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meta a {
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meta a:hover {
-  text-decoration: none;
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge {
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-blue {
-  background: var(--cc-blue-soft);
-  color: var(--cc-blue);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-green {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-amber {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-red {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-violet,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-teal {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-orange {
-  background: var(--cc-orange-soft);
-  color: var(--cc-orange);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-badge.tone-slate {
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-owner {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-/* the row of actions: 40px white discs, ink when active, with their labels under them */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-actions {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action {
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action > span {
-  width: 40px;
-  height: 40px;
-  border: 0;
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-  box-shadow: var(--bf-shadow-card);
-  transition:
-    transform var(--bf-dur-press) var(--bf-ease),
-    box-shadow var(--bf-dur-hover) var(--bf-ease),
-    background var(--bf-dur-hover) var(--bf-ease-size),
-    color var(--bf-dur-hover) var(--bf-ease-size);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action > span svg {
-  width: 17px;
-  height: 17px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action:hover > span,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action:focus-visible > span {
-  background: var(--bf-surface);
-  border-color: transparent;
-  color: var(--bf-ink);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action.active > span {
-  background: var(--bf-ink);
-  border-color: transparent;
-  color: var(--bf-surface);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action.disabled,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action.disabled > span {
-  color: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action.disabled:hover > span {
-  background: var(--bf-surface);
-  transform: none;
-  box-shadow: var(--bf-shadow-card);
-}
-/* the composer and every tile: the second surface */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-highlights > div,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-dial {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer input,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer select,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer textarea,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-search {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-search {
-  min-height: 30px;
-  border-radius: 999px;
-  color: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-search input {
-  box-shadow: none;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer-head strong {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer-head small,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer .hs-composer-hint,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer .hs-composer-count {
-  font-size: 11px;
-  color: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-composer-actions .hs-btn-link {
-  height: 30px;
-  min-height: 30px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section {
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section h3,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-sec-head h3 {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-highlights > div {
-  padding: 12px 10px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-highlights span,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-props dt,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-month h4 {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-highlights strong {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-props dd {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-props dd a {
-  color: var(--bf-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-/* the timeline: a hairline rail, 30px discs on the semantic pairs, chip bodies */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-item::before {
-  left: 14px;
-  background: var(--bf-line-solid);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico {
-  width: 30px;
-  height: 30px;
-  background: var(--cc-blue-soft);
-  color: var(--cc-blue);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico svg {
-  width: 15px;
-  height: 15px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-green {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-amber {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-violet,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-teal {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-orange {
-  background: var(--cc-orange-soft);
-  color: var(--cc-orange);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-red {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-ico.tone-slate {
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-body {
-  padding: 8px 12px;
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-head strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-head time {
-  font-size: 11px;
-  color: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-timeline-body p,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-empty {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card {
-  padding: 12px 14px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-head > span {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-head button {
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 11px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-head button:hover {
-  background: var(--bf-surface);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-row .hs-avatar,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-list .hs-avatar {
-  width: 30px;
-  height: 30px;
-  background: var(--bf-color-face-2);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-link {
-  display: block;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-link:hover {
-  color: var(--bf-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-row strong,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meetings strong,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-list .hs-link {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-row span:last-child {
-  display: block;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card-row span:last-child,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meetings span,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-tasks .hs-task-meta,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-tasks time,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-list li > div > span {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-tasks li,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meetings li,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-list li {
-  padding: 8px 12px;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  font-size: 13px;
-}
-/* a list inside a card (the company record's contacts and deals) sits on the second surface already,
-   so its rows are white tiles with the card shadow instead of chips */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card .hs-record-list li {
-  padding: 8px 12px;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-card .hs-record-list .hs-link {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-prop-wide {
-  grid-column: 1 / -1;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-tasks li.done span {
-  color: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-task-pill {
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-task-pill.p-high {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-task-pill.p-medium {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-task-pill.p-normal {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meetings .hs-meeting-date {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-surface);
-  color: var(--bf-ink-faint);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  box-shadow: var(--bf-shadow-card);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meetings .hs-meeting-date b {
-  font-family: var(--bf-font-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-meetings .hs-meeting-notified {
-  color: var(--cc-green);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-notice {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-notice.tone-success {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-notice.tone-info {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-notice.tone-error {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-dial strong {
-  font-family: var(--bf-font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-btn-icon:hover,
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action:hover > span,
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-action:focus-visible > span {
-    transform: none;
-  }
-}
-
-/* ============================================================================
-   24. THE DEALS PAGE, INSIDE: the pipeline board, and the deal record's stage track
-   ----------------------------------------------------------------------------
-   Deals is the third index page on the Contacts root, so its tiles, toolbar,
-   table and record panel are already sections 21-23. What it adds is the
-   board layout — one column per stage, deal cards you drag between them — and,
-   in the record, HubSpot's stage track with its Mark lost / Mark won pair.
-   Here the board is a tray on the second surface, each stage a white card with
-   a 15px display head, its count and amount as a small ink-2 line, and the
-   stage dot on the semantic pairs; a deal card is a tile on the second surface
-   that lifts to white on hover, ghosts as a dashed hairline while it is picked
-   up, flies with the deepest shadow and an ink ring, and lands in a dashed ink
-   slot on the lime wash. The card's title is ink, its amount a 17px display
-   figure, its owner a 26px gradient face, its priority a semantic pill. The
-   stage track is a row of 6px bars: done steps ink, the current step the lime
-   fill, the rest hairline.
-   ============================================================================ */
-/* ---- 24a. the board ---- */
-.app-shell.hs-shell.bf-shell .deals-page .hs-board {
-  gap: 12px;
-  padding: 14px 16px 18px;
-  border-top: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col.is-over {
-  border-color: transparent;
-  box-shadow:
-    0 0 0 2px var(--bf-ink),
-    var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col-head {
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col.is-over .hs-board-col-head {
-  background: transparent;
-  border-bottom-color: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col-head strong {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col-meta {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot.tone-teal,
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot.tone-violet {
-  background: var(--cc-violet);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot.tone-amber {
-  background: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot.tone-orange {
-  background: var(--cc-orange);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot.tone-green {
-  background: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dot.tone-red {
-  background: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-col-body {
-  gap: 10px;
-  padding: 10px;
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-empty {
-  border: 1px dashed var(--bf-line-solid);
-  border-radius: var(--bf-radius-control);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-/* ---- 24b. the deal card ---- */
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card {
-  padding: 12px 12px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  box-shadow: none;
-  transition:
-    transform var(--bf-dur-press) var(--bf-ease),
-    box-shadow var(--bf-dur-hover) var(--bf-ease),
-    background var(--bf-dur-hover) var(--bf-ease-size),
-    border-color var(--bf-dur-hover) var(--bf-ease-size),
-    opacity var(--bf-dur-hover) var(--bf-ease-size);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card:hover {
-  border-color: transparent;
-  background: var(--bf-surface);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card.is-dragging {
-  border-style: dashed;
-  border-color: var(--bf-line-solid);
-  background: var(--bf-hover);
-  transform: none;
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card.hs-deal-overlay {
-  border-color: transparent;
-  background: var(--bf-surface);
-  box-shadow:
-    0 0 0 2px var(--bf-ink),
-    var(--bf-shadow-float);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-dropslot {
-  border: 2px dashed var(--bf-ink);
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-color-accent-wash);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card-title {
-  color: var(--bf-ink);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card-title:hover {
-  color: var(--bf-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card-amount {
-  font-family: var(--bf-font-display);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card-meta {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card-meta svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-deal-card-owner {
-  width: 26px;
-  height: 26px;
-  background: var(--bf-color-face-2);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-}
-.app-shell.hs-shell.bf-shell .deals-page .hs-board-hint {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-/* the priority pills on the board (the record's are section 23) */
-.app-shell.hs-shell.bf-shell .contacts-page .hs-task-pill {
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-deal-card .hs-task-pill {
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-task-pill.p-high,
-.app-shell.hs-shell.bf-shell .contacts-page .hs-deal-card .hs-task-pill.p-high {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-task-pill.p-medium,
-.app-shell.hs-shell.bf-shell .contacts-page .hs-deal-card .hs-task-pill.p-medium {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .contacts-page .hs-task-pill.p-normal,
-.app-shell.hs-shell.bf-shell .contacts-page .hs-deal-card .hs-task-pill.p-normal {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-  box-shadow: none;
-}
-/* ---- 24c. the deal record's stage track and close actions ---- */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-track {
-  gap: 6px;
-  padding: 16px 0 6px;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step {
-  gap: 7px;
-  color: var(--bf-ink-faint);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step > span {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--bf-line-solid);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step.done {
-  color: var(--bf-ink-muted);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step.done > span {
-  background: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step.current {
-  color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step.current > span {
-  background: var(--bf-color-accent-fill);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step:hover > span {
-  background: var(--bf-ink-faint);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-stage-step.current:hover > span {
-  background: var(--bf-color-accent-fill);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-close-actions {
-  padding: 10px 0 16px;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell .deals-page .hs-deal-card:hover {
-    transform: none;
-  }
-}
-
 /* ============================================================================
    25. THE EQUIPMENT AND MATERIALS PAGES, INSIDE: the fleet and stock dialogs, the footnote
    ----------------------------------------------------------------------------
@@ -11980,7 +10507,6 @@ body.bf-shell {
    than the page — and so the dropdown and date layers, which divide every rect by
    the zoom they find, place their popups over the right control (selectMenu.tsx) */
 body.bf-shell > .pdx,
-body.bf-shell > .hs-record-layer,
 body.bf-shell > .bf-breeze,
 body.bf-shell > .schedule-dialog-backdrop {
   zoom: var(--bf-ui-scale);
@@ -12059,7 +10585,7 @@ body.bf-shell > .schedule-dialog-backdrop {
 }
 /* ---- 42d. the index pages' head and toolbar under 560px. The title row's
    actions (Refresh · Export · Create) and the toolbar's search, filters, sort,
-   count and view toggle were one unwrappable line each, so a Sales page ran
+   count and view toggle were one unwrappable line each, so an index page ran
    past its column and the document scrolled sideways (the head pills were
    cut at the right edge). Both rows wrap there. ---- */
 @media (max-width: 560px) {
@@ -12373,7 +10899,6 @@ body.bf-shell > .schedule-dialog-backdrop {
     .delayIQ-rx,
     .field-rx,
     .settings-rx,
-    .contacts-page,
     .hs-index,
     .gantt-page,
     .gantt,
@@ -12591,16 +11116,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .bffb-form > label > textarea:focus-
 .app-shell.hs-shell.bf-shell .bffb-kind:focus-visible {
   outline: 2px solid var(--bf-accent, var(--bf-ink));
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-action:hover > span,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-action:focus-visible > span {
-  border-color: var(--bf-ink);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-composer textarea:focus,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-composer input:focus {
-  /* the ink ring, as a token: 28,28,28 is invisible on the dark panel */
-  outline: 2px solid rgba(var(--bf-line-rgb), 0.35);
-  border-color: var(--bf-ink);
-}
 .app-shell.hs-shell.bf-shell .dash-rx .dash-block-body.is-scrollable:focus-visible {
   outline: 2px solid var(--cc-blue, var(--bf-ink));
 }
@@ -12622,11 +11137,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus {
   box-shadow:
     0 0 0 3px rgba(28, 28, 28, 0.18),
     0 26px 52px rgba(28, 28, 26, 0.12);
-}
-.app-shell.hs-shell.bf-shell .schedule-add-job-button:hover,
-.app-shell.hs-shell.bf-shell .schedule-add-job-button:focus-visible {
-  border-color: var(--bf-ink);
-  color: var(--bf-ink);
 }
 .app-shell.hs-shell.bf-shell .schedule-job-create-form input:focus,
 .app-shell.hs-shell.bf-shell .schedule-job-create-form select:focus,
@@ -12725,13 +11235,11 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-fill-rgb), 0.2), transparent 62%);
 }
 /* the index pages' avatars: the blue tone is plum, slate is the ink's own grey */
-.app-shell.hs-shell.bf-shell .hs-index .hs-avatar.tone-blue,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-avatar.tone-blue {
+.app-shell.hs-shell.bf-shell .hs-index .hs-avatar.tone-blue {
   background: var(--bf-info-wash, var(--bf-color-info-wash));
   color: var(--bf-info-ink, var(--bf-color-info));
 }
-.app-shell.hs-shell.bf-shell .hs-index .hs-avatar.tone-slate,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-avatar.tone-slate {
+.app-shell.hs-shell.bf-shell .hs-index .hs-avatar.tone-slate {
   background: var(--bf-hover, #f1f1f1);
   color: var(--bf-ink-muted, #626262);
 }
@@ -12894,14 +11402,6 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
   border-color: rgba(28, 28, 28, 0.35);
 }
 /* the contact record's composer check and information notice */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-composer .hs-composer-check {
-  color: var(--bf-ink, #1c1c1c);
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-notice.tone-info {
-  border-color: var(--bf-info-edge, var(--bf-color-info-edge));
-  background: var(--bf-info-wash, var(--bf-color-info-wash));
-  color: var(--bf-info-ink, var(--bf-color-info));
-}
 /* every -rx page's cursor glow and hero icon shadow; the selected card's ring */
 .app-shell.hs-shell.bf-shell
   :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .field-rx, .settings-rx)
@@ -12959,15 +11459,6 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-notice.tone-i
 /* the Schedule: the job picker's title, the board chips' edges, the export menu's shadow */
 .app-shell.hs-shell.bf-shell .schedule-job-picker h3 {
   color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.ready-to-start,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.ready-to-start {
-  border-color: var(--bf-info-edge);
-  background: var(--cc-violet-soft);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.in-progress {
-  border-color: var(--bf-accent-fill);
-  background: var(--cc-blue-soft);
 }
 .app-shell.hs-shell.bf-shell .sched-export-menu {
   box-shadow: var(--bf-shadow-float);
@@ -13177,7 +11668,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
     .hs-index,
     .gantt-page,
     .gantt,
-    .contacts-page,
     .tc-page,
     .lm-card,
     .bfnt,
@@ -13345,7 +11835,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
    grew in section 48 and left the rest of the product a size behind.
 
    The program's page title is one token, so the index pages (Projects, Crews,
-   Contacts, Companies, Deals, Equipment, Materials, Field Updates, DelayIQs,
+   Equipment, Materials, Field Updates, DelayIQs,
    Bookmarks, Gantt Chart) and every `.dx-title` grow by re-pointing it:
    --bf-page-display goes from 30-38px to 34-48px, one clear step BELOW the
    Dashboard's greeting (40-68px), which stays the product's one big moment.
@@ -13757,9 +12247,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form select:focus[data-bfsel-qu
 /* Two lists nothing styles the edge of: at rest they wear the browser's own
    hairline (measured rgb(118, 118, 118)), which `revert` is the exact way back to. */
 .app-shell.hs-shell.bf-shell .hs-index select:focus:not(:focus-visible),
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell .hs-index select:focus[data-bfsel-quiet],
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record select:focus[data-bfsel-quiet] {
+.app-shell.hs-shell.bf-shell .hs-index select:focus[data-bfsel-quiet] {
   border-color: revert;
   box-shadow: none;
 }
@@ -13990,9 +12478,7 @@ body.bf-shell > .bfdate .bfdate-action:focus-visible {
    answers a press in that zone, so the system picker can no longer be opened. The
    scope is the same one dateMenu.tsx enhances, so a date field outside the program
    (none today) would keep its native picker rather than losing it. */
-body.bf-shell
-  :is(.app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop)
-  input[type="date"]::-webkit-calendar-picker-indicator {
+body.bf-shell :is(.app-shell.hs-shell, .pdx, .bf-breeze, .schedule-dialog-backdrop) input[type="date"]::-webkit-calendar-picker-indicator {
   pointer-events: none;
 }
 
@@ -14297,36 +12783,27 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bfai-prop-state.is-failed {
    lane closes up while a job is in the air.
 
    WHY IT IS DOWN HERE. Both halves have to out-rank each board's own card:
-   a status wash is six classes (`.sched-rx .schedule-job.confirmed`), the Week
-   card sets `box-shadow: none` at five, and a List row is styled through its
-   container. At the end of the sheet source order settles every one of those
-   ties without a single `!important`.
+   a Kanban card's tone and a Month chip's wash run to five and six classes
+   (the Week card's status wash did too, while it was here). At the end of the
+   sheet source order settles every one of those ties without a single
+   `!important`.
 
    The clone KEEPS ITS OWN COLOUR -- a green "confirmed" card is green in the
    air too, because it is the card you picked up -- so only the lift is set
-   here. The one exception is a List row, which has no background of its own.
+   here.
    ============================================================================ */
 .app-shell.hs-shell.bf-shell .sched-rx .sched-act.dragging,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-job.dragging,
-.app-shell.hs-shell.bf-shell .sched-rx .unassigned-card.dragging,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.dragging,
-.app-shell.hs-shell.bf-shell .sched-rx .schedule-list-view button.dragging {
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.dragging {
   outline: 2px dashed var(--bf-line-solid);
   outline-offset: -2px;
   background: var(--bf-hover);
   box-shadow: none;
 }
 .app-shell.hs-shell.bf-shell .sched-rx .sched-carry > .sched-act,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-carry > .schedule-job,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-carry > .unassigned-card,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-carry > .sched-kan-card,
-.app-shell.hs-shell.bf-shell .sched-rx .sched-carry.schedule-list-view > button {
+.app-shell.hs-shell.bf-shell .sched-rx .sched-carry > .sched-kan-card {
   box-shadow:
     0 0 0 1px var(--bf-line-solid),
     var(--bf-shadow-float);
-}
-.app-shell.hs-shell.bf-shell .sched-rx .sched-carry.schedule-list-view > button {
-  background: var(--bf-surface);
 }
 
 /* ============================================================================
@@ -14603,30 +13080,10 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-confirm .pdx-actions {
    narrowing it to match a form would crowd all three for the sake of a number
    nobody sees. Say so if you would rather they were identical.
    ============================================================================ */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record,
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer {
   /* the job drawer joined these 2026-09-18 ("match them"): it had kept its own
      `hsg-slide-in 0.32s` from before the program had motion tokens */
   animation: bfe-drawer-in var(--bf-dur-panel) var(--bf-ease-size) backwards;
-}
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-top {
-  position: sticky;
-  /* THE PANEL'S TOP PADDING SCROLLS PAST ABOVE THIS ROW and the record shows through the strip it
-     leaves — measured as 3px of the property list. The row is pulled up over that padding so its
-     own box covers it (which is what a hit-test can be asked about), and the solid shadow covers
-     the same strip again in case the padding ever changes from the 20px it is now. */
-  top: calc(-1 * var(--bf-record-pad, 20px));
-  z-index: 2;
-  margin-top: calc(-1 * var(--bf-record-pad, 20px));
-  padding-top: var(--bf-record-pad, 20px);
-  padding-bottom: 10px;
-  background: var(--bf-surface);
-  box-shadow: 0 -24px 0 var(--bf-surface);
-}
-@media (prefers-reduced-motion: reduce) {
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record {
-    animation: none;
-  }
 }
 
 /* ============================================================================
@@ -14656,46 +13113,33 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-to
    to animate out — an exit needs a closing state at each call site, which is a
    dozen places in App.tsx rather than a rule in this sheet.
    ============================================================================ */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-head,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-actions,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section,
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > * {
   --bfe-r: 0;
   animation: bfe-row var(--bf-dur-panel) var(--bf-ease-size) backwards;
   animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(2),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(2) {
   --bfe-r: 2;
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(3),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(3) {
   --bfe-r: 3;
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(4),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(4) {
   --bfe-r: 4;
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(5),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(5) {
   --bfe-r: 5;
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(6),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(6) {
   --bfe-r: 6;
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(7),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(7) {
   --bfe-r: 7;
 }
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section:nth-of-type(n + 8),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > *:nth-child(n + 8) {
   --bfe-r: 8;
 }
 @media (prefers-reduced-motion: reduce) {
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-head,
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-actions,
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-section,
   .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-body > * {
     animation: none;
   }
@@ -14727,7 +13171,6 @@ body > .bf-panel-exit {
    `bfe-drawer-in` at (0,5,1); a plain `body > .bf-panel-exit .pdx-dialog` is (0,2,1) and loses, so
    the copy played the entrance again on its way out — measured before this line was written. */
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.pdx .pdx-dialog,
-body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.hs-record-layer .hs-record,
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.gantt-drawer-layer .gantt-drawer,
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.schedule-dialog-backdrop .schedule-job-picker,
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.bfsp .bfsp-drawer {
@@ -14897,7 +13340,6 @@ body.bf-shell {
 }
 /* ---- 70a. the frame ---- */
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog:not(.pdx-confirm),
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record,
 body:has(.app-shell.hs-shell.bf-shell) .gantt-page .gantt-drawer,
 body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker {
   width: var(--bf-panel-w);
@@ -14924,12 +13366,6 @@ body:has(.app-shell.hs-shell.bf-shell) .gantt-page .gantt-drawer .gantt-drawer-t
    Tight 20px, which reads as a different panel at the same size. The rule under it already exists
    (`.hs-record-head`), which is why nothing is added to its sticky top row: that row is a toolbar,
    and a second rule there would be one more line than the other panels have, not one fewer. */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-head h2 {
-  font-family: var(--bf-font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
 /* The picker's header is laid out by styles.css as a grid whose second track is a hard `42px` —
    sized for the 40px icon button it used to hold. With the 30px disc in it the button sat 12px
    short of the padding the title lines up with, measured, while the job drawer's close was flush.
@@ -14941,8 +13377,7 @@ body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker > he
   justify-content: space-between;
   gap: 12px;
 }
-body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker > header .icon-button,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-record-top .hs-btn-icon {
+body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker > header .icon-button {
   width: 30px;
   height: 30px;
   min-height: 30px;
@@ -14980,14 +13415,6 @@ body:has(.app-shell.hs-shell.bf-shell) .gantt-page .gantt-drawer .gantt-drawer-f
   flex-direction: column;
 }
 /* the record has no body element of its own (see above), so the rhythm goes on the panel */
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record {
-  /* and the sticky top row's pull reads the SAME number. It reaches the panel's edge by a
-     negative margin of `--bf-record-pad` (section 66), which was never declared and so fell back
-     to the 20px this panel used to pad — against 18px it overhung the rounded corner by 2px,
-     measured at the row's top edge. Declared here, one number moves both. */
-  --bf-record-pad: 18px;
-  padding: var(--bf-record-pad) 22px 22px;
-}
 /* ---- 70d. the job panel has to be ABOVE the top bar, like the other three ----
    Found by measuring, not by looking: `elementFromPoint` at the middle of the job panel's header
    returned the TOP BAR, not the panel — its title and its close button were behind 50px of white
@@ -15068,7 +13495,6 @@ body.bf-shell {
   --bf-scrim-blur: 6px;
 }
 body:has(.app-shell.hs-shell.bf-shell) .pdx,
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-backdrop,
 body:has(.app-shell.hs-shell.bf-shell) .gantt-drawer-layer .gantt-drawer-backdrop,
 body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog-backdrop {
   background: var(--bf-scrim);
@@ -15110,9 +13536,6 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) {
    samples that white across the whole area and rings every dark card with it.
    `--bf-ground` is the shell's own ground, so this follows the mode, the preset and the themes;
    in light mode it moves #f5f6fa to #f4f4f4, which is the shell's and a difference of six values. */
-body:has(.app-shell.hs-shell.bf-shell) .contacts-page {
-  --hsc-paper: var(--bf-ground);
-}
 /* ---- 70i. the add-job form's FIELDS are the editing drawer's fields ----
    They had never been reskinned: schedule.css styles them with `color: #1f2d45` and
    `border: 1px solid #dbe4ee` — a navy on a pale blue, both pre-no-blue leftovers that read as
@@ -15212,9 +13635,6 @@ body:has(.app-shell.hs-shell.bf-shell) .schedule-job-picker h3 {
    anything dark mode broke. Equipment and Map & Field Ops are locked add-ons in
    this workspace and were left alone rather than opening their purchase prompts.
    ============================================================================ */
-body:has(.app-shell.hs-shell.bf-shell) .sched-rx .schedule-list-view {
-  background: var(--bf-surface);
-}
 body:has(.app-shell.hs-shell.bf-shell) .reports-shell .main-panel,
 body:has(.app-shell.hs-shell.bf-shell) .main-panel.settings-main-panel {
   background: var(--bf-ground);
@@ -15848,9 +14268,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   :is(
     .proj-rx,
     .crew-rx,
-    .contacts-page,
     .companies-page,
-    .deals-page,
     .equip-rx,
     .delayIQ-rx,
     .mat-rx,
@@ -15858,7 +14276,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
     .reports-page,
     .tc-page,
     .bookmarks-page,
-    .map-ops-page,
     .settings-rx,
     .sched-rx,
     .gantt-page
@@ -15869,9 +14286,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   :is(
     .proj-rx,
     .crew-rx,
-    .contacts-page,
     .companies-page,
-    .deals-page,
     .equip-rx,
     .delayIQ-rx,
     .mat-rx,
@@ -15879,7 +14294,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
     .reports-page,
     .tc-page,
     .bookmarks-page,
-    .map-ops-page,
     .settings-rx,
     .sched-rx,
     .gantt-page
@@ -16328,7 +14742,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze.bfm-closing .bf-breeze-main[da
    route gets. The centred confirm is deliberately not in this list: it never
    went to the edge, so it does not come out of one (§65b). */
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog[data-bfm-goo="true"],
-body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record[data-bfm-goo="true"],
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer[data-bfm-goo="true"],
 body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker[data-bfm-goo="true"],
 body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-drawer[data-bfm-goo="true"] {
@@ -16344,7 +14757,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-drawer[data-bfm-goo="true"] {
    panel back to play this, and `cloneNode` carries the inline numbers and the
    mark with it, so the copy knows where to go without being measured again. */
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.pdx .pdx-dialog[data-bfm-goo="true"],
-body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.hs-record-layer .hs-record[data-bfm-goo="true"],
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.gantt-drawer-layer .gantt-drawer[data-bfm-goo="true"],
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.schedule-dialog-backdrop .schedule-job-picker[data-bfm-goo="true"],
 body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.bfsp .bfsp-drawer[data-bfm-goo="true"] {
@@ -16352,12 +14764,10 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.bfsp .bfsp-drawer[data-bfm
 }
 @media (prefers-reduced-motion: reduce) {
   body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog[data-bfm-goo="true"],
-  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record[data-bfm-goo="true"],
   .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer[data-bfm-goo="true"],
   body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker[data-bfm-goo="true"],
   body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-drawer[data-bfm-goo="true"],
   body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.pdx .pdx-dialog[data-bfm-goo="true"],
-  body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.hs-record-layer .hs-record[data-bfm-goo="true"],
   body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.gantt-drawer-layer .gantt-drawer[data-bfm-goo="true"],
   body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.schedule-dialog-backdrop .schedule-job-picker[data-bfm-goo="true"],
   body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.bfsp .bfsp-drawer[data-bfm-goo="true"] {

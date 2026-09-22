@@ -1,75 +1,16 @@
 /**
  * The re-book diffs behind a drop: what one request to /api/schedule/rebook should
  * carry, and the moves that put everything back for Undo. Pure functions — the
- * Week board, the Month calendar and the List build their drops from these.
+ * Month calendar's drop and the drawer's move build from these.
  */
 import type { Job, JobEdits, RebookMove, ScheduleAssignment } from "@buildflow/shared";
 import { shiftScheduleDate } from "./scheduleUtils";
-import { dayOf } from "./week";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Whole calendar days from one day to another; both are local midnights, so a daylight-saving day still counts as one. */
 export function daysBetween(fromIso: string, toIso: string) {
   return Math.round((new Date(`${toIso}T00:00:00`).getTime() - new Date(`${fromIso}T00:00:00`).getTime()) / DAY_MS);
-}
-
-/** What a Week board card or queue chip carries while it is dragged. */
-export type WeekDragSource = { assignmentId?: string; jobId?: string; crewId?: string; date?: string };
-/** The crew-day cell a drag ended on. */
-export type WeekDropTarget = { crewId?: string; date?: string };
-
-export type WeekRebook = {
-  /** A booked card moved, a queued job booked, or the job that is on that crew's day already. */
-  kind: "move" | "book" | "already";
-  jobId: string;
-  assignmentId?: string;
-  crewId: string;
-  date: string;
-  moves: RebookMove[];
-  /** The moves that put things back; a fresh booking's id is only known once the server has answered. */
-  inverse: (bookedId: string | undefined) => RebookMove[];
-};
-
-/**
- * A card dropped on another cell re-books that assignment; a queued job dropped on a
- * cell books it — unless that job is on the crew's day already, which is "already", the
- * one booking it has. Null when the drop changes nothing: off the board, the same cell,
- * or a booking the data does not know.
- */
-export function weekRebook(source: WeekDragSource, target: WeekDropTarget, assignments: ScheduleAssignment[]): WeekRebook | null {
-  const { crewId, date } = target;
-  if (!crewId || !date) return null;
-  if (source.assignmentId) {
-    const id = source.assignmentId;
-    if (source.crewId === crewId && source.date === date) return null;
-    const jobId = assignments.find((candidate) => candidate.id === id)?.jobId;
-    if (!jobId) return null;
-    const from = source.crewId && source.date ? { crewId: source.crewId, date: source.date } : null;
-    return {
-      kind: "move",
-      jobId,
-      assignmentId: id,
-      crewId,
-      date,
-      moves: [{ op: "move", id, crewId, date }],
-      inverse: () => (from ? [{ op: "move", id, ...from }] : [])
-    };
-  }
-  if (!source.jobId) return null;
-  const jobId = source.jobId;
-  // one job on a crew's day is one booking; the server answers the same way
-  if (assignments.some((candidate) => candidate.jobId === jobId && candidate.crewId === crewId && dayOf(candidate) === date)) {
-    return { kind: "already", jobId, crewId, date, moves: [], inverse: () => [] };
-  }
-  return {
-    kind: "book",
-    jobId,
-    crewId,
-    date,
-    moves: [{ op: "book", jobId, crewId, date }],
-    inverse: (bookedId) => (bookedId ? [{ op: "unbook", id: bookedId }] : [])
-  };
 }
 
 export type MonthRebook = { delta: number; moves: RebookMove[]; inverse: RebookMove[] };
@@ -108,12 +49,6 @@ export function monthRebook(
       ...bookings.map((booking): RebookMove => ({ op: "move", id: booking.id, date: booking.date }))
     ]
   };
-}
-
-/** A List row dropped on another day's section re-books it there. Null on its own day. */
-export function listRebook(assignmentId: string, from: string, date: string): { moves: RebookMove[]; inverse: RebookMove[] } | null {
-  if (from === date) return null;
-  return { moves: [{ op: "move", id: assignmentId, date }], inverse: [{ op: "move", id: assignmentId, date: from }] };
 }
 
 export type JobMove = MonthRebook;

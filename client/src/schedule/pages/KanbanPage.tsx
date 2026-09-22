@@ -5,7 +5,7 @@
  * card into another lane to move the job's status; a card opens the job drawer
  * the other sub-pages use; Export writes the board to CSV.
  *
- * Stands in the shared page frame (schedule/page.tsx): everything the seven
+ * Stands in the shared page frame (schedule/page.tsx): everything the four
  * pages share comes from the one page hook; this file is the board and its
  * drop rule.
  */
@@ -26,7 +26,7 @@ export type KanbanPageProps = {
   data: BootstrapPayload;
   reload: () => Promise<void>;
   onOpenSchedule: () => void;
-  /** Opens the page an alert points at (the Week board, DelayIQs, Materials, the Map). */
+  /** Opens the page an alert points at (the Month calendar, DelayIQs, Materials). */
   onOpenPage?: (page: ScheduleTarget) => void;
   /** The "New" pill the navigation shows for a fresh release. */
   releaseTag?: ReactNode;

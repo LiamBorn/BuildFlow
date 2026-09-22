@@ -1,10 +1,10 @@
 /**
  * The Schedule landing and the panels only it draws: the view cards, the unbooked
  * queue, crew availability, upcoming milestones and the field-variance review.
- * It stands in the shared page frame (schedule/page.tsx) like the six views it opens.
+ * It stands in the shared page frame (schedule/page.tsx) like the three views it opens.
  */
 import type { SchedulePage as SchedulePageId } from "../useScheduleContext";
-import type { BootstrapPayload, Crew, FieldUpdate, Job, Project, ScheduleAssignment, ScheduleVariance, User } from "@buildflow/shared";
+import type { BootstrapPayload, Crew, FieldUpdate, Job, Project, ScheduleVariance, User } from "@buildflow/shared";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,13 +13,11 @@ import {
   Clock,
   GanttChartSquare,
   LayoutGrid,
-  List,
   ListChecks,
   Plus,
   ShieldAlert,
   Sparkles,
   SquareKanban,
-  Table2,
   TrendingUp,
   Users,
   Zap
@@ -46,7 +44,6 @@ import {
 import type { ScheduleDialog, ScheduleMilestone } from "../parts";
 import { ScheduleStatusBand } from "../ScheduleStatusBand";
 import type { ScheduleContext } from "../useScheduleContext";
-import { startOfScheduleWeek } from "../week";
 import type { ScheduleTarget } from "../links";
 import { viewKeyFor } from "../viewKeys";
 import { WeeklyDigestPanel } from "../WeeklyDigest";
@@ -270,22 +267,17 @@ export function VarianceReviewCard({
 /** A card per schedule view, each with a live figure for what the filters show; opening one lands on its page. */
 export function ScheduleViewCards({
   jobs,
-  crews,
-  weekAssignments,
   monthAnchor,
   onOpen,
   headless = false
 }: {
   jobs: Job[];
-  crews: Crew[];
-  weekAssignments: ScheduleAssignment[];
   monthAnchor: string;
   /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
   headless?: boolean;
   onOpen: (page: SchedulePageId) => void;
 }) {
   const monthKey = monthAnchor.slice(0, 7);
-  const crewDaysBooked = crews.length ? Math.round((100 * weekAssignments.length) / (crews.length * 5)) : 0;
   const inProgress = jobs.filter((job) => job.status === "In Progress" || job.status === "On Site").length;
   const views: Array<{ page: SchedulePageId; icon: LucideIcon; title: string; text: string; figure: string }> = [
     {
@@ -294,20 +286,6 @@ export function ScheduleViewCards({
       title: "Month",
       text: "Every job on its start day, with milestones and holidays.",
       figure: `${plural(jobs.filter((job) => job.startDate.slice(0, 7) === monthKey).length, "job")} start in ${formatScheduleMonth(monthAnchor)}`
-    },
-    {
-      page: "week",
-      icon: Users,
-      title: "Week",
-      text: "Crews by row, days by column. Drag to re-book, or book straight from the queue.",
-      figure: `${plural(weekAssignments.length, "booking")} · ${plural(crews.length, "crew")}`
-    },
-    {
-      page: "list",
-      icon: List,
-      title: "List",
-      text: "This week's bookings in time order, day by day.",
-      figure: `${plural(weekAssignments.length, "booking")} this week`
     },
     {
       page: "gantt",
@@ -322,13 +300,6 @@ export function ScheduleViewCards({
       title: "Kanban",
       text: "Jobs by status. Drag a card to move it along.",
       figure: `${inProgress} in progress`
-    },
-    {
-      page: "matrix",
-      icon: Table2,
-      title: "Matrix",
-      text: "How booked each crew is this week, and where the conflicts are.",
-      figure: `${crewDaysBooked}% of crew-days booked`
     }
   ];
   return (
@@ -414,8 +385,8 @@ export function ScheduleQueuePanel({
  * The Schedule landing: the whole plan at a glance — status and the critical path,
  * this week's numbers, alerts, field variances, the unbooked queue, crew availability
  * and milestones — and a card per view that opens its page. Every view lives on its
- * own page (Month, Week, List, Gantt Chart, Kanban, Matrix); this page points at them,
- * and the filters and the week it shows follow you there through the schedule context.
+ * own page (Month, Gantt Chart, Kanban); this page points at them, and the filters and
+ * the week it shows follow you there through the schedule context.
  */
 export function SchedulePage({
   data: liveData,
@@ -476,7 +447,7 @@ export function SchedulePage({
       title,
       description:
         title === "Help Center"
-          ? "Open a view to change the plan: drag cards on the Week board, chips on the Month calendar, rows on the List."
+          ? "Open a view to change the plan: drag chips on the Month calendar, bars on the Gantt Chart, cards on the Kanban."
           : `${title} details are available for the BuildFlow Schedule workspace.`,
       items:
         title === "Help Center"
@@ -548,14 +519,12 @@ export function SchedulePage({
       title: "Open a view",
       icon: LayoutGrid,
       group: "Planning",
-      blurb: "The six schedule views — Week, Month, List, Kanban, Matrix, Gantt — one click each, on the week and filters you have here.",
-      action: <span className="sched-section-note">The week and filters follow you · keys 1–6 open a view</span>,
+      blurb: "The three schedule views — Month, Gantt Chart, Kanban — one click each, on the week and filters you have here.",
+      action: <span className="sched-section-note">The week and filters follow you · keys 1–3 open a view</span>,
       body: (
         <ScheduleViewCards
           headless
           jobs={jobs}
-          crews={crews}
-          weekAssignments={weekAssignments}
           monthAnchor={monthAnchor}
           onOpen={(target) => openView(target)}
         />
@@ -613,17 +582,18 @@ export function SchedulePage({
       title: "Unassigned Jobs",
       icon: ListChecks,
       group: "Planning",
-      blurb: "Jobs in view with no crew booked yet, each one click from the Week board.",
+      blurb: "Jobs in view with no crew booked yet, each one click from its day on the Month calendar.",
       action: (
         <span className="sched-section-note">
-          {unassigned.length === 0 ? "Every job in view has a crew booked" : "Book them on the Week board"}
+          {unassigned.length === 0 ? "Every job in view has a crew booked" : "Book them from the Month calendar"}
         </span>
       ),
       body: (
         <ScheduleQueuePanel
           headless
           jobs={unassigned}
-          onBook={(job) => openView("week", { weekStart: startOfScheduleWeek(job.startDate) })}
+          // the job's month: its chip is on its start day there, and the day's "+" books it on a crew
+          onBook={(job) => openView("month", { monthAnchor: firstOfScheduleMonth(job.startDate) })}
         />
       ),
       h: 5
@@ -644,8 +614,9 @@ export function SchedulePage({
       icon: Users,
       group: "Performance",
       blurb: "Each crew's booked days this week, and who has room.",
-      action: viewAllButton("View all", () => openView("matrix"), "View all crew availability"),
-      body: <CrewAvailabilityPanel headless crews={crews} utilizationById={utilizationById} onManage={() => openView("matrix")} />,
+      // the crews themselves: the Crews page is where a crew is read whole and managed
+      action: viewAllButton("View all", () => openView("crews"), "View all crew availability"),
+      body: <CrewAvailabilityPanel headless crews={crews} utilizationById={utilizationById} onManage={() => openView("crews")} />,
       h: 5
     },
     {
@@ -712,7 +683,7 @@ export function SchedulePage({
       }
       board={false}
       alerts={false}
-      onBooked={(booking) => openView("week", { weekStart: startOfScheduleWeek(booking.date) })}
+      onBooked={(booking) => openView("month", { monthAnchor: firstOfScheduleMonth(booking.date) })}
       dialogs={
         <>
           {importOpen && (

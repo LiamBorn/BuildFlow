@@ -26,15 +26,13 @@ import { X } from "lucide-react";
 export type TutorialShape =
   | "tiles"
   | "table"
-  | "board"
   | "calendar"
   | "lanes"
   | "timeline"
   | "list"
   | "form"
   | "switcher"
-  | "status"
-  | "map";
+  | "status";
 
 /** What the cursor does over it. */
 export type TutorialAction = "read" | "click" | "drag" | "fill";
@@ -42,7 +40,7 @@ export type TutorialAction = "read" | "click" | "drag" | "fill";
 export type TutorialSceneSpec = { shape: TutorialShape; action: TutorialAction };
 
 /**
- * One scene per step, by step id. The ids are App.tsx's `buildTutorialSteps` plus the eight
+ * One scene per step, by step id. The ids are App.tsx's `buildTutorialSteps` plus the six
  * in schedule/tour.ts; keeping the table here rather than on the step data means the tour's
  * steps did not have to be touched.
  */
@@ -52,22 +50,19 @@ export const TUTORIAL_SCENES: Record<string, TutorialSceneSpec> = {
   "dashboard-context": { shape: "tiles", action: "read" },
   "open-crew-form": { shape: "table", action: "click" },
   "submit-crew": { shape: "form", action: "fill" },
-  "schedule-overview": { shape: "board", action: "read" },
-  "open-job-form": { shape: "board", action: "click" },
+  "schedule-overview": { shape: "calendar", action: "read" },
+  "open-job-form": { shape: "calendar", action: "click" },
   "submit-job": { shape: "form", action: "fill" },
   // the Schedule tour, one stop per view
   "schedule-landing": { shape: "switcher", action: "click" },
   "schedule-status": { shape: "status", action: "read" },
   "schedule-filters": { shape: "switcher", action: "click" },
   "month-view": { shape: "calendar", action: "drag" },
-  "list-view": { shape: "list", action: "read" },
   "gantt-view": { shape: "timeline", action: "drag" },
   "kanban-view": { shape: "lanes", action: "drag" },
-  "matrix-view": { shape: "board", action: "read" },
   // the paid add-ons
   "product-schedule-ai": { shape: "list", action: "read" },
   "product-time-cards": { shape: "table", action: "read" },
-  "product-map-field-ops": { shape: "map", action: "read" },
   "product-equipment": { shape: "table", action: "read" },
   "wrap-up": { shape: "tiles", action: "click" }
 };
@@ -94,7 +89,6 @@ export function sceneForStep(step: TutorialStageStep): TutorialSceneSpec {
   if (step.targetId && /(calendar|month)/.test(step.targetId)) return { shape: "calendar", action: "drag" };
   if (step.targetId && /(lanes|kanban)/.test(step.targetId)) return { shape: "lanes", action: "drag" };
   if (step.targetId && /(timeline|gantt)/.test(step.targetId)) return { shape: "timeline", action: "drag" };
-  if (step.targetId && /(board|grid|matrix)/.test(step.targetId)) return { shape: "board", action: "read" };
   if (step.targetId && /(days|list|alerts)/.test(step.targetId)) return { shape: "list", action: "read" };
   return { shape: "tiles", action: "read" };
 }
@@ -154,25 +148,6 @@ function ShapeBody({ shape }: { shape: TutorialShape }) {
               <i className="bftu-cell" />
             </span>
           ))}
-        </div>
-      );
-    case "board":
-      return (
-        <div className="bftu-board">
-          <span className="bftu-board-days">
-            {times(6).map((day) => (
-              <i key={day} />
-            ))}
-          </span>
-          {times(4).map((row) => (
-            <span key={row} className="bftu-board-row">
-              <i className="bftu-stub is-crew" />
-              {times(6).map((cell) => (
-                <i key={cell} className="bftu-board-cell" />
-              ))}
-            </span>
-          ))}
-          <span className="bftu-hit is-cell" />
         </div>
       );
     case "calendar":
@@ -282,16 +257,6 @@ function ShapeBody({ shape }: { shape: TutorialShape }) {
               <i className="bftu-cell" />
               <i className="bftu-chip" />
             </span>
-          ))}
-        </div>
-      );
-    case "map":
-      return (
-        <div className="bftu-map">
-          <span className="bftu-map-grid" />
-          <span className="bftu-map-route" />
-          {times(5).map((pin) => (
-            <i key={pin} className="bftu-map-pin" />
           ))}
         </div>
       );

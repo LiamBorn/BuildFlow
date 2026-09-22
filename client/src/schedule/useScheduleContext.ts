@@ -64,7 +64,7 @@ const uniqueStatuses = (values: unknown): Status[] => {
 
 /* ── deep links ─────────────────────────────────────────────────────────── */
 
-export const SCHEDULE_PAGES = ["schedule", "month", "week", "list", "kanban", "matrix", "gantt"] as const;
+export const SCHEDULE_PAGES = ["schedule", "month", "kanban", "gantt"] as const;
 export type SchedulePage = (typeof SCHEDULE_PAGES)[number];
 export const isSchedulePage = (page: string): page is SchedulePage => (SCHEDULE_PAGES as readonly string[]).includes(page);
 
@@ -73,10 +73,7 @@ const FILTER_KEYS: Array<keyof ScheduleContext> = ["projectId", "crewType", "cre
 const LINK_KEYS: Record<SchedulePage, Array<keyof ScheduleContext>> = {
   schedule: ["weekStart", ...FILTER_KEYS],
   month: ["monthAnchor", ...FILTER_KEYS],
-  week: ["weekStart", ...FILTER_KEYS],
-  list: ["weekStart", ...FILTER_KEYS],
   kanban: FILTER_KEYS,
-  matrix: ["weekStart", ...FILTER_KEYS],
   gantt: FILTER_KEYS
 };
 const PARAM_NAMES: Record<keyof ScheduleContext, string> = {
@@ -104,18 +101,24 @@ export function scheduleHash(page: SchedulePage, context: ScheduleContext): stri
 
 const isDay = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
+/* The Week board, the List and the Matrix left the product on 2026-09-22 (docs/backlog.md). A
+   link to one — in an email already sent, a bookmark, a saved view — still lands: on the Month,
+   which the week it carried (`w=`) brings to the right month through `coupleWeekAndMonth`. */
+const RETIRED_PAGES: Record<string, SchedulePage> = { week: "month", list: "month", matrix: "month" };
+const pageOf = (name: string): SchedulePage | null => (isSchedulePage(name) ? name : (RETIRED_PAGES[name] ?? null));
+
 /** A schedule link back into a page and the context it asks for; null for any other hash. */
 export function parseScheduleHash(hash: string): { page: SchedulePage; patch: Partial<ScheduleContext> } | null {
   if (!hash.startsWith("#schedule")) return null;
   const [path, query = ""] = hash.slice(1).split("?");
   const [root, sub, extra] = path.split("/");
   if (root !== "schedule" || extra !== undefined) return null;
-  let page: SchedulePage | null = !sub ? "schedule" : isSchedulePage(sub) && sub !== "schedule" ? sub : null;
+  let page: SchedulePage | null = !sub ? "schedule" : sub !== "schedule" ? pageOf(sub) : null;
   if (!page) return null;
   const params = new URLSearchParams(query);
   // the board's old `?view=Week` links open the page that view became
   const view = params.get("view")?.toLowerCase();
-  if (page === "schedule" && view && isSchedulePage(view) && view !== "schedule") page = view;
+  if (page === "schedule" && view && view !== "schedule") page = pageOf(view) ?? page;
   const patch: Partial<ScheduleContext> = {};
   const week = params.get("w");
   if (week && isDay(week)) patch.weekStart = week;

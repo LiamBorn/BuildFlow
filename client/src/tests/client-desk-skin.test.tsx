@@ -98,8 +98,9 @@ describe("the Client Desk skin", () => {
      same way — and `> *` is the whole trick, which check-css's matcher cannot model. */
   it("lifts whatever card a Schedule board is carrying, and dashes the slot it left", () => {
     const S = ".app-shell.hs-shell.bf-shell .sched-rx";
-    const cards = [".sched-act", ".schedule-job", ".unassigned-card", ".sched-kan-card"];
-    for (const card of [...cards, ".schedule-list-view button"]) {
+    // (the Week card, the queue tile and the List row carried too, until those boards left on 2026-09-22)
+    const cards = [".sched-act", ".sched-kan-card"];
+    for (const card of cards) {
       const slot = declsOf(`${S} ${card}.dragging`);
       expect(slot.outline, card).toBe("2px dashed var(--bf-line-solid)");
       expect(slot.background, card).toBe("var(--bf-hover)");
@@ -111,14 +112,10 @@ describe("the Client Desk skin", () => {
       expect(carried["box-shadow"], card).toContain("var(--bf-shadow-float)");
       expect(carried.background, card).toBeUndefined();
     }
-    // except a List row, which has no colour of its own to keep
-    const carriedRow = declsOf(`${S} .sched-carry.schedule-list-view > button`);
-    expect(carriedRow["box-shadow"]).toContain("var(--bf-shadow-float)");
-    expect(carriedRow.background).toBe("var(--bf-surface)");
-    /* And all of it sits AFTER every board's own card rules: a status wash is six classes, so
-       source order is what settles the tie. The Week card is the one that proves it. */
+    /* And all of it sits AFTER every board's own card rules, so source order is what settles the
+       tie. The Kanban card is the one that proves it. */
     const sheetText = sheet.toString();
-    expect(sheetText.indexOf(`${S} .sched-carry > .schedule-job`)).toBeGreaterThan(sheetText.indexOf(`${S} .schedule-job.confirmed`));
+    expect(sheetText.indexOf(`${S} .sched-carry > .sched-kan-card`)).toBeGreaterThan(sheetText.indexOf(`${S} .sched-kan-card`));
   });
 
   it("routes the accent through the Colors hint tokens, and keeps the focus ring visible", () => {
@@ -309,37 +306,12 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .sched-rx .sched-cal-dow span`)["letter-spacing"]).toBe("0.14em");
   });
 
-  it("draws the Week board's heads as eyebrows, its job cards as semantic washes, its queue as tiles", () => {
+  // (the Week board's, the List's and the Matrix's cases left with those pages on 2026-09-22 — docs/backlog.md;
+  //  a badge still agrees with the Kanban card it sits on and the legend's dot)
+  it("keeps the status badges on the semantic washes", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    expect(declsOf(`${S} .sched-rx .schedule-header > span`)["letter-spacing"]).toBe("0.14em");
-    expect(declsOf(`${S} .sched-rx .schedule-header strong`)["font-family"]).toBe("var(--bf-font-display)");
-    const job = declsOf(`${S} .sched-rx .schedule-job`);
-    expect(job.border).toBe("0");
-    expect(job.background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .sched-rx .schedule-job.in-progress`).background).toBe("var(--cc-blue-soft)");
-    expect(declsOf(`${S} .sched-rx .schedule-job.delayIQed`).background).toBe("var(--cc-red-soft)");
-    expect(declsOf(`${S} .sched-rx .schedule-add-job-button`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .sched-rx .unassigned-card`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .sched-rx .schedule-legend .in-progress`).background).toBe("var(--bf-accent)");
-    // a badge agrees with the card it sits on and the legend's dot
     expect(declsOf(`${S} .sched-rx .badge.ready`).background).toBe("var(--cc-violet-soft)");
     expect(declsOf(`${S} .sched-rx .badge.planned`).background).toBe("var(--bf-hover)");
-    // the sticky crew column's own background and padding (schedule-phone.css) are left alone
-    const crew = declsOf(`${S} .sched-rx .crew-label`);
-    expect(crew.background).toBeUndefined();
-    expect(crew.padding).toBeUndefined();
-  });
-
-  it("draws the List page's rows on hairlines with eyebrow column heads and a lime today", () => {
-    const S = ".app-shell.hs-shell.bf-shell";
-    expect(declsOf(`${S} .sched-rx .schedule-list-view header`)["letter-spacing"]).toBe("0.14em");
-    expect(declsOf(`${S} .sched-rx .sched-list-dayhead`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} .sched-rx .sched-list-day.is-today .sched-list-dayhead`).background).toContain("var(--bf-accent-fill)");
-    const row = declsOf(`${S} .sched-rx .schedule-list-view button`);
-    expect(row["border-bottom"]).toBe("1px solid var(--bf-line-solid)");
-    expect(row["grid-template-columns"]).toBeUndefined(); // the phone sheet owns the row's grid
-    expect(declsOf(`${S} .sched-rx .schedule-list-view button:hover`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .sched-rx .sched-list-day.drop-over`)["box-shadow"]).toBe("inset 0 0 0 2px var(--bf-ink)");
   });
 
   it("draws the Kanban lanes as surface-2 tiles on the semantic tones, with white cards", () => {
@@ -352,16 +324,12 @@ describe("the Client Desk skin", () => {
     /* The lane being carried into is marked by its FILL and nothing else. The ink ring it used to
        wear was asked away 2026-09-17 ("remove the black outline around each of the sections when a
        user is moving a job into the section"); schedule.css is checked too, or that older sheet
-       would paint its own ring underneath this one. The List day's ring is untouched. */
+       would paint its own ring underneath this one. */
     /* The mark itself must stay LIGHT. It used to be 38% of `--bf-accent-fill`, which the no-blue
        pass had re-pointed to #1c1c1c — near-black — so the target lane rendered rgb(160,160,160)
        beside its neighbours' #f1f1f1 and was reported twice as a black outline. Every drop target
-       on the three boards now takes a low tint of the ink; anything above a fifth is a slab. */
-    for (const target of [
-      `${S} .sched-rx .sched-kan-lane.drop-over`,
-      `${S} .sched-rx .sched-cal-cell.drop-over`,
-      `${S} .sched-rx .sched-list-day.drop-over .sched-list-dayhead`
-    ]) {
+       on the boards now takes a low tint of the ink; anything above a fifth is a slab. */
+    for (const target of [`${S} .sched-rx .sched-kan-lane.drop-over`, `${S} .sched-rx .sched-cal-cell.drop-over`]) {
       const fill = declsOf(target).background;
       expect(fill, target).toContain("var(--bf-hover)");
       expect(fill, target).not.toContain("var(--bf-accent-fill)");
@@ -378,24 +346,6 @@ describe("the Client Desk skin", () => {
     expect(card.background).toBe("var(--bf-surface)");
     expect(card["box-shadow"]).toBe("var(--bf-shadow-card)");
     expect(declsOf(`${S} .sched-rx .sched-kan-empty`).border).toBe("0");
-  });
-
-  it("shades the Matrix's load on the reference's lime ramp and leaves its tooltip and overflow alone", () => {
-    const S = ".app-shell.hs-shell.bf-shell";
-    expect(declsOf(`${S} .sched-rx .sched-matrix-cell.load-1`).background).toBe("var(--bf-color-accent-wash)");
-    expect(declsOf(`${S} .sched-rx .sched-matrix-cell.load-3`).background).toBe("var(--bf-color-accent-wash-3)");
-    expect(declsOf(`${S} .sched-rx .sched-matrix-cell.is-conflict`).background).toBe("var(--cc-red-soft)");
-    expect(declsOf(`${S} .sched-rx .sched-matrix-cell:hover`)["box-shadow"]).toBe("inset 0 0 0 2px var(--bf-ink)");
-    expect(declsOf(`${S} .sched-rx .sched-matrix-util.limited`).color).toBe("var(--cc-amber)");
-    expect(declsOf(`${S} .sched-rx .sched-matrix-corner`)["letter-spacing"]).toBe("0.14em");
-    // the guard's contracts: the grid stays overflow: visible, the tooltip keeps its own show/hide
-    expect(declsOf(`${S} .sched-rx .sched-matrix`).overflow).toBeUndefined();
-    const tip = declsOf(`${S} .sched-rx .sched-matrix-tip`);
-    expect(tip.visibility).toBeUndefined();
-    expect(tip.opacity).toBeUndefined();
-    expect(tip.display).toBeUndefined();
-    // the phone sheet's sticky crew column keeps its background
-    expect(declsOf(`${S} .sched-rx .sched-matrix-crew`)).toEqual({});
   });
 
   it("gives the Gantt chart the pill nav, eyebrow heads, a lime today and pill bars, and leaves the bar's fill and overflow to the guard", () => {
@@ -529,66 +479,6 @@ describe("the Client Desk skin", () => {
         "font-size"
       ]
     ).toBe("32px");
-  });
-
-  it("gives the contact record panel the card language: gradient face, disc actions, chip rows, semantic tags", () => {
-    const S = ".app-shell.hs-shell.bf-shell";
-    /* The panel is a portal to document.body, so its rules hang off the body, not the shell — and
-       they are NOT fenced to one mode: the light palette below is, the rules that read it are not,
-       which is how dark mode reaches the panel at all (2026-09-17). */
-    const P = `body:has(${S}) .hs-record-layer`;
-    const LIGHT = `body:has(${S}:not([data-bf-mode="dark"]):not([data-bf-theme="dark"])) .hs-record-layer`;
-    expect(declsOf(LIGHT)["--bf-surface"]).toBe("#ffffff");
-    expect(declsOf(LIGHT)["--cc-green"]).toBe("var(--bf-color-ok)");
-    expect(declsOf(`${P} .hs-record`)["box-shadow"]).toBe("var(--bf-shadow-float)");
-    /* ON THE SAME DRAWER STANDARD as every dialog (asked 2026-09-18, "do the same for the contacts
-       record panel too"). It was already the right-side frame, so what this pins is the two places
-       it went its own way: the entrance is the shared one, not its bespoke 0.32s curve — which also
-       means the reduce block reaches it — and the row that leaves and acts on the record STAYS,
-       because a record runs to 1,500px and that row used to scroll away with the first flick. */
-    expect(declsOf(`${P} .hs-record`).animation).toContain("bfe-drawer-in");
-    const topRow = declsOf(`${P} .hs-record .hs-record-top`);
-    expect(topRow.position).toBe("sticky");
-    expect(topRow.background, "it has to paint, or the record shows through it").toBe("var(--bf-surface)");
-    // it reaches up over the panel's top padding, which would otherwise be a strip the record scrolls through
-    expect(topRow["margin-top"]).toBe("calc(-1 * var(--bf-record-pad, 20px))");
-    expect(topRow["box-shadow"], "and covers that strip again if the padding ever changes").toBe("0 -24px 0 var(--bf-surface)");
-    expect(declsOf(`${P} .hs-record .hs-record-avatar`).background).toContain("var(--bf-color-face");
-    expect(declsOf(`${P} .hs-record .hs-record-id h2`)["font-family"]).toBe("var(--bf-font-display)");
-    const action = declsOf(`${P} .hs-record .hs-record-action > span`);
-    expect(action.width).toBe("40px");
-    expect(action.background).toBe("var(--bf-surface)");
-    expect(declsOf(`${P} .hs-record .hs-record-action.active > span`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${P} .hs-record .hs-timeline-body`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${P} .hs-record .hs-badge.tone-red`).color).toBe("var(--cc-red)");
-    expect(declsOf(`${P} .hs-record .hs-task-pill.p-high`).background).toBe("var(--cc-red-soft)");
-    expect(declsOf(`${P} .hs-record .hs-link`).border).toBe("0");
-    // the company record's contact and deal lists sit inside a second-surface card: white tiles, not chips
-    expect(declsOf(`${P} .hs-record .hs-record-card .hs-record-list li`).background).toBe("var(--bf-surface)");
-    expect(declsOf(`${S} .contacts-page .hs-link-plain`).color).toBe("var(--bf-ink)");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th button`)[
-        "text-transform"
-      ]
-    ).toBe("inherit");
-  });
-
-  it("puts the Deals board on the tray: white stage columns, second-surface cards, an ink stage track", () => {
-    const S = ".app-shell.hs-shell.bf-shell";
-    const P = `body:has(${S}) .hs-record-layer`;
-    expect(declsOf(`${S} .deals-page .hs-board`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .deals-page .hs-board-col`).background).toBe("var(--bf-surface)");
-    expect(declsOf(`${S} .deals-page .hs-board-col-head strong`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} .deals-page .hs-deal-card`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .deals-page .hs-deal-card:hover`).background).toBe("var(--bf-surface)");
-    expect(declsOf(`${S} .deals-page .hs-deal-card-title`).color).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .deals-page .hs-deal-card-owner`).background).toContain("var(--bf-color-face");
-    expect(declsOf(`${S} .deals-page .hs-board-dot.tone-green`).background).toBe("var(--cc-green)");
-    expect(declsOf(`${P} .hs-record .hs-stage-step.done > span`).background).toBe("var(--bf-ink)");
-    // the portal cannot see the theme block's --bf-accent-fill, so the current step carries the lime itself
-    expect(declsOf(`${P} .hs-record .hs-stage-step.current > span`).background).toBe("var(--bf-color-accent-fill)");
-    // the landing pulse stays daylight's: this sheet never touches .is-landing
-    expect(declsOf(`${S} .deals-page .hs-deal-card.is-landing`)).toEqual({});
   });
 
   it("gives the Equipment and Materials dialogs the card language: stage radius, display title, second-surface fields, ink Save", () => {
@@ -853,7 +743,6 @@ describe("the Client Desk skin", () => {
     );
     for (const panel of [
       `body:has(${S}) .pdx .pdx-dialog:not(.pdx-confirm)`,
-      `body:has(${S}) .hs-record-layer .hs-record`,
       `body:has(${S}) .gantt-page .gantt-drawer`,
       `body:has(${S}) .schedule-dialog.schedule-job-picker`
     ]) {
@@ -874,10 +763,7 @@ describe("the Client Desk skin", () => {
     expect(drawerTop.margin, "the padding does the spacing now").toBe("0");
     /* ONE SIZE OF CLOSE BUTTON: the 30px disc the editing drawer uses. The picker's was a 40px
        icon button and the record's is the shell's, so both are brought to it. */
-    for (const close of [
-      `body:has(${S}) .schedule-dialog.schedule-job-picker > header .icon-button`,
-      `body:has(${S}) .hs-record-layer .hs-record .hs-record-top .hs-btn-icon`
-    ]) {
+    for (const close of [`body:has(${S}) .schedule-dialog.schedule-job-picker > header .icon-button`]) {
       const disc = declsOf(close);
       expect(disc.width, close).toBe("30px");
       expect(disc.height, close).toBe("30px");
@@ -920,7 +806,7 @@ describe("the Client Desk skin", () => {
        landed on the pill. The other three are portals above 80 and have always covered it. */
     const fab = sheet.nodes.filter((node): node is Rule => node.type === "rule" && node.selector.includes(".hc-assistant-fab"));
     expect(fab.length, "one rule, and it names every panel").toBe(1);
-    for (const panel of [".pdx", ".hs-record-layer", ".gantt-drawer-layer", ".schedule-dialog-backdrop"]) {
+    for (const panel of [".pdx", ".gantt-drawer-layer", ".schedule-dialog-backdrop"]) {
       expect(fab[0].selector, panel).toContain(panel);
     }
     expect(declsOf(fab[0].selector).display).toBe("none");
@@ -936,7 +822,6 @@ describe("the Client Desk skin", () => {
     expect(declsOf("body.bf-shell")["--bf-scrim-blur"]).toBe("6px");
     for (const veil of [
       `body:has(${S}) .pdx`,
-      `body:has(${S}) .hs-record-layer .hs-record-backdrop`,
       `body:has(${S}) .gantt-drawer-layer .gantt-drawer-backdrop`,
       `body:has(${S}) .schedule-dialog-backdrop`
     ]) {
@@ -970,9 +855,6 @@ describe("the Client Desk skin", () => {
     for (const attr of ['[data-bf-mode="dark"]', '[data-bf-theme="dark"]']) {
       expect(declsOf(`body:has(${S}${attr})`)["--bf-scrim"], attr).toBe("rgba(0, 0, 0, 0.66)");
     }
-    /* (3) The Contacts page's own ground was a page-scope literal; section 46 re-points every
-       sheet's TONE names but not their surfaces, so the blur rang each dark card with white. */
-    expect(declsOf(`body:has(${S}) .contacts-page`)["--hsc-paper"]).toBe("var(--bf-ground)");
     /* (4) A PORTAL CANNOT SEE `.bf-shell[data-bf-mode="dark"]`, so each needs the dark palette
        restated on it. Only the record layer and the AI dock had it; the editing dialogs and the
        add-job form painted the whole LIGHT palette in dark mode. Dark and system only — in light
@@ -1011,7 +893,6 @@ describe("the Client Desk skin", () => {
     /* The palette is declared for these; a root counts as covered when ANY of its classes is one
        (the project and crew dialogs are `.pdx` as well, and the assistant keeps its own copy). */
     const darkened = [
-      ".hs-record-layer",
       ".pdx",
       ".schedule-dialog-backdrop",
       ".bfsel",
@@ -1033,7 +914,7 @@ describe("the Client Desk skin", () => {
       return !root.split(/\s+/).some((cls) => darkened.includes("." + cls));
     });
     expect(uncovered, "a body portal with no dark palette").toEqual([]);
-    for (const panel of [".hs-record-layer", ".pdx", ".schedule-dialog-backdrop", ".bfsel", ".bfdate"]) {
+    for (const panel of [".pdx", ".schedule-dialog-backdrop", ".bfsel", ".bfdate"]) {
       for (const attr of ['[data-bf-mode="dark"]', '[data-bf-theme="dark"]']) {
         expect(declsOf(`body:has(${S}${attr}) ${panel}`)["--bf-surface"], panel + attr).toBe("#1b1b19");
       }
@@ -1085,20 +966,6 @@ describe("the Client Desk skin", () => {
        panel is mounted; `:has()` is that condition. */
     const lifted = declsOf(`body:has(${S}) .sched-rx:has(.gantt-drawer-layer)`);
     expect(lifted["z-index"], "clear of the top bar's 40, under the body portals").toBe("60");
-    /* THE ONE THING THAT STAYS DIFFERENT, recorded so nobody takes it for a miss: the record panel
-       has no body element to make a scroller of — its sections are siblings in App.tsx — so it
-       scrolls as a WHOLE with its top row stuck to the edge (section 66). Same behaviour to look
-       at, different mechanism, and the rhythm is still the drawer's. */
-    const record = declsOf(`body:has(${S}) .hs-record-layer .hs-record`);
-    expect(record.padding).toBe("var(--bf-record-pad) 22px 22px");
-    /* and its sticky top row's negative pull reads the SAME number (section 66 reaches the panel's
-       edge with `calc(-1 * var(--bf-record-pad, 20px))`). The token was never declared, so it took
-       the 20px fallback while the panel padded 18 — measured, the row hung 2px over the rounded
-       corner. Declaring it is what keeps the two in step. */
-    expect(record["--bf-record-pad"], "declared, not left on the 20px fallback").toBe("18px");
-    expect(declsOf(`body:has(${S}) .hs-record-layer .hs-record .hs-record-top`).position, "the record's header holds by sticking").toBe(
-      "sticky"
-    );
   });
 
   it("gives the Create menu and the shared dialog the card language, scoped from the body because the dialog is a portal", () => {
@@ -1186,7 +1053,6 @@ describe("the Client Desk skin", () => {
     expect(shape.animation, "and the arrival is that same duration").toContain("var(--bf-dur-panel)");
     // a confirm never went to the edge, so it does not leave by it
     expect(declsOf(`body:has(${S}) .bf-panel-exit.pdx .pdx-dialog.pdx-confirm`).animation).toContain("bfe-pop-out");
-    expect(declsOf(`body:has(${S}) .bf-panel-exit.hs-record-layer .hs-record`).animation).toContain("bfe-drawer-out");
     expect(declsOf("body > .bf-panel-exit")["pointer-events"], "the copy is a picture, not a panel").toBe("none");
     /* The copy must carry what the person typed — `cloneNode` copies attributes, and a controlled
        input's text is a PROPERTY — or the panel blanks its own fields on the way out. */
@@ -1226,9 +1092,7 @@ describe("the Client Desk skin", () => {
     });
     expect(baseLabel.animation, "the base entrance went with it").toBeUndefined();
     expect(declsOf(`${P} .pdx .pdx-form > *`).animation, "not fenced to one mode").toBeUndefined();
-    for (const one of [`body:has(${S}) .hs-record-layer .hs-record .hs-record-section`, `${S} .gantt-page .gantt-drawer-body > *`]) {
-      expect(declsOf(one).animation, one).toContain("bfe-row");
-    }
+    expect(declsOf(`${S} .gantt-page .gantt-drawer-body > *`).animation).toContain("bfe-row");
   });
 
   it("gives the search palette the card language: a lavender scrim, a stage card, a display input with the magnifier, eyebrow groups, pill rows with a lime mark, chip keys, a stagger", () => {
@@ -1791,7 +1655,7 @@ describe("the Client Desk skin", () => {
        (week.tsx), so its own date fields need the browser's glyph made inert like everyone else's,
        and selectMenu/dateMenu must recognise it — otherwise the OS picker comes back on exactly
        the two date fields in that panel. The three copies of this list have to move together. */
-    const SURFACES = ".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop";
+    const SURFACES = ".app-shell.hs-shell, .pdx, .bf-breeze, .schedule-dialog-backdrop"; // (the Sales record panel's layer left with its hub, 2026-09-22)
     const gate = `body.bf-shell :is(${SURFACES}) input[type="date"]`;
     /* Whitespace-collapsed: a selector this long gets wrapped across lines by the formatter, and a
        raw `toContain` on the sheet then finds nothing — the same trap as splitSelectors above. */
@@ -2080,14 +1944,11 @@ describe("the Client Desk skin", () => {
    * Each page was walked with the shell in dark, measuring every element's own background and the
    * contrast of each run of text against the nearest painted surface behind it. Three pages came
    * back with a light literal in an older sheet that this skin styles the INSIDE of but never the
-   * container — so the page stayed light while the ink flipped.
+   * container — so the page stayed light while the ink flipped. (The third was the List view, a
+   * 642x571 white slab at contrast 1.11; its page left the product on 2026-09-22 — docs/backlog.md.)
    */
-  it("paints the three pages whose own ground was a light literal from the shell's tokens", () => {
+  it("paints the two pages whose own ground was a light literal from the shell's tokens", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    /* The list view was a 642x571 white slab with the day's rows on it in light ink — measured
-       contrast 1.11, i.e. nothing readable at all. `--bf-surface` is #ffffff, so light mode is
-       unchanged to the byte. */
-    expect(declsOf(`body:has(${S}) .sched-rx .schedule-list-view`).background).toBe("var(--bf-surface)");
     /* Reports and Settings were whole PAGES: `#f5f8fb` over 698x1373 with the h1 at contrast 1.04,
        and `#f4f7fb` over 1193x1049. They share one rule because they are the same defect. */
     for (const panel of [".reports-shell .main-panel", ".main-panel.settings-main-panel"]) {

@@ -10,7 +10,7 @@ import { bookingsWithoutCrew } from "./filters";
 import { formatScheduleDate, mondayOf } from "./week";
 
 /** Where an alert takes you: the Week board on that week, or the page that owns the problem. */
-export type ScheduleAlertPage = "week" | "delayIQs" | "materials" | "map";
+export type ScheduleAlertPage = "month" | "delayIQs" | "materials";
 export type ScheduleAlertLink = { page: ScheduleAlertPage; weekStart?: string };
 
 export type ScheduleAlert = {
@@ -98,7 +98,7 @@ export function deriveScheduleAlerts(
       when: null,
       jobId: first.jobId,
       date: first.date,
-      link: { page: "week", weekStart: weekOf(first.date) }
+      link: { page: "month", weekStart: weekOf(first.date) }
     });
   }
   if (conflict) {
@@ -112,7 +112,7 @@ export function deriveScheduleAlerts(
       when: null,
       jobId: conflict.jobId,
       date: conflict.date,
-      link: { page: "week", weekStart: weekOf(conflict.date) }
+      link: { page: "month", weekStart: weekOf(conflict.date) }
     });
   }
   if (openDelayIQ) {
@@ -139,7 +139,9 @@ export function deriveScheduleAlerts(
       when: relativeTime(weather.startsAt, now),
       jobId: null,
       date: null,
-      link: { page: "map" }
+      // the weather warning opened Map & Field Ops until 2026-09-22 (in the backlog, docs/backlog.md); the
+      // DelayIQs page is where a weather delay is read now
+      link: { page: "delayIQs" }
     });
   }
   if (missingMaterials) {

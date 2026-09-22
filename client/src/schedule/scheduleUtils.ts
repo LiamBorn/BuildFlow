@@ -28,24 +28,6 @@ export function getUnassignedJobs(jobs: Job[], assignments: ScheduleAssignment[]
   return jobs.filter((job) => !assignedJobIds.has(job.id));
 }
 
-export function assignmentsForCell(assignments: ScheduleAssignment[], crewId: string, date: string) {
-  return assignments.filter((assignment) => assignment.crewId === crewId && assignment.date === date);
-}
-
-export const cellKey = (crewId: string, date: string) => `${crewId}|${date.slice(0, 10)}`;
-
-/** Bookings by crew-day, built once so a board of crews × days reads each cell in constant time. */
-export function indexAssignmentsByCell(assignments: ScheduleAssignment[]): Map<string, ScheduleAssignment[]> {
-  const byCell = new Map<string, ScheduleAssignment[]>();
-  for (const assignment of assignments) {
-    const key = cellKey(assignment.crewId, assignment.date);
-    const cell = byCell.get(key);
-    if (cell) cell.push(assignment);
-    else byCell.set(key, [assignment]);
-  }
-  return byCell;
-}
-
 export function statusTone(status: string) {
   return status.toLowerCase().replaceAll(" ", "-");
 }

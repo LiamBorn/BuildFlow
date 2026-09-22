@@ -1,6 +1,6 @@
 /**
  * The one page frame every schedule view stands in. `useSchedulePage` derives what the
- * seven pages used to derive for themselves — the workspace (bench-aware), the shared
+ * four pages used to derive for themselves — the workspace (bench-aware), the shared
  * context, the live feed and the view keys, the filtered scope, the shared week, the
  * calendar, the KPIs, the alerts, the lookup maps, the notice, the conflict question, the
  * save and the drawer, plus the drag sensors and the one way a drop runs with its Undo —
@@ -11,7 +11,7 @@
  */
 import { DndContext, type DragEndEvent, type DragOverEvent } from "@dnd-kit/core";
 import { dragModifiers } from "../dragZoom";
-import { AlertTriangle, Bookmark, CalendarDays, ChevronDown, Crosshair, Gauge, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bookmark, CalendarDays, Gauge, SlidersHorizontal, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import {
   holidayMap,
@@ -23,7 +23,7 @@ import {
   type ScheduleAssignment
 } from "@buildflow/shared";
 import { assignJob, createDependency, createJob, deleteDependency, setScheduleBaseline } from "../api";
-import { addDays, parseIsoDate, toIsoDate } from "../components/ui/gantt";
+import { parseIsoDate, toIsoDate } from "../components/ui/gantt";
 import {
   BoardCustomizeHint,
   BoardLayoutControls,
@@ -169,7 +169,7 @@ export function useSchedulePage({
       }),
     [scope.assignments, weekStartIso, weekEndIso]
   );
-  // jobs with no crew booked yet: the Week board's queue, the landing's panel
+  // jobs with no crew booked yet: the landing's unbooked queue
   const unassigned = useMemo(() => getUnassignedJobs(jobs, data.assignments), [jobs, data.assignments]);
   // holidays and working days come from Settings › Work calendar
   const calendar = useMemo(() => workCalendarOf(data), [data]);
@@ -203,7 +203,7 @@ export function useSchedulePage({
   );
   // the same alerts every schedule page raises, for what the filters show
   const alerts = useMemo(() => deriveScheduleAlerts(data, jobs, scope.assignments), [data, jobs, scope.assignments]);
-  // an alert opens the place it is dealt with — a Week alert changes the shared week on the way; on the Week board that is all it does
+  // an alert opens the place it is dealt with — a booking alert changes the shared week on the way (the month follows it)
   const openAlert = useCallback(
     (alert: ScheduleAlert) => {
       if (alert.link.weekStart) updateContext({ weekStart: alert.link.weekStart });
@@ -342,14 +342,14 @@ export function useSchedulePage({
       setBusy(true);
       try {
         const job = await createJob(input);
-        // a "no" leaves the new job unbooked, in the Week board's queue
+        // a "no" leaves the new job unbooked, in the landing's queue
         const booked = (await withConflictAsk((force) => assignJob({ jobId: job.id, crewId, date }, { force }), ask)) !== null;
         setPicker(null);
         /* EVERY PAGE MOVES TO THE NEW JOB. The week and the month are one shared context so that a
            page "opens where the last one left off" — which is right for browsing and wrong the
-           moment you SCHEDULE something: the Week, List and Matrix boards show one week and the
-           Month one month, and a job made on a day outside them is simply not on the board when
-           you switch. Reported 2026-09-20 as "if a user schedules a job within the Month, that
+           moment you SCHEDULE something: the Month shows one month (and the boards that showed one
+           week did the same while they were here), and a job made on a day outside it is simply not
+           on the board when you switch. Reported 2026-09-20 as "if a user schedules a job within the Month, that
            same job can be seen within the week page, list, kanban, matrix, and gantt chart — as of
            right now it doesn't do it"; measured before the change, a job created on the 24th was
            invisible on List and Matrix (parked a week later) and on the Week BOARD, where it only
@@ -367,7 +367,7 @@ export function useSchedulePage({
         await settle({
           done: booked
             ? `${job.name} scheduled for ${crewsById.get(crewId)?.name ?? "crew"} on ${formatScheduleDate(date)}`
-            : `${job.name} created but not booked — find it in the Week board's queue.`
+            : `${job.name} created but not booked — find it in the Schedule landing's unbooked queue.`
         });
         return { job, booked, date };
       } catch (error) {
@@ -523,38 +523,6 @@ export function useSchedulePage({
 
 export type SchedulePageState = ReturnType<typeof useSchedulePage>;
 
-/** The previous/next week stepper every week-bound page carries. */
-export function WeekStepper({ page }: { page: SchedulePageState }) {
-  const { weekRange, setWeekStart } = page;
-  return (
-    <div className="week-stepper" aria-label={`Selected week ${weekRange}`}>
-      <button type="button" aria-label="Previous week" onClick={() => setWeekStart((start) => addDays(start, -WEEK_DAYS))}>
-        <ChevronDown className="previous-week" size={18} />
-      </button>
-      <strong>{weekRange}</strong>
-      <button type="button" aria-label="Next week" onClick={() => setWeekStart((start) => addDays(start, WEEK_DAYS))}>
-        <ChevronDown className="next-week" size={18} />
-      </button>
-    </div>
-  );
-}
-
-/** "This week": back to the current week, disabled when already there. */
-export function ThisWeekButton({ page }: { page: SchedulePageState }) {
-  const { setWeekStart, isThisWeek } = page;
-  return (
-    <button
-      type="button"
-      className="outline-button"
-      onClick={() => setWeekStart(mondayOf(new Date()))}
-      disabled={isThisWeek}
-      title="Back to the current week"
-    >
-      <Crosshair size={16} /> This week
-    </button>
-  );
-}
-
 /** "Schedule": back to the overview. */
 export function BackToScheduleButton({ onOpenSchedule }: { onOpenSchedule: () => void }) {
   return (
@@ -637,7 +605,7 @@ export type SchedulePageFrameProps = {
   page: SchedulePageState;
   /** The page's own sections, as panels on the board (see ScheduleSection); without them the page lays itself out. */
   sections?: ScheduleSection[];
-  /** The page's own root class, e.g. "week-page". */
+  /** The page's own root class, e.g. "month-page". */
   pageClass?: string;
   eyebrow: ReactNode;
   title: ReactNode;
@@ -668,7 +636,7 @@ export type SchedulePageFrameProps = {
     /** Escape, or a drag that never landed: take that preview back down. */
     onDragCancel?: () => void;
   };
-  /** After the picker creates and books a job (the landing goes to the Week board on that week). */
+  /** After the picker creates and books a job (the landing goes to the Month calendar on that month). */
   onBooked?: (booking: { job: Job; booked: boolean; date: string }) => void;
   /** The page's own dialogs (a day summary, an import). */
   dialogs?: ReactNode;

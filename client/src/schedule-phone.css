@@ -1,87 +1,20 @@
 /* ============================================================================
    schedule-phone.css — the Schedule category on phones and narrow tablets.
    Loaded after schedule-redesign / -calendar / -views so it wins ties.
-   Boards stop clipping: wide grids scroll sideways inside the card with the
-   crew column pinned, the List reflows into stacked rows, the Month calendar
-   shows dots instead of chips, control rows pack two-up and the footer wraps.
+   Boards stop clipping: the Kanban's lanes scroll sideways inside the card, the
+   Month calendar shows dots instead of chips, control rows pack two-up and the
+   footer wraps. (The Week board's pinned crew column and the List's stacked rows
+   left with those pages on 2026-09-22 — docs/backlog.md.)
    Touch: cards still scroll the page; a long press lifts them (TouchSensor).
    ========================================================================== */
 
 /* cards allow normal scrolling; dnd-kit's TouchSensor lifts them after a 250ms press */
-.sched-rx .schedule-job,
 .sched-rx .sched-act,
-.sched-rx .sched-kan-card,
-.sched-rx .schedule-list-view button,
-.sched-rx .sched-matrix-cell {
+.sched-rx .sched-kan-card {
   touch-action: manipulation;
 }
 
-/* the Week board's header and rows share one sideways scroller inside the card */
-.sched-rx .schedule-week-scroll {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
 @media (max-width: 900px) {
-  /* Week: day cells keep a usable width; the crew column stays pinned while you swipe */
-  .sched-rx .schedule-week-scroll .schedule-header,
-  .sched-rx .schedule-week-scroll .crew-row {
-    grid-template-columns: 124px repeat(7, 116px);
-    min-width: max-content;
-  }
-  .sched-rx .schedule-week-scroll .schedule-header > span:first-child,
-  .sched-rx .schedule-week-scroll .crew-label {
-    position: sticky;
-    left: 0;
-    z-index: 2;
-    background: var(--wx-card);
-    box-shadow: 1px 0 0 var(--wx-line-soft);
-  }
-  /* The corner cell used to re-declare `background: #ffffff` here, overriding the `var(--wx-card)`
-     the rule above gives it and every sibling. Redundant in light mode (the card IS #ffffff) and
-     wrong in dark, where it painted a pure-white 112x65 block over the board — measured on the
-     Week page in dark mode, and the only reason nobody had seen it is that this rule lives under
-     `max-width: 900px`. The token is opaque in both modes (#ffffff / #1b1b19), which is all the
-     override was ever providing for a cell that has to stay solid while the board scrolls under it. */
-  .sched-rx .schedule-week-scroll .crew-label,
-  .sched-rx .schedule-week-scroll .schedule-cell {
-    min-height: 124px;
-  }
-  .sched-rx .schedule-week-scroll .crew-label {
-    padding: 14px 10px;
-  }
-
-  /* Matrix: the same treatment. The desktop rule that lets the grid's tooltips escape its rounded
-     corners doubles its own class to outrank the card's overflow, so this has to carry the same weight
-     — a media query adds none of its own, and without the match a phone gets no scroller at all (P5.1). */
-  .sched-rx .sched-matrix.sched-matrix {
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-  /* that scroller would clip the tooltip; every cell's accessible name already carries the same words */
-  .sched-rx .sched-matrix-tip {
-    display: none;
-  }
-  .sched-rx .sched-matrix-head,
-  .sched-rx .sched-matrix-row {
-    grid-template-columns: 124px repeat(var(--matrix-cols, 7), 64px) 72px;
-    min-width: max-content;
-  }
-  .sched-rx .sched-matrix-corner,
-  .sched-rx .sched-matrix-crew {
-    position: sticky;
-    left: 0;
-    z-index: 2;
-    background: var(--wx-card);
-    box-shadow: 1px 0 0 var(--wx-line-soft);
-  }
-  .sched-rx .sched-matrix-corner {
-    background: var(--wx-bg-2);
-  }
-
   /* Kanban lanes already scroll sideways; keep them readable */
   .sched-rx .sched-kanban {
     grid-auto-columns: minmax(232px, 1fr);
@@ -130,28 +63,6 @@
 
 @media (max-width: 640px) {
   /* List: one stacked card per booking — time and status on the first line, job and crew beneath */
-  .sched-rx .schedule-list-view header {
-    display: none;
-  }
-  .sched-rx .schedule-list-view button {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "time status" "job job" "crew crew";
-    gap: 4px 12px;
-    padding: 12px 16px;
-  }
-  .sched-rx .schedule-list-view button > span:nth-child(1) {
-    grid-area: time;
-  }
-  .sched-rx .schedule-list-view button > span:nth-child(2) {
-    grid-area: job;
-  }
-  .sched-rx .schedule-list-view button > span:nth-child(3) {
-    grid-area: crew;
-  }
-  .sched-rx .schedule-list-view button > .badge {
-    grid-area: status;
-    justify-self: end;
-  }
 
   /* Month: dots instead of chips; the day itself stays tappable */
   .sched-rx .sched-cal-cell {
@@ -240,7 +151,6 @@
   .sched-views-form input,
   .sched-chips .sched-chip,
   .sched-filters-clear,
-  .sched-rx .schedule-add-job-button.compact,
   .sched-rx .sched-book,
   .sched-rx .sched-rail-foot-btn,
   .sched-rx .sched-cpm-baseline,

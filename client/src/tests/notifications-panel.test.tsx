@@ -246,11 +246,12 @@ describe("the notifications drawer", () => {
   });
 
   /**
-   * A booking is addressed by week and crew rather than by row, and the board remembers the
+   * A booking is addressed by week and crew rather than by row, and the calendar remembers the
    * filters the reader last used — which can be the very reason the booking is not visible.
-   * So the jump writes the context, the same way a pasted schedule link does.
+   * So the jump writes the context, the same way a pasted schedule link does, and opens the
+   * Month calendar (the Week board it used to open left on 2026-09-22 — docs/backlog.md).
    */
-  it("points the Week board at the booking, dropping filters that would hide it", async () => {
+  it("points the Month calendar at the booking, dropping filters that would hide it", async () => {
     // a context that hides the fixture's only assignment: the wrong project, and a status set
     window.localStorage.setItem(
       "bf:schedule:context:u-matt",
@@ -270,5 +271,6 @@ describe("the notifications drawer", () => {
         statuses: null
       });
     });
+    expect(await screen.findByRole("heading", { level: 1, name: /^Month/ })).toBeInTheDocument();
   });
 });

@@ -120,7 +120,7 @@ describe("diffPlanSnapshots", () => {
     expect(notice.lines).toContain("  • Concrete Crew 2 on Sep 10 — Slab Pour and Backfill");
     expect(notice.lines).toContain("  • Foundations complete (Pinecrest Medical) — Sep 20 → Sep 23 (+3 days)");
     expect(digestNotice(digest, "Pinecrest Builders", "https://app.example.com").lines).toContain(
-      "Open the week: https://app.example.com/#schedule/week?w=2026-09-14"
+      "Open the week: https://app.example.com/#schedule?w=2026-09-14"
     );
   });
 

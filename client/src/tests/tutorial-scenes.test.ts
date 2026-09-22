@@ -12,12 +12,12 @@ import type { OnboardingProductId } from "@buildflow/shared";
 import { buildTutorialSteps } from "../App";
 import { TUTORIAL_SCENES, sceneForStep } from "../TutorialStage";
 
-/** Every step the tutorial can build: the core, the Schedule tour and all four add-ons. */
+/** Every step the tutorial can build: the core, the Schedule tour and all three add-ons. */
 const everyStep = () =>
   buildTutorialSteps({
     selectedBusinessType: "Asphalt",
     selectedPlanId: "business",
-    selectedProductIds: ["schedule-ai", "time-cards", "map-field-ops", "equipment-tracking"] as OnboardingProductId[]
+    selectedProductIds: ["schedule-ai", "time-cards", "equipment-tracking"] as OnboardingProductId[]
   });
 
 describe("the tutorial's demonstrations", () => {
@@ -39,8 +39,7 @@ describe("the tutorial's demonstrations", () => {
     expect(scene("month-view").shape).toBe("calendar");
     expect(scene("kanban-view").shape).toBe("lanes");
     expect(scene("gantt-view").shape).toBe("timeline");
-    expect(scene("schedule-overview").shape).toBe("board");
-    expect(scene("product-map-field-ops").shape).toBe("map");
+    expect(scene("schedule-overview").shape).toBe("calendar");
     expect(scene("schedule-status").shape).toBe("status");
     // a step that asks you to OPEN something clicks; one that asks you to SAVE fills
     expect(scene("open-crew-form").action).toBe("click");
@@ -49,9 +48,10 @@ describe("the tutorial's demonstrations", () => {
     expect(scene("submit-job").action).toBe("fill");
   });
 
-  it("uses all eleven shapes, so none is dead weight", () => {
+  it("uses all nine shapes, so none is dead weight", () => {
+    // (the map shape left with the Map & Field Ops lesson, and the board shape with the Week board, on 2026-09-22; docs/backlog.md)
     const used = new Set(Object.values(TUTORIAL_SCENES).map((entry) => entry.shape));
-    expect(used.size).toBe(11);
+    expect(used.size).toBe(9);
   });
 
   /** And a step with no named scene still gets a sensible one from what it declares. */

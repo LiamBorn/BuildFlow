@@ -59,7 +59,6 @@ export const PILL_GROUPS = [
   ".gantt-seg", // Gantt — the timeline range
   ".bfnt-tabs", // the notifications drawer's filters
   ".bf-breeze-nav", // BuildFlow AI's own nav
-  ".mx-goal", // Map & Field Ops — the optimisation goal (mapops/, painted in mapops.css)
   ".hs-rail-list", // the icon rail: the page you are on (docs/motion-spec.md §5)
   ".settings-rail", // Settings — the category you are reading, across all four sections
   /* Onboarding step 3 — the trade tiles (2026-09-22, "add some sort of clean effect for when a

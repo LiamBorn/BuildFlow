@@ -1,14 +1,17 @@
 /**
- * Schedule area tests — the landing (page "schedule") and the Week board
- * (page "week"), rewritten against the 2026-09-08 layout. The old board tests
- * in App.test.tsx were quarantined when the six views moved to their own pages.
+ * Schedule area tests — the landing (page "schedule") and the Month calendar
+ * (page "month"), rewritten against the 2026-09-08 layout; the Week board's cases
+ * moved onto the calendar when the Week, List and Matrix pages left the product
+ * on 2026-09-22 (docs/backlog.md). The old board tests in App.test.tsx were
+ * quarantined when the views moved to their own pages.
  *
  * What the current UI allows:
  * - the landing lists the unbooked queue with a "Book" per job and opens the
  *   views from its view cards; "View all alerts" opens the alerts dialog;
- * - the Week board is a crew × day grid whose cards open the shared job drawer
- *   (NOT the project editor — `onOpenProject` is a no-op on the Week page);
- * - "Add job" opens the picker, which POSTs /api/jobs then /api/schedule/assign.
+ * - the Month calendar is a day grid whose chips open the shared job drawer
+ *   (NOT the project editor — `onOpenProject` is a no-op on the Month page);
+ * - a day's "+" (or the empty part of the day) opens the picker, which POSTs
+ *   /api/jobs then /api/schedule/assign.
  * dnd-kit drags need layout, so re-booking by drag is not asserted here.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -20,7 +23,7 @@ import { bootstrapFixture } from "../test/fixture";
 /** The path of a fetched URL, whatever base api.ts prefixes it with. */
 const pathOf = (input: RequestInfo | URL) => new URL(String(input), "http://buildflow.test").pathname;
 
-type ScheduleView = "Month" | "Week" | "List" | "Kanban" | "Matrix" | "Gantt Chart";
+type ScheduleView = "Month" | "Kanban" | "Gantt Chart";
 
 /** Open a schedule view from the rail: hover the Schedule hub (React listens to
     mouseover), then pick the page from its flyout. The landing's view cards
@@ -33,18 +36,22 @@ async function openScheduleView(view: ScheduleView) {
   await screen.findByRole("heading", { level: 1, name: new RegExp(`^${view}`) });
 }
 
-async function openWeekBoard() {
-  await openScheduleView("Week");
-  await screen.findByRole("region", { name: "Crew schedule for the week" });
+async function openMonthCalendar() {
+  await openScheduleView("Month");
+  await screen.findByRole("region", { name: "Calendar for June 2026" });
 }
+
+/** A job's chip on the calendar: the button titled "name · phase". */
+const chip = (title: string) => screen.getAllByTitle(title).find((element) => element.tagName === "BUTTON") as HTMLElement;
+const RIVERSIDE = "Riverside Office Building · Concrete - Level 3 Slab";
 
 describe("Schedule pages", () => {
   installAppHarness();
 
-  it("opens Settings from the Week page account menu", async () => {
+  it("opens Settings from the Month page account menu", async () => {
     render(<App />);
     await enterDashboard();
-    await openWeekBoard();
+    await openMonthCalendar();
 
     // The topbar control is avatar-only; the name and role live in the menu it opens.
     fireEvent.click(screen.getByRole("button", { name: / account$/ }));
@@ -57,10 +64,10 @@ describe("Schedule pages", () => {
 
     fireEvent.click(settingsItem);
     expect(await screen.findByLabelText("Settings categories")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Crew schedule for the week" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Calendar for June 2026" })).not.toBeInTheDocument();
   });
 
-  it("lists the unbooked queue on the Schedule landing and Book opens the Week board", async () => {
+  it("lists the unbooked queue on the Schedule landing and Book opens the Month calendar on the job's month", async () => {
     render(<App />);
     await enterDashboard();
     await openSchedule();
@@ -73,33 +80,21 @@ describe("Schedule pages", () => {
        panels would otherwise let any one of them satisfy it. */
     const panel = queue.closest(".dash-block");
     expect(panel, "the queue sits in a board panel").not.toBeNull();
-    expect(within(panel as HTMLElement).getByText("Book them on the Week board")).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText("Book them from the Month calendar")).toBeInTheDocument();
     // the booked job is not waiting for a crew
     expect(within(queue).queryByText("Riverside Office Building")).not.toBeInTheDocument();
 
     fireEvent.click(within(queue).getByRole("button", { name: "Book" }));
-    await screen.findByRole("heading", { level: 1, name: /^Week/ });
-    expect(screen.getByLabelText("Selected week Jun 15 - Jun 21, 2026")).toBeInTheDocument();
+    await screen.findByRole("heading", { level: 1, name: /^Month/ });
+    // the job starts on 16 June, so the calendar opens on June with its chip on the day
+    expect(screen.getAllByText("June 2026").length).toBeGreaterThan(0);
+    expect(chip("Downtown Retail Buildout · Interior Finishes")).toBeInTheDocument();
   });
 
-  it("shows the unassigned drag queue beside the Week board", async () => {
+  it("makes the Month calendar controls interactive", async () => {
     render(<App />);
     await enterDashboard();
-    await openWeekBoard();
-
-    expect(screen.getByRole("heading", { name: "Unassigned Jobs" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Downtown Retail Buildout — drag onto the board to book it" })).toBeInTheDocument();
-    expect(screen.getByText("Drag a job onto a crew's day to book it.")).toBeInTheDocument();
-    // the booked job sits in its crew's cell, not in the queue
-    const board = screen.getByRole("region", { name: "Crew schedule for the week" });
-    expect(within(board).getByRole("button", { name: "Open Riverside Office Building" })).toBeInTheDocument();
-    expect(within(board).getByText("Concrete Crew 1")).toBeInTheDocument();
-  });
-
-  it("makes the Week board controls interactive", async () => {
-    render(<App />);
-    await enterDashboard();
-    await openWeekBoard();
+    await openMonthCalendar();
 
     // status filters live behind the shared "Statuses" button
     fireEvent.click(screen.getByRole("button", { name: /^Statuses/ }));
@@ -112,14 +107,15 @@ describe("Schedule pages", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(delayIQed).toHaveAttribute("aria-pressed", "true");
 
-    // week stepper, and "This week" brings it back
-    expect(screen.getByLabelText("Selected week Jun 15 - Jun 21, 2026")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "This week" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Next week" }));
-    expect(screen.getByLabelText("Selected week Jun 22 - Jun 28, 2026")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "This week" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "This week" }));
-    expect(screen.getByLabelText("Selected week Jun 15 - Jun 21, 2026")).toBeInTheDocument();
+    // month stepper, and "Today" brings it back
+    const nav = screen.getByRole("button", { name: "Next month" }).parentElement as HTMLElement;
+    expect(screen.getAllByText("June 2026").length).toBeGreaterThan(0);
+    expect(within(nav).getByRole("button", { name: "Today" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(screen.getAllByText("July 2026").length).toBeGreaterThan(0);
+    expect(within(nav).getByRole("button", { name: "Today" })).toBeEnabled();
+    fireEvent.click(within(nav).getByRole("button", { name: "Today" }));
+    expect(screen.getAllByText("June 2026").length).toBeGreaterThan(0);
 
     // export is a menu now, not a dialog
     fireEvent.click(screen.getByRole("button", { name: /^Export/ }));
@@ -131,7 +127,7 @@ describe("Schedule pages", () => {
     await screen.findByRole("heading", { name: "The whole plan, at a glance." });
   });
 
-  it("opens the alerts dialog and the List view from the Schedule landing", async () => {
+  it("opens the alerts dialog and the Month view from the Schedule landing", async () => {
     render(<App />);
     await enterDashboard();
     await openSchedule();
@@ -141,21 +137,26 @@ describe("Schedule pages", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close Scheduling Alerts" }));
     expect(screen.queryByRole("dialog", { name: "Scheduling Alerts" })).not.toBeInTheDocument();
 
-    // the view cards: title, blurb and a live figure in one button
+    // the view cards: title, blurb and a live figure in one button — three views since 2026-09-22
     const views = screen.getByRole("region", { name: "Schedule views" });
-    expect(within(views).getByRole("button", { name: /^Week .*1 booking · 1 crew$/ })).toBeInTheDocument();
-    fireEvent.click(within(views).getByRole("button", { name: /^List / }));
-    await screen.findByRole("heading", { level: 1, name: /^List/ });
-    expect(screen.getByRole("region", { name: "Bookings this week" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Riverside Office Building for Concrete Crew 1" })).toBeInTheDocument();
+    expect(within(views).getAllByRole("button").map((card) => card.querySelector("strong")?.textContent)).toEqual([
+      "Month",
+      "Gantt Chart",
+      "Kanban"
+    ]);
+    expect(within(views).getByRole("button", { name: /^Month .*2 jobs start in June 2026$/ })).toBeInTheDocument();
+    fireEvent.click(within(views).getByRole("button", { name: /^Month / }));
+    await screen.findByRole("heading", { level: 1, name: /^Month/ });
+    expect(screen.getByRole("region", { name: "Calendar for June 2026" })).toBeInTheDocument();
+    expect(chip(RIVERSIDE)).toBeInTheDocument();
   });
 
-  it("opens the job drawer from a scheduled job card on the Week board", async () => {
+  it("opens the job drawer from a job's chip on the Month calendar", async () => {
     render(<App />);
     await enterDashboard();
-    await openWeekBoard();
+    await openMonthCalendar();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open Riverside Office Building" }));
+    fireEvent.click(chip(RIVERSIDE));
 
     const drawer = screen.getByRole("dialog", { name: "Riverside Office Building" });
     expect(within(drawer).getByText(/Concrete - Level 3 Slab/)).toBeInTheDocument();
@@ -170,7 +171,7 @@ describe("Schedule pages", () => {
     expect(screen.queryByRole("dialog", { name: "Riverside Office Building" })).not.toBeInTheDocument();
   });
 
-  it("saves a job from the Week board drawer with a PATCH", async () => {
+  it("saves a job from the Month calendar drawer with a PATCH", async () => {
     const updatedJob = { ...bootstrapFixture.jobs[0], status: "In Progress" as const, notes: "Pump on site at 6." };
     let jobUpdated = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
@@ -189,9 +190,9 @@ describe("Schedule pages", () => {
 
     render(<App />);
     await enterDashboard();
-    await openWeekBoard();
+    await openMonthCalendar();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open Riverside Office Building" }));
+    fireEvent.click(chip(RIVERSIDE));
     const drawer = screen.getByRole("dialog", { name: "Riverside Office Building" });
     fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "In Progress" } });
     fireEvent.change(within(drawer).getByLabelText("Notes"), { target: { value: "Pump on site at 6." } });
@@ -202,13 +203,13 @@ describe("Schedule pages", () => {
     expect(await screen.findByText("Riverside Office Building saved")).toBeInTheDocument();
   });
 
-  it("opens the add-job picker from an empty cell and from a cell that already has work", async () => {
+  it("opens the add-job picker from a day's + and from the empty part of a day that already has work", async () => {
     render(<App />);
     await enterDashboard();
-    await openWeekBoard();
+    await openMonthCalendar();
 
-    // an empty cell: Tuesday has no booking for the concrete crew
-    fireEvent.click(screen.getByRole("button", { name: "Add job to Concrete Crew 1 on Jun 16" }));
+    // a day's "+": the picker opens on that day, on the first crew
+    fireEvent.click(screen.getByRole("button", { name: "Add a job on Jun 16" }));
     let dialog = screen.getByRole("dialog", { name: "Add job to schedule" });
     expect(within(dialog).getByText("Concrete Crew 1 · Jun 16")).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: "Custom job" })).toBeInTheDocument();
@@ -220,9 +221,9 @@ describe("Schedule pages", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Close Add job to schedule" }));
     expect(screen.queryByRole("dialog", { name: "Add job to schedule" })).not.toBeInTheDocument();
 
-    // a cell with a card in it keeps a compact "Add job" of its own
-    expect(screen.getByRole("button", { name: "Open Riverside Office Building" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Add job to Concrete Crew 1 on Jun 15" }));
+    // a day with a chip on it still opens the form from its empty part
+    expect(chip(RIVERSIDE)).toBeInTheDocument();
+    fireEvent.click(document.querySelector('.sched-cal-cell[data-date="2026-06-15"]') as HTMLElement);
     dialog = screen.getByRole("dialog", { name: "Add job to schedule" });
     expect(within(dialog).getByText("Concrete Crew 1 · Jun 15")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Start Date")).toHaveValue("2026-06-15");
@@ -230,7 +231,7 @@ describe("Schedule pages", () => {
     expect(screen.queryByRole("dialog", { name: "Add job to schedule" })).not.toBeInTheDocument();
   });
 
-  it("creates and schedules a custom job from the Week board picker", async () => {
+  it("creates and schedules a custom job from the Month calendar picker", async () => {
     const createdJob = {
       id: "job-custom-pour",
       projectId: "p-riverside",
@@ -246,7 +247,7 @@ describe("Schedule pages", () => {
       materialsStatus: "Ordered" as const,
       status: "Confirmed" as const,
       priority: "High" as const,
-      notes: "Created from the Week board.",
+      notes: "Created from the Month calendar.",
       percentComplete: 0
     };
     const scheduledAssignment = {
@@ -275,7 +276,7 @@ describe("Schedule pages", () => {
           materialsStatus: "Ordered",
           status: "Confirmed",
           priority: "High",
-          notes: "Created from the Week board."
+          notes: "Created from the Month calendar."
         });
         return new Response(JSON.stringify(createdJob), { status: 201 });
       }
@@ -301,9 +302,9 @@ describe("Schedule pages", () => {
 
     render(<App />);
     await enterDashboard();
-    await openWeekBoard();
+    await openMonthCalendar();
 
-    fireEvent.click(screen.getByRole("button", { name: "Add job to Concrete Crew 1 on Jun 16" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add a job on Jun 16" }));
     const dialog = screen.getByRole("dialog", { name: "Add job to schedule" });
     const field = (label: string) => within(dialog).getByLabelText(label);
     fireEvent.change(field("Job Name"), { target: { value: "Custom Concrete Pour" } });
@@ -315,14 +316,14 @@ describe("Schedule pages", () => {
     fireEvent.change(field("Materials"), { target: { value: "Ordered" } });
     fireEvent.change(field("Status"), { target: { value: "Confirmed" } });
     fireEvent.change(field("Priority"), { target: { value: "High" } });
-    fireEvent.change(field("Notes"), { target: { value: "Created from the Week board." } });
+    fireEvent.change(field("Notes"), { target: { value: "Created from the Month calendar." } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Create & Schedule Job" }));
 
     await waitFor(() => expect(scheduled).toBe(true));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add job to schedule" })).not.toBeInTheDocument());
     expect(await screen.findByText("Custom Concrete Pour scheduled for Concrete Crew 1 on Jun 16")).toBeInTheDocument();
-    // the new booking lands in Tuesday's cell
-    expect(await screen.findByRole("button", { name: "Open Custom Concrete Pour" })).toBeInTheDocument();
+    // the new job's chip lands on the 16th
+    await waitFor(() => expect(chip("Custom Concrete Pour · Concrete - Custom Pour")).toBeInTheDocument());
   });
 });
 
@@ -331,10 +332,18 @@ describe("Signed-in links land", () => {
 
   it("opens a schedule link on a fresh load when a session is live", async () => {
     // a fresh load: the hash is there before the app mounts, and no hashchange fires
+    window.history.replaceState(null, "", "/#schedule/month?m=2026-07-01");
+    render(<App />);
+    await screen.findByRole("heading", { level: 1, name: /^Month/ });
+    expect(screen.getAllByText("July 2026").length).toBeGreaterThan(0);
+  });
+
+  it("lands a link to a page that has left the product on the Month, on that week's month", async () => {
+    // the Week board's links are in sent emails and old bookmarks (it left on 2026-09-22 — docs/backlog.md)
     window.history.replaceState(null, "", "/#schedule/week?w=2026-06-22");
     render(<App />);
-    await screen.findByRole("heading", { level: 1, name: /^Week/ });
-    expect(screen.getByLabelText("Selected week Jun 22 - Jun 28, 2026")).toBeInTheDocument();
+    await screen.findByRole("heading", { level: 1, name: /^Month/ });
+    expect(screen.getAllByText("June 2026").length).toBeGreaterThan(0);
   });
 
   it("keeps the landing, and the link, when nobody is signed in", async () => {
@@ -347,10 +356,10 @@ describe("Signed-in links land", () => {
       }
       return respondToBuildflowApi(input);
     });
-    window.history.replaceState(null, "", "/#schedule/week?w=2026-06-22");
+    window.history.replaceState(null, "", "/#schedule/month?m=2026-07-01");
     render(<App />);
     await screen.findByRole("button", { name: /^Login from welcome navigation$/ });
-    expect(screen.queryByRole("heading", { level: 1, name: /^Week/ })).toBeNull();
-    expect(window.location.hash).toBe("#schedule/week?w=2026-06-22");
+    expect(screen.queryByRole("heading", { level: 1, name: /^Month/ })).toBeNull();
+    expect(window.location.hash).toBe("#schedule/month?m=2026-07-01");
   });
 });
