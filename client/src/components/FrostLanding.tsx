@@ -707,12 +707,20 @@ function FrostHero() {
             We believe great tools should feel invisible. Explore the ideas, details, and small decisions we&rsquo;ve obsessed over to help
             your team do its best work.
           </p>
+          {/* Was `href="#learn"` reading "Learn more →": no such route, no element with that id,
+              so the hash changed and the page stayed put. The pages it was written for went with
+              the marketing site in this rebuild (see getWelcomeViewFromHash in App.tsx — only
+              eleven hashes route now), so there is nothing left to learn more AT. Pointed at the
+              waitlist, which does route, and relabelled to say so: a button that lands somewhere
+              other than its label promises is the same dishonesty in a quieter form.
+              `FrostHero` takes no props, and a route anchor is native, keyboard-operable and
+              middle-clickable, so it is used here rather than plumbing `onJoinWaitlist` down. */}
           <a
-            href="#learn"
+            href="#waitlist"
             className="button-01 ghost"
             style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.85)", textDecoration: "none", whiteSpace: "nowrap" }}
           >
-            <SlideLabel text="Learn more →" />
+            <SlideLabel text="Join the Waitlist →" />
           </a>
         </div>
       </motion.div>
