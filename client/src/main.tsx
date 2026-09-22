@@ -28,7 +28,6 @@ import "./assistant-global.css";
 import "./settings-redesign.css";
 import "./field-variance.css";
 import "./topbar-redesign.css";
-import "./ai-film-redesign.css";
 import "./crew-scheduling-redesign.css";
 import "./crew-scheduling-apple.css";
 import "./product-overview.css";
