@@ -114,7 +114,6 @@ function SlideLabel({ text, stagger = false }: { text: string; stagger?: boolean
 }
 
 /** The accent the drawer's hover uses — the orange of the BuildFlow mark. */
-const DRAWER_ACCENT = "#f47b20";
 
 type FrostNavbarProps = FrostLandingProps & {
   open: boolean;

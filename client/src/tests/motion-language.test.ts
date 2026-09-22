@@ -736,7 +736,7 @@ describe("Settings' buttons each answer for what they do (skin §82)", () => {
   it("says what less motion means for the gestures it just added", () => {
     const quieted = new Set<string>();
     skin.walkRules((rule: Rule) => {
-      let at = rule.parent as { type: string; params?: string } | undefined;
+      const at = rule.parent as { type: string; params?: string } | undefined;
       if (!at || at.type !== "atrule" || !/reduced-motion/.test(at.params ?? "")) return;
       for (const one of norm(rule.selector).split(",")) quieted.add(norm(one));
     });

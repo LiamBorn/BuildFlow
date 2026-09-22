@@ -125,7 +125,7 @@ describe("the travelling pill", () => {
     // could reach neither the other sections nor that button.
     const rail = document.createElement("aside");
     rail.className = "settings-rail";
-    const sections = [0, 1].map((n) => {
+    const sections = [0, 1].map((_n) => {
       const section = document.createElement("section");
       section.className = "settings-nav-group";
       section.append(document.createElement("h2"));

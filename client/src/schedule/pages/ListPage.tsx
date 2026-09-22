@@ -24,7 +24,7 @@ import { listRebook } from "../rebook";
 import { ScheduleExportMenu } from "../ExportMenu";
 import type { ScheduleTarget } from "../links";
 import { BackToScheduleButton, SchedulePageFrame, ThisWeekButton, WeekStepper, useSchedulePage } from "../page";
-import { insertInGroup, moveInGroup, orderGroupItems, placeInGroup, type BoardHover } from "../boardOrder";
+import { insertInGroup, moveInGroup, orderGroupItems, placeInGroup } from "../boardOrder";
 import { useBoardOrder, useHoverFor, type HoverStore } from "../useBoardOrder";
 import type { CSSProperties } from "react";
 

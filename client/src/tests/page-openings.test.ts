@@ -366,7 +366,7 @@ describe("every page opens on the shared beats", () => {
     // reduce blocks themselves, so a rule added to §81 and forgotten there fails.
     const quieted = new Set<string>();
     sheet.walkRules((rule: Rule) => {
-      let at = rule.parent as { type: string; params?: string } | undefined;
+      const at = rule.parent as { type: string; params?: string } | undefined;
       if (!at || at.type !== "atrule" || !/reduced-motion/.test(at.params ?? "")) return;
       for (const one of selectorsOf(rule.selector)) quieted.add(one);
     });

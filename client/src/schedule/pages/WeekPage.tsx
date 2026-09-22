@@ -26,7 +26,7 @@ import {
   ScheduleNotice,
   ScheduleCarryLayer
 } from "../parts";
-import { insertInGroup, moveInGroup, orderGroupItems, placeInGroup } from "../boardOrder";
+import { insertInGroup, moveInGroup, orderGroupItems } from "../boardOrder";
 import { useBoardOrder } from "../useBoardOrder";
 import { ScheduleAlertsPanel } from "../alerts";
 import { scheduleAccessibility, spokenDay } from "../dragKeyboard";

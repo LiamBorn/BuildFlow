@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { businessTypeOptions } from "@buildflow/shared";
 import { describe, expect, it, vi } from "vitest";
 import type { OnboardingProductId } from "@buildflow/shared";
@@ -6,17 +6,13 @@ import App, { buildTutorialSteps } from "./App";
 import { bootstrapFixture } from "./test/fixture";
 import {
   ACCOUNT,
-  blankWorkspaceFixture,
   chooseBusinessType,
   chooseSizeAndPlan,
   completeOnboarding,
   enterDashboard,
   installAppHarness,
-  newOrgWorkspaceFixture,
   openAppPage,
   openCreateAccount,
-  openMapFieldOps,
-  openSchedule,
   respondToBuildflowApi,
   signUp,
   state
