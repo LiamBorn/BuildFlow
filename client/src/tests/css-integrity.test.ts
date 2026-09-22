@@ -63,27 +63,56 @@ describe("every animation names a keyframe that exists", () => {
   const defined = new Set<string>();
   for (const { root } of sheets) root.walkAtRules(/^(-\w+-)?keyframes$/, (at) => defined.add(at.params.trim()));
 
+  /**
+   * Drop function calls, repeatedly, because they nest: `var(--hsx-ease, cubic-bezier(…))` needs
+   * two passes, and a single pass leaves a dangling `var(` behind. Doing this in one pass is how
+   * the first version of this file came to skip 151 of the client's ~200 animation declarations.
+   */
+  const stripCalls = (value: string) => {
+    let prev = "";
+    let out = value;
+    while (prev !== out) {
+      prev = out;
+      out = out.replace(/[\w-]+\([^()]*\)/g, " ");
+    }
+    return out;
+  };
+
   /** Names referenced by an `animation` / `animation-name` declaration, with where they are. */
   const referenced: { name: string; at: string }[] = [];
+  let skippedRuntimeNames = 0;
   for (const { file, root } of sheets) {
     root.walkDecls(/^(-\w+-)?animation(-name)?$/, (decl) => {
-      // Drop function calls first: cubic-bezier(0.22, 1, 0.36, 1) and steps(4, end) both
-      // contain commas and bare words that would otherwise read as names.
-      const flat = decl.value.replace(/[\w-]+\([^()]*\)/g, " ");
-      // A name built from a custom property is resolved at runtime; a static read cannot judge it.
-      if (/var\(/.test(flat)) return;
-      for (const word of flat.split(/[\s,]+/)) {
-        if (!/^[a-zA-Z_-][\w-]*$/.test(word)) continue; // numbers, times, empties
-        if (NOT_A_NAME.has(word.toLowerCase())) continue;
-        referenced.push({ name: word, at: where(file, decl) });
+      // cubic-bezier(0.22, 1, 0.36, 1) and steps(4, end) carry commas and bare words that would
+      // otherwise read as names.
+      const flat = stripCalls(decl.value);
+      const names = flat
+        .split(/[\s,]+/)
+        .filter((w) => /^[a-zA-Z_-][\w-]*$/.test(w) && !NOT_A_NAME.has(w.toLowerCase()));
+      if (names.length === 0) {
+        // Nothing static left. Either the name itself came from a custom property -- which a
+        // static read cannot judge -- or this is an `animation: none`. Only the former is
+        // worth counting. A var() ANYWHERE in the value is NOT grounds to skip: it is almost
+        // always the easing, and the name beside it is perfectly checkable.
+        if (/var\(/.test(decl.value)) skippedRuntimeNames++;
+        return;
       }
+      for (const name of names) referenced.push({ name, at: where(file, decl) });
     });
   }
 
   it("finds animations to check at all", () => {
     // If a refactor ever moves motion out of these sheets, this file must not pass on nothing.
-    expect(referenced.length).toBeGreaterThan(50);
-    expect(defined.size).toBeGreaterThan(50);
+    // The floor is high on purpose: the earlier version passed a floor of 50 while silently
+    // checking a fraction of the sheets, so a weak floor is not a guard.
+    expect(referenced.length).toBeGreaterThan(150);
+    expect(defined.size).toBeGreaterThan(150);
+  });
+
+  it("is not quietly skipping declarations it could check", () => {
+    // Every animation in this project names its keyframe literally; a name built from a token
+    // would be new, and worth a deliberate decision rather than a silent exemption.
+    expect(skippedRuntimeNames, "declarations whose animation NAME comes from a var()").toBe(0);
   });
 
   it("defines every keyframe that a rule animates with", () => {
