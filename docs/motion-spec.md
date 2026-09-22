@@ -469,3 +469,17 @@ day. It is the flow's TAIL rather than a single screen, so `AuthShell` draws the
 block for it — full, and labelled "Last step" — instead of the solo offset; its heading lands on the
 same y=192. Sending swaps to the answer on the same exit/gap/enter, and each invitee's row on the
 card's tray arrives on the beats' own focus-in.
+
+### Map & Field Ops, on the Schedule pages' board (2026-09-22)
+
+Redesigned from a reference recording of a dispatch map. The page hosts the panel board the way
+the seven Schedule pages do (`mapops/MapOpsPage.tsx` renders `dash-rx hs-home sched-board-host`
+inside a `sched-rx` root), so every beat it has is one it inherited: the title sharpens with
+`TextReveal`, the control row arrives on the Schedule's `data-reveal` delays, the sections come
+into focus in reading order on §74h's `bfe-focus`, and Customize, the "+" drawer and Reset layout
+are the board's own. Nothing in `mapops.css` times a page beat; its three motions are local — the
+selected machine's card rises on `--bfm-dur-base`, the forecast matrix's cells pop in on the same,
+and the destination ring on the map scales up on `--bfm-dur-chart`. The optimisation goal switch
+is the twelfth pill group (`.mx-goal`, painted in the page's sheet; `tests/page-openings.test.ts`
+reads that sheet too). The map is Leaflet — DOM tiles, no frame loop while idle — and is created
+only once its host has room, because the board sizes a panel after mounting it.

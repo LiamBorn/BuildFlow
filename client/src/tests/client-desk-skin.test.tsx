@@ -604,22 +604,6 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .equipment-footnote`).color).toBe("var(--bf-ink-faint)");
   });
 
-  it("gives Map & Field Ops the card language: panels, chip rows, a pill-track goal switch, semantic pills, an entrance", () => {
-    const S = ".app-shell.hs-shell.bf-shell";
-    const panel = declsOf(`${S} .map-ops-page .panel`);
-    expect(panel["border-radius"]).toBe("var(--bf-radius-card)");
-    expect(panel.background).toBe("var(--bf-surface)");
-    expect(declsOf(`${S} .map-ops-page .panel-header h2`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} .map-ops-page .panel-header button`)["border-radius"]).toBe("999px");
-    expect(declsOf(`${S} .map-ops-page .lm-card`)["--lm-accent"]).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .map-ops-page .route-goal-control button.active`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .map-ops-page .map-field-job-main`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .map-ops-page .badge.delayiqed`).color).toBe("var(--cc-red)");
-    expect(declsOf(`${S} .map-ops-page .primary-button`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .map-ops-page .map-command-bar`).animation).toContain("bfe-fade");
-    expect(declsOf(`${S} .map-ops-page .map-ops-left > .site-grid`)["animation-delay"]).toContain("var(--bfe-r, 0)");
-  });
-
   it("gives the DelayIQs rail the card language: panels, second-surface risk cards, semantic severity, bars in the bad tone", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     expect(declsOf(`${S} .delayIQ-rx .panel`)["border-radius"]).toBe("var(--bf-radius-card)");
@@ -1734,21 +1718,6 @@ describe("the Client Desk skin", () => {
     // the tag's ping animated that ring, so it is switched off and its keyframes are gone
     expect(declsOf(`${S} .hs-rail-tag`).animation).toBe("none");
     expect(sheet.toString()).not.toContain("@keyframes hs-tag-ping");
-  });
-
-  it("leaves the Map page's active marker without a ring, and its own blues behind", () => {
-    const S = ".app-shell.hs-shell.bf-shell";
-    // the last ring in the program: the dot lifts instead, and the label takes the ink edge
-    expect(declsOf(`${S} .map-ops-page .map-marker.active .map-marker-dot`)["box-shadow"]).toBe("var(--bf-shadow-float)");
-    expect(declsOf(`${S} .map-ops-page .map-marker.active .map-marker-label`).outline).toBe("2px solid var(--bf-ink)");
-    /* This page is a locked add-on here, so section 46's live audit never opened it and its
-       sheet kept a full set of blues. They are re-pointed in section 52; these are the ones
-       the probe found rendering a hue. */
-    expect(declsOf(`${S} .map-ops-page .route-lines .route-orange`).stroke).toBe("var(--bf-color-warn)");
-    expect(declsOf(`${S} .map-ops-page .map-pin-kind`).color).toBe("var(--bf-color-accent)");
-    expect(declsOf(`${S} .map-ops-page .map-route-vehicle.blue`).background).toBe("var(--bf-color-accent)");
-    expect(declsOf(`${S} .map-ops-page .map-legend i.traffic`).background).toBe("var(--bf-color-bad)");
-    expect(declsOf(`${S} .map-ops-page .crew-pin.three`).background).toBe("var(--bf-color-accent)");
   });
 
   it("dresses the dropdown list as the program's own menu, not the system panel", () => {

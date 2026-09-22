@@ -250,8 +250,8 @@ export async function openMapFieldOps() {
   fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
   fireEvent.click(await screen.findByRole("button", { name: "Skip Tutorial" }));
   await openAppPage("Map & Field Ops");
-  // Live Map is a grid of job-site cards since 2026-09-06 (the embedded map is gone)
-  await screen.findByRole("heading", { name: "Job sites" });
+  // the page opens on the Schedule pages' board since 2026-09-22 (mapops/MapOpsPage.tsx)
+  await screen.findByRole("heading", { name: "Every site, live." });
 }
 
 /** beforeEach/afterEach for a describe block: fresh fake server, clean storage, clean URL. */

@@ -7057,800 +7057,17 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record .hs-deal-clos
    index pages have.
    ============================================================================ */
 /* ---- 26a. the command bar ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select select {
-  min-height: 48px;
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  padding: 19px 38px 7px 14px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select select:focus {
-  border-color: transparent;
-  box-shadow:
-    0 0 0 2px var(--bf-ink),
-    var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select span {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-live-toggle {
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-live-toggle input {
-  accent-color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-live-toggle b {
-  background: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-live-toggle input:checked + span + b {
-  background: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .icon-button.map-settings-button {
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .icon-button.map-settings-button:hover {
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-editor-strip {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-sync-status {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .primary-button {
-  min-height: 40px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0 16px;
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .primary-button:hover:not(:disabled) {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .primary-button:disabled {
-  background: var(--bf-hover);
-  color: var(--bf-ink-faint);
-}
 /* ---- 26b. the panels ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .panel,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-panel.site-grid {
-  padding: 18px 20px 20px;
-  border: 0;
-  border-radius: var(--bf-radius-card);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .panel-header {
-  min-height: 30px;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .panel-header h2,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-site-head h2 {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  text-transform: none;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .panel-header button {
-  min-height: 30px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .panel-header button:hover {
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .panel-header button[aria-pressed="true"] {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-site-head p {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-site-legend span {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-site-empty {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-site-empty strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .inline-empty-state {
-  padding: 14px 16px;
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .inline-empty-state svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .inline-empty-state strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .inline-empty-state em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
 /* ---- 26c. the job-site cards carry the skin's inks ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-card {
-  --hsx-ink: var(--bf-ink);
-  --hsx-mut: var(--bf-ink-muted);
-  --hsx-faint: var(--bf-ink-faint);
-  --hsx-line: var(--bf-line-solid);
-  --hsx-paper: var(--bf-hover);
-  --lm-accent: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-surface {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-card:hover .lm-surface {
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-card.is-selected .lm-surface,
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-card:focus-visible .lm-surface {
-  box-shadow:
-    0 0 0 2px var(--bf-ink),
-    var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-title {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-count strong {
-  font-family: var(--bf-font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-live {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-  font-size: 11px;
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .lm-live i {
-  background: var(--cc-green);
-}
 /* ---- 26d. the status pills ---- */
 /* every status pill on this page sits on a second-surface chip, where the soft washes alone
    would not read: the flat pill is white on the card shadow, and each toned pill keeps its
    wash/ink pair inside a hairline ring of its own ink */
-.app-shell.hs-shell.bf-shell .map-ops-page .badge {
-  padding: 3px 8px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-transform: none;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  .badge:is(.ready, .on-site, .complete, .confirmed, .ready-to-start, .scheduled, .in-progress, .medium, .delayiqed, .at-risk) {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.ready,
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.on-site,
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.complete,
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.confirmed {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.ready-to-start,
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.scheduled {
-  background: var(--cc-blue-soft);
-  color: var(--cc-blue);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.in-progress {
-  background: var(--bf-color-accent-wash);
-  color: var(--bf-accent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.medium {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.delayiqed,
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.delayIQed,
-.app-shell.hs-shell.bf-shell .map-ops-page .badge.at-risk {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-}
 /* ---- 26e. the weather panel ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-card > svg,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-summary svg {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-primary strong {
-  font-family: var(--bf-font-display);
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.036em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-primary strong .af-frac,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-primary strong .af-unit {
-  font-size: 0.55em;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-primary span,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-details span,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-row span {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-weather-details b {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-row {
-  border-top: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-row button {
-  border-right: 0;
-  border-radius: var(--bf-radius-control);
-  background: transparent;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-row button:hover {
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-full-forecastIQ {
-  border-top: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-search label,
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-planner label,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-composer,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor label {
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-search input,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor input,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor select {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-planner input,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-composer textarea {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-search input:focus,
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-planner input:focus,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor input:focus,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor select:focus,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-composer textarea:focus {
-  border-color: transparent;
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-location-preview {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-list article {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-list article.active {
-  border-color: transparent;
-  box-shadow: 0 0 0 2px var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-list header strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-list header span {
-  padding: 3px 8px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 11px;
-  font-weight: 600;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-summary b {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-summary em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-list dt,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-days b,
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result dt,
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer dt,
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer > div > span {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-list dd,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-days em,
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result dd,
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer dd {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-days span {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-actions button {
-  min-height: 30px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-local-forecastIQ-actions .map-delete-forecastIQ-button {
-  border-color: transparent;
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-forecastIQ-empty-state {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
 /* ---- 26f. the route planner, its result and the optimizer ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-planner {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions li button {
-  border-radius: var(--bf-radius-control);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions li button:hover,
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions li button.active {
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions li button > svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions li button strong {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions li button em,
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-suggestions-empty {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result header span {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result header svg {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result p {
-  border-top: 1px solid var(--bf-line-solid);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result.moderate p {
-  color: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result.heavy p {
-  color: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-result p.trucker-route-note {
-  border-top-color: var(--bf-line-solid);
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-clear {
-  min-height: 30px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 11px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .trucker-route-clear:hover {
-  border-color: transparent;
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer strong {
-  font-family: var(--bf-font-display);
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.036em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer em {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer dl div {
-  border-top: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control {
-  gap: 2px;
-  padding: 3px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control button {
-  min-height: 30px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control button.active {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .reference-route-optimizer .primary-button {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-}
 /* ---- 26g. the travel list, today's jobs and the field updates: chip rows ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-travel-list button {
-  min-height: 44px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-travel-list button:hover {
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-travel-list svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-travel-list span {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-travel-list strong {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-list,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-list {
-  gap: 8px;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-row {
-  border-top: 0;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-main {
-  min-height: 0;
-  padding: 10px 12px;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-main:hover {
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-row.active .map-field-job-main {
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  box-shadow:
-    0 0 0 2px var(--bf-ink),
-    var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .project-thumb {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-copy strong,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-job-crew strong,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-job-time strong {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-copy em,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-copy small,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row em,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row time {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row time {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-avatar-stack i {
-  border-color: var(--bf-surface);
-  background: var(--bf-color-face-2);
-  color: #fff;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-avatar-stack b {
-  border-color: var(--bf-surface);
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-job-editor,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row {
-  padding: 12px;
-  border-top: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row .avatar {
-  background: var(--bf-color-face-2);
-  color: #fff;
-  font-weight: 700;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-field-update-row p {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-update-photo-strip .field-photo-image,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-update-photo-strip .field-photo-file {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-add-field-update {
-  min-height: 40px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-add-field-update:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
 /* ---- 26h. the footer ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-footer {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-footer button {
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-footer button:hover {
-  color: var(--bf-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
 /* ---- 26i. the entrance: the bar fades, the panels rise, the rows follow ---- */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-command-bar {
-  animation: bfe-fade var(--bf-dur-enter) var(--bf-ease) backwards;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-left > .site-grid,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-right > .panel {
-  --bfe-r: 0;
-  --bfe-y: var(--bfm-rise-l);
-  --bfe-blur: var(--bfm-blur);
-  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel:nth-child(1) {
-  --bfe-r: 1;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel:nth-child(2),
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-right > .panel:nth-child(1) {
-  --bfe-r: 2;
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel:nth-child(3),
-.app-shell.hs-shell.bf-shell .map-ops-page .map-ops-right > .panel:nth-child(2) {
-  --bfe-r: 3;
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-  > * {
-  --bfe-r: 0;
-  --bfe-y: 8px;
-  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-  > :nth-child(2) {
-  --bfe-r: 1;
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-  > :nth-child(3) {
-  --bfe-r: 2;
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-  > :nth-child(4) {
-  --bfe-r: 3;
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-  > :nth-child(5) {
-  --bfe-r: 4;
-}
-.app-shell.hs-shell.bf-shell
-  .map-ops-page
-  :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-  > :nth-child(n + 6) {
-  --bfe-r: 5;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell .map-ops-page .map-command-bar,
-  .app-shell.hs-shell.bf-shell .map-ops-page .map-ops-left > .site-grid,
-  .app-shell.hs-shell.bf-shell .map-ops-page .map-bottom-grid > .panel,
-  .app-shell.hs-shell.bf-shell .map-ops-page .map-ops-right > .panel,
-  .app-shell.hs-shell.bf-shell
-    .map-ops-page
-    :is(.map-site-cards, .map-travel-list, .map-field-job-list, .map-field-update-list, .map-local-forecastIQ-list)
-    > * {
-    animation: none;
-  }
-  .app-shell.hs-shell.bf-shell .map-ops-page .icon-button.map-settings-button:hover,
-  .app-shell.hs-shell.bf-shell .map-ops-page .primary-button:hover:not(:disabled),
-  .app-shell.hs-shell.bf-shell .map-ops-page .map-add-field-update:hover {
-    transform: none;
-  }
-}
 
 /* ============================================================================
    27. THE DELAYIQS PAGE, INSIDE: the rail — early warning, the log form, the
@@ -13443,19 +12660,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus {
   border-color: var(--bf-ink);
   box-shadow: 0 0 0 3px rgba(28, 28, 28, 0.14);
 }
-.app-shell.hs-shell.bf-shell .map-filter-select select:focus {
-  border-color: var(--bf-ink);
-  box-shadow: 0 0 0 3px rgba(28, 28, 28, 0.14);
-}
 .app-shell.hs-shell.bf-shell .schedule-page-footer button:focus-visible {
   color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-edit-popover input:focus,
-.app-shell.hs-shell.bf-shell .map-edit-popover select:focus,
-.app-shell.hs-shell.bf-shell .map-inline-editor input:focus,
-.app-shell.hs-shell.bf-shell .map-inline-editor select:focus {
-  border-color: var(--bf-ink);
-  box-shadow: 0 0 0 3px rgba(28, 28, 28, 0.14);
 }
 .app-shell.hs-shell.bf-shell .settings-nav-item.active,
 .app-shell.hs-shell.bf-shell .settings-nav-item:hover,
@@ -13502,10 +12708,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus {
 .app-shell.hs-shell.bf-shell .reports-actions button:focus-visible {
   border-color: var(--bf-ink);
   box-shadow: 0 0 0 3px rgba(28, 28, 28, 0.14);
-}
-.app-shell.hs-shell.bf-shell .map-forecastIQ-search input:focus {
-  border-color: var(--bf-ink);
-  box-shadow: 0 0 0 3px rgba(28, 28, 28, 0.13);
 }
 .app-shell.hs-shell.bf-shell .topbar .search-box:focus-within {
   border-color: var(--bf-ink);
@@ -13771,67 +12973,17 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record-notice.tone-i
   box-shadow: var(--bf-shadow-float);
 }
 /* Map & Field Ops (styles.css): navy type, blue tabs, blue markers and routes */
-.app-shell.hs-shell.bf-shell .map-ops-page,
-.app-shell.hs-shell.bf-shell .map-ops-page .page-title p,
-.app-shell.hs-shell.bf-shell .map-page-tabs button,
-.app-shell.hs-shell.bf-shell .map-route-card dd,
-.app-shell.hs-shell.bf-shell .map-route-card-editor select,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select select {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-page-tabs {
-  border-bottom-color: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .map-page-tabs button.active {
-  border-color: var(--bf-ink);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .outline-button.active {
-  border-color: var(--bf-ink);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select select,
-.app-shell.hs-shell.bf-shell .map-route-card-editor select,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-editor-strip,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-panel,
-.app-shell.hs-shell.bf-shell .map-route-card,
 .app-shell.hs-shell.bf-shell .map-pin {
   border-color: var(--bf-line-solid);
 }
-.app-shell.hs-shell.bf-shell .map-route-card,
 .app-shell.hs-shell.bf-shell .map-pin {
   box-shadow: var(--bf-shadow-float);
 }
-.app-shell.hs-shell.bf-shell .map-route-card .primary-button {
-  background: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-marker-dot,
 .app-shell.hs-shell.bf-shell .map-pin svg,
 .app-shell.hs-shell.bf-shell .demo-map-scene path {
   background: var(--bf-accent);
   color: var(--bf-accent);
   stroke: var(--bf-accent);
-}
-.app-shell.hs-shell.bf-shell .map-marker.at-risk .map-marker-dot {
-  background: var(--bf-color-bad);
-}
-.app-shell.hs-shell.bf-shell .map-marker.in-progress .map-marker-dot {
-  background: var(--bf-info-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker.active .map-marker-dot {
-  /* the last ring in the program, removed on request (2026-09-16). The active site is still
-     marked: its dot lifts on the float shadow and its label takes an ink edge below. */
-  box-shadow: var(--bf-shadow-float);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .route-lines .route-blue,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-lines .route-traffic {
-  stroke: var(--bf-accent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .route-lines .route-purple {
-  stroke: var(--bf-info-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-panel::after {
-  background: radial-gradient(ellipse at 77% 58%, transparent 0 15%, rgba(var(--bf-color-accent-fill-rgb), 0.16) 40%, transparent 70%);
 }
 /* the site cards' drawn roads (expand-map.css) */
 .app-shell.hs-shell.bf-shell .lm-road-main {
@@ -14002,8 +13154,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
 /* the index pages' orange KPI icon (hs-index.css) carried its own tint */
 /* the week stepper's and the map filter's chevrons read a slate of their own (styles.css) */
 .app-shell.hs-shell.bf-shell .week-stepper button,
-.app-shell.hs-shell.bf-shell .week-stepper svg,
-.app-shell.hs-shell.bf-shell .map-filter-select svg {
+.app-shell.hs-shell.bf-shell .week-stepper svg {
   color: var(--bf-ink-muted);
 }
 
@@ -14374,106 +13525,12 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
    here. Nothing on this page carries a hue of its own now: it reads the Colors
    set like every other page.
    ============================================================================ */
-.app-shell.hs-shell.bf-shell .map-ops-page .route-lines .route-orange {
-  stroke: var(--bf-color-warn);
-}
 /* the marker's label: an ink edge marks the active one, the rest is the ink ladder */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker-label,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-pin-tag {
-  border-color: var(--bf-line-solid);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker.active .map-marker-label {
-  outline: 2px solid var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker-label strong,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-pin-tag span {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker-label em,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker.active .map-marker-label em,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker.ready-to-start .map-marker-label em {
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-marker.en-route .map-marker-label em {
-  color: var(--bf-color-accent);
-}
 /* the crew pins: two shades of ink instead of a navy and a blue */
-.app-shell.hs-shell.bf-shell .map-ops-page .crew-pin {
-  background: var(--bf-ink);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .crew-pin.two {
-  background: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .crew-pin.three {
-  background: var(--bf-color-accent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-pin-tag b,
-.app-shell.hs-shell.bf-shell .map-ops-page .crew-pin.three .map-pin-tag b {
-  color: var(--bf-color-accent);
-}
 /* the pin kinds: the accent pair, the information pair, the flat pair */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-pin-kind {
-  background: var(--bf-color-accent-wash);
-  color: var(--bf-color-accent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-pin-kind.destination {
-  background: var(--bf-color-info-wash);
-  color: var(--bf-color-info);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-pin-kind.jobsite {
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
 /* the route markers */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-route-vehicle.blue {
-  background: var(--bf-color-accent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-route-vehicle.purple {
-  background: var(--bf-color-info);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-route-vehicle.orange {
-  background: var(--bf-color-warn);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-route-vehicle,
-.app-shell.hs-shell.bf-shell .map-ops-page .map-route-index {
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-route-index {
-  background: var(--bf-ink);
-}
 /* the legend */
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend {
-  border-color: var(--bf-line-solid);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend span {
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend strong {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend button {
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend i.traffic {
-  background: var(--bf-color-bad);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend i.planned {
-  background: var(--bf-color-accent);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-legend i.geofence {
-  border-color: var(--bf-ink-muted);
-}
 /* the page head's rule, and the navy-tinted shadows the sheet drew everywhere */
-.app-shell.hs-shell.bf-shell .map-ops-page .page-title {
-  border-bottom-color: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .map-ops-page .map-panel.live-map {
-  background: var(--bf-hover);
-}
 
 /* ============================================================================
    53. THE DROPDOWN LIST, IN THE PROGRAM'S LANGUAGE (2026-09-16)
@@ -14655,12 +13712,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-msg-body li {
 .app-shell.hs-shell.bf-shell .select-box:focus-within:has(select[data-bfsel-quiet]),
 .app-shell.hs-shell.bf-shell .reports-page .reports-actions select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .reports-actions select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell .map-filter-select select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .reports-page .reports-actions select:focus[data-bfsel-quiet],
-.app-shell.hs-shell.bf-shell .reports-actions select:focus[data-bfsel-quiet],
-.app-shell.hs-shell.bf-shell .map-ops-page .map-filter-select select:focus[data-bfsel-quiet],
-.app-shell.hs-shell.bf-shell .map-filter-select select:focus[data-bfsel-quiet] {
+.app-shell.hs-shell.bf-shell .reports-actions select:focus[data-bfsel-quiet] {
   border-color: transparent;
   box-shadow: var(--bf-shadow-card);
 }
@@ -14670,8 +13723,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-msg-body li {
    hairline here only has to not be a ring. */
 .app-shell.hs-shell.bf-shell .pref-select:focus-within:not(:has(:focus-visible)),
 .app-shell.hs-shell.bf-shell .pref-select:focus-within:has(select[data-bfsel-quiet]),
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell .map-inline-editor select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .settings-rx .settings-row select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .settings-row select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .settings-rx .settings-invite-fields select:focus:not(:focus-visible),
@@ -14686,8 +13737,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-msg-body li {
 .app-shell.hs-shell.bf-shell .delayIQ-rx .form-stack select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-form select:focus:not(:focus-visible),
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell .map-ops-page .map-inline-editor select:focus[data-bfsel-quiet],
-.app-shell.hs-shell.bf-shell .map-inline-editor select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .settings-rx .settings-row select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .settings-row select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .settings-rx .settings-invite-fields select:focus[data-bfsel-quiet],
@@ -14726,11 +13775,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus[data-bfs
 .app-shell.hs-shell.bf-shell .schedule-job-create-form select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .schedule-job-create-form select:focus[data-bfsel-quiet] {
   border-color: #dbe4ee;
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .map-edit-popover select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell .map-edit-popover select:focus[data-bfsel-quiet] {
-  border-color: #cfdae8;
   box-shadow: none;
 }
 
@@ -17036,7 +16080,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg,
 .app-shell.hs-shell.bf-shell .bfnt-tabs,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control,
 .app-shell.hs-shell.bf-shell .hs-rail-list {
   position: relative;
   /* what the pill is made of; a group with its own answer says so below */
@@ -17051,7 +16094,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill]::before,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill]::before {
   content: "";
@@ -17076,7 +16118,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill="live"]::before {
   transition:
@@ -17093,7 +16134,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] > *,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] > * {
   position: relative;
@@ -17110,7 +16150,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] button.active,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] button.active,
 .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] .hs-rail-btn.active,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill] button.active:hover,
 .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] .pref-seg[aria-checked="true"]:hover,
@@ -17120,7 +16159,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] button.active:hover,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active:hover,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active:hover,
-.app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] button.active:hover,
 .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] .hs-rail-btn.active:hover,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] .settings-nav-item.active,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] .settings-ai-button.active,
@@ -17144,16 +16182,15 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill="live"]::before {
+.app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill="live"]::before {
     transition: none;
   }
 }

@@ -60,6 +60,8 @@ import "./hs-breeze.css"; // BuildFlow AI panel (HubSpot Breeze-style)
 import "./schedule.css"; // the Schedule category: landing, six views, status band, dialogs, import, the ported Gantt
 import "./schedule-phone.css"; // the Schedule category on phones: scrolling boards, stacked rows, touch
 import "./expand-map.css"; // Map & Field Ops job-site cards (ported LocationMap)
+import "leaflet/dist/leaflet.css"; // the live map's tiles, panes and controls (mapops/LiveMap.tsx)
+import "./mapops/mapops.css"; // Map & Field Ops on the Schedule pages' board (2026-09-22)
 import "./bookmarks-page.css"; // Bookmarks page (starred pages by category)
 import "./quantum-cloud-loader.css"; // BuildFlow AI "thinking" particles (ported Quantum Cloud Loader)
 import "./interactive-hover-links.css"; // landing side-menu section heads (ported 21st.dev interactive hover links)
