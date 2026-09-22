@@ -9,7 +9,6 @@ import "./timecard.css";
 import "./welcome-redesign.css";
 import "./frost-landing.css"; // the landing page (Frost hero)
 import "./updates-redesign.css";
-import "./updates-ascent.css";
 import "./reviews-redesign.css";
 import "./help-redesign.css";
 import "./about-redesign.css";
