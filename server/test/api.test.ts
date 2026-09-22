@@ -13,7 +13,9 @@ async function testApp() {
   // store, so tests see the same seed data they did before the auth gate existed.
   const agent = request.agent(app);
   await agent.post("/api/auth/demo").expect(200);
-  return agent;
+  // supertest keeps the app on the agent at runtime but does not type it, and the calendar-feed
+  // test needs it to make a deliberately cookie-less request against the same server.
+  return Object.assign(agent, { app });
 }
 
 describe("BuildFlow API", () => {

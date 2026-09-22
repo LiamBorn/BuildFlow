@@ -5953,9 +5953,10 @@ export class BuildFlowStore {
   /* ─────────────────────────── end waitlist ──────────────────────────────── */
 
   readiness(projectId?: string): ReadinessItem[] {
+    type ReadinessRow = Omit<ReadinessItem, "complete"> & { complete: number };
     const rows = projectId
-      ? this.all<ReadinessItem & { complete: number }>("SELECT * FROM readiness WHERE projectId = ? ORDER BY id", [projectId])
-      : this.all<ReadinessItem & { complete: number }>("SELECT * FROM readiness ORDER BY id");
+      ? this.all<ReadinessRow>("SELECT * FROM readiness WHERE projectId = ? ORDER BY id", [projectId])
+      : this.all<ReadinessRow>("SELECT * FROM readiness ORDER BY id");
     return rows.map((row) => ({ ...row, complete: Boolean(row.complete) }));
   }
 
