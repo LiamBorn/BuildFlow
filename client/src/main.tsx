@@ -41,6 +41,7 @@ import "./help-center-page.css";
 import "./integrations-page.css";
 import "./program-showcase.css"; // landing: Production control program showcase
 import "./account-redesign.css";
+import "./onboarding/onboarding.css"; // the five-step signup + setup, on the reference recording's design
 import "./compare-plans-redesign.css";
 import "./contact-sales-redesign.css";
 import "./legal-redesign.css";

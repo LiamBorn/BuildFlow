@@ -128,7 +128,7 @@ export async function openCreateAccount() {
   fireEvent.click(await screen.findByRole("button", { name: /^Login from welcome navigation$/ }));
   await screen.findByRole("heading", { name: "Welcome back." });
   fireEvent.click(screen.getByRole("button", { name: "Create an account" }));
-  await screen.findByRole("heading", { name: "Create your workspace." });
+  await screen.findByRole("heading", { name: "Let's start with you." });
 }
 
 /** Which rail hub a page lives under since the HubSpot-style rail (2026-09-04). */
@@ -170,39 +170,46 @@ export async function openSchedule(view?: "Month" | "Week" | "List" | "Gantt" | 
 
 /** Register through the real signup form as a brand-new org, which lands on the
     first onboarding question. Leaves the caller on #business-type. */
+/** Signing up is the first two of the five onboarding steps (2026-09-22): the person, then the
+    business — that second Next is the signup — and it lands on the trade question. */
 export async function signUp({ email = ACCOUNT.email }: { email?: string } = {}) {
   state.bootstrapPayload = newOrgWorkspaceFixture;
   await openCreateAccount();
-  fireEvent.change(await screen.findByLabelText("Your name"), { target: { value: ACCOUNT.name } });
-  fireEvent.change(screen.getByLabelText("Company"), { target: { value: ACCOUNT.company } });
+  const [firstName, ...rest] = ACCOUNT.name.split(" ");
+  fireEvent.change(await screen.findByLabelText("First name"), { target: { value: firstName } });
+  fireEvent.change(screen.getByLabelText("Last name"), { target: { value: rest.join(" ") } });
   fireEvent.change(screen.getByLabelText("Work email"), { target: { value: email } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: ACCOUNT.password } });
   fireEvent.click(screen.getByLabelText("I agree to the"));
-  fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-  await screen.findByRole("heading", { name: "What type of Business do you own" });
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  fireEvent.change(await screen.findByLabelText("Business name"), { target: { value: ACCOUNT.company } });
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByRole("heading", { name: "What type of construction business do you own?" });
 }
 
-/** Answer the business-type question, landing on #additional-products. */
+/** Answer the trade question, landing on the size question (#additional-products). */
 export async function chooseBusinessType(businessType: string) {
-  // trade cards are radios labelled by the trade name inside the "Business type" group
+  // trade tiles are radios labelled by the trade name inside the "Business type" group
   fireEvent.click(await screen.findByRole("radio", { name: businessType }));
-  fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
-  await screen.findByRole("heading", { name: "What additional products do you want to use?" });
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByRole("heading", { name: /How big is/ });
 }
 
-/** Pick products and a plan, then continue. This completes onboarding and lands
-    straight in the app (the HUD launcher that used to sit here was removed). */
-export async function chooseProductsAndPlan(products: string[], plan: string) {
-  for (const product of products) {
-    const productCheckbox = await screen.findByLabelText(new RegExp(product));
-    if (!(productCheckbox as HTMLInputElement).checked) {
-      fireEvent.click(productCheckbox);
-    }
-  }
-  fireEvent.click(screen.getByRole("button", { name: `Select ${plan} plan` }));
-  fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
-  // last step: invite the team — skippable
-  fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
+/** The size answers that make the rule recommend each plan (see onboarding/recommendPlan.ts). */
+const SIZE_FOR_PLAN: Record<string, { revenue: string; team: string }> = {
+  Free: { revenue: "Just starting out", team: "Just me" },
+  Pro: { revenue: "$25k – $100k / month", team: "16 – 50" },
+  Business: { revenue: "$500k – $2M / month", team: "51 – 200" },
+  Enterprise: { revenue: "$2M+ / month", team: "200+" }
+};
+/** Answer the size question so the card recommends `plan`, then take that plan. */
+export async function chooseSizeAndPlan(plan: "Free" | "Pro" | "Business") {
+  const size = SIZE_FOR_PLAN[plan];
+  fireEvent.click(await screen.findByRole("radio", { name: size.revenue }));
+  fireEvent.click(screen.getByRole("radio", { name: size.team }));
+  fireEvent.click(screen.getByRole("button", { name: "Next" }));
+  await screen.findByRole("heading", { name: plan });
+  fireEvent.click(screen.getByRole("button", { name: plan === "Free" ? "Continue for free" : `Continue with ${plan}` }));
 }
 
 export async function completeOnboarding({
@@ -221,7 +228,14 @@ export async function completeOnboarding({
   // Applying the business profile provisions the workspace, so bootstrap answers
   // with it from here on rather than with the pre-onboarding new-org payload.
   state.bootstrapPayload = state.businessProfilePayload;
-  await chooseProductsAndPlan(products, plan);
+  /* Add-ons are not asked at onboarding any more (2026-09-22): they are bought in Settings ›
+     Billing. `products` is still accepted so the call sites that name them read as they did;
+     every onboarding records none. Enterprise ends in a sales conversation, not a workspace,
+     so it is asked for here as Pro. */
+  void products;
+  await chooseSizeAndPlan(plan === "Enterprise" ? "Pro" : plan);
+  // last step: invite the team — skippable
+  fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
   // Onboarding completes straight into the Dashboard now.
   await screen.findByLabelText("Search BuildFlow");
 }
@@ -231,7 +245,9 @@ export async function openMapFieldOps() {
   await signUp({ email: "route@buildflow.test" });
   await chooseBusinessType("Asphalt");
   state.bootstrapPayload = state.businessProfilePayload;
-  await chooseProductsAndPlan(["Map & Field Ops"], "Business");
+  // Business bundles Map & Field Ops; add-ons are not an onboarding question any more (2026-09-22)
+  await chooseSizeAndPlan("Business");
+  fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
   fireEvent.click(await screen.findByRole("button", { name: "Skip Tutorial" }));
   await openAppPage("Map & Field Ops");
   // Live Map is a grid of job-site cards since 2026-09-06 (the embedded map is gone)

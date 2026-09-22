@@ -37,10 +37,13 @@ const setupKeyFor = (trade: string, plan: string, productIds: string[]) =>
 const ASPHALT_SETUP = {
   email: "ops@asphalt.test",
   businessType: "Asphalt",
+  /* Add-ons stopped being an onboarding question on 2026-09-22 (they are bought in Settings ›
+     Billing), so every setup's key is its trade and plan over "core" — the harness accepts the
+     list for the call sites that still name one and records none. */
   products: ["Map & Field Ops", "Equipment Tracking"],
   plan: "Business" as const
 };
-const ASPHALT_KEY = setupKeyFor("asphalt", "business", ["map-field-ops", "equipment-tracking"]);
+const ASPHALT_KEY = setupKeyFor("asphalt", "business", []);
 const TUTORIAL_TITLE = "Your BuildFlow workspace is ready";
 /** The device copy of the person-level record, keyed by the signed-in user so a shared
     browser cannot hand one person's tour to the next. */

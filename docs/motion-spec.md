@@ -281,6 +281,8 @@ Groups deliberately left out: the command palette (keyboard-driven rows that scr
 
 Worth recording plainly: **the reference clip does not do this.** Tracking its pill's own painted edges through one move, frame by frame, the two never diverge by more than **1.3 percentage points** of their own travel — that is the rounded corners, not a leading edge. A wide pill crossing two labels mid-slide looks like a stretch in a still frame, and that is what it was read as here. This is an addition that was asked for, not a correction.
 
+**The onboarding's trade tiles (2026-09-22)** are the twelfth group, asked for as "some sort of clean effect for when a user selects" a trade. Same engine, one difference in the sheet: a grid of bordered tiles gets a RING above the tiles rather than the fill beneath them — a fill travelling under the grid would cross two tiles' own borders on the way. The tile's grey fill, its icon's colour (a small spring, `DUR.base` on `EASE.soft`) and a check badge change in place as the ring arrives; the first choice fades in where it lands (`placed` flushed at opacity 0, `live` carries it up). The ring lives in `onboarding.css`, since the flow is outside the shell and §78 cannot reach it.
+
 It cannot be a transition. Both edges of a `transform` + `width` pair are tied to the same two values, so a move between two options of the same width cannot change length on the way — whatever easing either property is given. `left`/`right` would express it directly and is what this wanted to be, but §6 is "animate only opacity, transform and filter" and those two are layout. So `motion/SegmentPill.tsx` emits 18 stops onto the group's `::before` through the Web Animations API, as `transform` + `width` + `height` — the pair §78 was already animating. Not `scaleX`: a fully-rounded pill scaled sideways has elliptical ends.
 
 `PILL.lead` (0.35) is a fraction of the travel rather than a second curve — the leading edge runs `EASE.pill` at 1 + lead times the rate, arrives early, and waits while the trailing edge catches up. One number to justify instead of four. Each axis is measured separately, so a column's pill leads with its bottom edge going down and its top edge coming back.
@@ -410,3 +412,45 @@ Three things deliberately did NOT change:
 One thing had to: **a section's contents stop sliding too** (`--bfe-y: 0`). Eight pixels of contents sliding inside a card that is standing still is the one thing the clip never shows. They keep their own beat, as a fade.
 
 **Phones keep the lift** (§74i). The blur is the expensive half and is dropped there, and with it gone `bfe-focus` is a bare fade — so on a phone the panels take `bfe-lift` and its rise back. The shape the clip asks for is the one a phone cannot afford.
+
+---
+
+## Signing up in five steps (2026-09-22)
+
+Asked for with a recording of another product's onboarding, against the signup page and the three
+onboarding pages that followed it: *"redesign the signup page & onboarding … five easy steps … make
+sure to add the animations/effects from the video, and the same colours."* Built as
+`client/src/onboarding/` (OnboardingFlow, OnboardingPreview, PlanStep, recommendPlan) on
+`onboarding.css`; App.tsx renders it for `#create-account`, `#business-type` and
+`#additional-products`, and the login form keeps its own page.
+
+**What the recording does, measured at 40ms** (a 57fps source, so 40ms is the resolution):
+
+| beat | measured | rung used |
+|---|---|---|
+| the preview and the counter move | at once — the next card is on the right while the old form is still whole | synchronous |
+| the outgoing form fades, as one piece | ~160ms | `DUR.exit` 180ms |
+| the column stands empty | ~120ms | `STAGGER.row` 140ms |
+| each incoming element comes into focus | ~160ms, blur and opacity, **no travel** | `DUR.fast` 220ms, `MOTION.blurT` 6px |
+| one element to the next, top to bottom | ~100ms | `STAGGER.card` 90ms |
+| the plan page's gradient | at once | — |
+| the plan card, as one unit | starts ~160ms later, ~200ms in | `STAGGER.row`, `DUR.base` |
+
+The elements do not travel: the heading sits on the same pixel in its first blurred frame and its
+settled one (frames 36.80 and 37.36). That is the same shape as the Dashboard's `bfe-focus` above,
+arrived at from a different reference, and it is what keeps the layout still while a form is
+retyped — a field that slid in under a moving cursor would be the thing the recording never shows.
+
+**Verified in the running page** by sampling the DOM through one transition: at +100ms the frame had
+already turned from rose to mint and the counter read "Step 2 of 5" while the old pane was at
+opacity 1; at +200ms the pane was at 0.35; at +340ms the new heading was mounted with every beat at
+0; at +420ms the first beat was at 0.90 and the rest still 0. The plan card's animation, seeked:
+0 at 0 and 140ms, 0.92 at 300ms, 1 at 540ms.
+
+**Colour.** White, near-black, mid greys, and three pastel gradients sampled from the recording —
+rose while the questions are about the person, mint once they are about the business, peach for its
+size — plus the plan page's own. The recording's progress bar is blue; this product has no blue
+anywhere (skin §46), so the bar is ink.
+
+**Less motion**: every beat becomes a `--bfm-reduced` fade with no delay, the exit is the same fade,
+and the flow moves to the next step without waiting for the old one to leave.

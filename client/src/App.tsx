@@ -323,6 +323,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { SelectMenuLayer } from "./components/ui/selectMenu";
 import { DateMenuLayer } from "./components/ui/dateMenu";
 import { PanelExitLayer } from "./components/ui/panelExit";
+import { OnboardingFlow } from "./onboarding/OnboardingFlow";
 import { AppFrame, PageSwap, PanelGoo, SegmentPill, TextReveal } from "./motion";
 import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
@@ -4354,8 +4355,29 @@ function WelcomePage({
           </>
         )}
 
-      {welcomeView === "createAccount" ? (
-        <WelcomeCreateAccountPage onBack={showWelcomeHome} onSignup={onSignup} onLoginSubmit={onLoginSubmit} initialMode={accountMode} />
+      {welcomeView === "createAccount" && accountMode === "login" ? (
+        <WelcomeCreateAccountPage
+          onBack={showWelcomeHome}
+          onSignup={onSignup}
+          onLoginSubmit={onLoginSubmit}
+          initialMode="login"
+          onSwitchToSignup={showCreateAccountPage}
+        />
+      ) : welcomeView === "createAccount" || welcomeView === "businessType" || welcomeView === "additionalProducts" ? (
+        /* Signing up and setting the workspace up are one five-step flow (onboarding/, 2026-09-22).
+           It stays mounted across the three hashes so a step can fade into the next; the hash says
+           which group of steps it is on. */
+        <OnboardingFlow
+          entry={welcomeView === "createAccount" ? "create-account" : welcomeView === "businessType" ? "business-type" : "additional-products"}
+          plans={productPlans}
+          onSignup={onSignup}
+          onTradeChosen={handleBusinessTypeSelected}
+          onBackToTrade={showBusinessTypePage}
+          onFinish={(plan, seats) => finishOnboarding(plan, [], seats)}
+          onLogIn={showLoginPage}
+          onBack={showWelcomeHome}
+          onContactSales={showContactSalesPage}
+        />
       ) : welcomeView === "resetPassword" ? (
         <WelcomeResetPasswordPage onBack={showLoginPage} onReset={onResetPassword} />
       ) : welcomeView === "verifyEmail" ? (
@@ -4364,14 +4386,6 @@ function WelcomePage({
         <WelcomeAcceptInvitePage onAccept={onAcceptInvite} onLogin={showLoginPage} />
       ) : welcomeView === "inviteTeam" ? (
         <WelcomeInviteTeamPage onDone={finishInviteStep} />
-      ) : welcomeView === "businessType" ? (
-        <WelcomeBusinessTypePage
-          onBack={showCreateAccountPage}
-          onContinue={handleBusinessTypeSelected}
-          hasWork={Boolean(data && data.projects.length > 0)}
-        />
-      ) : welcomeView === "additionalProducts" ? (
-        <WelcomeAdditionalProductsPage businessType={pendingBusinessType} onBack={showBusinessTypePage} onContinue={finishOnboarding} />
       ) : welcomeView === "crewScheduling" ? (
         <WelcomeCrewSchedulingPage onBack={showWelcomeHome} onOpenSchedule={onOpenSchedule} onGetStarted={showCreateAccountPage} />
       ) : welcomeView === "scheduleAi" ? (
@@ -7694,12 +7708,15 @@ function WelcomeCreateAccountPage({
   onBack,
   onSignup,
   onLoginSubmit,
-  initialMode = "signup"
+  initialMode = "signup",
+  onSwitchToSignup
 }: {
   onBack: () => void;
   onSignup: (input: SignupInput) => Promise<void>;
   onLoginSubmit: (input: { email: string; password: string; remember?: boolean }) => Promise<void>;
   initialMode?: "signup" | "login";
+  /** Signing up happens in the five-step flow now (onboarding/); when given, "Create an account" goes there. */
+  onSwitchToSignup?: () => void;
 }) {
   const [mode, setMode] = useState<"signup" | "login" | "forgot">(initialMode);
   // "forgot": the email field + one button; after sending, a plain confirmation.
@@ -7735,7 +7752,10 @@ function WelcomeCreateAccountPage({
       exchange_failed: "The provider didn't complete sign-in. Please try again or use your email."
     };
     setError(messages[reason] ?? "Sign-in with that provider didn't complete. Please try again or use your email.");
-    if (reason === "no_account") setMode("signup");
+    if (reason === "no_account") {
+      if (onSwitchToSignup) onSwitchToSignup();
+      else setMode("signup");
+    }
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
   }, []);
 
@@ -8126,6 +8146,10 @@ function WelcomeCreateAccountPage({
             <button
               type="button"
               onClick={() => {
+                if (mode === "login" && onSwitchToSignup) {
+                  onSwitchToSignup();
+                  return;
+                }
                 setMode(mode === "login" ? "signup" : "login");
                 setResetSent(false);
                 setFieldErrors({});

@@ -8,7 +8,7 @@ import {
   ACCOUNT,
   blankWorkspaceFixture,
   chooseBusinessType,
-  chooseProductsAndPlan,
+  chooseSizeAndPlan,
   completeOnboarding,
   enterDashboard,
   installAppHarness,
@@ -146,15 +146,18 @@ describe("BuildFlow app", () => {
 
     await openCreateAccount();
 
-    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
-    expect(screen.getByLabelText("Your name")).toBeInTheDocument();
+    // the first of the five onboarding steps (2026-09-22): the person; the business is asked next
+    expect(await screen.findByRole("heading", { name: "Let's start with you." })).toBeInTheDocument();
+    expect(screen.getByText("Step 1 of 5")).toBeInTheDocument();
+    expect(screen.getByLabelText("First name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Last name")).toBeInTheDocument();
     expect(screen.getByLabelText("Work email")).toHaveAttribute("placeholder", "name@company.com");
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create account" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
     // social sign-in buttons are gone until OAuth is real — a disabled sign-in button costs trust
     expect(screen.queryByRole("button", { name: "Google" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Microsoft" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Company")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Company")).not.toBeInTheDocument();
     expect(screen.getByLabelText("I agree to the")).not.toBeChecked();
     expect(screen.getByRole("button", { name: "Log in" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Pending Approvals" })).not.toBeInTheDocument();
@@ -204,31 +207,31 @@ describe("BuildFlow app", () => {
     render(<App />);
 
     await openCreateAccount();
-    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Let's start with you." })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Log in" }));
 
     expect(await screen.findByRole("heading", { name: "Welcome back." })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
     // Login only needs credentials — the signup-only fields are gone.
-    expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("First name")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Create an account" }));
 
-    expect(await screen.findByRole("heading", { name: "Create your workspace." })).toBeInTheDocument();
-    expect(screen.getByLabelText("Your name")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Let's start with you." })).toBeInTheDocument();
+    expect(screen.getByLabelText("First name")).toBeInTheDocument();
   });
 
   it("requires a password of at least 8 characters to create an account", async () => {
     render(<App />);
 
     await openCreateAccount();
-    fireEvent.change(await screen.findByLabelText("Your name"), { target: { value: ACCOUNT.name } });
-    fireEvent.change(screen.getByLabelText("Company"), { target: { value: ACCOUNT.company } });
+    fireEvent.change(await screen.findByLabelText("First name"), { target: { value: "Jordan" } });
+    fireEvent.change(screen.getByLabelText("Last name"), { target: { value: "Reyes" } });
     fireEvent.change(screen.getByLabelText("Work email"), { target: { value: ACCOUNT.email } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "short" } });
     fireEvent.click(screen.getByLabelText("I agree to the"));
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Password must be at least 8 characters.");
     expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).includes("/api/auth/signup"))).toBe(false);
@@ -239,7 +242,8 @@ describe("BuildFlow app", () => {
 
     await signUp();
 
-    expect(await screen.findByRole("heading", { name: "What type of Business do you own" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "What type of construction business do you own?" })).toBeInTheDocument();
+    expect(screen.getByText("Step 3 of 5")).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "Business type" })).toBeInTheDocument();
     businessTypeOptions.forEach((businessType) => {
       expect(screen.getByRole("radio", { name: businessType })).toBeInTheDocument();
@@ -247,36 +251,36 @@ describe("BuildFlow app", () => {
     expect(window.location.hash).toBe("#business-type");
 
     fireEvent.click(screen.getByRole("radio", { name: "Roofing" }));
-    fireEvent.click(screen.getByRole("button", { name: "Get BuildFlow" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(await screen.findByRole("heading", { name: "What additional products do you want to use?" })).toBeInTheDocument();
+    // then the size of the business, which is what the plan is recommended from
+    expect(await screen.findByRole("heading", { name: "How big is Reyes Construction today?" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Monthly revenue" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Total employees" })).toBeInTheDocument();
     expect(window.location.hash).toBe("#additional-products");
   });
 
-  it("requires a plan but not an add-on before entering BuildFlow", async () => {
+  it("recommends a plan from the size answers, says why, and keeps Free one click away", async () => {
     render(<App />);
 
     await signUp();
     await chooseBusinessType("Asphalt");
 
-    expect(await screen.findByText("Map & Field Ops")).toBeInTheDocument();
-    expect(screen.getByText("Track vehicles, equipment, and design traffic routes.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select Free plan" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select Pro plan" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select Business plan" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Select Enterprise plan" })).toBeInTheDocument();
+    // nothing is recommended until both answers are in — or the step is skipped
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: "$25k – $100k / month" }));
+    fireEvent.click(screen.getByRole("radio", { name: "16 – 50" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
-    // a plan is required; add-ons are optional, and the button says so
-    const continueButton = screen.getByRole("button", { name: "Continue without add-ons" });
-    expect(continueButton).toBeDisabled();
-    expect(screen.getByLabelText("Seats")).toHaveValue(5);
-
-    fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
-    expect(continueButton).toBeEnabled();
-    expect(screen.getByText(/\$240 \/ month/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText(/Map & Field Ops/));
-    expect(screen.getByRole("button", { name: "Continue to BuildFlow" })).toBeEnabled();
+    // a crew of 16–50 is past Free's five seats: Pro, with the reason on the card
+    expect(await screen.findByRole("heading", { name: "Pro" })).toBeInTheDocument();
+    expect(screen.getByText("$20")).toBeInTheDocument();
+    expect(screen.getByText("/ user / month")).toBeInTheDocument();
+    expect(screen.getByText(/A crew of 16 – 50 is past Free's 5 seats/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue with Pro" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue for free" })).toBeInTheDocument();
+    // no add-on catalogue here any more: that lives in Settings › Billing
+    expect(screen.queryByText("Map & Field Ops")).not.toBeInTheDocument();
   });
 
   it("opens a blank workspace after the selected onboarding setup", async () => {
@@ -284,10 +288,8 @@ describe("BuildFlow app", () => {
 
     await signUp({ email: "ops@asphalt.test" });
     await chooseBusinessType("Asphalt");
-    fireEvent.click(await screen.findByLabelText(/Map & Field Ops/));
-    fireEvent.click(screen.getByLabelText(/Equipment Tracking/));
-    fireEvent.click(screen.getByRole("button", { name: "Select Business plan" }));
-    fireEvent.click(screen.getByRole("button", { name: "Continue to BuildFlow" }));
+    // the size answers that recommend Business, then that plan (add-ons are Settings' now)
+    await chooseSizeAndPlan("Business");
     // last step: invite the team — skippable
     fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
 
@@ -298,7 +300,8 @@ describe("BuildFlow app", () => {
     expect(screen.getByText("Asphalt workspace")).toBeInTheDocument();
     expect(window.localStorage.getItem("buildflow.businessType")).toBe("Asphalt");
     expect(window.localStorage.getItem("buildflow.selectedPlan")).toBe("business");
-    expect(JSON.parse(window.localStorage.getItem("buildflow.selectedProducts") ?? "[]")).toEqual(["map-field-ops", "equipment-tracking"]);
+    expect(JSON.parse(window.localStorage.getItem("buildflow.selectedProducts") ?? "[]")).toEqual([]);
+    // "51 – 200" people is recorded as 75 seats (onboarding/recommendPlan.ts, TEAM_OPTIONS)
     expect(fetch).toHaveBeenCalledWith(
       "/api/business-profile",
       expect.objectContaining({
@@ -306,13 +309,12 @@ describe("BuildFlow app", () => {
         body: JSON.stringify({
           businessType: "Asphalt",
           selectedPlan: "business",
-          selectedProducts: ["map-field-ops", "equipment-tracking"],
-          seats: 5
+          selectedProducts: [],
+          seats: 75
         })
       })
     );
     expect(screen.getAllByText(/Business plan/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Selected products: Map & Field Ops, Equipment Tracking/)).toBeInTheDocument();
     // a blank workspace shows the board's own empty states (the weekly board,
     // job list and project table retired to their pages in Phase 3)
     expect(screen.getByText("No approvals waiting on you")).toBeInTheDocument();
@@ -338,11 +340,9 @@ describe("BuildFlow app", () => {
     });
 
     expect(await screen.findByRole("dialog", { name: "Your BuildFlow workspace is ready" })).toBeInTheDocument();
-    expect(
-      screen.getByText(/BuildFlow is set up for Asphalt on the Business plan with Map & Field Ops, Equipment Tracking/)
-    ).toBeInTheDocument();
+    // add-ons are not an onboarding question any more (2026-09-22), so the intro names the trade and the plan
+    expect(screen.getByText(/BuildFlow is set up for Asphalt on the Business plan/)).toBeInTheDocument();
 
-    // the panel counts the steps the two add-ons added
     expect(within(screen.getByRole("dialog")).getByText(/Step 1 of \d+/)).toBeInTheDocument();
   });
 

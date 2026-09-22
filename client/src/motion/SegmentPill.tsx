@@ -61,7 +61,12 @@ export const PILL_GROUPS = [
   ".bf-breeze-nav", // BuildFlow AI's own nav
   ".route-goal-control", // Map & Field Ops — the optimisation goal
   ".hs-rail-list", // the icon rail: the page you are on (docs/motion-spec.md §5)
-  ".settings-rail" // Settings — the category you are reading, across all four sections
+  ".settings-rail", // Settings — the category you are reading, across all four sections
+  /* Onboarding step 3 — the trade tiles (2026-09-22, "add some sort of clean effect for when a
+     user selects"). A grid, not a row, and the pill is a RING rather than a fill: the tiles carry
+     their own text and icon, and a fill travelling under them would cross two tiles' borders on
+     the way. The ring is drawn by onboarding.css, not the skin — the flow lives outside the shell. */
+  ".onb-tiles"
 ].join(", ");
 
 /** How each of them says which option is selected. */

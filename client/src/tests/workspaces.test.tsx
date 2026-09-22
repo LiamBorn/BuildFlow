@@ -131,7 +131,7 @@ describe("workspaces", () => {
 
     // the new workspace is the active one, and it has its onboarding to do: the trade first
     await waitFor(() => expect(window.location.hash).toBe("#business-type"));
-    expect(await screen.findByRole("heading", { name: "What type of Business do you own" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "What type of construction business do you own?" })).toBeInTheDocument();
   });
 
   it("keeps the menu up with the reason when a workspace cannot be created", async () => {
@@ -182,19 +182,18 @@ describe("workspaces", () => {
     fireEvent.click(within(screen.getByRole("dialog", { name: "Workspaces" })).getByRole("button", { name: /Add workspace/ }));
 
     // the trade question, and it stays (a demo session used to be sent to Create account here)
-    expect(await screen.findByRole("heading", { name: "What type of Business do you own" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "What type of construction business do you own?" })).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole("heading", { name: "Create your workspace." })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "What type of Business do you own" })).toBeInTheDocument();
-    // then the plan …
+    expect(screen.getByRole("heading", { name: "What type of construction business do you own?" })).toBeInTheDocument();
+    // then the size question, and the plan it points at …
     await chooseBusinessType("Roofing");
-    expect(screen.getAllByRole("button", { name: /^Select .+ plan$/ }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("radiogroup", { name: "Monthly revenue" })).toBeInTheDocument();
     // … and the invite step, which is the new workspace's too (the demo used to be bounced HERE,
     // once the trade step had marked the workspace's onboarding complete)
     state.businessProfilePayload = { ...blankWorkspaceFixture, workspaceTrial: true };
-    fireEvent.click(screen.getByRole("button", { name: "Select Free plan" }));
-    // with no add-ons picked the button says "Continue without add-ons"
-    fireEvent.click(screen.getByRole("button", { name: /^Continue/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue for free" }));
     expect(await screen.findByRole("button", { name: "Skip for now" })).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole("heading", { name: "Create your workspace." })).not.toBeInTheDocument();

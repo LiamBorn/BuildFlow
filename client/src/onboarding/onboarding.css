@@ -1,0 +1,979 @@
+/* =============================================================================
+   Onboarding — the five-step signup and setup, on the reference recording's design
+   (2026-09-22). Scoped `.onb-*`; light only, like the landing it is reached from.
+
+   GEOMETRY, measured off the recording (1400px frame, ~1:1 with the logical window):
+   the question column is a ~330px block standing at the same height on every step
+   (heading at y=185 of 787 whatever the step holds — top-anchored, not centred); the
+   preview is a 450×630 rounded frame centred in the right half, with the white card
+   inset 38px from its top and left and running off its right and bottom edges. Type
+   is scaled up ~1.3× from the recording's compact UI so it sits at the landing's size.
+
+   COLOUR: white page, near-black ink, mid greys; the three pastel gradients and the
+   plan page's are sampled from the recording (see OnboardingPreview.tsx). The
+   recording's progress bar is a blue (#1f4c9b); this product has no blue anywhere
+   (skin §46), so the bar is ink.
+
+   MOTION: every duration, curve, blur and stagger is a `--bfm-*` rung from
+   motion/tokens.ts, declared on `.bf-shell` — which is on <body>, so it reaches here.
+   ============================================================================= */
+
+.onb {
+  --onb-ink: #141414;
+  --onb-ink-soft: #3c3c3c;
+  --onb-sub: #6b6b6b;
+  --onb-hint: #8a8a8a;
+  --onb-line: #e2e2e2;
+  --onb-line-strong: #a3a3a3;
+  --onb-track: #d9d9d9;
+  --onb-fill-muted: #e6e6e6;
+  --onb-disabled: #dcdcdc;
+  --onb-disabled-ink: #8f8f8f;
+  --onb-selected: #f3f3f3;
+  --onb-danger: #c5221f;
+  --onb-check: #7c9a8e;
+  --onb-rose: linear-gradient(180deg, #fde9ee 0%, #fceddc 45%, #fce1d1 65%, #fdc0de 100%);
+  --onb-mint: linear-gradient(180deg, #ddfad6 0%, #e8f5d2 42%, #f4e4d1 68%, #dabedc 100%);
+  --onb-peach: linear-gradient(180deg, #fdebda 0%, #fdebda 40%, #f9e3ef 68%, #c9d0f5 100%);
+  --onb-plan-bg: linear-gradient(180deg, #ddfad6 0%, #ddfad6 40%, #f8ecd0 70%, #d3b5de 100%);
+  --onb-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  background: #ffffff;
+  color: var(--onb-ink);
+  font-family: var(--onb-sans);
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 960px) {
+  .onb {
+    grid-template-columns: 1fr 1fr;
+    /* the page is its own scroll container: only the question column scrolls, the
+       preview stays put. (`position: sticky` cannot work under .welcome-page.) */
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+.onb *,
+.onb *::before,
+.onb *::after {
+  box-sizing: border-box;
+}
+.onb :is(button, input, a):focus-visible {
+  outline: 2px solid var(--onb-ink);
+  outline-offset: 2px;
+}
+
+/* ───────────────────────── the question column ───────────────────────── */
+.onb-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(64px, 9vh, 80px) clamp(20px, 5vw, 48px) 48px;
+}
+@media (min-width: 960px) {
+  .onb-col {
+    height: 100dvh;
+    overflow-y: auto;
+  }
+}
+.onb-brand {
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--onb-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+.onb-brand img {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.onb-inner {
+  width: min(100%, 380px);
+  margin: 0 auto;
+}
+
+.onb-progress {
+  font-size: 12px;
+  color: var(--onb-sub);
+}
+.onb-progress-bar {
+  width: 120px;
+  height: 3px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: var(--onb-track);
+  overflow: hidden;
+}
+.onb-progress-bar i {
+  display: block;
+  height: 100%;
+  width: var(--onb-fill);
+  background: var(--onb-ink);
+  transition: width var(--bfm-dur-base) var(--bfm-ease-out);
+}
+
+/* the block stands at the same height on every step, whatever the step holds */
+.onb-pane {
+  margin-top: clamp(48px, 11vh, 96px);
+}
+.onb-h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.onb-sub {
+  margin: 0 0 26px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--onb-sub);
+}
+
+/* fields */
+.onb-field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.onb-field > label {
+  font-size: 13px;
+  color: var(--onb-ink-soft);
+}
+.onb-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.onb-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--onb-line-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--onb-ink);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  appearance: none;
+  transition:
+    border-color var(--bfm-dur-instant) linear,
+    box-shadow var(--bfm-dur-instant) linear;
+}
+.onb-input::placeholder {
+  color: var(--onb-hint);
+}
+.onb-input:focus {
+  border-color: var(--onb-ink);
+  box-shadow: 0 0 0 3px rgba(20, 20, 20, 0.08);
+}
+.onb-input.is-invalid {
+  border-color: var(--onb-danger);
+}
+.onb-pw {
+  position: relative;
+}
+.onb-pw .onb-input {
+  padding-right: 44px;
+}
+.onb-pw-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--onb-sub);
+  cursor: pointer;
+}
+.onb-pw-eye svg {
+  width: 16px;
+  height: 16px;
+}
+.onb-pw-eye:hover {
+  color: var(--onb-ink);
+}
+/* a field's hint or error is the field's own last line (see Beats in OnboardingFlow.tsx) */
+.onb-hint,
+.onb-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.onb-row2-note {
+  grid-column: 1 / -1;
+}
+.onb-check .onb-error {
+  display: block;
+  margin-top: 4px;
+}
+.onb-form-note:empty {
+  display: none;
+}
+.onb-form-note .onb-error {
+  margin: 4px 0 8px;
+}
+.onb-hint {
+  color: var(--onb-hint);
+}
+.onb-error {
+  color: var(--onb-danger);
+}
+.onb-inline-link {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--onb-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.onb-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 4px 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--onb-ink-soft);
+}
+.onb-check input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--onb-ink);
+}
+.onb-check a {
+  color: var(--onb-ink);
+  text-decoration: underline;
+}
+.onb-check.is-invalid {
+  color: var(--onb-danger);
+}
+
+/* buttons */
+.onb-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  margin-top: 22px;
+}
+.onb-btn {
+  width: 100%;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    color var(--bfm-dur-fast) var(--bfm-ease-out),
+    transform var(--bfm-dur-instant) linear;
+}
+.onb-btn:disabled {
+  cursor: default;
+}
+.onb-btn-primary {
+  background: var(--onb-ink);
+  color: #ffffff;
+}
+.onb-btn-primary:hover:not(:disabled) {
+  background: #2a2a2a;
+}
+.onb-btn-primary:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.onb-btn-primary:disabled {
+  background: var(--onb-disabled);
+  color: var(--onb-disabled-ink);
+}
+.onb-btn-ghost {
+  background: var(--onb-fill-muted);
+  color: var(--onb-ink);
+}
+.onb-btn-ghost:hover:not(:disabled) {
+  background: #dcdcdc;
+}
+.onb-link {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--onb-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.onb-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.onb-link:disabled {
+  color: var(--onb-disabled-ink);
+  cursor: default;
+}
+.onb-alt {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--onb-sub);
+}
+.onb-alt .onb-link {
+  padding: 0 2px;
+}
+.onb-oauth {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  margin-top: 2px;
+}
+.onb-oauth > span {
+  font-size: 12px;
+  color: var(--onb-hint);
+}
+.onb-oauth > div {
+  width: 100%;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 10px;
+}
+.onb-oauth button {
+  height: 40px;
+  border: 1px solid var(--onb-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--onb-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.onb-oauth button:hover {
+  border-color: var(--onb-line-strong);
+}
+
+/* the trade tiles — three across, as on the recording */
+.onb-tiles {
+  position: relative; /* the ring below is placed against this box (motion/SegmentPill.tsx) */
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+/* THE SELECTION TRAVELS (2026-09-22). The chosen tile's ink ring is the group's own ::before,
+   placed by the app's pill engine (skin §78, motion/SegmentPill.tsx) and carried from the last
+   choice to the next on the same curve the button groups use — a selection with a place, not
+   two lamps swapping. It is a RING above the tiles rather than the skin's fill beneath them:
+   a fill travelling under the grid would cross two tiles' own borders on the way. The tile's
+   grey fill, its icon's colour and the check badge change in place, in step with the ring's
+   arrival. */
+.onb-tiles[data-bfm-pill]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  box-sizing: border-box;
+  width: var(--bfm-pill-w);
+  height: var(--bfm-pill-h);
+  transform: translate(var(--bfm-pill-x), var(--bfm-pill-y));
+  border: 1px solid var(--onb-ink);
+  border-radius: 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+/* the first placement has nowhere to travel from: it fades in where it lands (`placed` is
+   flushed at opacity 0, `live` carries it up); every move after that travels */
+.onb-tiles[data-bfm-pill="live"]::before {
+  opacity: 1;
+  transition:
+    transform var(--bfm-dur-pill) var(--bfm-ease-pill),
+    width var(--bfm-dur-pill) var(--bfm-ease-pill),
+    height var(--bfm-dur-pill) var(--bfm-ease-pill),
+    opacity var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+/* with the ring live, the chosen tile's own border goes back to the others' — the ring is its border now */
+.onb-tiles[data-bfm-pill] .onb-tile.is-on {
+  border-color: var(--onb-line);
+}
+.onb-tiles[data-bfm-pill] .onb-tile.is-on:hover {
+  transform: none; /* the ring does not lift with it */
+}
+.onb-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 88px;
+  padding: 12px 10px;
+  border: 1px solid var(--onb-line);
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--onb-ink);
+  cursor: pointer;
+  transition:
+    border-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    background-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    transform var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.onb-tile:hover {
+  border-color: var(--onb-line-strong);
+  transform: translateY(-1px);
+}
+.onb-tile input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.onb-tile:active {
+  transform: scale(0.985);
+}
+.onb-tile > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--onb-sub);
+  transition: color var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.onb-tile.is-on {
+  border-color: var(--onb-ink);
+  background: var(--onb-selected);
+}
+/* the icon takes the trade's colour with a small spring, as the ring arrives */
+.onb-tile.is-on > svg {
+  color: var(--tone);
+  animation: onb-pop var(--bfm-dur-base) var(--bfm-ease-soft);
+}
+@keyframes onb-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+/* and a check lands in the corner */
+.onb-tile-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--onb-ink);
+  color: #ffffff;
+  animation: onb-badge var(--bfm-dur-fast) var(--bfm-ease-soft) both;
+}
+.onb-tile-check svg {
+  width: 11px;
+  height: 11px;
+}
+@keyframes onb-badge {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* keyboard focus: a halo, not a second hard ring on top of the selection's */
+.onb-tile:has(input:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(20, 20, 20, 0.14);
+}
+
+/* the size chips */
+.onb-group {
+  margin-bottom: 22px;
+}
+.onb-group > span {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--onb-ink-soft);
+}
+.onb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.onb-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--onb-line);
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    background-color var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.onb-chip:hover {
+  border-color: var(--onb-line-strong);
+}
+.onb-chip input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.onb-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.onb-chip.is-on {
+  border-color: var(--onb-ink);
+  background: var(--onb-selected);
+}
+.onb-chip:has(input:focus-visible) {
+  outline: 2px solid var(--onb-ink);
+  outline-offset: 2px;
+}
+
+/* ───────────────────────── the preview ───────────────────────── */
+.onb-aside {
+  display: none;
+}
+@media (min-width: 960px) {
+  .onb-aside {
+    display: grid;
+    place-items: center;
+    height: 100dvh;
+    padding: 48px 48px 48px 24px;
+  }
+}
+.onb-frame {
+  position: relative;
+  width: min(100%, 470px);
+  aspect-ratio: 45 / 63;
+  max-height: calc(100dvh - 96px);
+  border-radius: 24px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.onb-frame[data-variant="rose"],
+.onb-frame-old[data-variant="rose"] {
+  background: var(--onb-rose);
+}
+.onb-frame[data-variant="mint"],
+.onb-frame-old[data-variant="mint"] {
+  background: var(--onb-mint);
+}
+.onb-frame[data-variant="peach"],
+.onb-frame-old[data-variant="peach"] {
+  background: var(--onb-peach);
+}
+/* the gradient it is leaving, fading out over the new one */
+.onb-frame-old {
+  position: absolute;
+  inset: 0;
+  animation: onb-fade-out var(--bfm-dur-slow) var(--bfm-ease-inout) forwards;
+}
+.onb-mock {
+  position: absolute;
+  top: 38px;
+  left: 38px;
+  right: 0;
+  bottom: 0;
+  border-radius: 20px 0 0 0;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(20, 20, 20, 0.06),
+    0 12px 32px rgba(20, 20, 20, 0.08);
+  overflow: hidden;
+  color: var(--onb-ink);
+  font-size: 13px;
+}
+.onb-mock .is-empty {
+  color: var(--onb-hint);
+}
+
+/* the picture of the program, and the card's own chrome around it */
+.onb-shot-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.onb-shots {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #f6f6f6;
+}
+/* all four pages are mounted and one shows, so a step change is a cross-fade, not a load */
+.onb-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left top;
+  opacity: 0;
+  transition: opacity var(--bfm-dur-base) var(--bfm-ease-inout);
+}
+.onb-shot.is-on {
+  opacity: 1;
+}
+
+/* from step 2: the business as the card's header — initial, name, then the trade and the size as chips */
+.onb-mock-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-height: 54px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #ececec;
+  background: #ffffff;
+}
+.onb-mock-tile {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--onb-ink);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.onb-mock-tile.is-empty {
+  background: #8a8a8a;
+}
+.onb-mock-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.onb-mock-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.onb-mock-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #efefef;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--onb-ink);
+}
+.onb-mock-chip svg {
+  width: 12px;
+  height: 12px;
+}
+.onb-mock-chip > span {
+  color: var(--onb-ink);
+}
+/* the trade chip replays its arrival when the trade changes (it is re-keyed on the trade) */
+.onb-mock-chip.is-live {
+  animation: onb-in var(--bfm-dur-fast) var(--bfm-ease-out) both;
+}
+.onb-mock-chip.is-empty > span {
+  color: var(--onb-hint);
+}
+
+/* step 1: the account row under the Dashboard, written as the name is typed */
+.onb-mock-user {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid #ececec;
+  background: #ffffff;
+}
+.onb-mock-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--onb-ink);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.onb-mock-user-text {
+  display: grid;
+  line-height: 1.3;
+}
+.onb-mock-user-text b {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.onb-mock-user-text i {
+  font-size: 11px;
+  font-style: normal;
+  color: var(--onb-sub);
+}
+
+/* ───────────────────────── step 5: the plan page ───────────────────────── */
+.onb.onb-is-plan {
+  grid-template-columns: 1fr;
+  /* the page IS the gradient: no question column to hold still, so let it scroll if the card is taller than a short window */
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+/* the question column's top offset is not the plan page's — it left a white band above the gradient */
+.onb.onb-is-plan .onb-pane {
+  margin-top: 0;
+}
+.onb-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 40px 20px;
+  background: var(--onb-plan-bg);
+  animation: onb-fade var(--bfm-dur-fast) linear both;
+}
+.onb-plan-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.onb-plan-brand img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+.onb-badge {
+  margin-left: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--onb-ink);
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* the card comes into focus a beat after the gradient, as one unit (frames 25.54–25.86) */
+.onb-plan-brand,
+.onb-card,
+.onb-plan-back {
+  animation: onb-in var(--bfm-dur-base) var(--bfm-ease-out) both;
+  animation-delay: var(--bfm-stagger-row);
+}
+.onb-card {
+  width: min(100%, 300px);
+  padding: 18px 16px 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(20, 20, 20, 0.04),
+    0 12px 32px rgba(20, 20, 20, 0.1);
+}
+.onb-card-plan {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--onb-sub);
+}
+.onb-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.onb-card-price strong {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.onb-card-price span {
+  font-size: 12px;
+  color: var(--onb-sub);
+}
+.onb-card-reason {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--onb-ink-soft);
+}
+.onb-card hr {
+  margin: 0 0 12px;
+  border: 0;
+  border-top: 1px solid #ececec;
+}
+.onb-card ul {
+  display: grid;
+  gap: 7px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.onb-card li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.onb-card li svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--onb-check);
+}
+.onb-card-actions {
+  display: grid;
+  gap: 8px;
+}
+.onb-card-note {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--onb-hint);
+}
+.onb-plan-back {
+  margin-top: 14px;
+}
+
+/* ───────────────────────── the transition ───────────────────────── */
+/* the outgoing form goes as one piece */
+.onb-pane.is-leaving {
+  animation: onb-fade-out var(--bfm-dur-exit) var(--bfm-ease-inout) forwards;
+  pointer-events: none;
+}
+/* the incoming elements come into focus top to bottom — no travel */
+.onb-beat {
+  animation: onb-in var(--bfm-dur-fast) var(--bfm-ease-out) both;
+  animation-delay: calc(var(--i) * var(--bfm-stagger-card));
+}
+@keyframes onb-in {
+  from {
+    opacity: 0;
+    filter: blur(var(--bfm-blur-t));
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+@keyframes onb-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes onb-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onb-tiles[data-bfm-pill="live"]::before {
+    transition: opacity var(--bfm-reduced) linear;
+  }
+  .onb-tile.is-on > svg,
+  .onb-tile-check,
+  .onb-mock-chip.is-live {
+    animation: none;
+  }
+  .onb-beat,
+  .onb-plan,
+  .onb-plan-brand,
+  .onb-card,
+  .onb-plan-back {
+    animation: onb-fade var(--bfm-reduced) linear both;
+    animation-delay: 0s;
+  }
+  .onb-pane.is-leaving,
+  .onb-frame-old {
+    animation-duration: var(--bfm-reduced);
+  }
+  .onb-progress-bar i,
+  .onb-tile,
+  .onb-chip {
+    transition: none;
+  }
+}
+
+/* ───────────────────────── phones ───────────────────────── */
+@media (max-width: 959px) {
+  .onb-col {
+    padding-top: 72px;
+  }
+  .onb-pane {
+    margin-top: 32px;
+  }
+  .onb-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 420px) {
+  .onb-row2 {
+    grid-template-columns: 1fr;
+  }
+}
