@@ -839,9 +839,6 @@
 /* 3 steps */
 
 /* CTA */
-
-@media (max-width: 820px) {
-}
 .welcome-rx .wx-btn {
   display: inline-flex;
   align-items: center;
@@ -1196,17 +1193,11 @@
 
 /* "What is BuildFlow?" — the question on the left, the answer on the right,
    the way a product page explains itself before it shows who trusts it. */
-@media (max-width: 820px) {
-}
 
 /* "Trusted by teams that build" — a steady logo strip.
    One row of monochrome wordmarks drifting right → left at a constant speed,
    both edges faded by a mask so marks appear and disappear softly. No per-item
    motion: the strip is something you glance at, not something you operate. */
-@media (max-width: 620px) {
-}
-@media (prefers-reduced-motion: reduce) {
-}
 
 /* ============================ sections ================================= */
 .welcome-rx .wx-section {
@@ -1744,9 +1735,6 @@
 /* mini case-study metric strip */
 
 /* quote cards */
-
-@media (max-width: 900px) {
-}
 
 /* ============================ updates carousel ========================= */
 .welcome-rx .wx-updates-head {
