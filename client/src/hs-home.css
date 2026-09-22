@@ -1877,7 +1877,12 @@
     left 0.18s cubic-bezier(0.22, 1, 0.36, 1),
     width 0.18s cubic-bezier(0.22, 1, 0.36, 1),
     height 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-  animation: hs-dropslot-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* Was `hs-dropslot-in`, which was never defined in any commit — so the slot has always
+     appeared instantly and this line did nothing. The fade two rules above is what it wanted;
+     the author's 0.22s and curve are kept. Deliberately NOT a scale: a transform on an element
+     whose position is being transitioned inside an active drag outranks the inline transform
+     the drag rewrites each frame, which is a bug this codebase has already had once. */
+  animation: hsh-fade-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /* the corner handle: HubSpot's dotted triangle, shown on hover and in Customize */
 .dash-rx.hs-home .dash-resize {
