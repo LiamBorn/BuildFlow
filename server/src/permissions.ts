@@ -250,6 +250,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
      here means "no workspace capability applies", not "unguarded". */
   "GET /api/ops/backups": "public",
   "GET /api/ops/metrics": "public",
+  "GET /api/ops/stats": "public",
   "GET /api/projects": "schedule.read",
   "GET /api/projects/:id": "schedule.read",
   "GET /api/resources": "schedule.read",

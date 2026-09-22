@@ -5,6 +5,7 @@ import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import { hashPassword, hashToken, newAuthToken, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
 import { createBusinessProfile } from "./businessProfiles.js";
 import { isPermissionLevel, type PermissionLevel } from "@buildflow/shared";
+import { metrics } from "./metrics.js";
 import type {
   CrewClash,
   RebookMove,
@@ -1333,6 +1334,7 @@ export class BuildFlowStore {
      * data directory cannot publish each other's half-written file.
      */
     const tmp = `${this.dataFile}.tmp-${process.pid}`;
+    const startedAt = process.hrtime.bigint();
     try {
       const fd = fs.openSync(tmp, "w");
       try {
@@ -1342,6 +1344,9 @@ export class BuildFlowStore {
         fs.closeSync(fd);
       }
       fs.renameSync(tmp, this.dataFile);
+      // Counted because this is the server's characteristic cost: a whole-file rewrite plus
+      // an fsync, per write, everywhere. See metrics.ts.
+      metrics.recordSave(data.length, Number(process.hrtime.bigint() - startedAt) / 1e6);
     } catch (error) {
       try {
         fs.unlinkSync(tmp);

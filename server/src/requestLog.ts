@@ -28,6 +28,7 @@
    ========================================================================= */
 import crypto from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
+import { metrics } from "./metrics.js";
 
 /** Strip control characters and cap the length of anything the caller chose. */
 function safeForLog(value: string, max = 200): string {
@@ -64,7 +65,6 @@ export function createRequestLogger(mode: RequestLogMode = requestLogMode()) {
     const id = crypto.randomBytes(8).toString("hex");
     // Handed back so a customer's screenshot of an error can be found in the log.
     res.setHeader("X-Request-Id", id);
-    if (mode === "off") return next();
 
     const startedAt = process.hrtime.bigint();
     let done = false;
@@ -73,6 +73,13 @@ export function createRequestLogger(mode: RequestLogMode = requestLogMode()) {
       done = true;
       const ms = Number(process.hrtime.bigint() - startedAt) / 1e6;
       const status = res.statusCode;
+
+      /* Counted whatever REQUEST_LOG says. Turning the log down is a decision about noise,
+         not about whether the server keeps track of itself — and the route label is
+         Express's matched PATTERN, never the path the caller chose. See metrics.ts on why
+         that distinction is the whole ballgame. */
+      metrics.recordRequest(req.method, req.route?.path, status, ms, req.path);
+      if (mode === "off") return;
 
       /* A load balancer polls health continuously. Logging every successful poll buries
          everything worth reading, so a healthy check is dropped — a failing one is exactly

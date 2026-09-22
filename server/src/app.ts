@@ -79,6 +79,7 @@ import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.j
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
 import { createRequestLogger } from "./requestLog.js";
+import { metrics } from "./metrics.js";
 
 // Attach the authenticated account/org to the request (set by the ops auth gate).
 declare module "express-serve-static-core" {
@@ -3581,6 +3582,22 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      It answers in integers only. Counting happens in SQL (store.objectCounts()), so the
      contract values and crew rates that made /api/bootstrap worth gating are never read,
      let alone sent. */
+  /* Runtime counters: how much and how fast, where /api/ops/metrics above says how much
+     data exists. Same operator guard. Prometheus text with ?format=prometheus, JSON
+     otherwise, so it is readable both by a scraper and by a person with curl. Nothing
+     identifying is in it — see metrics.ts. */
+  app.get("/api/ops/stats", (req, res) => {
+    if (!opsAuthorized(req)) {
+      res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
+      return;
+    }
+    if (String(req.query.format ?? "") === "prometheus") {
+      res.type("text/plain; version=0.0.4").send(metrics.prometheus());
+      return;
+    }
+    res.json(metrics.snapshot());
+  });
+
   app.get("/api/ops/metrics", async (req, res) => {
     if (!opsAuthorized(req)) {
       res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
