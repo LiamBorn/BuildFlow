@@ -15,7 +15,6 @@ import {
   type ReactNode
 } from "react";
 import { createPortal } from "react-dom";
-import GlyphPortal from "./components/ui/glyph-portal";
 import FrostLanding from "./components/FrostLanding";
 import {
   DndContext,
@@ -325,9 +324,8 @@ import { ScheduleStatusBand } from "./schedule/ScheduleStatusBand";
 import { relativeTime as relativeAlertTime } from "./schedule/alerts";
 import { useHudMotion } from "./useHudMotion";
 import { formatDate } from "./formatDate";
-import { DASH_COLS, sortByPosition, type GridItem, type GridLimits } from "./dashGrid";
+import { DASH_COLS, type GridItem, type GridLimits } from "./dashGrid";
 import { LocationMap } from "./components/ui/expand-map";
-import { StaggerCards, type StaggerCardsHandle } from "./components/ui/stagger-cards";
 import { buildTimecardModel, totalsFor } from "./timecardModel";
 import { ScheduleImportDialog } from "./schedule/ScheduleImportDialog";
 import { DelayEarlyWarning } from "./DelayEarlyWarning";
@@ -335,7 +333,6 @@ import { TextShimmer } from "./components/ui/text-shimmer";
 import CloudLoader from "./components/ui/quantum-cloud-loader"; // BuildFlow AI "thinking" particles
 import { InteractiveHoverLink } from "./components/ui/interactive-hover-links"; // landing side-menu section heads
 import { BackgroundBeams } from "./components/ui/background-beams"; // waitlist (removable feature)
-import DisplayCards from "./components/ui/display-cards";
 import { animate } from "framer-motion";
 import { track, trackPageView, EVENTS } from "./analytics";
 import { startPlanCheckout, readCheckoutReturn, type CheckoutPlanId } from "./billing";
@@ -981,8 +978,6 @@ const WELCOME_MENU_IMAGES: Record<string, string> = {
 /* The desktop dropdowns draw every item as a compact hover link, each with a line
    and a picture of its own (keyed by item title; a section's picture is the fallback). */
 const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=640&q=80`;
-/** The split section's photo — the Crew Scheduling jobsite shot, at panel size. */
-const HERO_SPLIT_PHOTO = "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80";
 const WELCOME_ITEM_BLURBS: Record<string, string> = {
   "Crew Scheduling": "Assign crews across the week",
   "Schedule AI": "Suggestions that keep the plan moving",
@@ -4393,7 +4388,7 @@ function WelcomePage({
           onEnterDashboard={showCreateAccountPage}
         />
       ) : welcomeView === "updates" ? (
-        <WelcomeUpdatesPage onBack={showWelcomeHome} onOpenSchedule={onOpenSchedule} initialAnchor={updatesAnchor} />
+        <WelcomeUpdatesPage initialAnchor={updatesAnchor} />
       ) : welcomeView === "reviews" ? (
         <WelcomeCustomerReviewsPage onBack={showWelcomeHome} onOpenSchedule={onOpenSchedule} onLogin={onEnterDashboard} />
       ) : welcomeView === "helpCenter" ? (
@@ -4784,13 +4779,6 @@ function WxTypewriter({ normal, em }: { normal: string; em: string }) {
   );
 }
 
-// Types the static prefix once, then endlessly cycles the emphasis phrase
-// (type → hold → delete → next). Reuses WxTypewriter's ghost/real/caret markup
-// so it inherits the exact hero styling — blue `em`, sizing, and caret.
-// Interchangeable closers for the split section's headline — each finishes "Where
-// crews, projects, and schedules ___" with the same "move together" meaning (stable
-// ref so the rotator effect below doesn't restart on every render).
-const heroTaglinePhrases = ["move together.", "stay in sync.", "flow as one.", "run on time.", "stay on track.", "move as one."];
 
 function WxRotatingHeadline({ prefix, phrases }: { prefix: string; phrases: string[] }) {
   const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -4841,34 +4829,6 @@ function WxRotatingHeadline({ prefix, phrases }: { prefix: string; phrases: stri
   );
 }
 
-// Interchangeable closers for the "Conflicts spotted." AI band — each matches
-// the "Recovery suggested" meaning (stable ref for the rotator effect below).
-// The three things Schedule AI catches, shown as a stacked card fan under the
-// "Conflicts spotted." band. Descriptions stay short — the cards are a fixed
-// width and the copy is nowrap, like the original component.
-const aiCaughtCards = [
-  {
-    icon: <AlertTriangle size={15} />,
-    title: "Double-booked",
-    description: "Concrete 1, two pours",
-    date: "Caught before dispatch",
-    accent: "var(--wx-g-coral)"
-  },
-  {
-    icon: <CloudSun size={15} />,
-    title: "Weather risk",
-    description: "Rain on Thursday's pour",
-    date: "Flagged 3 days out",
-    accent: "var(--wx-g-amber, #f9ab00)"
-  },
-  {
-    icon: <PackageCheck size={15} />,
-    title: "Material late",
-    description: "Rebar slipped to Friday",
-    date: "Recovery suggested",
-    accent: "var(--wx-g-blue)"
-  }
-];
 
 const aiRecoveryPhrases = [
   "Recovery suggested.",
@@ -5007,258 +4967,8 @@ function WxTypeIn({ text, className }: { text: string; className?: string }) {
   );
 }
 
-function WxCompanyWave() {
-  // Wordmarks only: each company is set as type, in one grey, so the row reads
-  // like a logo strip rather than a row of controls. The strip scrolls right to
-  // left at a constant speed with the edges faded (see .wx-companies in
-  // welcome-redesign.css); hovering pauses it, reduced motion stops it.
-  const companies: Array<{ name: string; type: string; mark: "serif" | "sans" | "mono" | "wide" | "caps" }> = [
-    { name: "Riverside", type: "General Contractor", mark: "serif" },
-    { name: "Harborview", type: "Multifamily GC", mark: "sans" },
-    { name: "Pinecrest", type: "Roofing", mark: "caps" },
-    { name: "Tech Ridge", type: "Commercial GC", mark: "mono" },
-    { name: "Logistics Group", type: "Site & Utilities", mark: "wide" },
-    { name: "Summit Builders", type: "General Contractor", mark: "serif" },
-    { name: "Ironline Civil", type: "Excavation", mark: "caps" },
-    { name: "Northgate", type: "Framing", mark: "sans" },
-    { name: "Bedrock Concrete", type: "Concrete", mark: "wide" },
-    { name: "Vanguard", type: "Electrical", mark: "mono" },
-    { name: "Metro Works", type: "Utilities", mark: "serif" },
-    { name: "Cedarline", type: "Landscaping", mark: "sans" },
-    { name: "Apex Grading", type: "Grading & Earthwork", mark: "caps" },
-    { name: "Keystone", type: "Masonry", mark: "wide" },
-    { name: "Delta Utilities", type: "Utilities", mark: "mono" },
-    { name: "Granite Ridge", type: "Excavation", mark: "serif" }
-  ];
-  // Two copies: the track translates from 0 to -50%, so the second copy takes
-  // over exactly where the first ends and the loop never visibly restarts.
-  const loop = [...companies, ...companies];
 
-  return (
-    <section className="wx-companies" data-reveal aria-label="Trusted by construction teams">
-      <span className="wx-companies-lead">Trusted by teams that build</span>
-      <div className="wx-company-viewport">
-        <ul className="wx-company-track" aria-label="Companies that run BuildFlow">
-          {loop.map((company, index) => (
-            <li
-              className={`wx-company wx-company-${company.mark}`}
-              key={index}
-              aria-hidden={index >= companies.length ? true : undefined}
-              aria-label={index < companies.length ? `${company.name} — ${company.type}` : undefined}
-            >
-              <span className="wx-company-mark" aria-hidden="true">
-                {company.name}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
 
-/* ── Production control: program showcase ────────────────────────────────
-   Modelled on monday.com's "Get more done with agents" block: a pill tab bar,
-   then for the chosen program a headline with an accented last word, a line of
-   copy and Get Started on the left, and a demo video on the right.
-
-   Videos are PLACEHOLDERS until real cuts exist. Give a program a `video`
-   (e.g. "/demos/crew-scheduling.mp4", 1600×1000, muted, looping) and the frame
-   plays it; without one it shows the poster with a play badge, a moving
-   progress bar and the "agent at work" steps, so the section never looks empty. */
-type WxProgramDemo = {
-  id: string;
-  tab: string;
-  lead: string;
-  accent: string;
-  text: string;
-  poster: string;
-  video?: string;
-  steps: [string, string, string];
-};
-
-const WX_PROGRAM_DEMOS: WxProgramDemo[] = [
-  {
-    id: "scheduling",
-    tab: "Scheduling",
-    lead: "Crews booked.",
-    accent: "Done.",
-    text: "Drag jobs onto crews by day, capacity and readiness. Double-bookings surface before dispatch, not after the crew rolls out.",
-    poster: "Crew Scheduling",
-    steps: ["Checking crew capacity", "Placing Deck pour on Concrete 1", "Double-booking avoided"]
-  },
-  {
-    id: "schedule-ai",
-    tab: "Schedule AI",
-    lead: "Next week drafted.",
-    accent: "Done.",
-    text: "Schedule AI reads ready work, free crews and the forecast, then lays out a week you can accept, edit, or ignore.",
-    poster: "Schedule AI",
-    steps: ["Reading ready work", "Matching crews to jobs", "Draft week ready to review"]
-  },
-  {
-    id: "field",
-    tab: "Field & DelayIQ",
-    lead: "Slips flagged.",
-    accent: "Done.",
-    text: "Crews post progress and photos from the jobsite. DelayIQ spots the job trending late while there is still time to recover.",
-    poster: "Field Updates & DelayIQs",
-    steps: ["Field update received", "Pour trending 2 days late", "Recovery plan suggested"]
-  },
-  {
-    id: "materials",
-    tab: "Materials",
-    lead: "Deliveries tracked.",
-    accent: "Done.",
-    text: "Every delivery carries a live status, so a crew only rolls to a job once the steel, rebar and units are actually on site.",
-    poster: "Materials Readiness",
-    steps: ["Checking delivery windows", "Rebar in transit, Wed 7am", "Blocked job held off the board"]
-  },
-  {
-    id: "equipment",
-    tab: "Equipment",
-    lead: "Fleet assigned.",
-    accent: "Done.",
-    text: "See which machines are free, in use or in the shop, and commit only the iron that is actually available that day.",
-    poster: "Equipment Tracking",
-    steps: ["Scanning the yard", "Crane #2 committed to Harborview", "Excavator flagged for service"]
-  },
-  {
-    id: "map",
-    tab: "Map & Field Ops",
-    lead: "Routes planned.",
-    accent: "Done.",
-    text: "Crews, trucks and jobsites on one live map. Re-route a late truck in seconds and the field sees the new plan first.",
-    poster: "Map & Field Ops",
-    steps: ["Locating crews and trucks", "Re-routing Truck 4 via Riverside", "Crews notified"]
-  },
-  {
-    id: "reports",
-    tab: "Reports",
-    lead: "Weekly review.",
-    accent: "Done.",
-    text: "On-time completion, utilization and backlog roll up from the work your crews ran, ready before the meeting starts.",
-    poster: "Production Reports",
-    steps: ["Rolling up field progress", "On-time completion at 87%", "Summary exported"]
-  }
-];
-
-function WxProgramShowcase({ onGetStarted, className = "" }: { onGetStarted: () => void; className?: string }) {
-  const [active, setActive] = useState(0);
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const demo = WX_PROGRAM_DEMOS[active];
-
-  const select = (index: number, focus = false) => {
-    setActive(index);
-    if (focus) tabRefs.current[index]?.focus();
-  };
-  const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const count = WX_PROGRAM_DEMOS.length;
-    const map: Record<string, number> = {
-      ArrowRight: (index + 1) % count,
-      ArrowDown: (index + 1) % count,
-      ArrowLeft: (index - 1 + count) % count,
-      ArrowUp: (index - 1 + count) % count,
-      Home: 0,
-      End: count - 1
-    };
-    const next = map[event.key];
-    if (next === undefined) return;
-    event.preventDefault();
-    select(next, true);
-  };
-
-  return (
-    <div className={`wx-ps ${className}`.trim()} data-reveal>
-      <div className="wx-ps-head">
-        <h3 className="wx-ps-title">Get more done with BuildFlow.</h3>
-        <p>Pick a program and watch it take a piece of the week off your plate.</p>
-      </div>
-
-      <div className="wx-ps-tabs" role="tablist" aria-label="BuildFlow programs">
-        {WX_PROGRAM_DEMOS.map((item, index) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            id={`wx-ps-tab-${item.id}`}
-            aria-selected={index === active}
-            aria-controls="wx-ps-panel"
-            tabIndex={index === active ? 0 : -1}
-            className={`wx-ps-tab${index === active ? " is-active" : ""}`}
-            ref={(el) => {
-              tabRefs.current[index] = el;
-            }}
-            onClick={() => select(index)}
-            onKeyDown={(event) => onTabKey(event, index)}
-          >
-            {item.tab}
-          </button>
-        ))}
-      </div>
-
-      <div className="wx-ps-panel" role="tabpanel" id="wx-ps-panel" aria-labelledby={`wx-ps-tab-${demo.id}`}>
-        <div className="wx-ps-copy" key={`copy-${demo.id}`}>
-          <h4 className="wx-ps-lead">
-            {demo.lead} <span className="wx-ps-accent">{demo.accent}</span>
-          </h4>
-          <p>{demo.text}</p>
-          <button type="button" className="wx-ps-cta" onClick={onGetStarted}>
-            Get Started <ArrowRight size={17} aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className="wx-ps-stage" key={`stage-${demo.id}`}>
-          <div className="wx-ps-video">
-            <div className="wx-ps-chrome" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <span>BuildFlow · {demo.tab}</span>
-            </div>
-            <div className="wx-ps-screen">
-              {demo.video ? (
-                <video
-                  className="wx-ps-media"
-                  src={demo.video}
-                  poster={WELCOME_ITEM_IMAGES[demo.poster]}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  aria-label={`${demo.tab} demo`}
-                />
-              ) : (
-                <>
-                  <img className="wx-ps-media" src={WELCOME_ITEM_IMAGES[demo.poster]} alt="" loading="lazy" />
-                  <span className="wx-ps-play" aria-hidden="true">
-                    <PlayCircle size={30} />
-                  </span>
-                  <span className="wx-ps-badge">Demo video coming soon</span>
-                </>
-              )}
-            </div>
-            <ol className="wx-ps-steps" aria-label={`What ${demo.tab} does`}>
-              {demo.steps.map((step, index) => (
-                <li key={step} style={{ "--s": index } as CSSProperties}>
-                  {index === demo.steps.length - 1 ? (
-                    <CheckCircle2 size={15} aria-hidden="true" />
-                  ) : (
-                    <span className="wx-ps-dot" aria-hidden="true" />
-                  )}
-                  {step}
-                </li>
-              ))}
-            </ol>
-            <div className="wx-ps-progress" aria-hidden="true">
-              <span />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 type OverviewIcon = typeof CalendarDays;
 type OverviewModule = {
@@ -11979,114 +11689,7 @@ function WelcomeScheduleAiPage({
   );
 }
 
-type MfoPin = {
-  kind: "crew" | "truck" | "job";
-  icon: typeof Grid2X2;
-  label: string;
-  meta?: string;
-  x: number;
-  y: number;
-  right?: boolean;
-  delayIQ?: boolean;
-};
 
-// Signature "live dispatch map" mock — a topographic surface with animated
-// marching-dash routes and pulsing crew / truck / job pins. Two modes: the
-// hero's live-tracking view and the lead section's route-optimization view.
-function MfoMap({ mode }: { mode: "live" | "route" }) {
-  const livePins: MfoPin[] = [
-    { kind: "truck", icon: Truck, label: "Truck 4", meta: "8 min out", x: 20, y: 75 },
-    { kind: "crew", icon: HardHat, label: "Concrete 1", meta: "on site", x: 32, y: 39 },
-    { kind: "crew", icon: HardHat, label: "Framing 2", meta: "en route", x: 55, y: 68 },
-    { kind: "job", icon: MapPin, label: "Deck pour", x: 83, y: 30, right: true, delayIQ: true }
-  ];
-  const routePins: MfoPin[] = [
-    { kind: "truck", icon: Truck, label: "Central Yard", meta: "6:40a", x: 15, y: 70 },
-    { kind: "job", icon: MapPin, label: "Riverside", meta: "stop 1", x: 37, y: 44 },
-    { kind: "job", icon: MapPin, label: "Harborview", meta: "stop 2", x: 61, y: 62 },
-    { kind: "job", icon: PackageCheck, label: "Deck pour", meta: "7:41a", x: 85, y: 27, right: true }
-  ];
-  const pins = mode === "live" ? livePins : routePins;
-  return (
-    <div className={`mfo-map${mode === "route" ? " compact" : ""}`}>
-      <svg className="mfo-map-svg" viewBox="0 0 380 230" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <path className="mfo-road" d="M-10 150 H390" />
-        <path className="mfo-road minor" d="M140 -10 V240" />
-        <path className="mfo-road minor" d="M-10 92 C120 92 150 118 390 108" />
-        <path className="mfo-road minor" d="M255 -10 C250 90 262 150 390 176" />
-        {mode === "live" ? (
-          <>
-            <path className="mfo-route-ghost" d="M76 173 C132 190 250 186 315 69" />
-            <path className="mfo-route" d="M76 173 C120 166 176 174 209 156 S286 118 315 69" />
-          </>
-        ) : (
-          <>
-            <path className="mfo-route-ghost" d="M57 161 C140 200 262 190 323 62" />
-            <path className="mfo-route blue" d="M57 161 C104 146 122 116 141 101 S204 146 232 143 S302 106 323 62" />
-          </>
-        )}
-      </svg>
-
-      <span className="mfo-chip live">
-        <span className="mfo-live-dot" /> {mode === "live" ? "Live tracking" : "Route optimized"}
-      </span>
-      <div className="mfo-layers" aria-hidden="true">
-        <span className={mode === "live" ? "on" : ""}>Production</span>
-        <span className={mode === "route" ? "on" : ""}>Traffic</span>
-        <span>Satellite</span>
-      </div>
-
-      {pins.map((pin) => {
-        const Icon = pin.icon;
-        return (
-          <span className={`mfo-pin${pin.right ? " right" : ""}`} key={pin.label} style={{ left: `${pin.x}%`, top: `${pin.y}%` }}>
-            <span className={`mfo-dot ${pin.kind}${pin.delayIQ ? " delayIQ" : ""}`}>
-              <Icon />
-            </span>
-            <span className="mfo-tag">
-              <b>{pin.label}</b>
-              {pin.meta ? ` · ${pin.meta}` : ""}
-            </span>
-          </span>
-        );
-      })}
-
-      {mode === "live" ? (
-        <div className="mfo-legend" aria-hidden="true">
-          <span>
-            <i className="crew" /> Crews
-          </span>
-          <span>
-            <i className="truck" /> Trucks
-          </span>
-          <span>
-            <i className="job" /> Jobs
-          </span>
-        </div>
-      ) : (
-        <div className="mfo-summary" aria-hidden="true">
-          <div className="mfo-summary-metric">
-            <strong>42 min</strong>
-            <span>Drive time</span>
-          </div>
-          <div className="mfo-summary-sep" />
-          <div className="mfo-summary-metric">
-            <strong>18.4 mi</strong>
-            <span>3 stops</span>
-          </div>
-          <div className="mfo-summary-sep" />
-          <div className="mfo-summary-metric">
-            <strong>Fastest</strong>
-            <span>&minus;22% vs. manual</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* Map & Field Ops is the Crew Scheduling page with the field-ops words: same
-   layout, same motion, its own content object. One implementation for all three. */
 function WelcomeMapFieldOpsPage({
   onBack,
   onOpenMap,
@@ -12106,49 +11709,7 @@ function WelcomeMapFieldOpsPage({
   );
 }
 
-type FudUpdateData = {
-  initials: string;
-  avatar: "blue" | "green" | "rose";
-  who: string;
-  time: string;
-  msg: string;
-  badge: string;
-  tone: string;
-  photos: Array<"a" | "b" | "c" | "d">;
-};
 
-// A single crew check-in card for the "field feed" mock — avatar, message,
-// shimmering jobsite-photo thumbnails, and a status pill (reuses .cs-badge).
-function FudUpdate({ item }: { item: FudUpdateData }) {
-  return (
-    <div className="fud-update">
-      <div className="fud-update-head">
-        <span className={`fud-avatar ${item.avatar}`}>{item.initials}</span>
-        <span className="fud-who">
-          <strong>{item.who}</strong>
-          <span>{item.time}</span>
-        </span>
-        <span className={`cs-badge ${item.tone}`}>{item.badge}</span>
-      </div>
-      <p className="fud-msg">{item.msg}</p>
-      {item.photos.length > 0 && (
-        <div className="fud-photos">
-          {item.photos.map((p, i) => (
-            <span className={`fud-photo ${p}`} key={i}>
-              <span className="fud-photo-ic">
-                <ImagePlus size={12} />
-              </span>
-            </span>
-          ))}
-          <span className="fud-photo count">+{item.photos.length}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* Field Updates & DelayIQs is the Crew Scheduling page with the field-log words:
-   same layout, same motion, its own content object. */
 function WelcomeFieldUpdatesDelayIQsPage({
   onBack,
   onOpenField,
@@ -12168,35 +11729,7 @@ function WelcomeFieldUpdatesDelayIQsPage({
   );
 }
 
-// Animated readiness gauge — an SVG ring that draws to `value`% when revealed.
-function MatRing({ value }: { value: number }) {
-  const circumference = 2 * Math.PI * 30;
-  const offset = circumference * (1 - value / 100);
-  return (
-    <div className="mat-ring">
-      <svg viewBox="0 0 76 76">
-        <circle className="mat-ring-track" cx="38" cy="38" r="30" />
-        <circle
-          className="mat-ring-fill"
-          cx="38"
-          cy="38"
-          r="30"
-          strokeDasharray={circumference}
-          style={{ "--c": `${circumference}`, "--off": `${offset}` } as CSSProperties}
-        />
-      </svg>
-      <div className="mat-ring-label">
-        <strong>{value}%</strong>
-        <span>Ready</span>
-      </div>
-    </div>
-  );
-}
 
-type MatRowData = { name: string; impact: string; status: "ready" | "ordered" | "waiting" | "missing"; label: string; w: number };
-
-/* Materials Readiness is the Crew Scheduling page with the yard's words:
-   same layout, same motion, its own content object. */
 function WelcomeMaterialsReadinessPage({
   onBack,
   onOpenMaterials,
@@ -12216,10 +11749,6 @@ function WelcomeMaterialsReadinessPage({
   );
 }
 
-type EqRowData = { name: string; sub: string; status: "avail" | "inuse" | "maint"; label: string; w: number };
-
-/* Equipment Tracking is the Crew Scheduling page with the yard's words:
-   same layout, same motion, its own content object. */
 function WelcomeEquipmentTrackingPage({
   onBack,
   onOpenEquipment,
@@ -12239,82 +11768,6 @@ function WelcomeEquipmentTrackingPage({
   );
 }
 
-// Planned-vs-actual bar chart mock — bars grow to their height when revealed.
-function PrBars({ data, maxY }: { data: Array<{ month: string; planned: number; actual: number }>; maxY: number }) {
-  return (
-    <div className="pr-bars-wrap">
-      <div className="pr-bars">
-        {data.map((d) => (
-          <div className="pr-bar-group" key={d.month}>
-            <span className="pr-bar planned" style={{ "--h": `${Math.round((d.planned / maxY) * 100)}%` } as CSSProperties} />
-            <span className="pr-bar actual" style={{ "--h": `${Math.round((d.actual / maxY) * 100)}%` } as CSSProperties} />
-          </div>
-        ))}
-      </div>
-      <div className="pr-bars-x">
-        {data.map((d) => (
-          <span key={d.month}>{d.month}</span>
-        ))}
-      </div>
-      <div className="pr-legend">
-        <span>
-          <i className="planned" />
-          Planned
-        </span>
-        <span>
-          <i className="actual" />
-          Actual
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// Backlog-forecastIQ area chart mock — the line draws itself in on reveal
-// (pathLength=1 normalizes the dash so no path-length math is needed).
-function PrLine({ data, maxY }: { data: Array<{ month: string; v: number }>; maxY: number }) {
-  const W = 320;
-  const H = 140;
-  const padL = 6;
-  const padR = 6;
-  const padT = 12;
-  const padB = 20;
-  const baseY = H - padB;
-  const plotH = baseY - padT;
-  const step = (W - padL - padR) / (data.length - 1);
-  const pts = data.map((d, i) => [padL + i * step, baseY - (d.v / maxY) * plotH] as const);
-  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
-  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${baseY} L${pts[0][0].toFixed(1)} ${baseY} Z`;
-  return (
-    <div className="pr-line">
-      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-        <defs>
-          <linearGradient id="pr-area-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {[0.25, 0.5, 0.75].map((f, i) => (
-          <line key={i} className="pr-grid-line" x1={padL} x2={W - padR} y1={padT + plotH * f} y2={padT + plotH * f} />
-        ))}
-        <path className="pr-area" d={area} />
-        <path className="pr-line-path" pathLength={1} d={line} />
-        {pts.map(([x, y], i) => (
-          <circle key={i} className="pr-dot" cx={x} cy={y} r="3.4" />
-        ))}
-      </svg>
-      <div className="pr-line-x">
-        {data.map((d) => (
-          <span key={d.month}>{d.month}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* Production Reports is the Crew Scheduling page with the report's words:
-   same layout, same motion, its own content object. All seven product pages
-   now render from one implementation. */
 function WelcomeProductionReportsPage({
   onBack,
   onOpenReports,
@@ -16140,7 +15593,6 @@ function WelcomePlanShowcase({
   );
 }
 
-const UPDATE_MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 type UpdateSection = { label: string; items: string[] };
 
@@ -16436,451 +15888,7 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
   }
 ];
 
-// ---------------------------------------------------------------------------
-// Updates — "Roadmap Ascent" scroll-pinned changelog.
-//
-// The release dates run down a vertical timeline that scrolls THROUGH a node
-// pinned at the centre of the panel: each date lights up, slides toward the
-// spine and scales as it reaches centre, while its tick dash fades out near the
-// node. A progress ring fills around the node, an odometer rolls the cumulative
-// count of shipped changes, and the release itself — date, version, author,
-// title, description, quote, Improvements / Fixes / Patches — swaps in on the
-// right. Entries arrive oldest-first so the ascent runs forward through time and
-// the count climbs; the node lands on the newest release.
-//
-// Ported from the Roadmap Ascent spec, re-skinned to the changelog palette in
-// updates-ascent.css. The eased-follow factor, geometry, row proximity maths,
-// split-flap roll and cube-field falloff are the spec's, kept near-verbatim.
-// ---------------------------------------------------------------------------
-const UPX_EASE = 0.085;
 
-function UpdatesAscent({
-  entries,
-  onOpenSchedule,
-  initialAnchor
-}: {
-  entries: UpdateEntryData[];
-  onOpenSchedule: () => void;
-  initialAnchor?: string | null;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const pinRef = useRef<HTMLDivElement>(null);
-  const spineRef = useRef<HTMLDivElement>(null);
-  const nodeRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const glowRef = useRef<HTMLDivElement>(null);
-  const odoRef = useRef<HTMLDivElement>(null);
-  const pixRef = useRef<HTMLCanvasElement>(null);
-  const labelRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const tickRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const activeRef = useRef(0);
-
-  const [active, setActive] = useState(0);
-  const [openSections, setOpenSections] = useState<Set<number>>(() => new Set([0, 1, 2]));
-
-  // Cumulative shipped items — what the odometer counts up to.
-  const cumulative = useMemo(() => {
-    let running = 0;
-    return entries.map((entry) => {
-      running += entry.sections.reduce((sum, section) => sum + section.items.length, 0);
-      return running;
-    });
-  }, [entries]);
-
-  const places = useMemo(() => {
-    const total = cumulative[cumulative.length - 1] ?? 0;
-    const out: number[] = [];
-    for (let p = 1; p <= Math.max(total, 1); p *= 10) out.unshift(p);
-    return out;
-  }, [cumulative]);
-
-  // Every release opens with all of its non-empty sections expanded, like the card list.
-  useEffect(() => {
-    const entry = entries[active];
-    if (!entry) return;
-    const next = new Set<number>();
-    entry.sections.forEach((section, index) => {
-      if (section.items.length > 0) next.add(index);
-    });
-    setOpenSections(next);
-  }, [active, entries]);
-
-  const toggleSection = (index: number) =>
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-
-  useEffect(() => {
-    const scrollEl = scrollRef.current;
-    const pin = pinRef.current;
-    const spine = spineRef.current;
-    const node = nodeRef.current;
-    const ring = ringRef.current;
-    const glow = glowRef.current;
-    const odo = odoRef.current;
-    const pix = pixRef.current;
-    if (!scrollEl || !pin || !spine || !node || !ring || !glow || !odo || !pix) return;
-
-    const N = entries.length;
-    if (N === 0) return;
-
-    /* ---- split-flap odometer: 11 stacked digits so 9 can roll back to 0 ---- */
-    odo.innerHTML = "";
-    const strips: HTMLSpanElement[] = [];
-    places.forEach((_, i) => {
-      const digit = document.createElement("span");
-      digit.className = "upx-od-d";
-      const strip = document.createElement("span");
-      strip.className = "upx-od-strip";
-      for (let n = 0; n <= 10; n++) {
-        const t = document.createElement("span");
-        t.textContent = String(n % 10);
-        strip.appendChild(t);
-      }
-      digit.appendChild(strip);
-      odo.appendChild(digit);
-      strips.push(strip);
-      // comma between thousands and hundreds, once there are enough places
-      if (places.length >= 4 && i === places.length - 4) {
-        const comma = document.createElement("span");
-        comma.className = "upx-od-comma";
-        comma.textContent = ",";
-        odo.appendChild(comma);
-      }
-    });
-    const setOdo = (disp: number) => {
-      places.forEach((place, i) => {
-        const v = disp / place;
-        const dg = Math.floor(v) % 10;
-        const frac = v - Math.floor(v);
-        // lower places tumble only in the last 20%, just before the higher one ticks
-        const roll = frac > 0.8 ? (frac - 0.8) / 0.2 : 0;
-        const first = strips[i].firstChild as HTMLElement | null;
-        const h = first ? first.offsetHeight : 0;
-        strips[i].style.transform = `translateY(${-(dg + roll) * h}px)`;
-      });
-    };
-
-    /* ---- geometry ---- */
-    let W = 0;
-    let H = 0;
-    let spineX = 0;
-    let cy = 0;
-    let cd = 76;
-    let spacing = 96;
-    const layout = () => {
-      const box = pin.getBoundingClientRect();
-      W = box.width;
-      H = box.height;
-      const mobile = window.innerWidth <= 720;
-      if (mobile) {
-        spineX = Math.round(W * 0.82);
-        cy = Math.round(H * 0.5);
-        cd = Math.max(52, Math.min(H * 0.085, 66));
-        spacing = Math.max(58, Math.min(H * 0.1, 92));
-      } else {
-        spineX = Math.round(W * 0.3);
-        cy = Math.round(H * 0.5);
-        cd = Math.max(60, Math.min(H * 0.13, 84));
-        spacing = Math.max(72, Math.min(H * 0.135, 112));
-      }
-      spine.style.left = `${spineX}px`;
-      node.style.left = `${spineX}px`;
-      node.style.top = `${cy}px`;
-      node.style.setProperty("--cd", `${cd}px`);
-      glow.style.left = `${spineX}px`;
-      glow.style.top = `${cy}px`;
-      const labelRight = spineX - cd / 2 - 20;
-      labelRefs.current.forEach((label, i) => {
-        const tick = tickRefs.current[i];
-        if (label) {
-          label.style.left = "0";
-          label.style.width = `${Math.max(0, labelRight)}px`;
-        }
-        if (tick) {
-          tick.style.left = `${spineX - 7}px`;
-          tick.style.width = "14px";
-        }
-      });
-    };
-
-    /* ---- orange pixel-cube field, densest in the top-right corner ---- */
-    const pctx = pix.getContext("2d");
-    let cells: { x: number; y: number; s: number; d: number; ph: number }[] = [];
-    const buildPix = () => {
-      if (!pctx) return;
-      const r = pix.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio, 2);
-      pix.width = r.width * dpr;
-      pix.height = r.height * dpr;
-      pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const gap = Math.max(11, r.width / 40);
-      cells = [];
-      let seed = 8.31;
-      const rnd = () => ((seed = Math.sin(seed * 91.7 + 3) * 43758.5), seed - Math.floor(seed));
-      for (let x = 0; x < r.width; x += gap) {
-        for (let y = 0; y < r.height; y += gap) {
-          const nx = x / r.width;
-          const ny = y / r.height;
-          const d = Math.hypot(1 - nx, ny);
-          if (rnd() < 1.05 - d * 0.92) cells.push({ x, y, s: gap * (0.4 + rnd() * 0.42), d, ph: rnd() * 6.28 });
-        }
-      }
-    };
-    const drawPix = (t: number, p: number) => {
-      if (!pctx) return;
-      const r = pix.getBoundingClientRect();
-      pctx.clearRect(0, 0, r.width, r.height);
-      const intensity = 0.3 + 0.7 * p;
-      for (const c of cells) {
-        const fall = Math.max(0, 1 - c.d * 0.82);
-        const tw = 0.5 + 0.5 * Math.sin(t * 0.0015 + c.ph + c.d * 4);
-        const a = fall * tw * intensity;
-        if (a <= 0.02) continue;
-        pctx.fillStyle = `rgba(251,133,0,${(a * 0.85).toFixed(3)})`;
-        pctx.fillRect(c.x, c.y, c.s, c.s);
-      }
-    };
-
-    /* ---- render one progress value ---- */
-    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-    const countAt = (cf: number) => {
-      const i0 = Math.floor(cf);
-      const i1 = Math.min(cumulative.length - 1, i0 + 1);
-      return lerp(cumulative[i0] ?? 0, cumulative[i1] ?? 0, cf - i0);
-    };
-    const render = (p: number) => {
-      const cf = p * (N - 1);
-      labelRefs.current.forEach((label, i) => {
-        const tick = tickRefs.current[i];
-        const d = i - cf;
-        const ad = Math.abs(d);
-        const y = cy + d * spacing;
-        if (label) {
-          label.style.top = `${y}px`;
-          const prox = Math.max(0, 1 - ad);
-          label.style.transform = `translateY(-50%) translateX(${(-18 * prox).toFixed(1)}px) scale(${(1 + 0.09 * prox).toFixed(3)})`;
-          label.style.opacity = Math.max(0.14, 1 - ad * 0.32).toFixed(3);
-        }
-        if (tick) {
-          tick.style.top = `${y}px`;
-          tick.style.opacity = Math.max(0, Math.min(1, (ad - 0.55) / 0.8)).toFixed(3);
-        }
-      });
-      ring.style.setProperty("--p", p.toFixed(4));
-      setOdo(countAt(cf));
-      const next = Math.round(cf);
-      if (next !== activeRef.current) {
-        activeRef.current = next;
-        setActive(next);
-      }
-    };
-
-    /* ---- scroll → eased progress ---- */
-    let target = 0;
-    let cur = 0;
-    const readScroll = () => {
-      const rect = scrollEl.getBoundingClientRect();
-      // measured against the pin, not the viewport: the pin is inset below the
-      // header, so viewport height would end the run before the last release.
-      const pinTop = parseFloat(getComputedStyle(pin).top) || 0;
-      // Reserve a tail (half a panel) that progress does NOT map onto, so the run
-      // finishes while the panel is still stuck. Without it, full progress lands
-      // exactly as the sticky element releases and the last release's meta row
-      // slides up under the site header.
-      const tail = pin.offsetHeight * 0.5;
-      const total = scrollEl.offsetHeight - pin.offsetHeight - pinTop - tail;
-      if (total <= 0) return;
-      target = Math.max(0, Math.min(1, (pinTop - rect.top) / total));
-      if (target > 0.003) scrollEl.classList.add("upx-scrolled");
-    };
-    const onResize = () => {
-      layout();
-      buildPix();
-      readScroll();
-    };
-    window.addEventListener("scroll", readScroll, { passive: true });
-    window.addEventListener("resize", onResize);
-
-    layout();
-    buildPix();
-    readScroll();
-    let raf = 0;
-    const loop = (t: number) => {
-      cur += (target - cur) * UPX_EASE;
-      if (Math.abs(target - cur) < 1e-4) cur = target;
-      render(cur);
-      drawPix(t, cur);
-      glow.style.opacity = (0.7 + 0.3 * Math.sin(t * 0.0018)).toFixed(3);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    const revealRaf = requestAnimationFrame(() => scrollEl.classList.add("upx-ready"));
-
-    return () => {
-      window.removeEventListener("scroll", readScroll);
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(raf);
-      cancelAnimationFrame(revealRaf);
-    };
-  }, [entries, places, cumulative]);
-
-  // Deep-link: park the scroll where the requested release sits at the node.
-  // The updates page keeps re-laying-out for up to ~1s after mount (StrictMode
-  // remount plus the lede/filter reveals settling), which strands a single
-  // scrollTo at the top. So recompute and re-apply every frame until the target
-  // position holds steady for a few frames, then stop — same approach the card
-  // list used, but against the timeline's progress mapping instead of an anchor.
-  useEffect(() => {
-    if (!initialAnchor) return;
-    const index = entries.findIndex((entry) => `update-${entry.dateTime}` === initialAnchor);
-    if (index < 0) return;
-
-    let cancelled = false;
-    let lastTop: number | null = null;
-    let stableFrames = 0;
-    const deadline = performance.now() + 1500;
-    const tick = () => {
-      if (cancelled) return;
-      const scrollEl = scrollRef.current;
-      const pin = pinRef.current;
-      if (scrollEl && pin) {
-        const pinH = pin.offsetHeight;
-        const pinTop = parseFloat(getComputedStyle(pin).top) || 0;
-        const total = scrollEl.offsetHeight - pinH - pinTop - pinH * 0.5;
-        // document-absolute, not offsetTop: the spacer's offsetParent is the
-        // positioned page wrapper, so offsetTop lands short of the real position.
-        const docTop = scrollEl.getBoundingClientRect().top + window.scrollY;
-        const top = Math.round(docTop - pinTop + (entries.length > 1 ? (index / (entries.length - 1)) * total : 0));
-        window.scrollTo({ top, behavior: "auto" });
-        stableFrames = top === lastTop ? stableFrames + 1 : 0;
-        lastTop = top;
-        if (stableFrames >= 3) return; // position held steady — settled
-      }
-      if (performance.now() < deadline) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    return () => {
-      cancelled = true;
-    };
-  }, [initialAnchor, entries]);
-
-  const entry = entries[active];
-  if (!entry) return null;
-
-  return (
-    <div className="upx-scroll" ref={scrollRef} style={{ height: `${100 + entries.length * 60}vh` }} aria-label="Release timeline">
-      <div className="upx-pin" ref={pinRef}>
-        <canvas className="upx-pix" ref={pixRef} aria-hidden="true" />
-        <div className="upx-spine" ref={spineRef} aria-hidden="true" />
-
-        <div className="upx-rows" aria-hidden="true">
-          {entries.map((item, i) => (
-            <Fragment key={item.dateTime}>
-              <div
-                className="upx-label"
-                ref={(el) => {
-                  labelRefs.current[i] = el;
-                }}
-              >
-                {item.dateLabel}
-                {item.version && <i>v{item.version}</i>}
-              </div>
-              <div
-                className="upx-tick"
-                ref={(el) => {
-                  tickRefs.current[i] = el;
-                }}
-              />
-            </Fragment>
-          ))}
-        </div>
-
-        <div className="upx-glow" ref={glowRef} aria-hidden="true" />
-        <div className="upx-node" ref={nodeRef} aria-hidden="true">
-          <div className="upx-ring" ref={ringRef} />
-          <div className="upx-face">
-            <svg viewBox="0 0 24 24">
-              <path d="M6 13l6-6 6 6M6 18l6-6 6 6" />
-            </svg>
-          </div>
-        </div>
-
-        <article className="upx-right" key={entry.dateTime}>
-          <div className="upx-meta upx-anim">
-            <time className="upx-date" dateTime={entry.dateTime}>
-              {entry.dateLabel}
-            </time>
-            {entry.version && <span className="upx-chip">{entry.version}</span>}
-            {entry.creator && (
-              <span className="upx-author">
-                <span>Created by</span>
-                <strong>{entry.creator}</strong>
-                {entry.position && <em>{entry.position}</em>}
-              </span>
-            )}
-          </div>
-          <h2 className="upx-title upx-anim">{entry.title}</h2>
-          <p className="upx-desc upx-anim">{entry.description}</p>
-          {entry.quote && (
-            <blockquote className="upx-quote upx-anim">
-              {entry.quote.text}
-              {entry.quote.cite && <cite>{entry.quote.cite}</cite>}
-            </blockquote>
-          )}
-          <div className="upx-sections upx-anim">
-            {entry.sections.map((section, index) => {
-              const count = section.items.length;
-              const isEmpty = count === 0;
-              const isOpen = openSections.has(index) && !isEmpty;
-              return (
-                <div className={`upx-section${isOpen ? " is-open" : ""}${isEmpty ? " is-empty" : ""}`} key={section.label}>
-                  <button
-                    type="button"
-                    className="upx-section-head"
-                    aria-expanded={isOpen}
-                    disabled={isEmpty}
-                    onClick={() => !isEmpty && toggleSection(index)}
-                  >
-                    <span>
-                      {section.label} <em>{count}</em>
-                    </span>
-                    <ChevronDown size={17} className="upx-chev" aria-hidden="true" />
-                  </button>
-                  <div className="upx-section-body">
-                    <ul>
-                      {section.items.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <button type="button" className="upx-action upx-anim" onClick={onOpenSchedule}>
-            See it in the schedule <ArrowRight size={15} />
-          </button>
-        </article>
-
-        <div className="upx-metric">
-          <div className="upx-odo" ref={odoRef} />
-          <div className="upx-reg">Changes shipped</div>
-        </div>
-
-        <div className="upx-hint">
-          <span>Scroll</span>
-          <span className="upx-bar" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Questions the updates page answers, above the footer. */
 const UPDATES_FAQS: Array<{ q: string; a: string }> = [
   {
     q: "How often does BuildFlow ship?",
@@ -16908,15 +15916,7 @@ const UPDATES_FAQS: Array<{ q: string; a: string }> = [
   }
 ];
 
-function WelcomeUpdatesPage({
-  onBack,
-  onOpenSchedule,
-  initialAnchor
-}: {
-  onBack: () => void;
-  onOpenSchedule: () => void;
-  initialAnchor?: string | null;
-}) {
+function WelcomeUpdatesPage({ initialAnchor }: { initialAnchor?: string | null }) {
   const rootRef = useRef<HTMLElement>(null);
   // The year / month filter pills were removed 2026-09-12 and replaced by the
   // subscribe form below; every release is listed, newest first.
@@ -18824,58 +17824,7 @@ function WelcomeCustomerReviewsPage({ onOpenSchedule }: { onBack: () => void; on
   );
 }
 
-const reviewToneByImage: Record<string, string> = {
-  riverside: "blue",
-  harborview: "coral",
-  pinecrest: "green",
-  "tech-ridge": "purple"
-};
 
-function CustomerReviewCard({ review, index = 0 }: { review: CustomerReviewCardData; index?: number }) {
-  const style = { "--i": index % 3 } as CSSProperties;
-  if (review.kind === "quote") {
-    return (
-      <div className="rvx-card-reveal" data-reveal style={style}>
-        <WxTilt className="rvx-card-tilt" max={4} restRx={0} restRy={0}>
-          <article className={`rvx-card rvx-quote tone-${review.accent}`}>
-            <div className="rvx-quote-mark" aria-hidden="true">
-              &ldquo;
-            </div>
-            <blockquote>
-              {review.quote}
-              <cite>
-                <strong>{review.person}</strong>
-                <span>
-                  {review.role} · {review.company}
-                </span>
-              </cite>
-            </blockquote>
-          </article>
-        </WxTilt>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rvx-card-reveal" data-reveal style={style}>
-      <WxTilt className="rvx-card-tilt" max={4} restRx={0} restRy={0}>
-        <article className="rvx-card rvx-story">
-          <div className={`rvx-story-media tone-${reviewToneByImage[review.imageTone] ?? "blue"}`} aria-hidden="true">
-            <BuildFlowLogoMark />
-          </div>
-          <div className="rvx-company">{review.company}</div>
-          <h3>{review.title}</h3>
-          <p className="rvx-metric">
-            <LineChart size={15} /> {review.metric}
-          </p>
-          <span className="rvx-readlink">
-            Read story <ArrowRight size={15} />
-          </span>
-        </article>
-      </WxTilt>
-    </div>
-  );
-}
 
 const helpCenterNav: Array<{ title: string; items: Array<{ title: string; text: string }> }> = [
   {
@@ -26238,9 +25187,6 @@ function InlineEmptyState({ icon: Icon, title, detail }: { icon: typeof Building
   );
 }
 
-function ProjectThumb({ project }: { project: Project }) {
-  return <span className="project-thumb" style={{ background: imageThemes[project.image] }} aria-hidden="true" />;
-}
 
 function ResourceRow({ icon: Icon, title, detail, badge }: { icon: typeof CalendarDays; title: string; detail: string; badge: string }) {
   return (
