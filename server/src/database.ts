@@ -1380,6 +1380,13 @@ export class BuildFlowStore {
     return result as T;
   }
 
+  /** A read that proves the database is actually answering — what the health check needs
+   *  past "the process is up". Deliberately touches no table, so it stays valid whatever
+   *  the schema does next. */
+  ping(): boolean {
+    return this.get<{ n: number }>("SELECT 1 AS n")?.n === 1;
+  }
+
   /** Absolute path of this store's SQLite file (used to co-locate per-org files). */
   get dataFilePath(): string {
     return this.dataFile;

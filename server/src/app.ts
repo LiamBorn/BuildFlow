@@ -986,8 +986,21 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.send(ics);
   });
 
+  /* Answered true unconditionally, which made it useless as a health check: a load
+     balancer reading it would keep sending traffic to an instance whose database had
+     stopped answering, because the only thing it proved was that the process could still
+     serve a route. It now does a trivial read and reports 503 when that fails, which is
+     the signal a balancer acts on. The main store is the right one to ask — it holds the
+     auth tables, so nothing works without it — and asking every tenant file instead would
+     make the check as expensive as the thing it protects. */
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true });
+    try {
+      if (!mainStore.ping()) throw new Error("database did not answer");
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("[health] database unreachable:", error instanceof Error ? error.message : error);
+      res.status(503).json({ ok: false, error: "Database unavailable." });
+    }
   });
 
   // ── Authentication (public) ───────────────────────────────────────────────
