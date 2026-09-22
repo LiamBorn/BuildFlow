@@ -101,3 +101,43 @@ describe("the /api/ops guard", () => {
     await request(app).get("/api/ops/backups").expect(200);
   });
 });
+
+describe("request body limits", () => {
+  /**
+   * 25mb was applied to every route, so anyone — signed in or not — could make the server
+   * buffer 25MB by posting it at the login form, and a few concurrent requests is then a
+   * free memory-exhaustion DoS. The room is now given only to the routes that carry photos,
+   * attachments or an imported schedule file.
+   */
+  it("refuses an oversized body on an ordinary route", async () => {
+    const app = await freshApp();
+    const res = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send(JSON.stringify({ email: "a@b.com", password: "x".repeat(3 * 1024 * 1024) }));
+    expect(res.status).toBe(413);
+  });
+
+  /**
+   * The first version of the error handler added in this pass flattened EVERY error to 500,
+   * including the parser's own 413 and 400 — telling a caller their mistake was the server's,
+   * and hiding a mis-set body limit behind "something went wrong". This is the guard for that.
+   */
+  it("reports a malformed body as the caller's error, not the server's", async () => {
+    const app = await freshApp();
+    const res = await request(app).post("/api/auth/login").set("Content-Type", "application/json").send("{not json");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/not valid JSON/i);
+  });
+
+  it("still takes a body that size where the feature needs it", async () => {
+    const app = await freshApp();
+    // Same 3MB, at a route that carries attachments: it must get past the parser. What it
+    // answers after that is the route's business — only "not 413" is this test's concern.
+    const res = await request(app)
+      .post("/api/feedback")
+      .set("Content-Type", "application/json")
+      .send(JSON.stringify({ message: "x".repeat(3 * 1024 * 1024) }));
+    expect(res.status).not.toBe(413);
+  });
+});

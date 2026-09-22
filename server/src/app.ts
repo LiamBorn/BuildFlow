@@ -358,6 +358,16 @@ const feedbackSchema = z.object({
     .default([])
 });
 
+/* What to tell the caller when middleware — the body parser, in practice — rejected the
+   request before any route saw it. Deliberately does not repeat the parser's own message,
+   which describes the parser ("request entity too large", "Unexpected token } in JSON"). */
+function clientErrorMessage(status: number, type: unknown): string {
+  if (status === 413) return "That request is too large.";
+  if (type === "entity.parse.failed") return "That request body is not valid JSON.";
+  if (status === 400) return "That request could not be read.";
+  return "That request was refused.";
+}
+
 /* A file name out of a browser is a string like any other — it can carry a path, a
    newline, or nothing at all. Reduce it to something a mail client can write to disk. */
 function safeFileName(raw: string) {
@@ -772,11 +782,38 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.setHeader("Referrer-Policy", "no-referrer");
     next();
   });
-  // Field updates can carry base64 photo/file attachments, so allow a larger body than the 100kb default.
-  const jsonParser = express.json({ limit: "25mb" });
+  /**
+   * Body limits, per route rather than one number for the whole API.
+   *
+   * A handful of routes genuinely carry megabytes: a field update's photos, a feedback
+   * report's attachments, the images the AI importer reads a schedule out of, and a P6 or
+   * MS Project file. Those needed 25mb — but the limit was applied to EVERY route, so any
+   * caller, signed in or not, could make the server buffer 25MB by posting it to
+   * /api/auth/login. A few concurrent requests is then a memory-exhaustion DoS that costs
+   * an attacker nothing.
+   *
+   * The four that need the room get it by path; everything else gets 2mb, which is still
+   * twenty times Express's own default and far more than any of these JSON shapes. Paths
+   * are lowercased before the test: case-sensitive routing means an odd-cased path will
+   * 404 at the router, but the choice of parser should not depend on that happening first.
+   */
+  const largeBodyParser = express.json({ limit: "25mb" });
+  const standardBodyParser = express.json({ limit: "2mb" });
+  const wantsLargeBody = (rawPath: string) => {
+    const p = rawPath.toLowerCase();
+    return (
+      p.startsWith("/api/field-updates") || // photos, on the POST and the PATCH
+      p.startsWith("/api/import/schedule") || // a posted .xer / MSP XML file
+      p === "/api/ai/import-schedule" || // up to six images of someone else's schedule
+      p === "/api/feedback" // up to three attachments
+    );
+  };
   // The Stripe webhook must read the RAW body to verify its signature, so it's the
   // one route that skips JSON parsing (it uses express.raw() locally instead).
-  app.use((req, res, next) => (req.path === "/api/billing/webhook" ? next() : jsonParser(req, res, next)));
+  app.use((req, res, next) => {
+    if (req.path === "/api/billing/webhook") return next();
+    return (wantsLargeBody(req.path) ? largeBodyParser : standardBodyParser)(req, res, next);
+  });
 
   // ── Auth gate: protect the customer HUD data routes and bind the tenant store.
   // Only these prefixes are gated; auth/health/waitlist/contact-sales/sales/
@@ -3986,6 +4023,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * even though `next` is unused.
    */
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    /* Not everything that reaches here is the server's fault. The body parser rejects an
+       oversized body with a 413 and malformed JSON with a 400, and both arrive as errors
+       carrying their own status. Answering 500 to those tells the caller their own mistake
+       was ours, and hides a body limit that is set too low behind "something went wrong" —
+       so a status the middleware chose is passed through, with a message written for the
+       person rather than the parser's internal wording. Anything without one is genuinely
+       unhandled: logged in full, reported as 500, and never described to the caller. */
+    const carried = err as { status?: unknown; statusCode?: unknown; type?: unknown };
+    const status =
+      typeof carried?.status === "number" ? carried.status : typeof carried?.statusCode === "number" ? carried.statusCode : 500;
+    if (status >= 400 && status < 500) {
+      if (!res.headersSent) res.status(status).json({ error: clientErrorMessage(status, carried?.type) });
+      return;
+    }
     console.error("[api] unhandled error:", err);
     if (res.headersSent) return;
     res.status(500).json({ error: "Something went wrong. Please try again." });
