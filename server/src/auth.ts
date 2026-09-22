@@ -82,6 +82,23 @@ export function newId(prefix: string): string {
 export const SESSION_COOKIE = "bf_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+/**
+ * Whether the cookies this server sets must be HTTPS-only.
+ *
+ * One rule, in one place, because there were two. The session cookie and the OAuth state
+ * cookie asked NODE_ENV; the calendar state cookie asked `req.secure` — which is FALSE
+ * behind a TLS-terminating proxy, the ordinary production shape, unless trust proxy is
+ * configured AND the proxy sends X-Forwarded-Proto. So the one cookie that used a
+ * different rule was the one that quietly dropped Secure in exactly the deployment where
+ * it mattered, and it carried an OAuth state and PKCE verifier.
+ *
+ * `req.secure` is still honoured when it is true, so a dev server actually serving HTTPS
+ * gets the flag as well.
+ */
+export function cookiesAreSecure(req?: { secure?: boolean }): boolean {
+  return process.env.NODE_ENV === "production" || req?.secure === true;
+}
+
 /** Options for the session cookie (used with Express res.cookie/clearCookie).
  *  Pass `null` for a browser-session cookie — one the browser drops when it
  *  closes. That's "Keep me signed in" unchecked; the default stays SESSION_TTL_MS. */
@@ -93,7 +110,7 @@ export function sessionCookieOptions(maxAgeMs: number | null = SESSION_TTL_MS) {
     // maxAge must be OMITTED for a session cookie — passing null/0 would expire
     // it immediately instead of tying it to the browser session.
     ...(maxAgeMs === null ? {} : { maxAge: maxAgeMs }),
-    secure: process.env.NODE_ENV === "production"
+    secure: cookiesAreSecure()
   };
 }
 

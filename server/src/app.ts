@@ -74,7 +74,15 @@ import {
 } from "./calendar.js";
 import { assertRoutePolicyCovers, can, installRoutePolicy, outranks } from "./permissions.js";
 import crypto from "node:crypto";
-import { parseCookies, verifyPassword, secretsMatch, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
+import {
+  parseCookies,
+  verifyPassword,
+  secretsMatch,
+  cookiesAreSecure,
+  SESSION_COOKIE,
+  SESSION_TTL_MS,
+  sessionCookieOptions
+} from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
@@ -1247,7 +1255,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.cookie(CAL_COOKIE, signState<CalendarState>({ provider, state, verifier, returnTo, issuedAt: Date.now() }), {
       httpOnly: true,
       sameSite: "lax",
-      secure: req.secure,
+      // Was `req.secure`, which is false behind a TLS-terminating proxy — see cookiesAreSecure.
+      secure: cookiesAreSecure(req),
       path: CAL_COOKIE_PATH,
       maxAge: OAUTH_STATE_TTL_MS
     });
@@ -1368,7 +1377,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         sameSite: "lax",
         path: "/api/auth/oauth",
         maxAge: OAUTH_STATE_TTL_MS,
-        secure: process.env.NODE_ENV === "production"
+        secure: cookiesAreSecure(req)
       }
     );
     res.redirect(authorizeUrl(provider, config, { redirectUri: oauthCallbackUri(req, provider), state, challenge, nonce }));
