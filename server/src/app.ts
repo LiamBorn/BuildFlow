@@ -3974,5 +3974,22 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   /* Last thing before the app is handed back: prove the policy and the router still agree. */
   assertRoutePolicyCovers(app);
 
+  /**
+   * The backstop for anything a route threw and did not handle.
+   *
+   * There was no error handler at all, which left Express's default one in charge — and
+   * that one answers an HTML page, with the stack trace in it unless NODE_ENV is exactly
+   * "production". A deploy that forgets that one variable was publishing its source
+   * layout to anyone who could provoke a 500. This answers the same JSON shape as every
+   * other failure here, keeps the detail in the server log where it is useful, and must
+   * stay last: Express picks a handler by arity, so all four parameters are load-bearing
+   * even though `next` is unused.
+   */
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error("[api] unhandled error:", err);
+    if (res.headersSent) return;
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  });
+
   return app;
 }

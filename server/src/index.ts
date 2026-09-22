@@ -8,6 +8,24 @@ import type { StoreManager } from "./stores.js";
 import { LATEST_SCHEMA_VERSION } from "./database.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
 
+/**
+ * Nothing was watching the process itself.
+ *
+ * Node's default for an unhandled rejection is to terminate, so one stray promise in a
+ * background job — a digest send, a periodic backup — took the whole API down with no
+ * note of what did it. Logging and staying up is the right trade for a server whose
+ * request paths already answer their own failures: an unhandled rejection here is a bug
+ * to find in the log, not a reason to drop every connected client. An uncaught exception
+ * is different in kind, and the process is left to exit after it is recorded.
+ */
+process.on("unhandledRejection", (reason) => {
+  console.error("[server] unhandled promise rejection:", reason);
+});
+process.on("uncaughtException", (error) => {
+  console.error("[server] uncaught exception — exiting:", error);
+  process.exit(1);
+});
+
 const port = Number(process.env.PORT ?? 4300);
 const app = await createApp();
 

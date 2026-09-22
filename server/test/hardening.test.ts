@@ -60,7 +60,6 @@ describe("a client cannot choose its own rate-limit bucket", () => {
   });
 });
 
-
 describe("baseline response headers", () => {
   it("tells browsers not to sniff, frame, or leak the referer", async () => {
     const app = await freshApp();
@@ -70,7 +69,6 @@ describe("baseline response headers", () => {
     expect(res.headers["referrer-policy"]).toBe("no-referrer");
   });
 });
-
 
 describe("the /api/ops guard", () => {
   it("refuses a wrong token", async () => {
