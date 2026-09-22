@@ -1,7 +1,7 @@
 /* =========================================================================
    BuildFlow AI — real Claude behind the "Ask BuildFlow AI" prompt.
 
-   Uses the official Anthropic SDK (claude-opus-4-8, adaptive thinking, streamed).
+   Uses the official Anthropic SDK (claude-opus-5, adaptive thinking, streamed).
    Mirrors email.ts: without an ANTHROPIC_API_KEY it runs in "DEMO MODE" and the
    client falls back to its built-in simulated answers, so the whole flow works
    before any credential is added. The SDK is imported lazily so the server runs
@@ -15,7 +15,15 @@ import {
   type CreateJobInput
 } from "@buildflow/shared";
 
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8";
+/* Claude Opus 5 — the current generation, and the same price per token as the Opus 4.8 this
+   asked for before ($5/$25 per MTok). ANTHROPIC_MODEL still overrides it, so an operator can
+   pin an older one or move to a cheaper tier without a deploy.
+
+   Note for anyone changing this: the `thinking: { type: "adaptive" }` below is NOT optional
+   decoration. On Opus 4.8 and 4.7, omitting `thinking` runs the request with thinking OFF;
+   Opus 5 has it on by default. Setting it explicitly is what makes this behave the same
+   whichever of the two the env var names. `budget_tokens` is rejected outright on both. */
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5";
 
 // A project + its jobs, ready to create through the backend (matches the client's
 // ImportProjectSpec). crewId is optional (round-robin assignment).
