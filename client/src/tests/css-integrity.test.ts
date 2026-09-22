@@ -34,15 +34,22 @@ const sheets = readdirSync(SRC)
   .filter((f) => f.endsWith(".css"))
   .map((f) => ({ file: f, root: postcss.parse(readFileSync(join(SRC, f), "utf8"), { from: f }) }));
 
-/** Every .ts/.tsx under src, for the custom properties that are set from code rather than CSS. */
+/**
+ * Every .ts/.tsx under src, for the custom properties that are set from code rather than CSS.
+ *
+ * `tests` is excluded, and not as housekeeping: this file names `url(#pr-area-grad)` in a comment
+ * to explain the bug it guards, and while it read its own directory it reported that comment as a
+ * live dangling reference. A test that documents a defect will always look like it contains one.
+ */
 function codeFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    if (e.name === "node_modules" || e.name === "dist") return [];
+    if (e.name === "node_modules" || e.name === "dist" || e.name === "tests") return [];
     const p = join(dir, e.name);
     if (e.isDirectory()) return codeFiles(p);
     return /\.(ts|tsx)$/.test(e.name) ? [p] : [];
   });
 }
+const codePaths = codeFiles(SRC).map((p) => p.slice(SRC.length + 1));
 const code = codeFiles(SRC).map((p) => readFileSync(p, "utf8"));
 
 const where = (file: string, node: postcss.Node) => `${file}:${node.source?.start?.line ?? "?"}`;
@@ -170,4 +177,39 @@ describe("every var() resolves to a token that exists", () => {
     expect(missing.map((m) => `${m.name} (${m.at})`), "read with no fallback, declared nowhere").toEqual([]);
   });
 
+});
+
+describe("every url(#id) points at a paint server that exists", () => {
+  /**
+   * The third form of the same bug, and the one that crosses languages: `fill: url(#pr-area-grad)`
+   * sat in production-reports-redesign.css while the gradient it names was defined in no file at
+   * all. An SVG paint reference that resolves to nothing paints nothing -- no error, no warning.
+   * These references live in both the sheets and the JSX (`fill="url(#x)"`), and the `<linearGradient
+   * id="x">` that answers them is almost always in a .tsx, so neither language can check it alone.
+   */
+  const REF = /url\(#([A-Za-z0-9_-]+)\)/g;
+  const references: { id: string; at: string }[] = [];
+  for (const { file, root } of sheets) {
+    root.walkDecls((decl) => {
+      for (const m of decl.value.matchAll(REF)) references.push({ id: m[1], at: where(file, decl) });
+    });
+  }
+  for (const [i, src] of code.entries()) {
+    for (const m of src.matchAll(REF)) {
+      references.push({ id: m[1], at: `${codePaths[i]}:${src.slice(0, m.index).split("\n").length}` });
+    }
+  }
+  const ids = new Set<string>();
+  for (const src of code) for (const m of src.matchAll(/\bid="([^"{}]+)"/g)) ids.add(m[1]);
+
+  it("has references to check", () => {
+    // Only a handful exist. If this ever fails because the last SVG paint server was removed,
+    // delete this block rather than lowering the floor -- a check over nothing is not a check.
+    expect(references.length).toBeGreaterThan(0);
+  });
+
+  it("resolves every one to a declared id", () => {
+    const dangling = references.filter((r) => !ids.has(r.id));
+    expect(dangling.map((d) => `url(#${d.id}) (${d.at})`), "paints with a gradient defined nowhere").toEqual([]);
+  });
 });
