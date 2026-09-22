@@ -1292,7 +1292,13 @@
   outline: 2px dashed #8b95ab;
   outline-offset: -2px;
   border-radius: var(--hsh-radius);
-  background-color: var(--hsh-paper);
+  /* Was `var(--hsh-paper)`, a token this file never declared — the one name of the ten
+     `--hsh-*` it uses that has no definition, so the declaration was invalid at computed-value
+     time and the lifted card's paper backing fell to transparent, leaving the grey skeleton
+     rects floating over the page. Using the surface token dashboard-monday-panels.css already
+     uses for the `.dash-block` arm of this same rule rather than a literal: hs-home.css has no
+     white literal in it, and one here would not invert in dark mode. */
+  background-color: var(--bf-surface, #fff);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='4' y='4' width='92' height='92' rx='6' fill='%23e2e5ec'/%3E%3C/svg%3E");
   background-size: calc(100% / 3) 176px;
   background-origin: padding-box;
