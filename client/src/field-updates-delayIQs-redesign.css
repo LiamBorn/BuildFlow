@@ -44,17 +44,6 @@
 
 /* ============================ field feed ============================ */
 
-/* jobsite photo thumbnails with a slow "wet film" shimmer */
-@keyframes fud-shimmer {
-  0%,
-  55% {
-    transform: translateX(-130%);
-  }
-  100% {
-    transform: translateX(130%);
-  }
-}
-
 /* photo evidence grid (feature card) */
 
 /* attach strip */

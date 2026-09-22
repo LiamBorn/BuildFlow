@@ -1029,16 +1029,6 @@
 }
 
 
-/* floating chips — white paper pills with parallax + levitation */
-@keyframes wx-float-bob {
-  0%,
-  100% {
-    transform: translateY(0) rotate(var(--rot, 0deg));
-  }
-  50% {
-    transform: translateY(-13px) rotate(var(--rot, 0deg));
-  }
-}
 .welcome-rx .wx-chip {
   display: inline-flex;
   align-items: center;
@@ -1213,15 +1203,6 @@
    One row of monochrome wordmarks drifting right → left at a constant speed,
    both edges faded by a mask so marks appear and disappear softly. No per-item
    motion: the strip is something you glance at, not something you operate. */
-/* five typographic "logo" treatments so the strip has rhythm without images */
-@keyframes wx-company-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
 @media (max-width: 620px) {
 }
 @media (prefers-reduced-motion: reduce) {

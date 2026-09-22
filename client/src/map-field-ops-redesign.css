@@ -37,32 +37,6 @@
 /* =============================== LIVE MAP =============================== */
 /* parcel / block grid, faded at the edges */
 
-/* streets */
-/* animated optimized route (marching dashes = "live") */
-@keyframes mfo-dash {
-  to {
-    stroke-dashoffset: -32;
-  }
-}
-
-/* pins */
-@keyframes mfo-pulse {
-  0% {
-    box-shadow: 0 0 0 0 var(--ring);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 15px transparent;
-  }
-}
-
-/* live badge (top-left), layer switch (top-right), legend (bottom) */
-@keyframes mfo-blink {
-  50% {
-    opacity: 0.3;
-  }
-}
-
 
 
 /* route summary card (route-optimization map) */

@@ -580,17 +580,6 @@
   transform: scale(1.08);
   animation: hs-rail-pop 0.5s var(--hs-ease);
 }
-@keyframes hs-top-spin {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  60% {
-    transform: rotate(200deg) scale(1.2);
-  }
-  100% {
-    transform: rotate(180deg) scale(1.08);
-  }
-}
 @keyframes hs-top-gear {
   0% {
     transform: rotate(0deg) scale(1);

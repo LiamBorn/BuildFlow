@@ -422,16 +422,6 @@
   /* held still (2026-09-16): a label's marker, not a live indicator — the same call the
      app shell's .dx-dot took. The keyframes stay for the visualisation below. */
 }
-@keyframes acct-dot-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
 .acct-sec {
   display: grid;
   gap: 10px;
@@ -931,15 +921,6 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-@keyframes acct-viz-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(204, 204, 204, 0.55);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 7px rgba(204, 204, 204, 0);
   }
 }
 @keyframes acct-viz-job-in {
