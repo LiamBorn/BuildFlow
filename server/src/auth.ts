@@ -52,6 +52,19 @@ export function newAuthToken(): string {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+/**
+ * Constant-time compare for a secret that arrives as a string — a feed key, an ops token.
+ * `===` on a secret returns as soon as two bytes differ, so how long it took is a clue to
+ * how much of the guess was right. Length is not hidden (and does not need to be); the
+ * comparison of equal-length secrets is what has to be flat.
+ */
+export function secretsMatch(a: string, b: string): boolean {
+  const left = Buffer.from(a, "utf8");
+  const right = Buffer.from(b, "utf8");
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
+
 /** Tokens are stored hashed, so a copy of the database cannot be used to reset passwords. */
 export function hashToken(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");

@@ -71,3 +71,35 @@ describe("baseline response headers", () => {
   });
 });
 
+
+describe("the /api/ops guard", () => {
+  it("refuses a wrong token", async () => {
+    process.env.OPS_ADMIN_TOKEN = "the-real-token";
+    const app = await freshApp();
+    await request(app).get("/api/ops/backups").set("x-ops-token", "not-it").expect(403);
+    // A guess of a different length must be refused too, not throw on the length check.
+    await request(app).get("/api/ops/backups").set("x-ops-token", "short").expect(403);
+    await request(app).get("/api/ops/backups").set("x-ops-token", "the-real-token").expect(200);
+  });
+
+  /**
+   * The localhost fallback is a dev convenience. A deployed API normally sits behind a
+   * proxy on its own host, so every request arrives from 127.0.0.1 — supertest's loopback
+   * connection looks exactly like that. If the fallback applied in production it would
+   * hand the platform's object counts and a file-writing backup trigger to anyone.
+   */
+  it("closes the routes in production when no token is configured, rather than trusting localhost", async () => {
+    delete process.env.OPS_ADMIN_TOKEN;
+    process.env.NODE_ENV = "production";
+    const app = await freshApp();
+    await request(app).get("/api/ops/backups").expect(403);
+    await request(app).post("/api/ops/backup").expect(403);
+  });
+
+  it("still allows localhost off production, so the dev workflow is unchanged", async () => {
+    delete process.env.OPS_ADMIN_TOKEN;
+    process.env.NODE_ENV = "test";
+    const app = await freshApp();
+    await request(app).get("/api/ops/backups").expect(200);
+  });
+});

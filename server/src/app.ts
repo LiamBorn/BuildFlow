@@ -74,7 +74,7 @@ import {
 } from "./calendar.js";
 import { assertRoutePolicyCovers, can, installRoutePolicy, outranks } from "./permissions.js";
 import crypto from "node:crypto";
-import { parseCookies, verifyPassword, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
+import { parseCookies, verifyPassword, secretsMatch, SESSION_COOKIE, SESSION_TTL_MS, sessionCookieOptions } from "./auth.js";
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
@@ -925,7 +925,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(500).type("text/plain").send("Workspace unavailable");
       return;
     }
-    if (String(req.query.key ?? "") !== orgStore.calendarFeedKey()) {
+    // Constant-time: this route is outside the session gate on purpose, so the key in the
+    // link is the only thing standing between a guess and the workspace's whole schedule.
+    if (!secretsMatch(String(req.query.key ?? ""), orgStore.calendarFeedKey())) {
       res.status(403).type("text/plain").send("This calendar link is not valid");
       return;
     }
@@ -3457,8 +3459,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const required = process.env.OPS_ADMIN_TOKEN?.trim();
     if (required) {
       const provided = (req.headers["x-ops-token"] as string | undefined) ?? (req.query.token as string | undefined);
-      return provided === required;
+      return typeof provided === "string" && secretsMatch(provided, required);
     }
+    /* No token configured. The localhost fallback below is a dev convenience and must stay
+       one: a deployed API almost always sits behind a reverse proxy on the same host, so
+       EVERY request arrives from 127.0.0.1 and this check would wave the whole internet
+       through to the platform's object counts and to a backup trigger that writes files.
+       In production an unset OPS_ADMIN_TOKEN closes these routes instead of opening them. */
+    if (process.env.NODE_ENV === "production") return false;
     const ip = req.socket.remoteAddress ?? "";
     return ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
   };
