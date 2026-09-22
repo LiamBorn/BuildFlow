@@ -718,6 +718,22 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * other. Either would close it; both mean neither has to be right on its own.
    */
   app.set("case sensitive routing", true);
+  /**
+   * Whether to believe X-Forwarded-For.
+   *
+   * Express only derives `req.ip` from that header once it knows which proxies to trust,
+   * and every rate limiter in this file keys on `req.ip` via clientIp(). Leaving it unset
+   * is therefore the safe default — the socket address is used, and a client cannot choose
+   * its own limiter bucket. Behind a load balancer the real address is *only* in the
+   * header, so a deployment that has one sets TRUST_PROXY: "1" for a single proxy in
+   * front (the common case), "true" to trust the whole chain, or a comma-separated list
+   * of proxy IPs/subnets. Set this to the number of proxies you actually run; "true"
+   * behind a proxy that does not overwrite the header puts the spoof back.
+   */
+  const trustProxy = process.env.TRUST_PROXY?.trim();
+  if (trustProxy) {
+    app.set("trust proxy", /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy === "true" ? true : trustProxy);
+  }
   /* Every route registered from here on gets its permission check prepended, and any route
      with no entry in ROUTE_POLICY throws as it is registered. See server/src/permissions.ts. */
   installRoutePolicy(app);

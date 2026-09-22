@@ -86,10 +86,22 @@ export function createLoginGuard(threshold = 5, windowMs = 15 * 60 * 1000, lockM
   };
 }
 
+/**
+ * The actor every limiter above is keyed on.
+ *
+ * This reads `req.ip`, which Express derives from X-Forwarded-For ONLY when the app has
+ * been told which proxies to trust (`app.set("trust proxy", ...)`, driven by TRUST_PROXY
+ * in app.ts). That distinction is the whole point: this function used to read the header
+ * itself, unconditionally. Any client can send X-Forwarded-For, so any client could mint
+ * a fresh bucket on every request and walk straight through all of the limiters — the
+ * signup cap, the login cap, and the 5-per-15-minutes caps on "email me a verification
+ * link" and "email me a reset link", which is an open mail cannon pointed at any address.
+ *
+ * Untrusted input must not choose its own rate-limit key, so the header is honoured only
+ * where the deployment has said a proxy is in front and is rewriting it.
+ */
 export function clientIp(req: Request): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded?.split(",")[0];
-  return (first ?? req.ip ?? req.socket.remoteAddress ?? "unknown").trim();
+  return (req.ip ?? req.socket.remoteAddress ?? "unknown").trim();
 }
 
 export function humanSeconds(seconds: number): string {
