@@ -17,9 +17,11 @@
  * in the app knows it is here, and the 77 tests that drive a select with
  * `fireEvent.change` are untouched.
  *
- * SCOPE. Only selects inside the app shell and its three portals are enhanced. The
- * marketing pages and the sign-in screens sit outside the shell's language and keep
- * the native control.
+ * SCOPE. Only selects inside the app shell and its three portals are enhanced — and,
+ * since 2026-09-22, the signup and sign-in screens (`.onb`), which moved onto the
+ * program's own language that day and so stopped being the reason to keep the system
+ * panel ("change the dropdown to match the design", about the invite step's access
+ * level). The marketing pages still keep the native control.
  *
  * KEYBOARD. Pointer and keyboard open the SAME list, because a keyboard user
  * pressing Space on a select would otherwise be the one person still seeing the
@@ -44,6 +46,8 @@ type Anchor = {
   above: number;
   width: number;
   placed: { left: number; top: number; above: boolean; goo: Goo } | null;
+  /** The control's effective zoom — the list is laid out in it (see `zoomOf`). */
+  zoom: number;
   /**
    * How it was opened, which decides whether handing focus back should show a focus
    * ring. `select.focus()` is PROGRAMMATIC, and Chrome treats programmatic focus on a
@@ -57,10 +61,17 @@ type Anchor = {
 type Choice = { value: string; label: string; disabled: boolean };
 
 /**
- * The shell carries `zoom: var(--bf-ui-scale)`, and this list is a portal to
- * `document.body` that the skin zooms the same way (section 53). A rect is in
- * rendered pixels, so it is divided by the zoom to land in the space the list is
- * laid out in. The same correction the board's drag math uses (dragZoom.ts).
+ * THE LIST TAKES ITS CONTROL'S ZOOM. The shell carries `zoom: var(--bf-ui-scale)`, and
+ * this list is a portal to `document.body` that the skin zooms by the same property
+ * (section 53). A rect is in rendered pixels, so it is divided by the control's zoom to
+ * land in the space the list is laid out in — the correction the board's drag math uses
+ * (dragZoom.ts) — which is only right if the list is zoomed exactly as its control is.
+ *
+ * Inside the shell that held by coincidence: both were `--bf-ui-scale`. The signup
+ * screens broke it (2026-09-22) — they are not zoomed, but the property still sits on
+ * <body> at the person's scale, so the list opened 10% small and 10% short of its
+ * control. So the portal now carries the control's own zoom in that property: the same
+ * value as before everywhere inside the shell, and 1 wherever the control is unzoomed.
  */
 const zoomOf = (element: Element): number => {
   const zoom = (element as Element & { currentCSSZoom?: number }).currentCSSZoom;
@@ -109,11 +120,20 @@ export const isInOwnPopup = (target: EventTarget | null): boolean => {
   return Boolean(node?.closest(OWN_POPUPS));
 };
 
+/**
+ * The list is named after its control, however the control is named: an `aria-label`, or a
+ * `<label for>` — the signup screens label their selects the second way, and a list that only
+ * read the first opened nameless there (2026-09-22), which a screen reader announces as just
+ * "list box".
+ */
+const nameOf = (select: HTMLSelectElement): string | undefined =>
+  select.getAttribute("aria-label") ?? (select.labels?.[0]?.textContent?.trim() || undefined);
+
 /** A select the layer takes over: inside the program, and a plain single-choice list. */
 const isEnhanceable = (select: HTMLSelectElement): boolean => {
   if (select.disabled || select.multiple || select.size > 1) return false;
   if (select.dataset.bfSelectNative === "true") return false;
-  return Boolean(select.closest(".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop"));
+  return Boolean(select.closest(".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop, .onb"));
 };
 
 const choicesOf = (select: HTMLSelectElement): Choice[] =>
@@ -170,6 +190,7 @@ export function SelectMenuLayer() {
       above: rect.top / zoom,
       width: rect.width / zoom,
       placed: null,
+      zoom,
       openedWith
     });
   }, []);
@@ -322,12 +343,17 @@ export function SelectMenuLayer() {
   };
 
   return createPortal(
-    <div className="bfsel" role="presentation" onPointerDown={(event) => event.stopPropagation()}>
+    <div
+      className="bfsel"
+      role="presentation"
+      style={{ "--bf-ui-scale": String(anchor.zoom) } as CSSProperties}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
       <div
         ref={menuRef}
         className="bfsel-menu"
         role="listbox"
-        aria-label={anchor.select.getAttribute("aria-label") ?? undefined}
+        aria-label={nameOf(anchor.select)}
         tabIndex={-1}
         onKeyDown={onMenuKeyDown}
         onBlur={(event) => {

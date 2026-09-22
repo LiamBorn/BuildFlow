@@ -70,8 +70,6 @@ import {
   Database,
   DollarSign,
   Download,
-  Eye,
-  EyeOff,
   FileText,
   FileUp,
   FolderKanban,
@@ -187,13 +185,10 @@ import {
 } from "@buildflow/shared";
 import {
   forecastIQFinish,
-  passwordProblem,
-  passwordStrength,
   tradeProfileFor,
   invitablePermissionLevels,
   permissionLevelLabels,
   type PermissionLevel,
-  type InvitePreview,
   tradeProfiles,
   type TradeProfile,
   plannedPercentAt,
@@ -205,7 +200,6 @@ import {
   fetchSession as apiFetchSession,
   resetPassword as apiResetPassword,
   requestEmailVerification as apiRequestEmailVerification,
-  verifyEmail as apiVerifyEmail,
   listWorkspaces as apiListWorkspaces,
   createWorkspace as apiCreateWorkspace,
   switchWorkspace as apiSwitchWorkspace,
@@ -215,14 +209,12 @@ import {
   revokeInvite as apiRevokeInvite,
   removeSampleUser as apiRemoveSampleUser,
   updateTeamMemberPermission as apiUpdateTeamMemberPermission,
-  fetchInvitePreview as apiFetchInvitePreview,
   acceptInvite as apiAcceptInvite,
   updateAccount as apiUpdateAccount,
   renameOrg as apiRenameOrg,
   setUserSetting as apiSetUserSetting,
   openBillingPortal as apiOpenBillingPortal,
   type InviteDraft,
-  type InviteResult,
   type TeamPayload,
   assignJob,
   createCrew,
@@ -312,6 +304,11 @@ import { DateMenuLayer } from "./components/ui/dateMenu";
 import { PanelExitLayer } from "./components/ui/panelExit";
 import { OnboardingFlow } from "./onboarding/OnboardingFlow";
 import { LoginPage } from "./onboarding/LoginPage";
+import { ResetPasswordPage } from "./onboarding/ResetPasswordPage";
+import { VerifyEmailPage } from "./onboarding/VerifyEmailPage";
+import { AcceptInvitePage } from "./onboarding/AcceptInvitePage";
+import { InviteTeamPage } from "./onboarding/InviteTeamPage";
+import { checkInviteRows } from "./invites";
 import { AppFrame, PageSwap, PanelGoo, SegmentPill, TextReveal } from "./motion";
 import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
@@ -4346,13 +4343,16 @@ function WelcomePage({
           onContactSales={showContactSalesPage}
         />
       ) : welcomeView === "resetPassword" ? (
-        <WelcomeResetPasswordPage onBack={showLoginPage} onReset={onResetPassword} />
+        /* The three pages an emailed link lands on are the flow's design too (onboarding/,
+           2026-09-22) — the same column, card and beats as signing in. */
+        <ResetPasswordPage onBack={showLoginPage} onReset={onResetPassword} />
       ) : welcomeView === "verifyEmail" ? (
-        <WelcomeVerifyEmailPage onContinue={onAfterVerify} onLogin={showLoginPage} />
+        <VerifyEmailPage onContinue={onAfterVerify} onLogin={showLoginPage} />
       ) : welcomeView === "acceptInvite" ? (
-        <WelcomeAcceptInvitePage onAccept={onAcceptInvite} onLogin={showLoginPage} />
+        <AcceptInvitePage onAccept={onAcceptInvite} onLogin={showLoginPage} />
       ) : welcomeView === "inviteTeam" ? (
-        <WelcomeInviteTeamPage onDone={finishInviteStep} />
+        /* the signup flow's last step, on the flow's own design (onboarding/, 2026-09-22) */
+        <InviteTeamPage onDone={finishInviteStep} />
       ) : welcomeView === "crewScheduling" ? (
         <WelcomeCrewSchedulingPage onBack={showWelcomeHome} onOpenSchedule={onOpenSchedule} onGetStarted={showCreateAccountPage} />
       ) : welcomeView === "scheduleAi" ? (
@@ -7564,308 +7564,11 @@ function WelcomeOverviewPage({
   );
 }
 
-// Decorative signature visual for the login/signup aside: a "live schedule" that
-// assembles itself, with one double-booked block that moves into a free slot.
-// Rendered as pure CSS animation (see the .acct-viz block in account-redesign.css);
-// every animation shares one 12s period so the per-block animation-delay stagger
-// stays locked on every repeat. `fix` marks the double-booked block.
-type AcctVizJob = { left: number; width: number; tone: "blue" | "cyan" | "violet"; delayIQ: number; fix?: boolean };
-const ACCT_VIZ_LANES: { crew: string; jobs: AcctVizJob[] }[] = [
-  {
-    crew: "Framing",
-    jobs: [
-      { left: 2, width: 30, tone: "blue", delayIQ: 0.2 },
-      { left: 40, width: 26, tone: "cyan", delayIQ: 0.55 }
-    ]
-  },
-  {
-    crew: "Concrete",
-    jobs: [
-      { left: 6, width: 24, tone: "violet", delayIQ: 0.9 },
-      { left: 68, width: 28, tone: "blue", delayIQ: 1.25 }
-    ]
-  },
-  {
-    crew: "Electrical",
-    jobs: [
-      { left: 6, width: 26, tone: "cyan", delayIQ: 1.6 },
-      { left: 20, width: 24, tone: "blue", delayIQ: 1.95, fix: true }
-    ]
-  },
-  {
-    crew: "Roofing",
-    jobs: [
-      { left: 34, width: 30, tone: "violet", delayIQ: 2.3 },
-      { left: 72, width: 22, tone: "cyan", delayIQ: 2.65 }
-    ]
-  }
-];
-
-// Shared by every step of the auth/onboarding flow, so the branded panel reads as
-// one continuous surface while the form column advances.
-function AcctScheduleViz() {
-  return (
-    <div className="acct-viz">
-      <div className="acct-viz-card">
-        <div className="acct-viz-head">
-          <span className="acct-viz-live" />
-          <span>Live schedule</span>
-          <span className="acct-viz-week">Mon &mdash; Fri</span>
-        </div>
-        <div className="acct-viz-lanes">
-          {ACCT_VIZ_LANES.map((lane) => (
-            <div className="acct-viz-lane" key={lane.crew}>
-              <span className="acct-viz-crew">{lane.crew}</span>
-              <span className="acct-viz-track">
-                {lane.jobs.map((job, index) => (
-                  <i
-                    key={index}
-                    className={`acct-viz-job acct-viz-job-${job.tone}${job.fix ? " is-fix" : ""}`}
-                    style={{ left: `${job.left}%`, width: `${job.width}%`, animationDelay: `${job.delayIQ}s` }}
-                  />
-                ))}
-              </span>
-            </div>
-          ))}
-        </div>
-        <span className="acct-viz-sweep" />
-      </div>
-    </div>
-  );
-}
 
 // Deliberately loose: the server does the real check; this only catches "jordan"
 // or "jordan@reyes" before a round trip.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-/** The token an emailed link carries after "?" inside the hash: "#reset-password?token=…". */
-function tokenFromHash(): string {
-  if (typeof window === "undefined") return "";
-  const query = window.location.hash.split("?")[1] ?? "";
-  return new URLSearchParams(query).get("token") ?? "";
-}
-
-/** Landing page for the emailed reset link: one new password, then straight into the workspace. */
-function WelcomeResetPasswordPage({
-  onBack,
-  onReset
-}: {
-  onBack: () => void;
-  onReset: (token: string, password: string) => Promise<void>;
-}) {
-  const [token, setToken] = useState(tokenFromHash);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const strength = passwordStrength(password);
-  const invalidLink = !token;
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (busy) return;
-    const problem = passwordProblem(password);
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    setError("");
-    setBusy(true);
-    try {
-      await onReset(token, password);
-    } catch (err) {
-      // a weak password hands back a fresh token so the second try still works
-      if (err instanceof ApiError && err.code === "weak_password") {
-        const fresh = (err as ApiError & { token?: string }).token;
-        if (fresh) setToken(fresh);
-      }
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-      setBusy(false);
-    }
-  };
-
-  return (
-    <main className="acct-split" id="reset-password" aria-labelledby="reset-password-title">
-      <div className="acct-form-col">
-        <div className="acct-form-inner">
-          <button type="button" className="acct-back" onClick={onBack}>
-            ← Back to sign in
-          </button>
-          <div className="acct-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="acct-head">
-            <h1 id="reset-password-title">Choose a new password.</h1>
-            <p>
-              {invalidLink ? "This link is missing its token." : "You'll be signed in as soon as it's saved. Other devices are signed out."}
-            </p>
-          </div>
-          {invalidLink ? (
-            <p className="acct-error" role="alert">
-              Open the link from the email we sent, or{" "}
-              <button type="button" className="acct-inline-link" onClick={onBack}>
-                request a new one
-              </button>
-              .
-            </p>
-          ) : (
-            <form className="acct-form" onSubmit={submit}>
-              <div className="acct-field">
-                <label htmlFor="reset-password-input">New password</label>
-                <div className="acct-input-wrap">
-                  <input
-                    id="reset-password-input"
-                    className={error ? "acct-input has-toggle is-invalid" : "acct-input has-toggle"}
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(event) => {
-                      setPassword(event.target.value);
-                      if (error) setError("");
-                    }}
-                    placeholder="At least 8 characters"
-                    autoComplete="new-password"
-                    autoFocus
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? "reset-password-error" : "reset-password-hint"}
-                  />
-                  <button
-                    type="button"
-                    className="acct-pw-toggle"
-                    onClick={() => setShowPassword((value) => !value)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {password.length > 0 && (
-                  <div className="acct-strength" data-score={strength.score}>
-                    <div className="acct-strength-bar" aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <p className="acct-strength-label" aria-live="polite">
-                      <span>Password strength</span>
-                      <b>{strength.label}</b>
-                    </p>
-                  </div>
-                )}
-                {error ? (
-                  <p className="acct-field-error" id="reset-password-error" role="alert">
-                    {error}
-                  </p>
-                ) : (
-                  <p className="acct-hint" id="reset-password-hint">
-                    At least 8 characters. A longer phrase with a number or symbol is strongest. Avoid common words and your email.
-                  </p>
-                )}
-              </div>
-              <button type="submit" className="acct-primary" disabled={busy}>
-                {busy ? "Saving…" : "Save password and sign in"}
-              </button>
-            </form>
-          )}
-        </div>
-      </div>
-      <aside className="acct-aside" aria-hidden="true">
-        <div className="acct-aurora acct-aurora-1" />
-        <div className="acct-aurora acct-aurora-2" />
-        <div className="acct-aurora acct-aurora-3" />
-        <div className="acct-aside-brand">
-          <BuildFlowLogoMark /> BuildFlow
-        </div>
-        <AcctScheduleViz />
-        <blockquote className="acct-aside-quote">
-          <p className="acct-aside-type">
-            <WxTypewriter normal="Back on the " em="schedule in a minute." />
-          </p>
-          <cite>Run the whole jobsite from one place.</cite>
-        </blockquote>
-      </aside>
-    </main>
-  );
-}
-
-/** Landing page for the emailed confirmation link. Confirms on arrival, then offers the way in. */
-function WelcomeVerifyEmailPage({ onContinue, onLogin }: { onContinue: () => Promise<boolean>; onLogin: () => void }) {
-  const [state, setState] = useState<"checking" | "verified" | "failed">(() => (tokenFromHash() ? "checking" : "failed"));
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    const token = tokenFromHash();
-    if (!token) return;
-    let cancelled = false;
-    apiVerifyEmail(token)
-      .then(() => {
-        if (!cancelled) setState("verified");
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setMessage(err instanceof Error ? err.message : "This confirmation link is invalid or has expired.");
-        setState("failed");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const proceed = async () => {
-    setBusy(true);
-    const entered = await onContinue().catch(() => false);
-    if (!entered) {
-      setBusy(false);
-      onLogin();
-    }
-  };
-
-  return (
-    <main className="acct-split" id="verify-email" aria-labelledby="verify-email-title">
-      <div className="acct-form-col">
-        <div className="acct-form-inner">
-          <div className="acct-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="acct-head">
-            <h1 id="verify-email-title">
-              {state === "checking" ? "Confirming your email…" : state === "verified" ? "Email confirmed." : "That link didn't work."}
-            </h1>
-            <p>
-              {state === "checking"
-                ? "One moment."
-                : state === "verified"
-                  ? "Inviting your team and managing billing are unlocked for this workspace."
-                  : message || "Open the newest confirmation email, or request another one from your workspace."}
-            </p>
-          </div>
-          {state !== "checking" && (
-            <button type="button" className="acct-primary" onClick={proceed} disabled={busy}>
-              {busy ? "Opening…" : state === "verified" ? "Continue to BuildFlow" : "Sign in"}
-            </button>
-          )}
-        </div>
-      </div>
-      <aside className="acct-aside" aria-hidden="true">
-        <div className="acct-aurora acct-aurora-1" />
-        <div className="acct-aurora acct-aurora-2" />
-        <div className="acct-aurora acct-aurora-3" />
-        <div className="acct-aside-brand">
-          <BuildFlowLogoMark /> BuildFlow
-        </div>
-        <AcctScheduleViz />
-        <blockquote className="acct-aside-quote">
-          <p className="acct-aside-type">
-            <WxTypewriter normal="One address, " em="one workspace." />
-          </p>
-          <cite>Run the whole jobsite from one place.</cite>
-        </blockquote>
-      </aside>
-    </main>
-  );
-}
 
 /* How the Confirm-email pill keeps watch after "Sent": every fifteen seconds, for ten minutes. */
 const VERIFY_WATCH_MS = 15_000;
@@ -8021,367 +7724,9 @@ function InviteRows({
 }
 
 /** Validates drafts; blank rows are dropped, bad emails are named. */
-function checkInviteRows(rows: InviteDraft[]): { valid: InviteDraft[]; errors: Record<number, string> } {
-  const errors: Record<number, string> = {};
-  const valid: InviteDraft[] = [];
-  const seen = new Set<string>();
-  rows.forEach((row, index) => {
-    const email = row.email.trim().toLowerCase();
-    if (!email) return;
-    if (!EMAIL_PATTERN.test(email)) {
-      errors[index] = "Enter a valid email address.";
-      return;
-    }
-    if (seen.has(email)) {
-      errors[index] = "Already in the list.";
-      return;
-    }
-    seen.add(email);
-    valid.push({ email, permission: row.permission });
-  });
-  return { valid, errors };
-}
 
 /** Last onboarding step: who else should be in the workspace. Skippable — invites also live in Settings. */
-function WelcomeInviteTeamPage({ onDone }: { onDone: () => void }) {
-  const [rows, setRows] = useState<InviteDraft[]>([
-    { email: "", permission: "admin" },
-    { email: "", permission: "member" },
-    { email: "", permission: "member" }
-  ]);
-  const [errors, setErrors] = useState<Record<number, string>>({});
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [results, setResults] = useState<InviteResult[] | null>(null);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (busy) return;
-    const { valid, errors: problems } = checkInviteRows(rows);
-    setErrors(problems);
-    if (Object.keys(problems).length > 0) return;
-    if (valid.length === 0) {
-      onDone();
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const response = await apiSendInvites(valid);
-      track(EVENTS.invitesSent, {
-        count: valid.length,
-        held: response.results.filter((r) => r.status === "held").length,
-        source: "onboarding"
-      });
-      setResults(response.results);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const held = results?.some((result) => result.status === "held");
-
-  return (
-    <main className="acct-split acct-split-wide" id="invite-team" aria-labelledby="invite-team-title">
-      <div className="acct-form-col">
-        <div className="acct-form-inner">
-          <div className="acct-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <span className="acct-eyebrow">
-            <span className="acct-eyebrow-dot" />
-            Last step
-          </span>
-          <div className="acct-head">
-            <h1 id="invite-team-title">Who runs the work with you?</h1>
-            <p>
-              Invite your supers and crew leads now, or later from Settings. They get an email with a link that puts them straight into this
-              workspace.
-            </p>
-          </div>
-          {results ? (
-            <div className="acct-form">
-              <ul className="acct-invite-results">
-                {results.map((result) => (
-                  <li key={result.email} data-status={result.status}>
-                    <strong>{result.email}</strong>
-                    <span>
-                      {result.status === "sent"
-                        ? "Invite sent"
-                        : result.status === "held"
-                          ? "Will send once you confirm your email"
-                          : (result.reason ?? "Skipped")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {held && (
-                <p className="acct-hint">
-                  We emailed you a confirmation link at signup. Open it and the held invites go out automatically.
-                </p>
-              )}
-              <button type="button" className="acct-primary" onClick={onDone}>
-                Open BuildFlow
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          ) : (
-            <form className="acct-form" onSubmit={submit}>
-              <InviteRows rows={rows} onChange={setRows} errors={errors} />
-              {error && (
-                <p className="acct-error" role="alert">
-                  {error}
-                </p>
-              )}
-              <button type="submit" className="acct-primary" disabled={busy}>
-                {busy ? "Sending…" : rows.some((row) => row.email.trim()) ? "Send invites" : "Skip for now"}
-                {!busy && <ArrowRight size={18} />}
-              </button>
-              {rows.some((row) => row.email.trim()) && (
-                <button type="button" className="acct-link-btn acct-hint-center" onClick={onDone}>
-                  Skip for now
-                </button>
-              )}
-            </form>
-          )}
-        </div>
-      </div>
-      <aside className="acct-aside" aria-hidden="true">
-        <div className="acct-aurora acct-aurora-1" />
-        <div className="acct-aurora acct-aurora-2" />
-        <div className="acct-aurora acct-aurora-3" />
-        <div className="acct-aside-brand">
-          <BuildFlowLogoMark /> BuildFlow
-        </div>
-        <AcctScheduleViz />
-        <blockquote className="acct-aside-quote">
-          <p className="acct-aside-type">
-            <WxTypewriter normal="The whole crew, " em="one schedule." />
-          </p>
-          <cite>Run the whole jobsite from one place.</cite>
-        </blockquote>
-      </aside>
-    </main>
-  );
-}
-
-/** Landing page for an emailed invite: see who invited you, set a password, you're in. */
-function WelcomeAcceptInvitePage({
-  onAccept,
-  onLogin
-}: {
-  onAccept: (input: { token: string; name: string; password: string; acceptTerms: true; remember?: boolean }) => Promise<void>;
-  onLogin: () => void;
-}) {
-  const token = tokenFromHash();
-  const [preview, setPreview] = useState<InvitePreview | null>(null);
-  const [previewError, setPreviewError] = useState("");
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<"name" | "password" | "terms", string>>>({});
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const strength = passwordStrength(password, preview?.email ?? "");
-
-  useEffect(() => {
-    if (!token) {
-      setPreviewError("This invite link is missing its token.");
-      return;
-    }
-    let cancelled = false;
-    apiFetchInvitePreview(token)
-      .then((data) => {
-        if (!cancelled) setPreview(data);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setPreviewError(err instanceof Error ? err.message : "This invite is invalid or has expired.");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (busy) return;
-    const problems: typeof fieldErrors = {};
-    if (!name.trim()) problems.name = "Enter your name.";
-    const weak = passwordProblem(password, preview?.email ?? "");
-    if (weak) problems.password = weak;
-    if (!acceptTerms) problems.terms = "Please agree to the Terms & Conditions and Privacy Policy.";
-    setFieldErrors(problems);
-    if (Object.keys(problems).length > 0) return;
-    setBusy(true);
-    setError("");
-    try {
-      await onAccept({ token, name: name.trim(), password, acceptTerms: true, remember: true });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
-      if (err instanceof ApiError && err.field === "password") setFieldErrors({ password: message });
-      else setError(message);
-      setBusy(false);
-    }
-  };
-
-  return (
-    <main className="acct-split" id="accept-invite" aria-labelledby="accept-invite-title">
-      <div className="acct-form-col">
-        <div className="acct-form-inner">
-          <div className="acct-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="acct-head">
-            <h1 id="accept-invite-title">
-              {previewError ? "This invite didn't work." : preview ? `Join ${preview.orgName}.` : "Checking your invite…"}
-            </h1>
-            <p>
-              {previewError
-                ? previewError
-                : preview
-                  ? `${preview.inviterName} invited you as ${preview.permission === "admin" ? "an" : "a"} ${permissionLevelLabels[preview.permission]}. Set a password for ${preview.email} and you're in.`
-                  : "One moment."}
-            </p>
-          </div>
-          {previewError ? (
-            <button type="button" className="acct-primary" onClick={onLogin}>
-              Sign in instead
-            </button>
-          ) : preview ? (
-            <form className="acct-form" onSubmit={submit}>
-              <div className="acct-field">
-                <label htmlFor="invite-name">Your name</label>
-                <div className="acct-input-wrap">
-                  <input
-                    id="invite-name"
-                    className={fieldErrors.name ? "acct-input is-invalid" : "acct-input"}
-                    type="text"
-                    value={name}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                      setFieldErrors((current) => ({ ...current, name: undefined }));
-                    }}
-                    placeholder="Sam Ortiz"
-                    autoComplete="name"
-                    autoFocus
-                    aria-invalid={fieldErrors.name ? true : undefined}
-                  />
-                </div>
-                {fieldErrors.name && (
-                  <p className="acct-field-error" role="alert">
-                    {fieldErrors.name}
-                  </p>
-                )}
-              </div>
-              <div className="acct-field">
-                <label htmlFor="invite-email">Email</label>
-                <div className="acct-input-wrap">
-                  <input id="invite-email" className="acct-input" type="email" value={preview.email} readOnly aria-readonly="true" />
-                </div>
-                <p className="acct-hint">This is the address the invite was sent to. It's already confirmed.</p>
-              </div>
-              <div className="acct-field">
-                <label htmlFor="invite-password">Password</label>
-                <div className="acct-input-wrap">
-                  <input
-                    id="invite-password"
-                    className={fieldErrors.password ? "acct-input has-toggle is-invalid" : "acct-input has-toggle"}
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(event) => {
-                      setPassword(event.target.value);
-                      setFieldErrors((current) => ({ ...current, password: undefined }));
-                    }}
-                    placeholder="At least 8 characters"
-                    autoComplete="new-password"
-                    aria-invalid={fieldErrors.password ? true : undefined}
-                  />
-                  <button
-                    type="button"
-                    className="acct-pw-toggle"
-                    onClick={() => setShowPassword((value) => !value)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {password.length > 0 && (
-                  <div className="acct-strength" data-score={strength.score}>
-                    <div className="acct-strength-bar" aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                    <p className="acct-strength-label" aria-live="polite">
-                      <span>Password strength</span>
-                      <b>{strength.label}</b>
-                    </p>
-                  </div>
-                )}
-                {fieldErrors.password && (
-                  <p className="acct-field-error" role="alert">
-                    {fieldErrors.password}
-                  </p>
-                )}
-              </div>
-              <div className="acct-checks">
-                <div className={fieldErrors.terms ? "acct-remember acct-terms is-invalid" : "acct-remember acct-terms"}>
-                  <input
-                    id="invite-terms"
-                    type="checkbox"
-                    checked={acceptTerms}
-                    onChange={(event) => {
-                      setAcceptTerms(event.target.checked);
-                      setFieldErrors((current) => ({ ...current, terms: undefined }));
-                    }}
-                  />
-                  <span>
-                    <label htmlFor="invite-terms">I agree to the</label> <a href="#terms">Terms &amp; Conditions</a> and{" "}
-                    <a href="#privacy">Privacy Policy</a>.
-                  </span>
-                </div>
-                {fieldErrors.terms && (
-                  <p className="acct-field-error" role="alert">
-                    {fieldErrors.terms}
-                  </p>
-                )}
-              </div>
-              {error && (
-                <p className="acct-error" role="alert">
-                  {error}
-                </p>
-              )}
-              <button type="submit" className="acct-primary" disabled={busy}>
-                {busy ? "Joining…" : `Join ${preview.orgName}`}
-              </button>
-            </form>
-          ) : null}
-        </div>
-      </div>
-      <aside className="acct-aside" aria-hidden="true">
-        <div className="acct-aurora acct-aurora-1" />
-        <div className="acct-aurora acct-aurora-2" />
-        <div className="acct-aurora acct-aurora-3" />
-        <div className="acct-aside-brand">
-          <BuildFlowLogoMark /> BuildFlow
-        </div>
-        <AcctScheduleViz />
-        <blockquote className="acct-aside-quote">
-          <p className="acct-aside-type">
-            <WxTypewriter normal="Your crew is " em="already on the board." />
-          </p>
-          <cite>Run the whole jobsite from one place.</cite>
-        </blockquote>
-      </aside>
-    </main>
-  );
-}
 
 const automationParticles = Array.from({ length: 30 }, (_, i) => ({
   x: (i * 37) % 100,

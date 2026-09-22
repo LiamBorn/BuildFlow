@@ -455,9 +455,17 @@ anywhere (skin §46), so the bar is ink.
 **Less motion**: every beat becomes a `--bfm-reduced` fade with no delay, the exit is the same fade,
 and the flow moves to the next step without waiting for the old one to leave.
 
-**Signing in is on the same page (2026-09-22).** `onboarding/LoginPage.tsx` wears the flow's column,
-card and beats without its progress block — signing in is not a step of five — and `usePaneSwap`
-carries login into forgot-password on the same exit/gap/enter the steps use. The two screens'
-headings are held at the same height (`--onb-pane-top`, the progress block's 25px added back;
-measured at y=192 on both, and 57px over the phone's own 32px), so moving between them does not
-shift the page under the reader.
+**The whole way in is on the same page (2026-09-22).** `onboarding/AuthShell.tsx` is the frame the
+four single screens share — signing in, and the three an emailed link lands on (`ResetPasswordPage`,
+`VerifyEmailPage`, `AcceptInvitePage`). They wear the flow's column, card and beats without its
+progress block, which is what `.onb-solo` means: one screen, not a step of five. `--onb-pane-top`
+adds that block's 25px back, so every heading in the family is held at the same height (measured at
+y=192, and 57px over the phone's own 32px) and moving between them does not shift the page under the
+reader. `usePaneSwap` carries each of their state changes on the steps' own exit/gap/enter —
+login into forgot-password, "Confirming…" into its answer, "Checking your invite…" into the form.
+
+The flow's last step, "Who runs the work with you?" (`InviteTeamPage`, `#invite-team`), joined the same
+day. It is the flow's TAIL rather than a single screen, so `AuthShell` draws the flow's own progress
+block for it — full, and labelled "Last step" — instead of the solo offset; its heading lands on the
+same y=192. Sending swaps to the answer on the same exit/gap/enter, and each invitee's row on the
+card's tray arrives on the beats' own focus-in.

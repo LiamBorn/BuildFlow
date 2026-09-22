@@ -77,6 +77,8 @@ export const toneColor = (tone: TradeTone): string =>
   ({ blue: "#7a3d8a", violet: "#a0367a", green: "#1b7f3b", teal: "#0f766e", orange: "#c2410c" })[tone];
 
 export type PreviewStep = 1 | 2 | 3 | 4;
+/** How many invitees the tray lists before it says "+N more" — four fit under the Projects page. */
+const TRAY_ROWS = 4;
 type Gradient = "rose" | "mint" | "peach";
 const GRADIENT: Record<PreviewStep, Gradient> = { 1: "rose", 2: "mint", 3: "mint", 4: "peach" };
 
@@ -96,7 +98,8 @@ export function OnboardingPreview({
   trade,
   revenueLabel,
   teamLabel,
-  signingInAs
+  signingInAs,
+  invites
 }: {
   step: PreviewStep;
   firstName: string;
@@ -108,6 +111,8 @@ export function OnboardingPreview({
   /** Signing IN rather than up: the address typed so far goes in the account row, since the
       name is not known yet and inventing one from the local part would be a small lie. */
   signingInAs?: string;
+  /** The people being invited, as their addresses are typed — a tray at the card's foot. */
+  invites?: Array<{ email: string; level: string }>;
 }) {
   const variant = GRADIENT[step];
   /* The gradient it is leaving, kept underneath while the new one fades over it. A counter
@@ -185,6 +190,19 @@ export function OnboardingPreview({
               );
             })}
           </div>
+          {invites && invites.length > 0 && (
+            <div className="onb-mock-invites">
+              <span className="onb-mock-invites-head">Invited · {invites.length}</span>
+              {invites.slice(0, TRAY_ROWS).map((invite, index) => (
+                <span className="onb-mock-invite" key={`${index}-${invite.email}`}>
+                  <span className="onb-mock-avatar">{invite.email.charAt(0).toUpperCase()}</span>
+                  <b>{invite.email}</b>
+                  <i>{invite.level}</i>
+                </span>
+              ))}
+              {invites.length > TRAY_ROWS && <span className="onb-mock-invites-more">+{invites.length - TRAY_ROWS} more</span>}
+            </div>
+          )}
           {step === 1 && (
             <div className="onb-mock-user">
               <span className="onb-mock-avatar">{initials || "•"}</span>

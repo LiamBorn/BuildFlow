@@ -43,7 +43,7 @@ describe("signing in", () => {
   it("is the flow's page without its progress, showing the Dashboard it lands on", () => {
     const { container } = render(<LoginPage {...props()} />);
     expect(screen.getByRole("heading", { name: "Welcome back." })).toBeInTheDocument();
-    expect(container.querySelector(".onb-login")).not.toBeNull();
+    expect(container.querySelector(".onb-solo"), "the family's single-screen page, not a step of five").not.toBeNull();
     // not a step of five: no counter, no bar
     expect(container.querySelector(".onb-progress")).toBeNull();
     expect(screen.queryByText(/Step \d of 5/)).not.toBeInTheDocument();

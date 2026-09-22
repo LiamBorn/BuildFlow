@@ -1822,7 +1822,8 @@ describe("the Client Desk skin", () => {
        (week.tsx), so its own date fields need the browser's glyph made inert like everyone else's,
        and selectMenu/dateMenu must recognise it — otherwise the OS picker comes back on exactly
        the two date fields in that panel. The three copies of this list have to move together. */
-    const gate = 'body.bf-shell :is(.app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop) input[type="date"]';
+    const SURFACES = ".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop";
+    const gate = `body.bf-shell :is(${SURFACES}) input[type="date"]`;
     /* Whitespace-collapsed: a selector this long gets wrapped across lines by the formatter, and a
        raw `toContain` on the sheet then finds nothing — the same trap as splitSelectors above. */
     expect(sheet.toString().replace(/\s+/g, " ")).toContain(gate);
@@ -1830,11 +1831,15 @@ describe("the Client Desk skin", () => {
     const app = readFileSync(join(SRC, "App.tsx"), "utf8");
     expect(app).toContain("<DateMenuLayer />");
     const enhanced = readFileSync(join(SRC, "components", "ui", "dateMenu.tsx"), "utf8");
-    expect(enhanced).toContain('.closest(".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop")');
-    // and the dropdown layer's copy of the same list, which must not drift from it
-    expect(readFileSync(join(SRC, "components", "ui", "selectMenu.tsx"), "utf8")).toContain(
-      '.closest(".app-shell.hs-shell, .pdx, .hs-record-layer, .bf-breeze, .schedule-dialog-backdrop")'
-    );
+    expect(enhanced).toContain(`.closest("${SURFACES}")`);
+    /* and the dropdown layer's copy of the same list, which must not drift from it — with ONE
+       deliberate difference since 2026-09-22: the dropdown also reaches the signup and sign-in
+       screens (`.onb`), because the invite step has a select and mounts its own SelectMenuLayer
+       there. The calendar does NOT follow: no signup screen has a date field, and none mounts the
+       date layer, so widening its gate (and the inert-glyph rule above) would silence the browser's
+       picker on a signup date field with nothing to replace it. Add a date field to a signup screen
+       and all three move — the gate here, the rule above, and a mounted DateMenuLayer. */
+    expect(readFileSync(join(SRC, "components", "ui", "selectMenu.tsx"), "utf8")).toContain(`.closest("${SURFACES}, .onb")`);
   });
 
   /* THE GOOEY OPEN (section 64, asked for 2026-09-17 with a screen recording): every dropdown

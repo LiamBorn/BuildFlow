@@ -4,7 +4,8 @@
  * The thing under test is a layer over the native control, so what matters is that
  * the control stays the value: choosing a row must reach the same `onChange` the
  * system popup used to, or ninety dropdowns quietly stop working. The other half is
- * scope — the marketing pages and the sign-in screens keep the native list.
+ * scope — the marketing pages keep the native list; the signup and sign-in screens have
+ * been inside it since 2026-09-22, when they moved onto the program's language.
  */
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -129,12 +130,86 @@ describe("the program's dropdown list", () => {
     expect(screen.getByRole("listbox")).toBeInTheDocument();
   });
 
-  /* The sign-in screens and the marketing pages are outside the shell's language and
-     keep the native list, so the layer must not reach them. */
+  /* The marketing pages are outside the shell's language and keep the native list, so the
+     layer must not reach them. */
   it("leaves selects outside the program alone", () => {
     render(<Harness outside />);
     press(screen.getByLabelText("Colors"));
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  /* 2026-09-22: "change the dropdown to match the design", about the access level on the signup
+     flow's invite step. The signup family moved onto the program's language that day, so its
+     selects get the program's list rather than the system panel. */
+  it("reaches the signup and sign-in screens, which are on the program's language now", () => {
+    render(
+      <>
+        <SelectMenuLayer />
+        <div className="welcome-page">
+          <main className="onb">
+            <select aria-label="Access level 1" defaultValue="admin">
+              <option value="admin">Admin</option>
+              <option value="member">Member</option>
+            </select>
+          </main>
+        </div>
+      </>
+    );
+    press(screen.getByLabelText("Access level 1"));
+    const list = screen.getByRole("listbox", { name: "Access level 1" });
+    expect(within(list).getAllByRole("option").map((row) => row.textContent)).toEqual(["Admin", "Member"]);
+  });
+
+  /* A control named by a `<label for>` rather than an `aria-label` — the signup screens' way —
+     used to open a nameless list, which a screen reader announces as just "list box". */
+  it("names the list after its control however the control is named", () => {
+    render(
+      <>
+        <SelectMenuLayer />
+        <div className="app-shell hs-shell bf-shell">
+          <label htmlFor="crew-level">Crew level</label>
+          <select id="crew-level" defaultValue="a">
+            <option value="a">A</option>
+            <option value="b">B</option>
+          </select>
+        </div>
+      </>
+    );
+    press(screen.getByLabelText("Crew level"));
+    expect(screen.getByRole("listbox", { name: "Crew level" })).toBeInTheDocument();
+  });
+
+  /* The list is a body portal that the skin zooms by `--bf-ui-scale`, and it is positioned from
+     the control's rect divided by the CONTROL's zoom — so the two must be the same zoom or the
+     list opens short of its control and at the wrong size. Inside the shell they were equal by
+     coincidence; the signup screens are unzoomed while the property still sits on <body> at the
+     person's scale, which put the list 10% off. The portal carries the control's zoom now. */
+  it("lays the list out in its control's own zoom", () => {
+    const { unmount } = render(<Harness />);
+    const select = screen.getByLabelText("Colors");
+    // a control inside the shell at 90%
+    Object.defineProperty(select, "currentCSSZoom", { value: 0.9, configurable: true });
+    press(select);
+    expect(document.querySelector<HTMLElement>(".bfsel")?.style.getPropertyValue("--bf-ui-scale")).toBe("0.9");
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    unmount();
+
+    // an unzoomed control — the signup screens — whatever scale sits on <body>
+    render(
+      <>
+        <SelectMenuLayer />
+        <main className="onb">
+          <select aria-label="Access level 1" defaultValue="admin">
+            <option value="admin">Admin</option>
+            <option value="member">Member</option>
+          </select>
+        </main>
+      </>
+    );
+    document.body.style.setProperty("--bf-ui-scale", "0.9");
+    press(screen.getByLabelText("Access level 1"));
+    expect(document.querySelector<HTMLElement>(".bfsel")?.style.getPropertyValue("--bf-ui-scale")).toBe("1");
+    document.body.style.removeProperty("--bf-ui-scale");
   });
 
   it("leaves a disabled or multiple select alone", () => {

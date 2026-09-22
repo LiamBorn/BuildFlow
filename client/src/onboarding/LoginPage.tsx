@@ -22,10 +22,11 @@
  * (`#reset-password`) is still the old design; so are `#verify-email` and `#accept-invite`.
  */
 import { useEffect, useState, type FormEvent } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { fetchOauthStatus, oauthStartUrl, requestPasswordReset, type OAuthProvider } from "../api";
+import { AuthShell } from "./AuthShell";
 import { Beats } from "./Beats";
 import { OnboardingPreview } from "./OnboardingPreview";
+import { PasswordField } from "./PasswordField";
 import { usePaneSwap } from "./usePaneSwap";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -56,7 +57,6 @@ export function LoginPage({
   const { current: mode, leaving, go } = usePaneSwap<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   /* On by default, which is what the 30-day cookie has always done. Unchecking asks the server
      for a browser-session cookie instead, so closing the browser signs this account out — the
      answer for a shared site computer. */
@@ -152,162 +152,137 @@ export function LoginPage({
   };
 
   return (
-    <main className="onb onb-login" id="create-account" aria-labelledby="onb-title">
-      <div className="onb-col">
-        <button type="button" className="onb-brand" onClick={onBack} aria-label="Back to BuildFlow">
-          <img src="/buildflow-logo.png" alt="" />
-          <span>BuildFlow</span>
-        </button>
-        <div className="onb-inner">
-          <div className={`onb-pane${leaving ? " is-leaving" : ""}`} key={mode}>
-            <form className="onb-form" onSubmit={submit} noValidate>
-              <Beats>
-                <h1 className="onb-h1" id="onb-title">
-                  {mode === "forgot" ? "Reset your password." : "Welcome back."}
-                </h1>
-                <p className="onb-sub">
-                  {mode === "forgot"
-                    ? "Enter the email you signed up with and we'll send a link to choose a new password."
-                    : "Sign in to your production workspace."}
-                </p>
-                <div className="onb-field">
-                  <label htmlFor="login-email">Email</label>
-                  <input
-                    id="login-email"
-                    className={`onb-input${errors.email ? " is-invalid" : ""}`}
-                    type="email"
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value);
-                      setResetSent(false);
-                      clear("email");
-                    }}
-                    autoComplete="email"
-                    placeholder="name@company.com"
-                    aria-invalid={errors.email ? true : undefined}
-                    autoFocus
-                  />
-                  {errors.email && (
-                    <p className="onb-error" role="alert">
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
-                {mode === "login" && (
-                  <div className="onb-field">
-                    <div className="onb-label-row">
-                      <label htmlFor="login-password">Password</label>
-                      <button
-                        type="button"
-                        className="onb-link onb-link-quiet"
-                        onClick={() => {
-                          setErrors({});
-                          go("forgot");
-                        }}
-                      >
-                        Forgot password?
-                      </button>
-                    </div>
-                    <div className="onb-pw">
-                      <input
-                        id="login-password"
-                        className={`onb-input${errors.password ? " is-invalid" : ""}`}
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(event) => {
-                          setPassword(event.target.value);
-                          clear("password");
-                        }}
-                        autoComplete="current-password"
-                        placeholder="Your password"
-                        aria-invalid={errors.password ? true : undefined}
-                      />
-                      <button
-                        type="button"
-                        className="onb-pw-eye"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        onClick={() => setShowPassword((current) => !current)}
-                      >
-                        {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="onb-error" role="alert">
-                        {errors.password}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {mode === "login" && (
-                  <label className="onb-check">
-                    <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-                    <span>Keep me signed in for 30 days</span>
-                  </label>
-                )}
-                <div className="onb-form-note">
-                  {/* Always the same answer, whether or not that address has an account: a
-                      different one would tell a stranger who is a customer. */}
-                  {mode === "forgot" && resetSent && (
-                    <p className="onb-note" role="status">
-                      If there&apos;s a BuildFlow account for <b>{email.trim()}</b>, a reset link is on its way. It works for one hour.
-                    </p>
-                  )}
-                  {errors.form && (
-                    <p className="onb-error" role="alert">
-                      {errors.form}
-                    </p>
-                  )}
-                </div>
-                <div className="onb-actions">
-                  {!(mode === "forgot" && resetSent) && (
-                    <button type="submit" className="onb-btn onb-btn-primary" disabled={busy}>
-                      {busy ? (mode === "forgot" ? "Sending…" : "Signing in…") : mode === "forgot" ? "Send reset link" : "Sign in"}
-                    </button>
-                  )}
-                  {mode === "login" && anyProvider && (
-                    <div className="onb-oauth">
-                      <span>or continue with</span>
-                      <div>
-                        {oauth.google && (
-                          <button type="button" onClick={() => startWithProvider("google")}>
-                            Google
-                          </button>
-                        )}
-                        {oauth.microsoft && (
-                          <button type="button" onClick={() => startWithProvider("microsoft")}>
-                            Microsoft
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {mode === "forgot" ? (
-                    <button type="button" className="onb-link" onClick={backToLogin}>
-                      Back to sign in
-                    </button>
-                  ) : (
-                    <p className="onb-alt">
-                      New to BuildFlow?{" "}
-                      <button type="button" className="onb-link" onClick={onSwitchToSignup}>
-                        Create an account
-                      </button>
-                    </p>
-                  )}
-                </div>
-                <p className="onb-legal">
-                  By continuing, you agree to the <a href="#terms">Terms &amp; Conditions</a> and <a href="#privacy">Privacy Policy</a>.
-                </p>
-              </Beats>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <aside className="onb-aside">
-        {/* The Dashboard, because that is where this lands. `signingInAs` is the address as it
-            is typed — the only thing known about this person before they are through. */}
+    <AuthShell
+      id="create-account"
+      onBack={onBack}
+      paneKey={mode}
+      leaving={leaving}
+      preview={
+        /* The Dashboard, because that is where signing in lands. `signingInAs` is the address as
+           it is typed — the only thing known about this person before they are through. */
         <OnboardingPreview step={1} firstName="" lastName="" businessName="" trade={null} revenueLabel={null} teamLabel={null} signingInAs={email.trim()} />
-      </aside>
-    </main>
+      }
+    >
+      <form className="onb-form" onSubmit={submit} noValidate>
+        <Beats>
+          <h1 className="onb-h1" id="onb-title">
+            {mode === "forgot" ? "Reset your password." : "Welcome back."}
+          </h1>
+          <p className="onb-sub">
+            {mode === "forgot"
+              ? "Enter the email you signed up with and we'll send a link to choose a new password."
+              : "Sign in to your production workspace."}
+          </p>
+          <div className="onb-field">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              className={`onb-input${errors.email ? " is-invalid" : ""}`}
+              type="email"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setResetSent(false);
+                clear("email");
+              }}
+              autoComplete="email"
+              placeholder="name@company.com"
+              aria-invalid={errors.email ? true : undefined}
+              autoFocus
+            />
+            {errors.email && (
+              <p className="onb-error" role="alert">
+                {errors.email}
+              </p>
+            )}
+          </div>
+          {mode === "login" && (
+            <PasswordField
+              id="login-password"
+              label="Password"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                clear("password");
+              }}
+              placeholder="Your password"
+              autoComplete="current-password"
+              error={errors.password}
+              action={
+                <button
+                  type="button"
+                  className="onb-link onb-link-quiet"
+                  onClick={() => {
+                    setErrors({});
+                    go("forgot");
+                  }}
+                >
+                  Forgot password?
+                </button>
+              }
+            />
+          )}
+          {mode === "login" && (
+            <label className="onb-check">
+              <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+              <span>Keep me signed in for 30 days</span>
+            </label>
+          )}
+          <div className="onb-form-note">
+            {/* Always the same answer, whether or not that address has an account: a
+                different one would tell a stranger who is a customer. */}
+            {mode === "forgot" && resetSent && (
+              <p className="onb-note" role="status">
+                If there&apos;s a BuildFlow account for <b>{email.trim()}</b>, a reset link is on its way. It works for one hour.
+              </p>
+            )}
+            {errors.form && (
+              <p className="onb-error" role="alert">
+                {errors.form}
+              </p>
+            )}
+          </div>
+          <div className="onb-actions">
+            {!(mode === "forgot" && resetSent) && (
+              <button type="submit" className="onb-btn onb-btn-primary" disabled={busy}>
+                {busy ? (mode === "forgot" ? "Sending…" : "Signing in…") : mode === "forgot" ? "Send reset link" : "Sign in"}
+              </button>
+            )}
+            {mode === "login" && anyProvider && (
+              <div className="onb-oauth">
+                <span>or continue with</span>
+                <div>
+                  {oauth.google && (
+                    <button type="button" onClick={() => startWithProvider("google")}>
+                      Google
+                    </button>
+                  )}
+                  {oauth.microsoft && (
+                    <button type="button" onClick={() => startWithProvider("microsoft")}>
+                      Microsoft
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {mode === "forgot" ? (
+              <button type="button" className="onb-link" onClick={backToLogin}>
+                Back to sign in
+              </button>
+            ) : (
+              <p className="onb-alt">
+                New to BuildFlow?{" "}
+                <button type="button" className="onb-link" onClick={onSwitchToSignup}>
+                  Create an account
+                </button>
+              </p>
+            )}
+          </div>
+          <p className="onb-legal">
+            By continuing, you agree to the <a href="#terms">Terms &amp; Conditions</a> and <a href="#privacy">Privacy Policy</a>.
+          </p>
+        </Beats>
+      </form>
+    </AuthShell>
   );
 }

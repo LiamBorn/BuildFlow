@@ -37,7 +37,7 @@
   --onb-peach: linear-gradient(180deg, #fdebda 0%, #fdebda 40%, #f9e3ef 68%, #c9d0f5 100%);
   --onb-plan-bg: linear-gradient(180deg, #ddfad6 0%, #ddfad6 40%, #f8ecd0 70%, #d3b5de 100%);
   --onb-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  /* how far the question block sits below the progress; `.onb-login` adds the progress block's
+  /* how far the question block sits below the progress; `.onb-solo` adds the progress block's
      own height back, and the phone rule at the end restates both — a token, because a
      class-on-class selector would otherwise outrank a media query's single class at every width */
   --onb-pane-top: clamp(48px, 11vh, 96px);
@@ -152,11 +152,12 @@
   color: var(--onb-sub);
 }
 
-/* SIGNING IN sits on the same page as signing up, minus the progress block — it is not a step
-   of five. That block is 25px tall (the counter's line plus the bar and its margin, measured),
+/* A SINGLE SCREEN — signing in, and the three an emailed link lands on — sits on the same page
+   as the five-step flow, minus the progress block none of them is part of. That block is 25px
+   tall (the counter's line plus the bar and its margin, measured),
    so the pane takes those pixels back and the heading lands where the flow's does: measured at
    the same y=192 on both, so moving between the two does not shift the page under the reader. */
-.onb-login {
+.onb-solo {
   --onb-pane-top: calc(clamp(48px, 11vh, 96px) + 25px);
 }
 
@@ -192,6 +193,180 @@
 .onb-note b {
   font-weight: 600;
   color: var(--onb-ink);
+}
+
+/* how strong the password being CHOSEN is — the shared policy's own reading (passwordStrength),
+   shown where one is being set and not where one is being typed back in */
+.onb-strength {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.onb-strength-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.onb-strength-bar span {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--onb-track);
+  transition: background-color var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+/* filled left to right, and the fill says which of the four it is: two reds, then the ink the
+   rest of this page is written in — no green, because "strong" is the resting state here */
+.onb-strength[data-score="1"] .onb-strength-bar span:nth-child(-n + 1),
+.onb-strength[data-score="2"] .onb-strength-bar span:nth-child(-n + 2) {
+  background: var(--onb-danger);
+}
+.onb-strength[data-score="3"] .onb-strength-bar span:nth-child(-n + 3),
+.onb-strength[data-score="4"] .onb-strength-bar span {
+  background: var(--onb-ink);
+}
+.onb-strength-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--onb-hint);
+}
+.onb-strength-label b {
+  font-weight: 600;
+  color: var(--onb-ink-soft);
+}
+
+/* an address the page may show but not change — the invite was issued to it */
+.onb-input.is-readonly {
+  background: var(--onb-selected);
+  color: var(--onb-ink-soft);
+  cursor: default;
+}
+
+/* ── the invite step: a row per teammate — address, what they may do, and a way to drop it ── */
+.onb-invites {
+  display: grid;
+  gap: 10px;
+}
+.onb-invite-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 124px 42px;
+  gap: 8px;
+  align-items: center;
+}
+/* a row's complaint is its own last line, spanning the row — see Beats.tsx for why it lives inside */
+.onb-invite-error {
+  grid-column: 1 / -1;
+}
+.onb-select {
+  position: relative;
+}
+.onb-select select {
+  padding-right: 34px;
+  cursor: pointer;
+}
+.onb-select svg {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  translate: 0 -50%;
+  color: var(--onb-sub);
+  pointer-events: none;
+}
+/* The access level opens the program's own list (components/ui/selectMenu.tsx), which hands
+   focus back to the control when a choice is made. Chrome counts that programmatic focus as
+   focus-visible, so after a MOUSE choice the control would light up with a ring it never had —
+   the thing skin §55 keeps off every dropdown in the app. The list marks that one focus
+   `data-bfsel-quiet`; a keyboard-opened list is never marked, so the ring still shows there. */
+.onb-select select[data-bfsel-quiet]:focus {
+  border-color: var(--onb-line-strong);
+  box-shadow: none;
+}
+.onb-invite-remove {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--onb-line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--onb-sub);
+  cursor: pointer;
+  transition:
+    border-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    color var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.onb-invite-remove:hover {
+  border-color: var(--onb-line-strong);
+  color: var(--onb-ink);
+}
+.onb-invite-remove svg {
+  width: 15px;
+  height: 15px;
+}
+/* the last row cannot be removed, but keeps its column so the grid does not reflow under it */
+.onb-invite-remove.is-spacer {
+  visibility: hidden;
+}
+/* flush with the inputs above it. Two classes, because `.onb-link` is declared further down this
+   sheet and its 8px side padding won on source order — measured, it set the text 8px in. */
+.onb-invites .onb-invite-add {
+  justify-self: start;
+  padding: 2px 0;
+}
+
+/* what happened to each address, once sent */
+.onb-results {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.onb-results li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--onb-line);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.onb-results b {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.onb-results span {
+  flex: none;
+  font-size: 12px;
+  color: var(--onb-ink-soft);
+}
+.onb-results li[data-status="held"] span {
+  color: var(--onb-sub);
+}
+.onb-results li[data-status="skipped"] span {
+  color: var(--onb-danger);
+}
+
+/* a label that is there for a screen reader: the invite rows are labelled by their placeholder's
+   meaning visually, and by "Email 1" / "Access level 1" to anyone who cannot see the row */
+.onb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* the fine print under the way in */
@@ -792,6 +967,58 @@
   color: var(--onb-hint);
 }
 
+/* the invite step: the people being invited queue into a tray at the card's foot as their
+   addresses are typed — the same row the account line uses, one per person */
+.onb-mock-invites {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  gap: 8px;
+  padding: 12px 18px 14px;
+  border-top: 1px solid #ececec;
+  background: #ffffff;
+}
+.onb-mock-invites-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--onb-hint);
+}
+.onb-mock-invite {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  animation: onb-in var(--bfm-dur-fast) var(--bfm-ease-out) both;
+}
+.onb-mock-invite .onb-mock-avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+.onb-mock-invite b {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.onb-mock-invite i {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #efefef;
+  font-size: 10.5px;
+  font-style: normal;
+  color: var(--onb-ink-soft);
+}
+.onb-mock-invites-more {
+  font-size: 11px;
+  color: var(--onb-sub);
+}
+
 /* step 1: the account row under the Dashboard, written as the name is typed */
 .onb-mock-user {
   position: absolute;
@@ -1000,7 +1227,8 @@
   }
   .onb-tile.is-on > svg,
   .onb-tile-check,
-  .onb-mock-chip.is-live {
+  .onb-mock-chip.is-live,
+  .onb-mock-invite {
     animation: none;
   }
   .onb-beat,
@@ -1030,7 +1258,7 @@
   .onb {
     --onb-pane-top: 32px;
   }
-  .onb-login {
+  .onb-solo {
     --onb-pane-top: 57px; /* the same 25px of progress block, over the phone's own 32px */
   }
   .onb-tiles {
@@ -1040,5 +1268,8 @@
 @media (max-width: 420px) {
   .onb-row2 {
     grid-template-columns: 1fr;
+  }
+  .onb-invite-row {
+    grid-template-columns: minmax(0, 1fr) 104px 42px;
   }
 }
