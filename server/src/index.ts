@@ -35,6 +35,12 @@ const server = app.listen(port, () => {
   reportBillingStatus(); // logs Stripe billing mode (or NOT CONFIGURED)
   reportAiStatus(); // logs BuildFlow AI LIVE (Claude) vs DEMO MODE
   reportNotifyStatus(); // logs notification channels (email/SMS/push) + recipients
+  // Says out loud whether the auth limits hold across instances or only within this one.
+  console.log(
+    app.locals.rateLimitBackend === "redis"
+      ? "🚦 Rate limits: shared via REDIS_URL (they hold across every API instance)."
+      : "🚦 Rate limits: in this process only — set REDIS_URL to share them across instances."
+  );
 
   // Data layer: versioned schema + backups. A boot snapshot gives a restore point
   // each start; BACKUP_INTERVAL_MIN>0 adds periodic snapshots. Retained per

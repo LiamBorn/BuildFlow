@@ -46,7 +46,7 @@ import type { ScheduleAssignment, ScheduleLiveEvent } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
-import { createRateLimiter, createLoginGuard, humanSeconds } from "./rateLimit.js";
+import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds } from "./rateLimit.js";
 import {
   OAUTH_COOKIE,
   OAUTH_STATE_TTL_MS,
@@ -682,9 +682,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     return { emails: [...new Set(emails)], phones };
   };
 
-  // Auth abuse controls — per process, per app instance (see rateLimit.ts).
-  const limiter = createRateLimiter();
-  const loginGuard = createLoginGuard();
+  /* Auth abuse controls. One backend shared by both, so the sign-in cap and the per-email
+     lock are counted in the same place: Redis when REDIS_URL is set — which is what makes
+     the limits hold across more than one API instance — and in this process otherwise.
+     See rateLimit.ts, including why an unreachable Redis falls back rather than refusing. */
+  const limitBackend = createBackendFromEnv();
+  const limiter = createRateLimiter(limitBackend);
+  const loginGuard = createLoginGuard(limitBackend);
   const HOUR = 60 * 60 * 1000;
   const QUARTER = 15 * 60 * 1000;
   const VERIFY_TTL_MS = 24 * HOUR;
@@ -751,6 +755,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   installRoutePolicy(app);
   // Expose the store manager to the server entrypoint (backup scheduler/boot snapshot) + ops routes.
   app.locals.storeManager = manager;
+  // So the entrypoint can say at boot whether the auth limits are shared or per-process.
+  app.locals.rateLimitBackend = limitBackend.kind;
   const clientUrl = process.env.BUILDFLOW_CLIENT_URL ?? "http://localhost:5175/";
 
   // Cross-origin cookies require an explicit origin + credentials (NOT "*").
@@ -1096,7 +1102,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.status(201).json(sessionPayload(account, org));
   });
 
-  app.post("/api/auth/login", limiter.byIp("login", 30, QUARTER), (req, res) => {
+  app.post("/api/auth/login", limiter.byIp("login", 30, QUARTER), async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Enter your email and password." });
@@ -1104,7 +1110,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     // Five wrong passwords lock the email for fifteen minutes — the answer is
     // the same whether or not the account exists, so this reveals nothing.
-    const locked = loginGuard.lockedFor(parsed.data.email);
+    const locked = await loginGuard.lockedFor(parsed.data.email);
     if (locked > 0) {
       res.setHeader("Retry-After", String(locked));
       res
@@ -1114,11 +1120,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     const row = mainStore.getAccountRowByEmail(parsed.data.email);
     if (!row || !verifyPassword(parsed.data.password, row.passwordHash)) {
-      loginGuard.noteFailure(parsed.data.email);
+      await loginGuard.noteFailure(parsed.data.email);
       res.status(401).json({ error: "Incorrect email or password." });
       return;
     }
-    loginGuard.clear(parsed.data.email);
+    await loginGuard.clear(parsed.data.email);
     const org = mainStore.getOrg(row.orgId);
     if (!org) {
       res.status(500).json({ error: "Account workspace is missing." });
@@ -1421,7 +1427,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         return;
       }
       const account = mainStore.markEmailVerified(existing.id) ?? toAccount(existing);
-      loginGuard.clear(account.email);
+      await loginGuard.clear(account.email);
       issueSession(res, account, org, saved.remember);
       res.redirect(`${returnTo}/?oauth=login`);
       return;
@@ -1519,7 +1525,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     const email = parsed.data.email.toLowerCase();
-    const perEmail = limiter.hit("reset-email", email, 3, HOUR);
+    const perEmail = await limiter.hit("reset-email", email, 3, HOUR);
     const row = perEmail.ok ? mainStore.getAccountRowByEmail(email) : undefined;
     let debugToken: string | undefined;
     if (row) {
@@ -1536,7 +1542,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   // The link in the email lands here with the new password.
-  app.post("/api/auth/reset", limiter.byIp("reset", 20, QUARTER), (req, res) => {
+  app.post("/api/auth/reset", limiter.byIp("reset", 20, QUARTER), async (req, res) => {
     const parsed = z.object({ token: z.string().min(1), password: z.string().min(PASSWORD_MIN_LENGTH).max(200) }).safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`, field: "password" });
@@ -1556,7 +1562,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     mainStore.setAccountPassword(account.id, parsed.data.password);
-    loginGuard.clear(account.email);
+    await loginGuard.clear(account.email);
     // Following the emailed link proves the address, so count it as verified.
     const verified = mainStore.markEmailVerified(account.id) ?? account;
     const org = mainStore.getOrg(verified.orgId);
