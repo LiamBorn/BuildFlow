@@ -362,6 +362,9 @@ const feedbackSchema = z.object({
    newline, or nothing at all. Reduce it to something a mail client can write to disk. */
 function safeFileName(raw: string) {
   const cleaned = raw
+    // A newline in a file name is how a header gets injected into the mail below, so
+    // matching this control range IS the point rather than an oversight.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, "")
     .replace(/[\\/]+/g, "-")
     .replace(/^\.+/, "")
