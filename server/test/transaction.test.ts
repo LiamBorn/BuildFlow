@@ -99,7 +99,10 @@ describe("transactional writes", () => {
     const boot = await agent.get("/api/bootstrap").expect(200);
     const job = boot.body.jobs[0] as JobRow;
 
-    const writes = vi.spyOn(fs, "writeFileSync");
+    // save() publishes by renaming a temp file over the data file, so the rename is the
+    // moment the database is rewritten — and counting it is what counting writeFileSync
+    // used to be, before the write was made atomic.
+    const writes = vi.spyOn(fs, "renameSync");
     try {
       // A patch carrying no writable column is a no-op, and a no-op is not worth exporting the
       // whole SQLite image and writing it to disk — which committing a transaction always does.
@@ -126,7 +129,7 @@ describe("transactional writes", () => {
     ).toThrow("boom");
     expect(store.crews()).toHaveLength(crews);
 
-    const writes = vi.spyOn(fs, "writeFileSync");
+    const writes = vi.spyOn(fs, "renameSync"); // the atomic publish; one per save
     try {
       store.transaction(() => {
         store.createCrew(crew("Crew inside")); // createCrew saves on its own; inside a transaction that waits for the commit

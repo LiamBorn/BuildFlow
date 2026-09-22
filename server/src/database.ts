@@ -1311,7 +1311,43 @@ export class BuildFlowStore {
 
   private save() {
     if (this.inTransaction) return;
-    fs.writeFileSync(this.dataFile, Buffer.from(this.db.export()));
+    const data = Buffer.from(this.db.export());
+    /**
+     * Published atomically, because sql.js has no incremental write: every save re-exports
+     * and rewrites the WHOLE file, and there are ~80 call sites, so this runs constantly.
+     *
+     * Written straight to this.dataFile, that is a truncate followed by a write — which
+     * leaves a window, on every single save, where losing the process (a deploy's SIGTERM,
+     * an OOM, an uncaught throw) leaves a half-written SQLite file behind. For a tenant
+     * store that file is the only copy of their data, and the boot backup would then copy
+     * the damage forward.
+     *
+     * Writing a sibling temp file and renaming over the target closes the window: rename
+     * within one directory is atomic, so anything reading the path — the next boot, a
+     * backup, another process — sees either the whole old file or the whole new one, never
+     * a torn one. The fsync is what makes that promise survive more than a crashed process:
+     * it costs a flush per save, which is the right trade against the only copy of a
+     * customer's schedule. The temp name carries the pid so two processes pointed at one
+     * data directory cannot publish each other's half-written file.
+     */
+    const tmp = `${this.dataFile}.tmp-${process.pid}`;
+    try {
+      const fd = fs.openSync(tmp, "w");
+      try {
+        fs.writeSync(fd, data);
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+      fs.renameSync(tmp, this.dataFile);
+    } catch (error) {
+      try {
+        fs.unlinkSync(tmp);
+      } catch {
+        /* nothing to clean up */
+      }
+      throw error;
+    }
   }
 
   /**
