@@ -29,7 +29,7 @@ process.on("uncaughtException", (error) => {
 const port = Number(process.env.PORT ?? 4300);
 const app = await createApp();
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`BuildFlow API listening on http://localhost:${port}`);
   void reportMailStatus(); // logs LIVE (verified) vs LOG MODE + anything missing
   reportBillingStatus(); // logs Stripe billing mode (or NOT CONFIGURED)
@@ -74,3 +74,35 @@ app.listen(port, () => {
     console.log("📬 Weekly digest: OFF (WEEKLY_DIGEST=off).");
   }
 });
+
+/**
+ * Shut down on a deploy's signal instead of being killed mid-request.
+ *
+ * Nothing handled SIGTERM, so a restart dropped every connection that was open and cut the
+ * process off wherever it happened to be — including inside a store's save, which is a
+ * whole-file rewrite. (That write is now atomic, so an interrupted one can no longer leave a
+ * torn database; this is the other half — finishing the work already in flight rather than
+ * relying on the write being safe to interrupt.)
+ *
+ * Idle keep-alive sockets are closed at once, because they hold `server.close()` open while
+ * doing nothing; requests actually being served are allowed to finish. The timer is the
+ * backstop for a request that never ends, and is unref'd so it cannot itself keep the
+ * process alive.
+ */
+let shuttingDown = false;
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.on(signal, () => {
+    if (shuttingDown) return; // a second Ctrl-C should not race the first
+    shuttingDown = true;
+    console.log(`\n[server] ${signal} — finishing in-flight requests, then closing.`);
+    server.closeIdleConnections();
+    server.close(() => {
+      console.log("[server] closed cleanly.");
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.warn("[server] still busy after 10s — exiting anyway.");
+      process.exit(1);
+    }, 10_000).unref();
+  });
+}
