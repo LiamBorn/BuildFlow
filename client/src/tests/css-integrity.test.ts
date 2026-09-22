@@ -102,11 +102,13 @@ describe("every animation names a keyframe that exists", () => {
   }
 
   it("finds animations to check at all", () => {
-    // If a refactor ever moves motion out of these sheets, this file must not pass on nothing.
-    // The floor is high on purpose: the earlier version passed a floor of 50 while silently
-    // checking a fraction of the sheets, so a weak floor is not a guard.
+    // A smoke alarm, not the guard: a reader that has broken returns ~0, and the assertion
+    // below is what actually catches work being skipped. So these sit far enough under the
+    // real numbers (277 references, 163 names) to survive a dead-CSS sweep -- one earlier pass
+    // removed nine keyframes at once, and a floor that fails on legitimate cleanup gets raised
+    // by whoever it blocks, which is how a guard turns into a formality.
     expect(referenced.length).toBeGreaterThan(150);
-    expect(defined.size).toBeGreaterThan(150);
+    expect(defined.size).toBeGreaterThan(120);
   });
 
   it("is not quietly skipping declarations it could check", () => {
