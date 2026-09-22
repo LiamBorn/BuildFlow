@@ -1398,12 +1398,27 @@ export class BuildFlowStore {
    *  pruning to the newest `retain`. Returns the backup file path. */
   backup(retain = 20): string {
     this.save(); // snapshot the latest in-memory state to disk first
-    const dir = path.join(path.dirname(this.dataFile), "backups");
+    return BuildFlowStore.backupFile(this.dataFile, retain);
+  }
+
+  /**
+   * Snapshot a database file that no store has open.
+   *
+   * For a store that is not loaded, the file on disk IS its current state, so copying it is
+   * a complete backup — and the only correct way to take one. Opening it to call backup()
+   * would read a whole database into memory, migrate it to the current schema and write it
+   * back, which is a modification made as the side effect of taking a backup.
+   *
+   * Same naming and the same retention as an open store's snapshot, so the restore CLI
+   * cannot tell the two apart and neither does anything else.
+   */
+  static backupFile(file: string, retain = 20): string {
+    const dir = path.join(path.dirname(file), "backups");
     fs.mkdirSync(dir, { recursive: true });
-    const base = path.basename(this.dataFile, path.extname(this.dataFile));
+    const base = path.basename(file, path.extname(file));
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const dest = path.join(dir, `${base}-${stamp}.sqlite`);
-    fs.copyFileSync(this.dataFile, dest);
+    fs.copyFileSync(file, dest);
     // ISO timestamps sort chronologically — drop all but the newest `retain`.
     const mine = fs
       .readdirSync(dir)
@@ -1417,6 +1432,19 @@ export class BuildFlowStore {
       }
     }
     return dest;
+  }
+
+  /** The newest existing snapshot of `file`, or undefined if it has never been backed up. */
+  static newestBackupOf(file: string): string | undefined {
+    const dir = path.join(path.dirname(file), "backups");
+    if (!fs.existsSync(dir)) return undefined;
+    const base = path.basename(file, path.extname(file));
+    const mine = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith(`${base}-`) && f.endsWith(".sqlite"))
+      .sort();
+    const newest = mine[mine.length - 1];
+    return newest ? path.join(dir, newest) : undefined;
   }
 
   private getUserVersion(): number {

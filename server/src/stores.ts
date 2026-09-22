@@ -18,6 +18,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { BuildFlowStore, DEMO_ORG_ID } from "./database.js";
 
+/** Whether two files hold the same bytes. Size first, because it settles most cases without
+ *  reading anything. */
+function sameContents(a: string, b: string): boolean {
+  try {
+    if (fs.statSync(a).size !== fs.statSync(b).size) return false;
+    return fs.readFileSync(a).equals(fs.readFileSync(b));
+  } catch {
+    return false; // unreadable either side → take the backup rather than skip it
+  }
+}
+
 export class StoreManager {
   private readonly cache = new Map<string, BuildFlowStore>();
   private readonly dataDir: string;
@@ -91,16 +102,51 @@ export class StoreManager {
     return this.cache.has(orgId) || fs.existsSync(path.join(this.dataDir, `org-${orgId}.sqlite`));
   }
 
-  /** Snapshot every open store (main + each accessed tenant) into data/backups/,
-   *  each pruned to the newest `retain`. Returns the backup file paths written.
-   *  Cold tenant files that haven't been opened this process are static on disk
-   *  and covered by a filesystem-level backup of the data directory. */
+  /** Snapshot every workspace into data/backups/ — the open stores by saving and copying,
+   *  the rest by copying the file — each pruned to the newest `retain`. Returns the paths
+   *  written, which omits any cold file already identical to its newest snapshot. */
   backupAll(retain?: number): string[] {
     const written: string[] = [];
+    const open = new Set<string>();
     for (const store of new Set(this.cache.values())) {
+      open.add(store.dataFilePath);
       written.push(store.backup(retain));
     }
+
+    /**
+     * Then every tenant file that no store has open.
+     *
+     * This used to walk the cache alone, and at boot the cache holds only the main store —
+     * so a tenant was snapshotted only if someone happened to sign into it during that
+     * process's life AND a backup ran afterwards. On this machine that left 19 of 20
+     * workspace databases, 8.8MB of customer data, with no backup the app had ever taken.
+     * The comment that used to sit here said cold files were "covered by a filesystem-level
+     * backup of the data directory", which is an assumption about somebody else's ops, not
+     * a backup.
+     *
+     * Copied, never opened: a cold file is already its own current state, and opening it
+     * would load a database into memory and migrate it just to take a copy.
+     *
+     * A cold file has not changed since its last snapshot almost by definition, so an
+     * identical one is skipped. Otherwise every boot would file twenty more copies of the
+     * same bytes and push genuinely older states out of the retention window.
+     */
+    for (const file of this.tenantFilesOnDisk()) {
+      if (open.has(file)) continue;
+      const newest = BuildFlowStore.newestBackupOf(file);
+      if (newest && sameContents(file, newest)) continue;
+      written.push(BuildFlowStore.backupFile(file, retain));
+    }
     return written;
+  }
+
+  /** Every `org-<id>.sqlite` in the data directory — the naming getOrgStore() writes. */
+  private tenantFilesOnDisk(): string[] {
+    if (!fs.existsSync(this.dataDir)) return [];
+    return fs
+      .readdirSync(this.dataDir)
+      .filter((f) => f.startsWith("org-") && f.endsWith(".sqlite"))
+      .map((f) => path.join(this.dataDir, f));
   }
 
   /**
