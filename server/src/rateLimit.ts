@@ -145,7 +145,15 @@ export type RedisLike = { command(...args: (string | number)[]): Promise<RedisVa
  * the script promises all lead to the same place. `onFallback` is called so the decision
  * is visible in the log rather than silently changing the server's behaviour.
  */
-export function createRedisBackend(client: RedisLike, fallback: LimitBackend, onFallback?: (error: Error) => void): LimitBackend {
+export type RedisBackendOptions = {
+  /** Namespaces every key. Instances that should share a count must share this. */
+  keyPrefix?: string;
+  onFallback?: (error: Error) => void;
+};
+
+export function createRedisBackend(client: RedisLike, fallback: LimitBackend, options: RedisBackendOptions = {}): LimitBackend {
+  const prefix = options.keyPrefix ?? "bf:";
+  const onFallback = options.onFallback;
   const guard = async <T>(work: () => Promise<T>, instead: () => Promise<T>): Promise<T> => {
     try {
       return await work();
@@ -160,7 +168,7 @@ export function createRedisBackend(client: RedisLike, fallback: LimitBackend, on
     hit: (bucket, key, max, windowMs) =>
       guard(
         async () => {
-          const reply = await client.command("EVAL", HIT_SCRIPT, 1, `bf:rl:${bucket}:${key}`, Date.now(), windowMs, max, member());
+          const reply = await client.command("EVAL", HIT_SCRIPT, 1, `${prefix}rl:${bucket}:${key}`, Date.now(), windowMs, max, member());
           if (!Array.isArray(reply)) throw new Error("unexpected reply");
           return { ok: Number(reply[0]) === 1, retryAfterSec: Number(reply[1] ?? 0) };
         },
@@ -169,7 +177,7 @@ export function createRedisBackend(client: RedisLike, fallback: LimitBackend, on
     lockedFor: (email, lockMs) =>
       guard(
         async () => {
-          const ttl = await client.command("PTTL", `bf:lg:lock:${normaliseEmail(email)}`);
+          const ttl = await client.command("PTTL", `${prefix}lg:lock:${normaliseEmail(email)}`);
           const ms = Number(ttl);
           return ms > 0 ? Math.ceil(ms / 1000) : 0;
         },
@@ -183,8 +191,8 @@ export function createRedisBackend(client: RedisLike, fallback: LimitBackend, on
             "EVAL",
             FAILURE_SCRIPT,
             2,
-            `bf:lg:fail:${key}`,
-            `bf:lg:lock:${key}`,
+            `${prefix}lg:fail:${key}`,
+            `${prefix}lg:lock:${key}`,
             Date.now(),
             windowMs,
             threshold,
@@ -198,7 +206,7 @@ export function createRedisBackend(client: RedisLike, fallback: LimitBackend, on
       guard(
         async () => {
           const key = normaliseEmail(email);
-          await client.command("DEL", `bf:lg:fail:${key}`, `bf:lg:lock:${key}`);
+          await client.command("DEL", `${prefix}lg:fail:${key}`, `${prefix}lg:lock:${key}`);
         },
         () => fallback.clear(email)
       )
@@ -216,10 +224,20 @@ export function createBackendFromEnv(env: NodeJS.ProcessEnv = process.env): Limi
   if (!url) return memory;
   let complained = false;
   const client = RedisClient.fromUrl(url);
-  return createRedisBackend(client, memory, (error) => {
-    if (complained) return; // one line, not one per request
-    complained = true;
-    console.error(`[ratelimit] Redis unavailable (${error.message}); counting per-process until it returns.`);
+  /* Under test every createApp() would otherwise share one namespace, and the suite's own
+     sign-ups would eat the 10-per-hour signup cap between them — 49 tests failed with 429
+     the first time the suite was run against a real Redis. A namespace per app keeps the
+     tests independent while still exercising the Redis path through the real routes. The
+     cross-instance property is proved where it belongs, by the tests that deliberately
+     point two backends at one prefix. */
+  const keyPrefix = env.NODE_ENV === "test" ? `bf-test:${crypto.randomBytes(6).toString("hex")}:` : "bf:";
+  return createRedisBackend(client, memory, {
+    keyPrefix,
+    onFallback: (error) => {
+      if (complained) return; // one line, not one per request
+      complained = true;
+      console.error(`[ratelimit] Redis unavailable (${error.message}); counting per-process until it returns.`);
+    }
   });
 }
 

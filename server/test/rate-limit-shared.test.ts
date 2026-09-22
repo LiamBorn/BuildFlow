@@ -173,7 +173,7 @@ describe("when Redis is not there", () => {
    */
   it("counts in this process instead, and says so once rather than once per request", async () => {
     const complaints: string[] = [];
-    const backend = createRedisBackend(broken, createMemoryBackend(), (e) => complaints.push(e.message));
+    const backend = createRedisBackend(broken, createMemoryBackend(), { onFallback: (e) => complaints.push(e.message) });
 
     expect((await backend.hit("signup", "1.2.3.4", 2, 60_000)).ok).toBe(true);
     expect((await backend.hit("signup", "1.2.3.4", 2, 60_000)).ok).toBe(true);
