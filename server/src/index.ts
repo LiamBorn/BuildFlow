@@ -64,6 +64,21 @@ const server = app.listen(port, () => {
     console.log("🗄️  Backup: periodic OFF (set BACKUP_INTERVAL_MIN>0); on-demand: POST /api/ops/backup.");
   }
 
+  /* Sweep expired sessions and one-time auth tokens. Nothing removed these before, and
+     because save() rewrites the whole database file, rows nobody can use any more are paid
+     for by every later write rather than merely taking up space. Once at boot, then daily;
+     unref'd so it never holds the process open, and silent when it finds nothing. */
+  const sweep = (label: string) => {
+    try {
+      const { sessions, tokens } = manager.pruneExpiredAuthAll();
+      if (sessions || tokens) console.log(`🧹 Auth ${label}: removed ${sessions} expired session(s), ${tokens} token(s).`);
+    } catch (error) {
+      console.error(`🧹 Auth ${label} failed:`, error instanceof Error ? error.message : error);
+    }
+  };
+  sweep("sweep");
+  setInterval(() => sweep("sweep"), 24 * 60 * 60_000).unref();
+
   // Monday's "what changed this week" email, once per org (WEEKLY_DIGEST=off, DIGEST_WEEKDAY, DIGEST_HOUR).
   if ((process.env.WEEKLY_DIGEST ?? "on").toLowerCase() !== "off") {
     startWeeklyDigestScheduler(manager);

@@ -102,4 +102,26 @@ export class StoreManager {
     }
     return written;
   }
+
+  /**
+   * Sweep expired sessions and auth tokens out of every open store.
+   *
+   * Those tables are global and so live in the main store; the tenant files carry the same
+   * schema but leave them empty, where the sweep counts zero and writes nothing. Running
+   * it across the open set rather than the main store alone costs nothing and means the
+   * rule does not have to be re-checked if a table ever moves.
+   *
+   * Cold tenant files are left alone deliberately: opening one to delete nothing would
+   * load a whole database into memory and write it back out, which is the opposite of what
+   * this is for.
+   */
+  pruneExpiredAuthAll(): { sessions: number; tokens: number } {
+    const total = { sessions: 0, tokens: 0 };
+    for (const store of new Set(this.cache.values())) {
+      const pruned = store.pruneExpiredAuth();
+      total.sessions += pruned.sessions;
+      total.tokens += pruned.tokens;
+    }
+    return total;
+  }
 }

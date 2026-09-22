@@ -3207,6 +3207,41 @@ export class BuildFlowStore {
     this.save();
   }
 
+  /**
+   * Delete the auth rows that have expired. Nothing swept these before.
+   *
+   * `getSession` prunes an expired row, but only the one it was just asked about — a
+   * session nobody presents again (a device that never comes back, a cleared cookie) sat
+   * there for good. `consumeAuthToken` marks a token used and never deletes it, so every
+   * password reset, email confirmation and invite left a row behind permanently. Both
+   * tables only grew.
+   *
+   * That costs more here than it would on a normal database: `save()` re-exports and
+   * rewrites the WHOLE file, so dead rows are not merely wasted space — they are paid for
+   * again by every write anywhere in the app, for as long as they sit there.
+   *
+   * Tokens go on expiry whether or not they were used: `consumeAuthToken` already answers
+   * a used token and an unknown one identically, so keeping the row buys nothing. A token
+   * that is used but not yet expired stays until it expires, which keeps this to one rule.
+   *
+   * Counting first is the point of the early return — with no expired rows there is
+   * nothing to write, and calling this on a schedule must not itself rewrite every
+   * tenant's database file for no reason.
+   */
+  pruneExpiredAuth(): { sessions: number; tokens: number } {
+    const now = new Date().toISOString();
+    const countExpired = (table: "sessions" | "auth_tokens") =>
+      this.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table} WHERE expiresAt < ?`, [now])?.n ?? 0;
+    const sessions = countExpired("sessions");
+    const tokens = countExpired("auth_tokens");
+    if (sessions === 0 && tokens === 0) return { sessions: 0, tokens: 0 };
+    this.transaction(() => {
+      this.run("DELETE FROM sessions WHERE expiresAt < ?", [now]);
+      this.run("DELETE FROM auth_tokens WHERE expiresAt < ?", [now]);
+    });
+    return { sessions, tokens };
+  }
+
   /** Idempotently seed the demo org + demo account so the credential-free
       "Preview the live demo" logs into this seeded workspace. */
   seedDemoAccount() {
