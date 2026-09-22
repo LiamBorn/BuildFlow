@@ -30,7 +30,6 @@ import "./field-variance.css";
 import "./topbar-redesign.css";
 import "./ai-film-redesign.css";
 import "./crew-scheduling-redesign.css";
-import "./glyph-portal.css";
 import "./crew-scheduling-apple.css";
 import "./product-overview.css";
 import "./plans-overview.css";
