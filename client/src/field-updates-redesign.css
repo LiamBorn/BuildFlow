@@ -806,28 +806,6 @@
   color: var(--wx-ink);
 }
 
-/* readiness meter — the same rules Materials applies over the styles.css base,
-   so the "Progress" bar reads identically to its "Readiness" one */
-.field-rx .crew-utilization div {
-  color: var(--wx-faint);
-  font-weight: 600;
-}
-.field-rx .crew-utilization strong {
-  color: var(--wx-ink);
-}
-.field-rx .crew-utilization-track {
-  background: var(--wx-bg-2);
-}
-.field-rx .crew-utilization-track::before {
-  background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple));
-}
-.field-rx .crew-utilization-track.orange::before {
-  background: linear-gradient(90deg, #003fe0, #517ff5);
-}
-.field-rx .crew-utilization-track.red::before {
-  background: linear-gradient(90deg, #d93c38, #e8827f);
-}
-
 /* Click-anywhere-to-edit overlay. These rules live in crews-redesign.css scoped
    to `.crew-rx`, so on this page the button was inheriting the UA default and
    painting a grey bar across the top of every card. */

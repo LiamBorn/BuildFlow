@@ -333,11 +333,6 @@
 .proj-rx .project-card-title svg {
   color: var(--wx-faint);
 }
-
-.proj-rx .project-progress-summary {
-  color: var(--wx-mut);
-  font-weight: 600;
-}
 .proj-rx .project-health {
   color: var(--wx-green);
 }
@@ -350,23 +345,6 @@
 }
 .proj-rx .project-health.complete {
   color: var(--wx-blue);
-}
-
-.proj-rx .project-progress-track {
-  background: var(--wx-bg-2);
-}
-.proj-rx .project-progress-track i {
-  background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple));
-}
-.proj-rx .project-progress-track.monitor i {
-  background: linear-gradient(90deg, #003fe0, #517ff5);
-}
-.proj-rx .project-progress-track.at-risk i,
-.proj-rx .project-progress-track.delayIQed i {
-  background: linear-gradient(90deg, #d93c38, #e8827f);
-}
-.proj-rx .project-progress-track.complete i {
-  background: linear-gradient(90deg, var(--wx-g-blue), #7aa7f5);
 }
 
 .proj-rx .project-card-meta span {

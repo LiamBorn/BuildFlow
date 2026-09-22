@@ -1654,15 +1654,6 @@
   color: var(--wx-mut);
 }
 
-/* The stacked "what the AI caught" card fan under the band copy. The cards are
-   transform-offset to the right/down, which does not affect layout, so pull the
-   whole stack left by one step to optically centre it and reserve bottom margin
-   for the part that hangs below the grid box. */
-.welcome-rx .wx-band .wx-band-cards {
-  margin: clamp(48px, 6vw, 80px) auto clamp(104px, 12vw, 150px);
-  transform: translateX(calc(var(--dcx-dx) * -1));
-}
-
 /* ============================ stats ==================================== */
 .welcome-rx .wx-stats {
   display: grid;

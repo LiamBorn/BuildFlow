@@ -153,20 +153,12 @@ describe("every var() resolves to a token that exists", () => {
   }
 
   /**
-   * Known unresolvable tokens, each in a rule whose selector appears in no .ts/.tsx -- so they
-   * are dead CSS awaiting a sweep, not features that are broken. Listed rather than fixed
-   * because a name that nothing renders cannot be verified against an intended appearance, and
-   * guessing one is how a dead rule becomes a live wrong one.
-   *
-   * Deliberately no line numbers: two of these are in a sheet being rewritten, and a stale
-   * number is worse than none. An entry here is not required to still exist -- sweeping the
-   * rule is the point -- but it must not become DECLARED, which the second test below checks.
+   * There is no exception list. There was one -- three tokens read by rules whose selectors
+   * appeared in no .ts/.tsx -- and those 48 dead rules were removed across seven sheets rather
+   * than exempted, so the invariant holds with nothing carved out of it. If a token has to be
+   * listed here again, prefer deleting the rule that reads it: an exemption in a test is a
+   * place for exactly this kind of thing to settle and stay.
    */
-  const KNOWN_DEAD = new Map([
-    ["--project-progress", "styles.css `.project-progress-track i`; the track is rendered nowhere"],
-    ["--crew-progress", "styles.css `.crew-utilization-track::before`; the track is rendered nowhere"],
-    ["--dcx-dx", "welcome-redesign.css `.wx-band-cards`; the landing became FrostLanding.tsx"]
-  ]);
 
   it("finds var() references to check at all", () => {
     expect(bare.length).toBeGreaterThan(100);
@@ -174,12 +166,8 @@ describe("every var() resolves to a token that exists", () => {
   });
 
   it("declares every token that a rule reads without a fallback", () => {
-    const missing = bare.filter((b) => !declared.has(b.name) && !KNOWN_DEAD.has(b.name));
+    const missing = bare.filter((b) => !declared.has(b.name));
     expect(missing.map((m) => `${m.name} (${m.at})`), "read with no fallback, declared nowhere").toEqual([]);
   });
 
-  it("keeps the dead list honest: an entry that has been declared must be removed from it", () => {
-    const nowDeclared = [...KNOWN_DEAD.keys()].filter((k) => declared.has(k));
-    expect(nowDeclared, "declared now, so drop it from KNOWN_DEAD").toEqual([]);
-  });
 });

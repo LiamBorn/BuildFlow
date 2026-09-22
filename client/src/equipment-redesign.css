@@ -367,27 +367,6 @@
   color: var(--wx-mut);
 }
 
-/* utilization */
-.equip-rx .crew-utilization div {
-  color: var(--wx-faint);
-  font-weight: 600;
-}
-.equip-rx .crew-utilization strong {
-  color: var(--wx-ink);
-}
-.equip-rx .crew-utilization-track {
-  background: var(--wx-bg-2);
-}
-.equip-rx .crew-utilization-track::before {
-  background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple));
-}
-.equip-rx .crew-utilization-track.orange::before {
-  background: linear-gradient(90deg, #003fe0, #517ff5);
-}
-.equip-rx .crew-utilization-track.red::before {
-  background: linear-gradient(90deg, #d93c38, #e8827f);
-}
-
 /* detail list */
 .equip-rx .crew-detail-list svg,
 .equip-rx .crew-detail-list dt {

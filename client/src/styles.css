@@ -9042,16 +9042,6 @@ button:disabled {
   color: #7b8da6;
 }
 
-.project-progress-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #6f819a;
-  font-size: 14px;
-  font-weight: 800;
-}
-
 .project-health {
   display: inline-flex;
   align-items: center;
@@ -9078,35 +9068,6 @@ button:disabled {
 
 .project-health.complete {
   color: #1d73ff;
-}
-
-.project-progress-track {
-  display: block;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #edf2f8;
-}
-
-.project-progress-track i {
-  display: block;
-  width: var(--project-progress);
-  height: 100%;
-  border-radius: inherit;
-  background: #2f83ff;
-}
-
-.project-progress-track.monitor i {
-  background: #0b4df5;
-}
-
-.project-progress-track.at-risk i,
-.project-progress-track.delayIQed i {
-  background: #ff3049;
-}
-
-.project-progress-track.complete i {
-  background: #10b981;
 }
 
 .project-card-meta {
@@ -9801,49 +9762,6 @@ button:disabled {
 .crew-status-pill.unavailable {
   background: #eef2f6;
   color: #64748b;
-}
-
-.crew-utilization {
-  display: grid;
-  gap: 10px;
-}
-
-.crew-utilization div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: #71839f;
-  font-weight: 800;
-}
-
-.crew-utilization strong {
-  color: #3d4b62;
-}
-
-.crew-utilization-track {
-  position: relative;
-  display: block;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #edf2f8;
-}
-
-.crew-utilization-track::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: var(--crew-progress);
-  border-radius: inherit;
-  background: #12b981;
-}
-
-.crew-utilization-track.orange::before {
-  background: #0048ff;
-}
-
-.crew-utilization-track.red::before {
-  background: #ff2f45;
 }
 
 .crew-detail-list {

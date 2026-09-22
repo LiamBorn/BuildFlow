@@ -368,27 +368,6 @@
   color: var(--wx-mut);
 }
 
-/* readiness bar */
-.mat-rx .crew-utilization div {
-  color: var(--wx-faint);
-  font-weight: 600;
-}
-.mat-rx .crew-utilization strong {
-  color: var(--wx-ink);
-}
-.mat-rx .crew-utilization-track {
-  background: var(--wx-bg-2);
-}
-.mat-rx .crew-utilization-track::before {
-  background: linear-gradient(90deg, var(--wx-g-blue), var(--wx-g-purple));
-}
-.mat-rx .crew-utilization-track.orange::before {
-  background: linear-gradient(90deg, #003fe0, #517ff5);
-}
-.mat-rx .crew-utilization-track.red::before {
-  background: linear-gradient(90deg, #d93c38, #e8827f);
-}
-
 /* detail list */
 .mat-rx .crew-detail-list svg,
 .mat-rx .crew-detail-list dt {
