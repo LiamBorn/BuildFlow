@@ -1352,7 +1352,9 @@ describe("the Client Desk skin", () => {
     // ring was removed on request, so the animation has no subject (§47b-2)
     // hs-rail-ring went the way of hs-tag-ping: it pulsed a light-gray ring out of a rail
     // icon on hover, which was removed on request, so its keyframes have no subject either
-    for (const name of ["hs-deal-land", "dash-land", "sched-live-flash", "hsg-land", "sx-addon-pulse", "hs-upd-pulse"]) {
+    // (and hs-deal-land, the Deals board's landing ring, left with the Sales category on
+    // 2026-09-22 — docs/backlog.md)
+    for (const name of ["dash-land", "sched-live-flash", "hsg-land", "sx-addon-pulse", "hs-upd-pulse"]) {
       expect(text).toContain(`@keyframes ${name} {`);
     }
     // the setup animation plays outside the shell, so its sheet's own fallbacks carry the accent

@@ -4260,16 +4260,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    transform (a drag) and its hover lift are free — the admin-kit note applies.
    Reduced motion: the page arrives finished.
    ============================================================================ */
-@keyframes bfe-rise {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 @keyframes bfe-row {
   from {
     opacity: 0;
@@ -11508,23 +11498,6 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
    each is redrawn here on the accent or the ink. The setup animation (setup-stage.css) plays
    on the welcome page, OUTSIDE the shell, where the accent tokens do not exist — its fallbacks
    were re-pointed in that sheet itself. */
-@keyframes hs-deal-land {
-  0% {
-    transform: scale(0.96);
-    border-color: var(--bf-accent);
-    box-shadow: 0 0 0 0 rgba(var(--bf-color-accent-rgb), 0.55);
-  }
-  45% {
-    transform: scale(1.025);
-    border-color: var(--bf-accent);
-    box-shadow: 0 0 0 12px rgba(var(--bf-color-accent-rgb), 0);
-  }
-  100% {
-    transform: scale(1);
-    border-color: var(--bf-line-solid);
-    box-shadow: var(--bf-shadow-card);
-  }
-}
 @keyframes dash-land {
   0% {
     box-shadow: 0 0 0 0 rgba(var(--bf-color-accent-rgb), 0.5);
@@ -13792,9 +13765,10 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
       shifts by `--bfm-shift` so that, with the chrome already up, the title
       leads instead of waiting out a rail cascade that has already happened.
 
-   3. This section touches the Dashboard and the chrome, nothing else. The
-      pages that share `bfe-rise` keep it exactly as it was, so the eleven other
-      screens that animate through it are untouched until their own turn.
+   3. This section touches the Dashboard and the chrome, nothing else. (The
+      `bfe-rise` keyframe the pages once shared was left with no subject when
+      they moved to `bfe-lift` and the Dashboard to `bfe-focus`; it was removed
+      on 2026-09-22.)
    ========================================================================= */
 
 /* 74a. the tokens — motion/tokens.ts, printed. Do not hand-edit: regenerate.

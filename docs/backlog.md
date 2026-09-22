@@ -76,7 +76,8 @@ The code, at `4669d61`:
   `components/ui/panelExit.tsx`, and the dropdown/calendar gates in `components/ui/selectMenu.tsx`
   and `dateMenu.tsx` (with the skin's inert-glyph rule and the test that pins the three copies)
 - The skin (`app-shell-client-desk.css`) sections for the Contacts page, the record layer and the
-  Deals board, and four rules in `app-shell-daylight.css`
+  Deals board (and, since the keyframe cleanup that followed, the Deals board's landing ring
+  `@keyframes hs-deal-land`), and four rules in `app-shell-daylight.css`
 
 **Not removed:** the server's `/api/sales/*` and `/api/support/*` routes and their tables, which the
 standalone Sales & Support Desk (`sales-desk/`, port 5490) runs on. That console is a separate
