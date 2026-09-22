@@ -362,7 +362,9 @@ const JOB_COLUMNS = [
   "actualFinish"
 ] as const;
 
-const defaultDataFile = path.resolve(__dirname, "../data/buildflow.sqlite");
+/** The main database's path. Exported so tooling (the restore CLI) resolves the same data
+ *  directory this server uses, rather than working it out a second time. */
+export const defaultDataFile = path.resolve(__dirname, "../data/buildflow.sqlite");
 
 function parseJsonArray(value: string | null | undefined): string[] {
   if (!value) return [];
