@@ -78,6 +78,7 @@ import { parseCookies, verifyPassword, secretsMatch, SESSION_COOKIE, SESSION_TTL
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
+import { createRequestLogger } from "./requestLog.js";
 
 // Attach the authenticated account/org to the request (set by the ops auth gate).
 declare module "express-serve-static-core" {
@@ -782,6 +783,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.setHeader("Referrer-Policy", "no-referrer");
     next();
   });
+  /* Before the body parsers on purpose: a request the parser refuses (413, 400) never
+     reaches a route, and is exactly the kind you want a line for. It reads req.org and
+     req.account, which the auth gate below sets long before the response finishes. */
+  app.use(createRequestLogger());
   /**
    * Body limits, per route rather than one number for the whole API.
    *
