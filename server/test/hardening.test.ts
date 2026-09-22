@@ -60,3 +60,14 @@ describe("a client cannot choose its own rate-limit bucket", () => {
   });
 });
 
+
+describe("baseline response headers", () => {
+  it("tells browsers not to sniff, frame, or leak the referer", async () => {
+    const app = await freshApp();
+    const res = await request(app).get("/api/health").expect(200);
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["x-frame-options"]).toBe("DENY");
+    expect(res.headers["referrer-policy"]).toBe("no-referrer");
+  });
+});
+

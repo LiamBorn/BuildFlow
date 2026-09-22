@@ -747,16 +747,31 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  // A dev machine serves the client from some localhost port, so those origins are waved
+  // through — but only off production. In production the allowlist is CORS_ORIGIN and
+  // nothing else: these responses carry credentials, so anything the browser will let
+  // read them is something that can read a signed-in workspace.
+  const allowLocalhostOrigins = process.env.NODE_ENV !== "production";
   app.use(
     cors({
       origin(origin, cb) {
         if (!origin) return cb(null, true); // curl / same-origin / server-to-server
-        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return cb(null, true);
+        if (allowLocalhostOrigins && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return cb(null, true);
         return cb(null, allowedOrigins.includes(origin));
       },
       credentials: true
     })
   );
+  /* Baseline response headers. This API answers JSON and one text/calendar feed, so the
+     cheap, no-configuration protections are the right ones: never let a browser re-guess
+     a response's type, never let the JSON be framed, and never leak a feed URL (which
+     carries its key in the query string) into another site's referer log. */
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    next();
+  });
   // Field updates can carry base64 photo/file attachments, so allow a larger body than the 100kb default.
   const jsonParser = express.json({ limit: "25mb" });
   // The Stripe webhook must read the RAW body to verify its signature, so it's the
