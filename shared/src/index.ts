@@ -1,17 +1,14 @@
 /**
- * A person's JOB TITLE on the crew roster. Stored on the per-org tenant table `users`.
- * This is who you schedule, and it decides nothing about what they may do.
- * Not to be confused with PermissionLevel below — the two live in different databases
- * and both columns are called `role`, which is exactly why this comment exists.
- */
-export type UserRole = "Project Manager" | "Superintendent" | "Crew Lead";
-
-/**
- * A login's PERMISSION LEVEL in its workspace. Stored on the control table `accounts`.
- * This is what the person may do, and it says nothing about their trade.
+ * A login's PERMISSION LEVEL in its workspace — the ONLY role a person has.
+ * Stored on the control table `accounts`; what the person may do.
  *
- * Two of the three were already live before the permissions work began: signup writes
- * "owner" and invite acceptance writes "member". "admin" is the value being added.
+ * There used to be a second, parallel role: a `UserRole` job title on the crew
+ * roster ("Project Manager" | "Superintendent" | "Crew Lead"), in a different
+ * database, in a column also called `role`. Asked to remove it (2026-09-19):
+ * the construction titles are gone and these three are the whole taxonomy.
+ * Migration 25 drops both columns. What a person DOES for a living is still
+ * recorded — `User.title` is free text, and the Time card prices labour by
+ * trade — but neither is a role, and neither decides anything.
  *
  * Ordered deliberately, weakest last, so a rank comparison reads the way it sounds.
  */
@@ -96,13 +93,7 @@ export type PlanId = (typeof planOptions)[number];
 export type TeamInvite = {
   id: string;
   email: string;
-  /** The crew roster's job title — what this person does, not what they may do. */
-  role: UserRole;
-  /**
-   * The permission level the account will be created at. Separate from `role` because the
-   * two answer different questions, and an invite has to carry both: acceptance is the one
-   * moment a workspace decides what a new login may do.
-   */
+  /** The level the account will be created at. Acceptance is the one moment a workspace decides what a new login may do. */
   permission: PermissionLevel;
   invitedBy: string;
   createdAt: string;
@@ -117,7 +108,6 @@ export const invitablePermissionLevels = ["admin", "member"] as const satisfies 
 /** What the invited person sees before accepting. */
 export type InvitePreview = {
   email: string;
-  role: UserRole;
   permission: PermissionLevel;
   orgName: string;
   inviterName: string;
@@ -133,7 +123,16 @@ export type BillingStatus = "free" | "trial" | "active" | "trial_expired" | "ent
 export type User = {
   id: string;
   name: string;
-  role: UserRole;
+  /**
+   * What this person may do in the workspace. Null for a roster row with no login
+   * behind it — a seeded example, or someone whose access was removed.
+   *
+   * DERIVED, never stored here: the level lives on the control table `accounts`,
+   * and the server resolves it as it serialises the roster. A copy on this row
+   * could disagree with the one the server actually authorizes on, which is the
+   * kind of disagreement nobody notices until it matters.
+   */
+  permission?: PermissionLevel | null;
   title: string;
   avatar: string;
   /** The login account this person is, when they have one. The registered owner always does. */

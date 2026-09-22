@@ -51,7 +51,7 @@ describe("Schedule pages", () => {
     const accountMenu = screen.getByRole("menu", { name: "Account menu" });
     // the menu names the signed-in workspace user (the fixture's Matt Johnson, or the owner)
     expect(within(accountMenu).getByText(/^(?:Matt Johnson|Liam Santos)$/)).toBeInTheDocument();
-    expect(within(accountMenu).getByText("Project Manager")).toBeInTheDocument();
+    expect(within(accountMenu).getByText("Workspace Owner")).toBeInTheDocument();
     const settingsItem = within(accountMenu).getByRole("menuitem", { name: "Settings" });
     expect(settingsItem).toHaveAttribute("title", "Settings");
 

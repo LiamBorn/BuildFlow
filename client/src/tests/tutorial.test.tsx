@@ -112,7 +112,7 @@ async function createCrewThroughTutorial() {
 
   fireEvent.change(within(crewDialog).getByLabelText("Crew Name"), { target: { value: tutorialCrew.name } });
   fireEvent.change(within(crewDialog).getByLabelText("Specialty/Type"), { target: { value: tutorialCrew.specialty } });
-  fireEvent.change(within(crewDialog).getByLabelText("Foreman"), { target: { value: tutorialCrew.lead } });
+  fireEvent.change(within(crewDialog).getByLabelText("Crew lead"), { target: { value: tutorialCrew.lead } });
   fireEvent.click(within(crewDialog).getByRole("button", { name: "Add Crew" }));
 
   await waitFor(() => expect(tutorialNext()).toBeEnabled());
@@ -168,20 +168,23 @@ describe("BuildFlow onboarding tutorial", () => {
     ["the person-level record", { "tutorial:seen": "completed" }],
     ["the setup-level record it replaced", { [`tutorial:${ASPHALT_KEY}`]: "skipped" }]
   ];
-  it.each(SERVER_RECORDS)("does not auto-start a tutorial the server holds under %s, and offers no way to restart it", async (_label, userSettings) => {
-    // Another device: nothing in localStorage, but bootstrap carries the user's settings.
-    state.businessProfilePayload = { ...blankWorkspaceFixture, userSettings };
-    render(<App />);
+  it.each(SERVER_RECORDS)(
+    "does not auto-start a tutorial the server holds under %s, and offers no way to restart it",
+    async (_label, userSettings) => {
+      // Another device: nothing in localStorage, but bootstrap carries the user's settings.
+      state.businessProfilePayload = { ...blankWorkspaceFixture, userSettings };
+      render(<App />);
 
-    await completeOnboarding(ASPHALT_SETUP);
+      await completeOnboarding(ASPHALT_SETUP);
 
-    expect(window.localStorage.getItem(seenKey())).toBeNull();
-    expect(screen.queryByRole("dialog", { name: TUTORIAL_TITLE })).not.toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "BuildFlow tutorial" })).not.toBeInTheDocument();
-    // The top bar's Help-and-tutorial button went with the one-time rule (2026-09-15).
-    expect(screen.queryByRole("button", { name: "Help and tutorial" })).not.toBeInTheDocument();
-    expect(document.querySelector(".topbar-help-button")).toBeNull();
-  });
+      expect(window.localStorage.getItem(seenKey())).toBeNull();
+      expect(screen.queryByRole("dialog", { name: TUTORIAL_TITLE })).not.toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "BuildFlow tutorial" })).not.toBeInTheDocument();
+      // The top bar's Help-and-tutorial button went with the one-time rule (2026-09-15).
+      expect(screen.queryByRole("button", { name: "Help and tutorial" })).not.toBeInTheDocument();
+      expect(document.querySelector(".topbar-help-button")).toBeNull();
+    }
+  );
 
   it("keeps the crew tutorial gate locked until a crew is created", async () => {
     let crewCreated = false;

@@ -17,6 +17,7 @@ import {
   permissionLevelLabels,
   type PermissionLevel,
   type TeamInvite,
+  type User,
   type OnboardingProductId,
   type PlanId,
   localIsoDate,
@@ -90,6 +91,7 @@ import {
   contactSalesThankYouEmail,
   feedbackEmail,
   contactSalesLeadEmail,
+  type MailAttachment,
   type SalesLead,
   verifyEmailMessage,
   resetPasswordMessage,
@@ -328,11 +330,74 @@ const waitlistEmailSchema = z.object({
 // contact sales: potential-customer lead validation
 /* "Give feedback", from the Dashboard tab. Only the words are the person's; who they are and
    which workspace they are in come from the session, never from the body. */
+const FEEDBACK_MAX_FILES = 3;
+const FEEDBACK_MAX_BYTES = 10 * 1024 * 1024;
+/* An attachment arrives as a data URL: the whole file, base64, inside the JSON body.
+   Every part of it is the sender's claim, so none of it is taken on trust — the media
+   type has to LOOK like one (a stray newline would otherwise land in a mail header)
+   and only base64 is accepted, because that is the one form whose size can be read
+   off the text without decoding it. */
+const FEEDBACK_DATA_URL = /^data:([a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+)?(?:;[a-z0-9!#$&^_.+-]+=[^;,]*)*;base64,([A-Za-z0-9+/]*={0,2})$/i;
+const FEEDBACK_MEDIA_TYPE = /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i;
+
 const feedbackSchema = z.object({
   category: z.enum(["idea", "bug", "praise", "other"]).default("other"),
   message: z.string().trim().min(1, "Please write a few words.").max(4000),
-  page: z.string().trim().max(80).default("dashboard")
+  page: z.string().trim().max(80).default("dashboard"),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string().trim().max(200).default(""),
+        type: z.string().trim().max(120).default(""),
+        // bounded well above the decoded cap: base64 inflates by a third, and the
+        // string is measured properly a moment later
+        dataUrl: z.string().max(FEEDBACK_MAX_BYTES * 2)
+      })
+    )
+    .max(FEEDBACK_MAX_FILES, `Up to ${FEEDBACK_MAX_FILES} files, please.`)
+    .default([])
 });
+
+/* A file name out of a browser is a string like any other — it can carry a path, a
+   newline, or nothing at all. Reduce it to something a mail client can write to disk. */
+function safeFileName(raw: string) {
+  const cleaned = raw
+    .replace(/[\u0000-\u001f\u007f]/g, "")
+    .replace(/[\\/]+/g, "-")
+    .replace(/^\.+/, "")
+    .trim()
+    .slice(0, 120);
+  return cleaned || "attachment";
+}
+
+/* Turns the posted data URLs into mail attachments. The check that matters is the
+   TOTAL size of the set, and it is measured from the base64 text BEFORE any of it is
+   decoded — so an oversized body is refused rather than allocated. */
+function feedbackAttachments(posted: { name: string; type: string; dataUrl: string }[]) {
+  const files: MailAttachment[] = [];
+  const listed: { name: string; size: number }[] = [];
+  let total = 0;
+  for (const one of posted) {
+    const match = FEEDBACK_DATA_URL.exec(one.dataUrl);
+    if (!match) return { ok: false as const, error: "That file could not be read. Please try attaching it again." };
+    const base64 = match[2] ?? "";
+    const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+    const size = Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+    total += size;
+    if (total > FEEDBACK_MAX_BYTES) {
+      return {
+        ok: false as const,
+        error: `Attachments have to come to under ${Math.round(FEEDBACK_MAX_BYTES / (1024 * 1024))}MB in all.`
+      };
+    }
+    const name = safeFileName(one.name);
+    // the data URL's own media type wins: it is the one that describes what was encoded
+    const contentType = match[1] ?? (FEEDBACK_MEDIA_TYPE.test(one.type) ? one.type : undefined);
+    files.push({ filename: name, content: base64, encoding: "base64", contentType });
+    listed.push({ name, size });
+  }
+  return { ok: true as const, files, listed };
+}
 
 const contactSalesSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -624,13 +689,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const INVITE_TTL_MS = 7 * 24 * HOUR;
   const sendInviteEmail = async (
     req: express.Request,
-    invite: { email: string; role: string },
+    invite: { email: string; permission: PermissionLevel },
     token: string,
     inviterName: string,
     orgName: string
   ) => {
     const link = `${appOriginFor(req)}/#accept-invite?token=${encodeURIComponent(token)}`;
-    await sendMail({ to: invite.email, ...inviteMessage(inviterName, orgName, invite.role, link) });
+    await sendMail({ to: invite.email, ...inviteMessage(inviterName, orgName, permissionLevelLabels[invite.permission], link) });
   };
   // Tests read tokens back from the response instead of parsing log-mode email.
   const exposeTokens = process.env.NODE_ENV === "test" || process.env.BUILDFLOW_EXPOSE_AUTH_TOKENS === "1";
@@ -686,6 +751,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     "/api/bootstrap",
     "/api/business-profile",
     "/api/projects",
+    /* A phase belongs to a project and lives in the tenant file beside it. It was NOT
+       here until 2026-09-20, and the symptom was the Month calendar: dragging a phase's
+       "<name> Complete" marker to another day answered "Phase not found", because `store`
+       had fallen through to mainStore and the caller's phase is not in it. The 404 is the
+       kinder half — the seeded ids are deterministic per TRADE PROFILE, not per
+       workspace (businessProfiles.ts: `phase-<trade>-<n>-<name>`), so where an id does
+       exist in the main store the same request writes to the wrong database instead. */
+    "/api/phases",
     "/api/jobs",
     "/api/schedule",
     "/api/field-updates",
@@ -1460,7 +1533,6 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     const preview: InvitePreview = {
       email: invite.email,
-      role: invite.role,
       permission: invite.permission,
       orgName: org.name,
       inviterName: inviter?.name ?? "A teammate",
@@ -1515,7 +1587,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     mainStore.markInviteAccepted(invite.id);
     try {
       const orgStore = await manager.getOrgStore(org.id);
-      orgStore.createTeammateUser(verified, invite.role);
+      // A free-text title so the roster row reads as somebody; what they MAY do is
+      // their account's level, which lives in the control database, not here.
+      orgStore.createTeammateUser(verified, "Teammate");
     } catch (error) {
       console.error("[team] could not create the teammate's workspace user:", error instanceof Error ? error.message : error);
     }
@@ -1604,16 +1678,37 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     account: account ? { email: account.email, emailVerifiedAt: account.emailVerifiedAt ?? null } : null
   });
 
+  /**
+   * Put each roster row's permission level on it, resolved as the payload is serialised.
+   *
+   * It has to happen HERE and not in the tenant store, because the two halves live in
+   * different databases: the roster is per-org, the level is on `accounts` in the control
+   * database, and only this layer can see both. Deriving it on read rather than keeping a
+   * copy on the roster row is the point — a copy could disagree with the level the server
+   * actually authorizes on, and that is the kind of disagreement nobody notices until it
+   * matters. Null for a row with no login: a seeded example, or someone removed.
+   */
+  const withPermissions = <T extends { users: User[]; activeUser?: User }>(payload: T, orgId: string): T => {
+    const levels = new Map<string, PermissionLevel>();
+    for (const account of mainStore.accountsForOrg(orgId)) levels.set(account.id, account.role);
+    const resolve = (user: User): User => ({ ...user, permission: (user.accountId && levels.get(user.accountId)) || null });
+    const users = payload.users.map(resolve);
+    return {
+      ...payload,
+      users,
+      ...(payload.activeUser ? { activeUser: resolve(payload.activeUser) } : {})
+    };
+  };
+
   app.get("/api/bootstrap", (req, res) => {
     // Gated route: req.account is the signed-in person, who is the active user.
-    res.json(withBilling(store.bootstrap(req.account?.id), req.account));
+    res.json(withPermissions(withBilling(store.bootstrap(req.account?.id), req.account), req.org!.id));
   });
 
   /* ── Team: people in the workspace + open invites ────────────────────────── */
   const inviteView = (row: {
     id: string;
     email: string;
-    role: string;
     permission?: string;
     invitedBy: string;
     createdAt: string;
@@ -1622,7 +1717,6 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   }): TeamInvite => ({
     id: row.id,
     email: row.email,
-    role: row.role as TeamInvite["role"],
     // Optional on the way in and defaulted here, so a row written before migration 21
     // reads back as what it will actually become.
     permission: isPermissionLevel(row.permission) ? row.permission : "member",
@@ -1634,22 +1728,19 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   app.get("/api/team", (req, res) => {
     /**
-     * `permissions` maps an accountId to its level. The roster rows carry an accountId already, but
-     * the level lived only in the control database, so nothing outside the server could tell an
-     * Owner from a Member — which made "who can I transfer ownership to" and "why was I refused"
-     * both unanswerable on the client. Keyed by account rather than folded into the user rows
-     * because a roster row can outlive its login (see migration 22) and would then have no level.
+     * The level rides on each person, put there by withPermissions above. It used to be a
+     * separate `permissions` map keyed by accountId, on the grounds that a roster row can
+     * outlive its login (migration 22) and would then have no level — which is true, and is
+     * exactly what `permission: null` says, on the row itself, where the screen needs it.
      */
-    const permissions: Record<string, PermissionLevel> = {};
-    for (const account of mainStore.accountsForOrg(req.org!.id)) permissions[account.id] = account.role;
     res.json({
-      users: store.users(),
+      ...withPermissions({ users: store.users() }, req.org!.id),
       invites: mainStore.openInvites(req.org!.id).map(inviteView),
-      permissions,
-      // Whether this person may set job titles. It was `role === "owner"` when that was the
-      // only check in the server; it now asks the same question the route itself asks, so the
-      // button and the endpoint cannot disagree. The full capability mirror is a later step.
-      canManage: can(req.account!.role, "team.title"),
+      // Whether this person may change what a teammate may do. It asks the same question the
+      // route itself asks, so the control and the endpoint cannot disagree — which since the
+      // job titles went (migration 25) means the Owner alone, because an Admin who can mint
+      // another Admin is an Owner by a longer route.
+      canManage: can(req.account!.role, "team.permission"),
       emailVerified: Boolean(req.account?.emailVerifiedAt)
     });
   });
@@ -1659,10 +1750,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       .array(
         z.object({
           email: z.string().trim().email("Enter a valid email address.").max(320),
-          role: z.enum(["Project Manager", "Superintendent", "Crew Lead"]),
-          /* The permission level, defaulted so every caller that predates this field keeps
-             sending a Member — which is what acceptance used to hardcode. "owner" is not in
-             the enum at all: ownership is transferred, not emailed. */
+          /* Defaulted so every caller that predates this field keeps sending a Member — which
+             is what acceptance used to hardcode. "owner" is not in the enum at all:
+             ownership is transferred, not emailed. */
           permission: z.enum(invitablePermissionLevels).default("member")
         })
       )
@@ -1703,7 +1793,6 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       const { invite, token } = mainStore.createInvite({
         orgId: org.id,
         email,
-        role: item.role,
         permission: item.permission,
         invitedBy: account.id,
         ttlMs: INVITE_TTL_MS,
@@ -1754,25 +1843,57 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   /**
-   * Sets what a teammate is on the crew roster: Project Manager, Superintendent or Crew Lead.
+   * Sets a teammate's PERMISSION LEVEL — Admin or Member.
    *
-   * This used to be the only authorization check in the whole server, and it was an inline
-   * owner-only conditional right here. It is now the "team.title" row of ROUTE_POLICY, which
-   * both moves the decision somewhere it can be read alongside every other one and widens it
-   * to an Admin -- managing people is the Admin tier's job.
+   * This route used to set a job title out of a fixed list of three (Project Manager,
+   * Superintendent, Crew Lead), which decided nothing and was the only "role" anybody could
+   * see. The titles were removed on 2026-09-19; the level a person holds is the only role
+   * now, so this is the route that changes it, and its policy row moved from "team.title"
+   * (Owner + Admin) to "team.permission" (Owner only) because that is where the capability
+   * list already put it: an Admin who can mint another Admin is an Owner by a longer route.
+   *
+   * Three refusals, the same ones removal makes, for the same reasons:
+   *   - not yourself. An Owner demoting themselves leaves the workspace unowned, and a
+   *     person who could raise their own level would make every other rule decorative.
+   *   - only downwards. The subject must rank BELOW the actor as they stand.
+   *   - never to Owner. Ownership is transferred (POST /api/org/transfer), which is a
+   *     different thing with different rules: it moves the level off somebody.
    */
   app.patch("/api/team/users/:id", (req, res) => {
-    const parsed = z.object({ role: z.enum(["Project Manager", "Superintendent", "Crew Lead"]) }).safeParse(req.body);
+    const parsed = z.object({ permission: z.enum(invitablePermissionLevels) }).safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Choose Project Manager, Superintendent or Crew Lead." });
+      res.status(400).json({ error: "Choose Admin or Member." });
       return;
     }
-    const user = store.updateUserRole(String(req.params.id), parsed.data.role);
+    const user = store.getUser(String(req.params.id));
     if (!user) {
       res.status(404).json({ error: "That person is not in this workspace." });
       return;
     }
-    res.json({ user });
+    if (!user.accountId) {
+      res.status(400).json({ error: "That person has no login yet, so there is nothing to set." });
+      return;
+    }
+    const actor = req.account!;
+    if (user.accountId === actor.id) {
+      res.status(403).json({ error: "You cannot change your own access. Transfer ownership instead." });
+      return;
+    }
+    const subject = mainStore.getAccountById(user.accountId);
+    if (!subject || !mainStore.accountsForOrg(req.org!.id).some((one) => one.id === subject.id)) {
+      res.status(404).json({ error: "That person is not in this workspace." });
+      return;
+    }
+    if (!outranks(actor.role, subject.role)) {
+      res.status(403).json({ error: `You cannot change what ${permissionLevelLabels[subject.role]}s may do.` });
+      return;
+    }
+    const updated = mainStore.setAccountPermission(subject.id, req.org!.id, parsed.data.permission);
+    if (!updated) {
+      res.status(404).json({ error: "That person is not in this workspace." });
+      return;
+    }
+    res.json({ user: { ...user, permission: parsed.data.permission } });
   });
 
   /**
@@ -2080,12 +2201,12 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     defaultLocation: z.string().max(200).optional()
   });
 
-  /** Imported projects need an owner BuildFlow accepts (PM/superintendent). */
-  const importManagerId = (): string | undefined => {
-    const users = store.users();
-    const manager = users.find((user) => user.role === "Project Manager" || user.role === "Superintendent");
-    return manager?.id ?? users[0]?.id;
-  };
+  /**
+   * Imported projects need somebody named as the manager. Anyone on the roster will do:
+   * the job titles this used to filter on were removed on 2026-09-19, and managing a
+   * project is an assignment rather than a rank.
+   */
+  const importManagerId = (): string | undefined => store.users()[0]?.id;
 
   const planScheduleImport = (body: unknown) => {
     const parsed = scheduleImportSchema.safeParse(body);
@@ -3163,6 +3284,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Please write a few words." });
       return;
     }
+    const attached = feedbackAttachments(parsed.data.attachments);
+    if (!attached.ok) {
+      res.status(400).json({ error: attached.error });
+      return;
+    }
     const account = req.account!;
     const org = req.org!;
     const result = await sendMail({
@@ -3173,8 +3299,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         page: parsed.data.page,
         company: { id: org.id, name: org.name, plan: org.plan },
         person: { name: account.name, email: account.email, role: account.role },
-        sentAt: new Date().toISOString()
-      })
+        sentAt: new Date().toISOString(),
+        attachments: attached.listed
+      }),
+      attachments: attached.files
     });
     if (!result.ok) {
       // sendMail never throws, so a transport failure is the one case the person must hear about

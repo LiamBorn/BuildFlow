@@ -12,17 +12,28 @@ import os from "node:os";
 import path from "node:path";
 import request from "supertest";
 
-const sent: Array<{ to: string; subject: string; text: string; html: string }> = [];
+type Captured = {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: { filename: string; content: string; contentType?: string; encoding?: string }[];
+};
+const sent: Captured[] = [];
 vi.mock("../src/email.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/email.js")>();
   return {
     ...actual,
-    sendMail: vi.fn(async (msg: { to: string; subject: string; text: string; html: string }) => {
+    sendMail: vi.fn(async (msg: Captured) => {
       sent.push(msg);
       return { ok: true, mode: "log" as const };
     })
   };
 });
+
+/* a real one-pixel PNG, so the bytes that come out the far end can be checked */
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const pngUrl = `data:image/png;base64,${PNG}`;
 
 import { createApp } from "../src/app.js";
 
@@ -85,6 +96,79 @@ describe("POST /api/feedback", () => {
     const { agent } = await signedIn();
     await agent.post("/api/feedback").send({ message: "Routed elsewhere." }).expect(201);
     expect(sent[0].to).toBe("product@example.test");
+  });
+
+  it("carries an attachment through to the mail and names it in the body", async () => {
+    const { agent } = await signedIn();
+    await agent
+      .post("/api/feedback")
+      .send({
+        category: "bug",
+        message: "The Week board clips on my screen.",
+        attachments: [{ name: "screenshot.png", type: "image/png", dataUrl: pngUrl }]
+      })
+      .expect(201);
+
+    const files = sent[0].attachments ?? [];
+    expect(files).toHaveLength(1);
+    // handed over as base64 TEXT with the encoding declared — not as raw bytes
+    expect(files[0]).toEqual({
+      filename: "screenshot.png",
+      content: PNG,
+      contentType: "image/png",
+      encoding: "base64"
+    });
+    // and the recipient can see there is one without scrolling to the bottom
+    expect(sent[0].text).toContain("Attached: screenshot.png");
+    expect(sent[0].html).toContain("screenshot.png");
+  });
+
+  it("takes neither a path in the file name nor a header in the media type", async () => {
+    const { agent } = await signedIn();
+    await agent
+      .post("/api/feedback")
+      .send({
+        message: "Hi",
+        attachments: [{ name: "../../etc/passwd", type: "image/png\r\nBcc: someone@else.test", dataUrl: pngUrl }]
+      })
+      .expect(201);
+
+    const file = (sent[0].attachments ?? [])[0];
+    expect(file.filename).toBe("-..-etc-passwd");
+    expect(file.filename).not.toMatch(/[\\/]/);
+    // the data URL's own type is the one that describes the bytes, so the declared one is never read
+    expect(file.contentType).toBe("image/png");
+  });
+
+  it("refuses more files than it said it would take", async () => {
+    const { agent } = await signedIn();
+    const four = Array.from({ length: 4 }, (_, i) => ({ name: `shot-${i}.png`, type: "image/png", dataUrl: pngUrl }));
+    const response = await agent.post("/api/feedback").send({ message: "Hi", attachments: four }).expect(400);
+    expect(response.body.error).toMatch(/3 files/i);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("refuses anything that is not a base64 data URL", async () => {
+    const { agent } = await signedIn();
+    const response = await agent
+      .post("/api/feedback")
+      .send({ message: "Hi", attachments: [{ name: "shot.png", type: "image/png", dataUrl: "https://example.test/shot.png" }] })
+      .expect(400);
+    expect(response.body.error).toMatch(/could not be read/i);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("refuses a set over the size cap", async () => {
+    const { agent } = await signedIn();
+    // 14M base64 characters decode to ~10.5MB — just past the 10MB line, and measured
+    // from the text, so nothing this large is ever decoded
+    const big = `data:image/png;base64,${"A".repeat(14_000_000)}`;
+    const response = await agent
+      .post("/api/feedback")
+      .send({ message: "Hi", attachments: [{ name: "clip.mov", type: "video/quicktime", dataUrl: big }] })
+      .expect(400);
+    expect(response.body.error).toMatch(/10MB/i);
+    expect(sent).toHaveLength(0);
   });
 
   it("wants a few words, and wants a signed-in person", async () => {

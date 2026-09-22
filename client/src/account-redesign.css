@@ -1722,16 +1722,40 @@ button.acct-hint-center {
   }
 }
 
-/* Settings panels reuse the account form language */
+/* Settings panels reuse the account form language.
+
+   THREE SHARED ROWS, not `align-items`. Every field here is the same three
+   things in the same order — a label, a control, and sometimes a line under it
+   (a hint, or an error) — so the form declares those three rows once and each
+   field takes them as a `subgrid`. Labels sit on one line, controls on the next,
+   and the line underneath on the third, whether or not a given field has one.
+
+   It used to be `align-items: end`, which lines the fields up by their BOXES.
+   A field with a hint is taller than one without, so on Settings › Account the
+   email field's hint pushed "Your name" and its input 39px BELOW the "Email"
+   label beside it — measured, and what this was reported for (2026-09-20). Any
+   of `start`, `end` or `center` has the same fault from a different direction;
+   the fields have to share lines, not be aligned to each other's height. */
 .settings-inline-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: end;
-  margin-top: 18px;
+  grid-template-rows: auto auto auto;
+  gap: 6px 14px;
+  align-items: start;
+  /* No margin: every one of these forms sits in a `.settings-team-section`, which
+     is a grid with an 18px gap, so a margin on top of that spaced the card's
+     heading 36px from its first field while everything else in the category used
+     18px. The container's gap is the one that should say it. */
+  margin-top: 0;
 }
 .settings-inline-form-2 {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+.settings-inline-form > .acct-field {
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  /* the row gap is the form's now, or the fields would space themselves twice */
+  gap: 0;
 }
 .settings-inline-form .acct-field label {
   font-size: 13px;
@@ -1742,6 +1766,19 @@ button.acct-hint-center {
   width: auto;
   padding-left: 20px;
   padding-right: 20px;
+  /* No label above it, so it belongs on the CONTROL line. The COLUMN has to be
+     said too: grid places an item with a definite row before the auto-placed
+     ones, so a bare `grid-row: 2` let the button take column 1 and pushed both
+     fields along one. `-2` is the last column either way — this form has two,
+     `-2` has three — and does not need to know which.
+
+     Centred, not stretched: every primary button in the shell is 40px with a
+     pill radius, and a 46px one here to match the inputs would be the odd button
+     out in the whole product. Centred on a 46px row it reads as aligned. */
+  grid-row: 2;
+  grid-column: -2 / -1;
+  align-self: center;
+  margin-top: 0;
 }
 .settings-me-tag,
 .settings-sample-tag {
@@ -1781,10 +1818,23 @@ button.acct-hint-center {
   margin-top: 10px;
 }
 @media (max-width: 720px) {
+  /* one column: the fields stack, so there are no lines left to share and the
+     subgrid has to be given up — a field still spanning three rows of a
+     single-column grid would leave two empty ones under every one of them. */
   .settings-inline-form,
   .settings-inline-form-2 {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
     align-items: start;
+  }
+  .settings-inline-form > .acct-field {
+    grid-row: auto;
+    grid-template-rows: none;
+    gap: 6px;
+  }
+  .settings-inline-submit {
+    grid-row: auto;
+    align-self: start;
   }
 }
 

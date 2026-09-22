@@ -4523,7 +4523,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink);
 }
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-links em,
-.app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-links-empty {
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-links-empty,
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-note {
   font-size: 11.5px;
   color: var(--bf-ink-muted);
 }
@@ -11899,58 +11900,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-quick button {
    with its fields in a stagger.
    ============================================================================ */
 /* ---- 38a. the Create menu ---- */
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu {
-  min-width: 240px;
-  padding: 8px;
-  /* the entrance is the gooey one, out of its own button: section 64 */
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu-item {
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: var(--bf-radius-control);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu-item svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu-item:hover {
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu-item:hover svg {
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu-tag {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu-tag.new {
-  background: var(--bf-color-accent-wash);
-  color: var(--bf-color-accent);
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item {
-  --bfe-r: 0;
-  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
-  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item:nth-child(3) {
-  --bfe-r: 1;
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item:nth-child(4) {
-  --bfe-r: 2;
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item:nth-child(5) {
-  --bfe-r: 3;
-}
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item:nth-child(n + 6) {
-  --bfe-r: 4;
-}
 /* ---- 38b. the dialog shell ---- */
 /* NOT MODE-FENCED ANY MORE (2026-09-18). Every rule from here through 38d used to carry
    `:not([data-bf-mode="dark"]):not([data-bf-theme="dark"])`, so in dark mode the whole dialog
@@ -12188,8 +12137,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > :nth-child(n + 8) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell .hs-create .hs-menu,
-  .app-shell.hs-shell.bf-shell .hs-create .hs-menu > .hs-menu-item,
   body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog,
   body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form > * {
     animation: none;
@@ -13071,39 +13018,108 @@ body.bf-shell > .schedule-dialog-backdrop {
    word: one tab at the screen's edge doing both jobs, and a nub on the rail's
    top-right edge. This is the arrangement they kept.
    ============================================================================ */
+/* ---- 45a. BOTH ARROWS STAND IN ONE PLACE: the rail's head, under the logo
+   (2026-09-21, asked for with a mock-up drawn on the Dashboard — "move the
+   arrow to hide the side bar and put it where the image describes it to go,
+   and have the same arrow in the same spot to open it back up").
+
+   It used to take two places to say one thing: Hide at the rail's FOOT beneath
+   Settings, and Show as a tab bolted to the left edge of the window, half a
+   screen above it. Nothing pointed from one to the other, so the way back was
+   somewhere you had not been. They are one control now in one position, and
+   only the chevron turns round.
+
+   The Show arrow cannot simply be the same element — the rail is `display:
+   none` when it is hidden — so it is placed to land on the spot the Hide arrow
+   occupies, and the numbers below are that spot, derived rather than eyeballed:
+
+     top   the rail sticks at `--hs-topbar-h + 14px` and pads 10px, so its first
+           control starts at `--hs-topbar-h + 24px`
+     left  the rail's own margin is 18px and it is 52px wide, so a 36px button
+           inside it starts at 18 + (52 - 36) / 2 = 26px
+
+   Both sit inside the shell's `zoom`, so the two scale together and cannot come
+   apart at another --bf-ui-scale. ---- */
+.app-shell.hs-shell.bf-shell .hs-rail-top {
+  display: grid;
+  place-items: center;
+  /* clear of the pill below it — see the `::before` note under this rule */
+  margin-bottom: 30px;
+}
+/* ITS OWN BOX (2026-09-21, second pass: "separate the arrow to have its own individual box").
+   The first cut put the arrow at the rail's head but INSIDE it, so the rail's pill ran up behind
+   it and the two read as one long control. It carries the surface and the shadow itself now —
+   the same pair `.hs-rail-show` wears — so the hidden and shown states are the same box, and the
+   only thing that ever changes is which way the chevron points. */
 .app-shell.hs-shell.bf-shell .hs-rail-hide {
-  margin-top: 4px;
+  /* THE RAIL'S OWN WIDTH (2026-09-21, third pass: "make the button the same width as the left
+     sidebar, so it looks even"). 52 is the rail's `width`, so the two boxes share an edge down
+     both sides and read as one column of two things rather than a disc perched on a pill. The
+     radius stays circular because at 52 square that IS the rail's cap. */
+  width: 52px;
+  height: 52px;
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+}
+.app-shell.hs-shell.bf-shell .hs-rail-hide:hover,
+.app-shell.hs-shell.bf-shell .hs-rail-hide:focus-visible {
+  box-shadow: var(--bf-shadow-raised);
+}
+/* AND THE PILL STARTS WELL BELOW IT. The rail's face is a `::before` at `inset: 0` (section 43a),
+   so left alone it paints behind the arrow and swallows it. `top` resolves against the rail's
+   PADDING box, not its border box, so these are padding-box numbers: the arrow occupies 0-52 and
+   carries 30px beneath it, putting the nav at 82; 72 gives the pill 10px of its own above the
+   first icon and leaves 20px of daylight between the two boxes.
+
+   20 AND NOT 8. Eight was the first try and it read as touching — the shadow is only `0 1px 2px`,
+   so nothing separates two white shapes but the gap itself, and at 8px they merge into one long
+   control again at a glance. Twenty is two and a half times the rail's own 8px icon rhythm, which
+   is what says "a different thing" rather than "the next item down". */
+.app-shell.hs-shell.bf-shell .sidebar.hs-rail::before {
+  top: 72px;
 }
 .app-shell.hs-shell.bf-shell .sidebar.hs-rail.is-hidden {
   display: none;
 }
 .app-shell.hs-shell.bf-shell.sidebar-collapsed .hs-body {
   grid-template-columns: minmax(0, 1fr);
+  /* A LANE FOR THE ARROW, so the page never runs underneath it. The Show arrow floats over the
+     page, and with the rail's 88px given back in full the page's own first row lands squarely in
+     its band — measured on four pages, and it is a different row on each: the Dashboard's date
+     line, an index page's KPI strip, the Schedule's filter strip. A per-page rule would be four
+     selectors and a fifth the next time a page is added, so the lane is kept instead.
+
+     60px: the arrow ends at 70px (18 + 52) and a page carries 18px of its own left padding, so
+     60 puts the first row at 78 — eight clear of the arrow. The rail's lane is 88, so hiding it
+     still returns 28px; the alternative is the full 88 with the arrow sitting on top of whatever
+     the page starts with, which is what the old edge tab did and what this is fixing. */
+  padding-left: 60px;
 }
 .app-shell.hs-shell.bf-shell .hs-rail-show {
   position: fixed;
   top: calc(var(--hs-topbar-h) + 24px);
-  left: 0;
+  /* 18px is the rail's own margin: at 52 wide the box stands on the rail's left edge, not
+     inset from it the way a 36px control had to be */
+  left: 18px;
   z-index: 35;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 44px;
+  /* the hide arrow's box exactly: the same control, still in its place */
+  width: 52px;
+  height: 52px;
   padding: 0;
   border: 0;
-  border-radius: 0 999px 999px 0;
+  border-radius: 50%;
   background: var(--bf-surface);
   color: var(--bf-ink-muted);
   box-shadow: var(--bf-shadow-card);
   cursor: pointer;
   transition:
     color var(--bf-dur-hover) var(--bf-ease-size),
-    box-shadow var(--bf-dur-hover) var(--bf-ease),
-    width var(--bf-dur-hover) var(--bf-ease);
+    box-shadow var(--bf-dur-hover) var(--bf-ease);
 }
 .app-shell.hs-shell.bf-shell .hs-rail-show:hover,
 .app-shell.hs-shell.bf-shell .hs-rail-show:focus-visible {
-  width: 36px;
   color: var(--bf-ink);
   box-shadow: var(--bf-shadow-raised);
   outline: none;
@@ -13638,9 +13654,34 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
   background: var(--bf-info-ink);
   box-shadow: none;
 }
+/* THE ADD-ON DESCRIPTION FOLLOWS THE MODE (2026-09-21). Asked for against the flyout's bubble:
+   "make description show darkmode & lightmode — if the user is in light mode it will show
+   lightmode, and if the user is in darkmode it will show in darkmode."
+
+   It was an INK PILL, which the daylight sheet made it on purpose ("navy bubble becomes an ink
+   pill") — and `--bf-ink` is the one token that INVERTS with the mode, so the bubble did the
+   opposite of following it: measured, a near-black card in light mode and a near-WHITE card in
+   dark, in a dark app. The body text failed either way, because this sheet had re-pointed it to
+   `--bf-ink-muted` without moving the background out from under it: 2.75:1 on the light-mode
+   card, 1.9:1 on the dark-mode one, against 4.5 for text this size.
+
+   A surface card instead. `--bf-surface` is #fff in light and #1b1b19 in dark, so the bubble is
+   light on light and dark on dark with nothing mode-specific written here, and the muted ink on
+   it reads 5.9:1 and 8.2:1. The arrow takes the same pair, or it stays a navy dart pointing at a
+   white card. */
 .app-shell.hs-shell.bf-shell .hs-flyout-tip {
+  border: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
   color: var(--bf-ink-muted);
   box-shadow: var(--bf-shadow-float);
+}
+.app-shell.hs-shell.bf-shell .hs-flyout-tip strong {
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell .hs-flyout-tip::before {
+  border-left: 1px solid var(--bf-line-solid);
+  border-bottom: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
 }
 /* the index pages: the title's page tag, the edit action's hover ring */
 .app-shell.hs-shell.bf-shell .hs-index .hs-index-title .hs-page-tag {
@@ -15319,7 +15360,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bfai-prop-state.is-failed {
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .bfws-menu,
 .app-shell.hs-shell.bf-shell .hs-bookmarks-menu,
 .app-shell.hs-shell.bf-shell .user-settings-menu,
-.app-shell.hs-shell.bf-shell .hs-create .hs-menu,
 .app-shell.hs-shell.bf-shell .hs-upgrade-menu,
 .app-shell.hs-shell.bf-shell .pref-menu {
   transform-origin: top right;
@@ -16309,6 +16349,7 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   --bfm-dur-chart: 900ms;
   --bfm-dur-count: 1400ms;
   --bfm-dur-pill: 470ms;
+  --bfm-dur-exit: 180ms;
   --bfm-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --bfm-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
   --bfm-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
@@ -16373,6 +16414,25 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   to {
     opacity: 1;
     transform: none;
+    filter: blur(0px);
+  }
+}
+/* A SECTION COMING INTO FOCUS, and not moving while it does (2026-09-20). The
+   board's panels are the one entrance the newer reference clip cuts differently
+   from §74's original: its cards do not travel at all. At a third of the way in,
+   a card's figures sit on exactly the same baseline as the finished card beside
+   them — a 24px rise would read as 16px of offset there, and there is none —
+   while the content is plainly out of focus and the card's own border has not
+   arrived yet. So: opacity and blur, and NO transform in the frames at all,
+   which also leaves the hover lift and the board's inline placement untouched
+   for the whole 600ms rather than merely at the end of it. */
+@keyframes bfe-focus {
+  from {
+    opacity: 0;
+    filter: blur(var(--bfe-blur, 10px));
+  }
+  to {
+    opacity: 1;
     filter: blur(0px);
   }
 }
@@ -16538,9 +16598,12 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 
    These two rules replace §20's — see the note there. */
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block {
-  --bfe-y: var(--bfm-rise-l);
+  /* `bfe-focus`, not `bfe-lift`: a section comes INTO FOCUS where it already is
+     (2026-09-20, asked for with a clip — the keyframe's own note records what was
+     measured in it). The stagger below does not change: what the clip re-cuts is
+     the shape of one section's arrival, not the order they arrive in. */
   --bfe-blur: var(--bfm-blur);
-  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation: bfe-focus var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
   animation-delay: max(
     0ms,
     calc(var(--bfm-beat-board) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift))
@@ -16572,7 +16635,11 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-foot,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-firstrun-foot,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-section-note {
-  --bfe-y: 8px;
+  /* 0, because the section around them no longer travels either: 8px of contents
+     sliding inside a card that is standing still is the one thing the clip never
+     shows. They keep their own beat — a section's contents still arrive a moment
+     after the section — as a fade rather than a fade and a slide. */
+  --bfe-y: 0px;
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
   animation-delay: max(
     0ms,
@@ -16591,6 +16658,14 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-subline,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-meta {
     --bfe-blur: 0px;
+  }
+  /* A SECTION'S ARRIVAL IS THE BLUR NOW, so with the blur gone there would be
+     nothing left of it — `bfe-focus` on a phone is a bare fade. The panels take
+     the lift back here: the shape the clip asks for is the one a phone cannot
+     afford, which is the same trade this section already makes. */
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block {
+    --bfe-y: var(--bfm-rise-l);
+    animation-name: bfe-lift;
   }
   .app-shell.hs-shell.bf-shell.bfm-open {
     animation-name: bfe-lift;
@@ -16664,16 +16739,32 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-line {
   stroke-dasharray: 600;
   animation: bfe-draw var(--bfm-dur-chart) var(--bfm-ease-out) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+  animation-delay: max(
+    0ms,
+    calc(
+      var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)
+    )
+  );
 }
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-spark-fill {
   animation: bfe-fade var(--bfm-dur-base) var(--bfm-ease-inout) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfm-trail) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+  animation-delay: max(
+    0ms,
+    calc(
+      var(--bfm-beat-board-content) + var(--bfm-trail) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) -
+        var(--bfm-shift)
+    )
+  );
 }
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .recharts-responsive-container {
   transform-origin: 50% 50%;
   animation: bfe-pop var(--bfm-dur-chart) var(--bfm-ease-soft) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+  animation-delay: max(
+    0ms,
+    calc(
+      var(--bfm-beat-board-content) + var(--bfe-row, 0) * var(--bfm-row) + var(--bfe-col, 0) * var(--bfm-stagger-card) - var(--bfm-shift)
+    )
+  );
 }
 /* the band's per-project bars grow once the band's own columns have landed */
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-track > i {
@@ -16709,7 +16800,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
    Dashboard: the title's beat normally, and zero on the session's first open,
    when the chrome is still assembling and there is something to wait for.
    ========================================================================= */
-.app-shell.hs-shell.bf-shell :is(
+.app-shell.hs-shell.bf-shell
+  :is(
     .proj-rx,
     .crew-rx,
     .contacts-page,
@@ -16729,7 +16821,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   ) {
   --bfm-shift: var(--bfm-beat-title);
 }
-.app-shell.hs-shell.bf-shell.bfm-open :is(
+.app-shell.hs-shell.bf-shell.bfm-open
+  :is(
     .proj-rx,
     .crew-rx,
     .contacts-page,
@@ -16866,7 +16959,10 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-marker {
   transform-origin: top center;
   animation: bfe-wipe var(--bfm-dur-base) var(--bfm-ease-out) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board) + 5 * var(--bfm-stagger-bar) + var(--bfm-dur-chart) + var(--bfm-stagger-card) - var(--bfm-shift)));
+  animation-delay: max(
+    0ms,
+    calc(var(--bfm-beat-board) + 5 * var(--bfm-stagger-bar) + var(--bfm-dur-chart) + var(--bfm-stagger-card) - var(--bfm-shift))
+  );
 }
 @keyframes bfe-wipe {
   from {
@@ -16923,7 +17019,15 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 
    Nothing fires until the layer has marked the group, so with no JS every one of
    them simply keeps the background it always had.
-   ========================================================================= */
+
+   THE STRETCH IS NOT HERE (2026-09-20). The pill's leading edge runs ahead of its
+   trailing one, and that cannot be written as a transition: both edges of a
+   `transform` + `width` pair are tied to the same two values, so a move between
+   two options of the SAME width cannot change length on the way, whatever easing
+   either property is given. It needs the two edges on separate paths, which means
+   keyframes — motion/SegmentPill.tsx emits them onto this `::before` with the Web
+   Animations API. The transition below still carries the move on its own where
+   that is unavailable, and under reduced motion, which is why it stays. */
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg,
 .app-shell.hs-shell.bf-shell .pref-segmented,
 .app-shell.hs-shell.bf-shell .hs-index .hs-views,
@@ -16948,7 +17052,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill]::before,
-.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill]::before {
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill]::before,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill]::before {
   content: "";
   position: absolute;
   left: 0;
@@ -16972,7 +17077,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill="live"]::before,
-.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before {
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill="live"]::before {
   transition:
     transform var(--bfm-dur-pill) var(--bfm-ease-pill),
     width var(--bfm-dur-pill) var(--bfm-ease-pill),
@@ -16988,7 +17094,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] > *,
-.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] > * {
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] > *,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] > * {
   position: relative;
   z-index: 1;
 }
@@ -17014,13 +17121,26 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active:hover,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active:hover,
 .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill] button.active:hover,
-.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] .hs-rail-btn.active:hover {
+.app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill] .hs-rail-btn.active:hover,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] .settings-nav-item.active,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] .settings-ai-button.active,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] .settings-nav-item.active:hover,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill] .settings-ai-button.active:hover {
   background: transparent;
+  box-shadow: none;
 }
 /* the rail is a column of discs, and its fill is its own */
 .app-shell.hs-shell.bf-shell .hs-rail-list {
   --bfm-pill-fill: var(--bf-rail-fill);
   --bfm-pill-radius: 50%;
+}
+/* Settings' category rail takes the default ink pill, and is the one group NOT
+   given `position: relative` above: it is already positioned — `sticky`, which is
+   what holds it beside a panel taller than the window — and relative would take
+   that away. The layer needs a positioned group, not that exact value. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail {
+  --bfm-pill-fill: var(--bf-ink);
+  --bfm-pill-radius: 999px;
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-seg[data-bfm-pill="live"]::before,
@@ -17032,7 +17152,770 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .map-ops-page .route-goal-control[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before {
+  .app-shell.hs-shell.bf-shell .hs-rail-list[data-bfm-pill="live"]::before,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill="live"]::before {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   79. THE PAGE YOU ARE LEAVING (2026-09-19)
+   ----------------------------------------------------------------------------
+   docs/motion-spec.md §4's route transition. The page arriving was already
+   handled — its beats replay on mount (§74a, §75) — but the page leaving used
+   to vanish in a single frame, so for the length of a cascade there was a hole
+   where it had been. It fades and lifts out instead, over `--bfm-dur-exit`.
+
+   Two rules, and both are about the moment when BOTH pages exist. The scroller
+   is positioned so that framer can take the leaving page out of the layout
+   (`mode="popLayout"`) without it flying to the top of the document — which is
+   what keeps the arriving page from being pushed down the screen while the old
+   one is still on it. And the leaving page is put behind, so that for those
+   180ms the page underneath is the one you can see and click.
+
+   motion/PageSwap.tsx is the other half; it also stops the leaving page taking
+   the pointer, which §9.6 asks for: motion may never delay interactivity.
+   ========================================================================= */
+.app-shell.hs-shell.bf-shell .content-scroll,
+.app-shell.hs-shell.bf-shell .settings-content-scroll {
+  position: relative;
+}
+.app-shell.hs-shell.bf-shell .content-scroll > .bfm-page,
+.app-shell.hs-shell.bf-shell .settings-content-scroll > .bfm-page {
+  /* the page in place sits in front. The LEAVING one is put behind by its own
+     exit variant rather than by a rule here: which element is leaving is
+     framer's to know, and matching on the inline style it happens to write
+     would be reading an implementation detail. */
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================================
+   80. BUILDFLOW AI COMES OUT OF THE BUTTON YOU ASKED WITH (2026-09-19)
+   ----------------------------------------------------------------------------
+   Asked for: "add gooey animation for BuildFlow AI when a user pulls it up —
+   find the gooey effects you made and do the same."
+
+   So this is §64's effect, on §64's numbers, for the assistant. The panel used
+   to play `bfz-in` (hs-breeze.css): a fade and a 16px slide from the left,
+   which is word for word what §64 describes every dropdown doing before it —
+   a copy of itself growing in the middle of nowhere, with nothing tying it to
+   the control that opened it.
+
+   Now its first frame IS the button. motion/BreezeGoo.tsx measures whichever
+   button was pressed and writes §64's four placement numbers; the fifth, the
+   radius it starts with, is the same for both of them because both are round.
+   The panel's own blur does the merging, exactly as it does for the menus: the
+   trigger is in the shell and this panel is a portal on the body, so no filter
+   can fuse them for real, but a blurred rounded rect overlapping the button is
+   the merge, with the blur standing in for the threshold.
+
+   `[data-bfm-goo="true"]` is the same gate the two portal menus use at the end
+   of §64, and for the same reason: the numbers are measured, so the animation
+   must not be allowed to play before they have been written. Without a measured
+   button — opened from a keyboard route, say — the mark is never set and the
+   panel keeps the entrance it has always had.
+
+   The mounting model is untouched. The panel stays always-mounted and hidden by
+   `display: none`, which app-shell-daylight.css §14 requires; coming back INTO
+   the layout is itself what restarts the animation, so nothing here needs to
+   know that the panel was ever closed.
+   ========================================================================= */
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-main[data-bfm-goo="true"] {
+  /* both ways in are round, so the panel starts as round as they are */
+  --bf-goo-r: 999px;
+  transform-origin: top left;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-main[data-bfm-goo="true"] {
+    animation: none;
+  }
+}
+
+/* ---- 80b. and the way it goes back (2026-09-19) ------------------------- */
+/* The same morph in reverse: the panel shrinks into the button it came out of,
+   its blur returning as it goes, so the two are one soft surface again before it
+   is gone. `reverse` ends the animation on the 0% frame — the button's box, the
+   button's radius, fully blurred and transparent — and `forwards` holds it there
+   until motion/BreezeGoo.tsx lets the panel go.
+
+   `display` is the whole difficulty. The panel is hidden by `display: none` the
+   instant `is-open` leaves, so without this rule there is no frame in which
+   anything could be animated. `bfm-closing` holds it in the layout for exactly
+   as long as the animation, and nothing longer: the layer takes the class off on
+   `animationend`, with a backstop in case that never comes.
+
+   That is safe for viewKeys.ts's dialogIsOpen(), which app-shell-daylight.css
+   §14 warns about, because it reads `aria-hidden` — React has already set that
+   to "true" by the time this class goes on, so the 1-6 schedule shortcuts come
+   back the moment the panel is closed rather than when it has finished leaving.
+   It is inert and takes no pointer for the same reason: it is a picture of a
+   panel on its way out, and nobody should be able to reach into it. */
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze.bfm-closing {
+  display: flex;
+  pointer-events: none;
+}
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze.bfm-closing > * {
+  pointer-events: none;
+}
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze.bfm-closing .bf-breeze-main[data-bfm-goo="true"] {
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) reverse forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* asked to keep still: it goes the way it always went, at once */
+  body:has(.app-shell.hs-shell.bf-shell) .bf-breeze.bfm-closing {
+    display: none;
+  }
+  body:has(.app-shell.hs-shell.bf-shell) .bf-breeze.bfm-closing .bf-breeze-main[data-bfm-goo="true"] {
+    animation: none;
+  }
+}
+
+/* ---- 80c. and every right-side panel, the same way (2026-09-19) ---------- */
+/* Asked for: "make the right sidebar have the same gooey animation as BuildFlow
+   AI, and make sure all the right sidebars look the same."
+
+   All five came in from the right edge on `bfe-drawer-in` — a panel arriving
+   beside the thing that asked for it, rather than out of it. They are §64's
+   effect now, on §64's keyframe, measured the same way: motion/PanelGoo.tsx
+   takes the rect of whatever was pressed, in the capture phase of the click,
+   because a row that opens a record can be gone by the next render.
+
+   The radius they start at is left to `bfe-goo`'s own default, the control
+   radius, rather than the assistant's 999px: these are opened by rows and
+   rectangular controls as often as by pills.
+
+   WITHOUT A MEASURED TRIGGER NOTHING CHANGES. No mark, no rule below matches,
+   and the panel keeps the drawer it always had — which is also what a keyboard
+   route gets. The centred confirm is deliberately not in this list: it never
+   went to the edge, so it does not come out of one (§65b). */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record[data-bfm-goo="true"],
+.app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-drawer[data-bfm-goo="true"] {
+  /* `gooFrom` measures the offset from the panel's TOP-LEFT to the button's, so
+     the scale has to happen about that same corner. Left at the default 50% 50%
+     the first frame lands neither at the button's place nor its size: measured
+     on the add-job panel, 193px right and 332px below the button it is supposed
+     to be coming out of. §64 and §80 both set this; §80c was written without it. */
+  transform-origin: top left;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+/* and back into it, the same morph reversed. panelExit.tsx puts a COPY of the
+   panel back to play this, and `cloneNode` carries the inline numbers and the
+   mark with it, so the copy knows where to go without being measured again. */
+body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.pdx .pdx-dialog[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.hs-record-layer .hs-record[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.gantt-drawer-layer .gantt-drawer[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.schedule-dialog-backdrop .schedule-job-picker[data-bfm-goo="true"],
+body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.bfsp .bfsp-drawer[data-bfm-goo="true"] {
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) reverse forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .hs-record-layer .hs-record[data-bfm-goo="true"],
+  .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog.schedule-job-picker[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-drawer[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.pdx .pdx-dialog[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.hs-record-layer .hs-record[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.gantt-drawer-layer .gantt-drawer[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.schedule-dialog-backdrop .schedule-job-picker[data-bfm-goo="true"],
+  body:has(.app-shell.hs-shell.bf-shell) .bf-panel-exit.bfsp .bfsp-drawer[data-bfm-goo="true"] {
+    animation: none;
+  }
+}
+
+/* ---- 80d. and the icon rail's flyout, both ways (2026-09-19) ------------- */
+/* Asked for with a recording: the left sidebar panel should open and close the
+   way the rest of them do.
+
+   It played `hs-flyout-in` — a fade and a 6px slide — and had NOTHING on the way
+   out: it vanished on the frame the pointer left. It is §64's effect now, out of
+   the rail button the pointer is on, and back into it.
+
+   TWO THINGS MAKE IT THE ODD ONE OUT. It is opened by HOVER, so there is no
+   click to measure and motion/PanelGoo.tsx takes the rect of the rail button
+   under the pointer instead. And it is not a portal on the body: it lives inside
+   the rail, so components/ui/panelExit.tsx puts its copy back THERE — which is
+   the reason that file returns a copy to the node's own parent rather than to
+   the body, and why `body > .bf-panel-exit` below does not reach it.
+
+   The rail's buttons are 36px discs, so the flyout starts as round as they are. */
+.app-shell.hs-shell.bf-shell .hs-flyout[data-bfm-goo="true"] {
+  --bf-goo-r: 999px;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+.app-shell.hs-shell.bf-shell .hs-flyout.bf-panel-exit {
+  pointer-events: none;
+}
+.app-shell.hs-shell.bf-shell .hs-flyout.bf-panel-exit[data-bfm-goo="true"] {
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) reverse forwards;
+}
+/* opened with no measured button behind it — a keyboard route — leaves the way
+   it arrived rather than not at all */
+.app-shell.hs-shell.bf-shell .hs-flyout.bf-panel-exit:not([data-bfm-goo="true"]) {
+  animation: hs-flyout-in var(--bf-dur-panel) var(--bf-ease) reverse forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .hs-flyout[data-bfm-goo="true"],
+  .app-shell.hs-shell.bf-shell .hs-flyout.bf-panel-exit,
+  .app-shell.hs-shell.bf-shell .hs-flyout.bf-panel-exit[data-bfm-goo="true"] {
+    animation: none;
+  }
+}
+
+/* ============================================================================
+   81. SETTINGS, ON THE SAME BEATS AS EVERY OTHER PAGE (2026-09-19)
+   ----------------------------------------------------------------------------
+   Asked for: "put all the animations within the Dashboard as well as the pages
+   and put it within the Settings page" — the gooey effects, the travelling
+   selection, "and anything else you see that should be put in".
+
+   WHAT WAS ALREADY TRUE. Settings is named in 75's list, so it declares
+   `--bfm-shift`, and the Preferences view it hosts has had both the travelling
+   pill (`.pref-segmented`) and the gooey menus (`.pref-menu`, and every `<select>`
+   and date field through the two portal layers) since they were built. So part
+   of this page was already on the system.
+
+   WHAT WAS NOT. Settings is the one page whose own cascade was never re-pointed:
+   settings-redesign.css still opened it on nineteen hand-picked literals — 0.55s
+   rises at 0.04 / 0.1 / 0.16 / 0.22 / 0.28 / 0.36s down the rail, 0.6s rises at
+   0.02 / 0.1 / 0.18 / 0.26 / 0.34 / 0.42s down the panel, a 0.5s plan card every
+   0.08s, and a 0.32s slide under the billing segment. 75's prose says Settings
+   "opens the way the Dashboard does", and for this page that was a claim, not a
+   fact. This section makes it one. The numbers are not copied here: every rule
+   below reads the beats in 74a, which is where they live.
+
+   THE RAIL RISES AS ONE, AND ITS CONTENTS ONLY FADE. That is not a stylistic
+   preference, it is what the pill requires. The pill is the rail's own `::before`
+   (78), positioned in the rail's coordinates by offsets the layer measures — and
+   an offset does not see a transform. While each nav SECTION slid up
+   independently, as it used to, the pill would have sat at the final resting
+   place of an item that had not arrived there yet, detached from it for the
+   whole entrance. Moving the transform up to the rail itself puts the pill
+   INSIDE it, so the two travel together and can never come apart; the sections
+   then need nothing but opacity, which offsets do not see either.
+
+   AND THE PANEL COMES OUT OF THE CATEGORY YOU PICKED (80's morph, 64's numbers).
+   Picking a category re-keys the panel, so a whole new one arrives, and
+   motion/PanelGoo.tsx measures the item that was pressed and starts the panel on
+   its box — blurred, the item's own radius, growing into place. `transform-origin`
+   is load-bearing: the measurement is top-left to top-left, so the scale has to
+   happen about that corner or the panel lands somewhere else entirely.
+
+   The page's FIRST open is deliberately not that: it arrives from the top bar's
+   gear, and a panel morphing out of a gear while the rail is still assembling is
+   two openings at once. The layer only spends a rect taken from a category
+   control, so with no category behind it the panel keeps the beats below.
+   ========================================================================= */
+
+/* ---- 81a. the rail arrives as one block, on the chrome's own rail beat ---- */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail {
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-rail) - var(--bfm-shift)));
+}
+/* opacity only — see the note above on why nothing in here may translate */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-account-card,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-ai-button {
+  --bfe-r: 0;
+  animation: bfe-fade var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-rail) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group:nth-child(1) {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group:nth-child(2) {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group:nth-child(3) {
+  --bfe-r: 3;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group:nth-child(4) {
+  --bfe-r: 4;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-ai-button {
+  --bfe-r: 5;
+}
+/* The pill lands after the section it sits in has, so it is never a dark bar
+   waiting on an empty rail. Opacity only, again: its transform IS its position. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill]::before {
+  animation: bfe-fade var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-rail) + 6 * var(--bfm-stagger-icon) - var(--bfm-shift)));
+}
+
+/* ---- 81b. the panel: the title leads, the blocks arrive, the rows DROP ----
+   Asked for with a clip of the Companies page opening: "the animation should
+   look like a list dropping all the information (like how the pages within the
+   dashboard look)". Read frame by frame, that page is three things, and what
+   Settings was missing is the third:
+
+   at 0.27s  the card is a blurred slab and its head is writing itself;
+   at 0.55s  the head and the column labels are sharp, and the ROWS are arriving
+             one after another down the table — each still blurred and 8px low
+             when the one above it has landed;
+   at 0.82s  it is finished.
+
+   Settings had the first two. Its sections landed as whole cards, so a panel of
+   nine settings rows arrived as one slab of nine — the thing the reference
+   never does. The rows now carry the same cascade the index tables do, off the
+   same three beats and the same two staggers, so this is the Companies page's
+   entrance rather than a copy of it.
+
+   The blur is inherited, not repeated: the block sets `--bfe-blur` and every row
+   inside it reads that, which is exactly how the index card does it. A section's
+   own `h2` is deliberately NOT in the cascade — it comes in with its block, the
+   way the table's column labels are sharp while the rows are still arriving. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > .settings-page-header {
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-title) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:not(.settings-page-header) {
+  /* `--bfe-b`, not `--bfe-r`: the rows inside read BOTH, and a row setting its
+     own `--bfe-r` would shadow the block's at the moment it needed it */
+  --bfe-b: 0;
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-b, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:nth-child(3) {
+  --bfe-b: 1;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:nth-child(4) {
+  --bfe-b: 2;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:nth-child(5) {
+  --bfe-b: 3;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:nth-child(6) {
+  --bfe-b: 4;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:nth-child(7) {
+  --bfe-b: 5;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *:nth-child(n + 8) {
+  --bfe-b: 5;
+}
+
+/* the rows, top to bottom, once the block holding them is in */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row,
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *,
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > * {
+  --bfe-r: 0;
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  /* the BLOCK's rank as well as the row's place in it, so the drop carries on
+     down the page instead of every block restarting the same cascade at once */
+  animation-delay: max(
+    0ms,
+    calc(
+      var(--bfm-beat-board-content) + var(--bfe-b, 0) * var(--bfm-stagger-card) + var(--bfe-r, 0) * var(--bfm-stagger-icon) -
+        var(--bfm-shift)
+    )
+  );
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(3) {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(4) {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(5) {
+  --bfe-r: 3;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(6) {
+  --bfe-r: 4;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(7) {
+  --bfe-r: 5;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(8) {
+  --bfe-r: 6;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(9) {
+  --bfe-r: 7;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(10) {
+  --bfe-r: 8;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row:nth-child(n + 11) {
+  --bfe-r: 8;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(2),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(2),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(2) {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(3),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(3),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(3) {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(4),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(4),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(4) {
+  --bfe-r: 3;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(5),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(5),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(5) {
+  --bfe-r: 4;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(6),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(6),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(6) {
+  --bfe-r: 5;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(7),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(7),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(7) {
+  --bfe-r: 6;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(8),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(8),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(8) {
+  --bfe-r: 7;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(9),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(9),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(9) {
+  --bfe-r: 8;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row:nth-child(n + 10),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *:nth-child(n + 10),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-list > *:nth-child(n + 10) {
+  --bfe-r: 8;
+}
+
+/* the billing plan cards keep their own index, on the beat the content arrives */
+.app-shell.hs-shell.bf-shell .settings-rx .sx-plan-card {
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--i, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+/* Billing's own two-option switch is the travelling selection built a second
+   time, by hand, before 78 existed: a real element sliding on its own curve.
+   Its markup stays as it is — it works, and it is one of exactly two options, so
+   nothing has to be measured — but the curve it travels on is the one every
+   other selection in the program uses. */
+.app-shell.hs-shell.bf-shell .settings-rx .sx-seg-ind {
+  transition: transform var(--bfm-dur-pill) var(--bfm-ease-pill);
+}
+
+/* ---- 81c. the panel comes out of the category you picked ---- */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner[data-bfm-goo="true"] {
+  /* the measurement is top-left to top-left, so the scale must be about that corner */
+  transform-origin: top left;
+  /* the item it comes out of is a pill, so that is the radius it starts with —
+     the layer writes the other four numbers, this one is the same for every
+     category and belongs with the rule rather than in JS */
+  --bf-goo-r: 999px;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+/* The contents are NOT suppressed while it morphs, though they were when this
+   was first built. The two do not overlap: the morph is `--bf-dur-panel` (240ms)
+   and the first block does not start until the board beat, 300ms after a switch,
+   so the panel finishes arriving and then fills — the container coming out of
+   the category, and the list dropping into it, in that order. */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-rail,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-account-card,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-ai-button,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner > *,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-section > .settings-row,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-member-list > .settings-member-row,
+  .app-shell.hs-shell.bf-shell .settings-rx .sx-addon-grid > *,
+  .app-shell.hs-shell.bf-shell .settings-rx .wc-list > *,
+  .app-shell.hs-shell.bf-shell .settings-rx .sx-plan-card {
+    animation: bfe-fade var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+  }
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-rail[data-bfm-pill]::before,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-panel-inner[data-bfm-goo="true"] {
+    animation: none;
+  }
+  .app-shell.hs-shell.bf-shell .settings-rx .sx-seg-ind {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   82. SETTINGS' BUTTONS, EACH ONE ANSWERING FOR WHAT IT DOES (2026-09-20)
+   ----------------------------------------------------------------------------
+   Asked for, with the segmented-control clip that 78's pill came from: "look
+   through the animations, effects and tweening within the Settings page, then
+   customize the effects for the different buttons."
+
+   WHAT THE CLIP ACTUALLY ARGUES. It is five segmented controls side by side and
+   no two are dressed the same: one puts a white disc behind an icon, one a solid
+   fill behind a label, one a raised card with a shadow, one a tinted pill, one a
+   card with a rule beside it. The point is not the pill — that was built in 78 —
+   it is that a control's treatment is chosen for the control. Read frame by
+   frame the indicator also STRETCHES as it travels, its leading edge arriving
+   before its trailing edge lets go, and the labels change ink in step with it.
+
+   WHAT SETTINGS HAD. Measured, not read: fourteen kinds of button, and twelve of
+   them did the same two things — rise 2px and take a bigger shadow. `transform:
+   translateY(-2px)` appears 43 times in this sheet. Three of them were on
+   `transition: all`, which animates whatever happens to change and is what makes
+   a hover feel mushy. The durations ran 0.12 / 0.16 / 0.18 / 0.2 / 0.22s with no
+   two families agreeing. And there was no `:active` rule anywhere in the file —
+   `--bf-dur-press` had been declared, and put in transition lists, for a state
+   that was never written, so nothing in the program moved under the finger.
+
+   WHAT THEY DO NOW. Six families, by what pressing one COMMITS you to:
+
+     committing   rises to meet you, then takes the press      (82a)
+     secondary    stays put and tints; presses lightly         (82b)
+     (the line between those two is what the button WRITES, not how big it is:
+      "Add to workspace" is a solid pill that buys an add-on, so it commits)
+     destructive  never rises — it must not invite the click   (82c)
+     dismiss      turns rather than lifts                      (82d)
+     choosing     presses INTO its track, the opposite of a lift  (82e)
+     the toggle   its knob travels on the pill's own curve     (82f)
+
+   Every duration and curve below is a token. The press is `--bf-dur-press`
+   (120ms) — fast enough to feel like contact rather than an animation.
+   ========================================================================= */
+
+/* ---- 82a. committing: the buttons that write something ---- */
+.app-shell.hs-shell.bf-shell .settings-rx .acct-primary,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-primary-action,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-invite-submit,
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-cta,
+.app-shell.hs-shell.bf-shell .settings-rx .sx-plan-cta.primary {
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    box-shadow var(--bf-dur-hover) var(--bf-ease),
+    background var(--bf-dur-hover) var(--bf-ease);
+}
+/* It already rose to meet the pointer; what it never did was take the press.
+   Back to the ground AND fractionally smaller, so the finger is what moved it. */
+.app-shell.hs-shell.bf-shell .settings-rx .acct-primary:active:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .settings-primary-action:active:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .settings-invite-submit:active:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-addon-cta:active:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .sx-plan-cta.primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: var(--bf-shadow-card);
+}
+
+/* ---- 82b. secondary: the ones that open, reveal or resend ---- */
+/* No lift. These sit INSIDE a row rather than on top of one, and a row that
+   lifts a piece of itself toward you reads as the row coming apart. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-action-button,
+.app-shell.hs-shell.bf-shell .settings-rx .acct-link-btn {
+  /* `transition: all` on the last two: it animates whatever happens to change,
+     including the layout properties a re-render touches, and is why they felt
+     mushy where the others felt crisp. Named properties only. */
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    background var(--bf-dur-hover) var(--bf-ease),
+    color var(--bf-dur-hover) var(--bf-ease),
+    border-color var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-action-button:hover:not(:disabled) {
+  transform: none;
+  background: var(--bf-hover);
+  box-shadow: var(--bf-shadow-card);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-action-button:active:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .acct-link-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ---- 82c. destructive: remove ---- */
+/* Deliberately the one family that never rises toward the pointer. Every other
+   button here uses that as "come and press me", and a control that takes a
+   teammate off the workspace should not be the one saying it. It tints to the
+   danger tone and its glyph grows instead — the button stays where it is. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove,
+.app-shell.hs-shell.bf-shell .settings-rx .wc-remove {
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    background var(--bf-dur-hover) var(--bf-ease),
+    color var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove > svg,
+.app-shell.hs-shell.bf-shell .settings-rx .wc-remove > svg {
+  transition: transform var(--bf-dur-hover) var(--bf-ease-spring);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove:hover:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-remove:hover:not(:disabled) {
+  transform: none;
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove:hover > svg,
+.app-shell.hs-shell.bf-shell .settings-rx .wc-remove:hover > svg {
+  transform: scale(1.12);
+}
+/* a decisive squash rather than the commit family's 0.97: this one is final */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove:active:not(:disabled),
+.app-shell.hs-shell.bf-shell .settings-rx .wc-remove:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* ---- 82d. dismiss: the X in the corner ---- */
+/* It used to rise 2px like a commit button, which is the wrong invitation for a
+   control that throws the page away. It turns instead — the glyph rotates a
+   quarter turn under the pointer, which is a gesture only this button makes. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-close-button {
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    background var(--bf-dur-hover) var(--bf-ease),
+    color var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-close-button > svg {
+  transition: transform var(--bf-dur-hover) var(--bf-ease-spring);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-close-button:hover {
+  transform: none;
+  background: var(--bf-hover);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-close-button:hover > svg {
+  transform: rotate(90deg);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-close-button:active {
+  transform: scale(0.9);
+}
+
+/* ---- 82e. choosing: the options that live inside a track ---- */
+/* The rail's items and billing's two-option switch are not buttons on a surface,
+   they are options in a groove — so they press IN rather than lift OUT. Their
+   ink moves on the pill's own duration, so a label dims and brightens in step
+   with the indicator arriving under it, which is what the clip does. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-item,
+.app-shell.hs-shell.bf-shell .settings-rx .sx-seg-opt {
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    background var(--bf-dur-hover) var(--bf-ease),
+    color var(--bfm-dur-pill) var(--bfm-ease-pill);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-item:active,
+.app-shell.hs-shell.bf-shell .settings-rx .sx-seg-opt:active {
+  transform: translateY(1px);
+}
+/* the selected one is sitting on the pill and must not move off it */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-item.active:active {
+  transform: none;
+}
+
+/* ---- 82f. the toggle: a knob that travels like the clip's indicator ---- */
+/* It ran on 0.2s and a curve written out by hand. Both are now the measured pill
+   pair from 78 — the same character as the thing in the reference — and the knob
+   squeezes under the finger on the way. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-toggle {
+  transition: background var(--bfm-dur-pill) var(--bfm-ease-pill);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-toggle > span {
+  transition:
+    transform var(--bfm-dur-pill) var(--bfm-ease-pill),
+    width var(--bf-dur-press) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-toggle:active > span {
+  width: 26px;
+}
+/* pressed while ON, the knob has to keep its right edge where it is: it grows
+   from the left instead, or it would push out past the end of the track */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-toggle.active:active > span {
+  transform: translateX(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove > svg,
+  .app-shell.hs-shell.bf-shell .settings-rx .wc-remove > svg,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-close-button > svg,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-toggle > span {
+    transition: none;
+  }
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-close-button:hover > svg,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove:hover > svg,
+  .app-shell.hs-shell.bf-shell .settings-rx .wc-remove:hover > svg {
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   83. THE JOB DRAWER IS AN OVERLAY, AND THE RAIL STEPS OUT FOR IT (2026-09-20)
+   ----------------------------------------------------------------------------
+   Asked for: "make it so that the user is able to scroll up & down of the job
+   right side bar. Also make it so that the left sidebar will be hidden when the
+   job right sidebar gets shown up."
+
+   THE SCROLL WAS NEVER THE BUG. `.gantt-drawer-body` has had `flex: 1;
+   min-height: 0; overflow-y: auto` all along and it works — measured in the
+   running app at a 400px viewport, the body scrolled 218px under script. What
+   was wrong is what the screenshot showed: the drawer's HEAD was behind the top
+   bar. The job's name, its project line and the close disc were all under it,
+   and since the head sits outside the scroller no amount of scrolling could
+   reach them — which is exactly what "I can't scroll up" looks like from the
+   outside.
+
+   The layer is `position: fixed; inset: 0; z-index: 95`, which is over the top
+   bar's 40 and the rail's 30. It never got to make that case: rendered as a
+   child of the page, it was sealed inside `.schedule-page` (z-index 60 with
+   `isolation: isolate`) inside `.bfm-page` (z-index 1 — section 79's, added
+   2026-09-19, which is when this broke). The top bar is a sibling of THAT, so
+   the whole page — drawer included — painted underneath it.
+
+   JobDrawer.tsx now portals the layer to the shell, beside the top bar rather
+   than under it, the way the job picker's backdrop is already a child of the
+   body. Nothing here positions it; the portal wrapper just has to disappear
+   from the shell's flex column, which `display: contents` does completely — a
+   zero-height flex item would still have taken the column's gap.
+
+   THE RAIL then goes, because the person asked and because the drawer is modal:
+   everything behind it is dimmed and unclickable anyway, so the rail is a strip
+   of live-looking chrome next to a page you cannot use. It slides out to the
+   left rather than being dropped from the layout — `display: none` would
+   collapse `.hs-body`'s 230px column and re-flow the whole board behind the
+   blur, which is a lot of movement for something nobody is looking at. Its Show
+   tab goes with it: there is nothing to bring the rail back TO while the drawer
+   is up, and the rail returns on its own when the drawer closes.
+
+   The person's own Hide choice is untouched — that one is localStorage
+   (railHidden.ts) and belongs to them; this is a class on the body that lives
+   exactly as long as the drawer does.
+   ============================================================================ */
+/* ---- 83a. the portal is a scope, not a box ---- */
+.gantt-drawer-portal {
+  display: contents;
+}
+/* ---- 83b. the rail steps out ---- */
+.app-shell.hs-shell.bf-shell .sidebar.hs-rail {
+  transition: translate var(--bf-dur-panel) var(--bf-ease-size);
+}
+body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .sidebar.hs-rail {
+  /* `translate`, not `transform`: the rail's hover and arrival effects own `transform`, and the
+     individual properties compose ahead of it, so the two writers never have to agree.
+
+     TWICE its own width, not `calc(-100% - 12px)`: the rail is inset from the window's left edge
+     (17.9px measured) as well as being 50.8px wide, so one width plus a guess left 5.9px of it
+     still showing. Its own width is the one number that is certainly bigger than that inset, so
+     -200% needs no constant and survives the rail being made wider.
+
+     AND IT CANNOT FADE. `bf-shell-in` is `0% {opacity: 0} 100% {opacity: 1}` with
+     `animation-fill-mode: both`, so the shell's arrival keeps hold of the rail's opacity for good
+     — an animation outranks a declaration like this one, and `opacity: 0` here was simply never
+     applied (checked in the running app). Travelling clear of the edge is what hides it. */
+  translate: -200% 0;
+  pointer-events: none;
+}
+body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .sidebar.hs-rail {
     transition: none;
   }
 }

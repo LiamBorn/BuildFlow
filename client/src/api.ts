@@ -26,7 +26,6 @@ import type {
   PlanId,
   OnboardingProductId,
   User,
-  UserRole,
   TeamInvite,
   InvitePreview,
   CrewClash,
@@ -149,7 +148,8 @@ export type AuthSession = { account: Account; org: Org; demo?: boolean };
 
 /* ── team + invites ─────────────────────────────────────────────────────── */
 export type TeamPayload = { users: User[]; invites: TeamInvite[]; emailVerified: boolean; canManage?: boolean };
-export type InviteDraft = { email: string; role: UserRole };
+/** An invite carries one thing: what the person will be allowed to do once they accept. */
+export type InviteDraft = { email: string; permission: PermissionLevel };
 export type InviteResult = { email: string; status: "sent" | "held" | "skipped"; reason?: string };
 
 export function fetchTeam() {
@@ -167,9 +167,12 @@ export function resendInvite(id: string) {
 export function revokeInvite(id: string) {
   return request<void>(`/api/team/invites/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
-/** Owner only: what a teammate is in the workspace. */
-export function updateTeamMemberRole(id: string, role: UserRole) {
-  return request<{ user: User }>(`/api/team/users/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ role }) });
+/** Owner only: what a teammate may do in the workspace. Never to Owner — that is a transfer. */
+export function updateTeamMemberPermission(id: string, permission: PermissionLevel) {
+  return request<{ user: User }>(`/api/team/users/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ permission })
+  });
 }
 export function removeSampleUser(id: string) {
   return request<void>(`/api/team/users/${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -278,8 +281,10 @@ export function logout() {
 
 /* ── in-app feedback ─────────────────────────────────────────────────────── */
 export type FeedbackCategory = "idea" | "bug" | "praise" | "other";
-/** "Give feedback": only the words travel. The server adds who wrote and from which workspace. */
-export function sendFeedback(input: { category: FeedbackCategory; message: string; page: string }) {
+/** What a message may carry with it; the server checks the count and the size over again. */
+export type FeedbackAttachment = { name: string; type: string; dataUrl: string };
+/** "Give feedback": only the words and the files travel. The server adds who wrote and from which workspace. */
+export function sendFeedback(input: { category: FeedbackCategory; message: string; page: string; attachments?: FeedbackAttachment[] }) {
   return request<{ ok: true; mode: string }>("/api/feedback", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -327,7 +332,10 @@ export function createWorkspace() {
 }
 /** Makes another of the person's workspaces the active one; the app re-enters on it. */
 export function switchWorkspace(id: string) {
-  return request<WorkspacesPayload & { session: AuthSession }>(`/api/workspaces/${encodeURIComponent(id)}/switch`, { method: "POST", body: "{}" });
+  return request<WorkspacesPayload & { session: AuthSession }>(`/api/workspaces/${encodeURIComponent(id)}/switch`, {
+    method: "POST",
+    body: "{}"
+  });
 }
 
 /** Confirms the address from an emailed link. */

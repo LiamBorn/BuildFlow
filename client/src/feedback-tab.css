@@ -25,7 +25,12 @@
   gap: 10px;
   padding: 14px 10px 14px 11px;
   border: 0;
-  border-radius: var(--bf-radius-control, 12px) 0 0 var(--bf-radius-control, 12px);
+  /* The CURVED side faces the page and the square corners sit against the window
+     edge (asked for 2026-09-19). Authored the other way round on purpose: this
+     element carries `rotate(180deg)` below, which maps top-left to bottom-right,
+     so the two corners named here are the two that RENDER on the left. Writing
+     the radius the way it should look would put the curve against the edge. */
+  border-radius: 0 var(--bf-radius-control, 12px) var(--bf-radius-control, 12px) 0;
   background: var(--bf-ink, #1c1c1a);
   color: var(--bf-surface, #ffffff);
   font: inherit;
@@ -137,6 +142,131 @@
   margin-top: 2px;
 }
 
+/* ---- attachments ----------------------------------------------------------- */
+/* The real input is never shown: it cannot be styled to match the pills above,
+   and the button in front of it carries the same label, so nothing is lost.
+   `position: absolute` rather than `display: none` keeps it focusable for the
+   browsers that route a file-picker keyboard shortcut at it. */
+.bffb-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.bffb-attach {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: -4px;
+  animation: pdx-field-in 0.6s var(--pdx-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+}
+.bffb-attach-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.bffb-attach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px dashed var(--wx-line, rgba(28, 28, 26, 0.13));
+  border-radius: 999px;
+  background: var(--wx-card, #fff);
+  color: var(--wx-ink, #1c1c1a);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.25s) ease,
+    border-color var(--bf-dur-hover, 0.25s) ease;
+}
+.bffb-attach-btn:hover:not(:disabled) {
+  border-style: solid;
+  background: var(--wx-bg, #f5f6fa);
+}
+.bffb-attach-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.bffb-attach-btn svg {
+  color: var(--wx-mut, #575550);
+}
+.bffb-attach-btn:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 2px;
+}
+.bffb-attach-hint {
+  color: var(--wx-mut, #575550);
+  font-size: 12px;
+}
+.bffb-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bffb-file-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--wx-line, rgba(28, 28, 26, 0.13));
+  border-radius: var(--bf-radius-control, 12px);
+  background: var(--wx-bg, #f5f6fa);
+  font-size: 13px;
+}
+/* min-width: 0 is what lets the ellipsis happen — a flex item's floor is its
+   content width otherwise, and a long file name would push the size and the
+   remove button out of the row. */
+.bffb-file-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--wx-ink, #1c1c1a);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bffb-file-size {
+  flex: 0 0 auto;
+  color: var(--wx-mut, #575550);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.bffb-file-chip > button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wx-mut, #575550);
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover, 0.25s) ease,
+    color var(--bf-dur-hover, 0.25s) ease;
+}
+.bffb-file-chip > button:hover {
+  background: var(--wx-card, #fff);
+  color: var(--wx-ink, #1c1c1a);
+}
+.bffb-file-chip > button:focus-visible {
+  outline: 2px solid var(--bf-accent, #2f6bff);
+  outline-offset: 1px;
+}
+
 /* ---- the thanks state ------------------------------------------------------ */
 .bffb-sent {
   position: relative;
@@ -182,6 +312,7 @@
 @media (prefers-reduced-motion: reduce) {
   .bffb-tab,
   .bffb-kinds,
+  .bffb-attach,
   .bffb-sent {
     animation: none;
   }

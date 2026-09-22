@@ -10,7 +10,6 @@ import type {
   RebookMove,
   RebookResult,
   BootstrapPayload,
-  UserRole,
   BusinessTypeId,
   CreateEquipmentInput,
   CreateCrewInput,
@@ -76,8 +75,6 @@ export type InviteRow = {
   id: string;
   orgId: string;
   email: string;
-  /** The crew roster's job title. */
-  role: UserRole;
   /** The permission level the accepted account is created at. See migration 21. */
   permission: PermissionLevel;
   invitedBy: string;
@@ -1166,6 +1163,37 @@ SCHEMA_MIGRATIONS.push({
   }
 });
 
+SCHEMA_MIGRATIONS.push({
+  version: 25,
+  name: "one role taxonomy: the job titles go",
+  up: (db) => {
+    // Asked for on 2026-09-19: "remove the Project Manager, Superintendent, Foreman and any
+    // other construction roles. New roles would be Workspace Owner, Admin, Member."
+    //
+    // There were two parallel role systems. `accounts.role` is the permission level, which is
+    // what the server has always authorized on. `users.role` (here, on every tenant file) and
+    // `invites.role` held a JOB TITLE out of a fixed list of three, which decided nothing and
+    // was the only "role" anybody could actually see. The titles are gone, so the columns go
+    // with them rather than sitting NOT NULL and meaningless.
+    //
+    // A person's trade is still recorded where it belongs: `users.title` is free text, and the
+    // Time card prices labour by classification. Neither is a role.
+    //
+    // Guarded per table because this runner visits the control database and every tenant file,
+    // and neither has all of these. DROP COLUMN needs SQLite 3.35+; this ships 3.49.
+    for (const [table, column] of [
+      ["users", "role"],
+      ["invites", "role"]
+    ]) {
+      const present = db.exec(`SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'`);
+      if (!present[0]) continue;
+      const columns = db.exec(`PRAGMA table_info(${table})`);
+      const has = columns[0]?.values.some((row) => row[1] === column);
+      if (has) db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
+    }
+  }
+});
+
 export const LATEST_SCHEMA_VERSION = SCHEMA_MIGRATIONS.reduce((max, m) => Math.max(max, m.version), 0);
 
 /**
@@ -1714,27 +1742,9 @@ export class BuildFlowStore {
     if (count > 0) return;
 
     const users: User[] = [
-      {
-        id: "u-matt",
-        name: "Matt Johnson",
-        role: "Project Manager",
-        title: "Project Manager",
-        avatar: "MJ"
-      },
-      {
-        id: "u-jessica",
-        name: "Jessica Lee",
-        role: "Superintendent",
-        title: "Superintendent",
-        avatar: "JL"
-      },
-      {
-        id: "u-carlos",
-        name: "Carlos Ramirez",
-        role: "Crew Lead",
-        title: "Crew Lead - Crew 2",
-        avatar: "CR"
-      }
+      { id: "u-matt", name: "Matt Johnson", title: "Teammate", avatar: "MJ" },
+      { id: "u-jessica", name: "Jessica Lee", title: "Teammate", avatar: "JL" },
+      { id: "u-carlos", name: "Carlos Ramirez", title: "Teammate", avatar: "CR" }
     ];
 
     const projects: Project[] = [
@@ -2703,6 +2713,29 @@ export class BuildFlowStore {
   }
 
   /**
+   * Set what someone may do in ONE workspace — the write behind PATCH /api/team/users/:id.
+   *
+   * The level is kept in two places and this is why they cannot drift: `accounts.role` is
+   * what every request authorizes on (the session carries the account, see the gate in
+   * app.ts), and `workspace_members.role` is what the workspace switcher lists. Writing one
+   * without the other leaves a person who is an Admin to the server and a Member to the
+   * screen, or the reverse. Both, in one transaction, or neither.
+   *
+   * Refuses an account that is not in this workspace, so a valid id from somewhere else
+   * cannot be raised from here.
+   */
+  setAccountPermission(accountId: string, orgId: string, role: PermissionLevel): Account | undefined {
+    if (!isPermissionLevel(role)) return undefined;
+    if (!this.accountsForOrg(orgId).some((one) => one.id === accountId)) return undefined;
+    this.transaction(() => {
+      this.run("UPDATE accounts SET role = ? WHERE id = ?", [role, accountId]);
+      this.run("UPDATE workspace_members SET role = ? WHERE accountId = ? AND orgId = ?", [role, accountId, orgId]);
+    });
+    this.save();
+    return this.getAccountById(accountId);
+  }
+
+  /**
    * Every login in one workspace. `accounts` had only ever been queried by email and by id, so
    * before this there was no way to ask "who is in this workspace" or "is this the last owner" --
    * which are the two questions ownership transfer and teammate removal are made of.
@@ -2804,7 +2837,9 @@ export class BuildFlowStore {
 
   /** How many workspaces beyond the home one this login has created; the limit counts these. */
   extraWorkspaceCount(accountId: string): number {
-    return this.get<{ n: number }>("SELECT COUNT(*) AS n FROM workspace_members WHERE accountId = ? AND kind = 'extra'", [accountId])?.n ?? 0;
+    return (
+      this.get<{ n: number }>("SELECT COUNT(*) AS n FROM workspace_members WHERE accountId = ? AND kind = 'extra'", [accountId])?.n ?? 0
+    );
   }
 
   /**
@@ -2918,15 +2953,7 @@ export class BuildFlowStore {
   /* ── team invites (org records) ─────────────────────────────────────────── */
 
   /** Mint an invite; an open invite to the same address on this org is replaced. Returns the raw token for the link. */
-  createInvite(input: {
-    orgId: string;
-    email: string;
-    role: UserRole;
-    permission: PermissionLevel;
-    invitedBy: string;
-    ttlMs: number;
-    sent: boolean;
-  }): {
+  createInvite(input: { orgId: string; email: string; permission: PermissionLevel; invitedBy: string; ttlMs: number; sent: boolean }): {
     invite: InviteRow;
     token: string;
   } {
@@ -2938,7 +2965,6 @@ export class BuildFlowStore {
       id: newId("inv"),
       orgId: input.orgId,
       email,
-      role: input.role,
       // Never an owner: ownership is transferred, not handed out with an email. Anything
       // unrecognised fails closed to the least privilege, as it does on accounts.
       permission: input.permission === "admin" ? "admin" : "member",
@@ -3011,14 +3037,10 @@ export class BuildFlowStore {
     this.save();
   }
 
-  /** Change what a teammate is in the workspace. The title follows the role unless they are the owner. */
-  updateUserRole(userId: string, role: UserRole): User | undefined {
+  /** The roster row behind a person, by roster id. */
+  getUser(userId: string): User | undefined {
     const row = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE id = ?", [userId]);
-    if (!row) return undefined;
-    const title = row.title === "Owner" ? "Owner" : role;
-    this.run("UPDATE users SET role = ?, title = ? WHERE id = ?", [role, title, userId]);
-    this.save();
-    return userRow({ ...row, role, title });
+    return row ? userRow(row) : undefined;
   }
 
   /** Remove a seeded sample teammate (never a person linked to a login). */
@@ -3034,7 +3056,9 @@ export class BuildFlowStore {
   }
 
   /** The roster row behind a teammate, including the login it is linked to. */
-  teammateRow(userId: string): { id: string; name: string; accountId: string | null; isSample: boolean; removedAt: string | null } | undefined {
+  teammateRow(
+    userId: string
+  ): { id: string; name: string; accountId: string | null; isSample: boolean; removedAt: string | null } | undefined {
     const row = this.get<{ id: string; name: string; accountId: string | null; isSample: number; removedAt: string | null }>(
       "SELECT id, name, accountId, isSample, removedAt FROM users WHERE id = ?",
       [userId]
@@ -3070,8 +3094,9 @@ export class BuildFlowStore {
    */
   moveOwnerTitle(fromAccountId: string, toAccountId: string) {
     this.transaction(() => {
-      // The outgoing owner falls back to their job title, which is what everyone else displays.
-      this.run("UPDATE users SET title = role WHERE accountId = ? AND title = 'Owner'", [fromAccountId]);
+      // The outgoing owner keeps a title, just not that one: there is no job title to fall
+      // back to any more, and a roster row with an empty title reads as a missing person.
+      this.run("UPDATE users SET title = 'Teammate' WHERE accountId = ? AND title = 'Owner'", [fromAccountId]);
       this.run("UPDATE users SET title = 'Owner' WHERE accountId = ?", [toAccountId]);
     });
   }
@@ -3090,11 +3115,11 @@ export class BuildFlowStore {
    * old row is the record of their previous tenure and every field report and variance they filed
    * still points at it. Reviving it would re-attach that history to a new login.
    */
-  createTeammateUser(account: { id: string; name: string; email: string }, role: UserRole): User {
+  createTeammateUser(account: { id: string; name: string; email: string }, title: string): User {
     const existing = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE accountId = ?", [account.id]);
     if (existing) return userRow(existing);
     const name = account.name.trim() || account.email.split("@")[0];
-    const user = { id: newId("u"), name, role, title: role, avatar: initials(name), accountId: account.id, isSample: 0 };
+    const user = { id: newId("u"), name, title, avatar: initials(name), accountId: account.id, isSample: 0 };
     this.insert("users", user);
     this.save();
     return userRow(user);
@@ -3363,9 +3388,10 @@ export class BuildFlowStore {
   }
 
   /**
-   * The workspace person behind a login account, created on first sight. The
-   * registered owner is a Project Manager in their own workspace so every field
-   * update, assignment and approval is attributed to them, not to a seeded name.
+   * The workspace person behind a login account, created on first sight, so every
+   * field update, assignment and approval is attributed to them rather than to a
+   * seeded name. `title` is free text and says what they do; what they MAY do is
+   * their account's permission level, which does not live on this row.
    */
   ensureAccountUser(account: { id: string; name: string; email: string }): User {
     const existing = this.get<User & { isSample: number | boolean }>("SELECT * FROM users WHERE accountId = ?", [account.id]);
@@ -3374,7 +3400,6 @@ export class BuildFlowStore {
     const user = {
       id: newId("u"),
       name,
-      role: "Project Manager" as const,
       title: "Owner",
       avatar: initials(name),
       accountId: account.id,
@@ -3632,8 +3657,16 @@ export class BuildFlowStore {
     };
   }
 
+  /**
+   * Whether this id names somebody who can be a project's manager — which now means
+   * somebody on the roster, full stop. It used to read `role IN ('Project Manager',
+   * 'Superintendent')`; that column went with the job titles (migration 25), and nothing
+   * replaced the filter: answering for a project is an assignment, and the three levels
+   * that remain are about access, so gating on one would refuse the field staff who run
+   * the work. Still a real check — an id that is not a person is still refused.
+   */
   canManageProject(managerId: string) {
-    return Boolean(this.get<User>("SELECT * FROM users WHERE id = ? AND role IN (?, ?)", [managerId, "Project Manager", "Superintendent"]));
+    return Boolean(this.get<User>("SELECT id FROM users WHERE id = ?", [managerId]));
   }
 
   createProject(input: CreateProjectInput) {

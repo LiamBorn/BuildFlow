@@ -198,8 +198,10 @@ import {
   passwordProblem,
   passwordStrength,
   tradeProfileFor,
+  invitablePermissionLevels,
+  permissionLevelLabels,
+  type PermissionLevel,
   type InvitePreview,
-  type UserRole,
   tradeProfiles,
   type TradeIcon,
   type TradeProfile,
@@ -222,7 +224,7 @@ import {
   resendInvite as apiResendInvite,
   revokeInvite as apiRevokeInvite,
   removeSampleUser as apiRemoveSampleUser,
-  updateTeamMemberRole as apiUpdateTeamMemberRole,
+  updateTeamMemberPermission as apiUpdateTeamMemberPermission,
   fetchInvitePreview as apiFetchInvitePreview,
   acceptInvite as apiAcceptInvite,
   updateAccount as apiUpdateAccount,
@@ -321,7 +323,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { SelectMenuLayer } from "./components/ui/selectMenu";
 import { DateMenuLayer } from "./components/ui/dateMenu";
 import { PanelExitLayer } from "./components/ui/panelExit";
-import { AppFrame, SegmentPill, TextReveal } from "./motion";
+import { AppFrame, PageSwap, PanelGoo, SegmentPill, TextReveal } from "./motion";
 import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
 import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
 import { GanttPage } from "./schedule/pages/GanttPage";
@@ -889,7 +891,10 @@ function defaultProjectTargetCompletion() {
 }
 
 function initialProjectInput(project: Project | undefined, users: User[]): CreateProjectInput {
-  const defaultManagerId = users.find((user) => user.role === "Project Manager" || user.role === "Superintendent")?.id ?? "";
+  // Anyone on the roster. This used to look for a "Project Manager" or "Superintendent" job
+  // title; those were removed on 2026-09-19 and nothing replaced them — managing a project is
+  // an assignment, not a rank, and the three levels that remain are about access, not work.
+  const defaultManagerId = users[0]?.id ?? "";
 
   return {
     name: project?.name ?? "",
@@ -2446,10 +2451,6 @@ function App() {
   // cards, quick links, page panels, the tutorial, the what's-new spotlight —
   // goes through setPage / openAppPage, so the gate lives here.
   const [addOnPrompt, setAddOnPrompt] = useState<OnboardingProductId | null>(null);
-  // Sales pages: "Create new → Contact/Company/Deal" opens that page with its
-  // dialog up, and records link to each other across pages (a deal's company,
-  // a company's contacts …) through openSalesRecord.
-  const [createRequest, setCreateRequest] = useState<{ page: Page; nonce: number } | null>(null);
   const [salesOpenRequest, setSalesOpenRequest] = useState<{ page: Page; id: string; nonce: number } | null>(null);
   const openSalesRecord = (target: Page, id: string) => {
     setSalesOpenRequest({ page: target, id, nonce: Date.now() });
@@ -3171,6 +3172,8 @@ function App() {
       <AppFrame />
       {/* the selected option in a button group is a pill that travels (skin §78) */}
       <SegmentPill />
+      {/* every panel comes out of the thing you opened it with (skin §80) */}
+      <PanelGoo />
       {/* HubSpot layout: full-width top bar, then an icon rail + content row.
           APPROVED: Settings renders the top bar again. It had no bar and no rail,
           which made it the one page in the product with no search, no create menu,
@@ -3189,7 +3192,6 @@ function App() {
         onLogout={handleLogout}
         setPage={setPage}
         onAskAi={toggleAssistant}
-        onCreateRecord={(target) => setCreateRequest({ page: target, nonce: Date.now() })}
         bookmarks={bookmarks}
         currentPage={page}
         onToggleBookmark={toggleBookmark}
@@ -3238,6 +3240,9 @@ function App() {
         )}
         <main className={page === "settings" ? "main-panel settings-main-panel" : "main-panel"}>
           <section className={page === "settings" ? "settings-content-scroll" : "content-scroll"}>
+            {/* the page you are leaving goes rather than vanishing (docs/motion-spec.md §4).
+                The children below are untouched: PageSwap only keys them by page. */}
+            <PageSwap page={page}>
             {page === "dashboard" && (
               <Dashboard
                 key={pageEntrance}
@@ -3341,7 +3346,6 @@ function App() {
                 key={pageEntrance}
                 data={data}
                 activeUser={activeUser}
-                createSignal={createRequest?.page === "contacts" ? createRequest.nonce : 0}
                 openRecordRequest={
                   salesOpenRequest?.page === "contacts" ? { id: salesOpenRequest.id, nonce: salesOpenRequest.nonce } : null
                 }
@@ -3353,7 +3357,6 @@ function App() {
                 key={pageEntrance}
                 data={data}
                 activeUser={activeUser}
-                createSignal={createRequest?.page === "companies" ? createRequest.nonce : 0}
                 openRecordRequest={
                   salesOpenRequest?.page === "companies" ? { id: salesOpenRequest.id, nonce: salesOpenRequest.nonce } : null
                 }
@@ -3365,7 +3368,6 @@ function App() {
                 key={pageEntrance}
                 data={data}
                 activeUser={activeUser}
-                createSignal={createRequest?.page === "deals" ? createRequest.nonce : 0}
                 openRecordRequest={salesOpenRequest?.page === "deals" ? { id: salesOpenRequest.id, nonce: salesOpenRequest.nonce } : null}
                 onOpenRecord={openSalesRecord}
               />
@@ -3393,6 +3395,7 @@ function App() {
                 onChangeBusinessType={changeBusinessType}
               />
             )}
+            </PageSwap>
           </section>
         </main>
       </div>
@@ -8836,9 +8839,12 @@ function VerifyEmailBadge({ email, onVerified }: { email: string; onVerified: (v
     </button>
   );
 }
-const TEAM_ROLE_OPTIONS: UserRole[] = ["Project Manager", "Superintendent", "Crew Lead"];
+/** An Owner is never invited: ownership is transferred, not emailed. */
+const INVITE_LEVELS = invitablePermissionLevels;
+/** "an Admin", "a Member" — so a confirmation reads like a sentence. */
+const levelArticle = (level: PermissionLevel) => (level === "admin" ? "an" : "a");
 
-/** One editable invite row: email + role. Shared by the onboarding step and Settings. */
+/** One editable invite row: email + what they will be allowed to do. Shared by onboarding and Settings. */
 function InviteRows({
   rows,
   onChange,
@@ -8873,17 +8879,17 @@ function InviteRows({
           </div>
           <div className="acct-field">
             <label htmlFor={`invite-role-${index}`} className="acct-sr-only">
-              Role {index + 1}
+              Access level {index + 1}
             </label>
             <select
               id={`invite-role-${index}`}
               className="acct-input acct-select"
-              value={row.role}
-              onChange={(event) => update(index, { role: event.target.value as UserRole })}
+              value={row.permission}
+              onChange={(event) => update(index, { permission: event.target.value as PermissionLevel })}
             >
-              {TEAM_ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>
-                  {role}
+              {INVITE_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {permissionLevelLabels[level]}
                 </option>
               ))}
             </select>
@@ -8904,7 +8910,7 @@ function InviteRows({
         <button
           type="button"
           className="acct-link-btn acct-invite-add"
-          onClick={() => onChange([...rows, { email: "", role: "Crew Lead" }])}
+          onClick={() => onChange([...rows, { email: "", permission: "member" }])}
         >
           + Add another
         </button>
@@ -8930,7 +8936,7 @@ function checkInviteRows(rows: InviteDraft[]): { valid: InviteDraft[]; errors: R
       return;
     }
     seen.add(email);
-    valid.push({ email, role: row.role });
+    valid.push({ email, permission: row.permission });
   });
   return { valid, errors };
 }
@@ -8938,9 +8944,9 @@ function checkInviteRows(rows: InviteDraft[]): { valid: InviteDraft[]; errors: R
 /** Last onboarding step: who else should be in the workspace. Skippable — invites also live in Settings. */
 function WelcomeInviteTeamPage({ onDone }: { onDone: () => void }) {
   const [rows, setRows] = useState<InviteDraft[]>([
-    { email: "", role: "Superintendent" },
-    { email: "", role: "Crew Lead" },
-    { email: "", role: "Crew Lead" }
+    { email: "", permission: "admin" },
+    { email: "", permission: "member" },
+    { email: "", permission: "member" }
   ]);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
@@ -9137,7 +9143,7 @@ function WelcomeAcceptInvitePage({
               {previewError
                 ? previewError
                 : preview
-                  ? `${preview.inviterName} invited you as a ${preview.role}. Set a password for ${preview.email} and you're in.`
+                  ? `${preview.inviterName} invited you as ${preview.permission === "admin" ? "an" : "a"} ${permissionLevelLabels[preview.permission]}. Set a password for ${preview.email} and you're in.`
                   : "One moment."}
             </p>
           </div>
@@ -21578,6 +21584,13 @@ function Sidebar({
         </button>
       )}
       <aside className={`sidebar hs-rail${collapsed ? " is-hidden" : ""}`} aria-label="Primary navigation" onMouseLeave={scheduleClose}>
+      {/* the collapse control sits at the rail's HEAD, under the logo — and the Show arrow that
+          brings the rail back stands in exactly this spot (skin §45) */}
+      <div className="hs-rail-top">
+        <button type="button" className="hs-rail-btn hs-rail-hide" aria-label="Hide the sidebar" title="Hide the sidebar" onClick={onToggleCollapsed}>
+          <ChevronLeft size={20} />
+        </button>
+      </div>
       <nav className="hs-rail-list" aria-label="Hubs">
         {navHubs.map((hub) => {
           const Icon = hub.icon;
@@ -21625,9 +21638,6 @@ function Sidebar({
           onClick={onOpenSettings}
         >
           <Settings size={20} />
-        </button>
-        <button type="button" className="hs-rail-btn hs-rail-hide" aria-label="Hide the sidebar" title="Hide the sidebar" onClick={onToggleCollapsed}>
-          <ChevronLeft size={20} />
         </button>
       </div>
       {flyoutHub && (
@@ -21989,7 +21999,6 @@ function TopBar({
   reportsMode = false,
   setPage,
   onAskAi,
-  onCreateRecord,
   bookmarks = [],
   currentPage,
   onToggleBookmark,
@@ -22011,8 +22020,6 @@ function TopBar({
   reportsMode?: boolean;
   setPage?: (page: Page) => void;
   onAskAi?: () => void;
-  /** "Create new → Contact / Company / Deal": open that Sales page with its create dialog up. */
-  onCreateRecord?: (page: Page) => void;
   /** Starred pages for the quick-access menu, and the toggle for the page on screen. */
   bookmarks?: Page[];
   currentPage?: Page;
@@ -22032,9 +22039,7 @@ function TopBar({
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
-  const createMenuRef = useRef<HTMLDivElement | null>(null);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
   const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationItems = useMemo(() => buildNotificationItems(data), [data]);
@@ -22084,19 +22089,6 @@ function TopBar({
   }, [isAccountMenuOpen]);
 
   useEffect(() => {
-    if (!isCreateOpen || typeof document === "undefined") return;
-
-    const closeOnOutsideClick = (event: globalThis.MouseEvent) => {
-      if (!createMenuRef.current?.contains(event.target as Node)) {
-        setIsCreateOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
-  }, [isCreateOpen]);
-
-  useEffect(() => {
     if (!isBookmarksOpen || typeof document === "undefined") return;
     const closeOnOutsideClick = (event: globalThis.MouseEvent) => {
       if (!bookmarkMenuRef.current?.contains(event.target as Node)) setIsBookmarksOpen(false);
@@ -22106,30 +22098,17 @@ function TopBar({
   }, [isBookmarksOpen]);
 
   const goTo = (page: Page) => {
-    setIsCreateOpen(false);
     setIsNotificationsOpen(false);
     setIsAccountMenuOpen(false);
     setPage?.(page);
   };
   // HubSpot's Breeze-style AI button: open the BuildFlow assistant (falls back to the AI Command Center).
   const askAi = () => {
-    setIsCreateOpen(false);
     setIsNotificationsOpen(false);
     setIsAccountMenuOpen(false);
     if (onAskAi) onAskAi();
     else setPage?.("dashboard");
   };
-  // HubSpot-style "Create new" menu — each entry jumps to the page that owns that record type.
-  const createActions: Array<{ page: Page; label: string; icon: typeof Grid2X2 }> = [
-    { page: "projects", label: "Project", icon: Building2 },
-    { page: "schedule", label: "Scheduled job", icon: CalendarDays },
-    { page: "crews", label: "Crew", icon: Users },
-    { page: "contacts", label: "Contact", icon: ContactRound },
-    { page: "companies", label: "Company", icon: Building2 },
-    { page: "deals", label: "Deal", icon: Handshake },
-    { page: "field", label: "Field update", icon: ClipboardList }
-  ];
-
   return (
     <header className={`${topbarClassName} hs-topbar`}>
       {/* The word alone: the top row's brand carries no logo mark (asked for 2026-09-16). */}
@@ -22155,8 +22134,7 @@ function TopBar({
             aria-haspopup="menu"
             aria-expanded={isBookmarksOpen}
             onClick={() => {
-              setIsCreateOpen(false);
-              setIsNotificationsOpen(false);
+                        setIsNotificationsOpen(false);
               setIsAccountMenuOpen(false);
               setIsBookmarksOpen((isOpen) => !isOpen);
             }}
@@ -22246,53 +22224,6 @@ function TopBar({
             </div>
           )}
         </div>
-        <div className="hs-create" ref={createMenuRef}>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Create new"
-            title="Create new"
-            aria-haspopup="menu"
-            aria-expanded={isCreateOpen}
-            onClick={() => {
-              setIsNotificationsOpen(false);
-              setIsAccountMenuOpen(false);
-              setIsCreateOpen((isOpen) => !isOpen);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setIsCreateOpen(false);
-            }}
-          >
-            <Plus size={20} />
-          </button>
-          {isCreateOpen && (
-            <div className="hs-menu" role="menu" aria-label="Create new">
-              <div className="hs-menu-head">Create new</div>
-              {createActions.map((action) => {
-                const ActionIcon = action.icon;
-                return (
-                  <button
-                    key={action.page}
-                    type="button"
-                    role="menuitem"
-                    className="hs-menu-item"
-                    onClick={() => {
-                      goTo(action.page);
-                      if (action.page === "contacts" || action.page === "companies" || action.page === "deals")
-                        onCreateRecord?.(action.page);
-                    }}
-                  >
-                    <ActionIcon size={16} />
-                    <span>{action.label}</span>
-                    {pageReleaseTag(action.page) && (
-                      <span className={`hs-menu-tag ${pageReleaseTag(action.page)!.toLowerCase()}`}>{pageReleaseTag(action.page)}</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
         {data.account && !data.account.emailVerifiedAt && (
           <VerifyEmailBadge email={data.account.email} onVerified={(verifiedAt) => onEmailVerified?.(verifiedAt)} />
         )}
@@ -22346,8 +22277,7 @@ function TopBar({
             onClick={() => {
               setIsNotificationsOpen(false);
               setIsAccountMenuOpen(false);
-              setIsCreateOpen(false);
-              setIsPreferencesOpen((isOpen) => !isOpen);
+                        setIsPreferencesOpen((isOpen) => !isOpen);
             }}
           >
             <Settings size={20} />
@@ -22393,7 +22323,7 @@ function TopBar({
                 <span className="reports-avatar">{me.avatar}</span>
                 <span>
                   <strong>{me.name}</strong>
-                  <em>{me.role}</em>
+                  <em>{me.permission ? permissionLevelLabels[me.permission] : me.title}</em>
                 </span>
               </div>
               <button
@@ -22791,7 +22721,7 @@ function SettingsBillingPlans({
 function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: () => Promise<void> }) {
   const [team, setTeam] = useState<TeamPayload | null>(null);
   const [error, setError] = useState("");
-  const [rows, setRows] = useState<InviteDraft[]>([{ email: "", role: "Crew Lead" }]);
+  const [rows, setRows] = useState<InviteDraft[]>([{ email: "", permission: "member" }]);
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -22841,7 +22771,7 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
           .filter(Boolean)
           .join(" ")
       );
-      setRows([{ email: "", role: "Crew Lead" }]);
+      setRows([{ email: "", permission: "member" }]);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send invites.");
@@ -22916,26 +22846,34 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
               </div>
             </div>
             <div className="settings-member-controls">
-              {team?.canManage ? (
+              {/*
+                The Owner is shown, never offered: ownership moves by transfer, not by picking it
+                off a list, so the select carries Admin and Member only. A person with no login
+                has no level at all — there is nothing yet for a level to apply to.
+              */}
+              {team?.canManage && user.permission && user.permission !== "owner" && user.id !== me?.id ? (
                 <select
                   className="acct-input acct-select settings-role-select"
-                  aria-label={`Role for ${user.name}`}
-                  value={user.role}
+                  aria-label={`Access for ${user.name}`}
+                  value={user.permission}
                   disabled={busy}
                   onChange={(event) => {
-                    const role = event.target.value as UserRole;
-                    void act(() => apiUpdateTeamMemberRole(user.id, role), `${user.name} is now a ${role}.`);
+                    const level = event.target.value as PermissionLevel;
+                    void act(
+                      () => apiUpdateTeamMemberPermission(user.id, level),
+                      `${user.name} is now ${levelArticle(level)} ${permissionLevelLabels[level]}.`
+                    );
                   }}
                 >
-                  {TEAM_ROLE_OPTIONS.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
+                  {INVITE_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {permissionLevelLabels[level]}
                     </option>
                   ))}
                 </select>
-              ) : (
-                <span className="settings-role-pill">{user.role}</span>
-              )}
+              ) : user.permission ? (
+                <span className="settings-role-pill">{permissionLevelLabels[user.permission]}</span>
+              ) : null}
               {user.isSample &&
                 (confirmingId === `user:${user.id}` ? (
                   <span className="settings-member-confirm" role="group" aria-label={`Confirm removing ${user.name}`}>
@@ -22994,7 +22932,7 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
                   </div>
                 </div>
                 <div className="settings-member-controls">
-                  <span className="settings-role-pill">{inv.role}</span>
+                  <span className="settings-role-pill">{permissionLevelLabels[inv.permission]}</span>
                   <button
                     type="button"
                     className="acct-link-btn"
@@ -24097,7 +24035,7 @@ function SettingsPage({
             </span>
             <div>
               <strong>Liam Santos</strong>
-              <em>Project Manager</em>
+              <em>{data.activeUser?.permission ? permissionLevelLabels[data.activeUser.permission] : (data.activeUser?.title ?? "Teammate")}</em>
             </div>
           </div>
           <div className="settings-nav-groups">
@@ -24838,7 +24776,7 @@ const AI_FEATURE_HELP: Array<{ keys: string[]; text: string }> = [
   },
   {
     keys: ["add people", "invite", "add a member", "add a user", "add teammate", "invite team", "add someone", "manage users"],
-    text: "Open Settings → People to invite teammates by email and set their role (Project Manager, Superintendent, or Crew Lead)."
+    text: "Open Settings → People to invite teammates by email and set what they may do (Admin or Member). Ownership moves by transfer, not by invitation."
   },
   // Materials, readiness, field updates
   {
@@ -25305,7 +25243,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 function buildScheduleImportPlan(data: BootstrapPayload): ImportProjectSpec[] {
-  const managerId = data.users.find((user) => user.role === "Project Manager" || user.role === "Superintendent")?.id ?? data.activeUser.id;
+  const managerId = data.activeUser?.id ?? data.users[0]?.id ?? "";
   const crewAt = (index: number) => data.crews[index % Math.max(1, data.crews.length)]?.id;
   return [
     {
@@ -27930,10 +27868,10 @@ function ProjectEditorDialog({
     setIsProjectSubmitting(false);
   }, [projectInitialInput]);
 
-  const eligibleProjectManagers = useMemo(
-    () => users.filter((user) => user.role === "Project Manager" || user.role === "Superintendent"),
-    [users]
-  );
+  // Everyone on the roster. The job titles this used to filter on were removed on 2026-09-19;
+  // answering for a project is an assignment, and the three levels that replaced them are about
+  // access, so filtering by one here would refuse the field staff who actually run the work.
+  const eligibleProjectManagers = users;
 
   const percentCompleteNumber = Number(projectPercentComplete);
   const isPercentCompleteValid =
@@ -28057,11 +27995,11 @@ function ProjectEditorDialog({
             <input value={projectContractType} onChange={(event) => setProjectContractType(event.target.value)} />
           </label>
           <label>
-            <span>Project Manager</span>
+            <span>Managed by</span>
             <select value={projectManagerId} onChange={(event) => setProjectManagerId(event.target.value)}>
               {eligibleProjectManagers.map((manager) => (
                 <option key={manager.id} value={manager.id}>
-                  {manager.name} - {manager.role}
+                  {manager.name}
                 </option>
               ))}
             </select>
@@ -30956,13 +30894,11 @@ function formatDealValue(value: number) {
 function ContactsPage({
   data,
   activeUser,
-  createSignal,
   openRecordRequest,
   onOpenRecord
 }: {
   data: BootstrapPayload;
   activeUser: User;
-  createSignal: number;
   openRecordRequest: OpenRecordRequest;
   onOpenRecord: (page: SalesRecordPage, id: string) => void;
 }) {
@@ -31063,10 +30999,6 @@ function ContactsPage({
     setDialogMode(null);
     setEditingId(null);
   };
-  // The top bar's "Create new → Contact" lands here and opens the dialog straight away.
-  useEffect(() => {
-    if (createSignal > 0) openCreate();
-  }, [createSignal, openCreate]);
   useModalDialog(dialogRef, closeDialog, dialogMode !== null);
   useModalDialog(deleteRef, () => setDeletingId(null), deletingContact !== null);
 
@@ -33077,13 +33009,11 @@ type CompanyRollup = {
 function CompaniesPage({
   data,
   activeUser,
-  createSignal,
   openRecordRequest,
   onOpenRecord
 }: {
   data: BootstrapPayload;
   activeUser: User;
-  createSignal: number;
   openRecordRequest: OpenRecordRequest;
   onOpenRecord: (page: SalesRecordPage, id: string) => void;
 }) {
@@ -33173,9 +33103,6 @@ function CompaniesPage({
     setDialogMode(null);
     setEditingId(null);
   };
-  useEffect(() => {
-    if (createSignal > 0) openCreate();
-  }, [createSignal, openCreate]);
   useEffect(() => {
     if (openRecordRequest) setOpenCompanyId(openRecordRequest.id);
   }, [openRecordRequest]);
@@ -34278,13 +34205,11 @@ const EMPTY_DEAL_FORM: DealFormState = {
 function DealsPage({
   data,
   activeUser,
-  createSignal,
   openRecordRequest,
   onOpenRecord
 }: {
   data: BootstrapPayload;
   activeUser: User;
-  createSignal: number;
   openRecordRequest: OpenRecordRequest;
   onOpenRecord: (page: SalesRecordPage, id: string) => void;
 }) {
@@ -34371,9 +34296,6 @@ function DealsPage({
     setDialogMode(null);
     setEditingId(null);
   };
-  useEffect(() => {
-    if (createSignal > 0) openCreate();
-  }, [createSignal, openCreate]);
   useEffect(() => {
     if (openRecordRequest) setOpenDealId(openRecordRequest.id);
   }, [openRecordRequest]);
@@ -35993,7 +35915,7 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
   );
   const crewMixSummary = (crew: Crew) => crew.laborMix.map((item) => `${item.count} ${item.role}`).join(" · ");
   const exportCrewsCsv = () => {
-    const header = ["Name", "Specialty", "Status", "Utilization", "Foreman", "Size", "Capacity", "Equipment", "Current job", "Labor mix"];
+    const header = ["Name", "Specialty", "Status", "Utilization", "Crew lead", "Size", "Capacity", "Equipment", "Current job", "Labor mix"];
     const rows = filteredCrewCards.map(({ crew, job, equipment }) => [
       crew.name,
       crew.specialty,
@@ -36207,7 +36129,7 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
                     {crewSortHeader("name", "Name", "hs-cell-name")}
                     {crewSortHeader("status", "Status")}
                     {crewSortHeader("utilization", "Utilization")}
-                    {crewSortHeader("foreman", "Foreman")}
+                    {crewSortHeader("foreman", "Crew lead")}
                     {crewSortHeader("size", "Crew size")}
                     <th>Capacity</th>
                     <th>Equipment</th>
@@ -36400,7 +36322,7 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
                   <input value={specialty} onChange={(event) => setSpecialty(event.target.value)} placeholder="Example: Concrete" />
                 </label>
                 <label>
-                  <span>Foreman</span>
+                  <span>Crew lead</span>
                   <input value={foreman} onChange={(event) => setForeman(event.target.value)} placeholder="Example: Dana Brooks" />
                 </label>
                 <label>
@@ -36528,7 +36450,7 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
                   <strong>{deletingCrew.name}</strong>
                 </div>
                 <p className="pdx-note">
-                  Foreman {deletingCrew.lead}, {deletingCrew.size} workers.
+                  Led by {deletingCrew.lead}, {deletingCrew.size} workers.
                 </p>
                 {crewDeleteError && (
                   <p className="form-error" role="alert">
@@ -39163,7 +39085,10 @@ function DelayIQsPage({
 }) {
   // the trade this workspace runs — its own delayIQ categories replace the generic six
   const tradeProfile = useTradeProfile();
-  const canCreate = activeUser.role !== "Crew Lead" && data.projects.length > 0;
+  // A Member gets the read-only crew view. This used to read `role !== "Crew Lead"` — a job
+  // title that had nothing to do with the server's answer; `delayiq.log` is not in a Member's
+  // grants, so the button and POST /api/delayIQs now agree for the first time.
+  const canCreate = activeUser.permission !== "member" && data.projects.length > 0;
   const [title, setTitle] = useState("");
   const [delayIQProjectId, setDelayIQProjectId] = useState(data.projects[0]?.id ?? "");
   // HubSpot-style index controls: saved-view tabs, quick filters, search, column sort, paging, row selection.
@@ -39674,7 +39599,7 @@ function DelayIQsPage({
 
         <aside className="hs-index-rail">
           <DelayEarlyWarning />
-          <Panel title={activeUser.role === "Crew Lead" ? "Crew View" : "Log DelayIQ"}>
+          <Panel title={activeUser.permission === "member" ? "Crew View" : "Log DelayIQ"}>
             {canCreate ? (
               <div className="form-stack">
                 <label>
@@ -39700,7 +39625,7 @@ function DelayIQsPage({
                   <Plus size={17} /> Add DelayIQ
                 </button>
               </div>
-            ) : activeUser.role !== "Crew Lead" ? (
+            ) : activeUser.permission !== "member" ? (
               <div className="empty-state">
                 <AlertTriangle />
                 <strong>Create a project first</strong>

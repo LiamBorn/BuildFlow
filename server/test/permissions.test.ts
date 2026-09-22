@@ -36,9 +36,7 @@ async function bootedApp() {
 
 describe("the permission ladder", () => {
   it("gives each level strictly more than the one below it, with one deliberate exception", () => {
-    const [owner, admin, member] = (["owner", "admin", "member"] as const).map(
-      (level) => new Set(capabilitiesFor(level))
-    );
+    const [owner, admin, member] = (["owner", "admin", "member"] as const).map((level) => new Set(capabilitiesFor(level)));
 
     // Every Member capability is an Admin capability.
     for (const capability of member) expect(admin.has(capability)).toBe(true);
@@ -70,7 +68,14 @@ describe("the permission ladder", () => {
   });
 
   it("keeps billing, permission changes and ownership to the Owner alone", () => {
-    const ownerOnly: Capability[] = ["billing.plan", "billing.pay", "team.permission", "integrations.connect", "org.danger", "org.transfer"];
+    const ownerOnly: Capability[] = [
+      "billing.plan",
+      "billing.pay",
+      "team.permission",
+      "integrations.connect",
+      "org.danger",
+      "org.transfer"
+    ];
     for (const capability of ownerOnly) {
       expect(can("owner", capability)).toBe(true);
       expect(can("admin", capability)).toBe(false);
@@ -155,9 +160,7 @@ describe("the route policy", () => {
     // snapshot; with it, a new route cannot reach production undecided.
     const app = express();
     installRoutePolicy(app);
-    expect(() => app.get("/api/a-route-nobody-thought-about", (_req, res) => res.end())).toThrow(
-      /no entry in ROUTE_POLICY/
-    );
+    expect(() => app.get("/api/a-route-nobody-thought-about", (_req, res) => res.end())).toThrow(/no entry in ROUTE_POLICY/);
   });
 
   it("still lets a route through once it has an entry", async () => {
@@ -168,7 +171,9 @@ describe("the route policy", () => {
     app.get(publicPath, (_req, res) => {
       res.json({ ok: true });
     });
-    await request(app).get(publicPath.replace(/:[^/]+/g, "x")).expect(200);
+    await request(app)
+      .get(publicPath.replace(/:[^/]+/g, "x"))
+      .expect(200);
   });
 
   it("notices a route that was registered without a guard", () => {
@@ -213,10 +218,13 @@ async function workspace(): Promise<Harness> {
   const main = (app.locals.storeManager as { main: MainStore }).main;
 
   const join = async (level: PermissionLevel, email = `${level}@asphaltco.com`) => {
-    await owner.post("/api/team/invites").send({ invites: [{ email, role: "Crew Lead" }] }).expect(201);
-    const row = main.all<{ id: string; email: string }>("SELECT id, email FROM invites WHERE acceptedAt IS NULL").find(
-      (r) => r.email === email
-    )!;
+    await owner
+      .post("/api/team/invites")
+      .send({ invites: [{ email, permission: "member" }] })
+      .expect(201);
+    const row = main
+      .all<{ id: string; email: string }>("SELECT id, email FROM invites WHERE acceptedAt IS NULL")
+      .find((r) => r.email === email)!;
     // The raw token is only ever in the email, and its hash is all the row keeps, so mint
     // a fresh one the same way a resend does.
     const fresh = main.refreshInvite(row.id, orgId, 60_000)!;
@@ -384,10 +392,11 @@ describe("the Admin rows, once they are on", () => {
     const admin = await join("admin");
 
     // Runs the work: a real write that lands.
-    // The manager has to be a Project Manager or a Superintendent -- a rule of the schedule,
-    // not of permissions -- so pick one off the roster rather than assuming a position.
-    const roster = (await admin.get("/api/bootstrap").expect(200)).body.users as Array<{ id: string; role: string }>;
-    const managerId = roster.find((user) => user.role === "Project Manager" || user.role === "Superintendent")!.id;
+    // A project needs somebody named as its manager. That used to mean a Project Manager or a
+    // Superintendent -- a rule of the schedule, not of permissions -- and those job titles went
+    // on 2026-09-19, so anyone on the roster will do.
+    const roster = (await admin.get("/api/bootstrap").expect(200)).body.users as Array<{ id: string }>;
+    const managerId = roster[0]!.id;
     const project = await admin
       .post("/api/projects")
       .send({
@@ -409,28 +418,73 @@ describe("the Admin rows, once they are on", () => {
 
     // Does not own it: the three Owner reserves.
     expect((await admin.post("/api/billing/portal").send({ email: "dana@asphaltco.com" }).expect(403)).body.need).toBe("billing.pay");
-    expect(
-      (await admin.post("/api/business-profile").send({ businessType: "Asphalt", selectedPlan: "pro" }).expect(403)).body.need
-    ).toBe("billing.plan");
+    expect((await admin.post("/api/business-profile").send({ businessType: "Asphalt", selectedPlan: "pro" }).expect(403)).body.need).toBe(
+      "billing.plan"
+    );
   });
 
-  it("lets an Admin set a job title, which used to be the Owner's alone", async () => {
-    // The one authorization check that existed before this work was an inline owner-only
-    // conditional on this route. It is now a row in the table, and the row says Admin.
+  it("lets the Owner alone change what a teammate may do", async () => {
+    // This route used to set a job title out of a fixed list of three, and its row said Admin.
+    // The titles were removed on 2026-09-19, so it now sets the LEVEL -- and the row moved to
+    // "team.permission", which the capability list had already reserved for the Owner. An
+    // Admin who can mint another Admin is an Owner by a longer route.
     const { owner, join } = await workspace();
     const admin = await join("admin");
     const member = await join("member");
-    const roster = await admin.get("/api/team").expect(200);
-    expect(roster.body.canManage).toBe(true);
-    const someone = roster.body.users.find((user: { name: string }) => user.name === "member person");
-    const retitled = await admin.patch(`/api/team/users/${someone.id}`).send({ role: "Superintendent" }).expect(200);
-    expect(retitled.body.user).toMatchObject({ id: someone.id, role: "Superintendent" });
 
-    // A Member still cannot, and is told which permission it needed.
-    const mine = await member.get("/api/team").expect(200);
-    expect(mine.body.canManage).toBe(false);
-    expect((await member.patch(`/api/team/users/${someone.id}`).send({ role: "Crew Lead" }).expect(403)).body.need).toBe("team.title");
-    await owner.patch(`/api/team/users/${someone.id}`).send({ role: "Crew Lead" }).expect(200);
+    const ownerTeam = await owner.get("/api/team").expect(200);
+    expect(ownerTeam.body.canManage).toBe(true);
+    const someone = ownerTeam.body.users.find((user: { name: string }) => user.name === "member person");
+    expect(someone.permission, "the level rides on the person, resolved as the roster is built").toBe("member");
+
+    const raised = await owner.patch(`/api/team/users/${someone.id}`).send({ permission: "admin" }).expect(200);
+    expect(raised.body.user).toMatchObject({ id: someone.id, permission: "admin" });
+    // and it is the level the SERVER now authorizes on, not just a label on a row
+    expect((await member.get("/api/team").expect(200)).body.canManage).toBe(false);
+    await owner.patch(`/api/team/users/${someone.id}`).send({ permission: "member" }).expect(200);
+
+    // An Admin cannot, and is told which capability it needed.
+    const theirs = await admin.get("/api/team").expect(200);
+    expect(theirs.body.canManage).toBe(false);
+    const refused = await admin.patch(`/api/team/users/${someone.id}`).send({ permission: "admin" }).expect(403);
+    expect(refused.body.need).toBe("team.permission");
+    // Nor can a Member.
+    expect((await member.patch(`/api/team/users/${someone.id}`).send({ permission: "admin" }).expect(403)).body.need).toBe(
+      "team.permission"
+    );
+  });
+
+  it("will not hand out ownership, or let anyone change their own level", async () => {
+    const { owner, join } = await workspace();
+    await join("member");
+    const roster = await owner.get("/api/team").expect(200);
+    const someone = roster.body.users.find((user: { name: string }) => user.name === "member person");
+    // Ownership moves by transfer, which takes it OFF somebody; it is not on the menu here.
+    await owner.patch(`/api/team/users/${someone.id}`).send({ permission: "owner" }).expect(400);
+
+    // And nobody sets their own: an Owner demoting themselves leaves the workspace unowned.
+    // The MESSAGE is asserted, not just the 403 — the rank rule below would refuse this one
+    // too, so a test that only counted the status could not tell which guard did it, and
+    // deleting either would leave the run green.
+    const mine = roster.body.users.find((user: { permission: string }) => user.permission === "owner");
+    const self = await owner.patch(`/api/team/users/${mine.id}`).send({ permission: "member" }).expect(403);
+    expect(self.body.error).toMatch(/your own access/i);
+  });
+
+  it("refuses a level it does not outrank, which an Owner-on-Owner change is", async () => {
+    // The rank rule is not decoration even on an Owner-only route. `req.account.role` is the
+    // ACCOUNT's level, and an account can hold "owner" from its own workspace while sitting in
+    // someone else's -- so a subject this Owner does not outrank is reachable. Built directly
+    // here because there is no route that makes a second Owner.
+    const { app, owner, join } = await workspace();
+    await join("member");
+    const main = (app.locals.storeManager as { main: MainStore }).main;
+    const roster = await owner.get("/api/team").expect(200);
+    const someone = roster.body.users.find((user: { name: string }) => user.name === "member person");
+    expect(main.setAccountRole(someone.accountId, "owner")?.role).toBe("owner");
+
+    const refused = await owner.patch(`/api/team/users/${someone.id}`).send({ permission: "member" }).expect(403);
+    expect(refused.body.error).toMatch(/Workspace Owner/);
   });
 });
 
@@ -439,17 +493,22 @@ describe("the invite's permission field", () => {
     // Acceptance hardcoded "member", which is why the Admin tier was unreachable rather
     // than merely unenforced: there was no way to get an Admin into a workspace at all.
     const { app, owner, orgId } = await workspace();
-    await owner.post("/api/team/invites").send({ invites: [{ email: "kit@asphaltco.com", role: "Superintendent", permission: "admin" }] }).expect(201);
+    await owner
+      .post("/api/team/invites")
+      .send({ invites: [{ email: "kit@asphaltco.com", permission: "admin" }] })
+      .expect(201);
     const open = await owner.get("/api/team").expect(200);
-    expect(open.body.invites[0]).toMatchObject({ email: "kit@asphaltco.com", role: "Superintendent", permission: "admin" });
+    expect(open.body.invites[0]).toMatchObject({ email: "kit@asphaltco.com", permission: "admin" });
 
     const main = (app.locals.storeManager as { main: MainStore }).main;
     const [row] = main.all<{ id: string }>("SELECT id FROM invites WHERE acceptedAt IS NULL");
     const fresh = main.refreshInvite(row.id, orgId, 60_000)!;
 
     // The invited person sees the level before they commit to it.
-    const preview = await request(app).get(`/api/auth/invite/${encodeURIComponent(fresh.token)}`).expect(200);
-    expect(preview.body).toMatchObject({ email: "kit@asphaltco.com", role: "Superintendent", permission: "admin" });
+    const preview = await request(app)
+      .get(`/api/auth/invite/${encodeURIComponent(fresh.token)}`)
+      .expect(200);
+    expect(preview.body).toMatchObject({ email: "kit@asphaltco.com", permission: "admin" });
 
     const kit = request.agent(app);
     const joined = await kit
@@ -463,7 +522,10 @@ describe("the invite's permission field", () => {
 
   it("defaults to Member when no level is asked for, so an old caller means what it always did", async () => {
     const { owner } = await workspace();
-    await owner.post("/api/team/invites").send({ invites: [{ email: "plain@asphaltco.com", role: "Crew Lead" }] }).expect(201);
+    await owner
+      .post("/api/team/invites")
+      .send({ invites: [{ email: "plain@asphaltco.com" }] })
+      .expect(201);
     expect((await owner.get("/api/team").expect(200)).body.invites[0].permission).toBe("member");
   });
 
@@ -476,8 +538,8 @@ describe("the invite's permission field", () => {
       .post("/api/team/invites")
       .send({
         invites: [
-          { email: "ok@asphaltco.com", role: "Crew Lead", permission: "member" },
-          { email: "nope@asphaltco.com", role: "Crew Lead", permission: "admin" }
+          { email: "ok@asphaltco.com", permission: "member" },
+          { email: "nope@asphaltco.com", permission: "admin" }
         ]
       })
       .expect(201);
@@ -496,7 +558,7 @@ describe("the invite's permission field", () => {
     const { owner } = await workspace();
     const refused = await owner
       .post("/api/team/invites")
-      .send({ invites: [{ email: "usurper@asphaltco.com", role: "Crew Lead", permission: "owner" }] })
+      .send({ invites: [{ email: "usurper@asphaltco.com", permission: "owner" }] })
       .expect(400);
     expect(refused.body.error).toBeTruthy();
   });
@@ -507,9 +569,8 @@ describe("the routes the permissions were waiting for", () => {
     const { owner } = await workspace();
     const boot = await owner.get("/api/bootstrap").expect(200);
     const project = boot.body.projects[0];
-    const manager = (boot.body.users as Array<{ id: string; role: string }>).find(
-      (user) => user.role === "Project Manager" || user.role === "Superintendent"
-    )!;
+    // anyone on the roster: the job titles this used to pick from went on 2026-09-19
+    const manager = (boot.body.users as Array<{ id: string }>)[0]!;
     const crew = boot.body.crews[0];
 
     const job = await owner
@@ -565,7 +626,14 @@ describe("the routes the permissions were waiting for", () => {
     const project = (await owner.get("/api/bootstrap").expect(200)).body.projects[0];
     const created = await owner
       .post("/api/materials")
-      .send({ projectId: project.id, name: "Tack coat", supplier: "Regional Asphalt", deliveryDate: "2026-07-02", status: "Ordered", quantity: "400 gal" })
+      .send({
+        projectId: project.id,
+        name: "Tack coat",
+        supplier: "Regional Asphalt",
+        deliveryDate: "2026-07-02",
+        status: "Ordered",
+        quantity: "400 gal"
+      })
       .expect(201);
     const id = created.body.id as string;
     await owner.delete(`/api/materials/${id}`).expect(204);
@@ -579,9 +647,10 @@ describe("the routes the permissions were waiting for", () => {
     const roster = await owner.get("/api/team").expect(200);
     const person = roster.body.users.find((user: { name: string }) => user.name === "member person");
     expect(person.accountId).toBeTruthy();
-    // GET /api/team now reports each login's level, which is what makes a transfer target
-    // pickable and a refusal explainable on the client.
-    expect(roster.body.permissions[person.accountId]).toBe("member");
+    // GET /api/team reports each login's level ON the person, which is what makes a transfer
+    // target pickable and a refusal explainable on the client. It used to be a separate map
+    // keyed by account id; a row that outlives its login answers null, on the row itself.
+    expect(person.permission).toBe("member");
 
     const removed = await owner.delete(`/api/team/users/${person.id}`).expect(200);
     expect(removed.body.removed).toMatchObject({ id: person.id, name: "member person" });
@@ -590,7 +659,7 @@ describe("the routes the permissions were waiting for", () => {
     const stillThere = after.body.users.find((user: { name: string }) => user.name === "member person");
     expect(stillThere.accountId).toBeNull();
     expect(stillThere.removedAt).toBeTruthy();
-    expect(after.body.permissions[person.accountId]).toBeUndefined();
+    expect(stillThere.permission, "no login left, so no level").toBeNull();
   });
 
   it("lets a level remove only below itself, which is also what keeps a workspace owned", async () => {
@@ -602,8 +671,8 @@ describe("the routes the permissions were waiting for", () => {
     // Two people here are both displayed as "admin person", so rows are addressed by account id.
     const mine = (await adminA.get("/api/auth/me").expect(200)).body.account.id as string;
     const roster = await owner.get("/api/team").expect(200);
-    const rows = roster.body.users as Array<{ id: string; accountId: string | null }>;
-    const levelOf = (row: { accountId: string | null }) => roster.body.permissions[row.accountId!];
+    const rows = roster.body.users as Array<{ id: string; accountId: string | null; permission: string | null }>;
+    const levelOf = (row: { permission: string | null }) => row.permission;
     const ownerRow = rows.find((row) => levelOf(row) === "owner")!;
     const otherAdmin = rows.find((row) => levelOf(row) === "admin" && row.accountId !== mine)!;
     const memberRow = rows.find((row) => levelOf(row) === "member")!;
@@ -650,8 +719,9 @@ describe("the routes the permissions were waiting for", () => {
 
     // And the roster's display copy of "Owner" moved with it.
     const after = await admin.get("/api/team").expect(200);
-    expect(after.body.users.find((user: { name: string }) => user.name === "admin person").title).toBe("Owner");
-    expect(after.body.permissions[adminRow.accountId]).toBe("owner");
+    const nowOwner = after.body.users.find((user: { name: string }) => user.name === "admin person");
+    expect(nowOwner.title).toBe("Owner");
+    expect(nowOwner.permission).toBe("owner");
   });
 
   it("refuses a transfer to someone outside the workspace, or to yourself", async () => {
@@ -747,13 +817,40 @@ describe("the two ways the record could still have been lost", () => {
     orgStore.run(
       "INSERT INTO schedule_variances (id, projectId, jobId, fieldUpdateId, kind, severity, status, reportedPercent, plannedPercent, varianceDays, detectedAt, proposal) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      ["var-ripple", other.projectId, other.id, "fu-test", "behind", "High", "pending", 20, 60, 2, new Date("2026-06-16").toISOString(), JSON.stringify(proposal)]
+      [
+        "var-ripple",
+        other.projectId,
+        other.id,
+        "fu-test",
+        "behind",
+        "High",
+        "pending",
+        20,
+        60,
+        2,
+        new Date("2026-06-16").toISOString(),
+        JSON.stringify(proposal)
+      ]
     );
     // A resolved one naming the same job, which is history and must be left alone.
     orgStore.run(
       "INSERT INTO schedule_variances (id, projectId, jobId, fieldUpdateId, kind, severity, status, reportedPercent, plannedPercent, varianceDays, detectedAt, proposal, resolvedAt) " +
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      ["var-history", other.projectId, other.id, "fu-test", "behind", "Low", "accepted", 20, 60, 2, new Date("2026-06-16").toISOString(), JSON.stringify(proposal), new Date("2026-06-16").toISOString()]
+      [
+        "var-history",
+        other.projectId,
+        other.id,
+        "fu-test",
+        "behind",
+        "Low",
+        "accepted",
+        20,
+        60,
+        2,
+        new Date("2026-06-16").toISOString(),
+        JSON.stringify(proposal),
+        new Date("2026-06-16").toISOString()
+      ]
     );
 
     await owner.delete(`/api/jobs/${doomed.id}`).expect(204);
@@ -768,3 +865,87 @@ type OrgStore = {
   run: (sql: string, params: unknown[]) => void;
   all: <T>(sql: string) => T[];
 };
+
+describe("a gated route reaches the caller's own workspace, not the shared store", () => {
+  /*
+   * Reported 2026-09-20 with a screen recording of the Month calendar: dragging a phase's
+   * "<name> Complete" marker onto another day answered "Could not move …: Phase not found".
+   *
+   * `store` (app.ts) is a Proxy that resolves to `orgStoreALS.getStore() ?? mainStore`, and
+   * the ALS is only bound for paths under OPS_PREFIXES. `/api/phases` was not one of them,
+   * so PATCH /api/phases/:id read the SHARED main store and could not find a phase that
+   * lives in the caller's own file. The same hole had already been found and fixed for
+   * /api/ai, and the comment in that list describes it exactly.
+   *
+   * The 404 is the kinder half. Seeded phase ids are deterministic per TRADE PROFILE rather
+   * than per workspace (`phase-<trade>-<n>-<name>` in businessProfiles.ts), so where an id
+   * DOES exist in the main store the same request writes to the wrong database.
+   */
+  it("moves a phase's finish in the workspace that asked, which is what the Month marker does", async () => {
+    const { owner } = await workspace();
+    const boot = await owner.get("/api/bootstrap").expect(200);
+    const phases = boot.body.phases as Array<{ id: string; endDate: string; startDate: string }>;
+    const phase = phases.find((one) => one.endDate);
+    expect(phase, "a seeded workspace has phases to drag").toBeTruthy();
+
+    const moved = await owner
+      .patch(`/api/phases/${encodeURIComponent(phase!.id)}`)
+      .send({ endDate: "2026-12-24" })
+      .expect(200);
+    expect(moved.body).toMatchObject({ id: phase!.id, endDate: "2026-12-24" });
+
+    // and it landed in the caller's own workspace, not somewhere else
+    const again = await owner.get("/api/bootstrap").expect(200);
+    expect(again.body.phases.find((one: { id: string }) => one.id === phase!.id).endDate).toBe("2026-12-24");
+  });
+
+  it("binds the tenant store for every route that reads or writes one", () => {
+    /*
+     * The invariant behind that bug, as a test. Any handler that touches `store` is
+     * reaching for the CALLER's workspace; if its path is not under a gated prefix, the
+     * Proxy hands it the shared one instead and the mistake is silent — a 404 on a good
+     * request, or a write into the wrong file.
+     *
+     * Read out of the source because there is nowhere else it is written down: the gate is
+     * a list of prefixes in app.ts and the handlers are three thousand lines below it.
+     */
+    const source = fs.readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
+    const prefixes = (/const OPS_PREFIXES = \[(.*?)\n {2}\];/s.exec(source)?.[1].match(/"([^"]+)"/g) ?? []).map((one) =>
+      one.replace(/"/g, "").toLowerCase()
+    );
+    expect(prefixes.length, "the gate was found").toBeGreaterThan(10);
+    const gated = (path: string) => {
+      const p = path.toLowerCase();
+      return prefixes.some((pre) => p === pre || p.startsWith(`${pre}/`));
+    };
+
+    const lines = source.split("\n");
+    const ungated: string[] = [];
+    lines.forEach((line, index) => {
+      const route = /app\.(get|post|patch|put|delete)\("(\/api\/[^"]*)"/.exec(line);
+      if (!route) return;
+      // the handler's own body, to its closing brace
+      let depth = 0;
+      const body: string[] = [];
+      for (let i = index; i < Math.min(index + 120, lines.length); i += 1) {
+        body.push(lines[i]);
+        depth += (lines[i].match(/\{/g) ?? []).length - (lines[i].match(/\}/g) ?? []).length;
+        if (i > index && depth <= 0) break;
+      }
+      // `store.` and not `mainStore.` — the control database is a different thing
+      if (!/(?<!main)\bstore\.\w/.test(body.join("\n"))) return;
+      if (gated(route[2])) return;
+      /* PUBLIC routes are allowed to fall through to the main store, and thirty-odd of
+         them do it on purpose: the waitlist, the updates list, contact-sales, and the
+         whole Sales and Support Desk hold data that belongs to the business rather than
+         to any workspace. What cannot be right is a route that REQUIRES a session — that
+         request is being made on behalf of a workspace, and reaching past it to the
+         shared store is the bug this test exists for. */
+      const policy = ROUTE_POLICY[`${route[1].toUpperCase()} ${route[2]}` as keyof typeof ROUTE_POLICY];
+      if (!policy || policy === "public") return;
+      ungated.push(`${route[1].toUpperCase()} ${route[2]} (${String(policy)})`);
+    });
+
+    expect(ungated, "these reach for a workspace the request was never bound to").toEqual([]);
+  });
+});

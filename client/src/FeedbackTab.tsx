@@ -14,9 +14,38 @@
  */
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { Check, MessageSquareText, Send, X } from "lucide-react";
+import { Check, MessageSquareText, Paperclip, Send, X } from "lucide-react";
 import type { BootstrapPayload } from "@buildflow/shared";
 import { fetchSession, sendFeedback, type FeedbackCategory } from "./api";
+
+/**
+ * What may come with a message. Three files and 10MB between them: base64 inflates
+ * a payload by about a third, so 10MB arrives as ~13.3MB against the server's 25MB
+ * body limit, and lands well inside the 25MB most inboxes accept. The TYPE is not
+ * restricted — a screen recording is as good a bug report as a screenshot, and a
+ * declared MIME type is the sender's claim anyway, so size and count are the real
+ * controls.
+ */
+const MAX_FILES = 3;
+const MAX_TOTAL_BYTES = 10 * 1024 * 1024;
+
+type Attachment = { id: string; name: string; type: string; size: number; dataUrl: string };
+
+const readAsDataUrl = (file: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read that file."));
+    reader.readAsDataURL(file);
+  });
+
+const fileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  const mb = bytes / (1024 * 1024);
+  // a round number reads as "10 MB", not "10.0 MB" — the cap in the hint is always round
+  return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
+};
 
 const KINDS: Array<{ id: FeedbackCategory; label: string }> = [
   { id: "idea", label: "An idea" },
@@ -32,7 +61,9 @@ export function FeedbackTab({ data, page = "dashboard" }: { data: BootstrapPaylo
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
   const [company, setCompany] = useState<string | null>(null);
+  const [files, setFiles] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   /* Who this goes out as. The workspace name lives on the session, not the bootstrap payload,
      so it is fetched the first time the form opens; until it arrives, or if it never does, the
@@ -71,7 +102,44 @@ export function FeedbackTab({ data, page = "dashboard" }: { data: BootstrapPaylo
       setStatus("idle");
       setMessage("");
       setKind("idea");
+      setFiles([]);
     }
+  }
+
+  /** Take what the picker gave us, as far as the budget goes, and say so if it does not all fit. */
+  async function addFiles(chosen: FileList | null) {
+    if (!chosen?.length) return;
+    setError(null);
+    const room = MAX_FILES - files.length;
+    if (room <= 0) {
+      setError(`You can attach up to ${MAX_FILES} files.`);
+      return;
+    }
+    let total = files.reduce((sum, file) => sum + file.size, 0);
+    const added: Attachment[] = [];
+    let refused: string | null = null;
+    for (const file of Array.from(chosen).slice(0, room)) {
+      if (total + file.size > MAX_TOTAL_BYTES) {
+        refused = `“${file.name}” would take this over ${fileSize(MAX_TOTAL_BYTES)}.`;
+        continue;
+      }
+      try {
+        added.push({
+          id: `${file.name}-${file.size}-${file.lastModified}`,
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+          dataUrl: await readAsDataUrl(file)
+        });
+        total += file.size;
+      } catch {
+        refused = `“${file.name}” could not be read.`;
+      }
+    }
+    if (chosen.length > room) refused = `You can attach up to ${MAX_FILES} files.`;
+    // the id keeps the same file from being attached twice
+    if (added.length) setFiles((current) => [...current, ...added.filter((one) => !current.some((had) => had.id === one.id))]);
+    if (refused) setError(refused);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -81,7 +149,14 @@ export function FeedbackTab({ data, page = "dashboard" }: { data: BootstrapPaylo
     setStatus("sending");
     setError(null);
     try {
-      await sendFeedback({ category: kind, message: words, page });
+      await sendFeedback({
+        category: kind,
+        message: words,
+        page,
+        // left off the body entirely when there is nothing attached, so the common
+        // message is the same request it has always been
+        ...(files.length ? { attachments: files.map(({ name, type, dataUrl }) => ({ name, type, dataUrl })) } : {})
+      });
       setStatus("sent");
     } catch (failure) {
       // the words stay in the box: a failed send must never cost someone what they wrote
@@ -123,8 +198,8 @@ export function FeedbackTab({ data, page = "dashboard" }: { data: BootstrapPaylo
                     Tell us what would make BuildFlow <em>better</em>
                   </h2>
                   <p className="pdx-sub" id="feedback-dialog-description">
-                    Ideas, rough edges, praise — it goes straight to the BuildFlow team, with your company's name on it, so we
-                    know who to thank and who to get back to.
+                    Ideas, rough edges, praise — it goes straight to the BuildFlow team, with your company's name on it, so we know who to
+                    thank and who to get back to.
                   </p>
                 </div>
                 <button className="pdx-close" aria-label="Close Give feedback" type="button" onClick={close}>
@@ -174,6 +249,53 @@ export function FeedbackTab({ data, page = "dashboard" }: { data: BootstrapPaylo
                       maxLength={4000}
                     />
                   </label>
+                  <div className="bffb-attach">
+                    <input
+                      ref={fileRef}
+                      className="bffb-file-input"
+                      type="file"
+                      multiple
+                      aria-label="Attach a file"
+                      onChange={(event) => {
+                        void addFiles(event.target.files);
+                        // cleared so picking the SAME file again still fires a change
+                        event.target.value = "";
+                      }}
+                    />
+                    <div className="bffb-attach-row">
+                      <button
+                        type="button"
+                        className="bffb-attach-btn"
+                        onClick={() => fileRef.current?.click()}
+                        disabled={files.length >= MAX_FILES}
+                      >
+                        <Paperclip size={15} aria-hidden="true" />
+                        {files.length ? "Add another" : "Add an attachment"}
+                      </button>
+                      <span className="bffb-attach-hint">
+                        A screenshot or a recording helps · up to {MAX_FILES} files, {fileSize(MAX_TOTAL_BYTES)} in all
+                      </span>
+                    </div>
+                    {files.length > 0 && (
+                      <ul className="bffb-files">
+                        {files.map((file) => (
+                          <li key={file.id} className="bffb-file-chip">
+                            <span className="bffb-file-name" title={file.name}>
+                              {file.name}
+                            </span>
+                            <span className="bffb-file-size">{fileSize(file.size)}</span>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${file.name}`}
+                              onClick={() => setFiles((current) => current.filter((one) => one.id !== file.id))}
+                            >
+                              <X size={13} aria-hidden="true" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                   <p className="bffb-sender">
                     Sending as <strong>{sender}</strong>
                     {company ? ` · ${data.activeUser.name}` : ""}

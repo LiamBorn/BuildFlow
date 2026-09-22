@@ -82,7 +82,14 @@ async function getTransport(): Promise<{ transporter: Transporter | null; mode: 
 
 export type MailResult = { ok: boolean; mode: MailMode; previewUrl?: string };
 
-export type MailAttachment = { filename: string; content: string; contentType?: string };
+/* `content` is the file itself. With `encoding: "base64"` it is the base64 TEXT and
+   nodemailer decodes it; without one it is taken as the raw bytes. */
+export type MailAttachment = {
+  filename: string;
+  content: string;
+  contentType?: string;
+  encoding?: "base64";
+};
 export async function sendMail(msg: {
   to: string;
   subject: string;
@@ -306,10 +313,18 @@ export type FeedbackEntry = {
   company: { id: string; name: string; plan: string };
   person: { name: string; email: string; role: string };
   sentAt: string;
+  /* what the person attached — the files themselves ride on the message, this is
+     only so the body says what is there without anyone having to scroll down */
+  attachments?: { name: string; size: number }[];
 };
+
+const fileSize = (bytes: number) =>
+  bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 export function feedbackEmail(entry: FeedbackEntry) {
   const label = FEEDBACK_LABELS[entry.category] ?? entry.category;
+  const files = entry.attachments ?? [];
+  const fileList = files.map((one) => `${one.name} (${fileSize(one.size)})`).join(", ");
   const subject = `BuildFlow feedback from ${entry.company.name} · ${label}`;
   const text =
     `New feedback from inside BuildFlow:\n\n` +
@@ -317,8 +332,9 @@ export function feedbackEmail(entry: FeedbackEntry) {
     `  From:     ${entry.person.name} <${entry.person.email}> · ${entry.person.role}\n` +
     `  Kind:     ${label}\n` +
     `  Page:     ${entry.page}\n` +
-    `  Sent:     ${entry.sentAt}\n\n` +
-    `${entry.message}\n\n` +
+    `  Sent:     ${entry.sentAt}\n` +
+    (files.length ? `  Attached: ${fileList}\n` : "") +
+    `\n${entry.message}\n\n` +
     `Reply to ${entry.person.email} to follow up.`;
   const html = shell(
     `<p style="font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#1a73e8;margin:0 0 6px">Feedback · ${escapeHtml(label)}</p>` +
@@ -330,6 +346,7 @@ export function feedbackEmail(entry: FeedbackEntry) {
       leadRow("Email", `<a href="mailto:${escapeHtml(entry.person.email)}" style="color:#1a73e8">${escapeHtml(entry.person.email)}</a>`) +
       leadRow("Page", escapeHtml(entry.page)) +
       leadRow("Sent", escapeHtml(entry.sentAt)) +
+      (files.length ? leadRow(files.length === 1 ? "Attached" : `Attached (${files.length})`, escapeHtml(fileList)) : "") +
       `</table>` +
       `<p style="font-size:14px;line-height:1.6;color:#1c1c1a;margin:0 0 18px;padding:14px 16px;background:#f5f6fa;border-radius:10px;white-space:pre-wrap">${escapeHtml(entry.message)}</p>` +
       `<a href="mailto:${escapeHtml(entry.person.email)}" style="display:inline-block;background:#1c1c1a;color:#fff;text-decoration:none;font-size:14px;font-weight:600;padding:11px 20px;border-radius:10px">Reply to ${escapeHtml(entry.person.name.trim().split(/\s+/)[0] || "them")} →</a>`

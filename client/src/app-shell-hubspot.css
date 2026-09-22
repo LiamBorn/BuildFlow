@@ -181,9 +181,6 @@
 /* HubSpot order (create · settings · alerts · | · account) via flex order, so the
    existing notification/account panels keep their DOM + behavior. (The help /
    tutorial button that sat second went on 2026-09-15: the tutorial shows once.) */
-.hs-shell .topbar.hs-topbar .topbar-actions .hs-create {
-  order: 1;
-}
 .hs-shell .topbar.hs-topbar .topbar-actions .hs-settings-button {
   order: 3;
 }
@@ -274,9 +271,6 @@
 }
 
 /* create menu (HubSpot "Create new") */
-.hs-shell .hs-create {
-  position: relative;
-}
 .hs-shell .hs-menu {
   position: absolute;
   top: calc(100% + 8px);
@@ -553,15 +547,6 @@
   animation: hs-rail-draw 0.6s ease-out;
 }
 /* create "+": a half spin on hover; an × while the menu is open */
-.hs-shell .hs-topbar .hs-create .icon-button:hover svg,
-.hs-shell .hs-topbar .hs-create .icon-button:focus-visible svg {
-  transform: rotate(180deg) scale(1.08);
-  animation: hs-top-spin 0.55s var(--hs-ease);
-}
-.hs-shell .hs-topbar .hs-create .icon-button[aria-expanded="true"] svg {
-  transform: rotate(45deg) scale(1.08);
-  animation: none;
-}
 /* settings gear: turns half a revolution */
 .hs-shell .hs-topbar .hs-settings-button:hover svg,
 .hs-shell .hs-topbar .hs-settings-button:focus-visible svg {
@@ -1126,8 +1111,7 @@
     gap: 2px;
   }
   .hs-shell .topbar.hs-topbar .topbar-actions > .hs-bookmarks,
-  .hs-shell .topbar.hs-topbar .topbar-actions > .hs-create,
-  .hs-shell .topbar.hs-topbar .topbar-actions > .hs-settings-button {
+.hs-shell .topbar.hs-topbar .topbar-actions > .hs-settings-button {
     display: none;
   }
 }

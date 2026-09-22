@@ -8,7 +8,9 @@ export * from "./week";
 export * from "./month";
 export * from "./kanban";
 export * from "./matrix";
+export * from "./ScheduleDrawer";
 export * from "./JobDrawer";
+export * from "./MilestoneDrawer";
 export * from "../hooks";
 export { computeScheduleKpis, crewWeekUtilization, workingDays, type ScheduleKpis } from "../kpis";
 export {

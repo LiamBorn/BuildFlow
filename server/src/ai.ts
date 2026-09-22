@@ -230,7 +230,10 @@ export async function importScheduleFromImages(imageUrls: string[], data: Bootst
 // Map Claude's lightweight extraction onto valid, backend-ready specs: fill the
 // operational fields BuildFlow needs, coerce enums/dates, assign crews round-robin.
 function normalizePlan(rawProjects: unknown[], data: BootstrapPayload): ImportProjectSpec[] {
-  const managerId = data.users.find((u) => u.role === "Project Manager" || u.role === "Superintendent")?.id ?? data.activeUser.id;
+  // Whoever is importing, or the first person on the roster. This used to look for a
+  // "Project Manager" or "Superintendent" job title; those were removed on 2026-09-19 and
+  // there is nothing to put in their place — managing a project is an assignment, not a rank.
+  const managerId = data.activeUser?.id ?? data.users[0]?.id ?? "";
   const crews = data.crews ?? [];
   let cursor = 0;
   const nextCrew = () => (crews.length ? crews[cursor++ % crews.length]?.id : undefined);

@@ -25,11 +25,39 @@ import { useEffect } from "react";
  *
  * `.bfsp` joined on 2026-09-18, when the picker was brought onto the panels' design: it had an
  * arrival of its own and no exit at all, so it vanished on the frame it was closed.
+ *
+ * `.hs-flyout` joined on 2026-09-19 for exactly the same reason — the rail's menu had an arrival
+ * and nothing on the way out. It is the one here that is NOT a child of the body: it lives inside
+ * the rail, which is why the copy goes back to the node's own parent (see below) rather than to
+ * the body, and why the observer needs `subtree`.
  */
-const PANELS = ".pdx, .hs-record-layer, .gantt-drawer-layer, .schedule-dialog-backdrop, .bfsp";
+const PANELS = ".pdx, .hs-record-layer, .gantt-drawer-layer, .schedule-dialog-backdrop, .bfsp, .hs-flyout";
 const EXIT_CLASS = "bf-panel-exit";
 /** Long enough for the CSS to finish; the copy goes whatever happens, so this is a backstop. */
 const EXIT_MS = 420;
+
+/**
+ * THE NAMES A COPY MUST NOT ANSWER TO.
+ *
+ * `cloneNode` brings every attribute with it, including the handles the rest of the app looks the
+ * ONE LIVE panel up by. A copy wearing them answers a question about a panel that has already
+ * closed:
+ *   - `id` — what `aria-labelledby`, `<label for>` and `getElementById` resolve through, and the
+ *     reason this stripped anything at all to begin with.
+ *   - `data-tutorial-id` — what the tutorial's gates and spotlight find their target with, via
+ *     `document.querySelector` (`targetExists` in App.tsx). Left on, the "Open the Add Crew form"
+ *     step read as satisfied for the whole time the copy was up, because the gate is nothing more
+ *     than "is there a crew-dialog in the document", and the spotlight measured the copy instead
+ *     of what is really on screen. Found 2026-09-20 as a flake in tutorial.test.tsx: a copy from
+ *     one test was still parked when the next one reached that gate.
+ */
+const HANDLES = ["id", "data-tutorial-id"];
+const shedHandles = (copy: HTMLElement) => {
+  for (const handle of HANDLES) {
+    copy.removeAttribute(handle);
+    copy.querySelectorAll(`[${handle}]`).forEach((child) => child.removeAttribute(handle));
+  }
+};
 
 /**
  * A clone does not carry what the USER typed: `cloneNode` copies attributes, and a React-controlled
@@ -61,6 +89,13 @@ export function PanelExitLayer() {
     // asked to keep still: a panel that cannot animate in should not animate out either
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
+    /* THE COPIES THAT ARE UP RIGHT NOW, each with the timer that will take it away. A copy is
+       parked OUTSIDE React — on the body, or on the leaving panel's own parent — so nothing else
+       will ever collect it, and the only thing that did was its own real-time timer. That is long
+       enough to outlive the tree that made it: when the app unmounts, its ghosts stayed behind,
+       haunting whatever rendered next. Holding them here means the cleanup below can take them. */
+    const parked = new Map<HTMLElement, number>();
+
     const watch = new MutationObserver((records) => {
       for (const record of records) {
         /* WHERE THE COPY GOES BACK: the node's own parent, not the body. The dialogs and the
@@ -80,10 +115,15 @@ export function PanelExitLayer() {
           copy.classList.add(EXIT_CLASS);
           copy.setAttribute("aria-hidden", "true");
           copy.setAttribute("inert", "");
-          copy.querySelectorAll("[id]").forEach((child) => child.removeAttribute("id"));
-          copy.removeAttribute("id");
+          shedHandles(copy);
           parent.appendChild(copy);
-          window.setTimeout(() => copy.remove(), EXIT_MS);
+          parked.set(
+            copy,
+            window.setTimeout(() => {
+              parked.delete(copy);
+              copy.remove();
+            }, EXIT_MS)
+          );
         }
       }
     });
@@ -91,7 +131,17 @@ export function PanelExitLayer() {
        lives inside its page. Only childList is asked for, so this wakes on nodes coming and going
        and never on an attribute or a character changing. */
     watch.observe(document.body, { childList: true, subtree: true });
-    return () => watch.disconnect();
+    return () => {
+      watch.disconnect();
+      /* The app is going, so its ghosts go with it. There is nothing left for an exit to lead
+         away from once the panel's whole world has gone, and a copy that stays is just a dead
+         panel sitting on the body with every attribute the real one had. */
+      parked.forEach((timer, copy) => {
+        window.clearTimeout(timer);
+        copy.remove();
+      });
+      parked.clear();
+    };
   }, []);
   return null;
 }

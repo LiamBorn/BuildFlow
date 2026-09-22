@@ -74,10 +74,13 @@ describe("the motion tokens the sheet and the code share", () => {
     // and exactly one documented addition to each: the pill's travel, MEASURED
     // off the reference clip rather than chosen (2026-09-19). Anything else added
     // here should have to justify itself the same way.
-    expect(Object.keys(DUR).filter((k) => !["instant", "fast", "base", "slow", "chart", "count"].includes(k))).toEqual(["pill"]);
+    expect(Object.keys(DUR).filter((k) => !["instant", "fast", "base", "slow", "chart", "count"].includes(k))).toEqual(["pill", "exit"]);
     expect(Object.keys(EASE).filter((k) => !["out", "soft", "inOut", "bar"].includes(k))).toEqual(["pill"]);
+    // the pill's travel, measured off the reference clip frame by frame
     expect(DUR.pill).toBe(0.47);
     expect(EASE.pill).toEqual([0.3, 1, 0.6, 0.85]);
+    // and §4's own number for the page being left, which §1's table has no entry for
+    expect(DUR.exit).toBe(0.18);
     expect(STAGGER).toEqual({ icon: 0.04, char: 0.035, card: 0.09, row: 0.14, bar: 0.055, cell: 0.012 });
     expect(MOTION.rise).toBe(16);
     expect(MOTION.riseL).toBe(24);

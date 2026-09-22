@@ -425,13 +425,22 @@ describe("the Client Desk skin", () => {
     // a base of its own; both read the beats, staggered by the panel's place in the grid.
     const S = ".app-shell.hs-shell.bf-shell";
     const panel = declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block`);
-    expect(panel.animation).toContain("bfe-lift");
+    /* 2026-09-20, re-cut to a second clip: a SECTION COMES INTO FOCUS WITHOUT MOVING. Measured in
+       it — a third of the way through a card's arrival its figures sit on the same baseline as the
+       finished card beside them (a 24px rise would read as 16px of offset there), while the content
+       is plainly out of focus and the card's border has not arrived. So `bfe-focus`, which carries
+       no transform at all, and the contents inside stop sliding with it. */
+    expect(panel.animation).toContain("bfe-focus");
+    expect(panel.animation).not.toContain("bfe-lift");
+    expect(panel["--bfe-y"], "a section that travels again").toBeUndefined();
+    expect(panel["--bfe-blur"], "the blur IS the arrival now").toBe("var(--bfm-blur)");
+    expect(declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block .cc-list > *`)["--bfe-y"]).toBe("0px");
     expect(panel.animation).toContain("backwards"); // so a drag's inline transform and the hover lift stay free afterwards
     expect(panel["animation-delay"]).toContain("var(--bfm-beat-board)");
     expect(panel["animation-delay"]).toContain("var(--bfe-row, 0) * var(--bfm-row)");
     expect(panel["animation-delay"]).toContain("var(--bfe-col, 0) * var(--bfm-stagger-card)");
     const row = declsOf(`${S} .dash-rx.hs-home .dash-board .dash-block .cc-list > *`);
-    expect(row.animation).toContain("bfe-lift");
+    expect(row.animation).toContain("bfe-lift"); // still the shared keyframe, now with no distance to travel
     expect(row["animation-delay"]).toContain("var(--bfm-beat-board-content)");
     // the old flat rank and per-page base are gone, and nothing reads them
     expect(sheet.toString()).not.toContain("var(--bfe-i");
@@ -994,10 +1003,24 @@ describe("the Client Desk skin", () => {
     const tsxFiles = (readdirSync(SRC, { recursive: true }) as string[]).filter(
       (name) => name.endsWith(".tsx") && !name.includes(".test.")
     );
+    /* THE HOST IS HALF THE QUESTION. What breaks dark mode is leaving the SHELL, not calling
+       createPortal: a root put in `document.body` inherits from the body and gets the light set,
+       where one put in `.app-shell` inherits the shell's own tokens — the job drawer's portal was
+       measured in the running app at `--bf-surface: #1b1b19` on a dark shell, painting
+       rgb(27, 27, 25) under rgb(244, 243, 240). So each call is read to the end of its argument
+       list (parens counted, since the root element holds plenty of its own) and only the ones
+       handing React `document.body` are held to the palette. */
     const portalRoots = new Set<string>();
     for (const file of tsxFiles.map((name) => join(SRC, name))) {
-      for (const hit of readFileSync(file, "utf8").matchAll(/createPortal\(\s*<\w+\s+className="([^"{}]+)"/g)) {
-        portalRoots.add(hit[1].trim());
+      const src = readFileSync(file, "utf8");
+      for (const hit of src.matchAll(/createPortal\(\s*<\w+\s+className="([^"{}]+)"/g)) {
+        let depth = 0;
+        let end = hit.index + "createPortal".length;
+        for (; end < src.length; end += 1) {
+          if (src[end] === "(") depth += 1;
+          else if (src[end] === ")" && (depth -= 1) === 0) break;
+        }
+        if (/,\s*document\.body\s*[,)]/.test(src.slice(hit.index, end + 1))) portalRoots.add(hit[1].trim());
       }
     }
     expect(portalRoots.size, "no createPortal roots found — the pattern must have changed").toBeGreaterThan(5);
@@ -1097,8 +1120,7 @@ describe("the Client Desk skin", () => {
   it("gives the Create menu and the shared dialog the card language, scoped from the body because the dialog is a portal", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     const P = `body:has(${S}:not([data-bf-mode="dark"]):not([data-bf-theme="dark"]))`;
-    expect(declsOf(`${S} .hs-create .hs-menu-item`)["border-radius"]).toBe("var(--bf-radius-control)");
-    expect(declsOf(`${S} .hs-create .hs-menu-tag.new`).background).toBe("var(--bf-color-accent-wash)");
+    // the top bar's "Create new" menu was removed on 2026-09-19, and its rules with it
     // the earlier sections' .pdx rules under the shell prefix could never match; none may remain
     expect(sheet.toString()).not.toMatch(/\.app-shell\.hs-shell\.bf-shell \.pdx /);
     /* The dialog's SHAPE moved to section 65 on 2026-09-18, when every one of these became a
@@ -1388,21 +1410,63 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${T} .topbar-verify`).margin).toBe("0");
   });
 
-  /* The arrow at the rail's foot and the tab at the edge. Two other arrangements were tried on
-     2026-09-17 — one tab at the screen's edge doing both jobs, then a nub on the rail's top-right
-     edge — and taken back out; this is the one the user kept. */
-  it("hides the rail behind its arrow and leaves a tab at the edge to bring it back", () => {
+  /* BOTH ARROWS STAND IN ONE PLACE — the rail's head, under the logo (2026-09-21, asked for with
+     a mock-up). Before, Hide was at the rail's FOOT under Settings and Show was a tab bolted to
+     the window's left edge half a screen above it, so the way back was somewhere you had not
+     been. Two earlier arrangements were tried on 2026-09-17 and taken back out; this is the one
+     the user drew. */
+  it("puts the hide and show arrows on the same spot, and leaves the page a lane clear of it", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     expect(declsOf(`${S} .sidebar.hs-rail.is-hidden`).display).toBe("none");
-    expect(declsOf(`${S}.sidebar-collapsed .hs-body`)["grid-template-columns"]).toBe("minmax(0, 1fr)");
-    // the arrow sits under Settings, in the rail's own foot: its own spacing and nothing else
-    expect(declsOf(`${S} .hs-rail-hide`)["margin-top"]).toBe("4px");
-    expect(declsOf(`${S} .hs-rail-hide`).position).toBeUndefined();
-    const tab = declsOf(`${S} .hs-rail-show`);
-    expect(tab.position).toBe("fixed");
-    expect(tab.left).toBe("0");
-    expect(tab["border-radius"]).toBe("0 999px 999px 0");
-    expect(tab.background).toBe("var(--bf-surface)");
+
+    /* THE ARITHMETIC IS THE POINT. The rail sticks at `--hs-topbar-h + 14px` and pads 10px, so
+       its head is at + 24px; its margin is 18px and it is 52px wide, so a 36px control inside it
+       starts at 18 + (52 - 36) / 2 = 26px. The Show arrow cannot BE the hide arrow — the rail is
+       display:none when hidden — so it is placed on those same two numbers. Verified in the
+       running app: both rects land on x 24.4, y 75.1. */
+    const show = declsOf(`${S} .hs-rail-show`);
+    expect(show.position).toBe("fixed");
+    expect(show.top).toBe("calc(var(--hs-topbar-h) + 24px)");
+    expect(show.left).toBe("18px");
+    // the hide arrow's box exactly, because it is meant to read as the same control
+    expect(show.width).toBe("52px");
+    expect(show.height).toBe("52px");
+    expect(show["border-radius"]).toBe("50%");
+    expect(show.background).toBe("var(--bf-surface)");
+
+    /* THE HIDE ARROW IS ITS OWN BOX, not a button sitting in the rail's face (2026-09-21, second
+       pass: "separate the arrow to have its own individual box"). It wears the same surface and
+       shadow as the Show arrow, so the two states are one box and only the chevron turns round —
+       measured live, both render 32.4 x 32.4 at x 23.4, y 72 with the same radius and fill. */
+    const hide = declsOf(`${S} .hs-rail-hide`);
+    expect(hide.position, "it is placed by the rail's flow, not by coordinates").toBeUndefined();
+    expect(hide.background).toBe(show.background);
+    expect(hide["box-shadow"], "without this the arrow has no box of its own").toBe("var(--bf-shadow-card)");
+    /* AND IT IS THE RAIL'S OWN WIDTH ("make the button the same width as the left sidebar, so it
+       looks even"), so the two boxes share an edge down both sides — measured live, both run
+       16.2 → 63.0. `left: 18px` on the Show arrow is the rail's own margin, which is what puts
+       its box on that same edge rather than inset from it. */
+    const railWidth = declsOf(".hs-shell.bf-shell .sidebar.hs-rail").width;
+    expect(railWidth, "the rail's width is what the arrow is matching").toBe("52px");
+    expect(hide.width, "the arrow no longer lines up with the rail").toBe(railWidth);
+    expect(hide.height).toBe(railWidth);
+    expect(declsOf(`${S} .hs-rail-top`).display).toBe("grid");
+
+    /* AND THE RAIL'S FACE STARTS WELL BELOW IT. The face is a `::before` at `inset: 0` (section
+       43a), so left alone it paints up behind the arrow and the two read as one long control.
+       56 and not 44: at 8px of daylight they still read as touching — the shadow is only
+       `0 1px 2px`, so nothing separates two white shapes but the gap. 20px is two and a half
+       times the rail's own icon rhythm, which is what says "a different thing". */
+    expect(declsOf(`${S} .sidebar.hs-rail::before`).top, "the pill would touch the arrow").toBe("72px");
+    expect(declsOf(`${S} .hs-rail-top`)["margin-bottom"], "and the nav would ride up into it").toBe("30px");
+
+    /* And the page keeps a lane for the arrow to float in. Without it the page reclaims the
+       rail's full 88px and its first row lands in the arrow's band — a different row on every
+       page (the Dashboard's date line, an index page's KPI strip, the Schedule's filter strip),
+       which is why this is one lane rather than four selectors. */
+    const collapsed = declsOf(`${S}.sidebar-collapsed .hs-body`);
+    expect(collapsed["grid-template-columns"]).toBe("minmax(0, 1fr)");
+    expect(collapsed["padding-left"], "the page would run under the arrow").toBe("60px");
   });
 
   it("leaves no blue anywhere: the information tone is plum, every blue token reads the accent or the ink", () => {
@@ -1819,7 +1883,6 @@ describe("the Client Desk skin", () => {
       `${S} .dash-rx.hs-home .bfws-menu`,
       `${S} .hs-bookmarks-menu`,
       `${S} .user-settings-menu`,
-      `${S} .hs-create .hs-menu`,
       `${S} .hs-upgrade-menu`,
       `${S} .pref-menu`
     ];

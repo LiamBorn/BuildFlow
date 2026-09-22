@@ -29,10 +29,13 @@ type TradeTemplate = {
   inspectionTitles: [string, string, string];
 };
 
+/* Seeded examples. They carry no role: a roster row never did decide anything, and since
+   2026-09-19 it does not even claim to — what a person may do is their account's permission
+   level, and these three have no login at all. `title` is free text. */
 const profileUsers: User[] = [
-  { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
-  { id: "u-jessica", name: "Jessica Lee", role: "Superintendent", title: "Superintendent", avatar: "JL" },
-  { id: "u-carlos", name: "Carlos Ramirez", role: "Crew Lead", title: "Crew Lead", avatar: "CR" }
+  { id: "u-matt", name: "Matt Johnson", title: "Teammate", avatar: "MJ" },
+  { id: "u-jessica", name: "Jessica Lee", title: "Teammate", avatar: "JL" },
+  { id: "u-carlos", name: "Carlos Ramirez", title: "Teammate", avatar: "CR" }
 ];
 
 const phaseStatuses: Phase["status"][] = ["On Track", "On Track", "At Risk", "Not Started", "Not Started", "DelayIQed"];

@@ -901,4 +901,51 @@ describe("the stylesheet cannot have hidden anything", () => {
     // the one display:none is decoration, and only under reduced motion
     expect(found["display:none"][0]).toMatch(/dx-cursor/);
   });
+
+  it("lines Settings' side-by-side fields up by their ROWS, not by their boxes", () => {
+    /*
+     * Reported 2026-09-20 with a screenshot of Settings › Account: "Your name" and its
+     * input sat 39px BELOW the "Email" label beside them. The form was `align-items: end`,
+     * which lines the two fields up by their outer boxes — and the email field is taller,
+     * because it carries a hint under its input that the name field does not. Any of
+     * `start`, `end` or `center` has the same fault from a different direction: they align
+     * the boxes, and the boxes are different heights. What has to line up is the LABELS
+     * with each other, the CONTROLS with each other, and whatever sits under them.
+     *
+     * So the form declares those three rows and the fields take them as a subgrid. This
+     * guards the mechanism, because the symptom is invisible to every other test here:
+     * jsdom lays nothing out, so nothing else in this suite can see 39px.
+     */
+    const sheet = postcss.parse(read("account-redesign.css"));
+    const decls: Record<string, Record<string, string>> = {};
+    sheet.walkRules((rule: Rule) => {
+      // The base rules only. The narrow-screen block below gives the SAME selectors
+      // `grid-template-rows: none` on purpose — one column has no lines to share — so
+      // reading both and letting the last win would test the phone layout by accident.
+      if (rule.parent?.type !== "root") return;
+      const selector = norm(rule.selector);
+      if (!/^(\.settings-inline-form|\.settings-inline-form > \.acct-field|\.settings-inline-submit)$/.test(selector)) return;
+      decls[selector] = decls[selector] ?? {};
+      rule.walkDecls((d) => {
+        decls[selector][d.prop] = norm(d.value);
+      });
+    });
+
+    const form = decls[".settings-inline-form"];
+    expect(form, "the form rule is where the shared rows are declared").toBeTruthy();
+    expect(form["grid-template-rows"], "label / control / the line under it").toBe("auto auto auto");
+    expect(form["align-items"], "aligning the boxes is the bug this replaced").not.toBe("end");
+
+    const field = decls[".settings-inline-form > .acct-field"];
+    expect(field, "each field has to take the form's rows, not make its own").toBeTruthy();
+    expect(field["grid-template-rows"]).toBe("subgrid");
+    expect(field["grid-row"]).toBe("span 3");
+    expect(field.gap, "the row gap is the form's, or the fields space themselves twice").toBe("0");
+
+    // the submit has no label above it, so it sits on the control row — and needs its
+    // column said too, because grid places a definite-row item before the auto ones
+    const submit = decls[".settings-inline-submit"];
+    expect(submit["grid-row"]).toBe("2");
+    expect(submit["grid-column"], "without this it takes column 1 and pushes the fields along").toBeTruthy();
+  });
 });

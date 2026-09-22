@@ -13,7 +13,15 @@ async function freshApp() {
   return createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
 }
 const OWNER = { email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true };
-type Summary = { id: string; kind: string; active: boolean; title: string; name: string; trialEndsAt: string | null; onboardingCompletedAt: string | null };
+type Summary = {
+  id: string;
+  kind: string;
+  active: boolean;
+  title: string;
+  name: string;
+  trialEndsAt: string | null;
+  onboardingCompletedAt: string | null;
+};
 
 describe("workspaces", () => {
   it("lets one login create up to three workspaces beside its first, each on a 7-day trial and called by its trade", async () => {
@@ -45,7 +53,10 @@ describe("workspaces", () => {
     expect(daysLeft).toBeLessThanOrEqual(7);
 
     // the same questions again: the trade names it, and picking Free does not end the trial
-    await agent.post("/api/business-profile").send({ businessType: "Roofing", selectedPlan: "free", selectedProducts: [], seats: 3 }).expect(200);
+    await agent
+      .post("/api/business-profile")
+      .send({ businessType: "Roofing", selectedPlan: "free", selectedProducts: [], seats: 3 })
+      .expect(200);
     const named = await agent.get("/api/workspaces").expect(200);
     expect((named.body.workspaces as Summary[]).find((w) => w.id === extra.id)).toMatchObject({
       title: "Roofing",
@@ -57,7 +68,8 @@ describe("workspaces", () => {
     // the owner is a person in the new workspace, at their level
     const me = await agent.get("/api/auth/me").expect(200);
     const team = await agent.get("/api/team").expect(200);
-    expect(team.body.permissions[me.body.account.id]).toBe("owner");
+    // the level rides on the roster row it belongs to, not in a map beside it
+    expect(team.body.users.find((user: { accountId?: string }) => user.accountId === me.body.account.id).permission).toBe("owner");
     expect(team.body.users.some((user: { accountId?: string }) => user.accountId === me.body.account.id)).toBe(true);
 
     // two more are allowed, a fourth is not
@@ -88,7 +100,10 @@ describe("workspaces", () => {
     const extraId: string = created.body.activeId;
 
     const sam = request.agent(app);
-    await sam.post("/api/auth/signup").send({ ...OWNER, email: "sam@concrete.test", orgName: "Sam Concrete" }).expect(201);
+    await sam
+      .post("/api/auth/signup")
+      .send({ ...OWNER, email: "sam@concrete.test", orgName: "Sam Concrete" })
+      .expect(201);
     const mine = await sam.get("/api/workspaces").expect(200);
     expect(mine.body.workspaces).toHaveLength(1);
     expect(mine.body.workspaces[0].name).toBe("Sam Concrete");
@@ -109,7 +124,10 @@ describe("workspaces", () => {
     // a visitor creates one and sets it up
     const created = await demo.post("/api/workspaces").send({}).expect(201);
     const extraId: string = created.body.activeId;
-    await demo.post("/api/business-profile").send({ businessType: "Roofing", selectedPlan: "free", selectedProducts: [], seats: 3 }).expect(200);
+    await demo
+      .post("/api/business-profile")
+      .send({ businessType: "Roofing", selectedPlan: "free", selectedProducts: [], seats: 3 })
+      .expect(200);
     const two = await demo.get("/api/workspaces").expect(200);
     expect(two.body.workspaces).toHaveLength(2);
     expect((two.body.workspaces as Summary[]).find((w) => w.id === extraId)).toMatchObject({ title: "Roofing", kind: "extra" });

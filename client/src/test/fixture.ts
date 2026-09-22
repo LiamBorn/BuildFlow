@@ -2,11 +2,11 @@ import type { BootstrapPayload } from "@buildflow/shared";
 
 export const bootstrapFixture: BootstrapPayload = {
   users: [
-    { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
-    { id: "u-carlos", name: "Carlos Ramirez", role: "Crew Lead", title: "Crew Lead - Crew 2", avatar: "CR" }
+    { id: "u-matt", name: "Matt Johnson", permission: "owner", title: "Owner", avatar: "MJ" },
+    { id: "u-carlos", name: "Carlos Ramirez", permission: "member", title: "Teammate", avatar: "CR" }
   ],
   onboardingCompletedAt: "2026-01-05T09:00:00.000Z",
-  activeUser: { id: "u-matt", name: "Matt Johnson", role: "Project Manager", title: "Project Manager", avatar: "MJ" },
+  activeUser: { id: "u-matt", name: "Matt Johnson", permission: "owner", title: "Owner", avatar: "MJ" },
   projects: [
     {
       id: "p-riverside",

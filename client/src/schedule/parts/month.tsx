@@ -69,6 +69,7 @@ export function ScheduleMonthView({
   onToggleDay,
   onAddJob,
   onOpenJob,
+  onOpenMilestone,
   holidays,
   pendingId,
   carrying,
@@ -87,6 +88,8 @@ export function ScheduleMonthView({
   onAddJob: (date: string) => void;
   /** When given, a job chip opens this instead of its project — the sub-pages' job drawer. */
   onOpenJob?: (job: Job) => void;
+  /** A marker opens its own drawer — the phase's or the project's date is what it edits. */
+  onOpenMilestone?: (milestone: ScheduleMilestone) => void;
   /** date → name, from the workspace's work calendar. */
   /** date → name, from Settings › Work calendar. */
   holidays: Record<string, string>;
@@ -136,6 +139,7 @@ export function ScheduleMonthView({
               open={openDays?.has(cell.date) ?? false}
               onAddJob={onAddJob}
               onOpenJob={onOpenJob}
+              onOpenMilestone={onOpenMilestone}
               pendingId={pendingId}
               holidays={holidays}
             />
@@ -167,6 +171,7 @@ function MonthDayCell({
   onToggleDay,
   onAddJob,
   onOpenJob,
+  onOpenMilestone,
   pendingId,
   holidays,
   open
@@ -186,6 +191,8 @@ function MonthDayCell({
   onToggleDay: (date: string) => void;
   onAddJob: (date: string) => void;
   onOpenJob?: (job: Job) => void;
+  /** A marker opens its own drawer — the phase's or the project's date is what it edits. */
+  onOpenMilestone?: (milestone: ScheduleMilestone) => void;
   pendingId?: string | null;
   /** date → name, from Settings › Work calendar. */
   holidays: Record<string, string>;
@@ -243,7 +250,12 @@ function MonthDayCell({
           ))}
         </SortableContext>
         {shownMilestones.map((milestone) => (
-          <MonthMilestoneChip key={milestone.id} milestone={milestone} pending={pendingId === milestone.id} />
+          <MonthMilestoneChip
+            key={milestone.id}
+            milestone={milestone}
+            onOpen={onOpenMilestone}
+            pending={pendingId === milestone.id}
+          />
         ))}
         {(hidden > 0 || open) && (
           <button
@@ -281,6 +293,7 @@ function MonthDayCell({
       projectName,
       onOpenProject,
       onOpenJob,
+  onOpenMilestone,
       onToggleDay,
       pendingId
     ]
@@ -371,26 +384,43 @@ function MonthJobChip({
 
 /**
  * A day's marker: a phase's finish, or a project's completion. It is dragged exactly like a job
- * chip — dropping it on another day moves the date it stands for — but it opens nothing on a
- * click, because a date is all it is. The square dot is what tells it apart from a job.
+ * chip — dropping it on another day moves the date it stands for — and, since 2026-09-20, it
+ * OPENS like one too. It used to be a `<div>` with no handler, on the reasoning that "a date is
+ * all it is"; reported with a clip as "users are only able to open up a select amount of jobs to
+ * edit them", because on the month shown 14 of the 20 chips were markers and none of them
+ * answered a click. A date is still something you edit, and nothing about the chip says that it
+ * is a different kind of thing. The square dot is what tells it apart from a job.
+ *
+ * A BUTTON, like the job chip, so it can also be reached by keyboard — a div with a click
+ * handler cannot be tabbed to or pressed with Enter.
  */
-function MonthMilestoneChip({ milestone, pending = false }: { milestone: ScheduleMilestone; pending?: boolean }) {
+function MonthMilestoneChip({
+  milestone,
+  onOpen,
+  pending = false
+}: {
+  milestone: ScheduleMilestone;
+  onOpen?: (milestone: ScheduleMilestone) => void;
+  pending?: boolean;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `month-ms-${milestone.id}`,
     data: { milestoneId: milestone.id, date: milestone.date }
   });
   return (
-    <div
+    <button
+      type="button"
       ref={setNodeRef}
       className={`sched-act is-milestone${isDragging ? " dragging" : ""}${pending ? " is-pending" : ""}`}
       aria-busy={pending || undefined}
       style={{ "--sc-tone": "var(--sc-milestone)" } as CSSProperties}
+      onClick={() => onOpen?.(milestone)}
       title={`${milestone.title} · ${milestone.project}`}
       {...listeners}
       {...attributes}
     >
       <MonthChipFace title={milestone.title} caption={milestone.project} />
-    </div>
+    </button>
   );
 }
 

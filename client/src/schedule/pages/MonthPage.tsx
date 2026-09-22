@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
 import type { BootstrapPayload, Job, Phase, Project } from "@buildflow/shared";
 import { projectInput, rebookSchedule, updatePhase, updateProject } from "../../api";
 import {
+  MilestoneDrawer,
   ScheduleCarryLayer,
   ScheduleMonthView,
   ScheduleTradeLegend,
@@ -28,6 +29,7 @@ import {
   formatScheduleWeekRange,
   shiftScheduleDate,
   shiftScheduleMonth,
+  type MilestoneEdit,
   type ScheduleMilestone
 } from "../parts";
 import { scheduleAccessibility, spokenDay } from "../dragKeyboard";
@@ -78,6 +80,10 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
   const [openDays, setOpenDays] = useState<ReadonlySet<string>>(() => new Set());
   /** A dropped marker's new day, held until its save comes back — the jobs' `moving`, for markers. */
   const [movingMarker, setMovingMarker] = useState<{ id: string; date: string } | null>(null);
+  /* The marker whose drawer is open, kept as an ID rather than the object: markers are derived
+     fresh from the payload on every load, so holding one would show the dates as they were
+     before the save that just landed. This is `selected` in schedule/page.tsx, for markers. */
+  const [openMarkerId, setOpenMarkerId] = useState<string | null>(null);
   const toggleDay = useCallback((date: string) => {
     setOpenDays((current) => {
       const next = new Set(current);
@@ -128,6 +134,13 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
     }
     return map;
   }, [milestones, movingMarker]);
+  /* Re-read from the derived list every render, so what the drawer shows is what the last save
+     wrote. The phase and the project behind it are looked up the same way. */
+  const openMarker = openMarkerId ? (milestones.find((candidate) => candidate.id === openMarkerId) ?? null) : null;
+  const openPhase = openMarker?.kind === "phase" ? data.phases.find((phase) => phase.id === openMarker.refId) : undefined;
+  const openMarkerProject = openMarker
+    ? data.projects.find((project) => project.id === (openPhase ? openPhase.projectId : openMarker.refId))
+    : undefined;
   const monthJobs = useMemo(() => jobs.filter((job) => job.startDate.slice(0, 7) === monthKey), [jobs, monthKey]);
   // the span the calendar covers, in the same shape the Week board prints its own
   const monthRange = formatScheduleWeekRange([
@@ -233,6 +246,34 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
     }
   };
 
+  /**
+   * THE ONE WRITE A MARKER HAS, whether it was dragged onto a day or typed into the drawer: a
+   * phase marker is the phase's own dates, the Certificate of Occupancy is the project's target
+   * completion. A drag passes only `endDate`, so the phase's start is left exactly as it is.
+   */
+  const writeMarker = (marker: ScheduleMilestone, edit: MilestoneEdit): Promise<Phase | Project> => {
+    if (marker.kind === "phase") return updatePhase(marker.refId, edit);
+    const project = data.projects.find((candidate) => candidate.id === marker.refId);
+    if (!project) return Promise.reject(new Error("that project is no longer here"));
+    return updateProject(marker.refId, projectInput(project, { targetCompletion: edit.endDate }));
+  };
+
+  /**
+   * The drawer's Save. It answers IN THE PANEL rather than on the board's notice, which is behind
+   * it — the job drawer's rule, for the same reason. No Undo, also like the job drawer: a date
+   * typed into a field that is showing you the old one is not the accident a drag is.
+   */
+  const saveMarker = async (marker: ScheduleMilestone, edit: MilestoneEdit) => {
+    try {
+      await writeMarker(marker, edit);
+      await reload();
+      say(`${marker.title} saved`);
+      return { saved: true };
+    } catch (error) {
+      return { saved: false, problem: error instanceof Error ? error.message : "The save could not be sent." };
+    }
+  };
+
   /* A marker dropped on another day moves the date it STANDS FOR: a phase's finish, or the
      project's target completion. The work inside the phase keeps its own dates — dragging a
      milestone says when the phase is due, and rescheduling the jobs is the jobs' own gesture. */
@@ -243,12 +284,8 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
       say(`${marker.title} cannot land before its phase starts on ${formatScheduleDate(marker.earliest)}.`, { error: true });
       return;
     }
-    const project = data.projects.find((candidate) => candidate.id === marker.refId);
-    if (marker.kind === "project" && !project) return;
-    const write = (when: string): Promise<Phase | Project> =>
-      marker.kind === "phase"
-        ? updatePhase(marker.refId, { endDate: when })
-        : updateProject(marker.refId, projectInput(project!, { targetCompletion: when }));
+    if (marker.kind === "project" && !data.projects.some((candidate) => candidate.id === marker.refId)) return;
+    const write = (when: string) => writeMarker(marker, { endDate: when });
     setMovingMarker({ id: marker.id, date });
     try {
       await runChange({
@@ -356,8 +393,21 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
         onOpenJob={(job) => {
           if (!suppressClick.current) openJob(job.id);
         }}
+        onOpenMilestone={(milestone) => {
+          // a grab that ended on the chip is not a click on it — the same guard the job chips use
+          if (!suppressClick.current) setOpenMarkerId(milestone.id);
+        }}
       />
       <ScheduleCarryLayer />
+      {openMarker && (
+        <MilestoneDrawer
+          milestone={openMarker}
+          phase={openPhase}
+          project={openMarkerProject}
+          onClose={() => setOpenMarkerId(null)}
+          onSave={(edit) => saveMarker(openMarker, edit)}
+        />
+      )}
       <footer className="schedule-board-footer">
         <ScheduleTradeLegend />
         <ScheduleExportMenu

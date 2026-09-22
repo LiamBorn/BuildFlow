@@ -126,6 +126,33 @@ describe("dark mode's missing pieces", () => {
     }
   });
 
+  /* THE ADD-ON DESCRIPTION IN THE NAV FLYOUT (2026-09-21). Asked for as "make description show
+     darkmode & lightmode"; the same family as the cases above, arrived at a different way. The
+     bubble was an INK PILL, which app-shell-daylight.css makes it on purpose — and `--bf-ink` is
+     the one token that INVERTS with the mode, so it did the opposite of following it: measured in
+     the browser, a near-black card in light mode and a near-WHITE card in dark, inside a dark app.
+
+     The text failed in both, because the two halves were decided in DIFFERENT SHEETS — daylight
+     set the ink background, the skin re-pointed the colour to `--bf-ink-muted` without moving the
+     background out from under it. Measured: 2.75:1 on the light card, 1.9:1 on the dark one. A
+     same-rule scan finds nothing, which is why this case is written out rather than generalised. */
+  it("paints the flyout's add-on description on the surface, so it follows the mode", () => {
+    const S = ".app-shell.hs-shell.bf-shell";
+    const tip = declsIn("app-shell-client-desk.css", `${S} .hs-flyout-tip`);
+    /* --bf-surface is #fff in light and #1b1b19 in dark, so the bubble is light on light and dark
+       on dark with nothing mode-specific written for it. --bf-ink would invert instead. */
+    expect(tip.background, "an ink pill inverts with the mode instead of following it").toBe("var(--bf-surface)");
+    expect(tip.color).toBe("var(--bf-ink-muted)");
+    expect(tip.border).toBe("1px solid var(--bf-line-solid)");
+    // the title has to leave the muted ink or it is the same weight as the body it heads
+    expect(declsIn("app-shell-client-desk.css", `${S} .hs-flyout-tip strong`).color).toBe("var(--bf-ink)");
+    /* And the little arrow takes the same pair. It is painted by app-shell-hubspot.css on
+       `--hs-navy-2`, so left alone it stays a navy dart pointing at a white card. */
+    const dart = declsIn("app-shell-client-desk.css", `${S} .hs-flyout-tip::before`);
+    expect(dart.background, "the arrow would not follow the card").toBe("var(--bf-surface)");
+    expect(dart["border-left"]).toBe("1px solid var(--bf-line-solid)");
+  });
+
   it("keeps the Meetings panel's error note in the bad tone, past the Dashboard's muted-note rule", () => {
     expect(declsIn("meetings-panel.css", ".bfmt-note.is-error").color).toBe("var(--bf-color-bad)");
     /* On the Dashboard the skin grays every .bfmt-note at five classes; the error note has

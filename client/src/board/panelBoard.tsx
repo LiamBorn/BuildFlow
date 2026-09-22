@@ -14,6 +14,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -25,6 +26,7 @@ import { Eye, EyeOff, GripVertical, Plus, RotateCcw, SlidersHorizontal, Trash2, 
 import { setUserSetting } from "../api";
 import { BOARD_RANK_CAP } from "../motion";
 import { usePanelFocus } from "../recordFocus";
+import { SCHEDULE_CARRY_EASE, scheduleCarryLean } from "../schedule/parts/carry";
 import { readUserSetting, rememberUserSetting } from "../userSettings";
 import {
   cellSize,
@@ -421,6 +423,12 @@ export function DashBoard({
   // the latest drag, readable from the window listeners without reaching into a state updater
   const dragRef = useRef<DashDrag | null>(null);
   dragRef.current = drag;
+  /* Where the carried panel is RIGHT NOW, which is not the same thing as what React last
+     rendered. A move only changes the board when the panel crosses into another cell;
+     between those moments the one thing that has to change is the carried panel's own
+     offset, and writing it here rather than through state is what keeps a drag from
+     re-rendering eight panels and their frame a hundred times a second. */
+  const offsetRef = useRef({ dx: 0, dy: 0 });
   const [landing, setLanding] = useState<string | null>(null);
   const colW = cellSize(boardWidth, DASH_COLS, DASH_GAP);
   const colWRef = useRef(colW);
@@ -530,30 +538,46 @@ export function DashBoard({
        slower than the hand. */
     let frame = 0;
     let latest: PointerEvent | null = null;
-    const applyMove = (event: PointerEvent) =>
-      setDrag((current) => {
-        if (!current) return current;
-        const zoom = boardZoom();
-        const dx = (event.clientX - current.pointerX) / zoom;
-        const dy = (event.clientY - current.pointerY) / zoom;
+    /** The cell a preview is currently laid out for, so an unchanged one costs no render. */
+    let previewAt: { x: number; y: number } | null = null;
+    const applyMove = (event: PointerEvent) => {
+      const current = dragRef.current;
+      if (!current) return;
+      const zoom = boardZoom();
+      const dx = (event.clientX - current.pointerX) / zoom;
+      const dy = (event.clientY - current.pointerY) / zoom;
+      offsetRef.current = { dx, dy };
+
+      if (current.kind === "move") {
+        // the cell is read from where the panel's own top-left corner is over the board; the
+        // panel keeps its width and height, so it snaps to the nearest column it still fits
+        // in. Dropping back on the same cell leaves the layout as it was.
+        const rawCol = current.origin.x + dx / (colWRef.current + DASH_GAP);
+        const dRow = snapDelta(dy, DASH_ROW_UNIT, DASH_GAP);
+        const cell = snapDragSameShape(rawCol, current.origin.y + dRow, current.origin.w, current.floor);
+        /* The board only has something new to say when the panel reaches another cell.
+           Until then the carry loop has already moved it — a render here would lay out
+           the same eight panels, the same placeholder and the same frame again to put one
+           of them a few pixels along. */
+        if (previewAt && cell.x === previewAt.x && cell.y === previewAt.y) return;
+        previewAt = cell;
+        const own = limits(current.id);
+        const moved = cell.x !== current.origin.x || cell.y !== current.origin.y;
+        const preview = moved ? placeItem(current.base, current.id, cell.x, cell.y, current.origin.w, own) : current.base;
+        setDrag((now) => (now ? { ...now, dx, dy, preview } : now));
+        return;
+      }
+
+      // A resize changes the panel's BOX, which is React's to draw: every frame of one is
+      // a real change, and there is nothing to skip.
+      setDrag((now) => {
+        if (!now) return now;
+        const own = limits(now.id);
         const dCol = snapDelta(dx, colWRef.current, DASH_GAP);
         const dRow = snapDelta(dy, DASH_ROW_UNIT, DASH_GAP);
-        const own = limits(current.id);
-        let preview: GridItem[];
-        if (current.kind === "move") {
-          // the cell is read from where the panel's own top-left corner is over the board; the
-          // panel keeps its width and height, so it snaps to the nearest column it still fits
-          // in. Dropping back on the same cell leaves the layout as it was.
-          const rawCol = current.origin.x + dx / (colWRef.current + DASH_GAP);
-          const cell = snapDragSameShape(rawCol, current.origin.y + dRow, current.origin.w, current.floor);
-          const moved = cell.x !== current.origin.x || cell.y !== current.origin.y;
-          preview = moved ? placeItem(current.base, current.id, cell.x, cell.y, current.origin.w, own) : current.base;
-          return { ...current, dx, dy, preview };
-        } else {
-          preview = resizeItem(current.base, current.id, current.origin.w + dCol, current.origin.h + dRow, own);
-        }
-        return { ...current, dx, dy, preview };
+        return { ...now, dx, dy, preview: resizeItem(now.base, now.id, now.origin.w + dCol, now.origin.h + dRow, own) };
       });
+    };
     const onMove = (event: PointerEvent) => {
       latest = event;
       if (frame) return;
@@ -590,6 +614,66 @@ export function DashBoard({
     // the listeners only need re-binding when a drag starts or ends
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag !== null]);
+
+  /*
+   * THE CARRIED PANEL LEANS THE WAY IT IS BEING TAKEN (2026-09-20).
+   *
+   * Asked for, with a clip of the Month board: "use the same animation/tween effect from
+   * the jobs within the schedule … wherever the job is going it will slowly tween that
+   * direction." So it is literally the same function — `scheduleCarryLean` out of
+   * schedule/parts/carry.tsx — rather than a second lean to keep in step with the first.
+   * A panel used to carry a fixed `rotate(-1.5deg)`: a tilt, but the same tilt whichever
+   * way it was going, which is the half of the gesture that says nothing.
+   *
+   * It runs as its own frame loop rather than off the pointer, for the reason the Schedule
+   * does: the lean has to keep easing back to square when the hand STOPS, and a hand that
+   * has stopped sends no pointer events. The loop measures the panel's own box each frame —
+   * the same "where has it moved to since last frame" the carried clone asks — so it needs
+   * nothing from the drag state and cannot disagree with it.
+   */
+  useEffect(() => {
+    if (!drag || drag.kind !== "move") return;
+    /* Less motion takes the LEAN away, not the carrying. The loop is what moves the panel
+       between cell changes now, so returning early here would leave it stuck wherever the
+       last render put it — a drag that jumps a cell at a time instead of following the
+       hand, which is worse for everyone and not what the setting asks for. */
+    const lean = !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const node = boardRef.current?.querySelector<HTMLElement>(`[data-dash-drag-id="${CSS.escape(drag.id)}"]`);
+    if (!node) return;
+
+    /* Where the panel has been carried to, out of the drag itself rather than off the
+       DOM. The Schedule's clone measures its own box because it is a clone and has no
+       other way to know; here the number already exists, is already in board pixels
+       (the pointer handler divides by the zoom), and reading it costs nothing.
+       `getBoundingClientRect` on an element React has just written a style to forces a
+       synchronous layout — measured at 0.4ms typical and 5.2ms at worst, every frame,
+       for a figure that was already to hand. */
+    const at = () => offsetRef.current;
+    let previous = { ...at(), at: performance.now() };
+    let speed = { x: 0, y: 0 };
+    let frame = window.requestAnimationFrame(function draw(now: number) {
+      const here = at();
+      // the same floor and ceiling on the gap: a first frame has no elapsed time, and a
+      // frame the tab slept through would otherwise read as a flick
+      const gap = Math.min(Math.max(now - previous.at, 8), 80);
+      const toward = { x: (here.dx - previous.dx) / gap, y: (here.dy - previous.dy) / gap };
+      previous = { ...here, at: now };
+      speed = {
+        x: speed.x + (toward.x - speed.x) * SCHEDULE_CARRY_EASE,
+        y: speed.y + (toward.y - speed.y) * SCHEDULE_CARRY_EASE
+      };
+      // this loop CARRIES the panel now: both where it is and how it is leaning
+      node.style.translate = `${here.dx}px ${here.dy}px`;
+      if (lean) node.style.transform = scheduleCarryLean(speed);
+      frame = window.requestAnimationFrame(draw);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      // handed back to the sheet: the panel lands square, and `is-landing` plays over it
+      node.style.transform = "";
+      node.style.translate = "";
+    };
+  }, [drag?.id, drag?.kind]);
 
   useEffect(() => {
     if (!landing) return;
@@ -629,6 +713,27 @@ export function DashBoard({
   const placeholder = drag ? shown.find((item) => item.id === drag.id) : undefined;
   const px = (item: { x: number; y: number; w: number; h: number }) => itemRect(item, colW, DASH_ROW_UNIT, DASH_GAP);
 
+  /* The graph-paper grid shown under a drag. It is decoration — aria-hidden, one span a
+     cell — and it does not change while a panel is being carried: only the number of rows
+     and the column width can move it, and neither does so per frame. Rebuilt on those two
+     rather than on every render, because it was 114 spans (and 114 `itemRect` calls) a
+     frame against the 8 panels it sits behind — the larger half of everything React was
+     doing during a drag. */
+  const cells = useMemo(
+    () => (
+      <div className="dash-cells" aria-hidden="true">
+        {Array.from({ length: rows * DASH_COLS }).map((_, index) => (
+          <span
+            key={index}
+            className="dash-cell"
+            style={itemRect({ x: index % DASH_COLS, y: Math.floor(index / DASH_COLS), w: 1, h: 1 }, colW, DASH_ROW_UNIT, DASH_GAP)}
+          />
+        ))}
+      </div>
+    ),
+    [rows, colW]
+  );
+
   // The entrance the sheet plays when the Dashboard opens (app-shell-client-desk §20): every
   // panel rises in turn, in reading order, and its rows follow it. The order is a CSS variable
   // on the panel so the sheet can stagger by it; a phone's stacked column plays in its own order.
@@ -654,13 +759,7 @@ export function DashBoard({
       className={`dash-board${stacked ? " is-stacked" : ""}${drag ? ` is-editing is-${drag.kind}` : ""}`}
       style={stacked ? undefined : { height: boardHeight }}
     >
-      {drag && !stacked && (
-        <div className="dash-cells" aria-hidden="true">
-          {Array.from({ length: rows * DASH_COLS }).map((_, index) => (
-            <span key={index} className="dash-cell" style={px({ x: index % DASH_COLS, y: Math.floor(index / DASH_COLS), w: 1, h: 1 })} />
-          ))}
-        </div>
-      )}
+      {drag && !stacked && cells}
       {placeholder && !stacked && <div className="dash-placeholder" style={px(placeholder)} aria-hidden="true" />}
       {(stacked ? [...layout].sort((a, b) => rank(a.id) - rank(b.id) || a.y - b.y || a.x - b.x) : shown).map((item, index) => {
         const panel = panels[item.id];
@@ -670,9 +769,17 @@ export function DashBoard({
         if (!stacked) {
           const rect = px(active ? { ...active.origin, w: active.w } : item);
           style = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-          // the carried panel rides the pointer at its own size, tilted a touch the way the
-          // reference's does (the sheet cannot add this: an inline transform replaces it)
-          if (active?.kind === "move") style.transform = `translate(${active.dx}px, ${active.dy}px) rotate(-1.5deg)`;
+          /* The carried panel rides the pointer at its own size. Its POSITION goes on the
+             individual `translate` property rather than into `transform`, because the lean
+             below owns `transform` and writes it every frame — two writers on one property
+             would clobber each other at pointer rate. The two compose in that order by
+             spec (translate, then rotate, then scale, then transform), which is the same
+             order the Schedule's overlay and its clone are in.
+
+             This is the offset as of the last time the board had something to say. The
+             carry loop keeps it current between those moments; re-stating it here is what
+             stops a render in the middle of a drag snapping the panel back. */
+          if (active?.kind === "move") style.translate = `${active.dx}px ${active.dy}px`;
           if (active?.kind === "resize") {
             const own = limits(item.id);
             const min = px({ x: 0, y: 0, w: own.minW ?? 1, h: own.minH ?? 1 });
@@ -773,14 +880,22 @@ export function BoardLayoutControls({
 export function BoardCustomizeHint() {
   return (
     <p className="hs-home-hint" role="status">
-      <GripVertical size={14} /> Drag any panel by its handle to rearrange this page, resize it from its corner, or remove it with the
-      trash at its corner — it waits in + until you want it back. Your layout follows your account.
+      <GripVertical size={14} /> Drag any panel by its handle to rearrange this page, resize it from its corner, or remove it with the trash
+      at its corner — it waits in + until you want it back. Your layout follows your account.
     </p>
   );
 }
 
 /** The sections taken off the board, each one click from coming back. */
-export function HiddenPanelChips({ hidden, titles, onShow }: { hidden: string[]; titles: Record<string, string>; onShow: (id: string) => void }) {
+export function HiddenPanelChips({
+  hidden,
+  titles,
+  onShow
+}: {
+  hidden: string[];
+  titles: Record<string, string>;
+  onShow: (id: string) => void;
+}) {
   return (
     <div className="hs-home-hidden" role="group" aria-label="Hidden panels">
       <span className="hs-home-hidden-label">

@@ -64,13 +64,11 @@ export const blankWorkspaceFixture: typeof bootstrapFixture = {
 export const newOrgWorkspaceFixture: typeof bootstrapFixture = {
   ...blankWorkspaceFixture,
   onboardingCompletedAt: null,
-  users: [
-    { id: "u-owner", name: "Jordan Reyes", role: "Project Manager", title: "Owner", avatar: "JR", accountId: "acct-1", isSample: false }
-  ],
+  users: [{ id: "u-owner", name: "Jordan Reyes", permission: "owner", title: "Owner", avatar: "JR", accountId: "acct-1", isSample: false }],
   activeUser: {
     id: "u-owner",
     name: "Jordan Reyes",
-    role: "Project Manager",
+    permission: "owner",
     title: "Owner",
     avatar: "JR",
     accountId: "acct-1",
@@ -137,6 +135,9 @@ export async function openCreateAccount() {
 export const HUB_OF: Record<string, string> = {
   Projects: "Operations",
   Crews: "Operations",
+  Contacts: "Sales",
+  Companies: "Sales",
+  Deals: "Sales",
   Equipment: "Resources",
   Materials: "Resources",
   "Field Updates": "Field",

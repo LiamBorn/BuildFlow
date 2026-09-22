@@ -3,13 +3,16 @@
  * one job, saved through the page's own PATCH, and the job's links — with the way
  * to draw or remove one — so a dependency needs no mouse. One implementation shared by the
  * Week, List, Kanban, Month, Matrix and Gantt pages; styled by hs-gantt.css.
+ *
+ * The frame it opens in — the layer, where it is painted, the focus trap — is ScheduleDrawer's.
  */
 import { useEffect, useState, type FormEvent } from "react";
-import { ExternalLink, Link2, Unlink, X } from "lucide-react";
+import { ExternalLink, Link2, Unlink } from "lucide-react";
 import type { Job, JobDependency, Status } from "@buildflow/shared";
 import { parseIsoDate } from "../../components/ui/gantt";
-import { useModalDialog, type JobSaveResult } from "../hooks";
+import { type JobSaveResult } from "../hooks";
 import { PRIORITIES, STATUSES } from "../statusPalette";
+import { ScheduleDrawer } from "./ScheduleDrawer";
 
 export function JobDrawer({
   job,
@@ -44,8 +47,6 @@ export function JobDrawer({
   const [notes, setNotes] = useState(job.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const panel = useModalDialog<HTMLElement>(onClose);
-
   useEffect(() => {
     setStatus(job.status);
     setPriority(job.priority);
@@ -82,26 +83,18 @@ export function JobDrawer({
   );
 
   return (
-    <div className="gantt-drawer-layer" role="presentation">
-      <div className="gantt-drawer-backdrop" onClick={onClose} />
-      <aside className="gantt-drawer" role="dialog" aria-modal="true" aria-labelledby="gantt-drawer-title" ref={panel}>
-        <div className="gantt-drawer-top">
-          <div>
-            <h2 id="gantt-drawer-title">{job.name}</h2>
-            <p className="gantt-drawer-sub">
-              {projectName}
-              {job.phase ? ` · ${job.phase}` : ""}
-              {job.location ? ` · ${job.location}` : ""}
-            </p>
-          </div>
-          <button type="button" className="gantt-drawer-close" aria-label="Close job details" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        {/* The header stays; everything under it scrolls (the notifications drawer's shape). The
-            panel used to be the scroller itself AND start at the top of the window, so its title
-            and close button sat behind the top bar with no way to reach them. */}
-        <div className="gantt-drawer-body">
+    <ScheduleDrawer
+      title={job.name}
+      sub={
+        <>
+          {projectName}
+          {job.phase ? ` · ${job.phase}` : ""}
+          {job.location ? ` · ${job.location}` : ""}
+        </>
+      }
+      closeLabel="Close job details"
+      onClose={onClose}
+    >
           <dl className="gantt-drawer-facts">
             <div>
               <dt>Crews</dt>
@@ -222,8 +215,6 @@ export function JobDrawer({
               </button>
             </div>
           </form>
-        </div>
-      </aside>
-    </div>
+    </ScheduleDrawer>
   );
 }

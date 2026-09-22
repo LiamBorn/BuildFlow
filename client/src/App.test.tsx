@@ -421,8 +421,8 @@ describe("BuildFlow app", () => {
     // was signed in used to land on the board, over the workspace the sign-in had just painted.
     const anonymous = {
       ...bootstrapFixture,
-      users: [{ id: "u-guest", name: "Dana Fox", role: "Project Manager", title: "Project Manager", avatar: "DF" }],
-      activeUser: { id: "u-guest", name: "Dana Fox", role: "Project Manager", title: "Project Manager", avatar: "DF" },
+      users: [{ id: "u-guest", name: "Dana Fox", permission: "owner", title: "Owner", avatar: "DF" }],
+      activeUser: { id: "u-guest", name: "Dana Fox", permission: "owner", title: "Owner", avatar: "DF" },
       projects: [{ ...bootstrapFixture.projects[0], name: "Somebody else's yard" }]
     };
     const answer: Array<(payload: unknown) => void> = [];
@@ -708,7 +708,7 @@ describe("BuildFlow app", () => {
     expect(screen.getByRole("dialog", { name: "Add Crew" })).toBeInTheDocument();
     expect(screen.getByLabelText("Crew Name")).toBeInTheDocument();
     expect(screen.getByLabelText("Specialty/Type")).toBeInTheDocument();
-    expect(screen.getByLabelText("Foreman")).toBeInTheDocument();
+    expect(screen.getByLabelText("Crew lead")).toBeInTheDocument();
     expect(screen.getByText("Labors & Operators")).toBeInTheDocument();
   });
 
@@ -783,7 +783,13 @@ describe("BuildFlow app", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Add Crew" }));
     fireEvent.change(await screen.findByLabelText("Count for role 1"), { target: { value: "3" } });
 
-    expect(screen.getByText("5")).toBeInTheDocument();
+    // 2026-09-19: scoped to the crew form. The page being LEFT fades out rather than
+    // vanishing now (skin §79), so for DUR.exit the Dashboard is still in the
+    // document — inert and hidden from the accessibility tree, but a bare
+    // getByText still reaches into it, and it has a "5" of its own.
+    const sizePreview = document.querySelector<HTMLElement>(".crew-size-preview");
+    expect(sizePreview).not.toBeNull();
+    expect(within(sizePreview!).getByText("5")).toBeInTheDocument();
   });
 
   it("adds and removes labor mix rows", async () => {
@@ -838,7 +844,7 @@ describe("BuildFlow app", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Add Crew" }));
     fireEvent.change(await screen.findByLabelText("Crew Name"), { target: { value: "Site Prep Crew 5" } });
     fireEvent.change(screen.getByLabelText("Specialty/Type"), { target: { value: "Site Prep" } });
-    fireEvent.change(screen.getByLabelText("Foreman"), { target: { value: "Dana Brooks" } });
+    fireEvent.change(screen.getByLabelText("Crew lead"), { target: { value: "Dana Brooks" } });
     fireEvent.change(screen.getByLabelText("Count for role 1"), { target: { value: "2" } });
     fireEvent.change(screen.getByLabelText("Role for role 2"), { target: { value: "Dozer Operator" } });
     const addCrewButtons = screen.getAllByRole("button", { name: "Add Crew" });
@@ -1241,7 +1247,15 @@ describe("BuildFlow app", () => {
       const url = String(input);
       if (url === "/api/delayiq/early-warning") return new Response(JSON.stringify({ asOf: "2026-09-09", risks: [] }), { status: 200 });
       if (url.endsWith("/api/auth/me")) {
-        const account = { id: "acct-1", orgId: "org-1", email: "liam@example.com", name: "Liam", role: "owner", createdAt: "2026-06-01T00:00:00.000Z", emailVerifiedAt: verifiedAt };
+        const account = {
+          id: "acct-1",
+          orgId: "org-1",
+          email: "liam@example.com",
+          name: "Liam",
+          role: "owner",
+          createdAt: "2026-06-01T00:00:00.000Z",
+          emailVerifiedAt: verifiedAt
+        };
         const org = { id: "org-1", name: "Reyes Construction", plan: "free", createdAt: "2026-06-01T00:00:00.000Z" };
         return new Response(JSON.stringify({ account, org }), { status: 200 });
       }
@@ -1431,8 +1445,23 @@ describe("BuildFlow app", () => {
 
   // ---- Phase 5: the board follows the person, panels can be hidden, tiles trend on real weeks ----
   /** The reset layout's order: the superintendent's reading order, every section full width. */
-  const FULL_WIDTH_ORDER = ["today", "quick", "kpis", "approvals", "alerts", "recommendations", "weather", "stats", "readiness", "conflicts", "inspections", "meetings", "apps"];
-  const boardOrder = () => Array.from(document.querySelectorAll<HTMLElement>(".dash-board .dash-block")).map((node) => node.dataset.dashDragId);
+  const FULL_WIDTH_ORDER = [
+    "today",
+    "quick",
+    "kpis",
+    "approvals",
+    "alerts",
+    "recommendations",
+    "weather",
+    "stats",
+    "readiness",
+    "conflicts",
+    "inspections",
+    "meetings",
+    "apps"
+  ];
+  const boardOrder = () =>
+    Array.from(document.querySelectorAll<HTMLElement>(".dash-board .dash-block")).map((node) => node.dataset.dashDragId);
   const settingsWrites = (fetchMock: ReturnType<typeof vi.fn>) =>
     fetchMock.mock.calls
       .filter(([url, init]) => (init as RequestInit | undefined)?.method === "PUT" && String(url).startsWith("/api/me/settings/"))
@@ -1498,7 +1527,11 @@ describe("BuildFlow app", () => {
     fireEvent.click(screen.getByRole("button", { name: /Reset layout/ }));
     expect(await screen.findByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
     expect(screen.getByText("Schedule Intelligence")).toBeInTheDocument();
-    const saved = JSON.parse(localStorage.getItem(key) ?? "{}") as { items: Array<{ id: string; x: number; w: number }>; hidden: string[]; fit?: boolean };
+    const saved = JSON.parse(localStorage.getItem(key) ?? "{}") as {
+      items: Array<{ id: string; x: number; w: number }>;
+      hidden: string[];
+      fit?: boolean;
+    };
     expect(saved.hidden).toEqual([]);
     expect(saved.fit).toBe(true);
     expect(saved.items.every((item) => item.x === 0 && item.w === 6)).toBe(true);
@@ -1545,12 +1578,14 @@ describe("BuildFlow app", () => {
     const lede = screen.getByText("Your AI-powered hub for construction scheduling, insights, and execution.");
     const row = lede.closest(".hs-home-subline") as HTMLElement | null;
     expect(row).not.toBeNull();
-    const stack = within(row!).getByRole("button", { name: /Reset layout/ }).closest(".hs-home-topline-actions") as HTMLElement;
-    expect(within(stack).getAllByRole("button").map((button) => button.getAttribute("aria-label") ?? button.textContent?.trim())).toEqual([
-      "Reset layout",
-      "Add a section",
-      "Customize"
-    ]);
+    const stack = within(row!)
+      .getByRole("button", { name: /Reset layout/ })
+      .closest(".hs-home-topline-actions") as HTMLElement;
+    expect(
+      within(stack)
+        .getAllByRole("button")
+        .map((button) => button.getAttribute("aria-label") ?? button.textContent?.trim())
+    ).toEqual(["Reset layout", "Add a section", "Customize"]);
     // the date line above carries the date alone now
     const dateLine = document.querySelector(".hs-home-topline") as HTMLElement;
     expect(dateLine).not.toContainElement(stack);

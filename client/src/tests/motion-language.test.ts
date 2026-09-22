@@ -599,3 +599,152 @@ describe("the reduced-motion branches the suite cannot execute", () => {
     expect(unpinned).toEqual([]);
   });
 });
+
+describe("Settings' buttons each answer for what they do (skin §82)", () => {
+  /*
+   * Asked for on 2026-09-20 with the segmented-control clip: "customize the effects
+   * for the different buttons." What that clip argues is that a control's treatment is
+   * chosen for the control — five segmented controls side by side, no two dressed the
+   * same. Settings had the opposite: fourteen kinds of button, twelve of them rising
+   * 2px with a bigger shadow, three on `transition: all`, five different durations, and
+   * no `:active` rule anywhere in the sheet.
+   *
+   * These read the SOURCE, because jsdom applies no CSS and nothing else in the suite
+   * can see a hover, a press, or a cascade.
+   */
+  const skin = postcss.parse(read("app-shell-client-desk.css"));
+
+  /** Every declaration of `prop` on a rule whose selector matches, by pseudo-state. */
+  const stateOf = (selector: string) => {
+    if (/:active/.test(selector)) return "active";
+    if (/:hover/.test(selector)) return "hover";
+    if (/:focus/.test(selector)) return "focus";
+    return "rest";
+  };
+  /** Whether a rule sits inside `@media (prefers-reduced-motion: reduce)`. */
+  const inReduce = (rule: Rule) => {
+    let at = rule.parent as { type: string; params?: string; parent?: unknown } | undefined;
+    while (at) {
+      if (at.type === "atrule" && /reduced-motion/.test(at.params ?? "")) return true;
+      at = at.parent as typeof at;
+    }
+    return false;
+  };
+
+  const settingsRules: Array<{ selector: string; state: string; reduce: boolean; decls: Record<string, string> }> = [];
+  skin.walkRules((rule: Rule) => {
+    const selector = norm(rule.selector);
+    if (!selector.includes(".settings-rx")) return;
+    const decls: Record<string, string> = {};
+    rule.walkDecls((d: Declaration) => {
+      decls[d.prop] = norm(d.value);
+    });
+    settingsRules.push({ selector, state: stateOf(selector), reduce: inReduce(rule), decls });
+  });
+
+  /**
+   * The `transform` `cls` ends up with in `state`, for someone who has NOT asked for
+   * less motion. Skipping the reduce block is the point: it nulls every hover transform
+   * in the page on purpose, and reading it as though it were the normal cascade reports
+   * that every button does nothing — which is how this test first passed a lift as a
+   * `none` and had to be corrected.
+   */
+  const transformFor = (target: string, state: string) => {
+    /*
+     * Anchored on the END of a selector, with the pseudo-classes taken out first:
+     * `.settings-member-remove:hover` is the button, `.settings-member-remove:hover > svg`
+     * is the glyph inside it, and a plain `includes` reads the second as the first —
+     * which reported the destructive family's hover as `scale(1.12)` (the glyph growing)
+     * instead of `none` (the button deliberately not rising).
+     */
+    const hits = settingsRules.filter(
+      (r) =>
+        !r.reduce &&
+        r.state === state &&
+        r.decls.transform &&
+        r.selector.split(",").some((part) =>
+          norm(part)
+            .replace(/:[a-z-]+(\([^)]*\))?/g, "")
+            .endsWith(target)
+        )
+    );
+    return hits.length ? hits[hits.length - 1].decls.transform : undefined;
+  };
+
+  it("gives the six families six different gestures, not one lift for all of them", () => {
+    // committing rises to meet the pointer, then takes the press
+    expect(transformFor(".acct-primary", "hover")).toContain("translateY(-2px)");
+    expect(transformFor(".acct-primary", "active")).toBe("translateY(0) scale(0.97)");
+
+    // secondary sits INSIDE a row, so it must not lift out of one
+    expect(transformFor(".settings-action-button", "hover")).toBe("none");
+    expect(transformFor(".settings-action-button", "active")).toBe("scale(0.97)");
+
+    // destructive never rises: that gesture is every other button saying "press me",
+    // and the control that takes a teammate off the workspace should not say it
+    expect(transformFor(".settings-member-remove", "hover")).toBe("none");
+    expect(transformFor(".settings-member-remove", "active")).toBe("scale(0.92)");
+    expect(transformFor(".wc-remove", "hover")).toBe("none");
+
+    // dismiss turns rather than lifts — a gesture only this button makes
+    expect(transformFor(".settings-close-button", "hover")).toBe("none");
+    expect(transformFor(".settings-close-button > svg", "hover")).toBe("rotate(90deg)");
+    expect(transformFor(".settings-close-button", "active")).toBe("scale(0.9)");
+
+    // choosing presses INTO its track, the opposite of a lift
+    expect(transformFor(".settings-nav-item", "active")).toBe("translateY(1px)");
+    expect(transformFor(".sx-seg-opt", "active")).toBe("translateY(1px)");
+
+    // and the four press depths are deliberately not all the same number
+    const presses = [".acct-primary", ".settings-action-button", ".settings-member-remove", ".settings-close-button"].map((c) =>
+      transformFor(c, "active")
+    );
+    expect(new Set(presses).size, "four families, four presses").toBe(4);
+  });
+
+  it("presses at all, which nothing in this sheet used to do", () => {
+    // `--bf-dur-press` had been declared, and put in transition lists, for a state that
+    // was never written: there was not one `:active` rule in the file.
+    const pressed = settingsRules.filter((r) => !r.reduce && r.state === "active");
+    expect(pressed.length, "Settings' buttons take the press").toBeGreaterThanOrEqual(8);
+    for (const rule of pressed) {
+      expect(rule.decls.transform ?? rule.decls.width, `${rule.selector} claims a press but does nothing`).toBeTruthy();
+    }
+  });
+
+  it("names the properties it animates, and takes every duration from a token", () => {
+    const mine = settingsRules.filter((r) => !r.reduce && r.decls.transition);
+    expect(mine.length).toBeGreaterThanOrEqual(6);
+    for (const rule of mine) {
+      const value = rule.decls.transition;
+      // `transition: all` animates whatever happens to change, layout included
+      expect(value, `${rule.selector} is on transition: all`).not.toMatch(/(^|,)\s*all\b/);
+      // every time in it is a var(), never a number
+      const times = value.match(/(^|[\s,])\d*\.?\d+m?s\b/g) ?? [];
+      expect(times, `${rule.selector} keeps its own time`).toEqual([]);
+    }
+  });
+
+  it("travels the toggle's knob on the curve measured off the reference clip", () => {
+    // the same pair 78's pill uses — the character of the thing in the video
+    const knob = settingsRules.find((r) => !r.reduce && r.selector.endsWith(".settings-toggle > span") && r.decls.transition);
+    expect(knob?.decls.transition).toContain("var(--bfm-dur-pill) var(--bfm-ease-pill)");
+    const track = settingsRules.find((r) => !r.reduce && r.selector.endsWith(".settings-toggle") && r.decls.transition);
+    expect(track?.decls.transition, "the track tints in step with the knob").toContain("var(--bfm-dur-pill)");
+  });
+
+  it("says what less motion means for the gestures it just added", () => {
+    const quieted = new Set<string>();
+    skin.walkRules((rule: Rule) => {
+      let at = rule.parent as { type: string; params?: string } | undefined;
+      if (!at || at.type !== "atrule" || !/reduced-motion/.test(at.params ?? "")) return;
+      for (const one of norm(rule.selector).split(",")) quieted.add(norm(one));
+    });
+    for (const moving of [".settings-close-button > svg", ".settings-member-remove > svg", ".wc-remove > svg", ".settings-toggle > span"]) {
+      expect(
+        [...quieted].some((q) => q.endsWith(moving)),
+        `${moving} moves with nothing said about less motion`
+      ).toBe(true);
+    }
+  });
+});

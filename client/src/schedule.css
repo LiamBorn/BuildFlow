@@ -5503,7 +5503,9 @@
   color: var(--hsx-mut, var(--wx-mut));
   font-style: normal;
 }
-.gantt-page .gantt-drawer-links-empty {
+.gantt-page .gantt-drawer-links-empty,
+/* the line under a milestone's dates that says what this marker does NOT move */
+.gantt-page .gantt-drawer-note {
   margin: 8px 0 0;
   color: var(--hsx-mut, var(--wx-mut));
 }

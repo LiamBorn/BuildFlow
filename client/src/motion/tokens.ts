@@ -32,7 +32,14 @@ export const DUR = {
    * edges interpolate together, so it changes WIDTH to fit its target rather
    * than sliding at a fixed size, and it never overshoots.
    */
-  pill: 0.47
+  pill: 0.47,
+  /**
+   * How long the page you are LEAVING takes to go — §4, "outgoing content
+   * opacity -> 0, y: -8, 180ms". Shorter than anything else here on purpose: a
+   * page on its way out is not something to watch, and the page arriving behind
+   * it has its own two seconds of beats to get through.
+   */
+  exit: 0.18
 } as const;
 
 /** Cubic-bezier control points. */
@@ -53,6 +60,30 @@ export const EASE = {
    * the move.
    */
   pill: [0.3, 1, 0.6, 0.85]
+} as const;
+
+/**
+ * The pill's STRETCH — how far its leading edge runs ahead of its trailing one.
+ *
+ * Asked for on 2026-09-20. Worth saying plainly: the reference clip does NOT do
+ * this. Tracking the pill's own edges through one move, frame by frame, the two
+ * never diverge by more than 1.3 percentage points of their own travel — which is
+ * the rounded corners, not a stretch. A wide pill crossing two labels mid-slide
+ * looks like one in a still, and that is what it was read as. This is an addition,
+ * not a correction.
+ *
+ * `LEAD` is a fraction of the travel, not a second curve: the leading edge runs
+ * EASE.pill at 1 + LEAD times the rate, arriving early and waiting while the
+ * trailing edge catches up. One number, and nothing to justify but this one.
+ *
+ * `STRETCH_CAP` is why it does not smear. The bulge is about a third of LEAD times
+ * the distance, so an option two sections down Settings' rail (647px) would take on
+ * 75px of extra length. Capped, the stretch grows with the travel and then stops.
+ */
+export const PILL = {
+  lead: 0.35,
+  /** px — the most extra length the pill may take on, however far it is going. */
+  stretchCap: 28
 } as const;
 
 /** Seconds between one sibling and the next. */

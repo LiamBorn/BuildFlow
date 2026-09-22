@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { BEAT, DUR, EASE, OPENING, STAGGER, cssEase, ms } from "../motion/tokens";
+import { PILL_GROUPS } from "../motion/SegmentPill";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sheet = postcss.parse(readFileSync(join(SRC, "app-shell-client-desk.css"), "utf8"));
@@ -40,6 +41,58 @@ const declsFor = (fragment: string) => {
   const found: Record<string, string> = {};
   sheet.walkRules((rule: Rule) => {
     if (!norm(rule.selector).includes(fragment)) return;
+    rule.each((node) => {
+      if (node.type !== "decl") return;
+      if (inReduceBlock(node as Declaration)) return;
+      found[node.prop] = norm((node as Declaration).value);
+    });
+  });
+  return found;
+};
+
+const S = ".app-shell.hs-shell.bf-shell";
+
+/**
+ * One rule, by its EXACT selector (the shell prefix is added for you).
+ *
+ * `declsFor` matches any selector CONTAINING its fragment, which is right for
+ * asking "what does the sheet say about this thing anywhere" and wrong for
+ * asking "what does this one rule say": a fragment like `.settings-rail` also
+ * sweeps up `.settings-rail[data-bfm-pill] > *` and `…::before`, and the merge
+ * hands back the last one's values under the first one's name.
+ */
+/**
+ * Split a selector list on its TOP-LEVEL commas only.
+ *
+ * `String.split(",")` tears `:is(.proj-rx, .crew-rx, …)` into pieces that match
+ * nothing, so a lookup for a rule using `:is()` silently found no rule — and an
+ * assertion comparing two of those is `undefined === undefined`, which passes
+ * however the sheet behaves. A mutation that changed the thing under test and
+ * left the run green is what showed it.
+ */
+const selectorsOf = (list: string) => {
+  const out: string[] = [];
+  let depth = 0;
+  let at = 0;
+  for (let i = 0; i < list.length; i += 1) {
+    const c = list[i];
+    if (c === "(" || c === "[") depth += 1;
+    else if (c === ")" || c === "]") depth -= 1;
+    else if (c === "," && depth === 0) {
+      out.push(norm(list.slice(at, i)));
+      at = i + 1;
+    }
+  }
+  out.push(norm(list.slice(at)));
+  return out;
+};
+
+const declsOf = (selector: string) => {
+  const want = norm(`${S} ${selector}`);
+  expect(selectorsOf(want).length, `declsOf takes ONE selector, not a list: ${selector}`).toBe(1);
+  const found: Record<string, string> = {};
+  sheet.walkRules((rule: Rule) => {
+    if (!selectorsOf(rule.selector).includes(want)) return;
     rule.each((node) => {
       if (node.type !== "decl") return;
       if (inReduceBlock(node as Declaration)) return;
@@ -193,10 +246,39 @@ describe("every page opens on the shared beats", () => {
     expect(pill["pointer-events"], "it must never eat a click meant for an option").toBe("none");
 
     // BOTH edges animate: a pill that only slid would be the wrong width for a
-    // wider option all the way across, which is the half of this the reference does
-    // and every group that has one is on the same mechanism, not just the Dashboard's
-    for (const g of [".hs-views", ".tc-tabs", ".gantt-seg", ".bfnt-tabs", ".bf-breeze-nav", ".route-goal-control", ".hs-rail-list"]) {
+    // wider option all the way across, which is the half of this the reference does.
+    //
+    // The two halves of this effect are in different files — the layer decides
+    // WHICH groups get a pill, the sheet decides what one looks like — and either
+    // half alone does nothing at all: a group the sheet has never heard of is
+    // marked and never painted, and a selector the layer has never heard of is
+    // painted for a group that is never marked. So the two lists are compared
+    // against each other rather than each against a copy of itself.
+    const groups = PILL_GROUPS.split(",").map((g) => g.trim());
+    expect(groups.length, "every group in the layer is checked").toBeGreaterThan(9);
+
+    const painted = new Set<string>();
+    sheet.walkRules((rule: Rule) => {
+      for (const one of selectorsOf(rule.selector)) {
+        if (!one.endsWith("[data-bfm-pill]::before")) continue;
+        painted.add(one.slice(0, -"[data-bfm-pill]::before".length));
+      }
+    });
+    // every group the layer marks is painted (some are page-scoped in the sheet)
+    for (const g of groups) {
+      expect(
+        [...painted].some((one) => one.endsWith(g)),
+        `${g} is marked by the layer but painted by no rule`
+      ).toBe(true);
       expect(declsFor(g + "[data-bfm-pill]::before").background, g).toBe("var(--bfm-pill-fill)");
+      expect(declsFor(g + '[data-bfm-pill="live"]::before').transition, g).toContain("transform var(--bfm-dur-pill)");
+    }
+    // and nothing is painted for a group the layer would never mark
+    for (const one of painted) {
+      expect(
+        groups.some((g) => one.endsWith(g)),
+        `${one} is painted but the layer never marks it`
+      ).toBe(true);
     }
 
     const live = declsFor('.hs-home-seg[data-bfm-pill="live"]::before').transition;
@@ -212,6 +294,131 @@ describe("every page opens on the shared beats", () => {
     expect(cssEase(EASE.pill)).toBe("cubic-bezier(0.3, 1, 0.6, 0.85)");
   });
 
+  it("gives Settings' category rail the pill without taking away its stickiness", () => {
+    // skin §81/§78. The rail is the one group the layer is NOT allowed to make
+    // `position: relative`: it is sticky, which is what holds it beside a panel
+    // taller than the window, and the layer only needs it POSITIONED.
+    const rail = declsOf(".settings-rx .settings-rail");
+    expect(rail["--bfm-pill-fill"]).toBe("var(--bf-ink)");
+    expect(rail["--bfm-pill-radius"]).toBe("999px");
+    expect(rail.position, "sticky is the page sheet's, and must not be overridden here").toBeUndefined();
+    // and the group it is NOT in is the one that would have done exactly that
+    const positioned = declsOf(".hs-rail-list");
+    expect(positioned.position, "the other ten groups do take it").toBe("relative");
+
+    // the pill IS the selected category's background, so the category gives it up
+    expect(declsOf(".settings-rx .settings-rail[data-bfm-pill] .settings-nav-item.active").background).toBe("transparent");
+    expect(declsOf(".settings-rx .settings-rail[data-bfm-pill] .settings-ai-button.active").background).toBe("transparent");
+  });
+
+  it("opens Settings on the shared beats, and never on its own numbers", () => {
+    // skin §81. The rail rises as ONE block: the pill is its ::before, placed by
+    // measured offsets, and an offset does not see a transform — so anything
+    // translating BETWEEN the rail and a nav item would leave the pill behind.
+    const rail = declsOf(".settings-rx .settings-rail");
+    expect(rail.animation).toContain("bfe-lift var(--bfm-dur-slow)");
+    expect(rail["animation-delay"]).toContain("var(--bfm-beat-rail)");
+    for (const one of [".settings-account-card", ".settings-nav-group", ".settings-ai-button"]) {
+      const inside = declsOf(`.settings-rx ${one}`);
+      expect(inside.animation, `${one} may fade, never translate`).toContain("bfe-fade");
+      expect(inside["animation-delay"], one).toContain("var(--bfm-beat-rail)");
+    }
+    // the pill's own arrival is opacity too: its transform is its POSITION
+    expect(declsOf(".settings-rx .settings-rail[data-bfm-pill]::before").animation).toContain("bfe-fade");
+
+    // the panel reads the beats, like every other page
+    expect(declsOf(".settings-rx .settings-panel-inner > .settings-page-header")["animation-delay"]).toContain("var(--bfm-beat-title)");
+    expect(declsOf(".settings-rx .sx-plan-card")["animation-delay"]).toContain("var(--bfm-beat-board-content)");
+    // billing's hand-built switch travels on the same curve as every selection
+    expect(declsFor(".settings-rx .sx-seg-ind").transition).toBe("transform var(--bfm-dur-pill) var(--bfm-ease-pill)");
+  });
+
+  it("gives everything Settings moves an answer under reduced motion", () => {
+    // spec §9.4 — it ships with the motion, never bolted on. Collected from the
+    // reduce blocks themselves, so a rule added to §81 and forgotten there fails.
+    const quieted = new Set<string>();
+    sheet.walkRules((rule: Rule) => {
+      let at = rule.parent as { type: string; params?: string } | undefined;
+      if (!at || at.type !== "atrule" || !/reduced-motion/.test(at.params ?? "")) return;
+      for (const one of selectorsOf(rule.selector)) quieted.add(one);
+    });
+    for (const moving of [
+      ".settings-rx .settings-rail",
+      ".settings-rx .settings-account-card",
+      ".settings-rx .settings-nav-group",
+      ".settings-rx .settings-ai-button",
+      ".settings-rx .settings-panel-inner > *",
+      ".settings-rx .sx-plan-card",
+      ".settings-rx .settings-rail[data-bfm-pill]::before",
+      '.settings-rx .settings-panel-inner[data-bfm-goo="true"]',
+      ".settings-rx .sx-seg-ind"
+    ]) {
+      expect(quieted.has(norm(`${S} ${moving}`)), `${moving} moves with nothing said about less motion`).toBe(true);
+    }
+  });
+
+  it("drops Settings' rows down the page the way an index table's do", () => {
+    // Asked for with a clip of the Companies page opening: "the animation should
+    // look like a list dropping all the information". These are the numbers that
+    // page uses, read off the rules that drive it — so this fails if either side
+    // drifts, not just Settings.
+    const table = declsOf(":is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr");
+    expect(table.animation, "the index table's own cascade, read from the sheet").toBeTruthy();
+    for (const list of [
+      ".settings-rx .settings-section > .settings-row",
+      ".settings-rx .settings-member-list > .settings-member-row",
+      ".settings-rx .sx-addon-grid > *",
+      ".settings-rx .wc-list > *"
+    ]) {
+      const rows = declsOf(list);
+      expect(rows.animation, `${list}: the same lift the table's rows use`).toBe(table.animation);
+      expect(rows["--bfe-y"], list).toBe(table["--bfe-y"]);
+      expect(rows["--bfe-blur"], `${list}: inherited from the block, never repeated`).toBeUndefined();
+      // the same beat and the same per-row stagger as the table...
+      const delay = norm(rows["animation-delay"] ?? "");
+      expect(delay, list).toContain("var(--bfm-beat-board-content)");
+      expect(delay, list).toContain("var(--bfe-r, 0) * var(--bfm-stagger-icon)");
+      expect(delay, list).toContain("var(--bfm-shift)");
+      // ...plus the one thing the table has no use for: Settings stacks several
+      // blocks down one panel, so a row also waits for the block holding it, and
+      // the drop carries on down the page instead of restarting in each block
+      expect(delay, `${list}: waits for its own block too`).toContain("var(--bfe-b, 0) * var(--bfm-stagger-card)");
+    }
+
+    // and the block above them is the index CARD's treatment, blur included —
+    // the rows inherit that blur rather than declaring one of their own
+    const block = declsOf(".settings-rx .settings-panel-inner > *:not(.settings-page-header)");
+    expect(block["--bfe-blur"]).toBe("var(--bfm-blur)");
+    expect(block["--bfe-y"]).toBe("var(--bfm-rise-l)");
+    expect(block["animation-delay"]).toContain("var(--bfm-beat-board)");
+    // its rank has a name of its own, because a row sets `--bfe-r` for itself and
+    // would otherwise shadow the block's at the moment the row needs to read it
+    expect(block["--bfe-b"]).toBe("0");
+    expect(declsOf(".settings-rx .settings-panel-inner > *:nth-child(3)")["--bfe-b"]).toBe("1");
+
+    // the ranks run to the same cap the table's do, and a section's rows start
+    // at its SECOND child because the first is the section's own heading
+    expect(declsOf(".settings-rx .settings-section > .settings-row:nth-child(3)")["--bfe-r"], "child 3 is the second row").toBe("1");
+    expect(declsOf(".settings-rx .settings-section > .settings-row:nth-child(n + 11)")["--bfe-r"]).toBe("8");
+    expect(declsOf(".settings-rx .settings-member-list > .settings-member-row:nth-child(2)")["--bfe-r"], "no heading inside this one").toBe(
+      "1"
+    );
+  });
+
+  it("brings Settings' panel out of the category that was picked", () => {
+    // skin §81c, on §64's numbers: motion/PanelGoo.tsx measures the item pressed
+    // and writes the first four; the radius is the same for every category.
+    const goo = declsOf('.settings-rx .settings-panel-inner[data-bfm-goo="true"]');
+    expect(goo.animation).toContain("bfe-goo var(--bf-dur-panel) var(--bf-ease-size)");
+    // the measurement is top-left to top-left, so the scale must be about that corner
+    expect(goo["transform-origin"]).toBe("top left");
+    expect(goo["--bf-goo-r"], "the category it comes out of is a pill").toBe("999px");
+    // and the contents are NOT suppressed while it morphs: the morph is over
+    // (--bf-dur-panel) well before the first block's beat, so the panel arrives
+    // and then fills rather than doing both at once
+    expect(declsOf('.settings-rx .settings-panel-inner[data-bfm-goo="true"] > *').animation).toBeUndefined();
+  });
+
   it("puts every menu and dialog on one pair, and never on a page's beats", () => {
     const overlay = "calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon))";
     const seen: string[] = [];
@@ -219,7 +426,6 @@ describe("every page opens on the shared beats", () => {
       ".bfnt-list > .bfnt-row",
       ".hs-bookmarks-menu > .hs-bookmark-row",
       ".user-settings-menu > *",
-      ".hs-create .hs-menu > .hs-menu-item",
       ".cmdk-list > .cmdk-item",
       ".hs-upgrade-menu > *",
       ".pref-menu > *",
@@ -229,6 +435,6 @@ describe("every page opens on the shared beats", () => {
       expect(delay, fragment).toBe(overlay);
       seen.push(fragment);
     }
-    expect(seen).toHaveLength(8);
+    expect(seen).toHaveLength(7);
   });
 });

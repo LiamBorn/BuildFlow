@@ -188,12 +188,12 @@ describe("Map & Field Ops", () => {
     // Each update shows who posted it, the job it belongs to, its status and the note.
     const firstUpdate = within(panel).getByText("Steel framing installation progressing.").closest("article") as HTMLElement;
     expect(within(firstUpdate).getByText("Carlos Ramirez")).toBeInTheDocument();
-    expect(within(firstUpdate).getByText("Crew Lead - Crew 2 - Riverside Office Building")).toBeInTheDocument();
+    expect(within(firstUpdate).getByText("Teammate - Riverside Office Building")).toBeInTheDocument();
     expect(within(firstUpdate).getByText("On Site")).toBeInTheDocument();
 
     const secondUpdate = within(panel).getByText("Tenant finish package staged on level 2.").closest("article") as HTMLElement;
     expect(within(secondUpdate).getByText("Matt Johnson")).toBeInTheDocument();
-    expect(within(secondUpdate).getByText("Project Manager - Downtown Retail Buildout")).toBeInTheDocument();
+    expect(within(secondUpdate).getByText("Owner - Downtown Retail Buildout")).toBeInTheDocument();
 
     // The add button toggles the note composer open, then reads as the save action.
     expect(within(panel).queryByLabelText("Update note")).not.toBeInTheDocument();

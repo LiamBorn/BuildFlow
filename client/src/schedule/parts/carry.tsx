@@ -31,6 +31,15 @@ import { unzoomDropFlight, unzoomOverlay } from "../../dragZoom";
 const LEAN = { ease: 0.2, bankPerSpeed: 6, bankCap: 8, tipPerSpeed: 5, tipCap: 10, depth: 700 };
 
 /**
+ * How much of the newest speed reading to take each frame — the "slowly" in the lean.
+ *
+ * Exported because the Dashboard's board carries its panels with this same gesture
+ * (board/panelBoard.tsx, 2026-09-20) and runs its own frame loop to do it: that loop
+ * smooths with this number, so there is one of it rather than two to keep in step.
+ */
+export const SCHEDULE_CARRY_EASE = LEAN.ease;
+
+/**
  * The lean at one speed, in pixels per millisecond: the card banks the way the hand is going, and
  * tips about the axis ACROSS that direction, so whichever way it travels the leading edge is the
  * one that dips. Below a twentieth of a degree of tip there is nothing to draw in three

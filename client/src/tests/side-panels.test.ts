@@ -39,10 +39,18 @@ describe("the panels that open from the right", () => {
   /* Each one runs the FULL HEIGHT of the page (2026-09-18, asked so they match the editing
      drawers). They used to start below the top bar, because at `top: 0` a job's name or a
      record's back button sat behind the bar with nothing to scroll to reach them — but that was
-     the wrong half of the fix: both layers are `z-index: 95` against the bar's 5, so they paint
-     OVER it and always could. What actually keeps that row reachable is asserted below — the
-     drawer's body is the scroller, and the record's top row is sticky — so the offset was just a
-     band of dead page above a modal panel. */
+     the wrong half of the fix: both layers are `z-index: 95` against the bar's 40, so they should
+     paint OVER it. What actually keeps that row reachable is asserted below — the drawer's body
+     is the scroller, and the record's top row is sticky — so the offset was just a band of dead
+     page above a modal panel.
+
+     "SHOULD" IS DOING WORK IN THAT SENTENCE, and it used to say "always could", which is what let
+     this come back on 2026-09-19. A z-index is only ever read against the siblings in its own
+     stacking context: the drawer sat inside `.schedule-page` (z-index 60, `isolation: isolate`)
+     inside `.bfm-page` (z-index 1), and the bar is a sibling of those — so 95 was compared with
+     nothing that mattered and the whole page, drawer included, painted under the bar. The number
+     below is necessary and was never sufficient. What makes it sufficient is that the drawer is
+     portalled out of the page entirely, which is job-drawer-overlay.test.tsx's to keep. */
   it("runs each one the full height of the page, with its header held by something other than an offset", () => {
     for (const [sheet, selector] of [
       ["schedule.css", ".gantt-page .gantt-drawer"],
@@ -72,6 +80,34 @@ describe("the panels that open from the right", () => {
     expect(body["min-height"]).toBe("0");
     // a flick at the end of the panel is not the page's business
     expect(body["overscroll-behavior"]).toBe("contain");
+  });
+
+  /* Skin §83. Asked for with the scroll: "make it so that the left sidebar will be hidden when
+     the job right sidebar gets shown up." */
+  it("takes the icon rail out of the way while the drawer is up, and only while it is up", () => {
+    const SKIN = "app-shell-client-desk.css";
+    /* The portal wrapper must generate NO box: it is a child of the shell's flex column, and a
+       zero-height flex item would still take the column's gap. */
+    expect(declsIn(SKIN, ".gantt-drawer-portal").display).toBe("contents");
+
+    const hidden = declsIn(SKIN, "body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .sidebar.hs-rail");
+    /* TWICE the rail's own width. One width plus a constant left 5.9px of it on screen (measured)
+       because the rail is inset from the window's edge as well as being 50.8px wide; its own
+       width is the one number certainly larger than that inset. */
+    expect(hidden.translate, "the rail no longer steps out").toBe("-200% 0");
+    expect(hidden["pointer-events"], "an off-screen rail can still be tabbed into").toBe("none");
+    /* NOT `opacity`. `bf-shell-in` is `0% {opacity: 0} 100% {opacity: 1}` with
+       `animation-fill-mode: both`, so the shell's arrival holds the rail's opacity for good and an
+       animation outranks a declaration like this one — a fade here is simply never applied. */
+    expect(hidden.opacity, "an opacity the shell's arrival animation will overrule").toBeUndefined();
+    // and no Show tab, since there is nothing to bring the rail back to while the drawer is modal
+    expect(
+      declsIn(SKIN, "body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show").display
+    ).toBe("none");
+
+    /* The person's OWN Hide choice is a different mechanism and must stay untouched: that one is
+       `display: none` from section 45, kept in localStorage by railHidden.ts. */
+    expect(declsIn(SKIN, ".app-shell.hs-shell.bf-shell .sidebar.hs-rail.is-hidden").display).toBe("none");
   });
 
   it("leaves the record panel scrolling as one piece", () => {

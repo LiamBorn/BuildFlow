@@ -84,8 +84,8 @@ export function FirstRunPanel({
       }
     });
   };
-  // the owner is a project manager (every workspace has one); a project needs someone to answer for it
-  const manager = data.users.find((user) => user.role === "Project Manager" || user.role === "Superintendent") ?? data.activeUser;
+  // a project needs someone to answer for it; whoever is setting the workspace up will do
+  const manager = data.activeUser ?? data.users[0];
   const addProject = (event: FormEvent) => {
     event.preventDefault();
     const name = projectName.trim();
@@ -138,7 +138,9 @@ export function FirstRunPanel({
         data-tutorial-id="schedule-first-run"
       >
         {headless ? (
-          <p className="sched-section-note">Every view is showing the starter workspace for your trade. Remove it when you are ready for your own work.</p>
+          <p className="sched-section-note">
+            Every view is showing the starter workspace for your trade. Remove it when you are ready for your own work.
+          </p>
         ) : (
           <header>
             <h2>

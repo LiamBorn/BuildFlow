@@ -29,7 +29,11 @@ describe("BuildFlow API", () => {
 
     expect(response.body.projects).toHaveLength(5);
     expect(response.body.crews).toHaveLength(6);
-    expect(response.body.activeUser.role).toBe("Project Manager");
+    // The seeded demo roster is people with no login, so nobody on it has a level: `permission`
+    // is resolved from the control database as the payload is built, and there is nothing to
+    // resolve. Null is the answer, not a missing field — see the invite test for a real one.
+    expect(response.body.activeUser).toMatchObject({ name: "Matt Johnson", accountId: null, permission: null });
+    expect(response.body.users.every((user: { permission: unknown }) => user.permission === null)).toBe(true);
   });
 
   it("asks for a session whatever case the path is written in", async () => {
@@ -260,8 +264,8 @@ describe("BuildFlow API", () => {
       .post("/api/team/invites")
       .send({
         invites: [
-          { email: "sam@asphaltco.com", role: "Superintendent" },
-          { email: "dana@asphaltco.com", role: "Crew Lead" }
+          { email: "sam@asphaltco.com", permission: "admin" },
+          { email: "dana@asphaltco.com", permission: "member" }
         ]
       })
       .expect(201);
@@ -302,7 +306,7 @@ describe("BuildFlow API", () => {
       .expect(200);
     expect(preview.body).toMatchObject({
       email: "sam@asphaltco.com",
-      role: "Superintendent",
+      permission: "admin",
       orgName: "Asphalt Co",
       inviterName: "Dana Brooks"
     });
@@ -316,30 +320,31 @@ describe("BuildFlow API", () => {
       .post("/api/auth/invite/accept")
       .send({ token: fresh.token, name: "Sam Ortiz", password: "Paver-Screed-2026", acceptTerms: true })
       .expect(201);
-    expect(joined.body.account).toMatchObject({ email: "sam@asphaltco.com", orgId, role: "member" });
+    expect(joined.body.account).toMatchObject({ email: "sam@asphaltco.com", orgId, role: "admin" });
     expect(joined.body.account.emailVerifiedAt).toBeTruthy();
     await request(app)
       .get(`/api/auth/invite/${encodeURIComponent(fresh.token)}`)
       .expect(404); // accepted
 
-    // Sam is a real person in Dana's workspace with the invited role, and lands past onboarding.
+    // Sam is a real person in Dana's workspace at the invited level, and lands past onboarding.
     const samBoot = await sam.get("/api/bootstrap").expect(200);
-    expect(samBoot.body.activeUser).toMatchObject({ name: "Sam Ortiz", role: "Superintendent", isSample: false });
+    expect(samBoot.body.activeUser).toMatchObject({ name: "Sam Ortiz", permission: "admin", isSample: false });
     expect(samBoot.body.onboardingCompletedAt).toBeTruthy();
     expect(samBoot.body.users.some((user: { name: string }) => user.name === "Dana Brooks")).toBe(true);
     const ownerTeam = await owner.get("/api/team").expect(200);
     expect(ownerTeam.body.invites).toHaveLength(0);
 
-    // The owner sets roles; the teammate cannot, and nonsense roles are refused.
+    // The owner sets levels; an Admin cannot, "owner" is not on offer, and nonsense is refused.
     expect(ownerTeam.body.canManage).toBe(true);
     const samRow = ownerTeam.body.users.find((user: { name: string }) => user.name === "Sam Ortiz");
-    const promoted = await owner.patch(`/api/team/users/${samRow.id}`).send({ role: "Project Manager" }).expect(200);
-    expect(promoted.body.user).toMatchObject({ id: samRow.id, role: "Project Manager", title: "Project Manager" });
-    await owner.patch(`/api/team/users/${samRow.id}`).send({ role: "Boss" }).expect(400);
-    await owner.patch("/api/team/users/nobody").send({ role: "Crew Lead" }).expect(404);
+    const demoted = await owner.patch(`/api/team/users/${samRow.id}`).send({ permission: "member" }).expect(200);
+    expect(demoted.body.user).toMatchObject({ id: samRow.id, permission: "member" });
+    await owner.patch(`/api/team/users/${samRow.id}`).send({ permission: "owner" }).expect(400);
+    await owner.patch(`/api/team/users/${samRow.id}`).send({ permission: "Boss" }).expect(400);
+    await owner.patch("/api/team/users/nobody").send({ permission: "member" }).expect(404);
     expect((await sam.get("/api/team").expect(200)).body.canManage).toBe(false);
-    await sam.patch(`/api/team/users/${samRow.id}`).send({ role: "Crew Lead" }).expect(403);
-    expect((await sam.get("/api/bootstrap").expect(200)).body.activeUser.role).toBe("Project Manager");
+    await sam.patch(`/api/team/users/${samRow.id}`).send({ permission: "admin" }).expect(403);
+    expect((await sam.get("/api/bootstrap").expect(200)).body.activeUser.permission).toBe("member");
 
     // A sample teammate is deleted outright — nothing real ever happened to them.
     const sample = ownerTeam.body.users.find((user: { isSample: boolean }) => user.isSample);
@@ -367,7 +372,7 @@ describe("BuildFlow API", () => {
     // Revoke: a new held invite disappears.
     const more = await owner
       .post("/api/team/invites")
-      .send({ invites: [{ email: "lee@asphaltco.com", role: "Crew Lead" }] })
+      .send({ invites: [{ email: "lee@asphaltco.com", permission: "member" }] })
       .expect(201);
     await owner.delete(`/api/team/invites/${more.body.invites[0].id}`).expect(204);
     expect((await owner.get("/api/team").expect(200)).body.invites).toHaveLength(0);
@@ -464,7 +469,7 @@ describe("BuildFlow API", () => {
     await request(app).post("/api/auth/verify").send({ token: sent.body.debugToken }).expect(200);
     await agent
       .post("/api/team/invites")
-      .send({ invites: [{ email: "sam@asphaltco.com", role: "Crew Lead" }] })
+      .send({ invites: [{ email: "sam@asphaltco.com", permission: "member" }] })
       .expect(201);
     const mainStore = (
       app.locals.storeManager as {
@@ -543,7 +548,7 @@ describe("BuildFlow API", () => {
     expect(empty.body.activeUser).toMatchObject({
       name: "Dana Brooks",
       title: "Owner",
-      role: "Project Manager",
+      permission: "owner",
       avatar: "DB",
       isSample: false
     });
@@ -771,7 +776,10 @@ describe("BuildFlow API", () => {
       { ...validProject, percentComplete: 10.5 },
       { ...validProject, status: "Blocked" },
       { ...validProject, scheduleHealth: "Behind" },
-      { ...validProject, managerId: "u-carlos" },
+      // `managerId: "u-carlos"` used to belong on this list: Carlos was a "Crew Lead", and only
+      // a Project Manager or Superintendent could answer for a project. Those job titles were
+      // removed on 2026-09-19 and nothing replaced the filter, so any teammate may now be named.
+      // An id that is not a person still cannot:
       { ...validProject, managerId: "missing-user" }
     ]) {
       await agent.post("/api/projects").send(invalidProject).expect(400);
@@ -818,7 +826,7 @@ describe("BuildFlow API", () => {
       { ...validProject, percentComplete: 101 },
       { ...validProject, percentComplete: 72.5 },
       { ...validProject, status: "Blocked" },
-      { ...validProject, managerId: "u-carlos" },
+      // ("u-carlos" was here for the same reason as in the creation case above)
       { ...validProject, managerId: "missing-user" }
     ]) {
       await agent.patch("/api/projects/p-riverside").send(invalidProject).expect(400);

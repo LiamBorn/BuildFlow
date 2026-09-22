@@ -14,7 +14,7 @@ import { bootstrapFixture } from "../test/fixture";
 const LIAM = {
   id: "u-liam",
   name: "Liam Santos",
-  role: "Project Manager",
+  permission: "owner",
   title: "Owner",
   avatar: "LS",
   accountId: "acct-liam",
@@ -36,9 +36,7 @@ function liamWorkspace(overrides: Partial<BootstrapPayload> = {}): BootstrapPayl
 const pendingInvite: TeamInvite = {
   id: "inv-1",
   email: "sam.rivera@buildflow.test",
-  role: "Crew Lead",
-  // The job title and the permission level are two different fields on purpose: what this
-  // person does on the crew, and what their login may do in the workspace.
+  // The one thing an invite decides: what this login may do once it is accepted.
   permission: "member",
   invitedBy: "acct-liam",
   createdAt: "2026-06-10T09:00:00.000Z",
@@ -96,7 +94,7 @@ describe("Settings", () => {
 
     const accountMenu = screen.getByRole("menu", { name: "Account menu" });
     expect(within(accountMenu).getByText("Liam Santos")).toBeInTheDocument();
-    expect(within(accountMenu).getByText("Project Manager")).toBeInTheDocument();
+    expect(within(accountMenu).getByText("Workspace Owner")).toBeInTheDocument();
     expect(within(accountMenu).getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
     fireEvent.click(within(accountMenu).getByRole("menuitem", { name: "Settings" }));
 
@@ -109,7 +107,10 @@ describe("Settings", () => {
     // closing returns to the Schedule landing, not the dashboard
     fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
     expect(await screen.findByRole("heading", { name: "The whole plan, at a glance." })).toBeInTheDocument();
-    expect(screen.queryByLabelText("Settings categories")).not.toBeInTheDocument();
+    // 2026-09-19: the page being left now fades out rather than vanishing (skin §79),
+    // so for DUR.exit it is still in the document — inert, hidden from the
+    // accessibility tree, and behind. It leaves for good a moment later.
+    await waitFor(() => expect(screen.queryByLabelText("Settings categories")).not.toBeInTheDocument());
   });
 
   // replaces "shows the same account settings button on every app category"
@@ -133,7 +134,7 @@ describe("Settings", () => {
       fireEvent.click(accountButton);
       const accountMenu = screen.getByRole("menu", { name: "Account menu" });
       expect(within(accountMenu).getByText("Liam Santos")).toBeInTheDocument();
-      expect(within(accountMenu).getByText("Project Manager")).toBeInTheDocument();
+      expect(within(accountMenu).getByText("Workspace Owner")).toBeInTheDocument();
       expect(within(accountMenu).getByRole("menuitem", { name: "Settings" })).toHaveAttribute("title", "Settings");
       expect(within(accountMenu).queryByText("Demo role")).not.toBeInTheDocument();
 
@@ -209,7 +210,9 @@ describe("Settings", () => {
     const me = within(team).getByText("Liam Santos").closest("article") as HTMLElement;
     expect(within(me).getByText("you")).toBeInTheDocument();
     expect(within(me).getByText("Owner")).toBeInTheDocument();
-    expect(within(me).getByText("Project Manager")).toBeInTheDocument();
+    // your own level is shown, never offered: it is not something you set on yourself
+    expect(within(me).getByText("Workspace Owner")).toBeInTheDocument();
+    expect(within(me).queryByRole("combobox")).not.toBeInTheDocument();
     expect(within(me).queryByRole("button", { name: /^Remove/ })).not.toBeInTheDocument();
 
     const sample = within(team).getByText("Carlos Ramirez").closest("article") as HTMLElement;
@@ -219,7 +222,7 @@ describe("Settings", () => {
 
     const invite = within(team).getByText("sam.rivera@buildflow.test").closest("article") as HTMLElement;
     expect(within(invite).getByText(/^Sent .* · expires /)).toBeInTheDocument();
-    expect(within(invite).getByText("Crew Lead")).toBeInTheDocument();
+    expect(within(invite).getByText("Member")).toBeInTheDocument();
     expect(within(invite).getByRole("button", { name: "Resend" })).toBeEnabled();
     expect(within(invite).getByRole("button", { name: "Withdraw invite for sam.rivera@buildflow.test" })).toBeInTheDocument();
   });
@@ -230,12 +233,12 @@ describe("Settings", () => {
     let invites: TeamInvite[] = [];
     const fetchMock = stubApi((url, init) => {
       if (url.endsWith("/api/team/invites") && isMethod(init, "POST")) {
-        const sent = JSON.parse(String(init?.body)) as { invites: Array<{ email: string; role: string }> };
+        const sent = JSON.parse(String(init?.body)) as { invites: Array<{ email: string; permission: string }> };
         invites = sent.invites.map((row, index) => ({
           ...pendingInvite,
           id: `inv-${index}`,
           email: row.email,
-          role: row.role as TeamInvite["role"],
+          permission: row.permission as TeamInvite["permission"],
           sentAt: null
         }));
         return json({
@@ -267,10 +270,11 @@ describe("Settings", () => {
     expect(callsTo(fetchMock, "/api/team/invites", "POST")).toHaveLength(0);
 
     fireEvent.change(within(team).getByLabelText("Email 1"), { target: { value: " Sam.Rivera@buildflow.test " } });
-    fireEvent.change(within(team).getByLabelText("Role 1"), { target: { value: "Superintendent" } });
+    fireEvent.change(within(team).getByLabelText("Access level 1"), { target: { value: "admin" } });
     fireEvent.click(within(team).getByRole("button", { name: "+ Add another" }));
     fireEvent.change(within(team).getByLabelText("Email 2"), { target: { value: "carlos@buildflow.test" } });
-    expect(within(team).getByLabelText("Role 2")).toHaveValue("Crew Lead");
+    // a new row starts at the least it can be
+    expect(within(team).getByLabelText("Access level 2")).toHaveValue("member");
     fireEvent.click(within(team).getByRole("button", { name: "Send invites" }));
 
     expect(await within(team).findByRole("status", { name: "" })).toBeInTheDocument();
@@ -278,13 +282,13 @@ describe("Settings", () => {
       within(team).getByText("1 held until you confirm your email. carlos@buildflow.test already has an account.")
     ).toBeInTheDocument();
 
-    // emails are trimmed + lower-cased before they go out, with the role each row picked
+    // emails are trimmed + lower-cased before they go out, with the level each row picked
     const posts = callsTo(fetchMock, "/api/team/invites", "POST");
     expect(posts).toHaveLength(1);
     expect(bodyOf(posts[0])).toEqual({
       invites: [
-        { email: "sam.rivera@buildflow.test", role: "Superintendent" },
-        { email: "carlos@buildflow.test", role: "Crew Lead" }
+        { email: "sam.rivera@buildflow.test", permission: "admin" },
+        { email: "carlos@buildflow.test", permission: "member" }
       ]
     });
 
@@ -461,27 +465,49 @@ describe("Settings", () => {
     expect(await screen.findByRole("heading", { level: 2, name: /^Free plan/ })).toHaveTextContent("Free");
     expect(screen.queryByRole("button", { name: "Add a payment method now" })).not.toBeInTheDocument();
   });
-  it("lets the owner change a member's role from the Team panel", async () => {
-    const owner = { id: "u-owner", name: "Liam Santos", role: "Project Manager" as const, title: "Owner", avatar: "LS", accountId: "acct-1", isSample: false };
-    const sam = { id: "u-sam", name: "Sam Ortiz", role: "Crew Lead" as const, title: "Crew Lead", avatar: "SO", accountId: "acct-2", isSample: false };
-    state.bootstrapPayload = { ...bootstrapFixture, users: [owner, sam], activeUser: owner, account: { email: "liam@buildflow.test", emailVerifiedAt: "2026-06-01T00:00:00.000Z" } };
+  it("lets the owner change what a teammate may do, and never their own", async () => {
+    const owner = {
+      id: "u-owner",
+      name: "Liam Santos",
+      permission: "owner" as const,
+      title: "Owner",
+      avatar: "LS",
+      accountId: "acct-1",
+      isSample: false
+    };
+    const sam = {
+      id: "u-sam",
+      name: "Sam Ortiz",
+      permission: "member" as const,
+      title: "Teammate",
+      avatar: "SO",
+      accountId: "acct-2",
+      isSample: false
+    };
+    state.bootstrapPayload = {
+      ...bootstrapFixture,
+      users: [owner, sam],
+      activeUser: owner,
+      account: { email: "liam@buildflow.test", emailVerifiedAt: "2026-06-01T00:00:00.000Z" }
+    };
     const patches: Array<[string, unknown]> = [];
-    let samRole: "Crew Lead" | "Superintendent" = "Crew Lead";
+    let samLevel: "member" | "admin" = "member";
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url.includes("/api/team/users/") && init?.method === "PATCH") {
-          const body = JSON.parse(String(init.body)) as { role: "Crew Lead" | "Superintendent" };
+          const body = JSON.parse(String(init.body)) as { permission: "member" | "admin" };
           patches.push([url, body]);
-          samRole = body.role;
-          return new Response(JSON.stringify({ user: { ...sam, role: samRole, title: samRole } }), { status: 200 });
+          samLevel = body.permission;
+          return new Response(JSON.stringify({ user: { ...sam, permission: samLevel } }), { status: 200 });
         }
+        const roster = [owner, { ...sam, permission: samLevel }];
         if (url.endsWith("/api/team")) {
-          return new Response(JSON.stringify({ users: [owner, { ...sam, role: samRole, title: samRole }], invites: [], emailVerified: true, canManage: true }), { status: 200 });
+          return new Response(JSON.stringify({ users: roster, invites: [], emailVerified: true, canManage: true }), { status: 200 });
         }
         if (url.includes("/api/bootstrap")) {
-          return new Response(JSON.stringify({ ...state.bootstrapPayload, users: [owner, { ...sam, role: samRole, title: samRole }] }), { status: 200 });
+          return new Response(JSON.stringify({ ...state.bootstrapPayload, users: roster }), { status: 200 });
         }
         return respondToBuildflowApi(input);
       })
@@ -490,15 +516,20 @@ describe("Settings", () => {
     await enterDashboard();
     await openSettingsCategory("People");
 
-    const roleSelect = (await screen.findByLabelText("Role for Sam Ortiz")) as HTMLSelectElement;
-    expect(roleSelect.value).toBe("Crew Lead");
-    // the owner's own row gets a select too; a non-owner would see plain pills
-    expect(screen.getByLabelText("Role for Liam Santos")).toBeInTheDocument();
+    const select = (await screen.findByLabelText("Access for Sam Ortiz")) as HTMLSelectElement;
+    expect(select.value).toBe("member");
+    // Owner is shown, never offered: ownership moves by transfer, not off a list.
+    expect([...select.options].map((option) => option.value)).toEqual(["admin", "member"]);
+    // and nobody sets their own level, so the owner's own row is a pill. Scoped to the roster:
+    // the rail's account card names the viewer AND their level too, so the page says both twice.
+    expect(screen.queryByLabelText("Access for Liam Santos")).not.toBeInTheDocument();
+    const roster = select.closest(".settings-member-list") as HTMLElement;
+    const myRow = within(roster).getByText("Liam Santos").closest("article") as HTMLElement;
+    expect(within(myRow).getByText("Workspace Owner")).toBeInTheDocument();
 
-    fireEvent.change(roleSelect, { target: { value: "Superintendent" } });
-    await screen.findByText("Sam Ortiz is now a Superintendent.");
-    expect(patches).toEqual([[expect.stringContaining("/api/team/users/u-sam"), { role: "Superintendent" }]]);
-    expect(((await screen.findByLabelText("Role for Sam Ortiz")) as HTMLSelectElement).value).toBe("Superintendent");
+    fireEvent.change(select, { target: { value: "admin" } });
+    await screen.findByText("Sam Ortiz is now an Admin.");
+    expect(patches).toEqual([[expect.stringContaining("/api/team/users/u-sam"), { permission: "admin" }]]);
+    expect(((await screen.findByLabelText("Access for Sam Ortiz")) as HTMLSelectElement).value).toBe("admin");
   });
-
 });

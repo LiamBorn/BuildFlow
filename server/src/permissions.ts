@@ -68,7 +68,6 @@ export const capabilities = [
   "team.read",
   "team.invite",
   "team.invite.revoke",
-  "team.title",
   "team.permission",
   "team.remove",
   // workspace and commercial
@@ -128,7 +127,6 @@ const ADMIN: readonly Capability[] = [
   "notify.send",
   "team.invite",
   "team.invite.revoke",
-  "team.title",
   "team.remove",
   "org.settings"
 ];
@@ -155,8 +153,7 @@ export const capabilitiesFor = (level: PermissionLevel): Capability[] => [...GRA
 export const can = (level: PermissionLevel, capability: Capability): boolean => GRANTS[level].has(capability);
 
 /** An Admin may act on a Member but not on an Owner. Equal ranks may not act on each other. */
-export const outranks = (actor: PermissionLevel, subject: PermissionLevel): boolean =>
-  permissionRank[actor] > permissionRank[subject];
+export const outranks = (actor: PermissionLevel, subject: PermissionLevel): boolean => permissionRank[actor] > permissionRank[subject];
 
 /* ── the policy ───────────────────────────────────────────────────────────────
    Four kinds of entry:
@@ -180,7 +177,7 @@ export const outranks = (actor: PermissionLevel, subject: PermissionLevel): bool
    server, which was the whole point of landing it empty-handed first.
 
    The one inline role check the codebase used to have, owner-only job-title changes, is now
-   the "team.title" row below and the conditional is gone from its handler.
+   the "team.permission" row below and the conditional is gone from its handler.
 
    Two checks are still deliberately NOT here, because a route-level capability cannot express
    either. The commercial fields of POST /api/business-profile: one route carrying two
@@ -294,7 +291,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "PATCH /api/schedule-tool/projects/:projectId": "scheduletool.write",
   "PATCH /api/schedule/:id": "assignments.write",
   "PATCH /api/support/conversations/:id": "public",
-  "PATCH /api/team/users/:id": "team.title",
+  "PATCH /api/team/users/:id": "team.permission",
   "POST /api/ai/ask": "schedule.read",
   "POST /api/ai/import-schedule": "import.commit",
   "POST /api/auth/demo": "public",
@@ -372,7 +369,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "PUT /api/schedule-tool/projects/:projectId/calendars/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/relationships/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/wbs/:id": "scheduletool.write",
-  "PUT /api/schedule/work-calendar": "calendar.write",
+  "PUT /api/schedule/work-calendar": "calendar.write"
 };
 
 /* ── the middleware ──────────────────────────────────────────────────────────── */
@@ -514,7 +511,9 @@ export function assertRoutePolicyCovers(app: express.Application): void {
   walk(router.stack);
 
   const missing = [...registered].filter((key) => !(key in ROUTE_POLICY)).sort();
-  const stale = Object.keys(ROUTE_POLICY).filter((key) => !registered.has(key)).sort();
+  const stale = Object.keys(ROUTE_POLICY)
+    .filter((key) => !registered.has(key))
+    .sort();
   const guarded = guardedKeysFor(app);
   const unguarded = [...registered].filter((key) => key in ROUTE_POLICY && !guarded.has(key)).sort();
   if (missing.length || stale.length || unguarded.length) {

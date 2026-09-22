@@ -297,7 +297,7 @@ describe("BuildFlow index pages", () => {
     fireEvent.click(within(card).getByRole("button", { name: "Edit Concrete Crew 1" }));
     const dialog = screen.getByRole("dialog", { name: "Edit Crew" });
     fireEvent.change(within(dialog).getByLabelText("Crew Name"), { target: { value: "Concrete Crew Alpha" } });
-    fireEvent.change(within(dialog).getByLabelText("Foreman"), { target: { value: "Morgan Lee" } });
+    fireEvent.change(within(dialog).getByLabelText("Crew lead"), { target: { value: "Morgan Lee" } });
     fireEvent.change(within(dialog).getByLabelText("Count for role 1"), { target: { value: "5" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save Crew" }));
 

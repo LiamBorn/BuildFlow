@@ -93,8 +93,10 @@ vi.mock("../api", async (importOriginal) => {
 
 import {
   ApiError,
+  assignJob,
   createCrew,
   createDependency,
+  createJob,
   createProject,
   updatePhase,
   updateProject,
@@ -630,6 +632,153 @@ describe("Month page", () => {
           { op: "move", id: "as-1", date: "2026-06-15" }
         ],
         { force: false }
+      )
+    );
+  });
+
+  /* EVERY CHIP OPENS (2026-09-20). Reported with a clip: "make it so that a user is able to open
+     all jobs — as of right now users are only able to open up a select amount of jobs to edit
+     them." Markers were `<div>`s with no handler, on the reasoning that a marker is only a date;
+     on the month in the clip that was 14 of the 20 chips, and nothing about one says it is a
+     different kind of thing from the job beside it. A date is still something you edit. */
+  const chips = () => [...document.querySelectorAll<HTMLElement>(".sched-cal-cell .sched-act")];
+  const openDrawer = () => document.querySelector(".gantt-drawer");
+  /* The fixture's two markers fall outside the month that renders — the phase ends 2026-07-14 and
+     the Certificate of Occupancy 2026-09-04 — and the drag tests above never needed them drawn,
+     because a drop is dispatched rather than clicked. A click has to hit a real chip, so both are
+     brought into June. Their spans are kept honest: the phase still starts 2026-06-17. */
+  const marked: BootstrapPayload = {
+    ...data,
+    phases: [{ ...data.phases[0], endDate: "2026-06-24" }],
+    projects: [{ ...data.projects[0], targetCompletion: "2026-06-26" }, ...data.projects.slice(1)]
+  };
+
+  it("opens a drawer for every chip on the calendar, markers included", async () => {
+    render(<MonthPage {...pageProps} data={marked} />);
+    const all = chips();
+    expect(all.length, "the fixture month has to hold both kinds").toBeGreaterThan(1);
+    expect(all.some((chip) => chip.classList.contains("is-milestone")), "no marker to test").toBe(true);
+
+    for (const chip of all) {
+      const label = chip.querySelector("strong")?.textContent ?? "";
+      fireEvent.click(chip);
+      const drawer = await waitFor(() => {
+        const found = openDrawer();
+        expect(found, `${label} opened nothing`).not.toBeNull();
+        return found as HTMLElement;
+      });
+      expect(drawer.querySelector("h2")?.textContent, "it opened something else").toBe(label);
+      fireEvent.click(within(drawer).getByRole("button", { name: /^Close/ }));
+      await waitFor(() => expect(openDrawer()).toBeNull());
+    }
+  });
+
+  it("makes a marker a button, so the keyboard can reach it too", () => {
+    render(<MonthPage {...pageProps} data={marked} />);
+    const marker = chips().find((chip) => chip.classList.contains("is-milestone"));
+    // it was a <div onClick>, which cannot be tabbed to or pressed with Enter
+    expect(marker?.tagName).toBe("BUTTON");
+  });
+
+  it("saves a phase's own dates from its marker's drawer", async () => {
+    render(<MonthPage {...pageProps} data={marked} />);
+    fireEvent.click(chips().find((chip) => chip.querySelector("strong")?.textContent === "Foundation Complete")!);
+    const drawer = await screen.findByRole("dialog", { name: "Foundation Complete" });
+    // the phase's OWN span, not the job's
+    const starts = within(drawer).getByLabelText("Phase starts") as HTMLInputElement;
+    const finishes = within(drawer).getByLabelText("Phase finishes") as HTMLInputElement;
+    expect(starts.value).toBe("2026-06-17");
+    expect(finishes.value).toBe("2026-06-24");
+
+    fireEvent.change(finishes, { target: { value: "2026-06-30" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    // both dates ride along, so a start edited in the same visit is not dropped
+    await waitFor(() => expect(updatePhase).toHaveBeenCalledWith("phase-1", { startDate: "2026-06-17", endDate: "2026-06-30" }));
+    // and the work inside the phase is untouched — the drag's rule, kept by the form
+    expect(rebookSchedule).not.toHaveBeenCalled();
+    expect(updateJob).not.toHaveBeenCalled();
+  });
+
+  it("refuses a finish typed before the start, in the panel, and writes nothing", async () => {
+    render(<MonthPage {...pageProps} data={marked} />);
+    fireEvent.click(chips().find((chip) => chip.querySelector("strong")?.textContent === "Foundation Complete")!);
+    const drawer = await screen.findByRole("dialog", { name: "Foundation Complete" });
+    fireEvent.change(within(drawer).getByLabelText("Phase finishes"), { target: { value: "2026-06-01" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    /* IN THE PANEL, not on the board's notice — which is behind it. The job drawer's rule. */
+    await waitFor(() => expect(within(drawer).getByRole("alert")).toHaveTextContent("The finish cannot be before the start."));
+    expect(updatePhase).not.toHaveBeenCalled();
+  });
+
+  /* A JOB YOU JUST SCHEDULED IS ON EVERY PAGE (2026-09-20). Reported: "if a user schedules a job
+     within the Month, that same job can be seen within the week page, list, kanban, matrix, and
+     gantt chart — as of right now it doesn't do it." The week and the month are one shared context
+     so a page opens where the last one left off, which is right for browsing and wrong the moment
+     you schedule something: measured in the running app, a job created on the 24th was invisible
+     on List and Matrix (parked a week later) and on the Week BOARD — it showed only in the side
+     queue, and only because its status happened to be Planned. Kanban and Gantt have no window
+     and always showed it. */
+  it("moves the shared week and month to a job it has just scheduled", async () => {
+    const ctxKey = `bf:schedule:context:${userId}`;
+    // parked in NOVEMBER, nowhere near the day the job is about to be made on
+    window.localStorage.setItem(ctxKey, JSON.stringify({ weekStart: "2026-11-02", monthAnchor: "2026-06-01" }));
+    vi.mocked(createJob).mockResolvedValueOnce({ ...pinecrestJob, id: "j-new", name: "New Pour", startDate: "2026-06-24", endDate: "2026-06-24" });
+    vi.mocked(assignJob).mockResolvedValueOnce({ id: "as-new" } as never);
+
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(document.querySelector('.sched-cal-cell[data-date="2026-06-24"] .sched-cal-add') as HTMLElement);
+    const dialog = await screen.findByRole("dialog", { name: "Add job to schedule" });
+    fireEvent.change(within(dialog).getByLabelText("Job Name"), { target: { value: "New Pour" } });
+    // the form's own guard refuses a blank phase, so the click would do nothing without this
+    fireEvent.change(within(dialog).getByLabelText("Phase"), { target: { value: "Concrete - Pour" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create & Schedule Job" }));
+
+    await waitFor(() => {
+      const context = JSON.parse(window.localStorage.getItem(ctxKey) ?? "{}");
+      // the Monday of the week holding the 24th — what Week, List and Matrix all read
+      expect(context.weekStart, "the week boards would open somewhere else").toBe("2026-06-22");
+      // the month rides along on its own: setting the week alone is what couples them
+      expect(context.monthAnchor, "and the calendar too").toBe("2026-06-01");
+    });
+  });
+
+  it("follows the job's OWN start day, not the cell the form was opened from", async () => {
+    const ctxKey = `bf:schedule:context:${userId}`;
+    // the calendar has to be on June for the 24th to be there to click; the WEEK is parked away
+    window.localStorage.setItem(ctxKey, JSON.stringify({ weekStart: "2026-11-02", monthAnchor: "2026-06-01" }));
+    /* The picker's Start Date is editable, so the day you clicked and the day the job lands on
+       are not always the same. The job is the thing that has to be on screen. */
+    vi.mocked(createJob).mockResolvedValueOnce({ ...pinecrestJob, id: "j-later", name: "Later Pour", startDate: "2026-07-08", endDate: "2026-07-08" });
+    vi.mocked(assignJob).mockResolvedValueOnce({ id: "as-later" } as never);
+
+    render(<MonthPage {...pageProps} />);
+    fireEvent.click(document.querySelector('.sched-cal-cell[data-date="2026-06-24"] .sched-cal-add') as HTMLElement);
+    const dialog = await screen.findByRole("dialog", { name: "Add job to schedule" });
+    fireEvent.change(within(dialog).getByLabelText("Job Name"), { target: { value: "Later Pour" } });
+    fireEvent.change(within(dialog).getByLabelText("Phase"), { target: { value: "Concrete - Pour" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create & Schedule Job" }));
+
+    await waitFor(() => {
+      const context = JSON.parse(window.localStorage.getItem(ctxKey) ?? "{}");
+      expect(context.weekStart).toBe("2026-07-06"); // the Monday holding July 8, not June 22
+      // and the calendar followed it out of June without being told to
+      expect(context.monthAnchor).toBe("2026-07-01");
+    });
+  });
+
+  it("saves the project's completion from the Certificate of Occupancy drawer", async () => {
+    render(<MonthPage {...pageProps} data={marked} />);
+    fireEvent.click(chips().find((chip) => chip.querySelector("strong")?.textContent === "Certificate of Occupancy")!);
+    const drawer = await screen.findByRole("dialog", { name: "Certificate of Occupancy" });
+    // a project marker has ONE date and no phase span
+    expect(within(drawer).queryByLabelText("Phase starts")).toBeNull();
+    fireEvent.change(within(drawer).getByLabelText("Target completion"), { target: { value: "2026-08-31" } });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
+    // the project's PATCH wants every field, so the change rides with the project as it stands
+    await waitFor(() =>
+      expect(updateProject).toHaveBeenCalledWith(
+        "p-riverside",
+        expect.objectContaining({ targetCompletion: "2026-08-31", name: data.projects[0].name, managerId: data.projects[0].managerId })
       )
     );
   });

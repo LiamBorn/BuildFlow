@@ -345,6 +345,25 @@ export function useSchedulePage({
         // a "no" leaves the new job unbooked, in the Week board's queue
         const booked = (await withConflictAsk((force) => assignJob({ jobId: job.id, crewId, date }, { force }), ask)) !== null;
         setPicker(null);
+        /* EVERY PAGE MOVES TO THE NEW JOB. The week and the month are one shared context so that a
+           page "opens where the last one left off" — which is right for browsing and wrong the
+           moment you SCHEDULE something: the Week, List and Matrix boards show one week and the
+           Month one month, and a job made on a day outside them is simply not on the board when
+           you switch. Reported 2026-09-20 as "if a user schedules a job within the Month, that
+           same job can be seen within the week page, list, kanban, matrix, and gantt chart — as of
+           right now it doesn't do it"; measured before the change, a job created on the 24th was
+           invisible on List and Matrix (parked a week later) and on the Week BOARD, where it only
+           showed in the side queue because its status happened to be Planned.
+
+           The job's own start day is what the pages follow, not `date` (the day the picker was
+           opened on): the form's Start Date is editable, and the job is the thing that has to be
+           on screen. Kanban and Gantt have no window and already showed it.
+
+           THE WEEK ALONE is the patch: useScheduleContext coupleWeekAndMonth moves the month to
+           follow a week given on its own, and treats a patch that sets BOTH as given — so naming
+           the month here would opt out of the very rule that keeps them together. */
+        const landsOn = job.startDate || date;
+        updateContext({ weekStart: toIsoDate(mondayOf(parseIsoDate(landsOn))) });
         await settle({
           done: booked
             ? `${job.name} scheduled for ${crewsById.get(crewId)?.name ?? "crew"} on ${formatScheduleDate(date)}`
@@ -358,7 +377,7 @@ export function useSchedulePage({
         setBusy(false);
       }
     },
-    [picker, ask, settle, say, crewsById]
+    [picker, ask, settle, say, crewsById, updateContext]
   );
   // dependencies: the links a job has, and the one way a link is drawn or taken away — from the drawer on
   // every page, from the bar's menu on the Gantt; each notice carries its Undo
