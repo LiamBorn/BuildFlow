@@ -3955,7 +3955,7 @@ function WelcomePage({
           it covers whichever onboarding screen is behind it without that screen needing to
           know about it. */}
       {showSetupStage && <SetupStage />}
-      {/* createAccount + businessType + additionalProducts are full-bleed `.acct-split`
+      {/* createAccount + businessType + additionalProducts are full-bleed onboarding
           screens (100vh, own brand mark) — the marketing nav would push them down and
           clip the panel. */}
       {welcomeView !== "createAccount" &&

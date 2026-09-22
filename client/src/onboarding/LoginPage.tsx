@@ -4,7 +4,7 @@
  * It lives beside the five-step flow and wears its clothes: the question column on the left
  * with the brand at its head, the black pill, the elements coming into focus top to bottom,
  * and on the right the same framed card showing the actual program. Before this it was the
- * last screen on the old `.acct-split` — an aurora panel and a typewriter quote — so arriving
+ * last screen on the old two-column account split — an aurora panel and a typewriter quote — so arriving
  * from the landing page to sign in and arriving to sign UP looked like two different products.
  *
  * WHAT THE CARD SHOWS. The Dashboard, because that is where signing in lands, and its account
