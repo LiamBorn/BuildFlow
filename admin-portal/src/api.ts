@@ -76,7 +76,15 @@ export async function fetchPlatformMetrics(): Promise<MetricsState> {
     if (!res.ok) {
       return { status: "unavailable", reason: `BuildFlow backend answered ${res.status}.`, needsToken: false };
     }
-    return { status: "live", metrics: (await res.json()) as PlatformMetrics };
+    /* A 200 is not on its own a reason to believe there are numbers here. An empty body, a
+       null, or anything that is not the shape this console reads would otherwise put it in
+       the "live" state carrying nothing, and the page would render undefined as a count —
+       which is the same lie as the hardcoded fallback, arrived at differently. */
+    const body = (await res.json()) as PlatformMetrics | null;
+    if (!body || typeof body !== "object" || typeof body.objects !== "number") {
+      return { status: "unavailable", reason: "The BuildFlow backend answered with something this console cannot read.", needsToken: false };
+    }
+    return { status: "live", metrics: body };
   } catch {
     return { status: "unavailable", reason: "Could not reach the BuildFlow backend.", needsToken: false };
   }

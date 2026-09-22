@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // Standalone BuildFlow Admin Portal. It's its own site/app, but stays LINKED to
@@ -7,6 +7,11 @@ import react from "@vitejs/plugin-react";
 // HUD client).
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test-setup.ts",
+    globals: true
+  },
   server: {
     port: 5480,
     strictPort: true,
