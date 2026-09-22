@@ -46,7 +46,6 @@ import {
   Bookmark,
   Boxes,
   Brain,
-  BrickWall,
   BriefcaseBusiness,
   Building2,
   CalendarCheck,
@@ -65,17 +64,14 @@ import {
   ClipboardList,
   Clock,
   CloudSun,
-  Construction,
   ContactRound,
   Copy,
   CreditCard,
   Database,
   DollarSign,
   Download,
-  Droplets,
   Eye,
   EyeOff,
-  Fan,
   FileText,
   FileUp,
   FolderKanban,
@@ -115,7 +111,6 @@ import {
   Navigation,
   Package,
   PackageCheck,
-  Paintbrush,
   PanelLeftClose,
   Paperclip,
   Pause,
@@ -135,7 +130,6 @@ import {
   Share2,
   ShieldAlert,
   ShoppingCart,
-  Shovel,
   SlidersHorizontal,
   Sparkles,
   SquareKanban,
@@ -144,13 +138,11 @@ import {
   Table2,
   Timer,
   Trash2,
-  Trees,
   TrendingDown,
   TrendingUp,
   Truck,
   Upload,
   Users,
-  Warehouse,
   Wrench,
   X,
   Zap
@@ -203,7 +195,6 @@ import {
   type PermissionLevel,
   type InvitePreview,
   tradeProfiles,
-  type TradeIcon,
   type TradeProfile,
   plannedPercentAt,
   scheduleCalendar
@@ -536,23 +527,6 @@ function isOnboardingProductId(value: string): value is OnboardingProductId {
 
 /** The lucide glyph for each trade. Every entry must be a real import — an
     unimported icon renders as `<undefined/>` and blanks #root with no overlay. */
-const TRADE_ICONS: Record<TradeIcon, typeof Hammer> = {
-  road: Construction,
-  concrete: Layers,
-  roof: Warehouse,
-  gc: HardHat,
-  excavation: Shovel,
-  utilities: Droplets,
-  framing: Hammer,
-  electrical: Zap,
-  plumbing: Wrench,
-  hvac: Fan,
-  masonry: BrickWall,
-  drywall: Building2,
-  landscaping: Trees,
-  painting: Paintbrush
-};
-
 /** The trade profile for the business this workspace was set up as, or null
     before one is chosen. Read from storage on each render — it only changes at
     onboarding, which remounts everything that cares. */
@@ -8185,374 +8159,6 @@ function WelcomeCreateAccountPage({
               normal={isSignup ? "Where crews, projects, and schedules " : "Welcome back to your "}
               em={isSignup ? "run as one." : "command center."}
             />
-          </p>
-          <cite>Run the whole jobsite from one place.</cite>
-        </blockquote>
-      </aside>
-    </main>
-  );
-}
-
-function WelcomeBusinessTypePage({
-  onBack,
-  onContinue,
-  hasWork = false
-}: {
-  onBack: () => void;
-  onContinue: (businessType: BusinessTypeId) => void;
-  /** The workspace already holds projects: nothing is seeded, the app just re-tunes. */
-  hasWork?: boolean;
-}) {
-  const [businessType, setBusinessType] = useState<BusinessTypeId | "">("");
-  const [businessTypeError, setBusinessTypeError] = useState("");
-  const profile = tradeProfileFor(businessType);
-
-  const submitBusinessType = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!isBusinessTypeId(businessType)) {
-      setBusinessTypeError("Choose your trade to continue.");
-      return;
-    }
-    setBusinessTypeError("");
-    onContinue(businessType);
-  };
-
-  return (
-    <main className="acct-split acct-split-wide" id="business-type" aria-labelledby="business-type-title">
-      <div className="acct-form-col">
-        <div className="acct-form-inner">
-          <button type="button" className="acct-back" onClick={onBack}>
-            ← Back to account details
-          </button>
-          <div className="acct-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-          <div className="acct-head">
-            <h1 id="business-type-title">What type of Business do you own</h1>
-            <p>Pick your trade — BuildFlow sets up crews, phases, readiness checks and its AI around it.</p>
-          </div>
-
-          <form className="acct-form" onSubmit={submitBusinessType}>
-            {/* A radiogroup of trade cards. Each card is a real radio labelled by
-                the trade name, so keyboard users and the tests both pick a trade
-                the same way a pointer does. */}
-            <div
-              className="acct-pick-grid acct-trade-grid"
-              role="radiogroup"
-              aria-label="Business type"
-              aria-describedby={businessTypeError ? "business-type-error" : undefined}
-            >
-              {businessTypeOptions.map((type, i) => {
-                const trade = tradeProfiles[type];
-                const Icon = TRADE_ICONS[trade.icon];
-                const checked = businessType === type;
-                // The radio is named by the trade alone; the tagline is its
-                // description. Otherwise the accessible name would be the whole
-                // card ("Asphalt Paving, milling and striping…") and a screen
-                // reader would read the pitch before the choice.
-                const slug = type.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-                const labelId = `business-type-${slug}-label`;
-                const descriptionId = `business-type-${slug}-desc`;
-                return (
-                  <label key={type} className={checked ? "acct-pick selected" : "acct-pick"} style={{ "--i": i } as CSSProperties}>
-                    <input
-                      type="radio"
-                      name="business-type"
-                      value={type}
-                      aria-labelledby={labelId}
-                      aria-describedby={descriptionId}
-                      checked={checked}
-                      onChange={() => {
-                        setBusinessType(type);
-                        if (businessTypeError) setBusinessTypeError("");
-                      }}
-                    />
-                    <span className={`acct-pick-ico tone-${trade.tone}`}>
-                      <Icon size={18} />
-                    </span>
-                    <span className="acct-pick-copy">
-                      <strong id={labelId}>{trade.label}</strong>
-                      <em id={descriptionId}>{trade.tagline}</em>
-                    </span>
-                    <span className="acct-pick-check" aria-hidden="true">
-                      <Check size={13} />
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            {businessTypeError && (
-              <p className="acct-error" id="business-type-error" role="alert">
-                {businessTypeError}
-              </p>
-            )}
-            <button type="submit" className="acct-primary">
-              Get BuildFlow
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <aside className="acct-aside" aria-hidden="true">
-        <div className="acct-aurora acct-aurora-1" />
-        <div className="acct-aurora acct-aurora-2" />
-        <div className="acct-aurora acct-aurora-3" />
-        <div className="acct-aside-brand">
-          <BuildFlowLogoMark /> BuildFlow
-        </div>
-        <AcctScheduleViz />
-        <blockquote className="acct-aside-quote">
-          <p className="acct-aside-type">
-            {/* Re-keying on the trade replays the typewriter, so the panel answers the
-                selection with the same phrasing the dashboard uses for the profile. */}
-            <WxTypewriter
-              key={businessType || "empty"}
-              normal={businessType ? "Production scheduling tuned for " : "Production scheduling for "}
-              em={businessType ? `${businessType.toLowerCase()} crews.` : "every trade."}
-            />
-          </p>
-          <cite>Run the whole jobsite from one place.</cite>
-        </blockquote>
-        {/* What the workspace will actually contain for the chosen trade. Keyed on
-            the trade so the rows replay their rise on every change. */}
-        <dl className="acct-preview" key={businessType || "empty"}>
-          <dt className="acct-preview-title">{hasWork ? "What changes for your workspace" : "Your workspace will include"}</dt>
-          {profile ? (
-            <>
-              <p className="acct-preview-desc">{profile.description}</p>
-              {hasWork && (
-                <p className="acct-preview-desc acct-preview-note">
-                  Your existing projects, crews and schedule stay exactly as they are. BuildFlow re-tunes its phases, readiness checks,
-                  DelayIQ categories and AI around {profile.label.toLowerCase()} work.
-                </p>
-              )}
-              {(
-                [
-                  ["Crews", profile.crewTypes],
-                  ["Phases", profile.phases],
-                  ["Readiness checks", profile.readinessChecks.slice(0, 4)],
-                  ["DelayIQ categories", profile.delayIQCategories.slice(0, 4)]
-                ] as Array<[string, string[]]>
-              ).map(([title, items], i) => (
-                <div className="acct-preview-row" key={title} style={{ "--i": i } as CSSProperties}>
-                  <dt>{title}</dt>
-                  <dd>
-                    {items.map((item) => (
-                      <span className="acct-preview-chip" key={item}>
-                        {item}
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              ))}
-            </>
-          ) : (
-            <p className="acct-preview-empty">
-              Choose a trade and BuildFlow shapes its crews, production phases, readiness checks, delayIQ categories and AI around how that
-              business actually runs.
-            </p>
-          )}
-        </dl>
-      </aside>
-    </main>
-  );
-}
-
-function WelcomeAdditionalProductsPage({
-  businessType,
-  onBack,
-  onContinue
-}: {
-  businessType: BusinessTypeId | "";
-  onBack: () => void;
-  onContinue: (selectedPlan: ProductPlanId, selectedProducts: OnboardingProductId[], seats: number) => Promise<void> | void;
-}) {
-  const [selectedPlan, setSelectedPlan] = useState<ProductPlanId | "">(readStoredPlan);
-  const [selectedProducts, setSelectedProducts] = useState<OnboardingProductId[]>(readStoredProducts);
-  const [seats, setSeats] = useState(DEFAULT_SEATS);
-  const [productError, setProductError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  // Add-ons are optional — the base product is a complete purchase on its own.
-  const canContinue = Boolean(selectedPlan);
-  const plan = selectedPlan ? planById[selectedPlan] : undefined;
-  const monthlyTotal = plan && typeof plan.priceMonthly === "number" ? plan.priceMonthly * seats : null;
-
-  const toggleProduct = (productId: OnboardingProductId) => {
-    setSelectedProducts((current) =>
-      current.includes(productId) ? current.filter((item) => item !== productId) : [...current, productId]
-    );
-    if (productError) setProductError("");
-  };
-
-  const submitProducts = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!isProductPlanId(selectedPlan)) {
-      setProductError("Choose a BuildFlow plan to continue.");
-      return;
-    }
-
-    setProductError("");
-    setIsSubmitting(true);
-    try {
-      await onContinue(selectedPlan, selectedProducts, seats);
-    } catch (error) {
-      setProductError(error instanceof Error ? error.message : "Unable to finish onboarding. Try again.");
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <main className="acct-split acct-split-wide" id="additional-products" aria-labelledby="additional-products-title">
-      <div className="acct-form-col">
-        <div className="acct-form-inner">
-          <button type="button" className="acct-back" onClick={onBack}>
-            ← Back to business type
-          </button>
-          <div className="acct-brand">
-            <BuildFlowLogoMark />
-            <strong>BuildFlow</strong>
-          </div>
-
-          <span className="acct-eyebrow">
-            <span className="acct-eyebrow-dot" />
-            Set up your workspace
-          </span>
-
-          <div className="acct-head">
-            <h1 id="additional-products-title">What additional products do you want to use?</h1>
-            <p>{businessType ? `BuildFlow for ${businessType}` : "Choose your BuildFlow setup"}</p>
-          </div>
-
-          <form className="acct-form" onSubmit={submitProducts}>
-            <section className="acct-sec" aria-labelledby="additional-products-products-title">
-              <div className="acct-sec-head">
-                <h2 id="additional-products-products-title">Additional products</h2>
-                <span>Choose one or more</span>
-              </div>
-              <div className="acct-pick-grid">
-                {onboardingProductOptions.map((product, i) => {
-                  const program = programRegistry[product.id];
-                  const Icon = program.icon;
-                  const checked = selectedProducts.includes(product.id);
-                  return (
-                    <label key={product.id} className={checked ? "acct-pick selected" : "acct-pick"} style={{ "--i": i } as CSSProperties}>
-                      <input type="checkbox" checked={checked} onChange={() => toggleProduct(product.id)} />
-                      <span className={`acct-pick-ico tone-${program.tone}`}>
-                        <Icon size={18} />
-                      </span>
-                      <span className="acct-pick-copy">
-                        <strong>{product.label}</strong>
-                        <em>{product.description}</em>
-                      </span>
-                      <span className="acct-pick-check" aria-hidden="true">
-                        <Check size={13} />
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="acct-sec" aria-labelledby="additional-products-plan-title">
-              <div className="acct-sec-head">
-                <h2 id="additional-products-plan-title">What type of plan?</h2>
-                <span>Choose one</span>
-              </div>
-              <div className="acct-plan-grid" role="radiogroup" aria-label="BuildFlow plan">
-                {productPlans.map((plan, i) => (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    className={selectedPlan === plan.id ? "acct-plan selected" : "acct-plan"}
-                    aria-pressed={selectedPlan === plan.id}
-                    aria-label={`Select ${plan.name} plan`}
-                    style={{ "--i": i } as CSSProperties}
-                    onClick={() => {
-                      setSelectedPlan(plan.id);
-                      if (productError) setProductError("");
-                    }}
-                  >
-                    <span className="acct-plan-check" aria-hidden="true">
-                      <Check size={12} />
-                    </span>
-                    <strong>{plan.name}</strong>
-                    <span className="acct-plan-price">{plan.price}</span>
-                    <em>{plan.priceNote}</em>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="acct-sec" aria-labelledby="additional-products-seats-title">
-              <div className="acct-sec-head">
-                <h2 id="additional-products-seats-title">How many people will use BuildFlow?</h2>
-                <span>Every plan is priced per seat</span>
-              </div>
-              <div className="acct-seats">
-                <div className="acct-field acct-seats-field">
-                  <label htmlFor="additional-products-seats">Seats</label>
-                  <div className="acct-input-wrap">
-                    <input
-                      id="additional-products-seats"
-                      className="acct-input"
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={1000}
-                      step={1}
-                      value={seats}
-                      onChange={(event) => setSeats(Math.min(1000, Math.max(1, Math.round(Number(event.target.value) || 1))))}
-                    />
-                  </div>
-                </div>
-                <p className="acct-seats-total" aria-live="polite">
-                  {!plan ? (
-                    <span>Pick a plan to see your monthly total.</span>
-                  ) : monthlyTotal === 0 ? (
-                    <span>
-                      <b>$0 / month</b> — Free for the whole team.
-                    </span>
-                  ) : monthlyTotal != null ? (
-                    <span>
-                      <b>${monthlyTotal.toLocaleString("en-US")} / month</b> for {seats} {seats === 1 ? "seat" : "seats"} on {plan.name}.
-                      Starts with a 14-day trial; nothing is charged today.
-                    </span>
-                  ) : (
-                    <span>
-                      <b>Custom pricing</b> — sales will size Enterprise for {seats} {seats === 1 ? "seat" : "seats"}.
-                    </span>
-                  )}
-                </p>
-              </div>
-            </section>
-
-            {productError && (
-              <p className="acct-error" id="additional-products-error" role="alert">
-                {productError}
-              </p>
-            )}
-
-            <button type="submit" className="acct-primary" disabled={!canContinue || isSubmitting}>
-              {isSubmitting ? "Building workspace..." : selectedProducts.length > 0 ? "Continue to BuildFlow" : "Continue without add-ons"}
-              {!isSubmitting && <ArrowRight size={18} />}
-            </button>
-            <p className="acct-hint acct-hint-center">Add-ons are optional. You can turn any of them on later in Settings.</p>
-          </form>
-        </div>
-      </div>
-
-      <aside className="acct-aside" aria-hidden="true">
-        <div className="acct-aurora acct-aurora-1" />
-        <div className="acct-aurora acct-aurora-2" />
-        <div className="acct-aurora acct-aurora-3" />
-        <div className="acct-aside-brand">
-          <BuildFlowLogoMark /> BuildFlow
-        </div>
-        <AcctScheduleViz />
-        <blockquote className="acct-aside-quote">
-          <p className="acct-aside-type">
-            <WxTypewriter normal="Pick the tools your " em="crews run on." />
           </p>
           <cite>Run the whole jobsite from one place.</cite>
         </blockquote>
