@@ -454,3 +454,10 @@ anywhere (skin §46), so the bar is ink.
 
 **Less motion**: every beat becomes a `--bfm-reduced` fade with no delay, the exit is the same fade,
 and the flow moves to the next step without waiting for the old one to leave.
+
+**Signing in is on the same page (2026-09-22).** `onboarding/LoginPage.tsx` wears the flow's column,
+card and beats without its progress block — signing in is not a step of five — and `usePaneSwap`
+carries login into forgot-password on the same exit/gap/enter the steps use. The two screens'
+headings are held at the same height (`--onb-pane-top`, the progress block's 25px added back;
+measured at y=192 on both, and 57px over the phone's own 32px), so moving between them does not
+shift the page under the reader.

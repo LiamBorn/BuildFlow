@@ -31,13 +31,14 @@
  * The plan (step 5) is the reference's pricing page: the whole screen turns to the gradient
  * at once, and the card comes into focus a beat later, as one unit.
  */
-import { Children, isValidElement, useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { Check, Eye, EyeOff } from "lucide-react";
 import { businessTypeOptions, passwordProblem, tradeProfiles, type BusinessTypeId, type PlanId } from "@buildflow/shared";
 import { ApiError, fetchOauthStatus, fetchSession, oauthStartUrl, type OAuthProvider, type SignupInput } from "../api";
 import { EVENTS, track } from "../analytics";
-import { DUR, STAGGER, ms } from "../motion/tokens";
 import { SegmentPill } from "../motion/SegmentPill";
+import { Beats } from "./Beats";
+import { usePaneSwap } from "./usePaneSwap";
 import { OnboardingPreview, TRADE_ICONS, toneColor, type PreviewStep } from "./OnboardingPreview";
 import { PlanStep, type OnboardingPlan } from "./PlanStep";
 import { recommendPlan, revenueLabel, REVENUE_OPTIONS, teamLabel, TEAM_OPTIONS, type RevenueBand, type TeamBand } from "./recommendPlan";
@@ -48,10 +49,6 @@ export const STEP_COUNT = 5;
 
 const FIRST_STEP: Record<OnboardingEntry, StepId> = { "create-account": 1, "business-type": 3, "additional-products": 4 };
 export const groupOf = (step: StepId): OnboardingEntry => (step <= 2 ? "create-account" : step === 3 ? "business-type" : "additional-products");
-
-/** The outgoing form's fade, and the empty beat before the next one starts to arrive. */
-const EXIT = DUR.exit;
-const GAP = STAGGER.row;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /* Consumer mailboxes. A signup from one still works — plenty of small contractors run on
@@ -113,30 +110,6 @@ export type OnboardingFlowProps = {
   onContactSales: () => void;
 };
 
-/**
- * The incoming elements, in the order they come into focus. Each child gets its place in
- * the cascade as `--i`; the sheet turns that into a delay.
- *
- * THE CHILD LIST MUST NOT SHIFT while a step is open. A wrapper keyed by position is a new
- * element to React the moment something is inserted above it — every field below a
- * validation error would remount, replaying its entrance and dropping the cursor from it.
- * So a step's errors and hints live INSIDE their field's own child (see the forms), a child
- * that carries a key keeps it, and only a child that is always there is placed by position.
- */
-function Beats({ children }: { children: ReactNode }) {
-  return (
-    <>
-      {Children.toArray(children).map((child, index) => (
-        <div key={isValidElement(child) && child.key != null ? child.key : index} className="onb-beat" style={{ "--i": index } as CSSProperties}>
-          {child}
-        </div>
-      ))}
-    </>
-  );
-}
-
-const reducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 export function OnboardingFlow({
   entry,
   plans,
@@ -149,42 +122,14 @@ export function OnboardingFlow({
   onBack,
   onContactSales
 }: OnboardingFlowProps) {
-  const [step, setStep] = useState<StepId>(() => FIRST_STEP[entry]);
-  /** What the preview and the progress show — they lead the form by one transition. */
-  const [shown, setShown] = useState<StepId>(step);
-  const [leaving, setLeaving] = useState(false);
-  const pending = useRef<StepId | null>(null);
-  const timer = useRef<number | null>(null);
-
-  const go = (next: StepId) => {
-    if (next === (pending.current ?? step)) return;
-    pending.current = next;
-    setShown(next);
-    if (timer.current !== null) window.clearTimeout(timer.current);
-    if (reducedMotion()) {
-      setStep(next);
-      pending.current = null;
-      return;
-    }
-    setLeaving(true);
-    timer.current = window.setTimeout(() => {
-      setStep(next);
-      setLeaving(false);
-      pending.current = null;
-      timer.current = null;
-    }, ms(EXIT) + ms(GAP));
-  };
-  useEffect(
-    () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-    },
-    []
-  );
+  /* `shown` leads `step` by one transition: the preview and the progress move while the
+     outgoing form is still fading, which is what the recording does (usePaneSwap). */
+  const { current: step, shown, leaving, target, go } = usePaneSwap<StepId>(FIRST_STEP[entry]);
 
   /* The hash moved (a signup finished, a trade was chosen, the browser went Back): follow it
      to that group's first step, unless this is already on — or on its way to — that group. */
   useEffect(() => {
-    if (groupOf(pending.current ?? step) !== entry) go(FIRST_STEP[entry]);
+    if (groupOf(target) !== entry) go(FIRST_STEP[entry]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `go` is stable enough: it reads refs
   }, [entry]);
 

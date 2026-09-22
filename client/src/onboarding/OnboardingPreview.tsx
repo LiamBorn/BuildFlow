@@ -95,7 +95,8 @@ export function OnboardingPreview({
   businessName,
   trade,
   revenueLabel,
-  teamLabel
+  teamLabel,
+  signingInAs
 }: {
   step: PreviewStep;
   firstName: string;
@@ -104,6 +105,9 @@ export function OnboardingPreview({
   trade: TradeProfile | null;
   revenueLabel: string | null;
   teamLabel: string | null;
+  /** Signing IN rather than up: the address typed so far goes in the account row, since the
+      name is not known yet and inventing one from the local part would be a small lie. */
+  signingInAs?: string;
 }) {
   const variant = GRADIENT[step];
   /* The gradient it is leaving, kept underneath while the new one fades over it. A counter
@@ -121,8 +125,13 @@ export function OnboardingPreview({
     return () => window.clearTimeout(timer);
   }, [variant]);
 
-  const name = `${firstName} ${lastName}`.trim();
-  const initials = `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase();
+  const typedName = `${firstName} ${lastName}`.trim();
+  const name = signingInAs === undefined ? typedName : signingInAs;
+  const initials =
+    signingInAs === undefined
+      ? `${firstName.trim().charAt(0)}${lastName.trim().charAt(0)}`.toUpperCase()
+      : signingInAs.charAt(0).toUpperCase();
+  const emptyName = signingInAs === undefined ? "Your name" : "Your workspace";
   const business = businessName.trim();
   const Icon = trade ? TRADE_ICONS[trade.icon] : null;
 
@@ -180,8 +189,8 @@ export function OnboardingPreview({
             <div className="onb-mock-user">
               <span className="onb-mock-avatar">{initials || "•"}</span>
               <span className="onb-mock-user-text">
-                <b className={name ? undefined : "is-empty"}>{name || "Your name"}</b>
-                <i>Owner</i>
+                <b className={name ? undefined : "is-empty"}>{name || emptyName}</b>
+                <i>{signingInAs === undefined ? "Owner" : "Signing in"}</i>
               </span>
             </div>
           )}
