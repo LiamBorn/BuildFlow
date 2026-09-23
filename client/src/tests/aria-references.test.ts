@@ -24,15 +24,21 @@ import { dirname, join } from "node:path";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function sources(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    if (e.name === "node_modules" || e.name === "dist" || e.name === "tests") return [];
-    const p = join(dir, e.name);
-    if (e.isDirectory()) return sources(p);
-    return /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) ? [p] : [];
-  });
-}
-const files = sources(SRC).map((p) => ({ path: p.slice(SRC.length + 1), text: readFileSync(p, "utf8") }));
+/**
+ * Every .ts/.tsx under src, excluding tests.
+ *
+ * `readdirSync(path, { recursive: true })` is the only readdirSync the project's `node:fs` shim
+ * declares (tests/node-fs-shim.d.ts explains why the shim stays minimal), so a `withFileTypes`
+ * walk does not typecheck here even though it runs fine under vitest.
+ */
+const files = readdirSync(SRC, { recursive: true })
+  .filter(
+    (rel) =>
+      /\.tsx?$/.test(rel) &&
+      !/\.test\.tsx?$/.test(rel) &&
+      !rel.split(/[\\/]/).some((part) => part === "tests" || part === "node_modules" || part === "dist")
+  )
+  .map((rel) => ({ path: rel, text: readFileSync(join(SRC, rel), "utf8") }));
 
 const ID_LITERAL = /\bid="([^"{}]+)"/g;
 /** `id={`row-${x}`}` -- the static head is all a source read can know about the ids it makes. */

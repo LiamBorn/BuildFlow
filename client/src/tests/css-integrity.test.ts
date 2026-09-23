@@ -29,10 +29,23 @@ import { dirname, join } from "node:path";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Every stylesheet, read as bytes -- vitest resolves a CSS *import* to an empty string. */
-const sheets = readdirSync(SRC)
-  .filter((f) => f.endsWith(".css"))
-  .map((f) => ({ file: f, root: postcss.parse(readFileSync(join(SRC, f), "utf8"), { from: f }) }));
+/**
+ * Every path under src, relative to it.
+ *
+ * `readdirSync(path, { recursive: true })` is the ONLY readdirSync the project's `node:fs` shim
+ * declares, and the shim is deliberately minimal -- see tests/node-fs-shim.d.ts for why adding
+ * Node's globals to a 39,000-line DOM program is not free. Walking with `withFileTypes` typechecks
+ * nowhere here, and reading only the top level also missed onboarding/onboarding.css.
+ */
+const paths = readdirSync(SRC, { recursive: true }).filter(
+  (rel) => !rel.includes("node_modules") && !rel.includes("dist")
+);
+const inTests = (rel: string) => rel.split(/[\\/]/).includes("tests");
+
+/** Read as bytes -- vitest resolves a CSS *import* to an empty string. */
+const sheets = paths
+  .filter((rel) => rel.endsWith(".css"))
+  .map((rel) => ({ file: rel, root: postcss.parse(readFileSync(join(SRC, rel), "utf8"), { from: rel }) }));
 
 /**
  * Every .ts/.tsx under src, for the custom properties that are set from code rather than CSS.
@@ -41,16 +54,8 @@ const sheets = readdirSync(SRC)
  * to explain the bug it guards, and while it read its own directory it reported that comment as a
  * live dangling reference. A test that documents a defect will always look like it contains one.
  */
-function codeFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    if (e.name === "node_modules" || e.name === "dist" || e.name === "tests") return [];
-    const p = join(dir, e.name);
-    if (e.isDirectory()) return codeFiles(p);
-    return /\.(ts|tsx)$/.test(e.name) ? [p] : [];
-  });
-}
-const codePaths = codeFiles(SRC).map((p) => p.slice(SRC.length + 1));
-const code = codeFiles(SRC).map((p) => readFileSync(p, "utf8"));
+const codePaths = paths.filter((rel) => /\.tsx?$/.test(rel) && !inTests(rel));
+const code = codePaths.map((rel) => readFileSync(join(SRC, rel), "utf8"));
 
 const where = (file: string, node: postcss.Node) => `${file}:${node.source?.start?.line ?? "?"}`;
 
@@ -68,7 +73,12 @@ describe("every animation names a keyframe that exists", () => {
   ]);
 
   const defined = new Set<string>();
-  for (const { root } of sheets) root.walkAtRules(/^(-\w+-)?keyframes$/, (at) => defined.add(at.params.trim()));
+  for (const { root } of sheets) {
+    // Braces matter: postcss expects `false | void` from a walker, and `Set.add` returns the Set.
+    root.walkAtRules(/^(-\w+-)?keyframes$/, (at) => {
+      defined.add(at.params.trim());
+    });
+  }
 
   /**
    * Drop function calls, repeatedly, because they nest: `var(--hsx-ease, cubic-bezier(…))` needs
@@ -141,7 +151,9 @@ describe("every var() resolves to a token that exists", () => {
     root.walkDecls((decl) => {
       if (decl.prop.startsWith("--")) declared.add(decl.prop);
     });
-    root.walkAtRules("property", (at) => declared.add(at.params.trim()));
+    root.walkAtRules("property", (at) => {
+      declared.add(at.params.trim());
+    });
   }
   // A custom property can also be set from code -- an inline style object or setProperty --
   // and 70 of this app's are. Without these the check would report them all as undefined.
