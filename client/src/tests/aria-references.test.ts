@@ -148,3 +148,76 @@ describe("every #anchor names a route or something on the page", () => {
     ).toEqual([]);
   });
 });
+
+describe("an icon-only button says what it does", () => {
+  /**
+   * A button whose only content is an icon has no accessible name unless one is given. A screen
+   * reader announces "button" and nothing else, and it is invisible to everyone who can see the
+   * icon — which is why it survives review. Nothing else here catches it: the eslint config
+   * carries only react-hooks and typescript-eslint, with no jsx-a11y.
+   *
+   * Two things this had to get right, both found by testing the scanner rather than trusting it.
+   * The opening tag cannot be matched with `<button[^>]*>`, because `onClick={() => …}` contains
+   * a `>` and the match stops inside the attributes — 269 of these 533 buttons are that shape, so
+   * a regex version reported zero while reading barely half of them. And "self-closing child"
+   * does not mean "icon": `<SlideLabel text="Log in" />` and `<ScheduleBadge status={s} />` both
+   * render text, so only children imported from lucide-react count.
+   */
+  const closeOfTag = (src: string, start: number) => {
+    let depth = 0;
+    let quote: string | null = null;
+    for (let i = start; i < src.length; i += 1) {
+      const c = src[i];
+      if (quote) {
+        if (c === quote && src[i - 1] !== "\\") quote = null;
+      } else if (c === '"' || c === "'" || c === "`") quote = c;
+      else if (c === "{") depth += 1;
+      else if (c === "}") depth -= 1;
+      else if (c === ">" && depth === 0) return i;
+    }
+    return -1;
+  };
+
+  const lucideNames = (src: string) => {
+    const names = new Set<string>();
+    for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*"lucide-react"/g)) {
+      for (const part of m[1].split(",")) {
+        const name = part.trim().split(" as ").pop()?.trim();
+        if (name) names.add(name);
+      }
+    }
+    return names;
+  };
+
+  const nameless: string[] = [];
+  let scanned = 0;
+  for (const { path, text } of files) {
+    const icons = lucideNames(text);
+    for (const m of text.matchAll(/<button\b/g)) {
+      const gt = closeOfTag(text, m.index);
+      if (gt === -1 || text[gt - 1] === "/") continue;
+      const end = text.indexOf("</button>", gt);
+      if (end === -1) continue;
+      scanned += 1;
+      const attrs = text.slice(m.index + "<button".length, gt);
+      const body = text.slice(gt + 1, end);
+      if (/\baria-label\b|\baria-labelledby\b|\btitle=/.test(attrs)) continue;
+      if (body.replace(/<[^>]*>/g, "").replace(/\{[^{}]*\}/g, "").trim()) continue;
+      const kids = [...body.matchAll(/<(\w+)[^>]*\/>/g)].map((k) => k[1]);
+      if (!kids.length || body.replace(/<\w+[^>]*\/>/g, "").trim()) continue;
+      if (kids.every((k) => icons.has(k))) {
+        nameless.push(`<${kids.join(", ")} /> (${path}:${text.slice(0, m.index).split("\n").length})`);
+      }
+    }
+  }
+
+  it("finds buttons to check", () => {
+    // A regex that truncates at the first `>` still finds hundreds, so a healthy count is not
+    // evidence the scan is sound. The floor only catches a reader that has stopped entirely.
+    expect(scanned).toBeGreaterThan(400);
+  });
+
+  it("gives every icon-only button an accessible name", () => {
+    expect(nameless, "a screen reader announces these as \"button\" and nothing more").toEqual([]);
+  });
+});
