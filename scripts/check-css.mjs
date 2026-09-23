@@ -160,12 +160,6 @@ function isSharedFurniture(selector) {
  * applying perfectly well in a browser — the inverse of the assumption the stray check is built on.
  */
 const ROOT = ["schedule-page", "page-stack", "sched-rx", "gantt-page"];
-const MATRIX = [ROOT, ["schedule-board"], ["sched-matrix"]];
-const CREW = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-crew"]];
-/** The tooltip with its cell at rest, and the same cell hovered — which is what shows it. */
-const TIP = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-cell"], ["sched-matrix-tip"]];
-const TIP_HOVERED = [...MATRIX, ["sched-matrix-row"], ["sched-matrix-cell", ":hover"], ["sched-matrix-tip"]];
-const WEEK = [ROOT, ["schedule-board"], ["schedule-week-scroll"]];
 /* The month grid's day washes. Both are ONE class on the same element, so source order is the
    whole of the decision between them. A third, `out-month`, went with the days either side of the
    month on 2026-09-17: the grid ends on the month's last day now and pads with `.sched-cal-blank`,
@@ -227,21 +221,12 @@ function check(what, got, want) {
 }
 
 console.log("The schedule stylesheets, resolved the way a browser would:\n");
-// A phone has to be able to reach all seven days: the grid scrolls, the crew column stays put.
-check("Matrix grid at 375px scrolls sideways", winner(MATRIX, "overflow-x", 375), /^(auto|scroll)$/);
-check("Matrix crew column at 375px is pinned", winner(CREW, "position", 375), "sticky");
-// A desktop keeps the tooltip that made the grid stop clipping in the first place.
-check("Matrix grid at 1280px lets its tooltip out", winner(MATRIX, "overflow-x", 1280), "visible");
-// Asked of the properties that actually hide it. It used to be asked about `display`, which no
-// rule sets at this width, so the question answered "the initial value" — and would have gone on
-// answering that with every tooltip rule in the sheet deleted.
-check("Matrix tooltip at 1280px waits out of the way", winner(TIP, "visibility", 1280), "hidden");
-check("Matrix tooltip at 1280px appears when its cell is hovered", winner(TIP_HOVERED, "visibility", 1280), "visible");
-check("…and is opaque when it does", winner(TIP_HOVERED, "opacity", 1280), "1");
-check("Matrix tooltip at 375px is hidden outright", winner(TIP, "display", 375), "none");
-// The Week board's scroller is the pattern the Matrix follows.
-check("Week board at 375px scrolls sideways", winner(WEEK, "overflow-x", 375), /^(auto|scroll)$/);
-check("Week board at 1280px scrolls sideways", winner(WEEK, "overflow-x", 1280), /^(auto|scroll)$/);
+/* The Matrix and Week boards had nine questions here — the grid scrolling sideways on a phone, the
+   crew column pinned, the tooltip escaping the grid on a desktop. Both boards were backlogged on
+   2026-09-22 and their stylesheets went with them, so all nine answered "(nothing sets it) (from no
+   rule)" and this script exited 1 on every run. They are removed rather than relaxed: an assertion
+   about a page that does not exist cannot pass, and one loosened until it can is worse than none.
+   The pages are at 4669d61 if they come back; docs/backlog.md went with the repo cleanup. */
 
 /* The Month grid's washes, which were invisible for a while and answered nothing. WHICH TOKEN was
    the question: they were mixed against `--wx-bg-2`, and the dark-mode section re-points that name
@@ -281,13 +266,11 @@ check("a milestone can be picked up as well", winner(CAL_MILESTONE, "cursor", 12
 check("the control that opens a day is a target, not a hint", winner(CAL_MORE, "min-height", 1280), "26px");
 check("…and a bigger one on a phone", winner(CAL_MORE, "min-height", 375), "40px");
 check("the slot a lifted job leaves is dashed", winner(CAL_SLOT, "outline", 1280), /\bdashed\b/);
-/* ...and the same slot on the other four boards, which had each lifted the card itself with a
-   shadow of its own before the carry layer took the job over. The Week board's card is the one
-   that proves it: `styles.css` fades it to 0.76 while it is dragged, and a slot at three quarters
-   opacity reads as a card that is still there. */
+/* ...and the same slot on the boards that lift a card, which had each done it with a shadow of
+   their own before the carry layer took the job over. Two of the three went on 2026-09-22 with the
+   Week board and its queue — `.schedule-week-scroll`, `.crew-row` and `.unassigned-card` are in no
+   component and no rule now — so Kanban is what is left to ask. */
 for (const [what, chain] of [
-  ["the Week board's card", [ROOT, ["schedule-board"], ["schedule-week-scroll"], ["crew-row"], ["schedule-job", "dragging"]]],
-  ["a queued job", [ROOT, ["schedule-layout"], ["unassigned-card", "dragging"]]],
   ["a Kanban card", [ROOT, ["schedule-board"], ["sched-kan-lane"], ["sched-kan-cards"], ["sched-kan-card", "dragging"]]]
 ]) {
   check(`the slot ${what} leaves is dashed`, winner(chain, "outline", 1280), /\bdashed\b/);
