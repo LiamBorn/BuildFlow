@@ -120,6 +120,17 @@ export default defineConfig({
     setupFiles: "./src/test/setup.ts",
     globals: true,
     // whole-app renders take seconds on a busy machine or a CI runner; vitest's 5 s default is too tight
-    testTimeout: 20000
+    testTimeout: 20000,
+    /* Half the cores, not all of them.
+       Nearly every file here renders the entire app into jsdom, so a worker is not a cheap
+       unit of work: at one per core the suite competes with itself, and on 2026-09-23 a full
+       run failed nine tests across five unrelated files — the landing drawer, Schedule
+       customize, Schedule pages, Settings, the tutorial — every one of them a 20 s timeout,
+       and all 149 passed when those five files were run together on their own. Failures that
+       move from run to run, and vanish in isolation, are contention rather than defects, and a
+       suite that goes red for reasons unrelated to your change is one people learn to ignore.
+       This costs wall-clock and buys back the signal. It also leaves room for a parallel
+       session's build, which is the normal state of this repo. */
+    maxWorkers: 4
   }
 });
