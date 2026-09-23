@@ -9867,32 +9867,32 @@ const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
     phrases: materialsPhrases,
     sub: (
       <>
-        Track delivery status, flag missing materials, and keep vendor notes on every order &mdash; so the office knows a job is{" "}
-        <b>truly ready</b> <b>before a crew ever rolls to it</b>.
+        Every material line in one list with its quantity, delivery date, project and status &mdash; so the office can see{" "}
+        <b>what&rsquo;s ready</b> and <b>what still needs chasing</b>.
       </>
     ),
     liveLabel: "See Materials Readiness live",
-    boardTitle: "Delivery schedule · this week",
+    boardTitle: "Materials · status by delivery date",
     board: [
       {
         crew: "Steel",
         dot: "#4285f4",
-        days: [{ t: "Delivered", c: "blue" }, null, null, { t: "Delivered", c: "blue" }, null]
+        days: [{ t: "Ready", c: "green" }, null, null, { t: "Ordered", c: "blue" }, null]
       },
       {
         crew: "Rebar",
         dot: "#9b72cb",
-        days: [null, { t: "In transit", c: "amber" }, { t: "In transit", c: "amber" }, null, null]
+        days: [null, { t: "Ready", c: "green" }, { t: "Waiting", c: "amber" }, null, null]
       },
       {
         crew: "Concrete",
         dot: "#4bb17a",
-        days: [null, null, { t: "Delivered", c: "green" }, { t: "Delivered", c: "green" }, { t: "Delivered", c: "green" }]
+        days: [null, null, { t: "Ordered", c: "blue" }, { t: "Ordered", c: "blue" }, { t: "Ordered", c: "blue" }]
       },
       {
         crew: "HVAC",
         dot: "#e0808a",
-        days: [null, null, null, { t: "DelayIQed", ghost: true }, { t: "Missing", c: "coral" }]
+        days: [null, null, null, null, { t: "Missing", c: "coral" }]
       }
     ]
   },
@@ -9902,116 +9902,113 @@ const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
       short: "Statuses",
       icon: Boxes,
       title: "Track every delivery status",
-      text: "Ready, ordered, waiting on delivery, or missing — filter the whole materials list by status, quantity, and delivery date to see exactly where every order stands.",
+      text: "Ready, ordered, waiting on delivery, or missing — filter the materials by status or project, or search them by name, to see exactly where every line stands.",
       mock: {
         kind: "list",
         title: "Materials · by status",
-        tabs: ["Ready now", "Ordered", "Attention"],
+        tabs: ["Materials", "Needs attention", "All items"],
         items: [
           {
             icon: PackageCheck,
             title: "Structural steel beams · 24 ea",
-            sub: "Ready for schedule · on site",
+            sub: "Harborview Apts · delivery Mon",
             badge: "READY",
             tone: "ready"
           },
-          { icon: Truck, title: "Rebar #5 · 3.2 tons", sub: "Watch delivery window · Wed", badge: "WAITING", tone: "wait" },
-          { icon: AlertTriangle, title: "HVAC units · 4 ea", sub: "Blocks affected work", badge: "MISSING", tone: "risk", alert: true }
-        ]
-      }
-    },
-    {
-      slot: "conflicts",
-      short: "Readiness gate",
-      icon: ShieldAlert,
-      title: "Flag what's missing before dispatch",
-      text: (
-        <>
-          Needs-attention materials surface the jobs they block, so a crew is never dispatched to work that&rsquo;s waiting on a delivery
-          that hasn&rsquo;t landed.
-        </>
-      ),
-      mock: {
-        kind: "list",
-        title: "Readiness gate",
-        items: [
+          { icon: Truck, title: "Rebar #5 · 3.2 tons", sub: "Parking deck · delivery Wed", badge: "WAITING", tone: "wait" },
           {
             icon: AlertTriangle,
-            title: "HVAC units not on site",
-            sub: "Blocks Harborview mechanical · Thu",
-            badge: "BLOCKED",
+            title: "HVAC units · 4 ea",
+            sub: "Harborview Apts · delivery Fri",
+            badge: "MISSING",
             tone: "risk",
             alert: true
-          },
-          { icon: Clock, title: "Rebar in transit", sub: "Parking deck pour · arrives Wed 7am", badge: "WATCH", tone: "wait" },
-          {
-            icon: CheckCircle2,
-            title: "Steel cleared the gate",
-            sub: "Tech Ridge frame · ready to schedule",
-            badge: "CLEAR",
-            tone: "ready"
           }
         ]
       }
     },
     {
+      slot: "conflicts",
+      short: "Needs attention",
+      icon: ShieldAlert,
+      title: "Put what's missing in one view",
+      text: "The Needs attention view gathers every line that's missing or still waiting on delivery — and any machine in maintenance — and a sort by status puts them at the top of every view.",
+      mock: {
+        kind: "list",
+        title: "Needs attention",
+        items: [
+          {
+            icon: AlertTriangle,
+            title: "HVAC units · 4 ea",
+            sub: "Harborview Apts · delivery Fri",
+            badge: "MISSING",
+            tone: "risk",
+            alert: true
+          },
+          { icon: Clock, title: "Rebar #5 · 3.2 tons", sub: "Parking deck · delivery Wed", badge: "WAITING", tone: "wait" },
+          { icon: Wrench, title: "Excavator 320", sub: "Excavator · Unassigned", badge: "MAINT", tone: "risk" }
+        ]
+      }
+    },
+    {
       slot: "trades",
-      short: "Vendors",
+      short: "Line details",
       icon: FileText,
-      title: "Keep vendor notes on every order",
-      text: "Vendor, purchase order, delivery window, quantity, and a note live on each material — so the whole procurement story is one click from the job that needs it.",
+      title: "Quantity, date and project on every line",
+      text: "Each material line carries its quantity, its delivery date and the project it belongs to — add, edit or remove one from a side drawer without leaving the list.",
       mock: {
         kind: "list",
         title: "Structural Steel Beams",
-        tabs: ["Vendor", "Purchase order", "Delivery window", "Note"],
+        tabs: ["Quantity", "Delivery date", "Project", "Status"],
         items: [
-          { icon: Building2, title: "Vendor · Lone Star Steel", sub: "PO 4471 · confirmed 6 Jun", badge: "PO", tone: "ready" },
-          { icon: CalendarDays, title: "Delivery window · Mon 7–10am", sub: "24 ea · crane on site", badge: "SET", tone: "ready" },
-          { icon: FileText, title: "Note · unload at the north gate", sub: "Escort required after 3pm", badge: "NOTE", tone: "wait" }
+          { icon: Boxes, title: "Quantity · 24 ea", sub: "Written the way you order it", badge: "QTY", tone: "ready" },
+          { icon: CalendarDays, title: "Delivery date · Mon", sub: "Shown under the line's name", badge: "DATE", tone: "ready" },
+          { icon: Building2, title: "Project · Harborview Apts", sub: "Every line belongs to one", badge: "PROJECT", tone: "ready" }
         ]
       }
     },
     {
       slot: "ready",
-      short: "Ready work",
+      short: "On the Dashboard",
       icon: ClipboardList,
-      title: "Only schedule work that's ready",
-      text: "Material readiness rolls up per job, so the jobs with everything on site rise to the top of the plan and blocked work stays off the board until it clears.",
+      title: "See the mix on the Dashboard",
+      text: "The Dashboard's Material Readiness panel charts every material line by status, and its View all opens the Inventory on the Materials view.",
       mock: {
         kind: "bars",
-        title: "Ready to schedule",
+        title: "Material Readiness",
         rows: [
-          { label: "Parking deck pour", pct: 100, cls: "" },
-          { label: "Tech Ridge frame", pct: 92, cls: "" },
-          { label: "Harborview mech", pct: 48, cls: "warn" },
-          { label: "Riverside fit-out", pct: 16, cls: "over" }
+          { label: "Ready", pct: 58, cls: "" },
+          { label: "Ordered", pct: 21, cls: "" },
+          { label: "Waiting on Delivery", pct: 13, cls: "warn" },
+          { label: "Missing", pct: 8, cls: "over" }
         ]
       }
     }
   ],
   rows: [
     {
-      kicker: "The delivery timeline",
-      title: "Know what's landing before you promise the date.",
-      text: "Every order shows its delivery window on one timeline — delivered, in transit, or running late — so the office plans the week around what will actually be on site, not what was supposed to be.",
-      ctaLabel: "Open materials",
+      kicker: "One list",
+      title: "Every material line, and where it stands.",
+      text: "Materials sit in the Inventory beside your equipment, one row per line with its quantity, delivery date, project and status — and the Materials view shows them on their own.",
+      ctaLabel: "Open the Inventory",
       seed: 21,
       mock: {
         kind: "board",
-        title: "Delivery schedule",
-        meta: "4 orders · this week",
-        cols: ["MON", "TUE", "WED", "THU"],
+        title: "Materials",
+        meta: "One status per line",
+        cols: ["READY", "ORDERED", "WAITING", "MISSING"],
         rows: [
-          { label: "Steel", cells: ["f1", null, null, "f1"] },
-          { label: "Rebar", cells: [null, "f3", "f3", null] },
-          { label: "Concrete", cells: [null, null, "f2", "f2"] }
+          { label: "Steel beams", cells: ["f2", null, null, null] },
+          { label: "Ready-mix", cells: [null, "f1", null, null] },
+          { label: "Rebar #5", cells: [null, null, "f3", null] },
+          { label: "HVAC units", cells: [null, null, null, "f3"] }
         ]
       }
     },
     {
       kicker: "Status tracking",
       title: "Ready, ordered, waiting, or missing.",
-      text: "Filter the whole materials list by status, quantity and delivery date to see exactly where every order stands, without opening a single purchase order.",
+      text: "Filter the materials by status or project, or search them by name or quantity, to see where every line stands in a couple of clicks.",
       ctaLabel: "See material statuses",
       tab: 0,
       seed: 22,
@@ -10020,63 +10017,63 @@ const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
         title: "Materials",
         meta: "By status",
         items: [
-          { icon: PackageCheck, text: "Structural steel · on site", tag: "Ready" },
-          { icon: Truck, text: "Rebar #5 · in transit", tag: "Waiting", tone: "warn" },
-          { icon: AlertTriangle, text: "HVAC units · not ordered", tag: "Missing", tone: "warn" }
+          { icon: PackageCheck, text: "Structural steel · Harborview", tag: "Ready" },
+          { icon: Truck, text: "Rebar #5 · Parking deck", tag: "Waiting", tone: "warn" },
+          { icon: AlertTriangle, text: "HVAC units · Harborview", tag: "Missing", tone: "warn" }
         ]
       }
     },
     {
-      kicker: "The readiness gate",
-      title: "No crew rolls to a missing delivery.",
-      text: "Every material carries a live status, so a job only reaches the schedule once the steel, rebar, and units it needs are actually on site — not promised.",
-      ctaLabel: "See the readiness gate",
+      kicker: "Needs attention",
+      title: "The gaps come first.",
+      text: "Every line that's missing or still waiting on delivery lands in the Needs attention view, and a sort by status puts the same lines at the top of every list.",
+      ctaLabel: "See what needs attention",
       tab: 1,
       seed: 23,
       mock: {
         kind: "list",
-        title: "Readiness gate",
-        meta: "Thursday",
+        title: "Needs attention",
+        meta: "3 items",
         items: [
-          { icon: AlertTriangle, text: "Harborview mech · HVAC missing", tag: "Blocked", tone: "warn" },
-          { icon: Clock, text: "Parking deck · rebar Wed 7am", tag: "Watch", tone: "warn" },
-          { icon: CheckCircle2, text: "Tech Ridge frame · steel on site", tag: "Clear" }
+          { icon: AlertTriangle, text: "HVAC units · Harborview", tag: "Missing", tone: "warn" },
+          { icon: Clock, text: "Rebar #5 · Parking deck", tag: "Waiting", tone: "warn" },
+          { icon: Wrench, text: "Excavator 320 · Unassigned", tag: "Maintenance", tone: "warn" }
         ]
       }
     },
     {
-      kicker: "Job readiness",
-      title: "One readiness number per job.",
-      text: "Delivery status rolls up into a single readiness percent, so a planner can see at a glance which work can start and which is still waiting on the yard.",
-      ctaLabel: "See ready work",
+      kicker: "On the Dashboard",
+      title: "The whole mix at a glance.",
+      text: "The Dashboard's Material Readiness panel charts every material line by status, and View all opens the Inventory on the Materials view.",
+      ctaLabel: "See the readiness panel",
       tab: 3,
       seed: 24,
       mock: {
         kind: "bars",
-        title: "Readiness by job",
-        meta: "This week",
+        title: "Material Readiness",
+        meta: "Lines by status",
         rows: [
-          { label: "Parking deck", pct: 100 },
-          { label: "Tech Ridge", pct: 92 },
-          { label: "Harborview", pct: 48 },
-          { label: "Riverside", pct: 16 }
+          { label: "Ready", pct: 58 },
+          { label: "Ordered", pct: 21 },
+          { label: "Waiting", pct: 13 },
+          { label: "Missing", pct: 8 }
         ]
       }
     },
     {
-      kicker: "Procurement and the plan",
-      title: "Deliveries meet the schedule.",
-      text: "Delivery windows and vendor notes sit next to the plan, so procurement and the field are working from the same dates instead of chasing each other.",
+      kicker: "The Schedule and the Inventory",
+      title: "Missing materials show on the Schedule.",
+      text: "A job whose materials are marked Missing raises a Missing materials alert on the Schedule, and the alert opens the Inventory where the lines are kept.",
       ctaLabel: "See it live",
       seed: 25,
       mock: {
         kind: "list",
-        title: "Lone Star Steel",
-        meta: "PO 4471",
+        title: "Missing materials",
+        meta: "Schedule alert",
         items: [
-          { icon: CalendarDays, text: "Mon 7–10am · 24 beams", tag: "Confirmed" },
-          { icon: Building2, text: "Unload at the north gate", tag: "Note" },
-          { icon: CheckCircle2, text: "Parking deck pour cleared", tag: "Ready" }
+          { icon: Truck, text: "Harborview mech · materials not confirmed", tag: "Alert", tone: "warn" },
+          { icon: Warehouse, text: "Opens the Inventory", tag: "1 click" },
+          { icon: AlertTriangle, text: "HVAC units · Harborview", tag: "Missing", tone: "warn" }
         ]
       }
     }
@@ -10084,82 +10081,82 @@ const MATERIALS_READINESS_PAGE_CONTENT: ProductPageContent = {
   reasons: [
     {
       slot: "reason-1",
-      label: "No wasted rolls",
-      title: "No crew rolls to a missing delivery.",
-      text: "Every material carries a live status, so a job only reaches the schedule once the steel, rebar, and units it needs are actually on site — not promised.",
-      more: "Needs-attention materials name the jobs they block, so the gap shows up on the plan instead of on a truck at 7am."
+      label: "Gaps first",
+      title: "Missing materials don't hide.",
+      text: "Every material line carries its own status, and the Needs attention view collects every line that's missing or still waiting on delivery.",
+      more: "Sort any view by status and those lines come first, ahead of what's ordered and what's ready."
     },
     {
       slot: "reason-2",
-      label: "One number",
-      title: "One readiness number per job.",
-      text: "Delivery status rolls up into a single readiness percent, so a planner can see at a glance which work can start and which is still waiting on the yard.",
-      more: "The same number sorts the ready-work list on the schedule, so the jobs that can start are the ones that rise to the top."
+      label: "At a glance",
+      title: "Four numbers at the top.",
+      text: "The Inventory opens on four counts — equipment, materials, ready to use and needs attention — so where things stand is the first thing you read.",
+      more: "Each view carries its own count as well, so you know how many lines need attention before you open it."
     },
     {
       slot: "reason-3",
-      label: "Dates that match",
-      title: "Deliveries meet the schedule.",
-      text: "Delivery windows and vendor notes sit next to the plan, so procurement and the field are working from the same dates instead of chasing each other.",
-      more: "A window that moves is visible on the timeline immediately, next to the work it was booked to support."
+      label: "Dates on every line",
+      title: "Every line has a delivery date.",
+      text: "A material line can't be saved without its delivery date, and the date shows under the line's name in the list.",
+      more: "When a supplier moves a delivery, change the date in the drawer and the list shows the new one as soon as you save."
     },
     {
       slot: "reason-4",
-      label: "The whole story",
-      title: "Vendor, PO and note on every order.",
-      text: "Vendor, purchase order, delivery window, quantity, and a note live on each material — so the whole procurement story is one click from the job that needs it.",
-      more: "When a delivery is disputed, the order, the window and the note are already attached to the job rather than in somebody's inbox."
+      label: "Site by site",
+      title: "Every line belongs to a project.",
+      text: "Material lines are filed under the project they're for, so the project filter lists every line for one site, whatever its status.",
+      more: "Search reads names, quantities, statuses and projects too, so typing a site's name finds its lines."
     },
     {
       slot: "reason-5",
-      label: "Built for the field",
-      title: "Check the yard from the truck.",
-      text: "Material statuses and delivery windows work on a phone, so a foreman can confirm what landed without calling the office.",
-      more: "Crews can flag a short or damaged delivery from the same screen, and it lands on the job as a delayIQ with a cause."
+      label: "Take it with you",
+      title: "Export the list in one click.",
+      text: "Export writes the list you're looking at, filters and all, to a CSV file: item, kind, quantity, status, project and delivery date.",
+      more: "Send it to a supplier or open it in a spreadsheet — there's nothing to set up first."
     },
     {
       slot: "reason-6",
-      label: "One schedule",
-      title: "Readiness is part of the plan.",
-      text: "Materials feed the same schedule the crews are booked against, so blocked work stays off the board until it clears.",
-      more: "Clear the blocker and the job returns to the ready list on the next plan, checked against capacity and trade like any other assignment."
+      label: "Linked from the Schedule",
+      title: "The Schedule points to it.",
+      text: "A job whose materials are marked Missing raises a Missing materials alert on the Schedule, and the alert opens the Inventory.",
+      more: "The Dashboard's Material Navigator card and its Material Readiness panel open the same list, on the Materials view."
     },
     {
       slot: "reason-7",
       label: "Start free",
       title: "Free for one crew. Grow when you do.",
-      text: "Start on the Free plan, then move to Pro or Business when the team needs readiness rules and reporting.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs more crews and reporting.",
       more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
     }
   ],
   cta: {
-    title: "Ready to start means ready to start.",
-    text: "Deliveries, vendors and readiness on the plan your crews already run. Start free, and see which jobs can actually start this week."
+    title: "Know what's ready. Chase what isn't.",
+    text: "Every material line with its quantity, delivery date, project and status, in the same program your crews already run. Start free, and see what needs chasing in minutes."
   },
   faqs: [
     {
       q: "What are the delivery statuses?",
-      a: "Ready, ordered, waiting on delivery, or missing. The whole materials list filters by status, quantity and delivery date, so you can see where every order stands without opening a purchase order."
+      a: "Ready, Ordered, Waiting on Delivery and Missing. Filter the materials by status or project, or search them, to see where every line stands."
     },
     {
-      q: "How is the readiness percent worked out?",
-      a: "Every material a job needs carries a live status, and those roll up into one number for the job. A job at 100 percent has everything on site, not everything promised."
+      q: "What does Needs attention show?",
+      a: "Every material line that is Missing or Waiting on Delivery, plus any machine in Maintenance. Sorting any view by status puts the same items first."
     },
     {
       q: "Does it stop a crew being booked on blocked work?",
-      a: "The readiness gate flags what is missing before dispatch and blocked work stays off the board until it clears. A planner can still override it, but they do so knowing the steel is not there."
+      a: "No. The Inventory records each line's status; it does not hold work off the schedule. A job whose materials are marked Missing does raise a Missing materials alert on the Schedule, and the alert opens the Inventory."
     },
     {
       q: "Do we have to move our purchasing into BuildFlow?",
-      a: "No. Keep raising purchase orders where you raise them today. What lives here is the vendor, the purchase order number, the delivery window, the quantity and a note, attached to the job that needs it."
+      a: "No. Keep ordering the way you do today. BuildFlow keeps the line itself (its name, quantity, delivery date, project and status), not the supplier or the purchase order."
     },
     {
       q: "Who updates a delivery when it lands?",
-      a: "Whoever receives it. Statuses and delivery windows work on a phone, so a foreman can confirm what came off the truck from the yard instead of calling the office."
+      a: "An Owner or Admin of the workspace. Open the line, set it to Ready and save, and the list and the Dashboard both show it."
     },
     {
       q: "What happens when a delivery slips?",
-      a: "The job's readiness drops and the work that depended on it stops reading as ready. The schedule does not re-plan itself, but the planner sees the problem while there is still a week to move something."
+      a: "Set the line to Waiting on Delivery and move its date, and it stays in Needs attention until its status changes. BuildFlow does not re-plan the schedule around it."
     }
   ]
 };
@@ -10175,12 +10172,12 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
     phrases: equipmentPhrases,
     sub: (
       <>
-        Track fleet availability, current assignments, and maintenance risk on <b>one board</b> &mdash; so the schedule only ever commits a
-        machine that&rsquo;s <b>actually free to roll</b>.
+        Every machine in one list with its type, its status and its project &mdash; so the office can see <b>what&rsquo;s free to send</b>{" "}
+        and <b>what&rsquo;s in the shop</b> at a glance.
       </>
     ),
     liveLabel: "See Equipment Tracking live",
-    boardTitle: "Fleet board · today",
+    boardTitle: "Equipment · status and project",
     board: [
       {
         crew: "Tower Crane #2",
@@ -10188,30 +10185,42 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
         days: [
           { t: "Harborview", c: "blue" },
           { t: "Harborview", c: "blue" },
-          { t: "Framing", c: "blue" },
           { t: "Harborview", c: "blue" },
-          null
+          { t: "Harborview", c: "blue" },
+          { t: "Harborview", c: "blue" }
         ]
       },
       {
         crew: "Concrete Pump #2",
         dot: "#9b72cb",
-        days: [null, { t: "Riverside", c: "purple" }, { t: "Deck pour", c: "purple" }, { t: "Riverside", c: "purple" }, null]
+        days: [
+          { t: "Riverside", c: "purple" },
+          { t: "Riverside", c: "purple" },
+          { t: "Riverside", c: "purple" },
+          { t: "Riverside", c: "purple" },
+          { t: "Riverside", c: "purple" }
+        ]
       },
       {
         crew: "Utility Truck #8",
         dot: "#4bb17a",
-        days: [{ t: "In the yard", c: "green" }, null, { t: "Available", c: "green" }, null, { t: "Available", c: "green" }]
+        days: [
+          { t: "Available", c: "green" },
+          { t: "Available", c: "green" },
+          { t: "Available", c: "green" },
+          { t: "Available", c: "green" },
+          { t: "Available", c: "green" }
+        ]
       },
       {
         crew: "Excavator 320",
         dot: "#e0808a",
         days: [
-          { t: "In the shop", ghost: true },
-          { t: "In the shop", ghost: true },
-          { t: "Service", c: "coral" },
-          { t: "Needed Thu", c: "amber" },
-          null
+          { t: "Maintenance", ghost: true },
+          { t: "Maintenance", ghost: true },
+          { t: "Maintenance", ghost: true },
+          { t: "Maintenance", ghost: true },
+          { t: "Maintenance", ghost: true }
         ]
       }
     ]
@@ -10221,13 +10230,8 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
       slot: "capacity",
       short: "Availability",
       icon: Gauge,
-      title: "Track availability in real time",
-      text: (
-        <>
-          Available, in use, or in maintenance &mdash; filter the whole fleet by status and type to see in a second what&rsquo;s free to
-          dispatch and what isn&rsquo;t.
-        </>
-      ),
+      title: "Track availability at a glance",
+      text: "Available, in use, or in maintenance — filter the equipment by status or project, or search it by name or type, to see what's free to send and what isn't.",
       mock: {
         kind: "list",
         title: "Equipment · by status",
@@ -10243,17 +10247,15 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
       slot: "conflicts",
       short: "Assignments",
       icon: HardHat,
-      title: "Keep machines and crews together",
-      text: (
-        <>Every machine shows the project and job it&rsquo;s on, so a crew and the iron it needs land on the same site on the same day.</>
-      ),
+      title: "Know which project has each machine",
+      text: "Every machine shows the project it's assigned to, or Unassigned, so you can see which site has what and what's spare.",
       mock: {
         kind: "list",
         title: "Assignments",
         items: [
-          { icon: HardHat, title: "Tower Crane #2", sub: "Harborview Apts · framing", badge: "ON JOB", tone: "wait" },
-          { icon: HardHat, title: "Concrete Pump #2", sub: "Riverside · deck pour", badge: "ON JOB", tone: "wait" },
-          { icon: MapPin, title: "Utility Truck #8", sub: "Not assigned · in the yard", badge: "OPEN", tone: "ready" }
+          { icon: HardHat, title: "Tower Crane #2", sub: "Harborview Apts", badge: "IN USE", tone: "wait" },
+          { icon: HardHat, title: "Concrete Pump #2", sub: "Riverside", badge: "IN USE", tone: "wait" },
+          { icon: Truck, title: "Utility Truck #8", sub: "Unassigned", badge: "AVAILABLE", tone: "ready" }
         ]
       }
     },
@@ -10261,63 +10263,58 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
       slot: "trades",
       short: "Maintenance",
       icon: Wrench,
-      title: "Stay ahead of maintenance",
-      text: "Machines in for service or due for inspection are flagged and pulled from the available pool, so nothing gets dispatched that should be in the shop.",
+      title: "Keep the shop off the free list",
+      text: "Set a machine to Maintenance and it drops out of Available and into Needs attention, so a machine in the shop never reads as free.",
       mock: {
         kind: "list",
         title: "Maintenance",
         items: [
-          { icon: AlertTriangle, title: "Excavator 320", sub: "Service required · in shop", badge: "SERVICE", tone: "risk", alert: true },
-          { icon: Clock, title: "Boom Lift #4", sub: "Inspection due in 3 days", badge: "DUE", tone: "wait" },
-          { icon: CheckCircle2, title: "Tower Crane #2", sub: "Serviced Aug 1 · cleared", badge: "OK", tone: "ready" }
+          { icon: AlertTriangle, title: "Excavator 320", sub: "Excavator · in the shop", badge: "MAINT", tone: "risk", alert: true },
+          { icon: Wrench, title: "Boom Lift #4", sub: "Lift · Tech Ridge", badge: "MAINT", tone: "risk" },
+          { icon: CheckCircle2, title: "Utility Truck #8", sub: "Truck · unassigned", badge: "AVAILABLE", tone: "ready" }
         ]
       }
     },
     {
       slot: "ready",
-      short: "Committed",
-      icon: CalendarDays,
-      title: "See what's committed to the schedule",
-      text: (
-        <>
-          Equipment already promised to scheduled jobs shows up next to the plan, so a machine is never double-booked or quietly missing on
-          the morning it&rsquo;s needed.
-        </>
-      ),
+      short: "On the Dashboard",
+      icon: Layers,
+      title: "Busy machines on the Dashboard",
+      text: "The Dashboard's Equipment Conflicts panel lists the machines that are in use or in the shop, and View all opens the Inventory on the Equipment view.",
       mock: {
         kind: "list",
-        title: "Committed to the schedule",
+        title: "Equipment Conflicts",
         items: [
-          { icon: CalendarDays, title: "Tower Crane #2", sub: "Harborview framing · Wed", badge: "COMMITTED", tone: "ready" },
-          { icon: CalendarDays, title: "Concrete Pump #2", sub: "Riverside pour · Thu", badge: "COMMITTED", tone: "ready" },
-          { icon: AlertTriangle, title: "Excavator 320", sub: "Needed Thu · still in service", badge: "AT RISK", tone: "risk", alert: true }
+          { icon: Wrench, title: "Tower Crane #2", sub: "Crane · Harborview Apts", badge: "IN USE", tone: "wait" },
+          { icon: Wrench, title: "Concrete Pump #2", sub: "Pump · Riverside", badge: "IN USE", tone: "wait" },
+          { icon: AlertTriangle, title: "Excavator 320", sub: "Excavator · in the shop", badge: "MAINT", tone: "risk", alert: true }
         ]
       }
     }
   ],
   rows: [
     {
-      kicker: "The fleet board",
-      title: "See the whole yard on one board.",
-      text: "Every machine, its status, its utilization, and the job it's on — in a single glance. The crane that's buried, the truck that's free, the excavator in the shop, all in one place.",
-      ctaLabel: "Open the fleet board",
+      kicker: "One list",
+      title: "See the whole yard in one list.",
+      text: "Every machine, its type, its status and its project, in one list beside your materials — the crane out at Harborview, the truck that's free, the excavator in the shop.",
+      ctaLabel: "Open the Inventory",
       seed: 21,
       mock: {
         kind: "board",
-        title: "Fleet board",
-        meta: "6 machines · today",
-        cols: ["MON", "TUE", "WED", "THU"],
+        title: "Inventory",
+        meta: "One list, four views",
+        cols: ["ALL", "EQUIPMENT", "MATERIALS", "ATTENTION"],
         rows: [
-          { label: "Tower Crane #2", cells: ["f1", "f1", "f1", "f1"] },
-          { label: "Utility Truck #8", cells: ["f2", null, "f2", null] },
-          { label: "Excavator 320", cells: [null, null, "f3", "f3"] }
+          { label: "Tower Crane #2", cells: ["f1", "f1", null, null] },
+          { label: "Excavator 320", cells: ["f1", "f1", null, "f3"] },
+          { label: "Steel beams", cells: ["f2", null, "f2", null] }
         ]
       }
     },
     {
       kicker: "Fleet status",
       title: "Available, in use, or in the shop.",
-      text: "Filter the whole fleet by status and type to see in a second what's free to dispatch and what isn't — no walking the yard, no phone calls.",
+      text: "Filter the equipment by status or project, or search it by name or type, to see what's free to send and what isn't.",
       ctaLabel: "See fleet status",
       tab: 0,
       seed: 22,
@@ -10328,61 +10325,60 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
         rows: [
           { label: "In use", pct: 67 },
           { label: "Available", pct: 17 },
-          { label: "Maintenance", pct: 16 },
-          { label: "Utilized", pct: 84 }
+          { label: "Maintenance", pct: 16 }
         ]
       }
     },
     {
       kicker: "Assignments",
-      title: "The crew and the iron land together.",
-      text: "Every machine shows the project and job it's on, so a crew and the iron it needs land on the same site on the same day — and an unassigned machine is visible before it sits another week.",
+      title: "Every machine, and the project it's on.",
+      text: "Each machine shows the project it's assigned to, or Unassigned. Filter by project to see what one site has, or by Unassigned to find the machines that are spare.",
       ctaLabel: "See assignments",
       tab: 1,
       seed: 23,
       mock: {
         kind: "list",
         title: "Assignments",
-        meta: "Today",
+        meta: "By project",
         items: [
-          { icon: HardHat, text: "Tower Crane #2 · Harborview", tag: "On job" },
-          { icon: HardHat, text: "Concrete Pump #2 · Riverside", tag: "On job" },
-          { icon: MapPin, text: "Utility Truck #8 · in the yard", tag: "Open" }
+          { icon: HardHat, text: "Tower Crane #2 · Harborview", tag: "In use" },
+          { icon: HardHat, text: "Concrete Pump #2 · Riverside", tag: "In use" },
+          { icon: Truck, text: "Utility Truck #8 · Unassigned", tag: "Available" }
         ]
       }
     },
     {
       kicker: "Maintenance",
-      title: "Catch maintenance before the breakdown.",
-      text: "Maintenance status rides right beside assignments, so a machine due for service comes off the board before it strands a crew in the middle of a pour.",
+      title: "Know what's in the shop.",
+      text: "Set a machine to Maintenance and it leaves the Available list and joins Needs attention, beside any material that's missing or still waiting on delivery.",
       ctaLabel: "See maintenance",
       tab: 2,
       seed: 24,
       mock: {
         kind: "list",
         title: "Maintenance",
-        meta: "This week",
+        meta: "By status",
         items: [
-          { icon: AlertTriangle, text: "Excavator 320 · in the shop", tag: "Service", tone: "warn" },
-          { icon: Clock, text: "Boom Lift #4 · inspection due", tag: "3 days", tone: "warn" },
-          { icon: CheckCircle2, text: "Tower Crane #2 · cleared", tag: "OK" }
+          { icon: AlertTriangle, text: "Excavator 320 · in the shop", tag: "Maintenance", tone: "warn" },
+          { icon: Wrench, text: "Boom Lift #4 · Tech Ridge", tag: "Maintenance", tone: "warn" },
+          { icon: CheckCircle2, text: "Utility Truck #8 · Unassigned", tag: "Available" }
         ]
       }
     },
     {
-      kicker: "Fleet and the plan",
-      title: "The schedule only commits free iron.",
-      text: "Equipment already promised to scheduled jobs shows up next to the plan, so a machine is never double-booked or quietly missing on the morning it's needed.",
+      kicker: "On the Dashboard",
+      title: "Busy machines, on the Dashboard.",
+      text: "The Dashboard's Equipment Conflicts panel lists the machines that are in use or in the shop, and View all opens the Inventory on the Equipment view.",
       ctaLabel: "See it live",
       seed: 25,
       mock: {
         kind: "list",
-        title: "Committed",
-        meta: "Next 3 days",
+        title: "Equipment Conflicts",
+        meta: "Dashboard",
         items: [
-          { icon: CalendarDays, text: "Crane · Harborview framing", tag: "Wed" },
-          { icon: CalendarDays, text: "Pump · Riverside pour", tag: "Thu" },
-          { icon: AlertTriangle, text: "Excavator needed Thu", tag: "At risk", tone: "warn" }
+          { icon: Wrench, text: "Tower Crane #2 · Crane", tag: "In use" },
+          { icon: Wrench, text: "Concrete Pump #2 · Pump", tag: "In use" },
+          { icon: AlertTriangle, text: "Excavator 320 · Excavator", tag: "Maintenance", tone: "warn" }
         ]
       }
     }
@@ -10390,57 +10386,57 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
   reasons: [
     {
       slot: "reason-1",
-      label: "Nothing waits on iron",
-      title: "No job waits on a missing machine.",
-      text: "Every machine's status and assignment is live, so the schedule only commits equipment that's actually free — not a crane still tied up on another site.",
-      more: "A machine that is in use or in the shop is out of the available pool, so it cannot be promised to a second job by mistake."
+      label: "What's free",
+      title: "Know what's free before you promise it.",
+      text: "Every machine carries its status and its project, so filtering to Available shows what's free to send before anyone promises it to a job.",
+      more: "Sort by status and the machines in Maintenance come first, then what's in use, then what's free."
     },
     {
       slot: "reason-2",
-      label: "Utilization",
-      title: "Utilization you can actually see.",
-      text: "Idle iron is money parked in the yard. Live utilization shows what's working and what's sitting, so the fleet earns its keep instead of collecting dust.",
-      more: "Utilization is measured from real assignments and booked days, so the number is the yard's, not an estimate."
+      label: "Idle iron",
+      title: "Spot the iron that's sitting.",
+      text: "Idle iron is money parked in the yard. Filter the equipment to Unassigned and every machine that isn't on a project is in one list.",
+      more: "Sort by project and the fleet groups site by site, with the unassigned machines together."
     },
     {
       slot: "reason-3",
-      label: "Before the breakdown",
-      title: "Catch maintenance before the breakdown.",
-      text: "Maintenance status rides right beside assignments, so a machine due for service comes off the board before it strands a crew in the middle of a pour.",
-      more: "Inspections due inside the week are flagged too, so a certificate never lapses on the morning the machine is needed."
+      label: "In the shop",
+      title: "The shop is on the list too.",
+      text: "Set a machine to Maintenance and it moves out of Available and into Needs attention, so it is never mistaken for a free one.",
+      more: "Needs attention puts it beside any material that's missing or still waiting on delivery, so one view covers everything that needs chasing."
     },
     {
       slot: "reason-4",
-      label: "Crew and iron",
-      title: "The machine meets the crew on site.",
-      text: "Every machine shows the project and job it's on, so a crew and the iron it needs land on the same site on the same day.",
-      more: "Move the job and the equipment commitment moves with it, so the crane does not turn up at last week's address."
+      label: "Site by site",
+      title: "Every machine, filed by project.",
+      text: "Each machine shows the project it's assigned to, and the project filter lists everything one site has, machines and materials together.",
+      more: "When a machine moves, change its project in the drawer and the list shows it on the new site as soon as you save."
     },
     {
       slot: "reason-5",
-      label: "Built for the field",
-      title: "Check the yard from the cab.",
-      text: "Fleet status, assignments and maintenance flags all work on a phone, so a foreman can see what is free without calling the yard.",
-      more: "A breakdown can be reported from the same screen, and it lands on the job as a delayIQ with a cause."
+      label: "Quick to keep current",
+      title: "Four fields and it's on the list.",
+      text: "A machine needs a name, a type and a status, plus a project if it's out on one. Add, edit or remove it from a side drawer without leaving the list.",
+      more: "Export writes the list you're looking at, filters and all, to a CSV file whenever the yard or the office wants a copy."
     },
     {
       slot: "reason-6",
-      label: "One schedule",
-      title: "The fleet is part of the plan.",
-      text: "Equipment sits on the same schedule the crews are booked against, so a machine shortage shows up as a scheduling problem, not a surprise.",
-      more: "Commit a machine and the week board, the crew sheets and the promised dates all account for it together."
+      label: "One list",
+      title: "Equipment and materials, side by side.",
+      text: "Machines sit in the same Inventory as your material lines, so All items shows everything you have and Needs attention shows everything that's stuck.",
+      more: "The Dashboard's Equipment Conflicts panel opens the same list on the Equipment view, so there is one record, not two."
     },
     {
       slot: "reason-7",
       label: "Start free",
       title: "Free for one crew. Grow when you do.",
-      text: "Start on the Free plan, then move to Pro or Business when the team needs more machines, more crews and reporting.",
+      text: "Start on the Free plan, then move to Pro or Business when the team needs more crews and reporting.",
       more: "Plans are priced per user per month with a discount for yearly billing, and a trial of Pro is on when you sign up."
     }
   ],
   cta: {
     title: "Keep the iron moving.",
-    text: "Availability, assignments and maintenance on the plan your crews already run. Start free, and see the whole yard on one board in minutes."
+    text: "Availability, projects and maintenance in the same program your crews already run. Start free, and see the whole yard in one list in minutes."
   },
   faqs: [
     {
@@ -10449,23 +10445,23 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
     },
     {
       q: "Does this show me where a machine is?",
-      a: "It shows what a machine is doing and which job it is on, not its position on a map. Live vehicle and equipment locations are Map & Field Ops, and the two sit on the same fleet."
+      a: "It shows which project a machine is assigned to and what state it is in, not its position on a map. Change the project when the machine moves, and the list follows."
     },
     {
       q: "What are the fleet statuses?",
-      a: "Available, in use, or in the shop. Filter the yard by status and type to see what is free to dispatch without walking the yard or making a round of phone calls."
+      a: "Available, In Use and Maintenance. Filter by status or project, or search by name or type, to see what is free to send."
     },
     {
       q: "Can a machine end up double-booked?",
-      a: "No. Equipment already promised to a scheduled job shows as committed, so the schedule only commits iron that is actually free rather than a crane still tied up on another site."
+      a: "BuildFlow does not book machines onto days, so it will not catch that on its own. What it shows is each machine's status and project, so you can see which ones are already In Use and where."
     },
     {
-      q: "What happens to a machine due for service?",
-      a: "It is flagged and pulled from the available pool, so it comes off the board before it strands a crew mid-pour. Inspections due are flagged the same way."
+      q: "What happens to a machine in for service?",
+      a: "Set it to Maintenance and it leaves the Available list and shows in Needs attention until someone changes its status. The Inventory does not keep service dates or inspection records."
     },
     {
-      q: "What does utilization tell us?",
-      a: "What is working and what is sitting. Idle iron is money parked in the yard, so seeing utilization per machine is usually what decides whether you rent the next one or move the one you have."
+      q: "Can we export the fleet list?",
+      a: "Yes. Export writes the list you are looking at, with its filters, to a CSV file: item, kind, type, status and project."
     }
   ]
 };
