@@ -152,3 +152,54 @@ Putting it back:
    `schedule-phone.css`, `app-shell-daylight.css`, `styles.css`, `redesign.css`,
    `tutorial-stage.css`; the `"board"` shape in `TutorialStage.tsx` (and the scene test's count).
 5. The tests named above, from the same commit; the harness's `openSchedule` view names.
+
+## Resources: the full Equipment and Materials pages
+
+**Replaced** 2026-09-23 by the one **Inventory** page. **Last working version:** commit `4c7c604`
+(the last commit before the change; the two pages had not changed since the index-page
+redesign). Asked for from a v1 scoping note: "Resources (Equipment, Materials) — fine to keep, but
+for v1 this probably just needs to be a list/inventory with status, not a full asset-management
+system."
+
+What they were: two HubSpot-style index pages under Resources. **Equipment** listed the fleet with
+a Utilization bar, the Current job, a Readiness line (all three read off the status, not measured),
+the assigned project and the type, a fleet-utilization footnote, and its own centred add / edit /
+remove dialogs. **Materials** listed material lines with a Readiness bar, the delivery date, the
+quantity, the project, the related Job and a Schedule impact line (again read off the status), and
+could only add a line — it had no edit and no remove.
+
+What replaced them: `client/src/inventory/` — `InventoryPage.tsx` (one list of both kinds, each
+with its own status; views All items / Equipment / Materials / Needs attention; search, status and
+project filters; add, edit and remove in the program's `.pdx` drawer) and `inventory.ts` (the pure
+rules, tested in `inventory.test.ts`). Materials gained an edit route for it:
+`PATCH /api/materials/:id` (`server/src/app.ts`, `store.updateMaterial`, `ROUTE_POLICY`
+`resources.write`). The page's frame is `client/src/inventory-redesign.css`, which is
+`equipment-redesign.css` with the scope renamed from `.equip-rx` to `.inv-rx` and the rules for the
+old card grid, hero and dialogs taken out; every page-root list in the skin, the daylight sheet and
+`styles.css` names `.inv-rx` where it named `.equip-rx`, and no longer names `.mat-rx`.
+
+What moved with it: the rail's Resources hub is one page (`"inventory"`); a bookmark on either old
+page follows it there; notifications for a machine or a material line land on its Inventory row;
+the Schedule's "Missing materials" alert opens the Inventory; the Dashboard's Material Navigator
+card and its two "View all" buttons open it on the Materials or Equipment view
+(`requestInventoryView`); the marketing product pages' "open the app" links, the explore card and
+the footers point at it; the 3.4 release entry spotlights its title; the tutorial's core step is
+`inventory-overview`.
+
+Putting them back:
+1. `git show 4c7c604:client/src/App.tsx` for `EquipmentPage`, `MaterialsPage`,
+   `equipmentUsageProgress`, `equipmentReadiness`, `materialStatusOptions`,
+   `materialReadinessProgress`, `materialImpact`, `jobForMaterial` and `type EquipmentModalMode`,
+   then the hooks: the `"equipment"` and `"materials"` members of `Page`, their `navItems` entries
+   and the Resources hub's page list, their render branches, the replay list in `setPage`, the
+   tutorial target ids and the release entry, the notification targets, the Dashboard links.
+2. `git checkout 4c7c604 -- client/src/equipment-redesign.css client/src/materials-redesign.css`,
+   their two imports in `main.tsx`, and the page-root lists: the removal commit's diff of
+   `app-shell-client-desk.css`, `app-shell-daylight.css` and `styles.css` (section 25 of the skin
+   dressed the two pages' dialogs).
+3. The tests the removal commit rewrote: the Equipment and Materials cases in
+   `tests/index-pages.test.tsx`, `App.test.tsx`, `tests/dashboard-entrance.test.tsx`,
+   `tests/notifications-panel.test.tsx`, `tests/client-desk-skin.test.tsx` and
+   `tests/page-openings.test.ts`, and the harness's `HUB_OF`.
+4. Or keep the Inventory beside them: it reads the same `/api/equipment` and `/api/materials`
+   records, so the two can run side by side.

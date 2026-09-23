@@ -120,6 +120,7 @@ import {
   TrendingUp,
   Truck,
   Users,
+  Warehouse,
   Wrench,
   X,
   Zap
@@ -198,7 +199,6 @@ import {
   assignJob,
   createCrew,
   createDelayIQ,
-  createEquipment,
   acceptVariance,
   fetchDelayEarlyWarning,
   type DelayEarlyWarning as EarlyWarningPayload,
@@ -211,14 +211,11 @@ import {
   type ScheduleWeekReading,
   rejectVariance,
   createJob,
-  createMaterial,
   createProject,
   deleteCrew,
   deleteProject,
-  deleteEquipment,
   loadBootstrap,
   updateCrew,
-  updateEquipment,
   updateProject,
   signup as apiSignup,
   login as apiLogin,
@@ -267,6 +264,8 @@ import { DxTilt, KpiCard, isText, deriveScheduleMilestones, formatScheduleDate }
 import { KanbanPage } from "./schedule/pages/KanbanPage";
 import { MonthPage } from "./schedule/pages/MonthPage";
 import { SchedulePage } from "./schedule/pages/SchedulePage";
+import { InventoryPage } from "./inventory/InventoryPage";
+import { requestInventoryView, type InventoryView } from "./inventory/inventory";
 import { ScheduleStatusBand } from "./schedule/ScheduleStatusBand";
 // aliased: App has its own older relativeTime, which rounds up and returns "" for a bad date
 import { relativeTime as relativeAlertTime } from "./schedule/alerts";
@@ -316,8 +315,7 @@ type Page =
   | "month"
   | "projects"
   | "crews"
-  | "equipment"
-  | "materials"
+  | "inventory"
   | "field"
   | "delayIQs"
   | "reports"
@@ -463,6 +461,12 @@ function isOnboardingProductId(value: string): value is OnboardingProductId {
     onboarding, which remounts everything that cares. */
 function useTradeProfile(): TradeProfile | null {
   return useMemo(() => tradeProfileFor(readStoredBusinessType()), []);
+}
+
+/** The Inventory's Quantity example, in the trade's own units ("Example: 420 tons" for asphalt). */
+function materialQuantityHint() {
+  const profile = tradeProfileFor(readStoredBusinessType());
+  return profile ? `Example: 420 ${profile.materialUnits[0]}` : "Example: 24 bundles";
 }
 
 function readStoredBusinessType(): BusinessTypeId | "" {
@@ -674,8 +678,7 @@ const navItems: Array<{ page: Page; label: string; icon: typeof Grid2X2 }> = [
   { page: "projects", label: "Projects", icon: Building2 },
   { page: "crews", label: "Crews", icon: Users },
   { page: "timecard", label: "TimeCard", icon: Clock },
-  { page: "equipment", label: "Equipment", icon: Wrench },
-  { page: "materials", label: "Materials", icon: Boxes },
+  { page: "inventory", label: "Inventory", icon: Warehouse },
   { page: "field", label: "Field Updates", icon: ClipboardList },
   { page: "delayIQs", label: "DelayIQs", icon: ShieldAlert },
   { page: "reports", label: "Reports", icon: LineChart }
@@ -691,7 +694,9 @@ const navHubs: Array<{ id: string; label: string; icon: typeof Grid2X2; pages: P
   { id: "schedule", label: "Schedule", icon: CalendarDays, pages: ["schedule", "month", "kanban", "gantt"] },
   { id: "operations", label: "Operations", icon: Building2, pages: ["projects", "crews"] },
   // Sales hub — HubSpot's CRM analogue; Contacts is its first page.
-  { id: "resources", label: "Resources", icon: Wrench, pages: ["equipment", "materials"] },
+  // Resources is one page since 2026-09-23: the Inventory, a list with status (the full Equipment and
+  // Materials pages are in the backlog, docs/backlog.md). One page, so the rail opens it straight off.
+  { id: "resources", label: "Resources", icon: Wrench, pages: ["inventory"] },
   { id: "field", label: "Field", icon: ClipboardList, pages: ["field", "delayIQs"] },
   { id: "reporting", label: "Reporting", icon: LineChart, pages: ["reports"] },
   { id: "timecard", label: "TimeCard", icon: Clock, pages: ["timecard"] }
@@ -709,7 +714,10 @@ function readBookmarks(userId: string): Page[] {
     const parsed = raw ? JSON.parse(raw) : null;
     if (!Array.isArray(parsed)) return [];
     const known = new Set(navItems.map((item) => item.page));
-    return parsed.filter((entry): entry is Page => typeof entry === "string" && known.has(entry as Page));
+    // Equipment and Materials became the one Inventory page (2026-09-23); a star on either follows it there
+    const retired: Record<string, Page> = { equipment: "inventory", materials: "inventory" };
+    const pages = parsed.map((entry) => (typeof entry === "string" && retired[entry]) || entry);
+    return [...new Set(pages)].filter((entry): entry is Page => typeof entry === "string" && known.has(entry as Page));
   } catch {
     return [];
   }
@@ -1694,8 +1702,7 @@ type TutorialTargetId =
   | "field-page-title"
   | "delayIQs-page-title"
   | "reports-page-title"
-  | "materials-page-title"
-  | "equipment-page-title"
+  | "inventory-page-title"
   | "timecard-page-title"
   | ScheduleTourTargetId;
 
@@ -1932,14 +1939,14 @@ export function buildTutorialSteps({
     },
     // the guided tour of the Schedule category, one stop per view (client/src/schedule/tour.ts)
     ...scheduleTourSteps,
-    // Equipment is part of every plan (2026-09-23), so its lesson is a core one
+    // Equipment and materials are in every plan (2026-09-23), and the Inventory lists both, so its lesson is a core one
     {
-      id: "equipment-overview",
-      title: "Equipment",
-      shortTitle: "Equipment",
-      body: "Equipment shows fleet availability, current assignments, maintenance, and assets already committed to work.",
-      page: "equipment",
-      targetId: "equipment-page-title"
+      id: "inventory-overview",
+      title: "Inventory",
+      shortTitle: "Inventory",
+      body: "Inventory lists every piece of equipment and every material line with its status. Needs attention shows what is in maintenance, missing or still waiting on delivery.",
+      page: "inventory",
+      targetId: "inventory-page-title"
     }
   ];
 
@@ -3200,11 +3207,10 @@ function App() {
                   target === "schedule" ||
                   target === "projects" ||
                   target === "crews" ||
-                  target === "equipment" ||
+                  target === "inventory" ||
                   target === "delayIQs" ||
                   target === "reports" ||
                   target === "timecard" ||
-                  target === "materials" ||
                   target === "field" ||
                   target === "bookmarks")
               ) {
@@ -3295,8 +3301,15 @@ function App() {
               />
             )}
             {page === "crews" && <CrewsPage key={pageEntrance} data={data} reload={reload} />}
-            {page === "equipment" && <EquipmentPage key={pageEntrance} data={data} reload={reload} focus={recordFocusFor("equipment")} />}
-            {page === "materials" && <MaterialsPage key={pageEntrance} data={data} reload={reload} focus={recordFocusFor("materials")} />}
+            {page === "inventory" && (
+              <InventoryPage
+                key={pageEntrance}
+                data={data}
+                reload={reload}
+                focus={recordFocusFor("inventory")}
+                quantityHint={materialQuantityHint()}
+              />
+            )}
             {page === "field" && <FieldUpdatesPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("field")} />}
             {page === "delayIQs" && (
               <DelayIQsPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
@@ -4329,13 +4342,13 @@ function WelcomePage({
       ) : welcomeView === "materialsReadiness" ? (
         <WelcomeMaterialsReadinessPage
           onBack={showWelcomeHome}
-          onOpenMaterials={() => onOpenPage("materials")}
+          onOpenMaterials={() => onOpenPage("inventory")}
           onGetStarted={showCreateAccountPage}
         />
       ) : welcomeView === "equipmentTracking" ? (
         <WelcomeEquipmentTrackingPage
           onBack={showWelcomeHome}
-          onOpenEquipment={() => onOpenPage("equipment")}
+          onOpenEquipment={() => onOpenPage("inventory")}
           onGetStarted={showCreateAccountPage}
         />
       ) : welcomeView === "productionReports" ? (
@@ -5017,10 +5030,10 @@ const productOverview: OverviewVariant = {
       icon: Users
     },
     {
-      page: "materials",
-      kicker: "Materials",
-      title: "Material readiness",
-      text: "Deliveries, permits, and locates ranked so crews only roll to work that can start.",
+      page: "inventory",
+      kicker: "Inventory",
+      title: "Equipment and materials",
+      text: "Every machine and material line with its status, so crews only roll to work that can start.",
       icon: Boxes
     },
     {
@@ -5495,9 +5508,8 @@ const OVERVIEW_RELEASE_PRODUCT: Partial<Record<Page, { label: string; imageKey?:
   crews: { label: "Crew Scheduling" },
   dashboard: { label: "Dashboard", imageKey: "Production Reports" },
   reports: { label: "Production Reports" },
-  materials: { label: "Materials Readiness" },
-  field: { label: "Field Updates & DelayIQs" },
-  equipment: { label: "Equipment Tracking" }
+  inventory: { label: "Materials Readiness" },
+  field: { label: "Field Updates & DelayIQs" }
 };
 
 /** Per-release shot overrides, so two releases on the same product don't repeat a photo. */
@@ -6638,7 +6650,7 @@ function WelcomePlansOverviewPage({
             <div>
               <h3>Modules</h3>
               <a onClick={() => onExplore("crews")}>Crews</a>
-              <a onClick={() => onExplore("materials")}>Materials</a>
+              <a onClick={() => onExplore("inventory")}>Inventory</a>
               <a onClick={() => onExplore("field")}>Field updates</a>
               <a onClick={() => onExplore("delayIQs")}>DelayIQs</a>
             </div>
@@ -7199,7 +7211,7 @@ function WelcomeOverviewPage({
             <div>
               <h3>Modules</h3>
               <a onClick={() => onExplore("crews")}>Crews</a>
-              <a onClick={() => onExplore("materials")}>Materials</a>
+              <a onClick={() => onExplore("inventory")}>Inventory</a>
               <a onClick={() => onExplore("field")}>Field updates</a>
               <a onClick={() => onExplore("delayIQs")}>DelayIQs</a>
             </div>
@@ -15702,8 +15714,8 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
   {
     version: "3.4",
     dateTime: "2026-04-21",
-    page: "materials",
-    spotlight: "materials-page-title",
+    page: "inventory",
+    spotlight: "inventory-page-title",
     dateLabel: "April 21, 2026",
     month: 3,
     year: 2026,
@@ -19129,7 +19141,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: material.status === "Missing" ? "red" : material.status === "Ready" ? "green" : "amber",
       icon: PackageCheck,
       projectId: material.projectId,
-      target: { kind: "record", page: "materials", recordId: material.id }
+      target: { kind: "record", page: "inventory", recordId: material.id }
     });
   });
 
@@ -19143,7 +19155,7 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
       tone: equipment.status === "Maintenance" ? "red" : equipment.status === "In Use" ? "amber" : "green",
       icon: Wrench,
       projectId: equipment.assignedTo ?? undefined,
-      target: { kind: "record", page: "equipment", recordId: equipment.id }
+      target: { kind: "record", page: "inventory", recordId: equipment.id }
     });
   });
 
@@ -24023,7 +24035,7 @@ function Dashboard({
     }
   ];
 
-  const ccApps: Array<{ id: string; icon: typeof Gauge; tone: CcTone; name: string; desc: string; page: Page }> = [
+  const ccApps: Array<{ id: string; icon: typeof Gauge; tone: CcTone; name: string; desc: string; page: Page; view?: InventoryView }> = [
     {
       id: "app-schedule",
       icon: Gauge,
@@ -24038,8 +24050,9 @@ function Dashboard({
       icon: Boxes,
       tone: "amber",
       name: "Material Navigator",
-      desc: "Track, forecastIQ, and align material needs.",
-      page: "materials"
+      desc: "Every material line and where it stands.",
+      page: "inventory",
+      view: "materials"
     },
     {
       id: "app-field",
@@ -24299,7 +24312,15 @@ function Dashboard({
           {ccApps.map((app) => {
             const Icon = app.icon;
             return (
-              <button key={app.id} type="button" className="cc-app" onClick={() => setPage(app.page)}>
+              <button
+                key={app.id}
+                type="button"
+                className="cc-app"
+                onClick={() => {
+                  if (app.view) requestInventoryView(app.view);
+                  setPage(app.page);
+                }}
+              >
                 <span className={`cc-app-ico tone-${app.tone}`}>
                   <Icon size={21} />
                 </span>
@@ -24347,7 +24368,15 @@ function Dashboard({
             detail="Add materials after creating a project to track readiness."
           />
         )}
-        <button type="button" className="cc-link cc-legacy-more" aria-label="View all materials" onClick={() => setPage("materials")}>
+        <button
+          type="button"
+          className="cc-link cc-legacy-more"
+          aria-label="View all materials"
+          onClick={() => {
+            requestInventoryView("materials");
+            setPage("inventory");
+          }}
+        >
           View all
         </button>
       </div>
@@ -24395,7 +24424,15 @@ function Dashboard({
             detail="Equipment assignments will appear after assets are added."
           />
         )}
-        <button type="button" className="cc-link cc-legacy-more" aria-label="View all equipment" onClick={() => setPage("equipment")}>
+        <button
+          type="button"
+          className="cc-link cc-legacy-more"
+          aria-label="View all equipment"
+          onClick={() => {
+            requestInventoryView("equipment");
+            setPage("inventory");
+          }}
+        >
           View all
         </button>
       </div>
@@ -26355,7 +26392,6 @@ function ProjectsPage({
 /** "30.2672° N, 97.7431° W" — the coordinate line on a job site card. */
 type CrewFormMixRow = CrewLaborMixItem & { id: string };
 type CrewModalMode = "add" | "edit";
-type EquipmentModalMode = "add" | "edit";
 
 function createInitialCrewMix(): CrewFormMixRow[] {
   return [
@@ -27216,1380 +27252,10 @@ function equipmentForCrewJob(data: BootstrapPayload, job?: Job) {
   return matches.find((equipment) => equipment.assignedTo === job.projectId)?.name ?? matches[0]?.name ?? job.requiredEquipment;
 }
 
-function EquipmentPage({ data, reload, focus }: { data: BootstrapPayload; reload: () => Promise<void>; focus?: RecordFocusRequest }) {
-  const [equipmentSearch, setEquipmentSearch] = useState("");
-  const [equipmentModalMode, setEquipmentModalMode] = useState<EquipmentModalMode | null>(null);
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
-  const [removingEquipmentId, setRemovingEquipmentId] = useState<string | null>(null);
-  const [equipmentName, setEquipmentName] = useState("");
-  const [equipmentType, setEquipmentType] = useState("");
-  const [equipmentStatus, setEquipmentStatus] = useState<Equipment["status"]>("Available");
-  const [assignedProjectId, setAssignedProjectId] = useState("");
-  const [isSubmittingEquipment, setIsSubmittingEquipment] = useState(false);
-  const [isRemovingEquipment, setIsRemovingEquipment] = useState(false);
-  const [equipmentFormError, setEquipmentFormError] = useState("");
-  const [equipmentRemoveError, setEquipmentRemoveError] = useState("");
-  // HubSpot-style index controls: saved-view tabs, quick filters, column sort, paging, row selection.
-  const [equipmentView, setEquipmentView] = useState<"all" | "available" | "in-use" | "maintenance">("all");
-  const [equipmentStatusFilter, setEquipmentStatusFilter] = useState("all");
-  const [equipmentTypeFilter, setEquipmentTypeFilter] = useState("all");
-  const [equipmentProjectFilter, setEquipmentProjectFilter] = useState("all");
-  const [equipmentSortKey, setEquipmentSortKey] = useState<"name" | "status" | "type" | "project" | "usage">("name");
-  const [equipmentSortDir, setEquipmentSortDir] = useState<"asc" | "desc">("asc");
-  const [equipmentPage, setEquipmentPage] = useState(1);
-  const [equipmentPerPage, setEquipmentPerPage] = useState(25);
-  const [equipmentSelected, setEquipmentSelected] = useState<Set<string>>(() => new Set());
-  const rootRef = useRef<HTMLDivElement>(null);
-  useHudMotion(rootRef);
-  const selectedEquipment = selectedEquipmentId ? data.equipment.find((equipment) => equipment.id === selectedEquipmentId) : undefined;
-  const removingEquipment = removingEquipmentId ? data.equipment.find((equipment) => equipment.id === removingEquipmentId) : undefined;
-  const availableEquipment = data.equipment.filter((equipment) => equipment.status === "Available").length;
-  const inUseEquipment = data.equipment.filter((equipment) => equipment.status === "In Use").length;
-  const maintenanceEquipment = data.equipment.filter((equipment) => equipment.status === "Maintenance").length;
-  const utilization = data.equipment.length > 0 ? Math.round((inUseEquipment / data.equipment.length) * 100) : 0;
-  const canSubmitEquipment = equipmentName.trim().length > 0 && equipmentType.trim().length > 0;
-  const equipmentTypes = Array.from(new Set(data.equipment.map((equipment) => equipment.type)));
-  const equipmentProjectLabel = (equipment: Equipment) => (equipment.assignedTo ? projectName(data, equipment.assignedTo) : "Unassigned");
-  const filteredEquipment = data.equipment
-    .filter((equipment) => {
-      const assignedProject = equipmentProjectLabel(equipment);
-      const assignedJob = equipment.assignedTo ? activeJobForProject(data, equipment.assignedTo) : undefined;
-      const query = equipmentSearch.trim().toLowerCase();
-      const inView =
-        equipmentView === "all" ||
-        (equipmentView === "available" && equipment.status === "Available") ||
-        (equipmentView === "in-use" && equipment.status === "In Use") ||
-        (equipmentView === "maintenance" && equipment.status === "Maintenance");
-      const matchesQuery =
-        !query ||
-        [equipment.name, equipment.type, equipment.status, assignedProject, assignedJob?.name ?? ""]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      return (
-        inView &&
-        matchesQuery &&
-        (equipmentStatusFilter === "all" || equipment.status === equipmentStatusFilter) &&
-        (equipmentTypeFilter === "all" || equipment.type === equipmentTypeFilter) &&
-        (equipmentProjectFilter === "all" || (equipment.assignedTo ?? "") === equipmentProjectFilter)
-      );
-    })
-    .sort((a, b) => {
-      const dir = equipmentSortDir === "asc" ? 1 : -1;
-      switch (equipmentSortKey) {
-        case "status":
-          return dir * a.status.localeCompare(b.status);
-        case "type":
-          return dir * a.type.localeCompare(b.type);
-        case "project":
-          return dir * equipmentProjectLabel(a).localeCompare(equipmentProjectLabel(b));
-        case "usage":
-          return dir * (equipmentUsageProgress(a.status) - equipmentUsageProgress(b.status));
-        case "name":
-        default:
-          return dir * a.name.localeCompare(b.name);
-      }
-    });
-  const equipmentDialogTitle = equipmentModalMode === "edit" ? "Edit Equipment" : "Add Equipment";
-  const equipmentSubmitLabel =
-    equipmentModalMode === "edit"
-      ? isSubmittingEquipment
-        ? "Saving Equipment"
-        : "Save Equipment"
-      : isSubmittingEquipment
-        ? "Adding Equipment"
-        : "Add Equipment";
-
-  function resetEquipmentForm() {
-    setEquipmentName("");
-    setEquipmentType("");
-    setEquipmentStatus("Available");
-    setAssignedProjectId("");
-    setEquipmentFormError("");
-  }
-
-  function openAddEquipment() {
-    resetEquipmentForm();
-    setSelectedEquipmentId(null);
-    setEquipmentModalMode("add");
-  }
-
-  function openEditEquipment(equipment: Equipment) {
-    setEquipmentName(equipment.name);
-    setEquipmentType(equipment.type);
-    setEquipmentStatus(equipment.status);
-    setAssignedProjectId(equipment.assignedTo ?? "");
-    setEquipmentFormError("");
-    setSelectedEquipmentId(equipment.id);
-    setEquipmentModalMode("edit");
-  }
-
-  function closeEquipmentModal() {
-    resetEquipmentForm();
-    setSelectedEquipmentId(null);
-    setEquipmentModalMode(null);
-  }
-
-  function openRemoveEquipment(equipment: Equipment) {
-    setEquipmentRemoveError("");
-    setRemovingEquipmentId(equipment.id);
-  }
-
-  function closeRemoveEquipment() {
-    setEquipmentRemoveError("");
-    setRemovingEquipmentId(null);
-  }
-
-  async function submitEquipment(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canSubmitEquipment || isSubmittingEquipment) return;
-
-    setIsSubmittingEquipment(true);
-    setEquipmentFormError("");
-
-    try {
-      const equipmentInput = {
-        name: equipmentName,
-        type: equipmentType,
-        status: equipmentStatus,
-        assignedTo: assignedProjectId || undefined
-      };
-      if (equipmentModalMode === "edit" && selectedEquipment) {
-        await updateEquipment(selectedEquipment.id, equipmentInput);
-      } else {
-        await createEquipment(equipmentInput);
-      }
-      closeEquipmentModal();
-      await reload();
-    } catch (error) {
-      setEquipmentFormError(error instanceof Error ? error.message : "Equipment could not be saved.");
-    } finally {
-      setIsSubmittingEquipment(false);
-    }
-  }
-
-  async function confirmRemoveEquipment() {
-    if (!removingEquipment || isRemovingEquipment) return;
-
-    setIsRemovingEquipment(true);
-    setEquipmentRemoveError("");
-
-    try {
-      await deleteEquipment(removingEquipment.id);
-      closeRemoveEquipment();
-      await reload();
-    } catch (error) {
-      setEquipmentRemoveError(error instanceof Error ? error.message : "Equipment could not be removed.");
-    } finally {
-      setIsRemovingEquipment(false);
-    }
-  }
-
-  // ---- HubSpot index helpers: saved views, paging, selection, sorting, export ----
-  const equipmentViews: Array<{ id: typeof equipmentView; label: string; icon: typeof Wrench; count: number }> = [
-    { id: "all", label: "All equipment", icon: Wrench, count: data.equipment.length },
-    { id: "available", label: "Available", icon: CheckCircle2, count: availableEquipment },
-    { id: "in-use", label: "In use", icon: Truck, count: inUseEquipment },
-    { id: "maintenance", label: "Maintenance", icon: AlertTriangle, count: maintenanceEquipment }
-  ];
-  const equipmentPageCount = Math.max(1, Math.ceil(filteredEquipment.length / equipmentPerPage));
-  const equipmentCurrentPage = Math.min(equipmentPage, equipmentPageCount);
-  const pagedEquipment = filteredEquipment.slice((equipmentCurrentPage - 1) * equipmentPerPage, equipmentCurrentPage * equipmentPerPage);
-  const equipmentActiveFilters = [equipmentStatusFilter, equipmentTypeFilter, equipmentProjectFilter].filter(
-    (value) => value !== "all"
-  ).length;
-  const allEquipmentRowsSelected = pagedEquipment.length > 0 && pagedEquipment.every((equipment) => equipmentSelected.has(equipment.id));
-  const toggleEquipmentRow = (id: string) =>
-    setEquipmentSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const toggleAllEquipmentRows = () =>
-    setEquipmentSelected((prev) => {
-      const next = new Set(prev);
-      pagedEquipment.forEach((equipment) => (allEquipmentRowsSelected ? next.delete(equipment.id) : next.add(equipment.id)));
-      return next;
-    });
-  const toggleEquipmentSort = (key: typeof equipmentSortKey) => {
-    if (equipmentSortKey === key) setEquipmentSortDir((current) => (current === "asc" ? "desc" : "asc"));
-    else {
-      setEquipmentSortKey(key);
-      setEquipmentSortDir("asc");
-    }
-  };
-  const clearEquipmentFilters = () => {
-    setEquipmentStatusFilter("all");
-    setEquipmentTypeFilter("all");
-    setEquipmentProjectFilter("all");
-    setEquipmentSearch("");
-    setEquipmentPage(1);
-  };
-  /* A notification pointed at one of these rows: clear the saved view and every filter that
-     could hide it, turn to the page it lands on, and light it. */
-  const focusedId = useRecordFocus(focus ?? null, filteredEquipment.map((item) => item.id), equipmentPerPage, setEquipmentPage, () => {
-    setEquipmentView("all");
-    clearEquipmentFilters();
-  });
-  const equipmentSortHeader = (key: typeof equipmentSortKey, label: string, className = "") => (
-    <th className={`${className}${equipmentSortKey === key ? " sorted" : ""}`.trim()}>
-      <button type="button" onClick={() => toggleEquipmentSort(key)}>
-        {label}
-        <ChevronDown style={{ transform: equipmentSortKey === key && equipmentSortDir === "desc" ? "rotate(180deg)" : undefined }} />
-      </button>
-    </th>
-  );
-  const exportEquipmentCsv = () => {
-    const header = ["Name", "Type", "Status", "Utilization", "Assigned to", "Current job", "Readiness"];
-    const rows = filteredEquipment.map((equipment) => {
-      const currentJob = equipment.assignedTo ? activeJobForProject(data, equipment.assignedTo) : undefined;
-      return [
-        equipment.name,
-        equipment.type,
-        equipment.status,
-        `${equipmentUsageProgress(equipment.status)}%`,
-        equipmentProjectLabel(equipment),
-        currentJob?.name ?? "Ready for assignment",
-        equipmentReadiness(equipment.status)
-      ];
-    });
-    const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "buildflow-equipment.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div className="page-stack equipment-page equip-rx hs-index" ref={rootRef}>
-      <div className="dx-bg" aria-hidden="true">
-        <span className="dx-aurora dx-aurora-1" />
-        <span className="dx-aurora dx-aurora-2" />
-        <span className="dx-aurora dx-aurora-3" />
-      </div>
-      <div className="dx-cursor" aria-hidden="true" />
-      {/* HubSpot-style index page: compact KPI strip, then a white index card with
-          title ⌄ + Add, saved-view tabs, Search / Filter / Sort, quick filters, a
-          checkbox table carrying every former card field, and a footer. */}
-      <div className="hs-kpis">
-        <div className="hs-kpi">
-          <span className="hs-kpi-ico tone-blue">
-            <Wrench />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Total Equipment</span>
-            <span className="hs-kpi-value">
-              <AnimatedFigure text={String(data.equipment.length)} />
-            </span>
-          </div>
-        </div>
-        <div className="hs-kpi">
-          <span className="hs-kpi-ico tone-green">
-            <CheckCircle2 />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Available Now</span>
-            <span className="hs-kpi-value">
-              <AnimatedFigure text={String(availableEquipment)} />
-            </span>
-          </div>
-        </div>
-        <div className="hs-kpi">
-          <span className="hs-kpi-ico tone-violet">
-            <Truck />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">In Use</span>
-            <span className="hs-kpi-value">
-              <AnimatedFigure text={String(inUseEquipment)} />
-            </span>
-          </div>
-        </div>
-        <div className="hs-kpi">
-          <span className={`hs-kpi-ico tone-${maintenanceEquipment > 0 ? "red" : "green"}`}>
-            <AlertTriangle />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Maintenance</span>
-            <span className="hs-kpi-value">
-              <AnimatedFigure text={String(maintenanceEquipment)} />
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="hs-index-main">
-        <section className="hs-index-card" aria-labelledby="equipment-index-title">
-          <div className="hs-index-head">
-            <h1 className="hs-index-title" id="equipment-index-title" data-tutorial-id="equipment-page-title">
-              <TextReveal text="Equipment" nested />
-              <button type="button" aria-label="Show all equipment" title="All equipment" onClick={() => setEquipmentView("all")}>
-                <ChevronDown size={16} />
-              </button>
-            </h1>
-            <div className="hs-index-actions">
-              <button className="hs-btn hs-btn-primary" type="button" onClick={openAddEquipment}>
-                <Plus size={16} /> Add Equipment
-              </button>
-            </div>
-          </div>
-
-          <div className="hs-views" role="tablist" aria-label="Equipment views">
-            {equipmentViews.map((view) => {
-              const ViewIcon = view.icon;
-              return (
-                <button
-                  key={view.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={equipmentView === view.id}
-                  className={`hs-view${equipmentView === view.id ? " active" : ""}`}
-                  onClick={() => {
-                    setEquipmentView(view.id);
-                    setEquipmentPage(1);
-                  }}
-                >
-                  <ViewIcon />
-                  {view.label}
-                  <span className="hs-view-count">{view.count}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="hs-toolbar">
-            <label className="hs-search">
-              <Search size={15} />
-              <input
-                aria-label="Search equipment"
-                placeholder="Search equipment"
-                value={equipmentSearch}
-                onChange={(event) => {
-                  setEquipmentSearch(event.target.value);
-                  setEquipmentPage(1);
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              className={`hs-chip${equipmentActiveFilters ? " active" : ""}`}
-              onClick={clearEquipmentFilters}
-              title={equipmentActiveFilters ? "Clear filters" : "Use the filters below"}
-            >
-              <SlidersHorizontal />
-              Filter{equipmentActiveFilters ? ` · ${equipmentActiveFilters}` : ""}
-            </button>
-            <button
-              type="button"
-              className={`hs-chip${equipmentSortKey !== "name" ? " active" : ""}`}
-              onClick={() => toggleEquipmentSort("status")}
-            >
-              <ChevronDown
-                style={{ transform: equipmentSortKey === "status" && equipmentSortDir === "desc" ? "rotate(180deg)" : undefined }}
-              />
-              Sort by {equipmentSortKey}
-            </button>
-            <div className="hs-toolbar-right">
-              <span className="hs-cell-muted">
-                {filteredEquipment.length} of {data.equipment.length}
-              </span>
-            </div>
-          </div>
-
-          <div className="hs-quickfilters">
-            <label className={`hs-qf${equipmentStatusFilter !== "all" ? " is-set" : ""}`}>
-              <select
-                value={equipmentStatusFilter}
-                onChange={(event) => {
-                  setEquipmentStatusFilter(event.target.value);
-                  setEquipmentPage(1);
-                }}
-                aria-label="Filter equipment by status"
-              >
-                <option value="all">Status</option>
-                <option value="Available">Available</option>
-                <option value="In Use">In Use</option>
-                <option value="Maintenance">Maintenance</option>
-              </select>
-              <ChevronDown />
-            </label>
-            <label className={`hs-qf${equipmentTypeFilter !== "all" ? " is-set" : ""}`}>
-              <select
-                value={equipmentTypeFilter}
-                onChange={(event) => {
-                  setEquipmentTypeFilter(event.target.value);
-                  setEquipmentPage(1);
-                }}
-                aria-label="Filter equipment by type"
-              >
-                <option value="all">Type</option>
-                {equipmentTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown />
-            </label>
-            <label className={`hs-qf${equipmentProjectFilter !== "all" ? " is-set" : ""}`}>
-              <select
-                value={equipmentProjectFilter}
-                onChange={(event) => {
-                  setEquipmentProjectFilter(event.target.value);
-                  setEquipmentPage(1);
-                }}
-                aria-label="Filter equipment by project"
-              >
-                <option value="all">Assigned project</option>
-                <option value="">Unassigned</option>
-                {data.projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown />
-            </label>
-            <button type="button" className="hs-qf-link" onClick={clearEquipmentFilters}>
-              <SlidersHorizontal />
-              {equipmentActiveFilters ? "Clear filters" : "Advanced filters"}
-            </button>
-          </div>
-
-          {pagedEquipment.length > 0 ? (
-            <div className="hs-table-wrap">
-              <table className="hs-table">
-                <thead>
-                  <tr>
-                    <th className="hs-cell-check">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all equipment on this page"
-                        checked={allEquipmentRowsSelected}
-                        onChange={toggleAllEquipmentRows}
-                      />
-                    </th>
-                    {equipmentSortHeader("name", "Name", "hs-cell-name")}
-                    {equipmentSortHeader("status", "Status")}
-                    {equipmentSortHeader("usage", "Utilization")}
-                    {equipmentSortHeader("project", "Assigned to")}
-                    <th>Current job</th>
-                    <th>Readiness</th>
-                    {equipmentSortHeader("type", "Type")}
-                    <th className="hs-cell-actions two" aria-label="Row actions" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedEquipment.map((equipment) => {
-                    const assignedProject = equipmentProjectLabel(equipment);
-                    const currentJob = equipment.assignedTo ? activeJobForProject(data, equipment.assignedTo) : undefined;
-                    const usage = equipmentUsageProgress(equipment.status);
-                    const usageTone = equipment.status === "Maintenance" ? "red" : equipment.status === "In Use" ? "amber" : "green";
-                    const equipmentTone = equipment.status === "Available" ? "green" : equipment.status === "Maintenance" ? "red" : "blue";
-                    const isChecked = equipmentSelected.has(equipment.id);
-                    return (
-                      <tr
-                        key={equipment.id}
-                        data-bf-focus={equipment.id}
-                        className={indexRowClass(isChecked || selectedEquipmentId === equipment.id, focusedId === equipment.id)}
-                      >
-                        <td className="hs-cell-check">
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${equipment.name}`}
-                            checked={isChecked}
-                            onChange={() => toggleEquipmentRow(equipment.id)}
-                          />
-                        </td>
-                        <td className="hs-cell-name">
-                          <div className="hs-row-name">
-                            <span className="hs-avatar">
-                              <Wrench size={15} />
-                            </span>
-                            <div>
-                              <button
-                                type="button"
-                                className="hs-link"
-                                aria-label={`Edit ${equipment.name}`}
-                                onClick={() => openEditEquipment(equipment)}
-                              >
-                                {equipment.name}
-                              </button>
-                              <span className="hs-row-sub">{equipment.type}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`hs-badge tone-${equipmentTone}`}>{equipment.status}</span>
-                        </td>
-                        <td>
-                          <div className="hs-progress">
-                            <span className={`hs-progress-track tone-${usageTone}`}>
-                              <i style={{ width: `${usage}%` }} />
-                            </span>
-                            <b>{usage}%</b>
-                          </div>
-                        </td>
-                        <td className="hs-cell-muted">{assignedProject}</td>
-                        <td className="hs-cell-muted">{currentJob?.name ?? "Ready for assignment"}</td>
-                        <td className="hs-cell-muted">{equipmentReadiness(equipment.status)}</td>
-                        <td className="hs-cell-muted">{equipment.type}</td>
-                        <td className="hs-cell-actions two">
-                          <button
-                            type="button"
-                            className="hs-row-action edit"
-                            aria-label={`Edit ${equipment.name}`}
-                            title="Edit equipment"
-                            onClick={() => openEditEquipment(equipment)}
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            type="button"
-                            className="hs-row-action"
-                            aria-label={`Remove ${equipment.name}`}
-                            title="Remove equipment"
-                            onClick={() => openRemoveEquipment(equipment)}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="hs-empty">
-              <Wrench size={28} />
-              <strong>{data.equipment.length === 0 ? "No equipment added yet" : "No equipment matches that search"}</strong>
-              <span>
-                {data.equipment.length === 0
-                  ? "Add vehicles and equipment before tracking field activity."
-                  : "Try a machine, type, status, project, or current job."}
-              </span>
-            </div>
-          )}
-
-          <div className="hs-index-foot">
-            <span className="hs-count-pill">
-              {filteredEquipment.length} {filteredEquipment.length === 1 ? "item" : "items"}
-              {equipmentSelected.size ? ` · ${equipmentSelected.size} selected` : ""}
-            </span>
-            <div className="hs-pagination">
-              <button
-                type="button"
-                className="hs-page-btn"
-                disabled={equipmentCurrentPage <= 1}
-                onClick={() => setEquipmentPage(equipmentCurrentPage - 1)}
-              >
-                <ChevronLeft size={14} /> Prev
-              </button>
-              {Array.from({ length: equipmentPageCount }, (_, index) => index + 1).map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  className={`hs-page-btn${pageNumber === equipmentCurrentPage ? " active" : ""}`}
-                  aria-current={pageNumber === equipmentCurrentPage ? "page" : undefined}
-                  onClick={() => setEquipmentPage(pageNumber)}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="hs-page-btn"
-                disabled={equipmentCurrentPage >= equipmentPageCount}
-                onClick={() => setEquipmentPage(equipmentCurrentPage + 1)}
-              >
-                Next <ChevronRight size={14} />
-              </button>
-              <label className="hs-qf hs-perpage">
-                <select
-                  value={equipmentPerPage}
-                  onChange={(event) => {
-                    setEquipmentPerPage(Number(event.target.value));
-                    setEquipmentPage(1);
-                  }}
-                  aria-label="Equipment per page"
-                >
-                  {[10, 25, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size} per page
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown />
-              </label>
-            </div>
-            <div className="hs-foot-right">
-              <button type="button" className="hs-btn" onClick={exportEquipmentCsv}>
-                <Download size={15} /> Export
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <p className="equipment-footnote">
-        Fleet utilization: <strong>{utilization}%</strong> currently assigned or in use.
-      </p>
-
-      {equipmentModalMode && (
-        <div className="crew-dialog-backdrop" role="presentation">
-          <section className="crew-dialog" role="dialog" aria-modal="true" aria-labelledby="equipment-dialog-title">
-            <header className="crew-dialog-header">
-              <div>
-                <h2 id="equipment-dialog-title">{equipmentDialogTitle}</h2>
-                <p>
-                  {equipmentModalMode === "edit"
-                    ? "Update equipment details, status, and project assignment."
-                    : "Create equipment with a type, status, and optional project assignment."}
-                </p>
-              </div>
-              <button className="icon-button" aria-label={`Close ${equipmentDialogTitle}`} type="button" onClick={closeEquipmentModal}>
-                <X size={18} />
-              </button>
-            </header>
-
-            <form className="form-stack crew-form equipment-form" onSubmit={submitEquipment}>
-              <label>
-                Equipment Name
-                <input
-                  value={equipmentName}
-                  onChange={(event) => setEquipmentName(event.target.value)}
-                  placeholder="Example: Boom Lift #5"
-                />
-              </label>
-              <label>
-                Equipment Type
-                <input value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)} placeholder="Example: Lift" />
-              </label>
-              <label>
-                Status
-                <select value={equipmentStatus} onChange={(event) => setEquipmentStatus(event.target.value as Equipment["status"])}>
-                  <option>Available</option>
-                  <option>In Use</option>
-                  <option>Maintenance</option>
-                </select>
-              </label>
-              <label>
-                Assigned Project
-                <select value={assignedProjectId} onChange={(event) => setAssignedProjectId(event.target.value)}>
-                  <option value="">Unassigned</option>
-                  {data.projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="crew-size-preview equipment-assignment-preview">
-                <span>Assignment</span>
-                <strong>{assignedProjectId ? projectName(data, assignedProjectId) : "Unassigned"}</strong>
-              </div>
-              {equipmentFormError && (
-                <p className="form-error" role="alert">
-                  {equipmentFormError}
-                </p>
-              )}
-              <div className="crew-dialog-actions">
-                <button className="outline-button" type="button" onClick={closeEquipmentModal}>
-                  Cancel
-                </button>
-                <button className="primary-button" disabled={!canSubmitEquipment || isSubmittingEquipment} type="submit">
-                  {equipmentModalMode === "edit" ? <Pencil size={17} /> : <Plus size={17} />} {equipmentSubmitLabel}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-      {removingEquipment && (
-        <div className="crew-dialog-backdrop" role="presentation">
-          <section
-            className="crew-dialog equipment-remove-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="equipment-remove-dialog-title"
-          >
-            <header className="crew-dialog-header">
-              <div>
-                <h2 id="equipment-remove-dialog-title">Remove Equipment</h2>
-                <p>This removes the equipment from fleet tracking and dashboards.</p>
-              </div>
-              <button className="icon-button" aria-label="Close Remove Equipment" type="button" onClick={closeRemoveEquipment}>
-                <X size={18} />
-              </button>
-            </header>
-            <div className="crew-review-panel equipment-remove-panel">
-              <div className="crew-review-size equipment-remove-summary">
-                <span>{removingEquipment.type}</span>
-                <strong>{removingEquipment.name}</strong>
-              </div>
-              <p className="form-note">
-                Assigned to {removingEquipment.assignedTo ? projectName(data, removingEquipment.assignedTo) : "Unassigned"} with status{" "}
-                {removingEquipment.status}.
-              </p>
-              {equipmentRemoveError && (
-                <p className="form-error" role="alert">
-                  {equipmentRemoveError}
-                </p>
-              )}
-              <div className="crew-dialog-actions">
-                <button className="outline-button" type="button" onClick={closeRemoveEquipment}>
-                  Cancel
-                </button>
-                <button
-                  className="primary-button danger-button"
-                  disabled={isRemovingEquipment}
-                  type="button"
-                  onClick={confirmRemoveEquipment}
-                >
-                  <Trash2 size={17} /> {isRemovingEquipment ? "Removing Equipment" : "Remove Equipment"}
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function equipmentUsageProgress(status: Equipment["status"]) {
-  if (status === "In Use") return 78;
-  if (status === "Maintenance") return 38;
-  return 12;
-}
-
-function equipmentReadiness(status: Equipment["status"]) {
-  if (status === "Maintenance") return "Service required";
-  if (status === "In Use") return "Committed today";
-  return "Dispatch ready";
-}
-
 function activeJobForProject(data: BootstrapPayload, projectId: string) {
   return (
     data.jobs.find((job) => job.projectId === projectId && job.status !== "Complete") ??
     data.jobs.find((job) => job.projectId === projectId)
-  );
-}
-
-const materialStatusOptions: Material["status"][] = ["Ready", "Ordered", "Waiting on Delivery", "Missing"];
-
-function MaterialsPage({ data, reload, focus }: { data: BootstrapPayload; reload: () => Promise<void>; focus?: RecordFocusRequest }) {
-  const tradeProfile = useTradeProfile();
-  // quantity hint in the trade's own units ("420 tons" for asphalt, "240 cy" for concrete)
-  const materialQuantityHint = tradeProfile ? `Example: 420 ${tradeProfile.materialUnits[0]}` : "Example: 24 bundles";
-  const [materialSearch, setMaterialSearch] = useState("");
-  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
-  const [materialName, setMaterialName] = useState("");
-  const [materialProjectId, setMaterialProjectId] = useState(data.projects[0]?.id ?? "");
-  const [materialStatus, setMaterialStatus] = useState<Material["status"]>("Ordered");
-  const [materialDeliveryDate, setMaterialDeliveryDate] = useState("");
-  const [materialQuantity, setMaterialQuantity] = useState("");
-  const [isSubmittingMaterial, setIsSubmittingMaterial] = useState(false);
-  const [materialFormError, setMaterialFormError] = useState("");
-  // HubSpot-style index controls: saved-view tabs, quick filters, column sort, paging, row selection.
-  const [materialView, setMaterialView] = useState<"all" | "ready" | "ordered" | "waiting" | "missing">("all");
-  const [materialStatusFilter, setMaterialStatusFilter] = useState("all");
-  const [materialProjectFilter, setMaterialProjectFilter] = useState("all");
-  const [materialSortKey, setMaterialSortKey] = useState<"name" | "status" | "delivery" | "project" | "readiness">("delivery");
-  const [materialSortDir, setMaterialSortDir] = useState<"asc" | "desc">("asc");
-  const [materialPage, setMaterialPage] = useState(1);
-  const [materialPerPage, setMaterialPerPage] = useState(25);
-  const [materialSelected, setMaterialSelected] = useState<Set<string>>(() => new Set());
-  const rootRef = useRef<HTMLDivElement>(null);
-  useHudMotion(rootRef);
-  const readyMaterials = data.materials.filter((material) => material.status === "Ready").length;
-  const orderedMaterials = data.materials.filter((material) => material.status === "Ordered").length;
-  const attentionMaterials = data.materials.filter(
-    (material) => material.status === "Missing" || material.status === "Waiting on Delivery"
-  ).length;
-  const canSubmitMaterial =
-    materialName.trim().length > 0 &&
-    materialProjectId.trim().length > 0 &&
-    materialDeliveryDate.trim().length > 0 &&
-    materialQuantity.trim().length > 0;
-  const filteredMaterials = data.materials
-    .filter((material) => {
-      const relatedJob = jobForMaterial(data, material);
-      const query = materialSearch.trim().toLowerCase();
-      const inView =
-        materialView === "all" ||
-        (materialView === "ready" && material.status === "Ready") ||
-        (materialView === "ordered" && material.status === "Ordered") ||
-        (materialView === "waiting" && material.status === "Waiting on Delivery") ||
-        (materialView === "missing" && material.status === "Missing");
-      const matchesQuery =
-        !query ||
-        [
-          material.name,
-          material.status,
-          material.quantity,
-          material.deliveryDate,
-          projectName(data, material.projectId),
-          relatedJob?.name ?? ""
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      return (
-        inView &&
-        matchesQuery &&
-        (materialStatusFilter === "all" || material.status === materialStatusFilter) &&
-        (materialProjectFilter === "all" || material.projectId === materialProjectFilter)
-      );
-    })
-    .sort((a, b) => {
-      const dir = materialSortDir === "asc" ? 1 : -1;
-      switch (materialSortKey) {
-        case "name":
-          return dir * a.name.localeCompare(b.name);
-        case "status":
-          return dir * a.status.localeCompare(b.status);
-        case "project":
-          return dir * projectName(data, a.projectId).localeCompare(projectName(data, b.projectId));
-        case "readiness":
-          return dir * (materialReadinessProgress(a.status) - materialReadinessProgress(b.status));
-        case "delivery":
-        default:
-          return dir * a.deliveryDate.localeCompare(b.deliveryDate);
-      }
-    });
-
-  function resetMaterialForm() {
-    setMaterialName("");
-    setMaterialProjectId(data.projects[0]?.id ?? "");
-    setMaterialStatus("Ordered");
-    setMaterialDeliveryDate("");
-    setMaterialQuantity("");
-    setMaterialFormError("");
-  }
-
-  function openAddMaterial() {
-    resetMaterialForm();
-    setIsAddMaterialOpen(true);
-  }
-
-  function closeAddMaterial() {
-    resetMaterialForm();
-    setIsAddMaterialOpen(false);
-  }
-
-  async function submitMaterial(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!canSubmitMaterial || isSubmittingMaterial) return;
-
-    setIsSubmittingMaterial(true);
-    setMaterialFormError("");
-
-    try {
-      await createMaterial({
-        projectId: materialProjectId,
-        name: materialName,
-        status: materialStatus,
-        deliveryDate: materialDeliveryDate,
-        quantity: materialQuantity
-      });
-      closeAddMaterial();
-      await reload();
-    } catch (error) {
-      setMaterialFormError(error instanceof Error ? error.message : "Material could not be created.");
-    } finally {
-      setIsSubmittingMaterial(false);
-    }
-  }
-
-  // ---- HubSpot index helpers: saved views, paging, selection, sorting, export ----
-  const materialViews: Array<{ id: typeof materialView; label: string; icon: typeof Boxes; count: number }> = [
-    { id: "all", label: "All materials", icon: Boxes, count: data.materials.length },
-    { id: "ready", label: "Ready", icon: CheckCircle2, count: readyMaterials },
-    { id: "ordered", label: "Ordered", icon: Truck, count: orderedMaterials },
-    {
-      id: "waiting",
-      label: "Waiting on delivery",
-      icon: CalendarDays,
-      count: data.materials.filter((material) => material.status === "Waiting on Delivery").length
-    },
-    {
-      id: "missing",
-      label: "Missing",
-      icon: AlertTriangle,
-      count: data.materials.filter((material) => material.status === "Missing").length
-    }
-  ];
-  const materialPageCount = Math.max(1, Math.ceil(filteredMaterials.length / materialPerPage));
-  const materialCurrentPage = Math.min(materialPage, materialPageCount);
-  const pagedMaterials = filteredMaterials.slice((materialCurrentPage - 1) * materialPerPage, materialCurrentPage * materialPerPage);
-  const materialActiveFilters = [materialStatusFilter, materialProjectFilter].filter((value) => value !== "all").length;
-  const allMaterialRowsSelected = pagedMaterials.length > 0 && pagedMaterials.every((material) => materialSelected.has(material.id));
-  const toggleMaterialRow = (id: string) =>
-    setMaterialSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const toggleAllMaterialRows = () =>
-    setMaterialSelected((prev) => {
-      const next = new Set(prev);
-      pagedMaterials.forEach((material) => (allMaterialRowsSelected ? next.delete(material.id) : next.add(material.id)));
-      return next;
-    });
-  const toggleMaterialSort = (key: typeof materialSortKey) => {
-    if (materialSortKey === key) setMaterialSortDir((current) => (current === "asc" ? "desc" : "asc"));
-    else {
-      setMaterialSortKey(key);
-      setMaterialSortDir("asc");
-    }
-  };
-  const clearMaterialFilters = () => {
-    setMaterialStatusFilter("all");
-    setMaterialProjectFilter("all");
-    setMaterialSearch("");
-    setMaterialPage(1);
-  };
-  /* A notification pointed at one of these rows: clear the saved view and every filter that
-     could hide it, turn to the page it lands on, and light it. */
-  const focusedId = useRecordFocus(focus ?? null, filteredMaterials.map((material) => material.id), materialPerPage, setMaterialPage, () => {
-    setMaterialView("all");
-    clearMaterialFilters();
-  });
-  const materialSortHeader = (key: typeof materialSortKey, label: string, className = "") => (
-    <th className={`${className}${materialSortKey === key ? " sorted" : ""}`.trim()}>
-      <button type="button" onClick={() => toggleMaterialSort(key)}>
-        {label}
-        <ChevronDown style={{ transform: materialSortKey === key && materialSortDir === "desc" ? "rotate(180deg)" : undefined }} />
-      </button>
-    </th>
-  );
-  const exportMaterialsCsv = () => {
-    const header = ["Name", "Project", "Status", "Readiness", "Delivery date", "Quantity", "Job", "Schedule impact"];
-    const rows = filteredMaterials.map((material) => [
-      material.name,
-      projectName(data, material.projectId),
-      material.status,
-      `${materialReadinessProgress(material.status)}%`,
-      material.deliveryDate,
-      material.quantity,
-      jobForMaterial(data, material)?.name ?? "Project stock",
-      materialImpact(material.status)
-    ]);
-    const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "buildflow-materials.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div className="page-stack materials-page mat-rx hs-index" ref={rootRef}>
-      <div className="dx-bg" aria-hidden="true">
-        <span className="dx-aurora dx-aurora-1" />
-        <span className="dx-aurora dx-aurora-2" />
-        <span className="dx-aurora dx-aurora-3" />
-      </div>
-      <div className="dx-cursor" aria-hidden="true" />
-      {/* HubSpot-style index page: compact KPI strip, then a white index card with
-          title ⌄ + Add, saved-view tabs, Search / Filter / Sort, quick filters, a
-          checkbox table carrying every former card field, and a footer. */}
-      <div className="hs-kpis">
-        <div className="hs-kpi">
-          <span className="hs-kpi-ico tone-blue">
-            <Boxes />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Total Materials</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(data.materials.length)} /></span>
-          </div>
-        </div>
-        <div className="hs-kpi">
-          <span className="hs-kpi-ico tone-green">
-            <CheckCircle2 />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Ready Now</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(readyMaterials)} /></span>
-          </div>
-        </div>
-        <div className="hs-kpi">
-          <span className="hs-kpi-ico tone-violet">
-            <Truck />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Ordered</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(orderedMaterials)} /></span>
-          </div>
-        </div>
-        <div className="hs-kpi">
-          <span className={`hs-kpi-ico tone-${attentionMaterials > 0 ? "red" : "green"}`}>
-            <AlertTriangle />
-          </span>
-          <div className="hs-kpi-body">
-            <span className="hs-kpi-label">Needs Attention</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(attentionMaterials)} /></span>
-          </div>
-        </div>
-      </div>
-
-      <div className="hs-index-main">
-        <section className="hs-index-card" aria-labelledby="materials-index-title">
-          <div className="hs-index-head">
-            <h1 className="hs-index-title" id="materials-index-title" data-tutorial-id="materials-page-title">
-              <TextReveal text="Materials" nested />
-              <button type="button" aria-label="Show all materials" title="All materials" onClick={() => setMaterialView("all")}>
-                <ChevronDown size={16} />
-              </button>
-            </h1>
-            <div className="hs-index-actions">
-              <button className="hs-btn hs-btn-primary" type="button" onClick={openAddMaterial}>
-                <Plus size={16} /> Add Material
-              </button>
-            </div>
-          </div>
-
-          <div className="hs-views" role="tablist" aria-label="Material views">
-            {materialViews.map((view) => {
-              const ViewIcon = view.icon;
-              return (
-                <button
-                  key={view.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={materialView === view.id}
-                  className={`hs-view${materialView === view.id ? " active" : ""}`}
-                  onClick={() => {
-                    setMaterialView(view.id);
-                    setMaterialPage(1);
-                  }}
-                >
-                  <ViewIcon />
-                  {view.label}
-                  <span className="hs-view-count">{view.count}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="hs-toolbar">
-            <label className="hs-search">
-              <Search size={15} />
-              <input
-                aria-label="Search materials"
-                placeholder="Search materials"
-                value={materialSearch}
-                onChange={(event) => {
-                  setMaterialSearch(event.target.value);
-                  setMaterialPage(1);
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              className={`hs-chip${materialActiveFilters ? " active" : ""}`}
-              onClick={clearMaterialFilters}
-              title={materialActiveFilters ? "Clear filters" : "Use the filters below"}
-            >
-              <SlidersHorizontal />
-              Filter{materialActiveFilters ? ` · ${materialActiveFilters}` : ""}
-            </button>
-            <button
-              type="button"
-              className={`hs-chip${materialSortKey !== "delivery" ? " active" : ""}`}
-              onClick={() => toggleMaterialSort("delivery")}
-            >
-              <ChevronDown
-                style={{ transform: materialSortKey === "delivery" && materialSortDir === "desc" ? "rotate(180deg)" : undefined }}
-              />
-              Sort by {materialSortKey}
-            </button>
-            <div className="hs-toolbar-right">
-              <span className="hs-cell-muted">
-                {filteredMaterials.length} of {data.materials.length}
-              </span>
-            </div>
-          </div>
-
-          <div className="hs-quickfilters">
-            <label className={`hs-qf${materialStatusFilter !== "all" ? " is-set" : ""}`}>
-              <select
-                value={materialStatusFilter}
-                onChange={(event) => {
-                  setMaterialStatusFilter(event.target.value);
-                  setMaterialPage(1);
-                }}
-                aria-label="Filter materials by status"
-              >
-                <option value="all">Status</option>
-                {materialStatusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown />
-            </label>
-            <label className={`hs-qf${materialProjectFilter !== "all" ? " is-set" : ""}`}>
-              <select
-                value={materialProjectFilter}
-                onChange={(event) => {
-                  setMaterialProjectFilter(event.target.value);
-                  setMaterialPage(1);
-                }}
-                aria-label="Filter materials by project"
-              >
-                <option value="all">Project</option>
-                {data.projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown />
-            </label>
-            <button type="button" className="hs-qf-link" onClick={clearMaterialFilters}>
-              <SlidersHorizontal />
-              {materialActiveFilters ? "Clear filters" : "Advanced filters"}
-            </button>
-          </div>
-
-          {pagedMaterials.length > 0 ? (
-            <div className="hs-table-wrap">
-              <table className="hs-table">
-                <thead>
-                  <tr>
-                    <th className="hs-cell-check">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all materials on this page"
-                        checked={allMaterialRowsSelected}
-                        onChange={toggleAllMaterialRows}
-                      />
-                    </th>
-                    {materialSortHeader("name", "Name", "hs-cell-name")}
-                    {materialSortHeader("status", "Status")}
-                    {materialSortHeader("readiness", "Readiness")}
-                    {materialSortHeader("delivery", "Delivery date")}
-                    <th>Quantity</th>
-                    {materialSortHeader("project", "Project")}
-                    <th>Job</th>
-                    <th>Schedule impact</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedMaterials.map((material) => {
-                    const progress = materialReadinessProgress(material.status);
-                    const relatedJob = jobForMaterial(data, material);
-                    const progressTone =
-                      material.status === "Missing" ? "red" : material.status === "Waiting on Delivery" ? "amber" : "green";
-                    const materialTone =
-                      material.status === "Ready"
-                        ? "green"
-                        : material.status === "Missing"
-                          ? "red"
-                          : material.status === "Waiting on Delivery"
-                            ? "amber"
-                            : "blue";
-                    const isChecked = materialSelected.has(material.id);
-                    return (
-                      <tr
-                        key={material.id}
-                        data-bf-focus={material.id}
-                        className={indexRowClass(isChecked, focusedId === material.id)}
-                      >
-                        <td className="hs-cell-check">
-                          <input
-                            type="checkbox"
-                            aria-label={`Select ${material.name}`}
-                            checked={isChecked}
-                            onChange={() => toggleMaterialRow(material.id)}
-                          />
-                        </td>
-                        <td className="hs-cell-name">
-                          <div className="hs-row-name">
-                            <span className={`hs-avatar tone-${materialTone}`}>
-                              <Boxes size={15} />
-                            </span>
-                            <div>
-                              <span className="hs-name">{material.name}</span>
-                              <span className="hs-row-sub">{projectName(data, material.projectId)}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`hs-badge tone-${materialTone}`}>{material.status}</span>
-                        </td>
-                        <td>
-                          <div className="hs-progress">
-                            <span className={`hs-progress-track tone-${progressTone}`}>
-                              <i style={{ width: `${progress}%` }} />
-                            </span>
-                            <b>{progress}%</b>
-                          </div>
-                        </td>
-                        <td className="hs-cell-muted">{formatDate(material.deliveryDate)}</td>
-                        <td className="hs-cell-num">{material.quantity}</td>
-                        <td className="hs-cell-muted">{projectName(data, material.projectId)}</td>
-                        <td className="hs-cell-muted">{relatedJob?.name ?? "Project stock"}</td>
-                        <td className="hs-cell-muted">{materialImpact(material.status)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="hs-empty">
-              <Boxes size={28} />
-              <strong>{data.materials.length === 0 ? "No materials added yet" : "No materials match that search"}</strong>
-              <span>
-                {data.materials.length === 0
-                  ? "Create a project, then add the materials needed for that work."
-                  : "Try a material, project, status, quantity, delivery date, or job."}
-              </span>
-            </div>
-          )}
-
-          <div className="hs-index-foot">
-            <span className="hs-count-pill">
-              {filteredMaterials.length} {filteredMaterials.length === 1 ? "material" : "materials"}
-              {materialSelected.size ? ` · ${materialSelected.size} selected` : ""}
-            </span>
-            <div className="hs-pagination">
-              <button
-                type="button"
-                className="hs-page-btn"
-                disabled={materialCurrentPage <= 1}
-                onClick={() => setMaterialPage(materialCurrentPage - 1)}
-              >
-                <ChevronLeft size={14} /> Prev
-              </button>
-              {Array.from({ length: materialPageCount }, (_, index) => index + 1).map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  className={`hs-page-btn${pageNumber === materialCurrentPage ? " active" : ""}`}
-                  aria-current={pageNumber === materialCurrentPage ? "page" : undefined}
-                  onClick={() => setMaterialPage(pageNumber)}
-                >
-                  {pageNumber}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="hs-page-btn"
-                disabled={materialCurrentPage >= materialPageCount}
-                onClick={() => setMaterialPage(materialCurrentPage + 1)}
-              >
-                Next <ChevronRight size={14} />
-              </button>
-              <label className="hs-qf hs-perpage">
-                <select
-                  value={materialPerPage}
-                  onChange={(event) => {
-                    setMaterialPerPage(Number(event.target.value));
-                    setMaterialPage(1);
-                  }}
-                  aria-label="Materials per page"
-                >
-                  {[10, 25, 50].map((size) => (
-                    <option key={size} value={size}>
-                      {size} per page
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown />
-              </label>
-            </div>
-            <div className="hs-foot-right">
-              <button type="button" className="hs-btn" onClick={exportMaterialsCsv}>
-                <Download size={15} /> Export
-              </button>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {isAddMaterialOpen && (
-        <div className="crew-dialog-backdrop" role="presentation">
-          <section className="crew-dialog" role="dialog" aria-modal="true" aria-labelledby="material-dialog-title">
-            <header className="crew-dialog-header">
-              <div>
-                <h2 id="material-dialog-title">Add Material</h2>
-                <p>Create a material record with project, status, delivery date, and quantity.</p>
-              </div>
-              <button className="icon-button" aria-label="Close Add Material" type="button" onClick={closeAddMaterial}>
-                <X size={18} />
-              </button>
-            </header>
-            <form className="form-stack crew-form material-form" onSubmit={submitMaterial}>
-              <label>
-                Material Name
-                <input
-                  value={materialName}
-                  onChange={(event) => setMaterialName(event.target.value)}
-                  placeholder="Example: Structural Steel Beams"
-                />
-              </label>
-              <label>
-                Project
-                <select value={materialProjectId} onChange={(event) => setMaterialProjectId(event.target.value)}>
-                  {data.projects.length === 0 && <option value="">Create a project first</option>}
-                  {data.projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Status
-                <select value={materialStatus} onChange={(event) => setMaterialStatus(event.target.value as Material["status"])}>
-                  {materialStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Delivery Date
-                <input type="date" value={materialDeliveryDate} onChange={(event) => setMaterialDeliveryDate(event.target.value)} />
-              </label>
-              <label>
-                Quantity
-                <input
-                  value={materialQuantity}
-                  onChange={(event) => setMaterialQuantity(event.target.value)}
-                  placeholder={materialQuantityHint}
-                />
-              </label>
-              {materialFormError && (
-                <p className="form-error" role="alert">
-                  {materialFormError}
-                </p>
-              )}
-              <div className="crew-dialog-actions">
-                <button className="outline-button" type="button" onClick={closeAddMaterial}>
-                  Cancel
-                </button>
-                <button className="primary-button" disabled={!canSubmitMaterial || isSubmittingMaterial} type="submit">
-                  <Plus size={17} /> {isSubmittingMaterial ? "Adding Material" : "Add Material"}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -30656,10 +29322,8 @@ function Badge({ status }: { status: string }) {
  *
  * A reported percent always wins — that is the crew's own number. Updates filed
  * without one fall back to the position their status implies, so every card
- * carries the meter. This mirrors how Materials draws its "Readiness" bar
- * (materialReadinessProgress below), which is status-derived for the same
- * reason. The fallback is a reading of the status, not a measurement: treat the
- * bar as a coarse indicator unless the update reports a number.
+ * carries the meter. The fallback is a reading of the status, not a measurement:
+ * treat the bar as a coarse indicator unless the update reports a number.
  */
 function fieldUpdateProgress(update: FieldUpdate) {
   if (update.percentComplete != null) return update.percentComplete;
@@ -30681,33 +29345,8 @@ function fieldUpdateProgress(update: FieldUpdate) {
   }
 }
 
-function materialReadinessProgress(status: Material["status"]) {
-  if (status === "Ready") return 100;
-  if (status === "Ordered") return 68;
-  if (status === "Waiting on Delivery") return 42;
-  return 12;
-}
 
-function materialImpact(status: Material["status"]) {
-  if (status === "Ready") return "Ready for schedule";
-  if (status === "Ordered") return "Procurement tracking";
-  if (status === "Waiting on Delivery") return "Watch delivery window";
-  return "Blocks affected work";
-}
 
-function jobForMaterial(data: BootstrapPayload, material: Material) {
-  const matchingStatus = {
-    Ready: "Delivered",
-    Ordered: "Ordered",
-    "Waiting on Delivery": "Waiting on Delivery",
-    Missing: "Missing"
-  } satisfies Record<Material["status"], Job["materialsStatus"]>;
-
-  return (
-    data.jobs.find((job) => job.projectId === material.projectId && job.materialsStatus === matchingStatus[material.status]) ??
-    data.jobs.find((job) => job.projectId === material.projectId)
-  );
-}
 
 function materialReadiness(data: BootstrapPayload) {
   const totals = data.materials.reduce<Record<string, number>>((acc, material) => {

@@ -641,6 +641,34 @@ describe("the routes the permissions were waiting for", () => {
     await owner.delete(`/api/materials/${id}`).expect(404);
   });
 
+  /* The Inventory (2026-09-23) changes a line's status from its edit drawer, so a material line
+     can be edited now as well as added and deleted. The line is sent whole, like equipment. */
+  it("edits a material line whole, refuses a Member, and answers 404 for a line or project that is not there", async () => {
+    const { owner, join } = await workspace();
+    const project = (await owner.get("/api/bootstrap").expect(200)).body.projects[0];
+    const line = { projectId: project.id, name: "Tack coat", deliveryDate: "2026-07-02", status: "Ordered", quantity: "400 gal" };
+    const id = (await owner.post("/api/materials").send(line).expect(201)).body.id as string;
+
+    const edited = await owner
+      .patch(`/api/materials/${id}`)
+      .send({ ...line, status: "Ready", quantity: " 380 gal " })
+      .expect(200);
+    expect(edited.body).toEqual({ id, ...line, status: "Ready", quantity: "380 gal" });
+    const stored = (await owner.get("/api/bootstrap").expect(200)).body.materials.find((m: { id: string }) => m.id === id);
+    expect(stored).toMatchObject({ status: "Ready", quantity: "380 gal", name: "Tack coat" });
+
+    // the same checks the create makes
+    await owner.patch(`/api/materials/${id}`).send({ ...line, status: "Lost" }).expect(400);
+    await owner.patch(`/api/materials/${id}`).send({ ...line, projectId: "p-nowhere" }).expect(404);
+    await owner.patch("/api/materials/mat-nowhere").send(line).expect(404);
+
+    // resources.write: an Admin writes the inventory, a Member reads it
+    const member = await join("member");
+    expect((await member.patch(`/api/materials/${id}`).send(line).expect(403)).body.need).toBe("resources.write");
+    const admin = await join("admin");
+    await admin.patch(`/api/materials/${id}`).send({ ...line, status: "Missing" }).expect(200);
+  });
+
   it("removes a teammate's access without removing what they did", async () => {
     const { owner, join } = await workspace();
     await join("member", "crew@asphaltco.com");

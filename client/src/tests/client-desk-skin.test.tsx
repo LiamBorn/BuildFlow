@@ -408,90 +408,83 @@ describe("the Client Desk skin", () => {
 
   it("plays the same entrance on the Projects and Crews pages: KPI tiles, then the card, then its rows", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    const tile = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpis > .hs-kpi`);
+    const tile = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi`);
     // 2026-09-19: the figures beat, not a pair of numbers this page owned (skin §75)
     expect(tile.animation).toContain("bfe-lift");
     expect(tile["animation-delay"]).toBe(
       "max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)))"
     );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-index-main > .hs-index-card`)[
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-main > .hs-index-card`)[
         "animation-delay"
       ]
     ).toBe("max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)))");
-    const row = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr`);
+    const row = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr`);
     expect(row.animation).toContain("bfe-lift");
     expect(row["animation-delay"]).toContain("var(--bfm-beat-board-content)");
     expect(row.animation).toContain("backwards");
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr:nth-child(3)`)[
-        "--bfe-r"
-      ]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(3)`)["--bfe-r"]
     ).toBe("2");
   });
 
   it("lays the Projects and Crews pages' tiles and tables out the reference's way, in their colours", () => {
     const S = ".app-shell.hs-shell.bf-shell";
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi`)["flex-direction"]).toBe(
+      "row-reverse"
+    );
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-value`)["font-size"]).toBe(
+      "32px"
+    );
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-down`).color).toBe(
+      "var(--cc-red)"
+    );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi`)["flex-direction"]
-    ).toBe("row-reverse");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-value`)["font-size"]
-    ).toBe("32px");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-delta.is-down`).color
-    ).toBe("var(--cc-red)");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th`)[
-        "letter-spacing"
-      ]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th`)["letter-spacing"]
     ).toBe("0.14em");
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody td`)[
-        "border-bottom"
-      ]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody td`)["border-bottom"]
     ).toBe("1px solid var(--bf-line-solid)");
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-avatar`).background).toContain(
+      "var(--bf-color-face"
+    );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-avatar`).background
-    ).toContain("var(--bf-color-face");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-progress-track.tone-red i`)
-        .background
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-red i`).background
     ).toBe("var(--cc-red)");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf.is-set`).background
-    ).toBe("var(--bf-accent-fill)");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip.active`).background
-    ).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-link`).color).toBe(
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf.is-set`).background).toBe(
+      "var(--bf-accent-fill)"
+    );
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip.active`).background).toBe(
       "var(--bf-ink)"
     );
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-link`).color).toBe("var(--bf-ink)");
     // the panels beside the table: cards with chip rows, the health figure in the display face
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel`)["border-radius"]).toBe(
+      "var(--bf-radius-card)"
+    );
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-row`).background).toBe(
+      "var(--bf-hover)"
+    );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-panel`)["border-radius"]
-    ).toBe("var(--bf-radius-card)");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-row`).background
-    ).toBe("var(--bf-hover)");
-    expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-center strong`)[
-        "font-size"
-      ]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-center strong`)["font-size"]
     ).toBe("32px");
   });
 
-  it("gives the Equipment and Materials dialogs the card language: stage radius, display title, second-surface fields, ink Save", () => {
+  /* Resources became the one Inventory list on 2026-09-23 (docs/backlog.md keeps the Equipment and
+     Materials pages, whose centred crew-dialog add / edit / remove this case used to check). The
+     Inventory edits in the shared .pdx drawer, so it reaches the index language through the page-root
+     lists and has no dialog of its own to dress. */
+  it("reaches the Inventory through the index pages' own lists, with no dialog of its own to dress", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-dialog`)["border-radius"]).toBe("var(--bf-radius-stage)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-dialog-header h2`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-dialog .icon-button`).width).toBe("40px");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-form input`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-form input:focus`)["box-shadow"]).toBe("0 0 0 2px var(--bf-ink)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-size-preview`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-dialog .primary-button`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .crew-dialog .primary-button.danger-button`).background).toBe("var(--cc-red)");
-    expect(declsOf(`${S} :is(.equip-rx, .mat-rx) .equipment-footnote`).color).toBe("var(--bf-ink-faint)");
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi`)["flex-direction"]).toBe(
+      "row-reverse"
+    );
+    expect(
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr`).animation
+    ).toContain("bfe-lift");
+    const text = sheet.toString();
+    expect(text).not.toMatch(/\.inv-rx[^{]*\.crew-dialog/);
+    expect(text).not.toMatch(/equip-rx|mat-rx/);
   });
 
   it("gives the DelayIQs rail the card language: panels, second-surface risk cards, semantic severity, bars in the bad tone", () => {
@@ -1568,7 +1561,7 @@ describe("the Client Desk skin", () => {
       `${S} .hs-rail-btn.active .hs-rail-tag`,
       ".hs-shell.bf-shell .hs-rail-btn.recommended::after",
       `${S} .sched-rx .dx-dot`,
-      `${S} :is(.dash-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .delayIQ-rx, .field-rx, .settings-rx) .dx-dot`
+      `${S} :is(.dash-rx, .proj-rx, .crew-rx, .inv-rx, .delayIQ-rx, .field-rx, .settings-rx) .dx-dot`
     ]) {
       expect(declsOf(dot)["box-shadow"], dot).toBe("none");
     }
@@ -1577,7 +1570,7 @@ describe("the Client Desk skin", () => {
        element. It marks a label; it is not a live indicator. */
     for (const dot of [
       `${S} .sched-rx .dx-dot`,
-      `${S} :is(.dash-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .delayIQ-rx, .field-rx, .settings-rx) .dx-dot`
+      `${S} :is(.dash-rx, .proj-rx, .crew-rx, .inv-rx, .delayIQ-rx, .field-rx, .settings-rx) .dx-dot`
     ]) {
       expect(declsOf(dot).animation, dot).toBe("none");
     }

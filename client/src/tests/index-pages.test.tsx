@@ -351,42 +351,52 @@ describe("BuildFlow index pages", () => {
     expect(await within(card).findByText("No crews added yet")).toBeInTheDocument();
   });
 
-  // --------------------------------------------------------------- Equipment
+  // --------------------------------------------------------------- Inventory
+  /* Resources is one Inventory list since 2026-09-23. The Equipment and Materials pages' cases left
+     with those pages; docs/backlog.md keeps both at the last commit that had them. */
 
-  // replaces "renders equipment with the crew-style directory layout"
-  it("lists equipment in the index table with status tabs and search", async () => {
+  it("lists equipment and materials in one inventory, each with its status, and narrows by view and search", async () => {
     state.bootstrapPayload = bootstrapFixture;
     render(<App />);
     await enterDashboard();
-    await openAppPage("Equipment");
+    await openAppPage("Inventory");
 
-    const card = await findIndexCard("Equipment");
-    expect(screen.getByText("Total Equipment")).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Add Equipment" })).toBeEnabled();
+    const card = await findIndexCard("Inventory");
+    for (const label of ["Equipment", "Materials", "Ready to Use", "Needs Attention"]) {
+      expect(screen.getByText(label, { selector: ".hs-kpi-label" })).toBeInTheDocument();
+    }
+    expect(within(card).getByRole("button", { name: "Add item" })).toBeEnabled();
+    const views = within(card).getByRole("tablist", { name: "Inventory views" });
+    expect(within(views).getByRole("tab", { name: /^All items/ })).toHaveAttribute("aria-selected", "true");
 
-    const views = within(card).getByRole("tablist", { name: "Equipment views" });
-    expect(within(views).getByRole("tab", { name: /^All equipment/ })).toHaveAttribute("aria-selected", "true");
+    // one row per record, each with its kind, its status and where it is
+    const pump = within(card).getAllByRole("button", { name: "Edit Concrete Pump #2" })[0].closest("tr") as HTMLElement;
+    expect(within(pump).getByText("Equipment")).toBeInTheDocument();
+    expect(within(pump).getByText("In Use")).toBeInTheDocument();
+    expect(within(pump).getByText("Riverside Office Building")).toBeInTheDocument();
+    const concrete = within(card).getAllByRole("button", { name: "Edit Ready Mix Concrete" })[0].closest("tr") as HTMLElement;
+    expect(within(concrete).getByText("Material")).toBeInTheDocument();
+    expect(within(concrete).getByText("Ready")).toBeInTheDocument();
+    expect(within(concrete).getByText("120 yd3")).toBeInTheDocument();
 
-    // the name cell link and the pencil row action share the "Edit <name>" label
-    const row = within(card).getAllByRole("button", { name: "Edit Concrete Pump #2" })[0].closest("tr") as HTMLElement;
-    expect(within(row).getByText("In Use")).toBeInTheDocument();
-    // assigned project + current job (the fixture job is named after its project)
-    expect(within(row).getAllByText("Riverside Office Building").length).toBeGreaterThan(0);
-    expect(within(row).getByRole("button", { name: "Remove Concrete Pump #2" })).toBeInTheDocument();
+    // a view is a kind, or what needs attention — nothing in the fixture does
+    fireEvent.click(within(views).getByRole("tab", { name: /^Materials/ }));
+    expect(within(card).queryByRole("button", { name: "Edit Concrete Pump #2" })).toBeNull();
+    expect(within(card).getAllByRole("button", { name: "Edit Ready Mix Concrete" }).length).toBeGreaterThan(0);
+    fireEvent.click(within(views).getByRole("tab", { name: /^Needs attention/ }));
+    expect(within(card).getByText("Nothing matches that search")).toBeInTheDocument();
+    fireEvent.click(within(views).getByRole("tab", { name: /^All items/ }));
 
-    fireEvent.click(within(views).getByRole("tab", { name: /^Maintenance/ }));
-    expect(within(card).getByText("No equipment matches that search")).toBeInTheDocument();
-    fireEvent.click(within(views).getByRole("tab", { name: /^In use/ }));
+    fireEvent.change(within(card).getByLabelText("Search inventory"), { target: { value: "pump" } });
     expect(within(card).getAllByRole("button", { name: "Edit Concrete Pump #2" }).length).toBeGreaterThan(0);
-
-    fireEvent.change(within(card).getByLabelText("Search equipment"), { target: { value: "forklift" } });
-    expect(within(card).getByText("No equipment matches that search")).toBeInTheDocument();
-    fireEvent.change(within(card).getByLabelText("Search equipment"), { target: { value: "pump" } });
-    expect(within(card).getAllByRole("button", { name: "Edit Concrete Pump #2" }).length).toBeGreaterThan(0);
+    expect(within(card).queryByRole("button", { name: "Edit Ready Mix Concrete" })).toBeNull();
+    fireEvent.change(within(card).getByLabelText("Search inventory"), { target: { value: "" } });
+    fireEvent.change(within(card).getByLabelText("Filter inventory by status"), { target: { value: "Ready" } });
+    expect(within(card).queryByRole("button", { name: "Edit Concrete Pump #2" })).toBeNull();
+    expect(within(card).getAllByRole("button", { name: "Edit Ready Mix Concrete" }).length).toBeGreaterThan(0);
   });
 
-  // replaces "creates equipment from the equipment popup and reloads bootstrap data"
-  it("creates equipment from Add Equipment and shows the reloaded row", async () => {
+  it("adds a piece of equipment from Add item and shows the reloaded row", async () => {
     const newEquipment = { id: "eq-forklift-9", name: "Forklift #9", type: "Forklift", status: "In Use", assignedTo: "p-riverside" };
     let created = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -410,46 +420,40 @@ describe("BuildFlow index pages", () => {
 
     render(<App />);
     await enterDashboard();
-    await openAppPage("Equipment");
+    await openAppPage("Inventory");
 
-    const card = await findIndexCard("Equipment");
-    fireEvent.click(within(card).getByRole("button", { name: "Add Equipment" }));
-    const dialog = screen.getByRole("dialog", { name: "Add Equipment" });
-    fireEvent.change(within(dialog).getByLabelText("Equipment Name"), { target: { value: "Forklift #9" } });
-    fireEvent.change(within(dialog).getByLabelText("Equipment Type"), { target: { value: "Forklift" } });
+    const card = await findIndexCard("Inventory");
+    fireEvent.click(within(card).getByRole("button", { name: "Add item" }));
+    const dialog = screen.getByRole("dialog", { name: "Add item" });
+    fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Forklift #9" } });
+    fireEvent.change(within(dialog).getByLabelText("Type"), { target: { value: "Forklift" } });
     fireEvent.change(within(dialog).getByLabelText("Status"), { target: { value: "In Use" } });
-    fireEvent.change(within(dialog).getByLabelText("Assigned Project"), { target: { value: "p-riverside" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Add Equipment" }));
+    fireEvent.change(within(dialog).getByLabelText("Project"), { target: { value: "p-riverside" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add item" }));
 
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add Equipment" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add item" })).not.toBeInTheDocument());
     expect(requestBody(fetchMock, "/api/equipment", "POST")).toEqual({
       name: "Forklift #9",
       type: "Forklift",
       status: "In Use",
       assignedTo: "p-riverside"
     });
-
     const row = (await within(card).findAllByRole("button", { name: "Edit Forklift #9" }))[0].closest("tr") as HTMLElement;
     expect(within(row).getByText("In Use")).toBeInTheDocument();
-    expect(within(card).getAllByRole("button", { name: "Edit Concrete Pump #2" }).length).toBeGreaterThan(0);
+    expect(within(row).getByText("Equipment")).toBeInTheDocument();
   });
 
-  // replaces "edits and removes equipment from equipment cards"
-  it("edits and removes equipment from the index rows", async () => {
-    let equipment = [...bootstrapFixture.equipment];
+  it("changes a material line's status in the drawer and sends the line back whole", async () => {
+    let materials = [...bootstrapFixture.materials];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url === "/api/equipment/eq-pump" && init?.method === "PATCH") {
+      if (url === "/api/materials/mat-concrete" && init?.method === "PATCH") {
         const updates = JSON.parse(String(init.body));
-        equipment = equipment.map((item) => (item.id === "eq-pump" ? { ...item, ...updates } : item));
-        return new Response(JSON.stringify(equipment.find((item) => item.id === "eq-pump")), { status: 200 });
-      }
-      if (url === "/api/equipment/eq-pump" && init?.method === "DELETE") {
-        equipment = equipment.filter((item) => item.id !== "eq-pump");
-        return new Response(null, { status: 204 });
+        materials = materials.map((item) => (item.id === "mat-concrete" ? { ...item, ...updates } : item));
+        return new Response(JSON.stringify(materials.find((item) => item.id === "mat-concrete")), { status: 200 });
       }
       if (url.includes("/api/bootstrap")) {
-        return new Response(JSON.stringify({ ...bootstrapFixture, equipment }), { status: 200 });
+        return new Response(JSON.stringify({ ...bootstrapFixture, materials }), { status: 200 });
       }
       return respondToBuildflowApi(input);
     });
@@ -457,70 +461,77 @@ describe("BuildFlow index pages", () => {
 
     render(<App />);
     await enterDashboard();
-    await openAppPage("Equipment");
+    await openAppPage("Inventory");
 
-    const card = await findIndexCard("Equipment");
-    fireEvent.click(within(card).getAllByRole("button", { name: "Edit Concrete Pump #2" })[0]);
-    const dialog = screen.getByRole("dialog", { name: "Edit Equipment" });
-    expect(within(dialog).getByLabelText("Equipment Name")).toHaveValue("Concrete Pump #2");
-    fireEvent.change(within(dialog).getByLabelText("Equipment Name"), { target: { value: "Concrete Pump #3" } });
-    fireEvent.change(within(dialog).getByLabelText("Equipment Type"), { target: { value: "Pump Truck" } });
-    fireEvent.change(within(dialog).getByLabelText("Status"), { target: { value: "Maintenance" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save Equipment" }));
+    const card = await findIndexCard("Inventory");
+    fireEvent.click(within(card).getAllByRole("button", { name: "Edit Ready Mix Concrete" })[0]);
+    const dialog = screen.getByRole("dialog", { name: "Edit item" });
+    // the line as it stands; an item keeps its kind
+    expect(within(dialog).getByLabelText("Kind")).toHaveValue("material");
+    expect(within(dialog).getByLabelText("Kind")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Name")).toHaveValue("Ready Mix Concrete");
+    expect(within(dialog).getByLabelText("Quantity")).toHaveValue("120 yd3");
+    expect(within(dialog).getByLabelText("Delivery date")).toHaveValue("2026-06-16");
+    expect(within(dialog).getByLabelText("Status")).toHaveValue("Ready");
 
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit Equipment" })).not.toBeInTheDocument());
-    expect(requestBody(fetchMock, "/api/equipment/eq-pump", "PATCH")).toEqual({
-      name: "Concrete Pump #3",
-      type: "Pump Truck",
-      status: "Maintenance",
-      assignedTo: "p-riverside"
+    fireEvent.change(within(dialog).getByLabelText("Status"), { target: { value: "Missing" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save item" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Edit item" })).not.toBeInTheDocument());
+    expect(requestBody(fetchMock, "/api/materials/mat-concrete", "PATCH")).toEqual({
+      projectId: "p-riverside",
+      name: "Ready Mix Concrete",
+      status: "Missing",
+      deliveryDate: "2026-06-16",
+      quantity: "120 yd3"
     });
-    const row = (await within(card).findAllByRole("button", { name: "Edit Concrete Pump #3" }))[0].closest("tr") as HTMLElement;
-    expect(within(row).getByText("Maintenance")).toBeInTheDocument();
-
-    fireEvent.click(within(row).getByRole("button", { name: "Remove Concrete Pump #3" }));
-    const confirm = screen.getByRole("dialog", { name: "Remove Equipment" });
-    fireEvent.click(within(confirm).getByRole("button", { name: "Remove Equipment" }));
-
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Remove Equipment" })).not.toBeInTheDocument());
-    expect(fetchMock).toHaveBeenCalledWith("/api/equipment/eq-pump", expect.objectContaining({ method: "DELETE" }));
-    expect(await within(card).findByText("No equipment added yet")).toBeInTheDocument();
+    const row = (await within(card).findAllByRole("button", { name: "Edit Ready Mix Concrete" }))[0].closest("tr") as HTMLElement;
+    expect(await within(row).findByText("Missing")).toBeInTheDocument();
+    // and it is now something that needs attention
+    fireEvent.click(within(card).getByRole("tab", { name: /^Needs attention/ }));
+    expect(within(card).getAllByRole("button", { name: "Edit Ready Mix Concrete" }).length).toBeGreaterThan(0);
   });
 
-  // --------------------------------------------------------------- Materials
+  it("removes an item of either kind after confirming", async () => {
+    let equipment = [...bootstrapFixture.equipment];
+    let materials = [...bootstrapFixture.materials];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/equipment/eq-pump" && init?.method === "DELETE") {
+        equipment = [];
+        return new Response(null, { status: 204 });
+      }
+      if (url === "/api/materials/mat-concrete" && init?.method === "DELETE") {
+        materials = [];
+        return new Response(null, { status: 204 });
+      }
+      if (url.includes("/api/bootstrap")) {
+        return new Response(JSON.stringify({ ...bootstrapFixture, equipment, materials }), { status: 200 });
+      }
+      return respondToBuildflowApi(input);
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-  // replaces "renders materials with the crew-style directory layout"
-  it("lists materials in the index table with status tabs and search", async () => {
     render(<App />);
     await enterDashboard();
-    await openAppPage("Materials");
+    await openAppPage("Inventory");
 
-    const card = await findIndexCard("Materials");
-    expect(screen.getByText("Total Materials")).toBeInTheDocument();
-    expect(screen.getByText("Ready Now")).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Add Material" })).toBeEnabled();
+    const card = await findIndexCard("Inventory");
+    fireEvent.click(within(card).getByRole("button", { name: "Remove Concrete Pump #2" }));
+    let confirm = screen.getByRole("dialog", { name: "Remove item" });
+    expect(within(confirm).getByText("Concrete Pump #2")).toBeInTheDocument();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Confirm remove Concrete Pump #2" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Remove item" })).not.toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith("/api/equipment/eq-pump", expect.objectContaining({ method: "DELETE" }));
+    await waitFor(() => expect(within(card).queryByRole("button", { name: "Edit Concrete Pump #2" })).toBeNull());
 
-    const views = within(card).getByRole("tablist", { name: "Material views" });
-    expect(within(views).getByRole("tab", { name: /^All materials/ })).toHaveAttribute("aria-selected", "true");
-
-    const table = within(card).getByRole("table");
-    const row = within(table).getByRole("checkbox", { name: "Select Ready Mix Concrete" }).closest("tr") as HTMLElement;
-    expect(within(row).getByText("Ready Mix Concrete")).toBeInTheDocument();
-    expect(within(row).getByText("Ready")).toBeInTheDocument();
-    expect(within(row).getByText("120 yd3")).toBeInTheDocument();
-    // the fixture's job is named after its project, so the Project and Job columns both read the project name
-    expect(within(row).getAllByText("Riverside Office Building").length).toBeGreaterThan(0);
-
-    fireEvent.click(within(views).getByRole("tab", { name: /^Ordered/ }));
-    expect(within(card).getByText("No materials match that search")).toBeInTheDocument();
-    fireEvent.click(within(views).getByRole("tab", { name: /^Ready/ }));
-    expect(within(card).getByRole("checkbox", { name: "Select Ready Mix Concrete" })).toBeInTheDocument();
-
-    fireEvent.change(within(card).getByLabelText("Search materials"), { target: { value: "rebar" } });
-    expect(within(card).getByText("No materials match that search")).toBeInTheDocument();
-    fireEvent.change(within(card).getByLabelText("Search materials"), { target: { value: "" } });
-    fireEvent.change(within(card).getByLabelText("Filter materials by status"), { target: { value: "Ready" } });
-    expect(within(card).getByRole("checkbox", { name: "Select Ready Mix Concrete" })).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Remove Ready Mix Concrete" }));
+    confirm = screen.getByRole("dialog", { name: "Remove item" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Confirm remove Ready Mix Concrete" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/materials/mat-concrete", expect.objectContaining({ method: "DELETE" }))
+    );
+    expect(await within(card).findByText("Nothing in inventory yet")).toBeInTheDocument();
   });
 
   // ----------------------------------------------------------- Field Updates

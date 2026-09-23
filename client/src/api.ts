@@ -21,6 +21,7 @@ import type {
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
+  UpdateMaterialInput,
   UpdatePhaseInput,
   UpdateProjectInput,
   PlanId,
@@ -502,6 +503,19 @@ export function createMaterial(input: CreateMaterialInput) {
   return request<Material>("/api/materials", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+export function updateMaterial(id: string, input: UpdateMaterialInput) {
+  return request<Material>(`/api/materials/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export function deleteMaterial(id: string) {
+  return request<void>(`/api/materials/${id}`, {
+    method: "DELETE"
   });
 }
 

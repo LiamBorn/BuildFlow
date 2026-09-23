@@ -106,11 +106,10 @@ export function useReadNotifications(userId: string) {
 /**
  * What the row promises, for the screen reader. The visible row already reads as a link from
  * its chevron and its hover; someone who cannot see either needs to be told where it goes,
- * and "Open Materials" is a more useful thing to hear than "button".
+ * and "Open Inventory" is a more useful thing to hear than "button".
  */
 const PAGE_LABELS: Record<string, string> = {
-  materials: "Materials",
-  equipment: "Equipment",
+  inventory: "Inventory",
   field: "Field updates",
   delayIQs: "DelayIQs"
 };
@@ -122,7 +121,7 @@ function targetLabel(target?: NotificationTarget): string {
   if (!target) return "BuildFlow";
   if (target.kind === "record") return PAGE_LABELS[target.page] ?? "the record";
   if (target.kind === "panel") return PANEL_LABELS[target.panelId] ?? "the Dashboard";
-  return "the Week board";
+  return "the Month calendar";
 }
 
 /** "3m ago" / "in 4d" — the same shape the rest of the app uses. */

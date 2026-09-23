@@ -63,7 +63,7 @@ export const TUTORIAL_SCENES: Record<string, TutorialSceneSpec> = {
   // the paid add-ons
   "product-schedule-ai": { shape: "list", action: "read" },
   "product-time-cards": { shape: "table", action: "read" },
-  "equipment-overview": { shape: "table", action: "read" },
+  "inventory-overview": { shape: "table", action: "read" },
   "wrap-up": { shape: "tiles", action: "click" }
 };
 

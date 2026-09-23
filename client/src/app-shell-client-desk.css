@@ -651,9 +651,8 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-colors="red"][data-bf-mode="dark"]
 .bf-shell:not([data-bf-theme]) .proj-rx,
 .bf-shell:not([data-bf-theme]) .sched-rx,
 .bf-shell:not([data-bf-theme]) .settings-rx,
-.bf-shell:not([data-bf-theme]) .equip-rx,
+.bf-shell:not([data-bf-theme]) .inv-rx,
 .bf-shell:not([data-bf-theme]) .field-rx,
-.bf-shell:not([data-bf-theme]) .mat-rx,
 .bf-shell:not([data-bf-theme]) .delayIQ-rx,
 .bf-shell:not([data-bf-theme]) .pdx,
 .bf-shell:not([data-bf-theme]) .acct-split,
@@ -911,8 +910,6 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="dark"]) {
 .bf-shell .sched-rx .dx-title,
 .bf-shell .proj-rx .dx-title,
 .bf-shell .crew-rx .dx-title,
-.bf-shell .equip-rx .dx-title,
-.bf-shell .mat-rx .dx-title,
 .bf-shell .field-rx .dx-title,
 .bf-shell .delayIQ-rx .dx-title {
   font-family: var(--bf-font-display);
@@ -1503,9 +1500,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 .bf-shell:not([data-bf-theme]) .proj-rx,
 .bf-shell:not([data-bf-theme]) .sched-rx,
 .bf-shell:not([data-bf-theme]) .settings-rx,
-.bf-shell:not([data-bf-theme]) .equip-rx,
+.bf-shell:not([data-bf-theme]) .inv-rx,
 .bf-shell:not([data-bf-theme]) .field-rx,
-.bf-shell:not([data-bf-theme]) .mat-rx,
 .bf-shell:not([data-bf-theme]) .delayIQ-rx,
 .bf-shell:not([data-bf-theme]) .hs-index {
   --cc-green: var(--bf-color-ok);
@@ -4547,152 +4543,91 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    the entrance plays again. Fills `backwards`, as section 20 does, so the
    rows' hover slide and the card's states are free once it has played.
    ============================================================================ */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpis > .hs-kpi {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi {
   --bfe-r: 0;
   --bfe-y: var(--bfm-rise);
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-kpis
-  > .hs-kpi:nth-child(2) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-kpis
-  > .hs-kpi:nth-child(3) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-kpis
-  > .hs-kpi:nth-child(4) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-kpis
-  > .hs-kpi:nth-child(n + 5) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(n + 5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-index-main
-  > .hs-index-card {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-main > .hs-index-card {
   --bfe-y: var(--bfm-rise-l);
   --bfe-blur: var(--bfm-blur);
   animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-index-card > * {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > * {
   --bfe-r: 0;
   --bfe-y: 8px;
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-index-card
-  > :nth-child(2) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-index-card
-  > :nth-child(3) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-index-card
-  > :nth-child(4) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-index-card
-  > :nth-child(5) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-index-card
-  > :nth-child(n + 6) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(n + 6) {
   --bfe-r: 5;
 }
 /* the table's rows, top to bottom, once the table itself is in */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr {
   --bfe-r: 0;
   --bfe-y: 8px;
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(2) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(3) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(4) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(5) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(6) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(6) {
   --bfe-r: 5;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(7) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(7) {
   --bfe-r: 6;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  > tr:nth-child(8) {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr:nth-child(8) {
   --bfe-r: 7;
 }
 .app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx)
   .hs-table
   tbody
   > tr:nth-child(n + 9) {
   --bfe-r: 8;
 }
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpis > .hs-kpi,
-  .app-shell.hs-shell.bf-shell
-    :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-    .hs-index-main
-    > .hs-index-card,
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-index-card > *,
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr {
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-main > .hs-index-card,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > *,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr {
     animation: none;
   }
 }
@@ -4718,39 +4653,39 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    colour, the value in the display face; the empty state a chip.
    ============================================================================ */
 /* ---- 22a. the KPI tiles ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpis {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis {
   gap: 12px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi {
   flex-direction: row-reverse;
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
   padding: 16px 18px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-ico {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-ico {
   width: 30px;
   height: 30px;
   border-radius: 50%;
   background: var(--bf-hover);
   box-shadow: none;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-ico svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-ico svg {
   width: 14px;
   height: 14px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-body {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-body {
   flex: 1;
   gap: 0;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-label {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-label {
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: none;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-value {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-value {
   margin: 6px 0 4px;
   font-family: var(--bf-font-display);
   font-size: 32px;
@@ -4759,37 +4694,33 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   line-height: 1;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-note {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-note {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-delta {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta {
   font-weight: 600;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-delta.is-up {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-up {
   color: var(--cc-green);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-kpi-delta.is-down {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-down {
   color: var(--cc-red);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-kpi-delta.is-up::before {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-up::before {
   content: "↗ ";
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-kpi-delta.is-down::before {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-down::before {
   content: "↘ ";
 }
 
 /* ---- 22b. the toolbar and the quick filters ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-toolbar {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-toolbar {
   gap: 8px;
   margin-bottom: 10px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-search {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search {
   min-height: 40px;
   padding: 0 12px 0 14px;
   border: 0;
@@ -4798,16 +4729,16 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink-faint);
   box-shadow: var(--bf-shadow-card);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-search:focus-within {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search:focus-within {
   border-color: transparent;
   box-shadow: 0 0 0 2px var(--bf-focus-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-search input {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search input {
   font-size: 12.5px;
   font-weight: 500;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-search kbd {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search kbd {
   border: 0;
   border-radius: 999px;
   padding: 2px 7px;
@@ -4815,7 +4746,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink-faint);
   font-size: 10.5px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip {
   min-height: 40px;
   padding: 0 16px;
   border: 0;
@@ -4829,35 +4760,35 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     transform var(--bf-dur-press) var(--bf-ease),
     box-shadow var(--bf-dur-hover) var(--bf-ease);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip svg {
   width: 15px;
   height: 15px;
   color: inherit;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip:hover {
   background: var(--bf-surface);
   color: var(--bf-ink);
   transform: translateY(-2px);
   box-shadow: var(--bf-shadow-raised);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip.active {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip.active {
   border-color: transparent;
   background: var(--bf-ink);
   color: var(--bf-surface);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip.active svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip.active svg {
   color: inherit;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-toolbar-right {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-toolbar-right {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-quickfilters {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-quickfilters {
   gap: 6px 8px;
   margin-bottom: 14px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf {
   min-height: 30px;
   padding: 0 24px 0 12px;
   border-radius: 999px;
@@ -4866,26 +4797,26 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-size: 11.5px;
   font-weight: 500;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf select {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf select {
   padding: 0 14px 0 0;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf > svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf > svg {
   right: 9px;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf:hover {
   background: var(--bf-hover);
 }
 /* a filter that is set is the reference's lime chip */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf.is-set {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf.is-set {
   background: var(--bf-accent-fill);
   color: var(--bf-on-accent);
   font-weight: 600;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf.is-set > svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf.is-set > svg {
   color: var(--bf-on-accent);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf-link {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link {
   height: 30px;
   padding: 0 12px;
   border-radius: 999px;
@@ -4895,21 +4826,21 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-weight: 500;
   box-shadow: var(--bf-shadow-card);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf-link:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link:hover {
   text-decoration: none;
   transform: translateY(-2px);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf-link svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link svg {
   width: 14px;
   height: 14px;
 }
 
 /* ---- 22c. the table ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table-wrap {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table-wrap {
   border: 1px solid var(--bf-line-solid);
   border-radius: var(--bf-radius-panel);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th {
   height: 40px;
   background: var(--bf-surface);
   border-bottom: 1px solid var(--bf-line-solid);
@@ -4919,50 +4850,40 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   text-transform: uppercase;
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th.sorted,
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  thead
-  th.sorted
-  button
-  svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th.sorted,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th.sorted button svg {
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody td {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody td {
   height: 52px;
   border-bottom: 1px solid var(--bf-line-solid);
   font-size: 12.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody tr:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody tr:hover {
   background: var(--bf-hover);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  tbody
-  tr.is-selected {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody tr.is-selected {
   background: var(--cc-blue-soft);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-link {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-link {
   font-size: 13px;
   font-weight: 600;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-link:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-link:hover {
   color: var(--bf-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-row-sub {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-row-sub {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-faint);
 }
 /* the avatar: the reference's faces — three gradients, by row */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-avatar {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-avatar {
   width: 30px;
   height: 30px;
   background: var(--bf-color-face-2);
@@ -4973,7 +4894,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   letter-spacing: 0;
 }
 .app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx)
   .hs-table
   tbody
   tr:nth-child(3n + 1)
@@ -4981,18 +4902,18 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   background: var(--bf-color-face-1);
 }
 .app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx)
   .hs-table
   tbody
   tr:nth-child(3n)
   .hs-avatar {
   background: var(--bf-color-face-3);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-cell-muted {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-cell-muted {
   font-size: 12.5px;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-cell-num {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-cell-num {
   font-family: var(--bf-font-display);
   font-size: 13px;
   font-weight: 600;
@@ -5000,9 +4921,9 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink);
 }
 /* every status, health and ± days: the small pill on the semantic pairs */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-delta {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-delta {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -5017,86 +4938,77 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   text-transform: none;
   white-space: nowrap;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge {
   background: var(--bf-hover);
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.confirmed,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.on-site,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.complete,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.available,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.scheduled,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.upcoming,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge.tone-green,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-delta.ahead {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.confirmed,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.on-site,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.complete,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.available,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.scheduled,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.upcoming,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-green,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-delta.ahead {
   background: var(--cc-green-soft);
   color: var(--cc-green);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.ready,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.ready-to-start,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge.tone-violet {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.ready,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.ready-to-start,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-violet {
   background: var(--cc-violet-soft);
   color: var(--cc-violet);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.in-progress,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge.tone-blue {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.in-progress,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-blue {
   background: var(--cc-blue-soft);
   color: var(--cc-blue);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.planned,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.not-started {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.planned,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.not-started {
   background: var(--bf-hover);
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.medium,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.monitor,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.ordered,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.waiting-on-delivery,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge.tone-amber {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.medium,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.monitor,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.ordered,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.waiting-on-delivery,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-amber {
   background: var(--cc-amber-soft);
   color: var(--cc-amber);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.delayIQed,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.delayiqed,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.high,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.maintenance,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.missing,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.at-risk,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.open,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .badge.overbooked,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-badge.tone-red,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-delta.behind {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.delayIQed,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.delayiqed,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.high,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.maintenance,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.missing,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.at-risk,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.open,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.overbooked,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-red,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-delta.behind {
   background: var(--cc-red-soft);
   color: var(--cc-red);
 }
 /* progress: a semantic fill on the line colour, the figure in the display face */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-progress-track {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track {
   height: 8px;
   background: var(--bf-line-solid);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-progress-track i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track i {
   background: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-progress-track.tone-green
-  i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-green i {
   background: var(--cc-green);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-progress-track.tone-amber
-  i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-amber i {
   background: var(--cc-amber);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-progress-track.tone-red
-  i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-red i {
   background: var(--cc-red);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-progress b {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress b {
   font-family: var(--bf-font-display);
   font-size: 13px;
   font-weight: 600;
@@ -5104,52 +5016,52 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink);
 }
 /* the empty state and the footer's count */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-empty {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty {
   margin: 14px 0 0;
   padding: 28px 20px;
   border-radius: var(--bf-radius-panel);
   background: var(--bf-hover);
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-empty svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty svg {
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-empty strong {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty strong {
   font-family: var(--bf-font-display);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.022em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-empty span {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty span {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-index-foot {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-foot {
   margin-top: 14px;
 }
 
 /* ---- 22d. the three panels beside the table: alerts, milestones, portfolio health ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-panel {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel {
   padding: 18px 20px;
   border: 0;
   border-radius: var(--bf-radius-card);
   background: var(--bf-surface);
   box-shadow: var(--bf-shadow-card);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-panel-head {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-head {
   gap: 10px;
   margin-bottom: 10px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-panel-head h2 {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-head h2 {
   font-family: var(--bf-font-display);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.022em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-panel-link {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-link {
   display: inline-flex;
   align-items: center;
   height: 30px;
@@ -5160,93 +5072,90 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-size: 11.5px;
   font-weight: 500;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-panel-link:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-link:hover {
   text-decoration: none;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-list,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-miles-list,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-legend {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-list,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-miles-list,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-legend {
   gap: 8px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-alert,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-row,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-empty-line {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-row,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-empty-line {
   padding: 8px 12px;
   border-radius: var(--bf-radius-control);
   background: var(--bf-hover);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-alert-ico,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-ico {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-ico,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-ico {
   width: 30px;
   height: 30px;
   border-radius: 50%;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-alert-ico svg,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-ico svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-ico svg,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-ico svg {
   width: 15px;
   height: 15px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-alert-body strong,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-body strong {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-body strong,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-body strong {
   font-size: 13px;
   font-weight: 600;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-alert-body span,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-body span,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-empty-line {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-body span,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-body span,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-empty-line {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .cc-alert-time,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-mile-date {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-time,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-date {
   font-size: 11px;
   font-weight: 500;
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .proj-health-center
-  strong {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-center strong {
   font-family: var(--bf-font-display);
   font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.036em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-center span {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-center span {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-row {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-row {
   padding: 6px 12px;
   border-radius: var(--bf-radius-control);
   background: var(--bf-hover);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-key {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-key {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-key i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-key i {
   border-radius: 50%;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-bar {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-bar {
   height: 8px;
   background: var(--bf-line-solid);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-pct {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-pct {
   font-family: var(--bf-font-display);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .proj-health-empty {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-empty {
   border-radius: var(--bf-radius-panel);
   background: var(--bf-hover);
   font-size: 11.5px;
@@ -5254,8 +5163,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-chip:hover,
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-qf-link:hover {
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip:hover,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link:hover {
     transform: none;
   }
 }
@@ -5271,19 +5180,14 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    picker — takes from the shell (23b).
    ============================================================================ */
 /* ---- 23a. the index table's extra tones ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th button {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th button {
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
 }
-.app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx)
-  .hs-table
-  thead
-  th
-  button:hover,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table thead th.sorted {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th button:hover,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th.sorted {
   color: var(--bf-ink);
 }
 
@@ -5383,177 +5287,16 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
   }
 }
 /* ============================================================================
-   25. THE EQUIPMENT AND MATERIALS PAGES, INSIDE: the fleet and stock dialogs, the footnote
+   25. THE INVENTORY PAGE (Resources, 2026-09-23): nothing of its own
    ----------------------------------------------------------------------------
-   Equipment is the index shape again (four KPI tiles, the card with views,
-   toolbar, quick filters, the fleet table with status pills and utilisation
-   bars), so sections 21-22 now reach `.equip-rx` too. What is its own: the
-   Add / Edit Equipment dialog and the Remove Equipment dialog, which are the
-   older `crew-dialog` markup rather than the `.pdx` system — a header with a
-   title and a close button, a stacked form, an assignment preview tile, a
-   note, the Cancel / Save pair — and a one-line footnote under the table.
-   Here the dialog is the reference's card language: the stage radius on the
-   deepest shadow, a 20px display title, a 40px white disc to close, labels at
-   11.5px, fields on the second surface with an ink focus ring, preview and
-   summary tiles on the second surface with an eyebrow and a display figure,
-   the note a chip, the error in the bad tone, Cancel a white pill and Save
-   an ink pill (Remove the bad tone).
+   This section dressed the Equipment and Materials pages' own parts — their
+   older centred `crew-dialog` add / edit / remove dialogs and the fleet
+   footnote. Both pages became the one Inventory list (docs/backlog.md keeps
+   them) and those rules went with them. The Inventory is the index shape
+   (four KPI tiles, the card with views, toolbar, quick filters, the table) and
+   edits in the `.pdx` drawer, so sections 21-22, 65 and 70 reach it through
+   `.inv-rx` and there is nothing left to say here.
    ============================================================================ */
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog-backdrop {
-  background: rgba(28, 28, 28, 0.32);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog {
-  border: 0;
-  border-radius: var(--bf-radius-stage);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-float);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog-header {
-  padding: 22px 24px 16px;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog-header h2 {
-  font-family: var(--bf-font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog-header p {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .icon-button {
-  width: 40px;
-  height: 40px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .icon-button:hover {
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .crew-form,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-review-panel {
-  padding: 20px 24px 24px;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form label {
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form input,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form select,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form textarea {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form input:focus,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form select:focus,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form textarea:focus {
-  border-color: transparent;
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-size-preview,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .equipment-assignment-preview,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-review-size,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .equipment-remove-summary {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-size-preview span,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .equipment-remove-summary span {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-size-preview strong,
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .equipment-remove-summary strong {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .form-note {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .form-error {
-  color: var(--cc-red);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .primary-button {
-  min-height: 40px;
-  height: 40px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .primary-button:hover:not(:disabled) {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  transform: translateY(-2px);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .primary-button:disabled {
-  background: var(--bf-hover);
-  color: var(--bf-ink-faint);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .primary-button.danger-button {
-  background: var(--cc-red);
-  color: #fff;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .primary-button.danger-button:hover:not(:disabled) {
-  background: var(--cc-red);
-  color: #fff;
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .equipment-footnote {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .equipment-footnote strong {
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .icon-button:hover,
-  .app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-dialog .primary-button:hover:not(:disabled) {
-    transform: none;
-  }
-}
 
 /* ============================================================================
    26. THE MAP & FIELD OPS PAGE, INSIDE: the command bar, the job-site grid, the
@@ -7094,11 +6837,6 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
     animation: none;
   }
 }
-
-/* Materials (root `page-stack materials-page mat-rx hs-index`) is the Equipment shape to the
-   letter — the same KPI strip, index card, table with readiness bars, and the same `crew-dialog`
-   markup for Add Material — so sections 21, 22 and 25 carry `.mat-rx` in their scopes rather than
-   repeating themselves here. */
 
 /* ============================================================================
    30. THE FIELD UPDATES PAGE, INSIDE: the entry card under the log
@@ -10884,8 +10622,7 @@ body.bf-shell > .schedule-dialog-backdrop {
     .sched-rx,
     .proj-rx,
     .crew-rx,
-    .equip-rx,
-    .mat-rx,
+    .inv-rx,
     .delayIQ-rx,
     .field-rx,
     .settings-rx,
@@ -11219,9 +10956,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus {
 
 /* ---- 46b. what the page-by-page audit still found ---------------------------------------- */
 /* every -rx page carries the same three auroras; the first was Google blue on all of them */
-.app-shell.hs-shell.bf-shell
-  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .field-rx, .settings-rx)
-  .dx-aurora-1 {
+.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-aurora-1 {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-fill-rgb), 0.2), transparent 62%);
 }
 /* the index pages' avatars: the blue tone is plum, slate is the ink's own grey */
@@ -11393,12 +11128,10 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
 }
 /* the contact record's composer check and information notice */
 /* every -rx page's cursor glow and hero icon shadow; the selected card's ring */
-.app-shell.hs-shell.bf-shell
-  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .field-rx, .settings-rx)
-  .dx-cursor {
+.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-cursor {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-fill-rgb), 0.12), transparent 62%);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .equip-rx, .mat-rx, .delayIQ-rx) .cc-hero-icon {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .delayIQ-rx) .cc-hero-icon {
   box-shadow: var(--bf-shadow-card);
 }
 .app-shell.hs-shell.bf-shell .crew-rx .crew-directory-card.selected,
@@ -11407,15 +11140,6 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
   box-shadow:
     0 0 0 3px rgba(28, 28, 28, 0.12),
     var(--bf-shadow-float);
-}
-/* the Equipment page's icons and its in-use pill */
-.app-shell.hs-shell.bf-shell .equip-rx .equipment-card-icon {
-  background: var(--bf-color-accent-wash);
-  color: var(--bf-accent);
-}
-.app-shell.hs-shell.bf-shell .equip-rx .crew-status-pill.in-use {
-  background: var(--bf-color-accent-wash);
-  color: var(--bf-accent);
 }
 /* the Dashboard: the business banner, the panel note, the customize hint, the drag handle, the ghost */
 .app-shell.hs-shell.bf-shell .dash-rx .business-context-banner span {
@@ -11551,7 +11275,7 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
    It breathed — `dx-pulse` took it from the ink to 0.35 and back every 2.6s, forever — which
    is the fade the user asked to stop (2026-09-16). It is a label's marker, not a live
    indicator, so it holds still at the ink instead. */
-.app-shell.hs-shell.bf-shell :is(.dash-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .delayIQ-rx, .field-rx, .settings-rx) .dx-dot {
+.app-shell.hs-shell.bf-shell :is(.dash-rx, .proj-rx, .crew-rx, .inv-rx, .delayIQ-rx, .field-rx, .settings-rx) .dx-dot {
   background: var(--bf-accent);
   box-shadow: none;
   animation: none;
@@ -11577,14 +11301,10 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
   color: var(--bf-ink-muted);
 }
 /* the second and third auroras were a violet and a coral haze: they read the set now */
-.app-shell.hs-shell.bf-shell
-  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .field-rx, .settings-rx)
-  .dx-aurora-2 {
+.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-aurora-2 {
   background: radial-gradient(circle, rgba(var(--bf-color-info-rgb), 0.08), transparent 62%);
 }
-.app-shell.hs-shell.bf-shell
-  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .equip-rx, .mat-rx, .field-rx, .settings-rx)
-  .dx-aurora-3 {
+.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-aurora-3 {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-rgb), 0.05), transparent 60%);
 }
 
@@ -11634,9 +11354,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
     .proj-rx,
     .sched-rx,
     .settings-rx,
-    .equip-rx,
+    .inv-rx,
     .field-rx,
-    .mat-rx,
     .delayIQ-rx,
     .hs-index,
     .gantt-page,
@@ -12196,7 +11915,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bf-breeze-msg-body li {
 .app-shell.hs-shell.bf-shell .settings-rx .acct-select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .field-rx .field-entry-body select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .tc-page .tc-field select:focus:not(:focus-visible),
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .delayIQ-rx .form-stack select:focus:not(:focus-visible),
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-form select:focus:not(:focus-visible),
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form select:focus:not(:focus-visible),
@@ -12210,7 +11928,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form select:focus:not(:focus-vi
 .app-shell.hs-shell.bf-shell .settings-rx .acct-select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .field-rx .field-entry-body select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .tc-page .tc-field select:focus[data-bfsel-quiet],
-.app-shell.hs-shell.bf-shell :is(.equip-rx, .mat-rx) .crew-form select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .delayIQ-rx .form-stack select:focus[data-bfsel-quiet],
 .app-shell.hs-shell.bf-shell .gantt-page .gantt-drawer-form select:focus[data-bfsel-quiet],
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form select:focus[data-bfsel-quiet] {
@@ -14243,9 +13960,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
     .proj-rx,
     .crew-rx,
     .companies-page,
-    .equip-rx,
+    .inv-rx,
     .delayIQ-rx,
-    .mat-rx,
     .field-rx,
     .reports-page,
     .tc-page,
@@ -14261,9 +13977,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
     .proj-rx,
     .crew-rx,
     .companies-page,
-    .equip-rx,
+    .inv-rx,
     .delayIQ-rx,
-    .mat-rx,
     .field-rx,
     .reports-page,
     .tc-page,

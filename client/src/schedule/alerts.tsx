@@ -10,7 +10,8 @@ import { bookingsWithoutCrew } from "./filters";
 import { formatScheduleDate, mondayOf } from "./week";
 
 /** Where an alert takes you: the Week board on that week, or the page that owns the problem. */
-export type ScheduleAlertPage = "month" | "delayIQs" | "materials";
+/* "inventory" since 2026-09-23: the Materials page became part of the one Inventory list. */
+export type ScheduleAlertPage = "month" | "delayIQs" | "inventory";
 export type ScheduleAlertLink = { page: ScheduleAlertPage; weekStart?: string };
 
 export type ScheduleAlert = {
@@ -155,7 +156,7 @@ export function deriveScheduleAlerts(
       when: null,
       jobId: missingMaterials.id,
       date: missingMaterials.startDate,
-      link: { page: "materials" }
+      link: { page: "inventory" }
     });
   }
   return alerts;

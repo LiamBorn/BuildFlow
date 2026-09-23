@@ -135,8 +135,7 @@ export async function openCreateAccount() {
 export const HUB_OF: Record<string, string> = {
   Projects: "Operations",
   Crews: "Operations",
-  Equipment: "Resources",
-  Materials: "Resources",
+  Inventory: "Resources",
   "Field Updates": "Field",
   DelayIQs: "Field"
 };

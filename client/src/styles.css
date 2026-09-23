@@ -9519,23 +9519,18 @@ button:disabled {
 }
 
 .crews-page,
-.equipment-page,
-.materials-page,
+.inventory-page,
 .field-updates-page {
   gap: 20px;
 }
 
 .crews-page .page-title,
-.equipment-page .page-title,
-.materials-page .page-title,
 .field-updates-page .page-title {
   border-bottom: 0;
   padding-bottom: 2px;
 }
 
 .crews-page .page-title h1,
-.equipment-page .page-title h1,
-.materials-page .page-title h1,
 .field-updates-page .page-title h1 {
   font-size: 34px;
 }

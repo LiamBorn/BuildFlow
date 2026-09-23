@@ -200,12 +200,12 @@ describe("the notifications drawer", () => {
     await enterDashboard();
     const row = rowFor(openBell(), /Ready Mix Concrete/);
     // the row promises where it goes, for anyone who cannot see the chevron
-    expect(row.getAttribute("aria-label")).toContain("Open Materials");
+    expect(row.getAttribute("aria-label")).toContain("Open Inventory");
 
     fireEvent.click(row);
 
-    expect(await screen.findByRole("heading", { name: "Materials", level: 1 })).toBeInTheDocument();
-    // and the material itself is lit — "somewhere on the Materials page" is not the ask
+    expect(await screen.findByRole("heading", { name: "Inventory", level: 1 })).toBeInTheDocument();
+    // and the material itself is lit — "somewhere on the Inventory page" is not the ask
     await waitFor(() => expect(focusNode("mat-concrete")?.className).toContain("is-bf-focused"));
     expect(focusNode("mat-concrete")?.textContent).toContain("Ready Mix Concrete");
   });
@@ -220,16 +220,16 @@ describe("the notifications drawer", () => {
     render(<App />);
     await enterDashboard();
     fireEvent.click(rowFor(openBell(), /Ready Mix Concrete/));
-    await screen.findByRole("heading", { name: "Materials", level: 1 });
+    await screen.findByRole("heading", { name: "Inventory", level: 1 });
 
-    // the reader narrows the page to Missing, and the Ready material drops off it
-    fireEvent.click(screen.getByRole("tab", { name: /^Missing/ }));
+    // the reader narrows the page to what needs attention, and the Ready material drops off it
+    fireEvent.click(screen.getByRole("tab", { name: /^Needs attention/ }));
     await waitFor(() => expect(focusNode("mat-concrete")).toBeNull());
 
     fireEvent.click(rowFor(openBell(), /Ready Mix Concrete/));
 
     await waitFor(() => expect(focusNode("mat-concrete")?.className).toContain("is-bf-focused"));
-    expect(screen.getByRole("tab", { name: /^All materials/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /^All items/ })).toHaveAttribute("aria-selected", "true");
   });
 
   /**

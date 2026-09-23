@@ -33,7 +33,7 @@ describe("schedule alerts", () => {
     expect(alerts[0].detail).toBe("Trenching Crew 2 conflicts on Sep 9.");
     expect(alerts[0].link).toEqual({ page: "month", weekStart: "2026-09-07" });
     expect(alerts[1].link).toEqual({ page: "delayIQs" });
-    expect(alerts[2].link).toEqual({ page: "materials" });
+    expect(alerts[2].link).toEqual({ page: "inventory" });
   });
 
   it("is quiet when the view has nothing wrong", () => {

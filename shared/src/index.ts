@@ -391,6 +391,9 @@ export type Material = {
 
 export type CreateMaterialInput = Omit<Material, "id">;
 
+/** A material line is edited whole — the Inventory's status change sends the other fields back as they were. */
+export type UpdateMaterialInput = CreateMaterialInput;
+
 export type ScheduleAssignment = {
   id: string;
   jobId: string;

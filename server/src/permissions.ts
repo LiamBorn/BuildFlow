@@ -279,6 +279,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "PATCH /api/equipment/:id": "resources.write",
   "PATCH /api/field-updates/:id": "field.report",
   "PATCH /api/jobs/:id": "jobs.write",
+  "PATCH /api/materials/:id": "resources.write",
   "PATCH /api/org": "org.settings",
   /* A phase belongs to a project's plan, so moving its finish line is a project write — the same
      level that may move a job, which is the gesture it shares on the Month calendar. */

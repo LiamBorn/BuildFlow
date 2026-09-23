@@ -107,20 +107,17 @@ describe("the Dashboard's entrance", () => {
     expect(after).not.toBe(before);
   });
 
-  it("plays again on the Equipment page when its flyout entry is clicked while it is already showing", async () => {
+  it("plays again on the Inventory page when the Resources rail button is clicked while it is already showing", async () => {
     render(<App />);
     await enterDashboard();
-    const resources = screen.getByRole("button", { name: /^Resources/ });
-    fireEvent.mouseEnter(resources.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Equipment/ }));
-    await screen.findByRole("heading", { name: /^Equipment/ });
-    const before = document.querySelector(".equipment-page");
+    fireEvent.click(screen.getByRole("button", { name: /^Resources( \(.*\))?$/ }));
+    await screen.findByRole("heading", { name: /^Inventory/ });
+    const before = document.querySelector(".inventory-page");
     expect(before).not.toBeNull();
 
-    fireEvent.mouseEnter(resources.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Equipment/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Resources( \(.*\))?$/ }));
 
-    const after = document.querySelector(".equipment-page");
+    const after = document.querySelector(".inventory-page");
     expect(after).not.toBeNull();
     expect(after).not.toBe(before);
   });
@@ -175,20 +172,20 @@ describe("the Dashboard's entrance", () => {
     expect(after).not.toBe(before);
   });
 
-  it("plays again on the Materials page when its flyout entry is clicked while it is already showing", async () => {
+  it("plays again on the Inventory page when its flyout entry is clicked while it is already showing", async () => {
     render(<App />);
     await enterDashboard();
     const resources = screen.getByRole("button", { name: /^Resources/ });
     fireEvent.mouseEnter(resources.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Materials/ }));
-    await screen.findByRole("heading", { name: /^Materials/ });
-    const before = document.querySelector(".materials-page");
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Inventory/ }));
+    await screen.findByRole("heading", { name: /^Inventory/ });
+    const before = document.querySelector(".inventory-page");
     expect(before).not.toBeNull();
 
     fireEvent.mouseEnter(resources.parentElement as HTMLElement);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^Materials/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Inventory/ }));
 
-    const after = document.querySelector(".materials-page");
+    const after = document.querySelector(".inventory-page");
     expect(after).not.toBeNull();
     expect(after).not.toBe(before);
   });

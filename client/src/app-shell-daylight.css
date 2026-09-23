@@ -1614,6 +1614,8 @@
 /* ============================================================================
    12. PROJECTS, CREWS, EQUIPMENT AND MATERIALS (Phase 4 step 7)
    ----------------------------------------------------------------------------
+   (Equipment and Materials are one Inventory page since 2026-09-23, root
+   `.inv-rx` — the same shared index chrome.)
    NO RULES NEEDED. All four pages render through the shared index chrome —
    verified in App.tsx, each one is `page-stack <name>-page <name>-rx hs-index`
    (lines 27724, 35150, 35967, 36676) — so section 7 above already did the work
@@ -2112,8 +2114,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal],
 .bf-shell .proj-rx.dx-ready [data-reveal],
 .bf-shell .crew-rx.dx-ready [data-reveal],
-.bf-shell .equip-rx.dx-ready [data-reveal],
-.bf-shell .mat-rx.dx-ready [data-reveal],
+.bf-shell .inv-rx.dx-ready [data-reveal],
 .bf-shell .field-rx.dx-ready [data-reveal],
 .bf-shell .delayIQ-rx.dx-ready [data-reveal] {
   transform: translateY(var(--bf-app-reveal-shift));
@@ -2126,8 +2127,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger] > *,
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger] > *,
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger] > *,
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger] > *,
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger] > *,
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger] > *,
 .bf-shell .field-rx.dx-ready [data-reveal-stagger] > *,
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger] > * {
   transform: translateY(var(--bf-app-reveal-shift));
@@ -2163,8 +2163,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal].in,
 .bf-shell .proj-rx.dx-ready [data-reveal].in,
 .bf-shell .crew-rx.dx-ready [data-reveal].in,
-.bf-shell .equip-rx.dx-ready [data-reveal].in,
-.bf-shell .mat-rx.dx-ready [data-reveal].in,
+.bf-shell .inv-rx.dx-ready [data-reveal].in,
 .bf-shell .field-rx.dx-ready [data-reveal].in,
 .bf-shell .delayIQ-rx.dx-ready [data-reveal].in {
   transform: none;
@@ -2173,8 +2172,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *,
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *,
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *,
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *,
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *,
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *,
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *,
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > * {
   transform: none;
@@ -2210,8 +2208,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1),
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(1) {
   transition-delay: 0s;
@@ -2220,8 +2217,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2),
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(2) {
   transition-delay: calc(1 * var(--bf-app-reveal-stagger));
@@ -2230,8 +2226,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3),
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(3) {
   transition-delay: calc(2 * var(--bf-app-reveal-stagger));
@@ -2240,8 +2235,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4),
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(4) {
   transition-delay: calc(3 * var(--bf-app-reveal-stagger));
@@ -2250,8 +2244,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5),
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(5) {
   transition-delay: calc(4 * var(--bf-app-reveal-stagger));
@@ -2260,8 +2253,7 @@
 .bf-shell .sched-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
 .bf-shell .proj-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
 .bf-shell .crew-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
-.bf-shell .equip-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
-.bf-shell .mat-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
+.bf-shell .inv-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
 .bf-shell .field-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6),
 .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger].in > *:nth-child(6) {
   transition-delay: calc(5 * var(--bf-app-reveal-stagger));
@@ -2550,16 +2542,14 @@
   .bf-shell .sched-rx.dx-ready [data-reveal],
   .bf-shell .proj-rx.dx-ready [data-reveal],
   .bf-shell .crew-rx.dx-ready [data-reveal],
-  .bf-shell .equip-rx.dx-ready [data-reveal],
-  .bf-shell .mat-rx.dx-ready [data-reveal],
+  .bf-shell .inv-rx.dx-ready [data-reveal],
   .bf-shell .field-rx.dx-ready [data-reveal],
   .bf-shell .delayIQ-rx.dx-ready [data-reveal],
   .bf-shell .dash-rx.dx-ready [data-reveal-stagger] > *,
   .bf-shell .sched-rx.dx-ready [data-reveal-stagger] > *,
   .bf-shell .proj-rx.dx-ready [data-reveal-stagger] > *,
   .bf-shell .crew-rx.dx-ready [data-reveal-stagger] > *,
-  .bf-shell .equip-rx.dx-ready [data-reveal-stagger] > *,
-  .bf-shell .mat-rx.dx-ready [data-reveal-stagger] > *,
+  .bf-shell .inv-rx.dx-ready [data-reveal-stagger] > *,
   .bf-shell .field-rx.dx-ready [data-reveal-stagger] > *,
   .bf-shell .delayIQ-rx.dx-ready [data-reveal-stagger] > * {
     transition-duration: 0.3s;
@@ -2572,8 +2562,6 @@
   .bf-shell .dash-rx .kpi-card,
   .bf-shell .sched-rx .schedule-kpis .kpi-card,
   .bf-shell .proj-rx .project-card,
-  .bf-shell .equip-rx .crew-stat-card,
-  .bf-shell .mat-rx .crew-stat-card,
   .bf-shell .field-rx .crew-stat-card {
     transform: translateY(var(--lift, 0px));
   }
@@ -2986,8 +2974,6 @@
 .bf-shell .sched-rx .dx-title,
 .bf-shell .proj-rx .dx-title,
 .bf-shell .crew-rx .dx-title,
-.bf-shell .equip-rx .dx-title,
-.bf-shell .mat-rx .dx-title,
 .bf-shell .field-rx .dx-title,
 .bf-shell .delayIQ-rx .dx-title {
   font-size: var(--bf-page-display);
@@ -3008,8 +2994,6 @@
 .bf-shell .sched-rx .dx-sub,
 .bf-shell .proj-rx .dx-sub,
 .bf-shell .crew-rx .dx-sub,
-.bf-shell .equip-rx .dx-sub,
-.bf-shell .mat-rx .dx-sub,
 .bf-shell .field-rx .dx-sub,
 .bf-shell .delayIQ-rx .dx-sub {
   font-size: var(--bf-page-lede);
@@ -3074,8 +3058,7 @@
 .bf-shell .sched-rx,
 .bf-shell .proj-rx,
 .bf-shell .crew-rx,
-.bf-shell .equip-rx,
-.bf-shell .mat-rx,
+.bf-shell .inv-rx,
 .bf-shell .field-rx,
 .bf-shell .delayIQ-rx,
 .bf-shell .settings-rx {
@@ -4001,9 +3984,8 @@
 .bf-shell .proj-rx,
 .bf-shell .sched-rx,
 .bf-shell .settings-rx,
-.bf-shell .equip-rx,
+.bf-shell .inv-rx,
 .bf-shell .field-rx,
-.bf-shell .mat-rx,
 .bf-shell .delayIQ-rx,
 .bf-shell .pdx,
 .bf-shell .acct-split,
@@ -4157,9 +4139,8 @@
 .bf-shell .proj-rx,
 .bf-shell .sched-rx,
 .bf-shell .settings-rx,
-.bf-shell .equip-rx,
+.bf-shell .inv-rx,
 .bf-shell .field-rx,
-.bf-shell .mat-rx,
 .bf-shell .delayIQ-rx,
 .bf-shell .pdx,
 .bf-shell .hs-index,
@@ -4244,9 +4225,8 @@
 .bf-shell[data-bf-mode="dark"] .proj-rx,
 .bf-shell[data-bf-mode="dark"] .sched-rx,
 .bf-shell[data-bf-mode="dark"] .settings-rx,
-.bf-shell[data-bf-mode="dark"] .equip-rx,
+.bf-shell[data-bf-mode="dark"] .inv-rx,
 .bf-shell[data-bf-mode="dark"] .field-rx,
-.bf-shell[data-bf-mode="dark"] .mat-rx,
 .bf-shell[data-bf-mode="dark"] .delayIQ-rx,
 .bf-shell[data-bf-mode="dark"] .pdx,
 .bf-shell[data-bf-mode="dark"] .hs-index,
@@ -4272,9 +4252,8 @@
   .bf-shell[data-bf-mode="system"] .proj-rx,
   .bf-shell[data-bf-mode="system"] .sched-rx,
   .bf-shell[data-bf-mode="system"] .settings-rx,
-  .bf-shell[data-bf-mode="system"] .equip-rx,
+  .bf-shell[data-bf-mode="system"] .inv-rx,
   .bf-shell[data-bf-mode="system"] .field-rx,
-  .bf-shell[data-bf-mode="system"] .mat-rx,
   .bf-shell[data-bf-mode="system"] .delayIQ-rx,
   .bf-shell[data-bf-mode="system"] .pdx,
   .bf-shell[data-bf-mode="system"] .hs-index,

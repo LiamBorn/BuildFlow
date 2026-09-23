@@ -366,7 +366,7 @@ describe("BuildFlow app", () => {
     expect(withTwo).toContain("AI lesson");
     expect(titlesFor(["time-cards"])).not.toContain("AI lesson");
     expect(core).not.toContain("Time Cards lesson");
-    expect(core).toContain("Equipment");
+    expect(core).toContain("Inventory");
     expect(withTwo).toHaveLength(core.length + 2);
 
     // and a product chosen twice still earns one lesson
@@ -713,22 +713,29 @@ describe("BuildFlow app", () => {
     expect(screen.getByText("Labors & Operators")).toBeInTheDocument();
   });
 
-  it("opens the add material form on the materials page", async () => {
+  it("opens the add-item drawer on the Inventory, with the material fields when the kind is Material", async () => {
     render(<App />);
     await enterDashboard();
 
-    await openAppPage("Materials");
-    fireEvent.click(await screen.findByRole("button", { name: "Add Material" }));
+    await openAppPage("Inventory");
+    fireEvent.click(await screen.findByRole("button", { name: "Add item" }));
 
-    expect(screen.getByRole("dialog", { name: "Add Material" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Material Name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Project")).toBeInTheDocument();
-    expect(screen.getByLabelText("Status")).toBeInTheDocument();
-    expect(screen.getByLabelText("Delivery Date")).toBeInTheDocument();
-    expect(screen.getByLabelText("Quantity")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Add item" });
+    // a new item starts as equipment (the page is on All items), on the yard
+    expect(within(dialog).getByLabelText("Kind")).toHaveValue("equipment");
+    expect(within(dialog).getByLabelText("Status")).toHaveValue("Available");
+    for (const label of ["Name", "Type", "Project"]) expect(within(dialog).getByLabelText(label)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Quantity")).toBeNull();
+
+    fireEvent.change(within(dialog).getByLabelText("Kind"), { target: { value: "material" } });
+    for (const label of ["Name", "Quantity", "Delivery date", "Project"]) expect(within(dialog).getByLabelText(label)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Type")).toBeNull();
+    // a material usually starts on order, on the first project
+    expect(within(dialog).getByLabelText("Status")).toHaveValue("Ordered");
+    expect(within(dialog).getByLabelText("Project")).toHaveValue("p-riverside");
   });
 
-  it("creates a material and reloads bootstrap data", async () => {
+  it("creates a material line from the Inventory and reloads bootstrap data", async () => {
     const newMaterial = {
       id: "mat-structural-steel-beams",
       projectId: "p-riverside",
@@ -756,15 +763,16 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    await openAppPage("Materials");
-    fireEvent.click(await screen.findByRole("button", { name: "Add Material" }));
-    fireEvent.change(await screen.findByLabelText("Material Name"), { target: { value: "Structural Steel Beams" } });
-    fireEvent.change(screen.getByLabelText("Delivery Date"), { target: { value: "2026-06-28" } });
-    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "24 bundles" } });
-    const addMaterialButtons = screen.getAllByRole("button", { name: "Add Material" });
-    fireEvent.click(addMaterialButtons[addMaterialButtons.length - 1]);
+    await openAppPage("Inventory");
+    fireEvent.click(await screen.findByRole("button", { name: "Add item" }));
+    const dialog = screen.getByRole("dialog", { name: "Add item" });
+    fireEvent.change(within(dialog).getByLabelText("Kind"), { target: { value: "material" } });
+    fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Structural Steel Beams" } });
+    fireEvent.change(within(dialog).getByLabelText("Delivery date"), { target: { value: "2026-06-28" } });
+    fireEvent.change(within(dialog).getByLabelText("Quantity"), { target: { value: "24 bundles" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add item" }));
 
-    expect(await screen.findByText("Structural Steel Beams")).toBeInTheDocument();
+    expect((await screen.findAllByRole("button", { name: "Edit Structural Steel Beams" })).length).toBeGreaterThan(0);
     const materialPost = fetchMock.mock.calls.find(([url]) => url === "/api/materials");
     expect(materialPost).toBeDefined();
     expect(JSON.parse(materialPost?.[1]?.body as string)).toEqual({
@@ -1149,7 +1157,9 @@ describe("BuildFlow app", () => {
 
     const block = (title: string) => within(screen.getByRole("heading", { name: title }).closest(".dash-block") as HTMLElement);
     fireEvent.click(block("Material Readiness").getByRole("button", { name: "View all materials" }));
-    expect(await screen.findByRole("heading", { level: 1, name: /material/i })).toBeInTheDocument();
+    // the materials live in the Inventory since 2026-09-23, and it opens on its Materials view
+    expect(await screen.findByRole("heading", { level: 1, name: /^Inventory/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /^Materials/ })).toHaveAttribute("aria-selected", "true");
   });
   // ---- Dashboard, Phase 3: the content sits above the fold ----------------
   it("keeps the legacy panels that carry unique data as board panels and retires the rest", async () => {

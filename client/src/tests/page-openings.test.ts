@@ -126,9 +126,8 @@ const declsOf = (selector: string) => {
 const PAGE_ROOTS = [
   ".proj-rx",
   ".crew-rx",
-  ".equip-rx",
+  ".inv-rx", // the Inventory (Resources) since 2026-09-23; Equipment's .equip-rx and Materials' .mat-rx before it
   ".delayIQ-rx",
-  ".mat-rx",
   ".field-rx",
   ".reports-page",
   ".tc-page",
@@ -387,7 +386,7 @@ describe("every page opens on the shared beats", () => {
     // look like a list dropping all the information". These are the numbers that
     // page uses, read off the rules that drive it — so this fails if either side
     // drifts, not just Settings.
-    const table = declsOf(":is(.proj-rx, .crew-rx, .contacts-page, .equip-rx, .delayIQ-rx, .mat-rx, .field-rx) .hs-table tbody > tr");
+    const table = declsOf(":is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr");
     expect(table.animation, "the index table's own cascade, read from the sheet").toBeTruthy();
     for (const list of [
       ".settings-rx .settings-section > .settings-row",

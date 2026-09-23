@@ -35,6 +35,7 @@ import type {
   Status,
   UpdateCrewInput,
   UpdateEquipmentInput,
+  UpdateMaterialInput,
   UpdatePhaseInput,
   UpdateProjectInput,
   User,
@@ -4214,6 +4215,32 @@ export class BuildFlowStore {
       quantity: input.quantity.trim()
     };
     this.insert("materials", material);
+    this.save();
+    return material;
+  }
+
+  /* The Inventory's edit (2026-09-23): a material line is a leaf, like its delete below — no table
+     carries a materialId and no booking note reads this table — so the row is the whole write.
+     save() explicitly, for the same reason deleteMaterial gives. */
+  updateMaterial(id: string, input: UpdateMaterialInput) {
+    const current = this.get<{ id: string }>("SELECT id FROM materials WHERE id = ?", [id]);
+    if (!current) return undefined;
+    const material: Material = {
+      id,
+      projectId: input.projectId,
+      name: input.name.trim(),
+      status: input.status,
+      deliveryDate: input.deliveryDate,
+      quantity: input.quantity.trim()
+    };
+    this.run("UPDATE materials SET projectId = ?, name = ?, status = ?, deliveryDate = ?, quantity = ? WHERE id = ?", [
+      material.projectId,
+      material.name,
+      material.status,
+      material.deliveryDate,
+      material.quantity,
+      id
+    ]);
     this.save();
     return material;
   }

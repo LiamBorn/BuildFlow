@@ -3254,6 +3254,25 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.status(201).json(store.createMaterial(parsed.data));
   });
 
+  /* A line's status (and anything else about it) changes from the Inventory's edit drawer. */
+  app.patch("/api/materials/:id", (req, res) => {
+    const parsed = materialSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    if (!store.project(parsed.data.projectId)) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    const material = store.updateMaterial(String(req.params.id), parsed.data);
+    if (!material) {
+      res.status(404).json({ error: "Material not found" });
+      return;
+    }
+    res.json(material);
+  });
+
   app.delete("/api/materials/:id", (req, res) => {
     if (!store.deleteMaterial(String(req.params.id))) {
       res.status(404).json({ error: "Material not found" });
