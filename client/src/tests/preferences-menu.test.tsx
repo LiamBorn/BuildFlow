@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import App from "../App";
 import { enterDashboard, installAppHarness, state } from "../test/appHarness";
 import { bootstrapFixture } from "../test/fixture";
-import { DEFAULT_PREFERENCES } from "../preferences";
+import { DEFAULT_PREFERENCES, parsePreferences } from "../preferences";
 
 /** The panel, once the gear has been clicked. */
 async function openPreferences() {
@@ -188,6 +188,15 @@ describe("the top bar's Preferences panel", () => {
         bfCollapse: "offcanvas"
       })
     );
+  });
+
+  /* A set the picker offers is one a saved copy may carry. Until 2026-09-23 only Default and Blue
+     were read back, so Red, Green and Yellow quietly became Default on the next visit. */
+  it("reads every colour set it offers back from a saved copy, and nothing else", () => {
+    for (const colors of ["default", "blue", "red", "green", "yellow"]) {
+      expect(parsePreferences({ colors }).colors, colors).toBe(colors);
+    }
+    expect(parsePreferences({ colors: "purple" }).colors).toBe(DEFAULT_PREFERENCES.colors);
   });
 
   it("offers the colour sets — Default (white, gray, black), Blue, Red, Green and Yellow — and carries the choice on data-bf-colors, never a theme", async () => {

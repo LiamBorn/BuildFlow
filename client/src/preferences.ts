@@ -178,7 +178,14 @@ export function parsePreferences(raw: unknown): AppPreferences {
   const input = raw as Record<string, unknown>;
   return {
     // a copy saved before 2026-09-16 carries `preset` (a theme); it is ignored, there are no themes
-    colors: isOneOf(input.colors, ["default", "blue"] as const) ? input.colors : DEFAULT_PREFERENCES.colors,
+    // every set the picker offers is one a saved copy may carry (Red, Green and Yellow were offered
+    // but read back as Default on the next visit until 2026-09-23)
+    colors: isOneOf(
+      input.colors,
+      COLOR_PRESETS.map((preset) => preset.id)
+    )
+      ? input.colors
+      : DEFAULT_PREFERENCES.colors,
     font: "inter",
     mode: isOneOf(input.mode, ["light", "dark", "system"] as const) ? input.mode : DEFAULT_PREFERENCES.mode,
     layout: isOneOf(input.layout, ["centered", "full"] as const) ? input.layout : DEFAULT_PREFERENCES.layout,
