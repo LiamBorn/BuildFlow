@@ -67,7 +67,7 @@ function classify(reportedPercent: number, varianceDays: number, status: Status)
  * by hand for every report, and it is the reason the drawer can be triaged
  * top-down.
  */
-function gradeSeverity(varianceDays: number, projectSlipDays: number, criticalPath: boolean): ScheduleVariance["severity"] {
+export function gradeSeverity(varianceDays: number, projectSlipDays: number, criticalPath: boolean): ScheduleVariance["severity"] {
   if (projectSlipDays > 0 && criticalPath) return "High";
   if (projectSlipDays > 0 || varianceDays >= 3) return "Medium";
   return "Low";
@@ -121,14 +121,34 @@ export function buildProposal(
 ): VarianceProposal | null {
   const job = jobs.find((item) => item.id === jobId);
   if (!job) return null;
+  // a field report never moves the start: the job began where it began, and only its finish is in question
+  const startIndex = calendar.toIndex(job.startDate);
+  const proposedEnd = calendar.fromIndex(Math.max(startIndex, calendar.toIndex(forecastIQEnd)));
+  return buildMoveProposal(jobs, dependencies, jobId, job.startDate, proposedEnd, calendar);
+}
+
+/**
+ * The same diff for a job that MOVES — its start as well as its finish. WeatherIQ's reschedule
+ * (2026-09-23) needs it: a job whose first day is called off for weather starts later, not just
+ * finishes later. `buildProposal` is this with the start held where it is.
+ */
+export function buildMoveProposal(
+  jobs: Job[],
+  dependencies: JobDependency[],
+  jobId: string,
+  proposedStart: string,
+  proposedEnd: string,
+  calendar: WorkCalendar
+): VarianceProposal | null {
+  const job = jobs.find((item) => item.id === jobId);
+  if (!job) return null;
 
   const beforeNetwork = toNetwork(jobs, dependencies, calendar);
   const before = calculateCpm(beforeNetwork.tasks, beforeNetwork.links);
   if (before.cycle) return null; // a broken network can't be priced; don't guess
 
-  const startIndex = calendar.toIndex(job.startDate);
-  const forecastIQIndex = calendar.toIndex(forecastIQEnd);
-  const proposedEndIndex = Math.max(startIndex, forecastIQIndex);
+  const startIndex = calendar.toIndex(proposedStart);
+  const proposedEndIndex = Math.max(startIndex, calendar.toIndex(proposedEnd));
 
   const overrides = new Map([[jobId, { start: startIndex, end: proposedEndIndex }]]);
   const afterNetwork = toNetwork(jobs, dependencies, calendar, overrides);
@@ -163,7 +183,7 @@ export function buildProposal(
   return {
     currentStart: job.startDate,
     currentEnd: job.endDate,
-    proposedStart: job.startDate,
+    proposedStart,
     proposedEnd: calendar.fromIndex(proposedEndIndex),
     ripple,
     projectSlipDays: Math.max(0, after.projectFinish - before.projectFinish),

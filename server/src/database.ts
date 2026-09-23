@@ -40,7 +40,9 @@ import type {
   UpdateProjectInput,
   User,
   VarianceProposal,
-  WeatherAlert
+  WeatherAlert,
+  WeatherConflict,
+  WeatherLocation
 } from "@buildflow/shared";
 import { businessTypeOptions, onboardingProductOptions, planOptions, type OnboardingProductId, type PlanId } from "@buildflow/shared";
 import { defaultCrewRate, normalizeWorkCalendar, type WorkCalendarSetting } from "@buildflow/shared";
@@ -401,6 +403,32 @@ function toVariance(row: VarianceRow): ScheduleVariance {
     resolutionNote: row.resolutionNote ?? undefined
   };
   return variance;
+}
+
+/* WeatherIQ's conflicts keep their window as startsAt/endsAt: END is an SQL keyword. */
+type WeatherConflictRow = Omit<WeatherConflict, "start" | "end" | "decidedAt" | "decidedBy" | "varianceId" | "delayIQId"> & {
+  startsAt: string;
+  endsAt: string;
+  decidedAt: string | null;
+  decidedBy: string | null;
+  varianceId: string | null;
+  delayIQId: string | null;
+};
+
+function toWeatherConflict(row: WeatherConflictRow): WeatherConflict {
+  const { startsAt, endsAt, decidedAt, decidedBy, varianceId, delayIQId, ...rest } = row;
+  const conflict: WeatherConflict = { ...rest, start: startsAt, end: endsAt };
+  if (decidedAt) conflict.decidedAt = decidedAt;
+  if (decidedBy) conflict.decidedBy = decidedBy;
+  if (varianceId) conflict.varianceId = varianceId;
+  if (delayIQId) conflict.delayIQId = delayIQId;
+  return conflict;
+}
+
+/** The server's own calendar day, YYYY-MM-DD — what "from today on" means for the conflicts bootstrap sends. */
+function localToday(now = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 function slugify(value: string, fallback = "crew") {
@@ -1195,6 +1223,49 @@ SCHEMA_MIGRATIONS.push({
       const has = columns[0]?.values.some((row) => row[1] === column);
       if (has) db.exec(`ALTER TABLE ${table} DROP COLUMN ${column}`);
     }
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 26,
+  name: "WeatherIQ: job days the weather reaches, and a project's own forecast location",
+  up: (db) => {
+    // 2026-09-23. `weather_conflicts` is one row per job per day that forecast weather reaches in
+    // the job's hours — found each time the forecast is read, and kept so that the person in
+    // charge's decision (call it off, or keep it on) sticks when the forecast is read again.
+    // `weather_locations` is where an Owner or Admin said a project's forecast should be read,
+    // when its address is not the place (or is the placeholder every new project is stored at).
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS weather_conflicts (
+        id TEXT PRIMARY KEY,
+        jobId TEXT NOT NULL,
+        projectId TEXT NOT NULL,
+        date TEXT NOT NULL,
+        cause TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        startsAt TEXT NOT NULL,
+        endsAt TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        assigneeId TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL,
+        detectedAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        decidedAt TEXT,
+        decidedBy TEXT,
+        varianceId TEXT,
+        delayIQId TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_weather_conflicts_date ON weather_conflicts(date);
+      CREATE TABLE IF NOT EXISTS weather_locations (
+        projectId TEXT PRIMARY KEY,
+        searchText TEXT NOT NULL,
+        place TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        updatedAt TEXT NOT NULL,
+        updatedBy TEXT NOT NULL
+      );
+    `);
   }
 });
 
@@ -2511,6 +2582,8 @@ export class BuildFlowStore {
 
   private clearWorkspace() {
     [
+      "weather_conflicts",
+      "weather_locations",
       "weather_alerts",
       "inspections",
       "readiness",
@@ -3556,7 +3629,8 @@ export class BuildFlowStore {
       readiness: this.readiness(),
       phases: this.phases(),
       inspections: this.inspections(),
-      weatherAlerts: this.weatherAlerts()
+      weatherAlerts: this.weatherAlerts(),
+      weatherConflicts: this.weatherConflicts({ from: localToday() })
     };
   }
 
@@ -3879,6 +3953,8 @@ export class BuildFlowStore {
       this.run("DELETE FROM readiness WHERE projectId = ?", [id]);
       this.run("DELETE FROM inspections WHERE projectId = ?", [id]);
       this.run("DELETE FROM weather_alerts WHERE projectId = ?", [id]);
+      this.run("DELETE FROM weather_conflicts WHERE projectId = ?", [id]);
+      this.run("DELETE FROM weather_locations WHERE projectId = ?", [id]);
       this.run("DELETE FROM materials WHERE projectId = ?", [id]);
       this.run("DELETE FROM phases WHERE projectId = ?", [id]);
       this.run("DELETE FROM jobs WHERE projectId = ?", [id]);
@@ -3909,6 +3985,7 @@ export class BuildFlowStore {
       this.run("DELETE FROM job_dependencies WHERE predecessorId = ?", [id]);
       this.run("DELETE FROM job_dependencies WHERE successorId = ?", [id]);
       this.run("DELETE FROM schedule_variances WHERE jobId = ?", [id]);
+      this.run("DELETE FROM weather_conflicts WHERE jobId = ?", [id]);
       /* The variances ON this job are gone. The ones that NAME it are the subtler half: a pending
          variance raised against job B carries a CPM-computed ripple of the successors it would push,
          and one of those can be this job. acceptVariance's applyDates returns silently when a job is
@@ -6132,5 +6209,173 @@ export class BuildFlowStore {
 
   weatherAlerts(): WeatherAlert[] {
     return this.all<WeatherAlert>("SELECT * FROM weather_alerts ORDER BY startsAt");
+  }
+
+  /* ── WeatherIQ (2026-09-23) ────────────────────────────────────────────────
+     The job days this week's weather reaches (found by weatherConflicts.ts each time the
+     forecast is read) and what the person in charge decided about them, plus the location an
+     Owner or Admin set for a project's forecast. */
+
+  /** Conflicts from `from` on, soonest first. A cleared one — the forecast no longer shows it — is left out unless asked for. */
+  weatherConflicts(options: { from?: string; includeCleared?: boolean } = {}): WeatherConflict[] {
+    const where: string[] = [];
+    const params: string[] = [];
+    if (options.from) {
+      where.push("date >= ?");
+      params.push(options.from);
+    }
+    if (!options.includeCleared) where.push("status != 'cleared'");
+    const sql = `SELECT * FROM weather_conflicts${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY date, startsAt`;
+    return this.all<WeatherConflictRow>(sql, params).map(toWeatherConflict);
+  }
+
+  weatherConflict(id: string): WeatherConflict | undefined {
+    const row = this.get<WeatherConflictRow>("SELECT * FROM weather_conflicts WHERE id = ?", [id]);
+    return row ? toWeatherConflict(row) : undefined;
+  }
+
+  /**
+   * Bring the stored conflicts in line with a fresh read of the forecast. A new one is added as
+   * open; an open (or cleared) one takes the new window, cause and person in charge; a decided one
+   * — called off or kept — is left exactly as the person left it. An open one the forecast no longer
+   * shows, on a day this read covered for a site it read, is cleared.
+   */
+  reconcileWeatherConflicts(
+    drafts: Array<
+      Pick<WeatherConflict, "id" | "jobId" | "projectId" | "date" | "cause" | "severity" | "start" | "end" | "reason" | "assigneeId">
+    >,
+    covered: { projectIds: string[]; from: string; to: string },
+    now = new Date().toISOString()
+  ) {
+    this.transaction(() => {
+      const seen = new Set<string>();
+      for (const draft of drafts) {
+        seen.add(draft.id);
+        const current = this.get<WeatherConflictRow>("SELECT * FROM weather_conflicts WHERE id = ?", [draft.id]);
+        if (!current) {
+          this.insert("weather_conflicts", {
+            id: draft.id,
+            jobId: draft.jobId,
+            projectId: draft.projectId,
+            date: draft.date,
+            cause: draft.cause,
+            severity: draft.severity,
+            startsAt: draft.start,
+            endsAt: draft.end,
+            reason: draft.reason,
+            assigneeId: draft.assigneeId,
+            status: "open",
+            detectedAt: now,
+            updatedAt: now,
+            decidedAt: null,
+            decidedBy: null,
+            varianceId: null,
+            delayIQId: null
+          });
+          continue;
+        }
+        if (current.status !== "open" && current.status !== "cleared") continue;
+        const changed =
+          current.status === "cleared" ||
+          current.cause !== draft.cause ||
+          current.severity !== draft.severity ||
+          current.startsAt !== draft.start ||
+          current.endsAt !== draft.end ||
+          current.reason !== draft.reason ||
+          current.assigneeId !== draft.assigneeId;
+        if (!changed) continue;
+        this.run(
+          "UPDATE weather_conflicts SET status = 'open', cause = ?, severity = ?, startsAt = ?, endsAt = ?, reason = ?, assigneeId = ?, updatedAt = ? WHERE id = ?",
+          [draft.cause, draft.severity, draft.start, draft.end, draft.reason, draft.assigneeId, now, draft.id]
+        );
+      }
+      if (covered.projectIds.length === 0) return;
+      const placeholders = covered.projectIds.map(() => "?").join(",");
+      const open = this.all<{ id: string }>(
+        `SELECT id FROM weather_conflicts WHERE status = 'open' AND date >= ? AND date <= ? AND projectId IN (${placeholders})`,
+        [covered.from, covered.to, ...covered.projectIds]
+      );
+      for (const row of open) {
+        if (seen.has(row.id)) continue;
+        this.run("UPDATE weather_conflicts SET status = 'cleared', updatedAt = ? WHERE id = ?", [now, row.id]);
+      }
+    });
+  }
+
+  /** The person in charge kept the day on: the conflict stays on the record, and stops asking. */
+  keepWeatherConflict(id: string, userId: string, now = new Date().toISOString()): WeatherConflict | undefined {
+    const current = this.weatherConflict(id);
+    if (!current || current.status !== "open") return undefined;
+    this.run("UPDATE weather_conflicts SET status = 'kept', decidedAt = ?, decidedBy = ?, updatedAt = ? WHERE id = ?", [
+      now,
+      userId,
+      now,
+      id
+    ]);
+    this.save();
+    return this.weatherConflict(id);
+  }
+
+  /**
+   * Call a job's day off for weather — every write together, or none of them: the crews booked on
+   * that job that day are released, the delay is logged (the DelayIQ record every other lost day
+   * goes on), the reschedule is raised as a pending variance of kind "weather" for the PM to accept
+   * or reject like any other, and the conflict records who called it off.
+   */
+  cancelWeatherConflict(
+    id: string,
+    input: {
+      userId: string;
+      delayIQ: Omit<DelayIQ, "id" | "reportedAt">;
+      variance: (Omit<ScheduleVariance, "id" | "status" | "detectedAt"> & { detectedAt?: string }) | null;
+      now?: string;
+    }
+  ): { conflict: WeatherConflict; delayIQ: DelayIQ; variance: ScheduleVariance | null; releasedAssignmentIds: string[] } | undefined {
+    const current = this.weatherConflict(id);
+    if (!current || (current.status !== "open" && current.status !== "kept")) return undefined;
+    const now = input.now ?? new Date().toISOString();
+    return this.transaction(() => {
+      const bookings = this.all<{ id: string }>("SELECT id FROM assignments WHERE jobId = ? AND date = ?", [current.jobId, current.date]);
+      for (const booking of bookings) this.deleteAssignment(booking.id);
+      const delayIQ = this.createDelayIQ(input.delayIQ);
+      const variance = input.variance ? this.recordVariance(input.variance) : null;
+      this.run(
+        "UPDATE weather_conflicts SET status = 'cancelled', decidedAt = ?, decidedBy = ?, updatedAt = ?, varianceId = ?, delayIQId = ? WHERE id = ?",
+        [now, input.userId, now, variance?.id ?? null, delayIQ.id, id]
+      );
+      return {
+        conflict: this.weatherConflict(id)!,
+        delayIQ,
+        variance,
+        releasedAssignmentIds: bookings.map((booking) => booking.id)
+      };
+    });
+  }
+
+  weatherLocations(): WeatherLocation[] {
+    return this.all<Omit<WeatherLocation, "query"> & { searchText: string }>("SELECT * FROM weather_locations").map(
+      ({ searchText, ...rest }) => ({ ...rest, query: searchText })
+    );
+  }
+
+  setWeatherLocation(location: WeatherLocation): WeatherLocation {
+    this.run(
+      `INSERT INTO weather_locations (projectId, searchText, place, latitude, longitude, updatedAt, updatedBy)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(projectId) DO UPDATE SET searchText = excluded.searchText, place = excluded.place, latitude = excluded.latitude,
+         longitude = excluded.longitude, updatedAt = excluded.updatedAt, updatedBy = excluded.updatedBy`,
+      [location.projectId, location.query, location.place, location.latitude, location.longitude, location.updatedAt, location.updatedBy]
+    );
+    this.save();
+    return location;
+  }
+
+  /** True when there was a location to clear. The project's own address takes over again. */
+  clearWeatherLocation(projectId: string): boolean {
+    const row = this.get<{ projectId: string }>("SELECT projectId FROM weather_locations WHERE projectId = ?", [projectId]);
+    if (!row) return false;
+    this.run("DELETE FROM weather_locations WHERE projectId = ?", [projectId]);
+    this.save();
+    return true;
   }
 }

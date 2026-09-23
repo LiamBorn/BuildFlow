@@ -42,7 +42,7 @@ import {
   type Org,
   type WorkspaceMemberRow
 } from "./database.js";
-import type { ScheduleAssignment, ScheduleLiveEvent } from "@buildflow/shared";
+import type { ScheduleAssignment, ScheduleLiveEvent, WeatherWindow } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
@@ -86,7 +86,8 @@ import {
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
-import { activeSites, forecastForSites, WeatherUnavailableError } from "./weather.js";
+import { activeSites, forecastForSites, placeForQuery, WeatherUnavailableError } from "./weather.js";
+import { detectConflicts, parseClock, rescheduleDates } from "./weatherConflicts.js";
 import { createRequestLogger } from "./requestLog.js";
 import { metrics } from "./metrics.js";
 
@@ -131,7 +132,7 @@ import {
   smsConfigured,
   type OpsRecipients
 } from "./notify.js";
-import { detectVariance } from "./variance.js";
+import { buildMoveProposal, detectVariance, gradeSeverity } from "./variance.js";
 import { buildCrewCalendar } from "./ics.js";
 import { registerScheduleToolRoutes } from "./schedule/routes.js";
 import { seedPavingSchedule } from "./schedule/seed.js";
@@ -261,6 +262,10 @@ const fieldUpdateSchema = z
     message: "percentComplete requires a jobId — progress has to be reported against a job.",
     path: ["percentComplete"]
   });
+
+const weatherLocationSchema = z.object({
+  query: z.string().trim().min(2).max(200)
+});
 
 const varianceResolutionSchema = z.object({
   userId: z.string().min(1),
@@ -2965,16 +2970,196 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * kept, so the delta measures Monday-to-Monday rather than drifting with
    * whenever someone happened to load the page.
    */
-  /* WeatherIQ (2026-09-23): the coming week at every active job site, read from Open-Meteo on the
-     server and cached there (weather.ts). A provider that cannot be reached is a 502 the panel says
-     out loud, never an empty forecast that would read as a week without weather. */
+  /* ── WeatherIQ (2026-09-23) ──────────────────────────────────────────────────
+     The coming week at every active job site, read from Open-Meteo on the server and cached there
+     (weather.ts), and every job day its weather reaches inside the job's own hours
+     (weatherConflicts.ts), kept in weather_conflicts so the person in charge's decision sticks. A
+     provider that cannot be reached is a 502 the panel says out loud, never an empty forecast that
+     would read as a week without weather. */
+
+  /** The locations Owners and Admins set, by project. */
+  const weatherCustom = () => new Map(store.weatherLocations().map((location) => [location.projectId, location]));
+  /** The workspace's working days, on an axis from the earliest job, so a reschedule can count in working days. */
+  const weatherCalendar = (jobs: Array<{ startDate: string }>) =>
+    scheduleCalendarFor(
+      jobs.reduce((min, job) => (job.startDate < min ? job.startDate : min), localIsoDate()),
+      store.workCalendar()
+    );
+  /** A project by id (store.project() answers with the project's whole bundle). */
+  const weatherProject = (id: string) => store.projects().find((project) => project.id === id);
+  /** The roster row of the signed-in person: who called a day off, kept it, or moved a site. */
+  const weatherActor = (req: express.Request) => store.users().find((user) => user.accountId === req.account?.id)?.id ?? "";
+  /** "13:00" → "1:00 PM", for the sentences a delay is logged with. */
+  const clockWords = (hhmm: string) => {
+    const [hours, minutes] = hhmm.split(":").map(Number);
+    return `${hours % 12 === 0 ? 12 : hours % 12}:${String(minutes).padStart(2, "0")} ${hours < 12 ? "AM" : "PM"}`;
+  };
+  const CAUSE_TITLE: Record<string, string> = {
+    lightning: "Lightning",
+    rain: "Rain",
+    snow: "Snow",
+    wind: "Wind",
+    heat: "Heat",
+    cold: "Cold",
+    fog: "Fog"
+  };
+
   app.get("/api/weather/forecast", async (_req, res) => {
+    const today = localIsoDate();
+    const jobs = store.jobs();
+    const projects = store.projects();
+    let forecast: Awaited<ReturnType<typeof forecastForSites>>;
     try {
-      res.json(await forecastForSites(activeSites(store.projects(), store.jobs(), localIsoDate())));
+      forecast = await forecastForSites(activeSites(projects, jobs, today), Date.now(), weatherCustom());
     } catch (error) {
       if (!(error instanceof WeatherUnavailableError)) throw error;
       res.status(502).json({ error: "The forecast service could not be reached." });
+      return;
     }
+    const calendar = weatherCalendar(jobs);
+    const drafts = detectConflicts({ sites: forecast.sites, jobs, projects, isWorkingDay: (date) => calendar.isWorkingDay(date), today });
+    const lastDay = forecast.sites.reduce((last, site) => {
+      const end = site.days[site.days.length - 1]?.date ?? today;
+      return end > last ? end : last;
+    }, today);
+    store.reconcileWeatherConflicts(drafts, { projectIds: forecast.sites.map((site) => site.projectId), from: today, to: lastDay });
+    res.json({ ...forecast, conflicts: store.weatherConflicts({ from: today }) });
+  });
+
+  /**
+   * The person in charge calls a job's day off for weather. Everything a lost day means lands at
+   * once (store.cancelWeatherConflict): the crews booked on it that day are released, the delay is
+   * logged, and the reschedule is raised as a pending variance of kind "weather" — the job moved to
+   * the next day it can work, priced through the network so the PM sees what else moves and whether
+   * the project's finish does. Accepting or rejecting it is the variance routes' job, as for any
+   * other proposed change to the plan.
+   */
+  app.post("/api/weather/conflicts/:id/cancel", async (req, res) => {
+    const conflict = store.weatherConflict(String(req.params.id));
+    if (!conflict || (conflict.status !== "open" && conflict.status !== "kept")) {
+      res.status(404).json({ error: "No open weather conflict with that id." });
+      return;
+    }
+    const job = store.job(conflict.jobId);
+    const project = weatherProject(conflict.projectId);
+    if (!job || !project) {
+      res.status(404).json({ error: "That job is no longer on the schedule." });
+      return;
+    }
+    // the site's own weather decides where the job can go; without a forecast the calendar alone does
+    let windows: WeatherWindow[] = [];
+    try {
+      windows = (await forecastForSites([project], Date.now(), weatherCustom())).sites[0]?.windows ?? [];
+    } catch (error) {
+      if (!(error instanceof WeatherUnavailableError)) throw error;
+    }
+    const jobs = store.jobs();
+    const calendar = weatherCalendar(jobs);
+    const dates = rescheduleDates({ job, lostDate: conflict.date, calendar, windows });
+    const proposal = buildMoveProposal(jobs, store.dependencies(), job.id, dates.start, dates.end, calendar);
+    const shift = calendar.toIndex(dates.end) - calendar.toIndex(job.endDate);
+    const day = new Date(`${conflict.date}T12:00:00Z`).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC"
+    });
+    const window = `${clockWords(conflict.start.slice(11, 16))}–${clockWords(conflict.end.slice(11, 16))}`;
+    const hours = [parseClock(job.startTime), parseClock(job.endTime)].every(Boolean) ? ` (${job.startTime}–${job.endTime})` : "";
+    const result = store.cancelWeatherConflict(conflict.id, {
+      userId: weatherActor(req),
+      delayIQ: {
+        projectId: conflict.projectId,
+        category: "Weather",
+        title: `${CAUSE_TITLE[conflict.cause] ?? "Weather"} called off ${job.phase}`,
+        impactDays: 1,
+        severity: conflict.severity === "hold" ? "High" : "Medium",
+        status: "Open",
+        description: `${conflict.reason.charAt(0).toUpperCase()}${conflict.reason.slice(1)} forecast ${window} on ${day} at ${project.name}, inside the job's working hours${hours}. Called off in WeatherIQ.`
+      },
+      variance: proposal
+        ? {
+            projectId: conflict.projectId,
+            jobId: job.id,
+            // a weather variance has no field report behind it; the conflict it came from stands in
+            fieldUpdateId: conflict.id,
+            kind: "weather",
+            severity: gradeSeverity(Math.max(0, shift), proposal.projectSlipDays, proposal.criticalPath),
+            reportedPercent: job.percentComplete ?? 0,
+            plannedPercent: job.percentComplete ?? 0,
+            varianceDays: shift,
+            proposal
+          }
+        : null
+    });
+    if (!result) {
+      res.status(404).json({ error: "No open weather conflict with that id." });
+      return;
+    }
+    res.json(result);
+    if (result.releasedAssignmentIds.length > 0) announce(req, { kind: "assignments", op: "unbook", ids: result.releasedAssignmentIds });
+  });
+
+  /** The person in charge keeps the day on. The conflict stays on the record and stops asking. */
+  app.post("/api/weather/conflicts/:id/keep", (req, res) => {
+    const kept = store.keepWeatherConflict(String(req.params.id), weatherActor(req));
+    if (!kept) {
+      res.status(404).json({ error: "No open weather conflict with that id." });
+      return;
+    }
+    res.json(kept);
+  });
+
+  /** An Owner or Admin says where a project's forecast should be read: an address, a ZIP code or a town. */
+  app.put("/api/weather/locations/:projectId", async (req, res) => {
+    const parsed = weatherLocationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+    const project = weatherProject(String(req.params.projectId));
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    let point: Awaited<ReturnType<typeof placeForQuery>>;
+    try {
+      point = await placeForQuery(parsed.data.query);
+    } catch (error) {
+      if (!(error instanceof WeatherUnavailableError)) throw error;
+      res.status(502).json({ error: "The place lookup could not be reached. Try again in a minute." });
+      return;
+    }
+    if (!point) {
+      res
+        .status(404)
+        .json({
+          error: `No town or ZIP code matched "${parsed.data.query}". Try a ZIP code, or a town and state such as "Round Rock, TX".`
+        });
+      return;
+    }
+    res.json(
+      store.setWeatherLocation({
+        projectId: project.id,
+        query: parsed.data.query,
+        place: point.place,
+        latitude: point.latitude,
+        longitude: point.longitude,
+        updatedAt: new Date().toISOString(),
+        updatedBy: weatherActor(req)
+      })
+    );
+  });
+
+  /** Back to the project's own address. */
+  app.delete("/api/weather/locations/:projectId", (req, res) => {
+    const project = weatherProject(String(req.params.projectId));
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    store.clearWeatherLocation(project.id);
+    res.status(204).end();
   });
 
   app.get("/api/schedule/status", (_req, res) => {

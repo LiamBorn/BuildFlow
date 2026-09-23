@@ -2,8 +2,11 @@
  * WeatherIQ's forecast: the next seven days at every active job site (2026-09-23).
  *
  * Asked for as "a pulled-in forecast widget for job sites — useful, low-cost, don't over-engineer
- * the AI part of it for launch". So this is one provider read on the server and cached there, and
- * the "IQ" is plain thresholds on the client (client/src/weather/weatherIQ.ts), not a model.
+ * the AI part of it for launch", then (the same day) to reach every job: WHEN the weather comes,
+ * WHERE, and whether it lands in a job's working hours. So this reads the provider's days AND its
+ * hours, turns the hours into windows — runs of hours that cross a threshold a jobsite plans around
+ * (HOURLY, below) — and weatherConflicts.ts lays the jobs over them. Plain thresholds throughout; no
+ * model is asked anything.
  *
  * WHY THE SERVER READS IT, NOT THE BROWSER. Two reasons, both about cost. A forecast is re-read at
  * most once per site every half hour however many people open the Dashboard, which keeps a busy
@@ -16,14 +19,25 @@
  * CC BY 4.0, which is why the panel credits it. WEATHER_FORECAST_URL / WEATHER_GEOCODE_URL point
  * the two requests somewhere else entirely (a stand-in, a proxy).
  *
- * WHERE A SITE IS. createProject and the schedule import store every project they make at one
- * placeholder point, downtown Austin (database.ts). A stored point is only trusted when it is not
- * that placeholder. Otherwise the site is found from its address with Open-Meteo's own geocoder:
- * the ZIP code first, then "City, ST". A site that cannot be found is reported as unplaced rather
- * than forecast in Austin, because weather for the wrong city reads exactly like weather for the
- * right one.
+ * WHERE A SITE IS, in this order. A location an Owner or Admin set for WeatherIQ (weather_locations)
+ * wins. Then the project's stored point — but createProject and the schedule import store every
+ * project they make at one placeholder point, downtown Austin (database.ts), so a stored point is only
+ * trusted when it is not that placeholder. Otherwise the site is found from its address with
+ * Open-Meteo's own geocoder: the ZIP code first, then "City, ST". A site that cannot be found is
+ * reported as unplaced rather than forecast in Austin, because weather for the wrong city reads
+ * exactly like weather for the right one.
  */
-import type { Job, Project, SiteWeatherForecast, WeatherForecastDay, WeatherForecastPayload } from "@buildflow/shared";
+import type {
+  Job,
+  Project,
+  SiteWeatherForecast,
+  WeatherCause,
+  WeatherForecastDay,
+  WeatherForecastPayload,
+  WeatherLocation,
+  WeatherSeverity,
+  WeatherWindow
+} from "@buildflow/shared";
 
 function env(name: string): string | undefined {
   const value = process.env[name]?.trim();
@@ -56,6 +70,7 @@ export const PLACEHOLDER_POINT = { latitude: 30.2672, longitude: -97.7431 } as c
 export class WeatherUnavailableError extends Error {}
 
 type Point = { latitude: number; longitude: number; place: string };
+type Located = Point & { locatedBy: SiteWeatherForecast["locatedBy"] };
 
 /** A stored point that is a real place: finite, on the globe, not 0,0, and not the placeholder. */
 export function hasRealPoint(project: Pick<Project, "latitude" | "longitude">): boolean {
@@ -167,21 +182,184 @@ async function geocode(query: string, now: number): Promise<Point | null> {
   return asking;
 }
 
-async function locate(project: Project, now: number): Promise<Point | null> {
+async function locate(project: Project, now: number, custom?: WeatherLocation): Promise<Located | null> {
+  if (custom) return { latitude: custom.latitude, longitude: custom.longitude, place: custom.place, locatedBy: "custom" };
   if (hasRealPoint(project)) {
-    return { latitude: project.latitude, longitude: project.longitude, place: project.location || project.address || project.name };
+    return {
+      latitude: project.latitude,
+      longitude: project.longitude,
+      place: project.location || project.address || project.name,
+      locatedBy: "project"
+    };
   }
   for (const query of siteQueries(project)) {
     const point = await geocode(query, now);
+    if (point) return { ...point, locatedBy: "address" };
+  }
+  return null;
+}
+
+/**
+ * A person's own words for where a site is — "78701", "Round Rock, TX", a whole street address —
+ * as a place, for the location an Owner or Admin sets (PUT /api/weather/locations/:projectId).
+ * Asked the way a project's address is: the ZIP first, then "City, ST", then the words as written.
+ */
+export async function placeForQuery(query: string, now = Date.now()): Promise<Point | null> {
+  const text = query.trim();
+  if (text.length < 2) return null;
+  const candidates = /^\d{5}(?:-\d{4})?$/.test(text) ? [text.slice(0, 5)] : siteQueries({ address: text, location: text });
+  for (const candidate of candidates) {
+    const point = await geocode(candidate, now);
     if (point) return point;
   }
   return null;
 }
 
+/* ---- the hours: when the weather crosses a line a jobsite plans around ------------------------ */
+
+/**
+ * Per hour, what stops or slows outdoor work. A hold is weather nobody should be working in; a
+ * watch costs production. Lightning is any thunderstorm hour (WMO 95–99): a jobsite shelters when
+ * thunder is heard, so a storm forecast during working hours is a hold, never a watch. Freezing
+ * rain is a hold too. Heat starts at 100 °F, not the 95 °F a hot-weather concrete plan starts at,
+ * because an Austin September sits in the upper 90s all month and a warning every day says nothing.
+ */
+export const HOURLY = {
+  rain: { watchChance: 50, watchInches: 0.02, holdInches: 0.1, holdChance: 80 },
+  snow: { holdInches: 0.2 },
+  wind: { watchMph: 25, holdMph: 35 },
+  heat: { watchF: 100, holdF: 105 },
+  cold: { watchF: 32, holdF: 20 },
+  fog: { watchFeet: 1000 }
+} as const;
+
+export type WeatherHour = {
+  /** Site-local "YYYY-MM-DDTHH:mm", as Open-Meteo stamps it with timezone=auto. */
+  time: string;
+  code: number;
+  tempF: number | null;
+  rainChance: number;
+  rainInches: number;
+  snowInches: number;
+  gustMph: number;
+  visibilityFt: number | null;
+};
+
+const THUNDER = new Set([95, 96, 99]);
+const FREEZING = new Set([56, 57, 66, 67]);
+const SNOW_CODES = new Set([71, 73, 75, 77, 85, 86]);
+const FOG_CODES = new Set([45, 48]);
+const CAUSES: WeatherCause[] = ["lightning", "rain", "snow", "wind", "heat", "cold", "fog"];
+
+/** What one hour does to outdoor work, cause by cause. */
+export function scoreHour(hour: WeatherHour): Partial<Record<WeatherCause, WeatherSeverity>> {
+  const { rain, snow, wind, heat, cold, fog } = HOURLY;
+  const out: Partial<Record<WeatherCause, WeatherSeverity>> = {};
+  if (THUNDER.has(hour.code)) out.lightning = "hold";
+  if (
+    FREEZING.has(hour.code) ||
+    hour.rainInches >= rain.holdInches ||
+    (hour.rainChance >= rain.holdChance && hour.rainInches >= rain.watchInches)
+  ) {
+    out.rain = "hold";
+  } else if (hour.rainChance >= rain.watchChance || hour.rainInches >= rain.watchInches) {
+    out.rain = "watch";
+  }
+  if (hour.snowInches >= snow.holdInches) out.snow = "hold";
+  else if (hour.snowInches > 0 || SNOW_CODES.has(hour.code)) out.snow = "watch";
+  if (hour.gustMph >= wind.holdMph) out.wind = "hold";
+  else if (hour.gustMph >= wind.watchMph) out.wind = "watch";
+  if (hour.tempF !== null) {
+    if (hour.tempF >= heat.holdF) out.heat = "hold";
+    else if (hour.tempF >= heat.watchF) out.heat = "watch";
+    if (hour.tempF <= cold.holdF) out.cold = "hold";
+    else if (hour.tempF <= cold.watchF) out.cold = "watch";
+  }
+  if (FOG_CODES.has(hour.code) || (hour.visibilityFt !== null && hour.visibilityFt <= fog.watchFeet)) out.fog = "watch";
+  return out;
+}
+
+/** The wall-clock hour after this one ("…T23:00" → the next day's "T00:00"), with no time zone involved. */
+export function nextHour(time: string): string {
+  const [date, clock = "00:00"] = time.split("T");
+  const [year, month, day] = date.split("-").map(Number);
+  const [hours, minutes] = clock.split(":").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day, hours + 1, minutes));
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}T${pad(next.getUTCHours())}:${pad(next.getUTCMinutes())}`;
+}
+
+/** Why a run of hours crossed the line, in the words a superintendent would use. */
+function reasonFor(cause: WeatherCause, hours: WeatherHour[]): string {
+  const most = (values: number[]) => Math.max(...values);
+  switch (cause) {
+    case "lightning":
+      return "thunderstorms";
+    case "rain": {
+      if (hours.some((hour) => FREEZING.has(hour.code))) return "freezing rain";
+      const inches = hours.reduce((sum, hour) => sum + hour.rainInches, 0);
+      return inches >= 0.02 ? `${inches.toFixed(2)} in of rain` : `${most(hours.map((hour) => hour.rainChance))}% chance of rain`;
+    }
+    case "snow": {
+      const inches = hours.reduce((sum, hour) => sum + hour.snowInches, 0);
+      return inches >= 0.1 ? `${inches.toFixed(1)} in of snow` : "snow";
+    }
+    case "wind":
+      return `gusts to ${Math.round(most(hours.map((hour) => hour.gustMph)))} mph`;
+    case "heat":
+      return `up to ${Math.round(most(hours.map((hour) => hour.tempF ?? -Infinity)))}°F`;
+    case "cold":
+      return `down to ${Math.round(Math.min(...hours.map((hour) => hour.tempF ?? Infinity)))}°F`;
+    case "fog":
+      return "dense fog";
+  }
+}
+
+/**
+ * The hours as windows: for each cause, every unbroken run of hours it is active in, at the worst
+ * severity any hour of the run reached. Soonest first; a hold before a watch at the same hour.
+ */
+export function windowsFromHours(hours: WeatherHour[]): WeatherWindow[] {
+  const scored = hours.map((hour) => ({ hour, score: scoreHour(hour) }));
+  const windows: WeatherWindow[] = [];
+  for (const cause of CAUSES) {
+    let run: typeof scored = [];
+    const close = () => {
+      if (run.length === 0) return;
+      const severity = run.some((entry) => entry.score[cause] === "hold") ? "hold" : "watch";
+      windows.push({
+        cause,
+        severity,
+        start: run[0].hour.time,
+        end: nextHour(run[run.length - 1].hour.time),
+        reason: reasonFor(
+          cause,
+          run.map((entry) => entry.hour)
+        )
+      });
+      run = [];
+    };
+    scored.forEach((entry, index) => {
+      // an hour missing from the series breaks a run: it is two stretches of weather, not one
+      const contiguous = run.length === 0 || nextHour(run[run.length - 1].hour.time) === entry.hour.time;
+      if (entry.score[cause] && contiguous) run.push(entry);
+      else {
+        close();
+        if (entry.score[cause]) run.push(entry);
+      }
+      if (index === scored.length - 1) close();
+    });
+  }
+  return windows.sort(
+    (a, b) =>
+      a.start.localeCompare(b.start) || Number(b.severity === "hold") - Number(a.severity === "hold") || a.cause.localeCompare(b.cause)
+  );
+}
+
 /* ---- the forecast ------------------------------------------------------------------------ */
 
-type Forecast = { at: number; timezone: string; days: WeatherForecastDay[] };
-type Daily = Record<string, unknown>;
+type Forecast = { at: number; timezone: string; days: WeatherForecastDay[]; windows: WeatherWindow[] };
+type Series = Record<string, unknown>;
 
 const forecasts = new Map<string, Forecast>();
 const reading = new Map<string, Promise<void>>();
@@ -195,7 +373,7 @@ const numberAt = (series: unknown, index: number): number | null => {
 };
 
 /** One answer's `daily` block to days. A day without both temperatures is not a day of forecast. */
-export function readDays(daily: Daily | undefined): WeatherForecastDay[] {
+export function readDays(daily: Series | undefined): WeatherForecastDay[] {
   const time = Array.isArray(daily?.time) ? (daily.time as unknown[]) : [];
   return time.flatMap((date, index): WeatherForecastDay[] => {
     const high = numberAt(daily?.temperature_2m_max, index);
@@ -215,6 +393,26 @@ export function readDays(daily: Daily | undefined): WeatherForecastDay[] {
   });
 }
 
+/** One answer's `hourly` block to hours. An hour without a timestamp is dropped; a missing value reads as none. */
+export function readHours(hourly: Series | undefined): WeatherHour[] {
+  const time = Array.isArray(hourly?.time) ? (hourly.time as unknown[]) : [];
+  return time.flatMap((stamp, index): WeatherHour[] => {
+    if (typeof stamp !== "string") return [];
+    return [
+      {
+        time: stamp,
+        code: Math.round(numberAt(hourly?.weather_code, index) ?? 0),
+        tempF: numberAt(hourly?.temperature_2m, index),
+        rainChance: Math.min(100, Math.max(0, Math.round(numberAt(hourly?.precipitation_probability, index) ?? 0))),
+        rainInches: numberAt(hourly?.precipitation, index) ?? 0,
+        snowInches: numberAt(hourly?.snowfall, index) ?? 0,
+        gustMph: numberAt(hourly?.wind_gusts_10m, index) ?? 0,
+        visibilityFt: numberAt(hourly?.visibility, index)
+      }
+    ];
+  });
+}
+
 /** One request for every cell; Open-Meteo answers a list of places with a list. */
 async function readCells(cells: string[], now: number): Promise<void> {
   const url = new URL(forecastUrl());
@@ -224,13 +422,15 @@ async function readCells(cells: string[], now: number): Promise<void> {
     "daily",
     "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max"
   );
+  // imperial units apply to the hours too: snowfall in inches, visibility in feet
+  url.searchParams.set("hourly", "weather_code,temperature_2m,precipitation_probability,precipitation,snowfall,wind_gusts_10m,visibility");
   url.searchParams.set("temperature_unit", "fahrenheit");
   url.searchParams.set("wind_speed_unit", "mph");
   url.searchParams.set("precipitation_unit", "inch");
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("forecast_days", String(FORECAST_DAYS));
   const payload = await getJson(url);
-  const answers = (Array.isArray(payload) ? payload : [payload]) as Array<{ timezone?: unknown; daily?: Daily }>;
+  const answers = (Array.isArray(payload) ? payload : [payload]) as Array<{ timezone?: unknown; daily?: Series; hourly?: Series }>;
   /* A 200 that is not a forecast — a proxy's page, a stub, a changed API — must not read as clear
      skies at every site (the lesson of the Map page's forecast, 2026-09-22). Without days for
      every place asked about, there is no forecast. */
@@ -240,7 +440,12 @@ async function readCells(cells: string[], now: number): Promise<void> {
   }
   cells.forEach((cell, index) => {
     const timezone = answers[index]?.timezone;
-    forecasts.set(cell, { at: now, timezone: typeof timezone === "string" ? timezone : "UTC", days: days[index] });
+    forecasts.set(cell, {
+      at: now,
+      timezone: typeof timezone === "string" ? timezone : "UTC",
+      days: days[index],
+      windows: windowsFromHours(readHours(answers[index]?.hourly))
+    });
   });
 }
 
@@ -266,10 +471,14 @@ export function activeSites(projects: Project[], jobs: Job[], today: string): Pr
  * one request. When that request fails, cells up to six hours old are still served (their
  * `fetchedAt` says how old); if even that leaves a site without a forecast, the whole answer is
  * WeatherUnavailableError, which the route turns into a 502 the panel says out loud — never an
- * empty week that reads as no weather.
+ * empty week that reads as no weather. The job conflicts are the route's to add (weatherConflicts.ts).
  */
-export async function forecastForSites(projects: Project[], now = Date.now()): Promise<WeatherForecastPayload> {
-  const points = await Promise.all(projects.map((project) => locate(project, now)));
+export async function forecastForSites(
+  projects: Project[],
+  now = Date.now(),
+  custom: ReadonlyMap<string, WeatherLocation> = new Map()
+): Promise<Omit<WeatherForecastPayload, "conflicts">> {
+  const points = await Promise.all(projects.map((project) => locate(project, now, custom.get(project.id))));
   const found = projects.flatMap((project, index) => {
     const point = points[index];
     return point ? [{ project, point, cell: cellOf(point) }] : [];
@@ -303,9 +512,11 @@ export async function forecastForSites(projects: Project[], now = Date.now()): P
     return {
       projectId: project.id,
       place: point.place,
+      locatedBy: point.locatedBy,
       timezone: forecast.timezone,
       fetchedAt: new Date(forecast.at).toISOString(),
-      days: forecast.days
+      days: forecast.days,
+      windows: forecast.windows
     };
   });
   return { source: "open-meteo", sites, unplaced };

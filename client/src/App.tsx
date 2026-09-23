@@ -299,6 +299,7 @@ import {
 } from "./board/panelBoard";
 import { MeetingsPanel } from "./MeetingsPanel";
 import { WeatherIQPanel } from "./weather/WeatherIQPanel";
+import { CAUSE_LABEL as WEATHER_CAUSE_LABEL, timeRange as weatherTimeRange } from "./weather/weatherIQ";
 import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
 import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
@@ -19086,6 +19087,29 @@ function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
     });
   });
 
+  /* WeatherIQ's job days (2026-09-23): each open one is a suggestion for the person in charge — the
+     project's manager, which is what the panel's "projects I manage" tab reads — and a called-off one
+     says a reschedule is waiting. Both land on the WeatherIQ section, where the decision is made. */
+  (data.weatherConflicts ?? []).forEach((conflict) => {
+    if (conflict.status !== "open" && conflict.status !== "cancelled") return;
+    const job = data.jobs.find((item) => item.id === conflict.jobId);
+    if (!job) return;
+    const when = `${new Date(`${conflict.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" })} ${weatherTimeRange(conflict.start, conflict.end)}`;
+    items.push({
+      id: `weather-conflict-${conflict.id}`,
+      title: conflict.status === "open" ? `Weather may stop ${job.phase}` : `${job.phase} was called off for weather`,
+      detail:
+        conflict.status === "open"
+          ? `${WEATHER_CAUSE_LABEL[conflict.cause]}: ${conflict.reason}, ${when}, at ${projectName(data, conflict.projectId)}, inside the job's hours. Call it off or keep it on.`
+          : `${WEATHER_CAUSE_LABEL[conflict.cause]} ${when} at ${projectName(data, conflict.projectId)}. A reschedule is suggested.`,
+      timestamp: conflict.updatedAt || conflict.detectedAt,
+      tone: conflict.status === "cancelled" ? "violet" : conflict.severity === "hold" ? "red" : "amber",
+      icon: CloudSun,
+      projectId: conflict.projectId,
+      target: { kind: "panel", panelId: "weather" }
+    });
+  });
+
   data.weatherAlerts.forEach((alert) => {
     items.push({
       id: `weather-${alert.id}`,
@@ -24133,7 +24157,7 @@ function Dashboard({
     return {
       id: variance.id,
       title: job?.phase ?? job?.name ?? "Unknown job",
-      meta: `${projectName(data, variance.projectId)} · ${variance.severity} severity${
+      meta: `${variance.kind === "weather" ? "Weather reschedule · " : ""}${projectName(data, variance.projectId)} · ${variance.severity} severity${
         variance.proposal.criticalPath ? " · critical path" : ""
       }`,
       side: drift === 0 ? "On plan" : `${late ? "+" : "−"}${drift} working day${drift === 1 ? "" : "s"}`,
@@ -24395,7 +24419,7 @@ function Dashboard({
     ),
     // WeatherIQ (2026-09-23): the week's forecast at every job site, read by the section itself
     // (weather/WeatherIQPanel.tsx), in the place of Weather Impact and under its id
-    weather: <WeatherIQPanel data={data} today={dashboardToday} />,
+    weather: <WeatherIQPanel data={data} today={dashboardToday} reload={reload} />,
     conflicts: (
       <div className="cc-legacy-panel">
         {data.equipment.filter((item) => item.status !== "Available").length > 0 ? (

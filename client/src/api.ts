@@ -36,7 +36,9 @@ import type {
   RebookMove,
   RebookResult,
   WeeklyDigest,
+  WeatherConflict,
   WeatherForecastPayload,
+  WeatherLocation,
   WorkspacesPayload
 } from "@buildflow/shared";
 
@@ -902,6 +904,36 @@ export function calendarFeed(): Promise<CalendarFeed> {
  */
 export function weatherForecast(): Promise<WeatherForecastPayload> {
   return request<WeatherForecastPayload>("/api/weather/forecast");
+}
+
+/**
+ * Call a job's day off for weather. The server releases that day's crew bookings, logs the delay,
+ * and raises the reschedule as a pending variance (accepted or rejected with acceptVariance /
+ * rejectVariance, like any other proposed change to the plan). Owner and Admin only.
+ */
+export function cancelWeatherConflict(id: string) {
+  return request<{ conflict: WeatherConflict; delayIQ: DelayIQ; variance: ScheduleVariance | null; releasedAssignmentIds: string[] }>(
+    `/api/weather/conflicts/${encodeURIComponent(id)}/cancel`,
+    { method: "POST", body: "{}" }
+  );
+}
+
+/** Keep a job's day on despite the weather: the conflict stays on the record and stops asking. */
+export function keepWeatherConflict(id: string) {
+  return request<WeatherConflict>(`/api/weather/conflicts/${encodeURIComponent(id)}/keep`, { method: "POST", body: "{}" });
+}
+
+/** Where WeatherIQ reads a project's forecast: an address, a ZIP code or a town. Workspace Owner and Admins only. */
+export function setWeatherLocation(projectId: string, query: string) {
+  return request<WeatherLocation>(`/api/weather/locations/${encodeURIComponent(projectId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ query })
+  });
+}
+
+/** Back to the project's own address. */
+export function clearWeatherLocation(projectId: string) {
+  return request<void>(`/api/weather/locations/${encodeURIComponent(projectId)}`, { method: "DELETE" });
 }
 
 /**

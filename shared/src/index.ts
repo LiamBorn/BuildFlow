@@ -441,7 +441,9 @@ export type VarianceKind =
   /** Reported 100% before the planned finish. */
   | "complete"
   /** Field flagged the work stopped (DelayIQed/At Risk) regardless of percent. */
-  | "blocked";
+  | "blocked"
+  /** WeatherIQ: a job day was called off for weather, and this is where the job would go instead. */
+  | "weather";
 
 export type VarianceStatus = "pending" | "accepted" | "rejected" | "superseded";
 
@@ -554,15 +556,91 @@ export type WeatherForecastDay = {
   gustMph: number;
 };
 
+/** What makes an hour of weather stop or slow outdoor work. */
+export type WeatherCause = "lightning" | "rain" | "snow" | "wind" | "heat" | "cold" | "fog";
+/** Watch: weather that costs production. Hold: weather nobody should be working in. */
+export type WeatherSeverity = "watch" | "hold";
+
+/**
+ * A run of hours at one site when the weather crosses a WeatherIQ threshold (server/src/weather.ts
+ * holds them). Times are the site's own wall clock, "YYYY-MM-DDTHH:mm", and `end` is exclusive —
+ * the same clock a job's "7:00 AM" is written in, so the two compare directly.
+ */
+export type WeatherWindow = {
+  cause: WeatherCause;
+  severity: WeatherSeverity;
+  start: string;
+  end: string;
+  /** What crossed the line, in words: "thunderstorms", "0.40 in of rain", "gusts to 38 mph". */
+  reason: string;
+};
+
 export type SiteWeatherForecast = {
   projectId: string;
   /** The place the forecast is for, as the site was found ("Austin, Texas"). */
   place: string;
+  /**
+   * How the site was placed: the project's own stored point, its address (looked up, because new
+   * projects are stored at a placeholder point), or a location an Owner or Admin set for WeatherIQ.
+   */
+  locatedBy: "project" | "address" | "custom";
   /** The site's IANA time zone, which is what its days are counted in. */
   timezone: string;
   /** When this site's forecast was read from the provider (ISO). */
   fetchedAt: string;
   days: WeatherForecastDay[];
+  /** The hours in the coming week that cross a threshold, per cause, soonest first. */
+  windows: WeatherWindow[];
+};
+
+/** Open: waiting on the person in charge. Cancelled: that day was called off. Kept: they chose to work it. Cleared: the forecast no longer shows it. */
+export type WeatherConflictStatus = "open" | "cancelled" | "kept" | "cleared";
+
+/**
+ * One job's working day that forecast weather reaches during the job's own hours (WeatherIQ,
+ * 2026-09-23). Found by the server each time it reads the forecast, kept so a decision on it
+ * sticks, and addressed to the person in charge — the project's manager.
+ */
+export type WeatherConflict = {
+  /** `wx-<jobId>-<date>`: one per job per day, so a re-read updates it rather than adding another. */
+  id: string;
+  jobId: string;
+  projectId: string;
+  /** The working day, site-local YYYY-MM-DD. */
+  date: string;
+  /** The worst weather that overlaps the job's hours that day. */
+  cause: WeatherCause;
+  severity: WeatherSeverity;
+  /** When it overlaps the job's hours, site-local "YYYY-MM-DDTHH:mm"; `end` exclusive. */
+  start: string;
+  end: string;
+  reason: string;
+  /** The person in charge: the project manager's user id, or "" when the project has none. */
+  assigneeId: string;
+  status: WeatherConflictStatus;
+  detectedAt: string;
+  updatedAt: string;
+  decidedAt?: string;
+  /** User id of whoever called the day off or kept it. */
+  decidedBy?: string;
+  /** The reschedule a call-off raised: a ScheduleVariance of kind "weather", accepted or rejected like any other. */
+  varianceId?: string;
+  /** The delay a call-off logged. */
+  delayIQId?: string;
+};
+
+/** Where WeatherIQ reads a project's forecast when an Owner or Admin has set it, instead of the project's address. */
+export type WeatherLocation = {
+  projectId: string;
+  /** What they typed: an address, a ZIP code or a town. */
+  query: string;
+  /** What it was found as: "Round Rock, Texas". */
+  place: string;
+  latitude: number;
+  longitude: number;
+  updatedAt: string;
+  /** User id of whoever set it. */
+  updatedBy: string;
 };
 
 export type WeatherForecastPayload = {
@@ -571,6 +649,8 @@ export type WeatherForecastPayload = {
   sites: SiteWeatherForecast[];
   /** Active projects whose site could not be found from their address — never forecast somewhere they are not. */
   unplaced: string[];
+  /** The job days this week's weather reaches, as the server now has them (cleared ones left out). */
+  conflicts: WeatherConflict[];
 };
 
 export type ResourcesPayload = {
@@ -596,6 +676,8 @@ export type BootstrapPayload = {
   phases: Phase[];
   inspections: Inspection[];
   weatherAlerts: WeatherAlert[];
+  /** WeatherIQ's job days at risk, from today on (cleared ones left out). Optional: a workspace that never read a forecast has none. */
+  weatherConflicts?: WeatherConflict[];
   /**
    * The trade this workspace is built around, recorded on the org when the
    * owner picks it at onboarding. Optional because older tenant DBs (and test

@@ -225,3 +225,206 @@
 .dash-rx .wiq-foot a:hover {
   color: var(--bf-ink);
 }
+
+/* ---- the job days you can open (2026-09-23) --------------------------------
+   A row with a stored conflict behind it is a button: it opens the decision.
+   The skin paints `.resource-row` at five classes, so the hover that has to
+   beat its background is written at six. */
+.dash-rx .wiq-risk {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+}
+.dash-rx button.wiq-risk {
+  cursor: pointer;
+  transition: background-color var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell .dash-rx button.resource-row.wiq-risk:hover {
+  background: color-mix(in srgb, var(--bf-ink) 6%, var(--bf-hover));
+}
+.dash-rx button.wiq-risk:focus-visible {
+  outline: 2px solid var(--bf-ink);
+  outline-offset: 2px;
+}
+
+/* where the forecast is read, and — for the Workspace Owner and Admins — the
+   Meetings panel's small link pill to change it */
+.dash-rx .wiq-place {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.dash-rx .wiq-change {
+  flex: none;
+}
+.dash-rx .wiq-change svg {
+  width: 13px;
+  height: 13px;
+}
+.dash-rx .wiq-unplaced {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.dash-rx .wiq-unplaced .wiq-note {
+  flex-basis: 100%;
+}
+
+/* ---- the drawers ------------------------------------------------------------
+   Portalled to the body like every `.pdx` drawer, so they are dressed under
+   .pdx, not .dash-rx. The body, the actions and the entrance are the drawer's
+   own (skin §38 and §65); these are only the parts WeatherIQ adds. */
+.pdx .wiq-facts {
+  display: grid;
+  margin: 0;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-hover);
+}
+.pdx .wiq-facts > div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 14px;
+}
+.pdx .wiq-facts > div + div {
+  border-top: 1px solid var(--bf-line-solid);
+}
+.pdx .wiq-facts dt {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.pdx .wiq-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+/* the Dashboard's Hold / Watch pill, for a drawer the Dashboard's rules cannot reach */
+.pdx .wiq-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.pdx .wiq-pill.is-hold {
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
+}
+.pdx .wiq-pill.is-watch {
+  background: var(--bf-color-warn-wash);
+  color: var(--bf-color-warn);
+}
+.pdx .wiq-decision {
+  display: grid;
+  gap: 12px;
+}
+.pdx .wiq-proposal {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-hover);
+}
+.pdx .wiq-proposal-eyebrow {
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pdx .wiq-proposal-dates {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+}
+.pdx .wiq-proposal-dates span {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.pdx .wiq-proposal-dates strong {
+  color: var(--bf-ink-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.pdx .wiq-proposal-dates.is-new strong {
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+}
+.pdx .wiq-proposal-line {
+  margin: 0;
+  color: var(--bf-ink-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.pdx .wiq-ripple {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pdx .wiq-ripple li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  font-size: 12.5px;
+}
+.pdx .wiq-ripple em {
+  color: var(--bf-ink-muted);
+  font-style: normal;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.pdx .wiq-location-now {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-hover);
+}
+.pdx .wiq-location-now svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--bf-ink-muted);
+}
+.pdx .wiq-location-now span {
+  display: grid;
+  gap: 2px;
+}
+.pdx .wiq-location-now strong {
+  color: var(--bf-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.pdx .wiq-location-now em {
+  color: var(--bf-ink-muted);
+  font-size: 12px;
+  font-style: normal;
+}
+.pdx .wiq-location-hint {
+  margin: 0;
+  color: var(--bf-ink-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}

@@ -246,6 +246,43 @@ describe("the notifications drawer", () => {
   });
 
   /**
+   * WeatherIQ's job days (2026-09-23) are suggestions for the person in charge — the project's
+   * manager — so they sit on the tab for the projects the reader manages, and they land on the
+   * WeatherIQ section, where the decision is made.
+   */
+  it("tells the person in charge about a job day the weather reaches, on the tab for the projects they manage", async () => {
+    state.bootstrapPayload = {
+      ...bootstrapFixture,
+      weatherConflicts: [
+        {
+          id: "wx-j-riverside-concrete-2026-06-17",
+          jobId: "j-riverside-concrete",
+          projectId: "p-riverside",
+          date: "2026-06-17",
+          cause: "lightning",
+          severity: "hold",
+          start: "2026-06-17T13:00",
+          end: "2026-06-17T15:00",
+          reason: "thunderstorms",
+          assigneeId: "u-matt",
+          status: "open",
+          detectedAt: "2026-06-16T12:00:00.000Z",
+          updatedAt: "2026-06-16T12:00:00.000Z"
+        }
+      ]
+    };
+    render(<App />);
+    await enterDashboard();
+    const panel = openBell();
+
+    const row = rowFor(panel, /Weather may stop Concrete - Level 3 Slab/);
+    expect(row.textContent).toContain("Lightning: thunderstorms, Wednesday 1–3 PM, at Riverside Office Building, inside the job's hours.");
+    fireEvent.click(within(panel).getByRole("tab", { name: /^Projects I manage/ }));
+    fireEvent.click(rowFor(panel, /Weather may stop Concrete - Level 3 Slab/));
+    await waitFor(() => expect(document.querySelector('[data-dash-drag-id="weather"]')?.className).toContain("is-bf-focused"));
+  });
+
+  /**
    * A booking is addressed by week and crew rather than by row, and the calendar remembers the
    * filters the reader last used — which can be the very reason the booking is not visible.
    * So the jump writes the context, the same way a pasted schedule link does, and opens the

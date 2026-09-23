@@ -263,6 +263,14 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/schedule/feeds": "feeds.read",
   "GET /api/schedule/status": "schedule.read",
   "GET /api/weather/forecast": "schedule.read",
+  /* WeatherIQ's decisions (2026-09-23). Calling a job's day off releases its crew bookings and
+     raises a reschedule, so it is a schedule write; keeping it on is the same person's other answer.
+     The reschedule itself is accepted or rejected on the variance routes (variance.resolve). */
+  "POST /api/weather/conflicts/:id/cancel": "assignments.write",
+  "POST /api/weather/conflicts/:id/keep": "assignments.write",
+  /* Where a project's forecast is read: the Workspace Owner and Admins, who hold projects.write. */
+  "PUT /api/weather/locations/:projectId": "projects.write",
+  "DELETE /api/weather/locations/:projectId": "projects.write",
   "GET /api/schedule/variances": "schedule.read",
   "GET /api/schedule/work-calendar": "schedule.read",
   "GET /api/support/agents": "public",
