@@ -40,9 +40,35 @@ cp client/.env.example client/.env
 ## Build & test
 
 ```bash
-npm run build      # type-check (tsc) + production build (vite)
-npm test           # workspace tests (vitest)
+npm run typecheck  # tsc across all five projects — the one that checks everything
+npm run lint       # eslint across all five
+npm test           # every suite (see the note below)
+npm run build      # production build: shared, then the client
+npm run test:perf  # the CPM wall-clock targets, on a quiet machine
 ```
+
+Two things worth knowing before you trust a green run.
+
+`npm run build` type-checks **shared and the client only**, because those are the
+two it builds. The server and the two consoles are covered by `npm run typecheck`,
+not by the build.
+
+`npm test` is an `&&` chain: the workspaces run first, and if any of them fails,
+admin-portal and sales-desk never run at all. A failure early on therefore hides
+whatever came after it. Run a project on its own when you want a complete answer:
+
+```bash
+npm --workspace client run test
+npm --prefix admin-portal test
+```
+
+And read the exit code, not the last line — `npm test | tail` reports the exit
+code of `tail`, which is always 0.
+
+The client suite is capped at four workers (`client/vite.config.ts`). On an
+8-core machine that is both faster and more reliable than the default: a full run
+uncapped failed nine unrelated tests on timeouts and took 129s, and capped it
+passes in ~85s.
 
 ## Data layer
 
