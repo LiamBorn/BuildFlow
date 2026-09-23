@@ -17,6 +17,8 @@ export function Conversations({ desk, onRefresh }: { desk: Desk; onRefresh: () =
   const [selected, setSelected] = useState<string | undefined>(focusId ?? deptConversations[0]?.id);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  /** Set when a reply did not reach the server, so the agent is not left thinking it did. */
+  const [sendError, setSendError] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | ConversationStatus>("all");
   const threadRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +37,7 @@ export function Conversations({ desk, onRefresh }: { desk: Desk; onRefresh: () =
 
   useEffect(() => {
     if (!selected) return;
+    setSendError(null);
     let cancelled = false;
     fetchMessages(selected).then((m) => {
       if (!cancelled) setMessages(m);
@@ -63,15 +66,23 @@ export function Conversations({ desk, onRefresh }: { desk: Desk; onRefresh: () =
     if (!draft.trim() || !active) return;
     const body = draft.trim();
     setDraft("");
+    setSendError(null);
     const optimistic: Message = { id: `local-${Date.now()}`, conversationId: active.id, author: "agent", body, createdAt: new Date().toISOString() };
     setMessages((m) => [...m, optimistic]);
     try {
       const saved = await sendMessage(active.id, body, "agent");
       setMessages((m) => m.map((x) => (x.id === optimistic.id ? saved : x)));
+      // Only once it is actually sent: this marks the conversation replied-to.
+      await desk.reply(active.id, body);
     } catch {
-      /* keep optimistic */
+      // The send failed. Keeping the optimistic bubble would leave the reply sitting in the
+      // thread looking delivered, which is the one thing a support console must not do -- the
+      // customer got nothing. Take it back out, return the text to the composer so the work is
+      // not lost, and leave the conversation unreplied.
+      setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+      setDraft(body);
+      setSendError("That reply didn't send — your message is back in the box. Check the connection and try again.");
     }
-    await desk.reply(active.id, body);
   };
 
   const setStatus = async (status: ConversationStatus) => {
@@ -164,6 +175,7 @@ export function Conversations({ desk, onRefresh }: { desk: Desk; onRefresh: () =
                 {messages.length === 0 && <p className="sd-muted sd-thread-empty">No messages yet.</p>}
               </div>
 
+              {sendError && <p className="sd-member-error">{sendError}</p>}
               <div className="sd-composer">
                 <textarea
                   value={draft}

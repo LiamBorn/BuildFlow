@@ -147,7 +147,12 @@ export function SalesApp() {
       try {
         const lead = await createLead(input);
         setData((d) => ({ ...d, leads: [lead, ...d.leads] }));
-      } catch {
+      } catch (err) {
+        // In sample mode there is no backend to reach and the badge already says "Sample data",
+        // so keeping a local lead is the demo working as intended. While we are LINKED, a write
+        // that failed must not look like one that saved -- the lead would vanish on refresh and
+        // nobody would know it had gone. Hand it to the caller to report.
+        if (live) throw err;
         const lead: Lead = {
           id: `local-${Date.now()}`,
           phone: "",
@@ -177,7 +182,9 @@ export function SalesApp() {
       try {
         const task = await createTask({ title, dueAt, leadId, department });
         setData((d) => ({ ...d, tasks: [...d.tasks, task] }));
-      } catch {
+      } catch (err) {
+        // Same rule as createLead: a fabricated task is the demo, not a saved to-do.
+        if (live) throw err;
         const task: SalesTask = { id: `local-${Date.now()}`, leadId: leadId ?? null, title, dueAt, done: 0, department, createdAt: new Date().toISOString() };
         setData((d) => ({ ...d, tasks: [...d.tasks, task] }));
       }

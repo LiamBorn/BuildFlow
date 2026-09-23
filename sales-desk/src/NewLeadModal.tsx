@@ -14,22 +14,31 @@ export function NewLeadModal({
 }) {
   const [form, setForm] = useState({ name: "", email: "", company: "", value: "", interest: INTERESTS[0], status: "New" as LeadStatus });
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.company.trim()) return;
     setBusy(true);
-    await onCreate({
-      name: form.name.trim(),
-      email: form.email.trim(),
-      company: form.company.trim(),
-      interest: form.interest,
-      status: form.status,
-      value: Number(form.value) || 0,
-      owner: "Sales Rep",
-      source: "Manual"
-    });
+    setError(null);
+    try {
+      await onCreate({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        company: form.company.trim(),
+        interest: form.interest,
+        status: form.status,
+        value: Number(form.value) || 0,
+        owner: "Sales Rep",
+        source: "Manual"
+      });
+    } catch {
+      // Stay open with everything still typed in, rather than closing on a lead that was lost.
+      setBusy(false);
+      setError("That lead didn't save. Your details are still here — check the connection and try again.");
+      return;
+    }
     setBusy(false);
     onClose();
   };
@@ -91,6 +100,7 @@ export function NewLeadModal({
           </label>
         </div>
 
+        {error && <p className="sd-member-error">{error}</p>}
         <footer className="sd-modal-foot">
           <button type="button" className="sd-btn ghost" onClick={onClose}>
             Cancel

@@ -9,6 +9,7 @@ export function Tasks({ desk }: { desk: Desk }) {
   const { data, department } = desk;
   const [filter, setFilter] = useState<Filter>("all");
   const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
 
@@ -20,7 +21,15 @@ export function Tasks({ desk }: { desk: Desk }) {
   const submit = async () => {
     if (!title.trim()) return;
     const dueAt = due ? new Date(due).toISOString() : new Date(Date.now() + 86_400_000).toISOString();
-    await desk.addTask(title.trim(), dueAt, null);
+    setAddError(null);
+    try {
+      await desk.addTask(title.trim(), dueAt, null);
+    } catch {
+      // Leave the form open with the text still in it: a to-do that looks added and is not
+      // there after a refresh is worse than one that plainly failed.
+      setAddError("That to-do didn't save. It's still here — check the connection and try again.");
+      return;
+    }
     setTitle("");
     setDue("");
     setAdding(false);
@@ -55,6 +64,7 @@ export function Tasks({ desk }: { desk: Desk }) {
 
       {adding && (
         <div className="sd-card sd-addtask" data-reveal>
+          {addError && <p className="sd-member-error">{addError}</p>}
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" onKeyDown={(e) => e.key === "Enter" && submit()} />
           <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
           <button type="button" className="sd-btn primary" onClick={submit}>
