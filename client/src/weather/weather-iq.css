@@ -1,0 +1,227 @@
+/* ============================================================================
+   weather-iq.css — the Dashboard's WeatherIQ section (weather/WeatherIQPanel.tsx).
+
+   Built from parts the board already has. The job rows, the empty state and the
+   Hold / Watch pills are the Dashboard's own `.resource-row`, `.inline-empty-state`
+   and `.badge` (skin §11a and §11d dress them under .dash-rx, so nothing here
+   restyles them). The site picker is the index pages' filter pill, and the day
+   tiles sit on the board's second surface, like its rows.
+
+   Colours are tokens only, so the section follows both modes, every Theme Preset
+   and every colour set — and no blue reaches it (skin §46), rain included.
+
+   It animates nothing by itself. The day tiles and the job rows are on the board's
+   row cascade (the skin lists `.wiq-days` and `.wiq-risks` in §20 and §74h/§74j),
+   and the temperatures count up through AnimatedFigure like every figure on it.
+   ========================================================================== */
+.dash-rx .wiq {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  /* the week shows five days when the section is half the board wide, seven when it has room */
+  container: wiq / inline-size;
+}
+.dash-rx .wiq-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- the job site, and where it is -------------------------------------- */
+.dash-rx .wiq-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+/* the index pages' filter pill (skin: `.hs-qf` on the index roots), at the same
+   size and on the same surface */
+.dash-rx .wiq-site {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 64%;
+  min-height: 30px;
+  padding: 0 24px 0 12px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dash-rx .wiq-site.is-single {
+  padding-right: 12px;
+  cursor: default;
+}
+.dash-rx .wiq-site select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.dash-rx .wiq-site > svg {
+  position: absolute;
+  right: 9px;
+  width: 14px;
+  height: 14px;
+  color: var(--bf-ink-muted);
+  pointer-events: none;
+}
+/* The ring belongs to the pill, and only for the keyboard: a list opened by
+   pointer marks the select quiet when it hands focus back (skin §55). */
+.dash-rx .wiq-site:has(select:focus-visible:not([data-bfsel-quiet])) {
+  outline: 2px solid var(--bf-ink);
+  outline-offset: 2px;
+}
+.dash-rx .wiq-where {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- the week ------------------------------------------------------------ */
+.dash-rx .wiq-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@container wiq (max-width: 460px) {
+  .dash-rx .wiq-days {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .dash-rx .wiq-day:nth-child(n + 6) {
+    display: none;
+  }
+}
+.dash-rx .wiq-day {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 4px 9px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  text-align: center;
+}
+/* A day that costs production takes the warning wash, one nobody should work in
+   the alarm's — the same pairs the board's rows and pills read. */
+.dash-rx .wiq-day.is-watch {
+  background: var(--bf-color-warn-wash);
+}
+.dash-rx .wiq-day.is-hold {
+  background: var(--bf-color-bad-wash);
+}
+.dash-rx .wiq-day-name {
+  color: var(--bf-ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.dash-rx .wiq-day-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--bf-ink);
+}
+.dash-rx .wiq-day-high {
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .wiq-day-low {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .wiq-day-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--bf-ink-faint);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .wiq-day-metric svg {
+  width: 11px;
+  height: 11px;
+}
+.dash-rx .wiq-day.is-watch .wiq-day-metric {
+  color: var(--bf-color-warn);
+}
+.dash-rx .wiq-day.is-hold .wiq-day-metric {
+  color: var(--bf-color-bad);
+}
+
+/* ---- the read: which scheduled work the weather reaches ------------------- */
+.dash-rx .wiq-read,
+.dash-rx .wiq-risks {
+  display: grid;
+  gap: 8px;
+}
+.dash-rx .wiq-headline {
+  margin: 0;
+  color: var(--bf-ink-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.dash-rx .wiq-headline strong {
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dash-rx .wiq-note {
+  margin: 0;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+/* "the forecast service could not be reached" is a warning, not a hint */
+.dash-rx .wiq-note.is-warn {
+  color: var(--bf-color-warn);
+}
+.dash-rx .wiq-foot {
+  margin: 0;
+  color: var(--bf-ink-faint);
+  font-size: 11px;
+  font-weight: 500;
+}
+.dash-rx .wiq-foot a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dash-rx .wiq-foot a:hover {
+  color: var(--bf-ink);
+}

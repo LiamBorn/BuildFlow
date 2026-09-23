@@ -533,6 +533,46 @@ export type WeatherAlert = {
   startsAt: string;
 };
 
+/* ── WeatherIQ (2026-09-23): the week's forecast at every active job site ──────────────────
+   Read on the server from Open-Meteo (server/src/weather.ts) and scored on the client by plain
+   thresholds (client/src/weather/weatherIQ.ts). The weather alerts above are what a workspace
+   keeps by hand; these are the live forecast. */
+
+/** One day of a site's forecast, in the units a US jobsite plans in. */
+export type WeatherForecastDay = {
+  /** The site's own calendar day, YYYY-MM-DD. */
+  date: string;
+  /** The WMO weather code: 0 clear, 1–3 cloud, 45–48 fog, 51–67 drizzle and rain, 71–86 snow, 95–99 storms. */
+  code: number;
+  highF: number;
+  lowF: number;
+  /** The day's highest hourly chance of rain, 0–100. */
+  rainChance: number;
+  /** Rain expected over the day, inches. */
+  rainInches: number;
+  /** The strongest gust, mph. */
+  gustMph: number;
+};
+
+export type SiteWeatherForecast = {
+  projectId: string;
+  /** The place the forecast is for, as the site was found ("Austin, Texas"). */
+  place: string;
+  /** The site's IANA time zone, which is what its days are counted in. */
+  timezone: string;
+  /** When this site's forecast was read from the provider (ISO). */
+  fetchedAt: string;
+  days: WeatherForecastDay[];
+};
+
+export type WeatherForecastPayload = {
+  /** The provider, named so the panel can credit it: Open-Meteo's data is CC BY 4.0. */
+  source: "open-meteo";
+  sites: SiteWeatherForecast[];
+  /** Active projects whose site could not be found from their address — never forecast somewhere they are not. */
+  unplaced: string[];
+};
+
 export type ResourcesPayload = {
   crews: Crew[];
   equipment: Equipment[];

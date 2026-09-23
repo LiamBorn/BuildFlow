@@ -262,6 +262,7 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/schedule/events": "schedule.read",
   "GET /api/schedule/feeds": "feeds.read",
   "GET /api/schedule/status": "schedule.read",
+  "GET /api/weather/forecast": "schedule.read",
   "GET /api/schedule/variances": "schedule.read",
   "GET /api/schedule/work-calendar": "schedule.read",
   "GET /api/support/agents": "public",

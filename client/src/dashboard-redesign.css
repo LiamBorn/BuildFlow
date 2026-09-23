@@ -456,34 +456,6 @@
   margin-left: auto;
 }
 
-/* weather alert */
-.dash-rx .weather-alert {
-  color: var(--wx-ink);
-}
-.dash-rx .weather-alert svg {
-  color: var(--wx-g-coral);
-}
-.dash-rx .weather-alert strong {
-  color: var(--wx-ink);
-  font-weight: 600;
-}
-.dash-rx .weather-alert p {
-  color: var(--wx-faint);
-}
-.dash-rx .weather-alert span {
-  color: var(--wx-mut);
-}
-.dash-rx .panel-note {
-  border-radius: 12px;
-  background: #d2defb;
-  color: #03257c;
-  font-weight: 600;
-  font-size: 13px;
-}
-.dash-rx .panel-note svg {
-  color: #0733a1;
-}
-
 /* inline empty states */
 .dash-rx .inline-empty-state {
   border: 1px dashed var(--wx-line);

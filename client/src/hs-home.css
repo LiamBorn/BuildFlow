@@ -2189,25 +2189,6 @@
 .dash-rx .cc-legacy-panel .cc-legacy-more {
   justify-self: start;
 }
-.dash-rx .cc-legacy-panel .weather-alert {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-.dash-rx .cc-legacy-panel .weather-alert > div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-.dash-rx .cc-legacy-panel .weather-alert svg {
-  flex: none;
-  width: 44px;
-  height: 44px;
-  color: var(--cc-amber, #b45309);
-}
-.dash-rx .cc-legacy-panel .panel-note {
-  font-size: 13px;
-}
 /* the KPI cards' label + delta lines could not shrink below their words at 390px */
 .dash-rx .kpi-card > *,
 .dash-rx .kpi-card p,

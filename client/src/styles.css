@@ -8108,7 +8108,6 @@ button:disabled {
   border-radius: 999px;
 }
 
-.weather-alert,
 .weather-card,
 .route-card,
 .forecastIQ-card,
@@ -8119,24 +8118,8 @@ button:disabled {
   color: #173055;
 }
 
-.weather-alert {
-  grid-template-columns: 88px 1fr;
-  align-items: center;
-}
-
-.weather-alert svg,
 .weather-card svg {
   color: #0045f5;
-}
-
-.panel-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 7px;
-  background: #e6edff;
 }
 
 .resource-row {
@@ -12845,8 +12828,7 @@ button:disabled {
   }
 
   .chart-row,
-  .progress-donut,
-  .weather-alert {
+  .progress-donut {
     display: grid;
   }
 }

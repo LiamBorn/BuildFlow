@@ -67,6 +67,7 @@ import "./dashboard-admin-kit.css"; // the Dashboard only, on the shadcn admin-k
 import "./setup-stage.css"; // the animation a new workspace shows while the server builds it
 import "./tutorial-stage.css"; // the onboarding tutorial, on the reference recording's design
 import "./meetings-panel.css"; // the Dashboard's Meetings panel (Google Calendar / Outlook)
+import "./weather/weather-iq.css"; // the Dashboard's WeatherIQ section (the week's forecast at every job site)
 import "./plan-upgrade.css"; // the top bar's Upgrade button and its plan menu
 import "./notifications-panel.css"; // the notifications drawer, on the reference's layout
 import "./record-focus.css"; // the landing a notification makes: the row or panel it points at, lit for a moment

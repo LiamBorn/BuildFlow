@@ -160,7 +160,6 @@ import {
   type Status,
   type Equipment,
   type User,
-  type WeatherAlert,
   type WorkspacesPayload
 } from "@buildflow/shared";
 import {
@@ -299,6 +298,7 @@ import {
   type DashPanel
 } from "./board/panelBoard";
 import { MeetingsPanel } from "./MeetingsPanel";
+import { WeatherIQPanel } from "./weather/WeatherIQPanel";
 import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
 import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
@@ -21446,11 +21446,6 @@ type DashboardFeed = {
   items: DashboardFeedItem[];
 };
 
-type WeatherJobImpact = {
-  alert: WeatherAlert;
-  job: Job;
-};
-
 // Subtle cursor-driven 3D tilt, mirroring the welcome page's floating windows.
 
 // Shared "Antigravity" HUD motion: cursor parallax (aurora + tint) and scroll
@@ -21557,7 +21552,7 @@ const DASH_SECTION_TITLES: Record<string, string> = {
   kpis: "Operational KPIs",
   apps: "BuildFlow Apps",
   readiness: "Material Readiness",
-  weather: "Weather Impact",
+  weather: "WeatherIQ",
   conflicts: "Equipment Conflicts",
   inspections: "Upcoming Inspections",
   today: "Today's plan",
@@ -21607,7 +21602,7 @@ const DASH_SECTION_BLURBS: Record<string, string> = {
   kpis: "Today's jobs, crews scheduled, equipment in use and DelayIQed projects.",
   apps: "The BuildFlow apps in this workspace, and the door to each.",
   readiness: "Materials by status — ready, ordered, waiting, missing — at a glance.",
-  weather: "Forecast alerts that overlap an active job this week.",
+  weather: "The week's forecast at every job site, and the scheduled work it puts at risk.",
   conflicts: "Equipment assigned to more than one place at once.",
   inspections: "Inspections coming up, by project and status.",
   meetings: "Google Calendar and Outlook meetings, with a live countdown to the next one."
@@ -23930,9 +23925,6 @@ function Dashboard({
       .map((delayIQ) => delayIQ.projectId)
   );
   const materialCounts = materialReadiness(data);
-  const weatherJobImpacts = weatherImpactsForActiveJobs(data.weatherAlerts, todaysJobs, dashboardToday);
-  const activeWeatherImpact = weatherJobImpacts[0];
-  const weatherImpactedJobNames = Array.from(new Set(weatherJobImpacts.map((impact) => impact.job.name)));
   const selectedPlanName = selectedPlanId ? planById[selectedPlanId].name : "";
   const selectedProductsText = selectedProductLabels(selectedProductIds).join(", ");
   const dashboardFeeds: Record<DashboardFeedKey, DashboardFeed> = {
@@ -24397,33 +24389,9 @@ function Dashboard({
         </button>
       </div>
     ),
-    weather: (
-      <div className="cc-legacy-panel">
-        {activeWeatherImpact ? (
-          <>
-            <div className="weather-alert">
-              <CloudSun size={74} />
-              <div>
-                <strong>{activeWeatherImpact.alert.title}</strong>
-                <p>{formatDate(activeWeatherImpact.alert.startsAt)}</p>
-                <span>{activeWeatherImpact.alert.details}</span>
-                <span>Affects {summarizeDashboardFeed(weatherImpactedJobNames, "active jobs")}</span>
-              </div>
-            </div>
-            <div className="panel-note warning">
-              <AlertTriangle size={18} />
-              {weatherImpactedJobNames.length} active job(s) may be impacted
-            </div>
-          </>
-        ) : (
-          <InlineEmptyState
-            icon={CloudSun}
-            title="No disruptive weather this week"
-            detail="Forecast alerts that overlap an active job show up here."
-          />
-        )}
-      </div>
-    ),
+    // WeatherIQ (2026-09-23): the week's forecast at every job site, read by the section itself
+    // (weather/WeatherIQPanel.tsx), in the place of Weather Impact and under its id
+    weather: <WeatherIQPanel data={data} today={dashboardToday} />,
     conflicts: (
       <div className="cc-legacy-panel">
         {data.equipment.filter((item) => item.status !== "Available").length > 0 ? (
@@ -25014,53 +24982,6 @@ function DashboardFeedPanel({ feed, onClose }: { feed: DashboardFeed; onClose: (
 
 function jobsActiveOnDate(jobs: Job[], date: string) {
   return jobs.filter((job) => job.startDate <= date && job.endDate >= date);
-}
-
-function weatherImpactsForActiveJobs(alerts: WeatherAlert[], activeJobs: Job[], today: string): WeatherJobImpact[] {
-  return alerts.flatMap((alert) => {
-    if (!isDisruptiveWeatherAlert(alert)) return [];
-
-    return activeJobs
-      .filter((job) => weatherAlertCanImpactJob(alert, job, today))
-      .map((job) => ({
-        alert,
-        job
-      }));
-  });
-}
-
-function weatherAlertCanImpactJob(alert: WeatherAlert, job: Job, today: string) {
-  const alertDate = alert.startsAt.slice(0, 10);
-  const alertMatchesProject = !alert.projectId || alert.projectId === job.projectId;
-  const alertFallsDuringActiveWork = alertDate >= today && alertDate <= job.endDate;
-
-  return alertMatchesProject && alertFallsDuringActiveWork;
-}
-
-function isDisruptiveWeatherAlert(alert: WeatherAlert) {
-  if (alert.severity === "High") return true;
-
-  const text = `${alert.title} ${alert.details}`.toLowerCase();
-  return [
-    "lightning",
-    "thunder",
-    "storm",
-    "heavy rain",
-    "rain",
-    "downpour",
-    "flood",
-    "wind",
-    "gust",
-    "hail",
-    "tornado",
-    "snow",
-    "ice",
-    "sleet",
-    "freeze",
-    "heat",
-    "fog",
-    "visibility"
-  ].some((keyword) => text.includes(keyword));
 }
 
 function shiftDate(value: string, offsetDays: number) {

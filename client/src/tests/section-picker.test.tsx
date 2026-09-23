@@ -43,9 +43,9 @@ describe("Add a section", () => {
     for (const card of all) expect(within(card).getByText("On the board")).toBeInTheDocument();
     expect(within(picker).queryAllByRole("button", { name: /^Add / })).toHaveLength(0);
     // a card explains itself: a group, a name, and what it shows
-    const weather = all.find((card) => card.getAttribute("aria-label") === "Weather Impact")!;
+    const weather = all.find((card) => card.getAttribute("aria-label") === "WeatherIQ")!;
     expect(within(weather).getByText("Readiness")).toBeInTheDocument();
-    expect(within(weather).getByText(/Forecast alerts/)).toBeInTheDocument();
+    expect(within(weather).getByText(/forecast at every job site/)).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Add a section" })).toBeNull();
@@ -56,25 +56,25 @@ describe("Add a section", () => {
     await enterDashboard();
     dismissWhatsNew();
 
-    // take Weather Impact off the board the way Customize does
+    // take WeatherIQ off the board the way Customize does
     fireEvent.click(screen.getByRole("button", { name: /^Customize$/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Remove Weather Impact" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove WeatherIQ" }));
     fireEvent.click(screen.getByRole("button", { name: /^Done$/ }));
-    expect(within(board()).queryByRole("heading", { name: "Weather Impact" })).toBeNull();
+    expect(within(board()).queryByRole("heading", { name: "WeatherIQ" })).toBeNull();
 
     const picker = openPicker();
     expect(within(picker).getByText(/1 section is off the board/)).toBeInTheDocument();
     // the one that can come back is listed first, and is the only one with a "+"
-    expect(cards(picker)[0].getAttribute("aria-label")).toBe("Weather Impact");
+    expect(cards(picker)[0].getAttribute("aria-label")).toBe("WeatherIQ");
     expect(within(picker).getAllByRole("button", { name: /^Add / })).toHaveLength(1);
 
-    fireEvent.click(within(picker).getByRole("button", { name: "Add Weather Impact" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "Add WeatherIQ" }));
 
     // back on the board (the card's own title is a heading too, so the board is asked, not the
     // page), the card now says so, and the drawer stays open for more
-    expect(within(board()).getByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
+    expect(within(board()).getByRole("heading", { name: "WeatherIQ" })).toBeInTheDocument();
     expect(within(picker).getByText(/Every section is on the board/)).toBeInTheDocument();
-    expect(within(picker).queryByRole("button", { name: "Add Weather Impact" })).toBeNull();
+    expect(within(picker).queryByRole("button", { name: "Add WeatherIQ" })).toBeNull();
     const stored = JSON.parse(localStorage.getItem(`bf:dash:layout:${bootstrapFixture.activeUser.id}`) ?? "{}");
     expect(stored.hidden).toEqual([]);
   });

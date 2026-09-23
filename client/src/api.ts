@@ -36,6 +36,7 @@ import type {
   RebookMove,
   RebookResult,
   WeeklyDigest,
+  WeatherForecastPayload,
   WorkspacesPayload
 } from "@buildflow/shared";
 
@@ -893,6 +894,14 @@ export function calendarStatus(): Promise<CalendarStatus> {
 
 export function calendarFeed(): Promise<CalendarFeed> {
   return request<CalendarFeed>("/api/calendar/events");
+}
+
+/**
+ * WeatherIQ: the coming week at every active job site (server/src/weather.ts). A 502 means the
+ * forecast service could not be reached — the panel says so rather than showing an empty week.
+ */
+export function weatherForecast(): Promise<WeatherForecastPayload> {
+  return request<WeatherForecastPayload>("/api/weather/forecast");
 }
 
 /**

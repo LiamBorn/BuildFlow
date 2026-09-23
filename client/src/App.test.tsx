@@ -413,7 +413,9 @@ describe("BuildFlow app", () => {
     expect(screen.getByText("Today's Jobs")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
     expect(screen.getAllByText("Riverside Office Building")[0]).toBeInTheDocument();
-    expect(screen.getByText("No disruptive weather this week")).toBeInTheDocument();
+    // WeatherIQ reads its own forecast; this mock does not answer it, so the section says so and
+    // reads the saved alerts, none of which falls on scheduled work
+    expect(await screen.findByText("No weather alerts on scheduled work")).toBeInTheDocument();
   });
 
   it("keeps the workspace the newest refresh fetched when an older one answers last", async () => {
@@ -463,7 +465,7 @@ describe("BuildFlow app", () => {
     expect(screen.queryByText("Somebody else's yard")).not.toBeInTheDocument();
   });
 
-  it("shows weather impact alerts only when disruptive weather overlaps an active job", async () => {
+  it("reads the saved weather alerts on WeatherIQ when the forecast cannot be had, flagging only work they fall on", async () => {
     const weatherImpactedFixture = {
       ...bootstrapFixture,
       jobs: bootstrapFixture.jobs.map((job) =>
@@ -483,10 +485,14 @@ describe("BuildFlow app", () => {
 
     await enterDashboard();
 
-    expect(screen.queryByText("No disruptive weather this week")).not.toBeInTheDocument();
-    expect(screen.getByText(/active job\(s\) may be impacted/)).toBeInTheDocument();
-    expect(screen.getByText("Heavy rain expected")).toBeInTheDocument();
-    expect(screen.getByText("1 active job(s) may be impacted")).toBeInTheDocument();
+    // every request here answers with the bootstrap, which is no forecast: the section says so
+    expect(await screen.findByText(/The forecast service could not be reached/)).toBeInTheDocument();
+    expect(screen.queryByText("No weather alerts on scheduled work")).not.toBeInTheDocument();
+    const section = screen.getByRole("heading", { name: "WeatherIQ" }).closest(".dash-block") as HTMLElement;
+    expect(section.querySelector(".wiq-headline")?.textContent).toBe("1 job at weather risk this week");
+    // the slab now runs through the 18th, the day the saved heavy-rain alert names
+    expect(within(section).getByText("Concrete - Level 3 Slab")).toBeInTheDocument();
+    expect(within(section).getByText("Thursday · Heavy rain expected · Riverside Office Building")).toBeInTheDocument();
   });
 
   it("opens live feed panels from the dashboard KPI cards", async () => {
@@ -1174,7 +1180,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
 
-    for (const promoted of ["Material Readiness", "Weather Impact", "Equipment Conflicts", "Upcoming Inspections"]) {
+    for (const promoted of ["Material Readiness", "WeatherIQ", "Equipment Conflicts", "Upcoming Inspections"]) {
       const heading = await screen.findByRole("heading", { name: promoted });
       expect(heading.closest(".dash-block")).not.toBeNull();
     }
@@ -1526,7 +1532,7 @@ describe("BuildFlow app", () => {
     render(<App />);
     await enterDashboard();
     await screen.findByRole("heading", { name: "Today's plan" });
-    expect(screen.queryByRole("heading", { name: "Weather Impact" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "WeatherIQ" })).not.toBeInTheDocument();
     expect(screen.queryByText("Schedule Intelligence")).not.toBeInTheDocument();
     // hydrated into the device key the board reads when the API is slow, and counted as customized
     expect(localStorage.getItem(key)).toBe(account);
@@ -1536,7 +1542,7 @@ describe("BuildFlow app", () => {
        the removed ones back — and SAVED, to this device and to the account, so the next login
        opens on it. It used to clear the board instead. */
     fireEvent.click(screen.getByRole("button", { name: /Reset layout/ }));
-    expect(await screen.findByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "WeatherIQ" })).toBeInTheDocument();
     expect(screen.getByText("Schedule Intelligence")).toBeInTheDocument();
     const saved = JSON.parse(localStorage.getItem(key) ?? "{}") as {
       items: Array<{ id: string; x: number; w: number }>;
@@ -1618,18 +1624,18 @@ describe("BuildFlow app", () => {
     await enterDashboard();
 
     // outside Customize there is nothing to move, size or remove a section with
-    expect(screen.queryByRole("button", { name: "Remove Weather Impact" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Move Weather Impact/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Resize Weather Impact" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove WeatherIQ" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Move WeatherIQ/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resize WeatherIQ" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Customize$/ }));
     expect(screen.getByRole("button", { name: /^Done$/ })).toHaveAttribute("aria-pressed", "true");
     // and inside it, all three
-    expect(screen.getByRole("button", { name: /^Move Weather Impact/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Resize Weather Impact" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Remove Weather Impact" }));
-    expect(screen.queryByRole("heading", { name: "Weather Impact" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Move WeatherIQ/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resize WeatherIQ" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove WeatherIQ" }));
+    expect(screen.queryByRole("heading", { name: "WeatherIQ" })).not.toBeInTheDocument();
     const hidden = screen.getByRole("group", { name: "Hidden panels" });
-    expect(within(hidden).getByRole("button", { name: "Show Weather Impact" })).toBeInTheDocument();
+    expect(within(hidden).getByRole("button", { name: "Show WeatherIQ" })).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(key) ?? "{}")).toMatchObject({ hidden: ["weather"] });
     await waitFor(() => expect(settingsWrites(fetchMock)).toHaveLength(1), { timeout: 3000 });
     const saved = JSON.parse(settingsWrites(fetchMock)[0].value) as { items: Array<{ id: string }>; hidden: string[] };
@@ -1637,16 +1643,16 @@ describe("BuildFlow app", () => {
     expect(saved.hidden).toEqual(["weather"]);
     expect(saved.items.map((item) => item.id)).not.toContain("weather");
 
-    fireEvent.click(within(hidden).getByRole("button", { name: "Show Weather Impact" }));
-    expect(screen.getByRole("heading", { name: "Weather Impact" })).toBeInTheDocument();
+    fireEvent.click(within(hidden).getByRole("button", { name: "Show WeatherIQ" }));
+    expect(screen.getByRole("heading", { name: "WeatherIQ" })).toBeInTheDocument();
     await waitFor(() => expect(settingsWrites(fetchMock)).toHaveLength(2), { timeout: 3000 });
     expect(JSON.parse(settingsWrites(fetchMock)[1].value).hidden).toEqual([]);
 
     // Done leaves the mode, and the controls go with it
     fireEvent.click(screen.getByRole("button", { name: /^Done$/ }));
-    expect(screen.queryByRole("button", { name: "Remove Weather Impact" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Move Weather Impact/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Resize Weather Impact" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove WeatherIQ" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Move WeatherIQ/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resize WeatherIQ" })).not.toBeInTheDocument();
   });
 
   it("draws each Performance tile's delta and line from the weekly readings, and a missing week ends the line", async () => {

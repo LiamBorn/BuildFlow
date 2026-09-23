@@ -1765,7 +1765,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 .app-shell.hs-shell.bf-shell .dash-rx .cc-legacy-panel .legend-list span,
 .app-shell.hs-shell.bf-shell .dash-rx .ss-project,
 .app-shell.hs-shell.bf-shell .dash-rx .bfmt-row,
-.app-shell.hs-shell.bf-shell .dash-rx .weather-alert,
 .app-shell.hs-shell.bf-shell .dash-rx .inline-empty-state {
   padding: 8px 12px;
   border: 0;
@@ -1850,11 +1849,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 .app-shell.hs-shell.bf-shell .dash-rx .resource-row svg,
 .app-shell.hs-shell.bf-shell .dash-rx .inline-empty-state svg {
   color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .dash-rx .cc-legacy-panel .weather-alert svg {
-  width: 24px;
-  height: 24px;
-  color: var(--cc-amber);
 }
 /* the unassigned crew's rows say so in the warning pair */
 .app-shell.hs-shell.bf-shell .dash-rx .cc-today-group.is-unassigned h3,
@@ -4324,6 +4318,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     .cc-legacy-panel,
     .bfmt-list,
     .bfmt-pitch,
+    .wiq-days,
+    .wiq-risks,
     .sched-views,
     .sched-queue,
     .sched-digest-list,
@@ -4354,6 +4350,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     .cc-legacy-panel,
     .bfmt-list,
     .bfmt-pitch,
+    .wiq-days,
+    .wiq-risks,
     .sched-views,
     .sched-queue,
     .sched-digest-list,
@@ -4384,6 +4382,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     .cc-legacy-panel,
     .bfmt-list,
     .bfmt-pitch,
+    .wiq-days,
+    .wiq-risks,
     .sched-views,
     .sched-queue,
     .sched-digest-list,
@@ -4414,6 +4414,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     .cc-legacy-panel,
     .bfmt-list,
     .bfmt-pitch,
+    .wiq-days,
+    .wiq-risks,
     .sched-views,
     .sched-queue,
     .sched-digest-list,
@@ -4444,6 +4446,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     .cc-legacy-panel,
     .bfmt-list,
     .bfmt-pitch,
+    .wiq-days,
+    .wiq-risks,
     .sched-views,
     .sched-queue,
     .sched-digest-list,
@@ -4474,6 +4478,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     .cc-legacy-panel,
     .bfmt-list,
     .bfmt-pitch,
+    .wiq-days,
+    .wiq-risks,
     .sched-views,
     .sched-queue,
     .sched-digest-list,
@@ -4503,6 +4509,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-legacy-panel > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-list > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-pitch > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .wiq-days > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .wiq-risks > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-queue > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-list > *,
@@ -11148,13 +11156,6 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .business-context-banner {
   border-color: var(--bf-line-solid);
 }
-.app-shell.hs-shell.bf-shell .dash-rx .panel-note {
-  background: var(--bf-info-wash);
-  color: var(--bf-info-ink);
-}
-.app-shell.hs-shell.bf-shell .dash-rx .panel-note svg {
-  color: var(--bf-info-ink);
-}
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .hs-home-hint {
   border-color: rgba(28, 28, 28, 0.35);
 }
@@ -13775,6 +13776,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-legacy-panel > *,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-list > *,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-pitch > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .wiq-days > *,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .wiq-risks > *,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views > *,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-queue > *,
 .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-list > *,
@@ -13864,6 +13867,8 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .cc-legacy-panel > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-list > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .bfmt-pitch > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .wiq-days > *,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .wiq-risks > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-views > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-queue > *,
   .app-shell.hs-shell.bf-shell .dash-rx.hs-home .dash-board .dash-block .sched-digest-list > *,

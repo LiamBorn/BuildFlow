@@ -219,11 +219,6 @@ html {
   color: var(--ink-strong);
 }
 
-.panel-note {
-  border-radius: var(--r-sm);
-  border: 1px solid rgba(247, 181, 0, 0.28);
-}
-
 /* ============================================================================
    GLOBAL PASS 2 — per-module surfaces so the refresh is consistent everywhere
    ============================================================================ */

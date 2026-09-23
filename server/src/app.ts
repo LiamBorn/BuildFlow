@@ -86,6 +86,7 @@ import {
 import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
+import { activeSites, forecastForSites, WeatherUnavailableError } from "./weather.js";
 import { createRequestLogger } from "./requestLog.js";
 import { metrics } from "./metrics.js";
 
@@ -866,6 +867,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     // DelayIQ early-warning reads the caller's own schedule and can notify their
     // team, so it's gated + tenant-bound too.
     "/api/delayiq",
+    // WeatherIQ forecasts the caller's own job sites, so it reads their projects.
+    "/api/weather",
     // Team (invites, sample teammates) and org (name) live behind the session too.
     "/api/team",
     "/api/org",
@@ -2962,6 +2965,18 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * kept, so the delta measures Monday-to-Monday rather than drifting with
    * whenever someone happened to load the page.
    */
+  /* WeatherIQ (2026-09-23): the coming week at every active job site, read from Open-Meteo on the
+     server and cached there (weather.ts). A provider that cannot be reached is a 502 the panel says
+     out loud, never an empty forecast that would read as a week without weather. */
+  app.get("/api/weather/forecast", async (_req, res) => {
+    try {
+      res.json(await forecastForSites(activeSites(store.projects(), store.jobs(), localIsoDate())));
+    } catch (error) {
+      if (!(error instanceof WeatherUnavailableError)) throw error;
+      res.status(502).json({ error: "The forecast service could not be reached." });
+    }
+  });
+
   app.get("/api/schedule/status", (_req, res) => {
     const asOf = localIsoDate();
     const jobs = store.jobs();

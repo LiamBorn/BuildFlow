@@ -114,7 +114,7 @@ const PAGE_LABELS: Record<string, string> = {
   delayIQs: "DelayIQs"
 };
 const PANEL_LABELS: Record<string, string> = {
-  weather: "Weather Impact on the Dashboard",
+  weather: "WeatherIQ on the Dashboard",
   inspections: "Upcoming Inspections on the Dashboard"
 };
 function targetLabel(target?: NotificationTarget): string {
