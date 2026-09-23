@@ -321,17 +321,19 @@ describe("anything focusable and clickable can be worked from the keyboard", () 
    *   - an explicit key handler
    *   - nothing else. tabIndex alone grants focus, never activation.
    *
-   * WHAT THIS RULE DOES NOT COVER, so its green is not read as more than it is: it only looks at
-   * elements that PRESENT as controls. An `<a onClick={...}>` with no href and no tabIndex is not
-   * focusable at all, so Tab never reaches it -- unreachable rather than inoperable, and invisible
-   * to this rule. There are 32 of those in App.tsx as of 2026-09-23, every link in the marketing
-   * footers ("Dashboard", "Schedule", "Get BuildFlow", "Log in"), inside <nav aria-label="Footer">.
+   * Two different failures, both caught here.
    *
-   * They are not fixable the way the 15 above were. `onExplore` reaches `openAppPage`, which calls
-   * pushState with pathname+search only (App.tsx:2702) and then setPage -- an in-app page has no
-   * URL, so an href would name a route that does not exist. They are buttons drawn as links, and
-   * making them buttons needs the footer CSS to follow. Handed to the session that owns those
-   * pages; extend this rule to `<a onClick>` without an href once they land.
+   * INOPERABLE is the one above: focusable, announced as a control, activated by nothing.
+   *
+   * UNREACHABLE is its quieter twin, which App.tsx carried 32 times until the footers were fixed:
+   * an `<a onClick={...}>` with no href and no tabIndex. Without an href an <a> is not a link and
+   * not focusable -- .focus() does not move focus to it and it is outside the tab order entirely --
+   * so Tab never reaches it. It was every link in four marketing footers. Worse than the 15, and
+   * easier to miss, because nothing about it presents as a control for a scan to notice.
+   *
+   * Careful reading a DOM check on this: `el.tabIndex` reports 0 for such an anchor, which looks
+   * like "focusable". It is not. The property defaults to 0; the test is whether .focus() lands.
+   *
    */
   const NATIVE = new Set(["button", "input", "select", "textarea", "summary", "label", "option"]);
   const dead: string[] = [];
@@ -343,10 +345,13 @@ describe("anything focusable and clickable can be worked from the keyboard", () 
       const tag = text.slice(m.index, gt + 1);
       const name = m[1];
       // "presents itself as a control": announced as one, or reachable by Tab on purpose.
+      if (!/onClick/.test(tag)) continue;
       const presents = /role=\{?["']button["']/.test(tag) || /tabIndex=\{0\}/.test(tag);
-      if (!presents || !/onClick/.test(tag)) continue;
+      // An <a> is only a link, and only focusable, with an href. Without one it is neither, so a
+      // clickable anchor is in scope whether or not it dresses itself up as a control.
+      const barePlaceholderAnchor = name === "a" && !/\bhref=/.test(tag);
+      if (!presents && !barePlaceholderAnchor) continue;
       scanned += 1;
-      // An <a> is only natively operable with an href; without one it is not a link at all.
       if (NATIVE.has(name) && (name !== "a" || /\bhref=/.test(tag))) continue;
       if (/onKeyDown|onKeyUp|onKeyPress/.test(tag)) continue;
       dead.push(`<${name}> (${path}:${text.slice(0, m.index).split("\n").length})`);

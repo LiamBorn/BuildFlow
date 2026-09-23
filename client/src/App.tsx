@@ -6652,22 +6652,22 @@ function WelcomePlansOverviewPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a onClick={() => onExplore("dashboard")}>Dashboard</a>
-              <a onClick={() => onExplore("schedule")}>Schedule</a>
-              <a onClick={() => onExplore("projects")}>Projects</a>
-              <a onClick={() => onExplore("reports")}>Reports</a>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
             </div>
             <div>
               <h3>Modules</h3>
-              <a onClick={() => onExplore("crews")}>Crews</a>
-              <a onClick={() => onExplore("inventory")}>Inventory</a>
-              <a onClick={() => onExplore("field")}>Field updates</a>
-              <a onClick={() => onExplore("delayIQs")}>DelayIQs</a>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("crews")}>Crews</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("inventory")}>Inventory</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("field")}>Field updates</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("delayIQs")}>DelayIQs</button>
             </div>
             <div>
               <h3>Get started</h3>
-              <a onClick={onGetStarted}>Get BuildFlow</a>
-              <a onClick={onLogIn}>Log in</a>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>Get BuildFlow</a>
+              <button type="button" className="wx-footer-link" onClick={onLogIn}>Log in</button>
             </div>
           </nav>
         </div>
@@ -7213,22 +7213,22 @@ function WelcomeOverviewPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a onClick={() => onExplore("dashboard")}>Dashboard</a>
-              <a onClick={() => onExplore("schedule")}>Schedule</a>
-              <a onClick={() => onExplore("projects")}>Projects</a>
-              <a onClick={() => onExplore("reports")}>Reports</a>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
             </div>
             <div>
               <h3>Modules</h3>
-              <a onClick={() => onExplore("crews")}>Crews</a>
-              <a onClick={() => onExplore("inventory")}>Inventory</a>
-              <a onClick={() => onExplore("field")}>Field updates</a>
-              <a onClick={() => onExplore("delayIQs")}>DelayIQs</a>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("crews")}>Crews</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("inventory")}>Inventory</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("field")}>Field updates</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("delayIQs")}>DelayIQs</button>
             </div>
             <div>
               <h3>Get started</h3>
-              <a onClick={onGetStarted}>Get BuildFlow</a>
-              <a onClick={onLogIn}>Log in</a>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>Get BuildFlow</a>
+              <button type="button" className="wx-footer-link" onClick={onLogIn}>Log in</button>
             </div>
           </nav>
         </div>
@@ -15267,15 +15267,15 @@ function WelcomeProductPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a onClick={() => onExplore("dashboard")}>Dashboard</a>
-              <a onClick={() => onExplore("schedule")}>Schedule</a>
-              <a onClick={() => onExplore("projects")}>Projects</a>
-              <a onClick={() => onExplore("reports")}>Reports</a>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
             </div>
             <div>
               <h3>Resources</h3>
-              <a onClick={() => onShowUpdates()}>Updates</a>
-              <a onClick={onShowHelp}>Help center</a>
+              <a href="#updates" onClick={navigateInApp(() => onShowUpdates())}>Updates</a>
+              <a href="#help-center" onClick={navigateInApp(onShowHelp)}>Help center</a>
               <a href="#templates">Templates</a>
               <a href="#partners">Partner programs</a>
               <a href="#integrations">Integrations</a>
@@ -15532,15 +15532,15 @@ function WelcomePlanShowcase({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <a onClick={() => onExplore("dashboard")}>Dashboard</a>
-              <a onClick={() => onExplore("schedule")}>Schedule</a>
-              <a onClick={() => onExplore("projects")}>Projects</a>
-              <a onClick={() => onExplore("reports")}>Reports</a>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
             </div>
             <div>
               <h3>Resources</h3>
-              <a onClick={() => onShowUpdates()}>Updates</a>
-              <a onClick={onShowHelp}>Help center</a>
+              <a href="#updates" onClick={navigateInApp(() => onShowUpdates())}>Updates</a>
+              <a href="#help-center" onClick={navigateInApp(onShowHelp)}>Help center</a>
               <a href="#templates">Templates</a>
               <a href="#partners">Partner programs</a>
               <a href="#integrations">Integrations</a>

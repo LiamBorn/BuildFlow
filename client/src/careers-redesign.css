@@ -612,7 +612,8 @@
   text-transform: uppercase;
   color: var(--wx-faint);
 }
-.careers-page .wx-footer a {
+.careers-page .wx-footer a,
+.careers-page .wx-footer .wx-footer-link {
   display: block;
   margin-bottom: 12px;
   font-size: 14px;
@@ -620,8 +621,20 @@
   text-decoration: none;
   cursor: pointer;
   transition: color 0.18s ease;
+  /* A <button> brings its own font, centres its text, and draws a background, border and padding;
+     and unlike a display:block <a> it does not stretch to the column. Every line below is a no-op
+     for the anchors -- measured before the change, they already compute to exactly these values. */
+  font-family: inherit;
+  font-weight: inherit;
+  text-align: start;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  appearance: none;
 }
-.careers-page .wx-footer a:hover {
+.careers-page .wx-footer a:hover,
+.careers-page .wx-footer .wx-footer-link:hover {
   color: var(--wx-ink);
 }
 
