@@ -18,12 +18,17 @@ import { PILL_GROUPS } from "../motion/SegmentPill";
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 const sheet = postcss.parse(readFileSync(join(SRC, "app-shell-client-desk.css"), "utf8"));
-/* The pill is painted in TWO sheets since 2026-09-22: the skin for every group inside the shell,
-   and onboarding.css for the signup flow's trade tiles, which render OUTSIDE it — every §78
-   selector begins `.app-shell.hs-shell.bf-shell`, so the skin cannot reach them. The invariant
-   the case below protects is unchanged (nothing marked and unpainted, nothing painted for a group
-   that is never marked); it just has two places to look now. */
-const pillSheets = [sheet, postcss.parse(readFileSync(join(SRC, "onboarding/onboarding.css"), "utf8"))];
+/* The pill is painted in THREE sheets: the skin for every group inside the shell, and the sheets
+   of two groups that render OUTSIDE it — every §78 selector begins `.app-shell.hs-shell.bf-shell`,
+   so the skin cannot reach them: onboarding.css for the signup flow's trade tiles (2026-09-22),
+   and meetings-panel.css for the meeting drawer's Details / Participants tabs, a `.pdx` portal on
+   the body (2026-09-23). The invariant the case below protects is unchanged (nothing marked and
+   unpainted, nothing painted for a group that is never marked); it just has more places to look. */
+const pillSheets = [
+  sheet,
+  postcss.parse(readFileSync(join(SRC, "onboarding/onboarding.css"), "utf8")),
+  postcss.parse(readFileSync(join(SRC, "meetings-panel.css"), "utf8"))
+];
 const pillDecls = (selector: string) => {
   const found: Record<string, string> = {};
   for (const one of pillSheets) {

@@ -34,12 +34,30 @@
 
    READ-ONLY ON PURPOSE. The panel shows meetings; it never writes one. So the
    scopes are the narrowest that work — calendar.readonly and Calendars.Read —
-   and consent asks for nothing else.
+   and consent asks for nothing else. "New event" on the panel opens the
+   provider's own editor in a tab instead.
+
+   THE WHOLE CALENDAR, NOT A PREVIEW (2026-09-23). The panel became a calendar
+   (day, week, month) that shows "all meetings when connected", so the feed takes
+   a range of up to 62 days and up to 250 meetings a calendar, and each meeting
+   carries what a person reads before walking into it: who organised it, who is
+   coming and how they answered, how YOU answered, the notes, the conferencing
+   service and a link back to it in Google or Outlook. A cancelled meeting is not
+   sent at all.
    ========================================================================= */
 import { OAUTH_PROVIDERS, type OAuthProvider, providerConfig } from "./oauth.js";
 
 export const CALENDAR_PROVIDERS = OAUTH_PROVIDERS;
 export type CalendarProvider = OAuthProvider;
+
+/** How someone answered an invite. */
+export type CalendarResponse = "accepted" | "declined" | "tentative" | "pending";
+
+/** One person on a meeting, and their answer. */
+export type CalendarGuest = { name: string; email: string; response: CalendarResponse; organizer: boolean };
+
+/** At most this many meetings a calendar per read: a busy month, with room to spare. */
+export const CALENDAR_PAGE = 250;
 
 /** What the panel needs about one meeting, whichever provider it came from. */
 export type CalendarEvent = {
@@ -56,7 +74,78 @@ export type CalendarEvent = {
   joinUrl: string;
   /** Display names, for the avatar row. */
   attendees: string[];
+  /** Who sent it: a name, or the address when there is none. */
+  organizer: string;
+  /** Everyone on the invite with their answer, the organizer first. */
+  guests: CalendarGuest[];
+  /** How the person whose calendar this is answered; "organizer" when it is their own meeting. */
+  myResponse: CalendarResponse | "organizer";
+  /** The invite's notes as plain text, at most 600 characters. */
+  description: string;
+  /** The meeting in Google Calendar or Outlook on the web. */
+  webUrl: string;
+  /** What the join link opens — "Google Meet", "Microsoft Teams", "Zoom" — or "" with no link. */
+  conference: string;
 };
+
+/** An invite's notes as plain text: tags out, the common entities decoded, blank lines folded, cut to 600. */
+export function plainNotes(value: string | undefined): string {
+  if (!value) return "";
+  const text = value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h\d)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n[\s]*/g, "\n")
+    .trim();
+  return text.length > 600 ? `${text.slice(0, 599).trimEnd()}…` : text;
+}
+
+/** What a join link opens: the provider's own name for it when it gives one, else read off the host. */
+export function conferenceName(url: string, named?: string): string {
+  if (named?.trim()) return named.trim();
+  if (!url) return "";
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return "Online meeting";
+  }
+  if (host === "meet.google.com") return "Google Meet";
+  if (host.endsWith("teams.microsoft.com") || host.endsWith("teams.live.com")) return "Microsoft Teams";
+  if (host === "zoom.us" || host.endsWith(".zoom.us")) return "Zoom";
+  if (host.endsWith("webex.com")) return "Webex";
+  return "Online meeting";
+}
+
+const GOOGLE_RESPONSE: Record<string, CalendarResponse> = {
+  accepted: "accepted",
+  declined: "declined",
+  tentative: "tentative",
+  needsAction: "pending"
+};
+const GRAPH_RESPONSE: Record<string, CalendarResponse | "organizer"> = {
+  accepted: "accepted",
+  declined: "declined",
+  tentativelyAccepted: "tentative",
+  notResponded: "pending",
+  none: "pending",
+  organizer: "organizer"
+};
+const GRAPH_CONFERENCE: Record<string, string> = {
+  teamsForBusiness: "Microsoft Teams",
+  skypeForBusiness: "Skype for Business",
+  skypeForConsumer: "Skype"
+};
+
+/** The organizer first, then everyone else in the order the invite lists them. */
+const organizerFirst = (guests: CalendarGuest[]) => [...guests].sort((a, b) => Number(b.organizer) - Number(a.organizer));
 
 export type CalendarTokens = {
   accessToken: string;
@@ -199,32 +288,62 @@ const GOOGLE_EVENTS_URL = () => env("CALENDAR_GOOGLE_EVENTS_URL") ?? "https://ww
 const GRAPH_EVENTS_URL = () => env("CALENDAR_MICROSOFT_EVENTS_URL") ?? "https://graph.microsoft.com/v1.0/me/calendarView";
 
 /** Google Calendar's primary calendar, between two instants. */
+/** Google Calendar's events list, as it answers. */
+type GoogleEventsAnswer = {
+  items?: Array<{
+    id?: string;
+    status?: string;
+    summary?: string;
+    description?: string;
+    location?: string;
+    htmlLink?: string;
+    hangoutLink?: string;
+    start?: { dateTime?: string; date?: string };
+    end?: { dateTime?: string; date?: string };
+    organizer?: { displayName?: string; email?: string; self?: boolean };
+    attendees?: Array<{ displayName?: string; email?: string; responseStatus?: string; organizer?: boolean; self?: boolean }>;
+    conferenceData?: { entryPoints?: Array<{ uri?: string; entryPointType?: string }>; conferenceSolution?: { name?: string } };
+  }>;
+};
+
 async function fetchGoogleEvents(accessToken: string, from: Date, to: Date): Promise<CalendarEvent[]> {
   const url = new URL(GOOGLE_EVENTS_URL());
   url.searchParams.set("timeMin", from.toISOString());
   url.searchParams.set("timeMax", to.toISOString());
   url.searchParams.set("singleEvents", "true");
   url.searchParams.set("orderBy", "startTime");
-  url.searchParams.set("maxResults", "12");
+  url.searchParams.set("maxResults", String(CALENDAR_PAGE));
   const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" } });
   if (!response.ok) throw new Error(`google calendar answered ${response.status}`);
-  const json = (await response.json()) as {
-    items?: Array<{
-      id?: string;
-      summary?: string;
-      location?: string;
-      hangoutLink?: string;
-      start?: { dateTime?: string; date?: string };
-      end?: { dateTime?: string; date?: string };
-      attendees?: Array<{ displayName?: string; email?: string }>;
-      conferenceData?: { entryPoints?: Array<{ uri?: string; entryPointType?: string }> };
-    }>;
-  };
+  return readGoogleEvents((await response.json()) as GoogleEventsAnswer);
+}
+
+/** Google's answer, as the panel reads meetings. Exported so the mapping is tested on its own. */
+export function readGoogleEvents(json: GoogleEventsAnswer): CalendarEvent[] {
   return (json.items ?? []).flatMap((item) => {
     const start = item.start?.dateTime ?? item.start?.date;
     const end = item.end?.dateTime ?? item.end?.date;
-    if (!start || !end) return [];
+    if (!start || !end || item.status === "cancelled") return [];
     const video = item.conferenceData?.entryPoints?.find((entry) => entry.entryPointType === "video")?.uri;
+    const joinUrl = item.hangoutLink ?? video ?? "";
+    const guests = organizerFirst(
+      (item.attendees ?? []).flatMap((a) => {
+        const name = (a.displayName ?? a.email ?? "").trim();
+        if (!name) return [];
+        return [
+          {
+            name,
+            email: (a.email ?? "").trim(),
+            response: GOOGLE_RESPONSE[a.responseStatus ?? ""] ?? "pending",
+            organizer: a.organizer === true
+          }
+        ];
+      })
+    );
+    const self = (item.attendees ?? []).find((a) => a.self);
+    // your own meeting, or one with no one else on it, is yours to hold; otherwise your answer on the invite
+    const myResponse: CalendarEvent["myResponse"] =
+      item.organizer?.self || !self ? "organizer" : (GOOGLE_RESPONSE[self.responseStatus ?? ""] ?? "pending");
     return [
       {
         id: `google:${item.id ?? start}`,
@@ -234,40 +353,89 @@ async function fetchGoogleEvents(accessToken: string, from: Date, to: Date): Pro
         endsAt: end,
         allDay: !item.start?.dateTime,
         location: (item.location ?? "").trim(),
-        joinUrl: item.hangoutLink ?? video ?? "",
-        attendees: (item.attendees ?? []).map((a) => (a.displayName ?? a.email ?? "").trim()).filter(Boolean)
+        joinUrl,
+        attendees: (item.attendees ?? []).map((a) => (a.displayName ?? a.email ?? "").trim()).filter(Boolean),
+        organizer: (item.organizer?.displayName ?? item.organizer?.email ?? "").trim(),
+        guests,
+        myResponse,
+        description: plainNotes(item.description),
+        webUrl: item.htmlLink ?? "",
+        conference: conferenceName(joinUrl, item.conferenceData?.conferenceSolution?.name)
       }
     ];
   });
 }
 
 /** Microsoft Graph's calendar view, between two instants. */
+/** Microsoft Graph's calendar view, as it answers. */
+type GraphEventsAnswer = {
+  value?: Array<{
+    id?: string;
+    subject?: string;
+    isAllDay?: boolean;
+    isCancelled?: boolean;
+    isOrganizer?: boolean;
+    start?: { dateTime?: string };
+    end?: { dateTime?: string };
+    location?: { displayName?: string };
+    onlineMeeting?: { joinUrl?: string };
+    onlineMeetingProvider?: string;
+    attendees?: Array<{ emailAddress?: { name?: string; address?: string }; status?: { response?: string } }>;
+    organizer?: { emailAddress?: { name?: string; address?: string } };
+    bodyPreview?: string;
+    webLink?: string;
+    responseStatus?: { response?: string };
+  }>;
+};
+
 async function fetchMicrosoftEvents(accessToken: string, from: Date, to: Date): Promise<CalendarEvent[]> {
   const url = new URL(GRAPH_EVENTS_URL());
   url.searchParams.set("startDateTime", from.toISOString());
   url.searchParams.set("endDateTime", to.toISOString());
   url.searchParams.set("$orderby", "start/dateTime");
-  url.searchParams.set("$top", "12");
+  url.searchParams.set("$top", String(CALENDAR_PAGE));
+  url.searchParams.set(
+    "$select",
+    "id,subject,isAllDay,isCancelled,isOrganizer,start,end,location,onlineMeeting,onlineMeetingProvider,attendees,organizer,bodyPreview,webLink,responseStatus"
+  );
   const response = await fetch(url, {
     headers: { authorization: `Bearer ${accessToken}`, accept: "application/json", prefer: 'outlook.timezone="UTC"' }
   });
   if (!response.ok) throw new Error(`microsoft graph answered ${response.status}`);
-  const json = (await response.json()) as {
-    value?: Array<{
-      id?: string;
-      subject?: string;
-      isAllDay?: boolean;
-      start?: { dateTime?: string };
-      end?: { dateTime?: string };
-      location?: { displayName?: string };
-      onlineMeeting?: { joinUrl?: string };
-      attendees?: Array<{ emailAddress?: { name?: string; address?: string } }>;
-    }>;
-  };
+  return readGraphEvents((await response.json()) as GraphEventsAnswer);
+}
+
+/** Graph's answer, as the panel reads meetings. Exported so the mapping is tested on its own. */
+export function readGraphEvents(json: GraphEventsAnswer): CalendarEvent[] {
   return (json.value ?? []).flatMap((item) => {
     const start = item.start?.dateTime;
     const end = item.end?.dateTime;
-    if (!start || !end) return [];
+    if (!start || !end || item.isCancelled === true) return [];
+    const joinUrl = item.onlineMeeting?.joinUrl ?? "";
+    const organizerName = (item.organizer?.emailAddress?.name ?? item.organizer?.emailAddress?.address ?? "").trim();
+    const organizerEmail = (item.organizer?.emailAddress?.address ?? "").trim();
+    // Graph leaves the organizer off the attendee list, so they are put back at its head
+    const invited = (item.attendees ?? []).flatMap((a) => {
+      const name = (a.emailAddress?.name ?? a.emailAddress?.address ?? "").trim();
+      if (!name) return [];
+      const response = GRAPH_RESPONSE[a.status?.response ?? ""];
+      return [
+        {
+          name,
+          email: (a.emailAddress?.address ?? "").trim(),
+          response: response === "organizer" || !response ? "pending" : response,
+          organizer: false
+        }
+      ];
+    });
+    const guests: CalendarGuest[] = organizerName
+      ? [
+          { name: organizerName, email: organizerEmail, response: "accepted", organizer: true },
+          ...invited.filter((guest) => !organizerEmail || guest.email.toLowerCase() !== organizerEmail.toLowerCase())
+        ]
+      : invited;
+    const answered = GRAPH_RESPONSE[item.responseStatus?.response ?? ""];
+    const myResponse: CalendarEvent["myResponse"] = item.isOrganizer === true ? "organizer" : (answered ?? "pending");
     // Graph returns a naive local string with the Prefer timezone applied; UTC is what we asked for
     const iso = (value: string) => (/(Z|[+-]\d\d:\d\d)$/.test(value) ? value : `${value}Z`);
     return [
@@ -279,8 +447,14 @@ async function fetchMicrosoftEvents(accessToken: string, from: Date, to: Date): 
         endsAt: iso(end),
         allDay: item.isAllDay === true,
         location: (item.location?.displayName ?? "").trim(),
-        joinUrl: item.onlineMeeting?.joinUrl ?? "",
-        attendees: (item.attendees ?? []).map((a) => (a.emailAddress?.name ?? a.emailAddress?.address ?? "").trim()).filter(Boolean)
+        joinUrl,
+        attendees: (item.attendees ?? []).map((a) => (a.emailAddress?.name ?? a.emailAddress?.address ?? "").trim()).filter(Boolean),
+        organizer: organizerName,
+        guests,
+        myResponse,
+        description: plainNotes(item.bodyPreview),
+        webUrl: item.webLink ?? "",
+        conference: conferenceName(joinUrl, GRAPH_CONFERENCE[item.onlineMeetingProvider ?? ""])
       }
     ];
   });

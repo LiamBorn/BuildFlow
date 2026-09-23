@@ -1315,10 +1315,27 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   });
 
+  /* The meetings between two instants (`from`, `to`, ISO), up to 62 days apart: the panel asks
+     for the month it shows, which covers its day and week views too. Without them, the next two
+     days, as the first version of the panel asked for. */
   app.get("/api/calendar/events", async (req, res) => {
-    const from = new Date();
-    // two days: enough for "later today" and "tomorrow", which is all the panel shows
-    const to = new Date(from.getTime() + 48 * 60 * 60 * 1000);
+    let from = new Date();
+    let to = new Date(from.getTime() + 48 * 60 * 60 * 1000);
+    if (req.query.from !== undefined || req.query.to !== undefined) {
+      const asked = (value: unknown) => (typeof value === "string" && value ? new Date(value) : null);
+      const start = asked(req.query.from);
+      const end = asked(req.query.to);
+      if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+        res.status(400).json({ error: "invalid_range" });
+        return;
+      }
+      if (end.getTime() - start.getTime() > 62 * 24 * 60 * 60 * 1000) {
+        res.status(400).json({ error: "range_too_wide" });
+        return;
+      }
+      from = start;
+      to = end;
+    }
     const events: CalendarEvent[] = [];
     const failed: CalendarProvider[] = [];
     for (const provider of CALENDAR_PROVIDERS) {
@@ -1331,7 +1348,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         failed.push(provider);
       }
     }
-    res.json({ events: sortEvents(events), failed, fetchedAt: from.toISOString() });
+    res.json({ events: sortEvents(events), failed, fetchedAt: new Date().toISOString(), from: from.toISOString(), to: to.toISOString() });
   });
 
   app.delete("/api/calendar/:provider", (req, res) => {

@@ -9,11 +9,12 @@
    like the rest of the Dashboard. The two brand marks are the exception, because
    a provider's mark is its own colour and must not be re-themed.
    ========================================================================== */
+/* a stack: the state line, a note when there is one, then the pitch or the calendar */
 .bfmt {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
   gap: 10px;
-  height: 100%;
+  min-width: 0;
 }
 
 /* "Not connected", or the mailbox. The reference puts this in the panel's header row, which
@@ -95,8 +96,7 @@
   border-radius: 3px;
 }
 .bfmt-provider.is-google .bfmt-provider-mark {
-  background:
-    conic-gradient(from 135deg at 50% 50%, #4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+  background: conic-gradient(from 135deg at 50% 50%, #4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
 }
 .bfmt-provider.is-microsoft .bfmt-provider-mark {
   background:
@@ -188,28 +188,8 @@
   background: rgba(var(--bf-line-rgb, 28, 28, 26), 0.12);
 }
 
-/* ---- connected: the live list ----------------------------------------- */
-.bfmt-list {
-  display: grid;
-  gap: 0;
-  min-height: 0;
-  overflow: auto;
-}
-.bfmt-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 2px;
-  border-top: 1px solid var(--bf-line-soft, #eef0f4);
-}
-.bfmt-row:first-child {
-  border-top: 0;
-}
-.bfmt-when {
-  flex: none;
-  width: 112px;
-}
-/* the countdown, which is the whole point of the panel */
+/* ---- the parts the calendar shares with the Dashboard's other rows ------ */
+/* the countdown on the next meeting */
 .bfmt-pill {
   display: inline-block;
   padding: 4px 10px;
@@ -219,34 +199,6 @@
   font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-}
-.bfmt-day {
-  color: var(--bf-ink-muted, #575550);
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.bfmt-what {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-  gap: 2px;
-}
-.bfmt-what strong {
-  overflow: hidden;
-  color: var(--bf-ink, #1c1c1a);
-  font-size: 13.5px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.bfmt-what em {
-  overflow: hidden;
-  color: var(--bf-ink-muted, #575550);
-  font-size: 11.5px;
-  font-style: normal;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .bfmt-faces {
   display: flex;
@@ -287,12 +239,6 @@
   color: var(--bf-ink-muted, #575550);
   font-size: 13px;
 }
-.bfmt-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding-top: 2px;
-}
 .bfmt-link {
   display: inline-flex;
   align-items: center;
@@ -303,6 +249,7 @@
   color: var(--bf-ink-muted, #575550);
   font-size: 12.5px;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 .bfmt-link:hover:not(:disabled) {
@@ -322,5 +269,1325 @@
 @media (max-width: 900px) {
   .bfmt-pitch {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ============================================================================
+   CONNECTED: THE WHOLE CALENDAR (meetings/MeetingsCalendar.tsx, 2026-09-23)
+
+   The Schedule reference's layout in BuildFlow's parts. The toolbar is the Month
+   page's (a date stamp, the range and its line, the stepper on its pill track)
+   with the Dashboard's segmented toggle, whose pill travels (skin §78 already
+   dresses `.hs-home-seg` inside the board). The day columns are the Month page's
+   tiles on a gap; a meeting is its chip — white, on the card shadow, lifting on
+   hover. The side column is the Dashboard's second surface.
+
+   Every colour is a token, so the Colors sets and both modes carry it. The two
+   calendars take two of the program's own label colours (the trade palette),
+   not their brands' blues: skin §46 keeps blue out of the program.
+   ========================================================================== */
+.bfmc {
+  --bfmc-google: var(--bf-color-trade-finishes);
+  --bfmc-microsoft: var(--bf-color-trade-inspections);
+  --bfmc-gutter: 58px;
+  container-type: inline-size;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+}
+.bfmc .is-google {
+  --bfmc-cal: var(--bfmc-google);
+}
+.bfmc .is-microsoft {
+  --bfmc-cal: var(--bfmc-microsoft);
+}
+
+/* ---- the toolbar ---- */
+.bfmc-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+.bfmc-lead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+/* today, as the Month page stamps it */
+.bfmc-stamp {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 2px;
+  width: 54px;
+  padding: 4px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+}
+.bfmc-stamp span {
+  color: var(--bf-ink-faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bfmc-stamp b {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.bfmc-heading {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bfmc-heading strong {
+  overflow: hidden;
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmc-heading em {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+.bfmc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+/* the stepper: the Month page's pill track */
+.bfmc-nav {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+}
+.bfmc-nav > button {
+  display: inline-grid;
+  place-items: center;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) var(--bf-ease-size),
+    color var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease-size);
+}
+.bfmc-nav .bfmc-icon {
+  width: 30px;
+}
+.bfmc-nav .bfmc-today {
+  padding: 0 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.bfmc-nav > button:hover:not(:disabled) {
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: var(--bf-shadow-card);
+}
+.bfmc-nav .bfmc-today:disabled {
+  color: var(--bf-ink-faint);
+  cursor: default;
+}
+.bfmc-sync.is-syncing svg {
+  animation: bfmc-spin 0.9s linear infinite;
+}
+@keyframes bfmc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- the body: the calendar beside its tools ---- */
+.bfmc-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 268px;
+  gap: 18px;
+  height: 660px;
+  min-height: 0;
+}
+/* a view comes into focus where it is, the way a section does (skin §74h's shape, at the fast beat) */
+.bfmc-main {
+  --bfe-y: 0px;
+  --bfe-blur: 6px;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  animation: bfe-lift var(--bfm-dur-fast) var(--bfm-ease-out) backwards;
+}
+
+/* ---- the time grid ---- */
+.bfmc-grid {
+  --bfmc-hour: 52px;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+.bfmc-scroll {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.bfmc-top {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  padding-bottom: 8px;
+  background: var(--bf-surface);
+}
+.bfmc-head,
+.bfmc-allday,
+.bfmc-canvas {
+  display: grid;
+  grid-template-columns: var(--bfmc-gutter) repeat(var(--bfmc-days), minmax(0, 1fr));
+  column-gap: 6px;
+}
+.bfmc-tz {
+  align-self: end;
+  padding-bottom: 6px;
+  color: var(--bf-ink-faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: right;
+  padding-right: 8px;
+}
+.bfmc-dow {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: var(--bf-radius-control);
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  transition: background var(--bf-dur-hover) var(--bf-ease-size);
+}
+button.bfmc-dow {
+  cursor: pointer;
+}
+button.bfmc-dow:hover {
+  background: var(--bf-hover);
+}
+.bfmc-dow em {
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bfmc-dow b {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+/* today's number is the Month page's: an ink disc */
+.bfmc-dow.is-today b {
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+}
+.bfmc-allday-label {
+  align-self: center;
+  padding-right: 8px;
+  color: var(--bf-ink-faint);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: right;
+}
+.bfmc-allday-cell {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+}
+.bfmc-canvas {
+  position: relative;
+  height: calc(24 * var(--bfmc-hour));
+}
+.bfmc-hours {
+  position: relative;
+}
+.bfmc-hours span {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* the label under the present time's pill steps aside for it */
+.bfmc-hours span.is-near {
+  visibility: hidden;
+}
+/* a day is a tile, the hours ruled across it faintly */
+.bfmc-col {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--bf-radius-control);
+  background-color: var(--bf-hover);
+  background-image: linear-gradient(rgba(var(--bf-line-rgb), 0.07) 1px, transparent 1px);
+  background-size: 100% var(--bfmc-hour);
+}
+.bfmc-col.is-weekend {
+  background-color: color-mix(in srgb, var(--bf-ink) 3%, var(--bf-hover));
+}
+.bfmc-col.is-today {
+  background-color: color-mix(in srgb, var(--bf-accent-fill) 6%, var(--bf-hover));
+}
+/* the present time: an ink rule across today with its dot, and its time in the gutter */
+.bfmc-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--bf-ink);
+  pointer-events: none;
+}
+.bfmc-now::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bf-ink);
+}
+.bfmc-now-pill {
+  position: absolute;
+  right: 4px;
+  z-index: 3;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- a meeting on the grid: the Month page's chip ---- */
+.bfmc-event {
+  --bfe-y: 6px;
+  --bfe-blur: 0px;
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+  color: var(--bf-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: bfe-lift var(--bfm-dur-fast) var(--bfm-ease-out) backwards;
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.bfmc-event:hover,
+.bfmc-event:focus-visible {
+  z-index: 2;
+  transform: translateY(-2px);
+  box-shadow: var(--bf-shadow-raised);
+}
+.bfmc-event strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmc-event-time,
+.bfmc-event-where {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* the calendar it came from, as the Month page marks a job: a round dot */
+.bfmc-event-time::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bfmc-cal);
+}
+.bfmc-event .bfmt-faces {
+  margin-top: auto;
+}
+/* a short meeting has room for one line: its title first, then as much of its time as fits */
+.bfmc-event.is-short {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-block: 2px;
+}
+.bfmc-event.is-short strong {
+  flex: none;
+}
+.bfmc-event.is-short .bfmc-event-time {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* on now: the reference's lime chip, which is the accent's fill here */
+.bfmc-event.is-now {
+  background: var(--bf-accent-fill);
+  color: var(--bf-on-accent);
+}
+.bfmc-event.is-now :is(.bfmc-event-time, .bfmc-event-where) {
+  color: inherit;
+  opacity: 0.78;
+}
+.bfmc-event.is-past {
+  box-shadow: none;
+  opacity: 0.55;
+}
+/* not answered yet: outlined in its calendar's colour, the way an invite waits */
+.bfmc-event.is-pending {
+  box-shadow: inset 0 0 0 1.5px var(--bfmc-cal);
+}
+.bfmc-event.is-tentative {
+  background-image: repeating-linear-gradient(135deg, transparent 0 6px, rgba(var(--bf-line-rgb), 0.06) 6px 12px);
+}
+/* declined: still on the calendar, and plainly not happening for you */
+.bfmc-event.is-declined {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(var(--bf-line-rgb), 0.22);
+}
+.bfmc-event.is-declined strong {
+  color: var(--bf-ink-muted);
+  text-decoration: line-through;
+}
+.bfmc-grid.is-single .bfmc-event {
+  padding: 7px 12px;
+}
+.bfmc-grid.is-single .bfmc-event strong {
+  font-size: 12.5px;
+}
+
+/* ---- chips: the all-day row and the month ---- */
+.bfmc-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.bfmc-chip:hover {
+  box-shadow: var(--bf-shadow-raised);
+}
+.bfmc-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmc-chip em {
+  flex: none;
+  color: var(--bf-ink-faint);
+  font-style: normal;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.bfmc-chip.is-declined span {
+  color: var(--bf-ink-muted);
+  text-decoration: line-through;
+}
+.bfmc-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bfmc-cal);
+}
+
+/* ---- the month: the Month page's tiles ---- */
+.bfmc-month {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+}
+.bfmc-month-dow,
+.bfmc-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.bfmc-month-dow span {
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bfmc-month-grid {
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  min-height: 0;
+}
+.bfmc-mcell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 6px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+}
+.bfmc-mcell.is-weekend {
+  background: color-mix(in srgb, var(--bf-ink) 7%, var(--bf-hover));
+}
+.bfmc-mcell.is-today {
+  background: color-mix(in srgb, var(--bf-accent-fill) 38%, var(--bf-hover));
+}
+.bfmc-mcell.is-outside {
+  opacity: 0.5;
+}
+.bfmc-mday {
+  display: grid;
+  flex: none;
+  align-self: flex-start;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--bf-dur-hover) var(--bf-ease-size);
+}
+.bfmc-mday:hover {
+  background: var(--bf-surface);
+}
+.bfmc-mcell.is-today .bfmc-mday {
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+}
+.bfmc-more {
+  align-self: flex-start;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.bfmc-more:hover {
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+}
+/* today's tile is the darker wash, where the muted ink would not read */
+.bfmc-mcell.is-today .bfmc-more {
+  color: var(--bf-ink);
+}
+
+/* ---- the side column ---- */
+.bfmc-side {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 2px 4px;
+  scrollbar-width: thin;
+}
+.bfmc .bfmt-empty {
+  padding: 2px 0 0;
+}
+/* New event over the month at a glance: one group, so the two stay together when the tools lay out
+   across under the calendar */
+.bfmc-plan {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+.bfmc-side > .bfmt-note {
+  grid-column: 1 / -1;
+}
+.bfmc-side-title {
+  margin: 0 0 8px;
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+/* New event: the program's primary pill, in ink (skin §9b) */
+.bfmc-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--bf-shadow-card);
+  cursor: pointer;
+  transition:
+    transform var(--bf-dur-press) var(--bf-ease),
+    box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.bfmc-new:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--bf-shadow-raised);
+}
+.bfmc-new-caret {
+  margin-left: auto;
+}
+.bfmc-new-wrap {
+  position: relative;
+}
+/* the choice between two calendars comes OUT of its button (skin §64) */
+.bfmc-new-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-float);
+  transform-origin: top left;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+.bfmc-new-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--bf-radius-control);
+  color: var(--bf-ink);
+  text-decoration: none;
+}
+.bfmc-new-menu a:hover,
+.bfmc-new-menu a:focus-visible {
+  background: var(--bf-hover);
+}
+.bfmc-new-menu a > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.bfmc-new-menu strong {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.bfmc-new-menu em {
+  overflow: hidden;
+  color: var(--bf-ink-muted);
+  font-size: 11px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the month at a glance */
+.bfmc-mini {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-hover);
+}
+.bfmc-mini-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bfmc-mini-head strong {
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.bfmc-mini-nav {
+  display: inline-flex;
+  gap: 2px;
+}
+.bfmc-mini-nav button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease-size);
+}
+.bfmc-mini-nav button:hover {
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: var(--bf-shadow-card);
+}
+.bfmc-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.bfmc-mini-dow {
+  padding-bottom: 2px;
+  color: var(--bf-ink-faint);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+.bfmc-mini-grid button {
+  position: relative;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease-size);
+}
+.bfmc-mini-grid button.is-outside {
+  color: var(--bf-ink-faint);
+}
+/* the days in view sit on the page's own surface, the way a selection does on the tile */
+.bfmc-mini-grid button.is-selected {
+  background: var(--bf-surface);
+}
+.bfmc-mini-grid button:hover {
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+}
+.bfmc-mini-grid button.is-today {
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+  font-weight: 600;
+}
+/* a day with a meeting on it */
+.bfmc-mini-grid button.has-meetings::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+/* up next: the Dashboard's list rows (skin §11d), a whole row opening the meeting */
+.bfmc-next {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bfmc-next-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+  transition:
+    background var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease-size);
+}
+.bfmc-next-row:hover {
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+}
+.bfmc-next-row.is-now {
+  background: color-mix(in srgb, var(--bf-accent-fill) 12%, var(--bf-hover));
+}
+.bfmc-next-open {
+  display: grid;
+  flex: 1;
+  justify-items: start;
+  gap: 3px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.bfmc-next-open strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmc-next-open em {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmc-when {
+  color: var(--bf-ink-faint);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bfmc-next-row .bfmt-join {
+  flex: none;
+}
+
+/* which calendars show */
+.bfmc-cals {
+  display: grid;
+  gap: 8px;
+}
+.bfmc-cals .bfmc-side-title {
+  margin-bottom: 0;
+}
+.bfmc-cal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+}
+.bfmc-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--bfmc-cal);
+}
+.bfmc-cal-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.bfmc-cal-text strong {
+  color: var(--bf-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.bfmc-cal-text em {
+  overflow: hidden;
+  color: var(--bf-ink-muted);
+  font-size: 11px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bfmc-switch {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(var(--bf-line-rgb), 0.2);
+  cursor: pointer;
+  transition: background var(--bf-dur-hover) var(--bf-ease);
+}
+.bfmc-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-raised);
+  transition: transform var(--bf-dur-press) var(--bf-ease);
+}
+.bfmc-switch[aria-checked="true"] {
+  background: var(--bfmc-cal);
+}
+.bfmc-switch[aria-checked="true"] i {
+  transform: translateX(14px);
+}
+.bfmc-cal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bfmc-synced {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- narrower boards ---- */
+/* until the week has room for its titles (about 110px a day), the tools go under the calendar
+   and lay out across it: a half-width panel, a small window, a tablet */
+@container (max-width: 1000px) {
+  .bfmc-body {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+  .bfmc-main {
+    height: 480px;
+  }
+  .bfmc-side {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    overflow: visible;
+  }
+}
+/* a phone: the week keeps a readable width per day and scrolls across inside its card */
+@container (max-width: 560px) {
+  .bfmc[data-view="week"] :is(.bfmc-top, .bfmc-canvas) {
+    min-width: 620px;
+  }
+  .bfmc-month-dow span {
+    letter-spacing: 0.04em;
+  }
+  .bfmc-mcell .bfmc-chip em {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bfmc-main,
+  .bfmc-event,
+  .bfmc-new-menu,
+  .bfmc-sync.is-syncing svg {
+    animation: none;
+  }
+  .bfmc-event:hover,
+  .bfmc-event:focus-visible,
+  .bfmc-new:hover {
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   ONE MEETING: the drawer (meetings/MeetingDrawer.tsx)
+
+   Portalled to the body like every `.pdx` drawer, so it is dressed under .pdx,
+   not .dash-rx. The frame, the head, the body, the actions and the entrance are
+   the drawer's own (skin §38, §65, §67, §70); these are only the parts a meeting
+   adds, on the same facts table and pills WeatherIQ's drawer uses.
+   ========================================================================== */
+/* A FLEX COLUMN, not the drawer's grid: in a grid taller than its contents every row stretches, which
+   made the overlap warning and the tab track twice their height. The slack goes to ONE place — the
+   action bar's top margin — so the bar sits on the panel's bottom edge, the way skin §70c and §70e
+   settle it for the job panel. */
+.pdx .pdx-body.bfmd-body {
+  display: flex;
+  flex-direction: column;
+}
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions.bfmd-actions {
+  margin: auto -22px 0;
+  padding: 14px 22px 18px;
+}
+.pdx .bfmd-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.pdx .bfmd-state,
+.pdx .bfmd-answer {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.pdx .bfmd-state.is-now,
+.pdx .bfmd-state.is-soon {
+  background: var(--bf-color-accent-fill);
+  color: var(--bf-color-on-accent);
+}
+.pdx .bfmd-state.is-later {
+  color: var(--bf-ink);
+}
+.pdx .bfmd-answer.is-accepted,
+.pdx .bfmd-answer.is-organizer {
+  background: var(--bf-color-ok-wash);
+  color: var(--bf-color-ok);
+}
+.pdx .bfmd-answer.is-tentative {
+  background: var(--bf-color-warn-wash);
+  color: var(--bf-color-warn);
+}
+.pdx .bfmd-answer.is-declined {
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
+}
+.pdx .bfmd-length {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+/* booked twice: said in the warning pair, with the other meeting one click away */
+.pdx .bfmd-clash {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-color-warn-wash);
+  color: var(--bf-color-warn);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.pdx .bfmd-clash svg {
+  flex: none;
+  margin-top: 2px;
+}
+.pdx .bfmd-clash button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+/* Details / Participants: the program's segmented track, whose selection is a pill that travels
+   (motion/SegmentPill.tsx lists `.bfmd-tabs`; this is skin §78's pill, for a drawer it cannot reach) */
+.pdx .bfmd-tabs {
+  --bfm-pill-fill: var(--bf-ink);
+  --bfm-pill-radius: 999px;
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+}
+.pdx .bfmd-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) var(--bf-ease-size),
+    color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.pdx .bfmd-tabs button:hover {
+  background: rgba(var(--bf-line-rgb), 0.06);
+  color: var(--bf-ink);
+}
+.pdx .bfmd-tabs button.is-active {
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+}
+.pdx .bfmd-tabs[data-bfm-pill]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--bfm-pill-w);
+  height: var(--bfm-pill-h);
+  transform: translate(var(--bfm-pill-x), var(--bfm-pill-y));
+  border-radius: var(--bfm-pill-radius);
+  background: var(--bfm-pill-fill);
+  pointer-events: none;
+}
+.pdx .bfmd-tabs[data-bfm-pill="live"]::before {
+  transition:
+    transform var(--bfm-dur-pill) var(--bfm-ease-pill),
+    width var(--bfm-dur-pill) var(--bfm-ease-pill),
+    height var(--bfm-dur-pill) var(--bfm-ease-pill);
+}
+.pdx .bfmd-tabs[data-bfm-pill] > * {
+  position: relative;
+  z-index: 1;
+}
+.pdx .bfmd-tabs[data-bfm-pill] button.is-active,
+.pdx .bfmd-tabs[data-bfm-pill] button.is-active:hover {
+  background: transparent;
+}
+.pdx .bfmd-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* the tab's contents list in behind it, on the drawer's beat (skin §67) */
+.pdx .bfmd-panel {
+  display: grid;
+  gap: 14px;
+  animation: bfe-row var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+.pdx .bfmd-facts {
+  display: grid;
+  margin: 0;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-hover);
+}
+.pdx .bfmd-facts > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 14px;
+}
+.pdx .bfmd-facts > div + div {
+  border-top: 1px solid var(--bf-line-solid);
+}
+.pdx .bfmd-facts dt {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.pdx .bfmd-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.pdx .bfmd-facts a {
+  color: var(--bf-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pdx .bfmd-none {
+  margin: 0;
+  color: var(--bf-ink-faint);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.pdx .bfmd-notes {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-hover);
+}
+.pdx .bfmd-eyebrow {
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pdx .bfmd-notes p {
+  margin: 0;
+  color: var(--bf-ink);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.pdx .bfmd-notes p.bfmd-none {
+  color: var(--bf-ink-faint);
+  font-size: 12.5px;
+}
+.pdx .bfmd-tally {
+  margin: 0;
+  color: var(--bf-ink-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.pdx .bfmd-guests {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pdx .bfmd-guest {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+}
+/* the Dashboard's faces, for a drawer its rules cannot reach */
+.pdx .bfmd-guest .bfmt-faces i {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: var(--bf-color-face-2);
+  color: #fff;
+  font-size: 11px;
+}
+.pdx .bfmd-guest:nth-child(3n + 1) .bfmt-faces i {
+  background: var(--bf-color-face-1);
+}
+.pdx .bfmd-guest:nth-child(3n) .bfmt-faces i {
+  background: var(--bf-color-face-3);
+}
+.pdx .bfmd-guest-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.pdx .bfmd-guest-text strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pdx .bfmd-guest-text em {
+  overflow: hidden;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pdx .bfmd-tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+/* the actions are links (a tab to the provider, a tab to the call), on the drawer's two buttons */
+.pdx .bfmd-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdx .bfmd-panel {
+    animation: none;
   }
 }

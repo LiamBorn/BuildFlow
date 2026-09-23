@@ -2633,6 +2633,9 @@ function App() {
           window.history.replaceState(null, "", window.location.pathname);
           openSettingsView("billing");
         }
+        // Back from connecting Google Calendar or Outlook: the Meetings panel is on the Dashboard,
+        // and it reads `?calendar=` and clears it itself, to say whether the connection worked.
+        if (params.get("calendar") && payload.onboardingCompletedAt) openAppPage("dashboard");
         // Back from Google/Microsoft with a session: existing accounts go to
         // the workspace, brand-new ones carry "#business-type" and start onboarding.
         if (params.get("oauth") === "login") {

@@ -58,6 +58,7 @@ export const PILL_GROUPS = [
   ".tc-tabs", // Timecards — its sections
   ".gantt-seg", // Gantt — the timeline range
   ".bfnt-tabs", // the notifications drawer's filters
+  ".bfmd-tabs", // the meeting drawer's Details / Participants (meetings/MeetingDrawer.tsx)
   ".bf-breeze-nav", // BuildFlow AI's own nav
   ".hs-rail-list", // the icon rail: the page you are on (docs/motion-spec.md §5)
   ".settings-rail", // Settings — the category you are reading, across all four sections

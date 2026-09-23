@@ -870,7 +870,13 @@ export type CalendarStatus = {
   providers: Record<CalendarProviderId, { configured: boolean; connected: boolean; email: string }>;
 };
 
-/** One meeting, already normalised by the server whichever provider it came from. */
+/** How someone answered an invite. */
+export type CalendarResponse = "accepted" | "declined" | "tentative" | "pending";
+
+/** One person on a meeting, and their answer. */
+export type CalendarGuest = { name: string; email: string; response: CalendarResponse; organizer: boolean };
+
+/** One meeting, already normalised by the server whichever provider it came from (server/src/calendar.ts). */
 export type CalendarMeeting = {
   id: string;
   provider: CalendarProviderId;
@@ -881,6 +887,18 @@ export type CalendarMeeting = {
   location: string;
   joinUrl: string;
   attendees: string[];
+  /** Who sent it. */
+  organizer: string;
+  /** Everyone on the invite with their answer, the organizer first. */
+  guests: CalendarGuest[];
+  /** How the person whose calendar this is answered; "organizer" when it is their own meeting. */
+  myResponse: CalendarResponse | "organizer";
+  /** The notes, as plain text. */
+  description: string;
+  /** The meeting in Google Calendar or Outlook on the web. */
+  webUrl: string;
+  /** What the join link opens: "Google Meet", "Microsoft Teams", "Zoom"; "" with no link. */
+  conference: string;
 };
 
 export type CalendarFeed = {
@@ -894,8 +912,10 @@ export function calendarStatus(): Promise<CalendarStatus> {
   return request<CalendarStatus>("/api/calendar/status");
 }
 
-export function calendarFeed(): Promise<CalendarFeed> {
-  return request<CalendarFeed>("/api/calendar/events");
+/** The meetings between two instants — at most 62 days apart; without them, the next two days. */
+export function calendarFeed(range?: { from: Date; to: Date }): Promise<CalendarFeed> {
+  const query = range ? `?from=${encodeURIComponent(range.from.toISOString())}&to=${encodeURIComponent(range.to.toISOString())}` : "";
+  return request<CalendarFeed>(`/api/calendar/events${query}`);
 }
 
 /**

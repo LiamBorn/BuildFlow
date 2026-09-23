@@ -1,11 +1,14 @@
 /**
  * The Dashboard's Meetings panel.
  *
- * Built to the monday.com reference the user pointed at: the pitch and the two connect
- * buttons on the left, a preview of what a connected panel looks like on the right, and
- * "Not connected" beside the heading. Once a calendar IS connected the same panel becomes
- * the live list — the next meeting with a countdown that ticks, then the rest of today and
- * tomorrow.
+ * NOT CONNECTED, it is the monday.com reference the user pointed at: the pitch and the two connect
+ * buttons on the left, a preview of what a connected panel looks like on the right, and "Not
+ * connected" beside the heading. Connecting is signing in: the button goes to Google's or
+ * Microsoft's own consent screen, and the provider sends the browser back here.
+ *
+ * CONNECTED, it is the whole calendar (meetings/MeetingsCalendar.tsx, 2026-09-23): Day / Week /
+ * Month, the time grid, New event, the month at a glance, what is up next and which calendars show,
+ * with every meeting opening in the right-hand drawer.
  *
  * WHAT IT NEEDS TO GO LIVE. Google Calendar and Microsoft Graph both require an OAuth app
  * registered in your own developer console, because a client secret can only be issued to
@@ -14,26 +17,13 @@
  * MICROSOFT_CLIENT_SECRET. server/src/calendar.ts has the console steps. Until they are
  * set, `configured` comes back false and the button says the provider is unavailable
  * instead of starting a flow that cannot finish.
- *
- * THE COUNTDOWN IS COMPUTED, NOT STORED. The server hands over start and end instants; the
- * "In 5 min." pill is derived from them against the clock on a 15-second tick, so it stays
- * true without re-fetching. Events are re-fetched every five minutes, which is what
- * actually costs a provider call.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarClock, ExternalLink, RefreshCw } from "lucide-react";
-import {
-  calendarConnectUrl,
-  calendarFeed,
-  calendarStatus,
-  disconnectCalendar,
-  type CalendarMeeting,
-  type CalendarProviderId,
-  type CalendarStatus
-} from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CalendarClock } from "lucide-react";
+import { calendarConnectUrl, calendarStatus, disconnectCalendar, type CalendarProviderId, type CalendarStatus } from "./api";
+import { CALENDAR_NAME, PROVIDER_IDS, PROVIDER_LABEL } from "./meetings/calendarModel";
+import { MeetingsCalendar } from "./meetings/MeetingsCalendar";
 
-const PROVIDER_LABEL: Record<CalendarProviderId, string> = { google: "Google", microsoft: "Outlook" };
-const PROVIDER_IDS = Object.keys(PROVIDER_LABEL) as CalendarProviderId[];
 const NOT_CONNECTED: CalendarStatus = {
   providers: {
     google: { configured: false, connected: false, email: "" },
@@ -49,7 +39,7 @@ const NOT_CONNECTED: CalendarStatus = {
  * — which is what every test's blanket fetch mock returns, and what a proxy error page would
  * be in production — threw `Cannot convert undefined or null to object` inside the board and
  * blanked the whole page. Anything unrecognisable now reads as "not connected", which is
- * both true and harmless.
+ * both true and harmless. (The meetings themselves are read the same way: readMeetings.)
  */
 function readStatus(value: unknown): CalendarStatus {
   const providers = (value as CalendarStatus | undefined)?.providers;
@@ -71,59 +61,37 @@ function readStatus(value: unknown): CalendarStatus {
   };
 }
 
-/** Likewise for the feed: a reply that is not a list of meetings is no meetings. */
-function readEvents(value: unknown): CalendarMeeting[] {
-  const events = (value as { events?: unknown } | undefined)?.events;
-  if (!Array.isArray(events)) return [];
-  return events.filter(
-    (event): event is CalendarMeeting =>
-      Boolean(event) && typeof (event as CalendarMeeting).id === "string" && typeof (event as CalendarMeeting).startsAt === "string"
-  );
-}
-/** How often the pill re-reads the clock, and how often the events are re-fetched. */
-const TICK_MS = 15_000;
-const REFRESH_MS = 5 * 60_000;
-
-/** "In 5 min.", "Now", "In 2 h 10 min.", "9:00 AM" — what the pill says about one meeting. */
-export function countdownLabel(startsAt: string, endsAt: string, now: number): string {
-  const start = new Date(startsAt).getTime();
-  const end = new Date(endsAt).getTime();
-  if (Number.isNaN(start) || Number.isNaN(end)) return "";
-  if (now >= end) return "Ended";
-  if (now >= start) return "Now";
-  const minutes = Math.round((start - now) / 60_000);
-  if (minutes < 1) return "Now";
-  if (minutes < 60) return `In ${minutes} min.`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours < 8) return rest ? `In ${hours} h ${rest} min.` : `In ${hours} h`;
-  // beyond that a countdown stops being useful and the clock time is what you want
-  return new Date(start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-/** "Today", "Tomorrow", or the weekday — the group a meeting belongs to. */
-export function dayLabel(startsAt: string, now: number): string {
-  const start = new Date(startsAt);
-  const today = new Date(now);
-  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (sameDay(start, today)) return "Today";
-  const tomorrow = new Date(now + 24 * 60 * 60 * 1000);
-  if (sameDay(start, tomorrow)) return "Tomorrow";
-  return start.toLocaleDateString("en-US", { weekday: "long" });
-}
-
-const timeRange = (startsAt: string, endsAt: string) => {
-  const opts: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
-  return `${new Date(startsAt).toLocaleTimeString("en-US", opts)} – ${new Date(endsAt).toLocaleTimeString("en-US", opts)}`;
+/** Why a connection did not finish, in words: the server sends back a code (server/src/app.ts, calDone). */
+const REASONS: Record<string, string> = {
+  access_denied: "the request was cancelled on the consent screen",
+  state_mismatch: "the sign-in expired or was started in another tab. Try again from here",
+  not_configured: "it is not set up on this deployment yet",
+  no_code: "the provider sent nothing back",
+  unknown_provider: "that provider is not one BuildFlow connects to"
 };
 
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
+/**
+ * What the provider said when it sent the browser back: `?calendar=connected&provider=google`, or
+ * `?calendar=error&reason=…`. Read once, said once, and taken out of the address so a reload or a
+ * shared link does not say it again.
+ */
+function readConnectReturn(): { ok: boolean; text: string } | null {
+  if (typeof window === "undefined") return null;
+  const url = new URL(window.location.href);
+  const outcome = url.searchParams.get("calendar");
+  if (outcome !== "connected" && outcome !== "error") return null;
+  const provider = url.searchParams.get("provider");
+  const reason = url.searchParams.get("reason") ?? "";
+  for (const key of ["calendar", "provider", "reason"]) url.searchParams.delete(key);
+  try {
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  } catch {
+    // an address that cannot be rewritten only means the note could show again on a reload
+  }
+  const name = provider === "google" || provider === "microsoft" ? CALENDAR_NAME[provider] : "The calendar";
+  if (outcome === "connected") return { ok: true, text: `${name} is connected. Your meetings are below.` };
+  return { ok: false, text: `${name} could not be connected: ${REASONS[reason] ?? "the provider refused the request. Try again"}.` };
+}
 
 /** The mock on the right of the not-connected state: what a connected panel looks like. */
 function MeetingsPreview() {
@@ -156,10 +124,9 @@ function MeetingsPreview() {
 
 export function MeetingsPanel() {
   const [status, setStatus] = useState<CalendarStatus | null>(null);
-  const [events, setEvents] = useState<CalendarMeeting[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [now, setNow] = useState(() => Date.now());
+  const [returned] = useState(readConnectReturn);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -174,16 +141,7 @@ export function MeetingsPanel() {
       const next = readStatus(await calendarStatus());
       if (!alive.current) return;
       setStatus(next);
-      const connected = PROVIDER_IDS.some((id) => next.providers[id].connected);
-      if (!connected) {
-        setEvents(null);
-        return;
-      }
-      const raw = await calendarFeed();
-      if (!alive.current) return;
-      setEvents(readEvents(raw));
-      const failed = Array.isArray(raw?.failed) ? raw.failed.filter((id) => PROVIDER_IDS.includes(id)) : [];
-      setError(failed.length > 0 ? `Could not reach ${failed.map((id) => PROVIDER_LABEL[id]).join(" and ")}.` : null);
+      setError(null);
     } catch {
       // A calendar that cannot be reached is worth saying; it is not worth breaking the board.
       if (alive.current) setError("Calendar is unavailable right now.");
@@ -192,95 +150,45 @@ export function MeetingsPanel() {
 
   useEffect(() => {
     void load();
-    const refresh = window.setInterval(() => void load(), REFRESH_MS);
-    const tick = window.setInterval(() => setNow(Date.now()), TICK_MS);
-    return () => {
-      window.clearInterval(refresh);
-      window.clearInterval(tick);
-    };
   }, [load]);
-
-  const connectedProviders = useMemo(
-    () =>
-      status ? PROVIDER_IDS.map((id) => [id, status.providers[id]] as const).filter(([, entry]) => entry.connected) : [],
-    [status]
-  );
-  /** Ended meetings drop off on their own, so the panel is never showing the past. */
-  const upcoming = useMemo(() => (events ?? []).filter((event) => new Date(event.endsAt).getTime() > now), [events, now]);
 
   const disconnect = async (provider: CalendarProviderId) => {
     setBusy(true);
     try {
       await disconnectCalendar(provider);
       await load();
+    } catch {
+      if (alive.current) setError(`${CALENDAR_NAME[provider]} could not be disconnected just now.`);
     } finally {
       if (alive.current) setBusy(false);
     }
   };
 
-  const isConnected = connectedProviders.length > 0;
+  const connected = status ? PROVIDER_IDS.filter((id) => status.providers[id].connected) : [];
+  const isConnected = status !== null && connected.length > 0;
 
   return (
     <div className="bfmt">
       <span className="bfmt-state">
-        {isConnected ? connectedProviders.map(([, entry]) => entry.email || "Connected").join(" · ") : "Not connected"}
+        {isConnected ? connected.map((id) => status.providers[id].email || CALENDAR_NAME[id]).join(" · ") : "Not connected"}
       </span>
 
+      {returned && (
+        <p className={`bfmt-note${returned.ok ? "" : " is-error"}`} role="status">
+          {returned.text}
+        </p>
+      )}
+
       {isConnected ? (
-        <>
-          <div className="bfmt-list">
-            {upcoming.length === 0 ? (
-              <p className="bfmt-empty">Nothing else on the calendar today or tomorrow.</p>
-            ) : (
-              upcoming.slice(0, 5).map((event, index) => (
-                <div key={event.id} className={`bfmt-row${index === 0 ? " is-next" : ""}`}>
-                  <span className="bfmt-when">
-                    {index === 0 && !event.allDay ? (
-                      <span className="bfmt-pill">{countdownLabel(event.startsAt, event.endsAt, now)}</span>
-                    ) : (
-                      <span className="bfmt-day">{event.allDay ? dayLabel(event.startsAt, now) : timeRange(event.startsAt, event.endsAt)}</span>
-                    )}
-                  </span>
-                  <span className="bfmt-what">
-                    <strong>{event.title}</strong>
-                    <em>
-                      {[dayLabel(event.startsAt, now), event.allDay ? "All day" : timeRange(event.startsAt, event.endsAt), event.location]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </em>
-                  </span>
-                  {event.attendees.length > 0 && (
-                    <span className="bfmt-faces" aria-label={`${event.attendees.length} attending`}>
-                      {event.attendees.slice(0, 3).map((name) => (
-                        <i key={name}>{initials(name)}</i>
-                      ))}
-                    </span>
-                  )}
-                  {event.joinUrl && (
-                    <a className="bfmt-join" href={event.joinUrl} target="_blank" rel="noreferrer">
-                      Join <ExternalLink size={13} />
-                    </a>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-          <div className="bfmt-foot">
-            <button type="button" className="bfmt-link" onClick={() => void load()}>
-              <RefreshCw size={13} /> Refresh
-            </button>
-            {connectedProviders.map(([provider]) => (
-              <button key={provider} type="button" className="bfmt-link" disabled={busy} onClick={() => void disconnect(provider)}>
-                Disconnect {PROVIDER_LABEL[provider]}
-              </button>
-            ))}
-          </div>
-        </>
+        <MeetingsCalendar status={status} busy={busy} onDisconnect={(provider) => void disconnect(provider)} onSync={() => void load()} />
       ) : (
         <div className="bfmt-pitch">
           <div className="bfmt-pitch-copy">
             <h3>Turn meetings into your day plan</h3>
-            <p>Connect your calendar to see what is next on the board, with a live countdown to every meeting.</p>
+            <p>
+              Sign in with Google or Microsoft to bring your calendar onto the board: every meeting on a day, week and month calendar, a
+              live countdown to the next one, and the link to join it.
+            </p>
             <div className="bfmt-connect">
               {PROVIDER_IDS.map((provider) => {
                 const entry = status?.providers[provider];
@@ -310,6 +218,9 @@ export function MeetingsPanel() {
               <p className="bfmt-note" role="status">
                 No calendar provider is set up on this deployment yet.
               </p>
+            )}
+            {status && PROVIDER_IDS.some((id) => status.providers[id].configured) && (
+              <p className="bfmt-note">Read-only: BuildFlow can see your meetings and never changes them.</p>
             )}
           </div>
           <MeetingsPreview />
