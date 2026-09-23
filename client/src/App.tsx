@@ -2635,9 +2635,16 @@ function App() {
           window.history.replaceState(null, "", window.location.pathname);
           openSettingsView("billing");
         }
-        // Back from connecting Google Calendar or Outlook: the Meetings panel is on the Dashboard,
-        // and it reads `?calendar=` and clears it itself, to say whether the connection worked.
-        if (params.get("calendar") && payload.onboardingCompletedAt) openAppPage("dashboard");
+        // Back from connecting Google Calendar or Outlook: the Dashboard opens ON the Meetings panel, lit
+        // for a moment (the same landing a notification makes), and the panel reads `?calendar=` and
+        // clears it, to say how it went. The request is let go after the landing, so a later visit to
+        // the Dashboard opens at the top as usual.
+        if (params.get("calendar") && payload.onboardingCompletedAt) {
+          const nonce = (focusTicket.current += 1);
+          setPanelFocus({ id: "meetings", nonce });
+          window.setTimeout(() => setPanelFocus((current) => (current?.nonce === nonce ? null : current)), 3000);
+          openAppPage("dashboard");
+        }
         // Back from Google/Microsoft with a session: existing accounts go to
         // the workspace, brand-new ones carry "#business-type" and start onboarding.
         if (params.get("oauth") === "login") {

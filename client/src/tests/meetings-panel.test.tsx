@@ -350,6 +350,41 @@ describe("the Meetings panel", () => {
     expect(window.location.hash).toBe("#dashboard");
   });
 
+  it("settles at the top of the screen once it knows what it shows, after coming back from signing in", async () => {
+    window.history.replaceState(null, "", "/?calendar=connected&provider=google#dashboard");
+    vi.stubGlobal("fetch", calendarApi(GOOGLE(), [WALKTHROUGH]));
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { value: scrollIntoView, configurable: true, writable: true });
+    try {
+      // on the Dashboard the panel sits in a board block; that block is what comes into view
+      const { container } = render(
+        <div className="dash-block" data-dash-drag-id="meetings">
+          <MeetingsPanel />
+        </div>
+      );
+      await screen.findByText("Google Calendar is connected. Your meetings are below.");
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1), { timeout: 3000 });
+      expect(scrollIntoView.mock.contexts[0]).toBe(container.querySelector(".dash-block"));
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
+    } finally {
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it("stays where it is on an ordinary visit", async () => {
+    vi.stubGlobal("fetch", calendarApi(GOOGLE(), [WALKTHROUGH]));
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { value: scrollIntoView, configurable: true, writable: true });
+    try {
+      render(<MeetingsPanel />);
+      await screen.findByRole("button", { name: "Week", pressed: true });
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    } finally {
+      delete (HTMLElement.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
   it("says why a connection did not finish", async () => {
     window.history.replaceState(null, "", "/?calendar=error&reason=access_denied#dashboard");
     vi.stubGlobal("fetch", calendarApi({ ...NOT_CONFIGURED(), google: { configured: true, connected: false, email: "" } }));

@@ -123,6 +123,9 @@ function MeetingsPreview() {
   );
 }
 
+/** A person moving the page: the panel stops trying to settle itself. */
+const PERSON_SCROLLS = ["wheel", "touchmove", "keydown"] as const;
+
 /** What the card says when a sign-in window is done; nothing for one the person cancelled. */
 function signInNote({ provider, outcome, reason }: SignInResult): { ok: boolean; text: string } | null {
   const name = CALENDAR_NAME[provider];
@@ -141,6 +144,14 @@ export function MeetingsPanel() {
   const [busy, setBusy] = useState(false);
   /** How the last connection went: back from the provider in this tab, or from its window. */
   const [note, setNote] = useState(readConnectReturn);
+  /* Back from signing in in this tab, the Dashboard lands on this panel (App.tsx sets the focus). The
+     panel then changes what it holds — the calendar is far taller than the pitch — and panels above
+     it may still be growing into their own data, so once it knows what it shows it settles itself
+     at the top of the screen, where the result it reports can be read. */
+  const landing = useRef(note !== null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const settle = useRef(0);
+  const settleStop = useRef<() => void>(() => undefined);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -167,6 +178,44 @@ export function MeetingsPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!landing.current || status === null) return;
+    landing.current = false;
+    const block = rootRef.current?.closest<HTMLElement>(".dash-block") ?? rootRef.current;
+    if (!block) return;
+    /* IT FOLLOWS ITS OWN PLACE for the first four seconds. Measured on the real board: the
+       Dashboard's landing put the panel under the top bar, then the panels above it finished loading
+       (a lazy section, a forecast arriving) and carried it 122px up and half out of sight, with no
+       scroll involved — once at 1.9s, once at 1.5s, never at the same moment. So whenever its place
+       on the page has changed and then held still for 400ms it settles again, until 4s have passed;
+       and the moment the person scrolls, the page is theirs. */
+    const started = performance.now();
+    let place = Number.NaN;
+    let stillSince = started;
+    let settledFor = Number.NaN;
+    const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const stop = () => {
+      window.clearInterval(settle.current);
+      for (const type of PERSON_SCROLLS) window.removeEventListener(type, stop);
+    };
+    for (const type of PERSON_SCROLLS) window.addEventListener(type, stop, { passive: true });
+    settle.current = window.setInterval(() => {
+      const now = performance.now();
+      const at = block.getBoundingClientRect().top + window.scrollY;
+      if (at !== place) {
+        place = at;
+        stillSince = now;
+      }
+      if (now - stillSince >= 400 && place !== settledFor) {
+        settledFor = place;
+        block.scrollIntoView?.({ block: "start", behavior: reduced ? "auto" : "smooth" });
+      }
+      if (now - started >= 4000) stop();
+    }, 150);
+    settleStop.current = stop;
+  }, [status]);
+  useEffect(() => () => settleStop.current(), []);
 
   /* Coming back to the tab reads the connections again: a calendar connected in another tab, or in a
      sign-in window whose last message never arrived, shows up without a reload. At most every 10s. */
@@ -209,7 +258,7 @@ export function MeetingsPanel() {
   const isConnected = status !== null && connected.length > 0;
 
   return (
-    <div className="bfmt">
+    <div className="bfmt" ref={rootRef}>
       <span className="bfmt-state">
         {isConnected ? connected.map((id) => status.providers[id].email || CALENDAR_NAME[id]).join(" · ") : "Not connected"}
       </span>

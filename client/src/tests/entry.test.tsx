@@ -1,7 +1,7 @@
 /* Where signing in lands you.
    The answer is the Dashboard, and the interesting case is the one that used to
    break it: a schedule link sitting in the hash. */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import App from "../App";
 import { ACCOUNT, installAppHarness, state } from "../test/appHarness";
@@ -62,5 +62,23 @@ describe("signing in", () => {
     expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
     // and the link is spent, so it cannot redirect a later navigation either
     expect(consumeScheduleDeepLink()).toBeNull();
+  });
+
+  /**
+   * Back from connecting Google Calendar or Outlook in this tab (2026-09-23, "open the Meeting/Widget
+   * Section when logged in"): a fresh load with a session used to stay on the landing page; it now
+   * opens the Dashboard ON the Meetings panel, lit the way a notification lights the panel it points
+   * at — where the panel says how the connection went.
+   */
+  it("comes back from connecting a calendar onto the Meetings panel", async () => {
+    window.history.replaceState(null, "", "/?calendar=connected&provider=google#dashboard");
+    render(<App />);
+
+    await screen.findByLabelText("Search BuildFlow");
+    const meetings = () => document.querySelector('[data-dash-drag-id="meetings"]');
+    await waitFor(() => expect(meetings()?.className).toContain("is-bf-focused"));
+    expect(await screen.findByText("Google Calendar is connected. Your meetings are below.")).toBeInTheDocument();
+    // the address is clean again, so a reload is an ordinary visit
+    expect(window.location.search).toBe("");
   });
 });

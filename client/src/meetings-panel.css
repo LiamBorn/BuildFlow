@@ -28,6 +28,12 @@
   font-weight: 600;
 }
 
+/* Back from signing in, the panel settles at the top of the screen (MeetingsPanel.tsx) — clear of
+   the sticky top bar rather than under it. */
+.dash-block[data-dash-drag-id="meetings"] {
+  scroll-margin-top: calc(var(--hs-topbar-h) + 20px);
+}
+
 /* ---- the not-connected state: pitch beside preview -------------------- */
 .bfmt-pitch {
   display: grid;
