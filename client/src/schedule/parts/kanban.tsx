@@ -19,6 +19,7 @@ import { KANBAN_LANES } from "../lanes";
 import { formatScheduleDate } from "../week";
 import { ScheduleBadge, tradeColorVar, tradeForText } from "./shared";
 import { liveChangeLabel, useLiveChange } from "../live";
+import { CallOffTag, allCalledOff, jobCallOffs, useCallOffs } from "../callOffs";
 
 export function ScheduleKanbanView({
   jobs,
@@ -184,11 +185,16 @@ export function ScheduleKanbanCard({
     transition
   } as CSSProperties;
   const live = useLiveChange(job.id);
+  // a day of it called off through WeatherIQ: the card says which, in the bad tone (../callOffs)
+  const callOffState = useCallOffs();
+  const callOffs = jobCallOffs(callOffState, job.id);
   return (
     <button
       type="button"
       ref={setNodeRef}
-      className={`sched-kan-card${isDragging ? " dragging" : ""}${isFocused ? " focused" : ""}${pending ? " is-pending" : ""}${live ? " is-live" : ""}`}
+      className={`sched-kan-card${isDragging ? " dragging" : ""}${isFocused ? " focused" : ""}${pending ? " is-pending" : ""}${live ? " is-live" : ""}${
+        callOffs.length > 0 ? " is-called-off" : ""
+      }${allCalledOff(job, callOffs) ? " is-all-off" : ""}`}
       aria-busy={pending || undefined}
       style={style}
       onClick={() => (onOpenJob ? onOpenJob(job) : onOpenProject(job.projectId))}
@@ -202,6 +208,7 @@ export function ScheduleKanbanCard({
         <strong>{job.name}</strong>
       </span>
       <em>{subtitle}</em>
+      <CallOffTag callOffs={callOffs} today={callOffState.today} />
       <footer>
         <span className="sched-kan-phase">{job.phase}</span>
         <ScheduleBadge status={job.status} />

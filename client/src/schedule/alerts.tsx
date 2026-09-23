@@ -3,10 +3,12 @@
  * DelayIQ, the weather warning and missing materials for whatever the page's
  * filters show. Each alert links to the place it is dealt with.
  */
-import { AlertTriangle, CloudSun, Truck } from "lucide-react";
+import { AlertTriangle, CalendarX2, CloudSun, Truck } from "lucide-react";
 import type { BootstrapPayload, Job, ScheduleAssignment } from "@buildflow/shared";
 import { parseIsoDate, toIsoDate } from "../components/ui/gantt";
 import { bookingsWithoutCrew } from "./filters";
+import { deriveCallOffs } from "./callOffs";
+import { CAUSE_LABEL } from "../weather/weatherIQ";
 import { formatScheduleDate, mondayOf } from "./week";
 
 /** Where an alert takes you: the Week board on that week, or the page that owns the problem. */
@@ -114,6 +116,32 @@ export function deriveScheduleAlerts(
       jobId: conflict.jobId,
       date: conflict.date,
       link: { page: "month", weekStart: weekOf(conflict.date) }
+    });
+  }
+  /* A DAY CALLED OFF, for a job in view (2026-09-23: "when a job is cancelled … make it a little more
+     noticeable"). WeatherIQ's call-off takes the day's crews off it; the soonest one is named, with
+     how many more, and it opens the Month calendar on its week, where the day is marked. */
+  const calledOff = [...deriveCallOffs(data, toIsoDate(now)).byJob.values()]
+    .flat()
+    .filter((callOff) => jobs.some((job) => job.id === callOff.jobId))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (calledOff.length > 0) {
+    const [first] = calledOff;
+    const job = data.jobs.find((item) => item.id === first.jobId);
+    const rest = calledOff.length - 1;
+    alerts.push({
+      id: `called-off-${first.jobId}-${first.date}`,
+      tone: "danger",
+      icon: CalendarX2,
+      title: calledOff.length === 1 ? "A job day was called off" : `${calledOff.length} job days were called off`,
+      detail: `${job?.name ?? "A job"} on ${formatScheduleDate(first.date)} · ${CAUSE_LABEL[first.cause].toLowerCase()}${
+        first.reschedulePending ? " · reschedule waiting" : ""
+      }${rest > 0 ? `, and ${rest} more` : ""}`,
+      // the day it was called off for, which may still be ahead
+      when: relativeTime(first.date, now),
+      jobId: first.jobId,
+      date: first.date,
+      link: { page: "month", weekStart: weekOf(first.date) }
     });
   }
   if (openDelayIQ) {

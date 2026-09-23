@@ -16,6 +16,7 @@ import { formatScheduleDate } from "../week";
 import { TRADE_ORDER, tradeColorVar, tradeForText } from "./shared";
 import type { TradeKey } from "./shared";
 import { liveChangeLabel, useLiveChange } from "../live";
+import { allCalledOff, callOffCaption, callOffSentence, jobCallOffs, useCallOffs } from "../callOffs";
 
 export type ScheduleMilestone = {
   id: string;
@@ -250,12 +251,7 @@ function MonthDayCell({
           ))}
         </SortableContext>
         {shownMilestones.map((milestone) => (
-          <MonthMilestoneChip
-            key={milestone.id}
-            milestone={milestone}
-            onOpen={onOpenMilestone}
-            pending={pendingId === milestone.id}
-          />
+          <MonthMilestoneChip key={milestone.id} milestone={milestone} onOpen={onOpenMilestone} pending={pendingId === milestone.id} />
         ))}
         {(hidden > 0 || open) && (
           <button
@@ -293,7 +289,7 @@ function MonthDayCell({
       projectName,
       onOpenProject,
       onOpenJob,
-  onOpenMilestone,
+      onOpenMilestone,
       onToggleDay,
       pendingId
     ]
@@ -362,21 +358,32 @@ function MonthJobChip({
     data: { jobId: job.id, date: day }
   });
   const live = useLiveChange(job.id);
+  /* A day of it called off through WeatherIQ (../callOffs). The chip stands on the job's first day
+     only, so it says WHICH day: a red edge and "Called off Tue · rain" while the job is still on, the
+     red wash and a struck-through name when every day of it is off. */
+  const callOffState = useCallOffs();
+  const callOffs = jobCallOffs(callOffState, job.id);
+  const allOff = allCalledOff(job, callOffs);
   return (
     <button
       type="button"
       ref={setNodeRef}
       /* `dragging` is the SLOT the card left behind, not the card: the lifted one is the
          overlay below, so this chip keeps its place in the day, dashed and empty. */
-      className={`sched-act${isDragging ? " dragging" : ""}${pending ? " is-pending" : ""}${live ? " is-live" : ""}`}
+      className={`sched-act${isDragging ? " dragging" : ""}${pending ? " is-pending" : ""}${live ? " is-live" : ""}${
+        callOffs.length > 0 ? " is-called-off" : ""
+      }${allOff ? " is-all-off" : ""}`}
       aria-busy={pending || undefined}
       style={{ "--sc-tone": tradeColorVar(tone), transform: CSS.Transform.toString(transform), transition } as CSSProperties}
       onClick={() => (onOpenJob ? onOpenJob(job) : onOpenProject(job.projectId))}
-      title={`${job.name} · ${job.phase}`}
+      title={`${job.name} · ${job.phase}${callOffs.map((callOff) => ` · ${callOffSentence(callOff)}`).join("")}`}
       {...listeners}
       {...attributes}
     >
-      <MonthChipFace title={job.name} caption={live ? liveChangeLabel(live) : subtitle} />
+      <MonthChipFace
+        title={job.name}
+        caption={live ? liveChangeLabel(live) : callOffs.length > 0 ? callOffCaption(callOffs, callOffState.today) : subtitle}
+      />
     </button>
   );
 }

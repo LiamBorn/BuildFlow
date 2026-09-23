@@ -669,6 +669,9 @@ export type GanttFeatureItemProps = GanttFeature & {
   className?: string;
   /** A faint bar behind the real one — the baseline this job was planned against. */
   ghost?: { startAt: Date; endAt: Date; title?: string };
+  /** Days inside the bar that are not being worked (a day WeatherIQ called off), drawn across the bar
+      where they fall; `label` is said to a screen reader and added to the bar's own title. */
+  offDays?: { at: Date; label: string }[];
 };
 
 export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
@@ -681,6 +684,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   children,
   className,
   ghost,
+  offDays,
   ...feature
 }) => {
   const gantt = useGantt();
@@ -783,6 +787,10 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   } as CSSProperties;
   const progress = Math.max(0, Math.min(100, feature.progress ?? 0));
   const tip = `${formatDate(startAt, "MMM d")} – ${formatDate(addDays(endAt, -1), "MMM d, yyyy")}`;
+  // the off days that land inside the bar as it is drawn now, placed by the chart's own date maths
+  const offs = (offDays ?? [])
+    .map((day) => ({ ...day, left: getOffset(day.at, gantt) - offset, span: getWidth(day.at, addDays(day.at, 1), gantt) }))
+    .filter((day) => day.left + day.span > 0 && day.left < width);
 
   return (
     <div className={`gantt-feature-row${className ? ` ${className}` : ""}`}>
@@ -804,7 +812,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           className={`gantt-bar${barClassName ? ` ${barClassName}` : ""}`}
           role="button"
           tabIndex={0}
-          title={`${feature.name} · ${tip}`}
+          title={`${feature.name} · ${tip}${offs.map((day) => ` · ${day.label}`).join("")}`}
           onPointerDown={onPointerDown("move")}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -817,6 +825,14 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           }}
         >
           {progress > 0 && <span className="gantt-bar-progress" style={{ width: `${progress}%` }} aria-hidden="true" />}
+          {offs.map((day) => (
+            <span
+              key={day.at.getTime()}
+              className="gantt-offday"
+              style={{ left: Math.round(day.left), width: Math.max(2, Math.round(day.span)) }}
+              aria-hidden="true"
+            />
+          ))}
           <span className="gantt-bar-label">{children ?? feature.name}</span>
         </div>
         {onMove && resizable && (

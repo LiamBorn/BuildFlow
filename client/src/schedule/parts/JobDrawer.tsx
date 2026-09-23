@@ -16,6 +16,7 @@ import { parseIsoDate } from "../../components/ui/gantt";
 import { type JobSaveResult } from "../hooks";
 import { PRIORITIES, STATUSES } from "../statusPalette";
 import { ScheduleDrawer } from "./ScheduleDrawer";
+import { CallOffTag, jobCallOffs, useCallOffs } from "../callOffs";
 
 export function JobDrawer({
   job,
@@ -83,6 +84,9 @@ export function JobDrawer({
     }
   };
 
+  const callOffState = useCallOffs();
+  const callOffs = jobCallOffs(callOffState, job.id);
+
   const days = Math.max(
     1,
     Math.round((parseIsoDate(endDate || startDate).getTime() - parseIsoDate(startDate || endDate).getTime()) / 86_400_000) + 1
@@ -96,6 +100,13 @@ export function JobDrawer({
           {projectName}
           {job.phase ? ` · ${job.phase}` : ""}
           {job.location ? ` · ${job.location}` : ""}
+          {/* a day called off through WeatherIQ, where the eye lands first; the card below has the rest */}
+          {callOffs.length > 0 && (
+            <>
+              {" "}
+              <CallOffTag callOffs={callOffs} today={callOffState.today} />
+            </>
+          )}
         </>
       }
       closeLabel="Close job details"

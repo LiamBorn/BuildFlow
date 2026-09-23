@@ -29,7 +29,9 @@ type ScheduleView = "Month" | "Kanban" | "Gantt Chart";
     mouseover), then pick the page from its flyout. The landing's view cards
     work too, but their accessible name runs title + blurb + figure together. */
 async function openScheduleView(view: ScheduleView) {
-  const hub = await screen.findByRole("button", { name: /^Schedule( \(.*\))?$/ });
+  // the rail's hub: a schedule page also has its own "Schedule" button, back to the landing
+  const hubs = await screen.findAllByRole("button", { name: /^Schedule( \(.*\))?$/ });
+  const hub = hubs.find((button) => button.classList.contains("hs-rail-btn")) ?? hubs[0];
   fireEvent.mouseOver(hub);
   const flyout = await screen.findByRole("menu", { name: "Schedule menu" });
   fireEvent.click(within(flyout).getByRole("menuitem", { name: new RegExp(`^${view}( New| Beta)?$`) }));
@@ -139,16 +141,76 @@ describe("Schedule pages", () => {
 
     // the view cards: title, blurb and a live figure in one button — three views since 2026-09-22
     const views = screen.getByRole("region", { name: "Schedule views" });
-    expect(within(views).getAllByRole("button").map((card) => card.querySelector("strong")?.textContent)).toEqual([
-      "Month",
-      "Gantt Chart",
-      "Kanban"
-    ]);
+    expect(
+      within(views)
+        .getAllByRole("button")
+        .map((card) => card.querySelector("strong")?.textContent)
+    ).toEqual(["Month", "Gantt Chart", "Kanban"]);
     expect(within(views).getByRole("button", { name: /^Month .*2 jobs start in June 2026$/ })).toBeInTheDocument();
     fireEvent.click(within(views).getByRole("button", { name: /^Month / }));
     await screen.findByRole("heading", { level: 1, name: /^Month/ });
     expect(screen.getByRole("region", { name: "Calendar for June 2026" })).toBeInTheDocument();
     expect(chip(RIVERSIDE)).toBeInTheDocument();
+  });
+
+  /**
+   * A DAY WEATHERIQ CALLED OFF (2026-09-23: "when a job is cancelled within any of the pages within the
+   * Schedule category make it a little more noticeable"). Riverside's pour on the 16th — today, on the
+   * test clock — was called off for rain; every page that shows the job says so, in the bad tone.
+   */
+  it("marks a day WeatherIQ called off on the landing, the Month, the job panel, the Kanban and the Gantt", async () => {
+    state.bootstrapPayload = {
+      ...bootstrapFixture,
+      weatherConflicts: [
+        {
+          id: "wx-j-riverside-concrete-2026-06-16",
+          jobId: "j-riverside-concrete",
+          projectId: "p-riverside",
+          date: "2026-06-16",
+          cause: "rain",
+          severity: "hold",
+          start: "2026-06-16T07:00",
+          end: "2026-06-16T15:00",
+          reason: "Heavy rain through the pour",
+          assigneeId: "",
+          status: "cancelled",
+          detectedAt: "2026-06-15T12:00:00.000Z",
+          updatedAt: "2026-06-15T12:00:00.000Z"
+        }
+      ]
+    };
+    render(<App />);
+    await enterDashboard();
+
+    // the landing's alerts name it
+    await openSchedule();
+    expect(await screen.findByText("A job day was called off")).toBeInTheDocument();
+    expect(screen.getByText(/Riverside Office Building on Jun 16 · rain/)).toBeInTheDocument();
+
+    // the Month: the job's chip (on its first day) says which day was called off, and why — and is not
+    // struck through, since two of its three days are still on
+    await openMonthCalendar();
+    const calledOff = screen.getByTitle(/Called off Tue, Jun 16 for rain\./);
+    expect(calledOff).toHaveClass("sched-act", "is-called-off");
+    expect(calledOff).not.toHaveClass("is-all-off");
+    expect(calledOff).toHaveTextContent("Called off today · rain");
+
+    // the job panel says it where the eye lands first
+    fireEvent.click(calledOff);
+    const drawer = screen.getByRole("dialog", { name: "Riverside Office Building" });
+    expect(within(drawer).getAllByText("Called off today").length).toBeGreaterThan(0);
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close job details" }));
+
+    // the Kanban card takes the tag and the red edge
+    await openScheduleView("Kanban");
+    const card = screen.getAllByTitle(RIVERSIDE).find((element) => element.classList.contains("sched-kan-card")) as HTMLElement;
+    expect(card).toHaveClass("is-called-off");
+    expect(within(card).getByText("Called off today")).toBeInTheDocument();
+
+    // the Gantt hatches the day across the bar, and names it beside the bar
+    await openScheduleView("Gantt Chart");
+    await waitFor(() => expect(document.querySelector(".gantt-offday")).not.toBeNull());
+    expect(document.querySelector(".gantt-calledoff")?.textContent).toContain("Called off today");
   });
 
   it("opens the job drawer from a job's chip on the Month calendar", async () => {

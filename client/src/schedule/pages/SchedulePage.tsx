@@ -51,6 +51,7 @@ import { FirstRunPanel, firstRunNeeded } from "../FirstRun";
 import { ScheduleExportMenu } from "../ExportMenu";
 import { ScheduleImportDialog } from "../ScheduleImportDialog";
 import { SchedulePageFrame, useSchedulePage, type ScheduleSection } from "../page";
+import { CallOffTag, jobCallOffs, useCallOffs } from "../callOffs";
 
 export function CrewAvailabilityPanel({
   crews,
@@ -347,6 +348,8 @@ export function ScheduleQueuePanel({
   /** Inside a panel on the board (2026-09-15): the panel draws the card and the title row. */
   headless?: boolean;
 }) {
+  // a job whose crew went with a day WeatherIQ called off is not waiting on a booking; it says so (../callOffs)
+  const callOffs = useCallOffs();
   return (
     <section className={`sched-home-section${headless ? " is-headless" : ""}`} aria-label="Unassigned jobs">
       {!headless && (
@@ -366,6 +369,7 @@ export function ScheduleQueuePanel({
                   ? formatScheduleDate(job.startDate)
                   : `${formatScheduleDate(job.startDate)} – ${formatScheduleDate(job.endDate)}`}
               </span>
+              <CallOffTag callOffs={jobCallOffs(callOffs, job.id)} today={callOffs.today} />
               <ScheduleBadge status={job.status} />
               <button type="button" className="sched-book" onClick={() => onBook(job)}>
                 Book

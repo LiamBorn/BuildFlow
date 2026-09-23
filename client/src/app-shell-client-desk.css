@@ -15067,3 +15067,107 @@ body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show {
     transition: none;
   }
 }
+
+/* ============================================================================
+   84. A CALLED-OFF DAY, WHEREVER THE SCHEDULE SHOWS IT (2026-09-23)
+   ----------------------------------------------------------------------------
+   Asked for as "when a job is cancelled within any of the pages within the
+   Schedule category make it a little more noticeable". A job is cancelled a
+   day at a time, through WeatherIQ's call-off (schedule/callOffs.tsx); until
+   now only the job panel's weather card said so, and everywhere else the day
+   looked like a working one.
+   One language on every page, in the program's bad tone — a little more, not a
+   siren. The Month chip (which stands on the job's first day only) takes a red
+   edge and says which day: "Called off Tue · rain"; the Kanban card takes the
+   same edge and the tag; the Gantt bar is hatched across the day itself, with
+   the tag beside its name; the landing's unassigned row and the job panel's
+   header carry the tag. Only a job with EVERY day called off — a one-day job,
+   most often — is washed red and struck through: one day of five is still a
+   job that is on. The three tones have dark rungs, so both modes hold.
+   ============================================================================ */
+/* the tag: the bad tone's pill, with its calendar-and-cross */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-calledoff {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-calledoff svg {
+  flex: none;
+}
+/* the Month chip: a red edge and dot, and which day, in the bad ink */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-called-off {
+  box-shadow:
+    inset 0 0 0 1px var(--bf-color-bad-edge),
+    var(--bf-shadow-card);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-called-off:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--bf-color-bad-edge),
+    var(--bf-shadow-raised);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-called-off .sched-act-dot {
+  background: var(--bf-color-bad);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-called-off .sched-act-text em {
+  color: var(--bf-color-bad);
+  font-weight: 600;
+}
+/* every day of it off: washed red, the name struck through */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-all-off,
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-all-off:hover {
+  background: var(--bf-color-bad-wash);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-act.is-all-off .sched-act-text strong,
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.is-all-off .sched-kan-card-top strong {
+  text-decoration: line-through;
+  text-decoration-color: var(--bf-color-bad);
+  text-decoration-thickness: 1.5px;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.is-all-off {
+  background: var(--bf-color-bad-wash);
+}
+/* the Kanban card: a red edge, and the tag on its own line under the name */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.is-called-off {
+  box-shadow:
+    inset 0 0 0 1.5px var(--bf-color-bad-edge),
+    var(--bf-shadow-card);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.is-called-off:hover {
+  box-shadow:
+    inset 0 0 0 1.5px var(--bf-color-bad-edge),
+    var(--bf-shadow-raised);
+}
+/* a focused card keeps its focus ring over the red edge */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card.is-called-off.focused {
+  box-shadow: inset 0 0 0 2px var(--bf-focus-ink);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card .sched-calledoff {
+  display: flex;
+  width: fit-content;
+  margin-top: 6px;
+}
+/* the Gantt bar: the day hatched across the bar where it falls (the label sits outside the bar, so
+   nothing is written under it), and the tag beside the name */
+.app-shell.hs-shell.bf-shell .sched-rx .gantt-bar .gantt-offday {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(135deg, var(--bf-color-bad) 0 2px, transparent 2px 5px),
+    var(--bf-color-bad-wash);
+  box-shadow: inset 0 0 0 1px var(--bf-color-bad);
+  pointer-events: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt-bar-label .gantt-calledoff {
+  color: var(--bf-color-bad);
+}

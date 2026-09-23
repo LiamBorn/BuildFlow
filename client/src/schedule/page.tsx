@@ -36,6 +36,7 @@ import { DASH_COLS, compact, type GridItem, type GridLimits } from "../dashGrid"
 import { SectionPicker, type SectionOption } from "../SectionPicker";
 import { useHudMotion } from "../useHudMotion";
 import { ScheduleAlertsPanel, deriveScheduleAlerts, type ScheduleAlert } from "./alerts";
+import { CallOffContext, deriveCallOffs } from "./callOffs";
 import { useBenchData } from "./bench";
 import { withConflictAsk } from "./conflicts";
 import { GanttLinkDialog } from "./GanttLinkDialog";
@@ -204,6 +205,8 @@ export function useSchedulePage({
   );
   // the same alerts every schedule page raises, for what the filters show
   const alerts = useMemo(() => deriveScheduleAlerts(data, jobs, scope.assignments), [data, jobs, scope.assignments]);
+  // the days WeatherIQ called off, marked on every page the frame holds (./callOffs)
+  const callOffs = useMemo(() => deriveCallOffs(data, today), [data, today]);
   // an alert opens the place it is dealt with — a booking alert changes the shared week on the way (the month follows it)
   const openAlert = useCallback(
     (alert: ScheduleAlert) => {
@@ -467,6 +470,7 @@ export function useSchedulePage({
     isThisWeek,
     weekRange,
     today,
+    callOffs,
     monthAnchor,
     setMonthAnchor,
     scope,
@@ -674,6 +678,7 @@ export function SchedulePageFrame({
     context,
     updateContext,
     today,
+    callOffs,
     kpis,
     notice,
     news,
@@ -939,7 +944,9 @@ export function SchedulePageFrame({
       )}
     </div>
   );
-  if (!drag) return body;
+  // every chip, card, bar and panel inside can tell a called-off day (./callOffs)
+  const marked = <CallOffContext.Provider value={callOffs}>{body}</CallOffContext.Provider>;
+  if (!drag) return marked;
   return (
     <DndContext
       sensors={sensors}
@@ -956,7 +963,7 @@ export function SchedulePageFrame({
       }}
       onDragEnd={(event) => void drag.onDragEnd(event)}
     >
-      {body}
+      {marked}
     </DndContext>
   );
 }

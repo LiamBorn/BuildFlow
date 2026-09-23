@@ -36,6 +36,42 @@ describe("schedule alerts", () => {
     expect(alerts[2].link).toEqual({ page: "inventory" });
   });
 
+  it("names a job day WeatherIQ called off, soonest first, and opens the Month on its week", () => {
+    const conflict = (jobId: string, date: string) => ({
+      id: `wx-${jobId}-${date}`,
+      jobId,
+      projectId: "p-1",
+      date,
+      cause: "wind",
+      severity: "hold",
+      start: `${date}T09:00`,
+      end: `${date}T12:00`,
+      reason: "Gusts",
+      assigneeId: "",
+      status: "cancelled",
+      detectedAt: "",
+      updatedAt: ""
+    });
+    const withCallOffs = {
+      ...data,
+      delayIQs: [],
+      variances: [],
+      jobs: [job("j-1", { endDate: "2026-09-12" }), job("j-3", { endDate: "2026-09-12" })],
+      weatherConflicts: [conflict("j-1", "2026-09-11"), conflict("j-1", "2026-09-10"), conflict("j-3", "2026-09-10")]
+    } as unknown as BootstrapPayload;
+    const inView = [job("j-1", { endDate: "2026-09-12" })];
+    const alerts = deriveScheduleAlerts(withCallOffs, inView, [], now);
+    expect(alerts.map((alert) => alert.title)).toEqual(["2 job days were called off"]);
+    // j-3's day is not in view, so it is not counted
+    expect(alerts[0]).toMatchObject({
+      tone: "danger",
+      detail: "j-1 on Sep 10 · wind, and 1 more",
+      jobId: "j-1",
+      date: "2026-09-10",
+      link: { page: "month", weekStart: "2026-09-07" }
+    });
+  });
+
   it("is quiet when the view has nothing wrong", () => {
     expect(deriveScheduleAlerts({ ...data, delayIQs: [] } as BootstrapPayload, [job("j-1")], [booking("a-1", "2026-09-09")])).toEqual([]);
   });

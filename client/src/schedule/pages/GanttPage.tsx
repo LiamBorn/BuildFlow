@@ -42,6 +42,7 @@ import {
 } from "../../components/ui/gantt";
 import type { ScheduleTarget } from "../links";
 import { BackToScheduleButton, SchedulePageFrame, useSchedulePage } from "../page";
+import { callOffSentence, callOffTag, jobCallOffs } from "../callOffs";
 import { narrowViewport, useNarrowViewport } from "../hooks";
 
 /** The chart's own ranges plus "week": a fitted seven-day window on the shared schedule week. */
@@ -655,7 +656,20 @@ export function GanttPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
                         selected={row.job.id === selectedJob?.id}
                         barClassName={row.critical ? "is-critical" : undefined}
                         ghost={row.ghost}
-                      />
+                        // a day WeatherIQ called off, hatched across the bar where it falls (../callOffs)
+                        offDays={jobCallOffs(page.callOffs, row.job.id).map((callOff) => ({
+                          at: parseIsoDate(callOff.date),
+                          label: callOffSentence(callOff)
+                        }))}
+                      >
+                        {row.feature.name}
+                        {jobCallOffs(page.callOffs, row.job.id).length > 0 && (
+                          <span className="gantt-calledoff">
+                            {" · "}
+                            {callOffTag(jobCallOffs(page.callOffs, row.job.id), page.callOffs.today)}
+                          </span>
+                        )}
+                      </GanttFeatureItem>
                     </GanttContextMenu>
                   )}
                 />
