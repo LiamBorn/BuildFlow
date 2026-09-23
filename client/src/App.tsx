@@ -504,24 +504,94 @@ function readUpdatesAnchorFromHash(): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * Every hash the site answers to, and the view it opens.
+ *
+ * 2026-09-16 the marketing pages were dropped from this resolver with the Frost landing
+ * rebuild, leaving only sign-in, onboarding, the waitlist and the legal pages. The pages
+ * themselves were never removed, and `showWelcomeSubpage` navigates with `history.pushState`,
+ * which does not fire `hashchange` — so they kept rendering when clicked while their URLs
+ * stopped working. The result was 42 views that could be reached but not linked: sharing,
+ * bookmarking or reloading any of them landed on the hero with the original URL still in the
+ * address bar. `#templates` and `#partners` were worse off still, because `onOpenHash` sets
+ * `location.hash` directly and so depended on this resolver entirely.
+ *
+ * Restored 2026-09-23 as a table rather than a chain of `if`s. The chain is what let the two
+ * halves drift: navigation kept its hashes in `showWelcomeSubpage` calls, the solution/business
+ * page configs, `productPlanHashes` and `automationConfigs`, and nothing tied them to the
+ * resolver. welcome-routes.test.ts now reads those same sources and fails if a hash used for
+ * navigation is missing here or points somewhere else.
+ */
+const welcomeRoutes: Record<string, WelcomeView> = {
+  // sign-in, onboarding and the waitlist
+  "#create-account": "createAccount",
+  "#invite-team": "inviteTeam",
+  "#business-type": "businessType",
+  "#additional-products": "additionalProducts",
+  "#waitlist": "waitlist", // waitlist (removable)
+  // legal
+  "#privacy": "privacy",
+  "#terms": "terms",
+  "#security": "security",
+  // the category overviews behind the mega-menu
+  "#overview": "overview",
+  "#plans-overview": "plansOverview",
+  "#resources-overview": "resourcesOverview",
+  "#company-overview": "companyOverview",
+  "#ai-overview": "aiOverview",
+  // product pages
+  "#crew-scheduling": "crewScheduling",
+  "#schedule-ai": "scheduleAi",
+  "#buildflow-ai": "scheduleAi", // the AI menu's name for the same page
+  "#map-field-ops": "mapFieldOps",
+  "#field-updates-delayIQs": "fieldUpdatesDelayIQs",
+  "#materials-readiness": "materialsReadiness",
+  "#equipment-tracking": "equipmentTracking",
+  "#production-reports": "productionReports",
+  "#tonnage-tracking": "tonnageTracking",
+  // plans
+  "#free-plan": "freePlan",
+  "#pro-plan": "proPlan",
+  "#business-plan": "businessPlan",
+  "#enterprise-plan": "enterprisePlan",
+  "#compare-plans": "comparePlans",
+  // solutions, by job and by company size
+  "#solutions-schedule": "solutionSchedule",
+  "#solutions-field-updates-delayIQs": "solutionField",
+  "#solutions-map-field-ops": "solutionMap",
+  "#solutions-reports": "solutionReports",
+  "#solutions-startups": "businessStartups",
+  "#solutions-small-businesses": "businessSmallBusinesses",
+  "#solutions-enterprise": "businessEnterprise",
+  // what the AI does on its own
+  "#weather-integration": "weatherIntegration",
+  "#schedule-suggestions": "scheduleSuggestions",
+  "#crew-suggestions": "crewSuggestions",
+  "#delayIQ-detection": "delayIQDetection",
+  "#route-optimization": "routeOptimization",
+  // resources and company
+  "#updates": "updates",
+  "#customer-reviews": "reviews",
+  "#help-center": "helpCenter",
+  "#integrations": "integrations",
+  "#templates": "templates",
+  "#partners": "partners",
+  "#about": "about",
+  "#customers": "customers",
+  "#careers": "careers",
+  "#apply": "apply",
+  "#contact-sales": "contactSales"
+};
+
 function getWelcomeViewFromHash(): WelcomeView {
   if (typeof window === "undefined") return "home";
-  // 2026-09-16: the marketing pages under Product / Plans / Resources / Company / AI
-  // were removed with the Frost landing rebuild. Their old hashes land on the
-  // landing page. Only sign-in, onboarding, the waitlist and the legal pages route.
-  if (window.location.hash === "#create-account") return "createAccount";
-  // emailed links carry their token after a "?" inside the hash
-  if (window.location.hash.startsWith("#reset-password")) return "resetPassword";
-  if (window.location.hash.startsWith("#verify-email")) return "verifyEmail";
-  if (window.location.hash.startsWith("#accept-invite")) return "acceptInvite";
-  if (window.location.hash === "#invite-team") return "inviteTeam";
-  if (window.location.hash === "#business-type") return "businessType";
-  if (window.location.hash === "#additional-products") return "additionalProducts";
-  if (window.location.hash === "#privacy") return "privacy";
-  if (window.location.hash === "#terms") return "terms";
-  if (window.location.hash === "#security") return "security";
-  if (window.location.hash === "#waitlist") return "waitlist"; // waitlist (removable)
-  return "home";
+  const hash = window.location.hash;
+  // emailed links carry their token after a "?" inside the hash, so these match by prefix
+  if (hash.startsWith("#reset-password")) return "resetPassword";
+  if (hash.startsWith("#verify-email")) return "verifyEmail";
+  if (hash.startsWith("#accept-invite")) return "acceptInvite";
+  // a deep link may carry its own query or anchor after the route
+  return welcomeRoutes[hash.split("?")[0]] ?? "home";
 }
 
 const navItems: Array<{ page: Page; label: string; icon: typeof Grid2X2 }> = [
