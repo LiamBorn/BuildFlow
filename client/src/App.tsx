@@ -20019,9 +20019,13 @@ function SettingsBillingPlans({
       </section>
 
       <p className="sx-plans-foot">
-        <a href="#usage-limits" onClick={(event) => event.preventDefault()}>
-          *Usage limits apply.
-        </a>{" "}
+        {/* No href, deliberately. This was `href="#usage-limits"` with a preventDefault: a
+            control that announced itself as a link, took focus, and did nothing when activated,
+            for a footnote with nowhere to go. An anchor without an href is what the HTML spec
+            provides for exactly this — "a placeholder for where a link might otherwise have been
+            placed" — so it keeps the `.sx-plans-foot a` styling while losing the link role and
+            the tab stop. Give it an href if usage limits ever get a page. */}
+        <a>*Usage limits apply.</a>{" "}
         Prices and plans are subject to change at BuildFlow's discretion.
       </p>
     </div>

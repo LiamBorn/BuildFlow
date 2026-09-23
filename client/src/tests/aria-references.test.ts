@@ -16,6 +16,11 @@
  * an id in a component that never renders beside it still passes. That weakens it to catching the
  * blatant case -- a typo, or an id that has been renamed or deleted on one side only. That is the
  * common case and worth a guard; a stronger check would need the render tree, not the source.
+ *
+ * The last block covers the third form of the same thing: `href="#..."`, which must name either a
+ * route the app answers or an element on the page. Two did neither -- the landing's "Learn more"
+ * and a Settings footnote that was a link with a preventDefault on it -- and both are fixed, so
+ * that block has no exception list. Do not add one: delete the dead anchor instead.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -31,6 +36,19 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
  * declares (tests/node-fs-shim.d.ts explains why the shim stays minimal), so a `withFileTypes`
  * walk does not typecheck here even though it runs fine under vitest.
  */
+/**
+ * Blank out comments, keeping the line count so reported positions stay true.
+ *
+ * Not housekeeping: a fix worth making is usually worth a comment saying what it replaced, and
+ * those comments quote the broken code. Three separate scans in one day flagged their own
+ * explanation as the defect -- `href="#learn"` and `href="#usage-limits"` both live on now only
+ * inside the comments that record removing them.
+ */
+const withoutComments = (src: string) =>
+  src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/[^\n]*/g, (m, lead: string) => lead + " ".repeat(m.length - lead.length));
+
 const files = readdirSync(SRC, { recursive: true })
   .filter(
     (rel) =>
@@ -38,7 +56,7 @@ const files = readdirSync(SRC, { recursive: true })
       !/\.test\.tsx?$/.test(rel) &&
       !rel.split(/[\\/]/).some((part) => part === "tests" || part === "node_modules" || part === "dist")
   )
-  .map((rel) => ({ path: rel, text: readFileSync(join(SRC, rel), "utf8") }));
+  .map((rel) => ({ path: rel, text: withoutComments(readFileSync(join(SRC, rel), "utf8")) }));
 
 const ID_LITERAL = /\bid="([^"{}]+)"/g;
 /** `id={`row-${x}`}` -- the static head is all a source read can know about the ids it makes. */
@@ -96,5 +114,37 @@ describe("labels and aria attributes point at ids that exist", () => {
       }
     }
     expect(wrong, "onb-title names the page heading; it must sit on one").toEqual([]);
+  });
+});
+
+describe("every #anchor names a route or something on the page", () => {
+  /** What the router answers, read from App.tsx's table plus its three prefix-matched routes. */
+  const app = files.find((f) => f.path === "App.tsx")!.text;
+  const table = app.slice(app.indexOf("const welcomeRoutes: Record<string, WelcomeView> = {"));
+  const routes = new Set([
+    ...[...table.slice(0, table.indexOf("\n};")).matchAll(/"(#[^"]+)"/g)].map((m) => m[1]),
+    "#reset-password",
+    "#verify-email",
+    "#accept-invite"
+  ]);
+
+  const anchors: { href: string; at: string }[] = [];
+  for (const { path, text } of files) {
+    for (const m of text.matchAll(/href="(#[^"]*)"/g)) {
+      anchors.push({ href: m[1], at: `${path}:${text.slice(0, m.index).split("\n").length}` });
+    }
+  }
+
+  it("finds anchors to check", () => {
+    expect(anchors.length).toBeGreaterThan(150);
+    expect(routes.size).toBeGreaterThan(40);
+  });
+
+  it("resolves every one", () => {
+    const nowhere = anchors.filter((a) => !routes.has(a.href) && !declared.has(a.href.slice(1)));
+    expect(
+      nowhere.map((a) => `href="${a.href}" (${a.at})`),
+      "a link that goes nowhere: it takes focus, reads as a link, and does nothing"
+    ).toEqual([]);
   });
 });
