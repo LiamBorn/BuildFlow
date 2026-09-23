@@ -267,6 +267,7 @@
   font-size: 13px;
   font-weight: 500;
   color: #71717a;
+  text-decoration: none;
   cursor: pointer;
 }
 .welcome-rx .wl-back:hover {

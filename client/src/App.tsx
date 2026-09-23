@@ -5566,6 +5566,15 @@ const OVERVIEW_FAQS: Array<{ q: string; a: string }> = [
   }
 ];
 
+/** onClick for an in-app <a href>: the href is the page's real address (Enter, a new tab, a copied
+    link), and a plain click navigates inside the app instead of reloading it. */
+function navigateInApp(navigate: () => void) {
+  return (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    navigate();
+  };
+}
+
 function WelcomeProductOverviewPage({
   onBack,
   onGetStarted,
@@ -6152,7 +6161,7 @@ function WelcomeProductOverviewPage({
             <strong>BuildFlow</strong>
           </div>
           <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
+            <a href="/" onClick={navigateInApp(onBack)}>
               Back to home
             </a>
             <a href="#privacy">Privacy</a>
@@ -11626,7 +11635,7 @@ function WelcomeCrewSchedulingPage({
             <strong>BuildFlow</strong>
           </div>
           <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
+            <a href="/" onClick={navigateInApp(onBack)}>
               Back to home
             </a>
             <a href="#privacy">Privacy</a>
@@ -11957,7 +11966,7 @@ function WelcomeWaitlistPage({ onBack }: { onBack: () => void }) {
           </div>
           {/* waitlist (removable feature): same live launch countdown on the confirmation screen */}
           <WaitlistCountdown />
-          <a className="wl-back" onClick={onBack} role="button" tabIndex={0}>
+          <a className="wl-back" href="/" onClick={navigateInApp(onBack)}>
             &larr; Back to home
           </a>
         </div>
@@ -12023,7 +12032,7 @@ function WelcomeWaitlistPage({ onBack }: { onBack: () => void }) {
               <b>{count.toLocaleString()}</b> builders already in line
             </span>
           </div>
-          <a className="wl-back" onClick={onBack} role="button" tabIndex={0}>
+          <a className="wl-back" href="/" onClick={navigateInApp(onBack)}>
             &larr; Back to home
           </a>
         </div>
@@ -12381,9 +12390,7 @@ function WelcomeContactSalesPage({ onBack, onGetStarted }: { onBack: () => void;
               <a href="#about">About us</a>
               <a href="#customers">Customers</a>
               <a href="#careers">Careers</a>
-              <a onClick={onBack} role="button" tabIndex={0}>
-                Contact sales
-              </a>
+              <a href="#contact-sales">Contact sales</a>
             </div>
           </nav>
         </div>
@@ -12402,7 +12409,7 @@ function WelcomeContactSalesPage({ onBack, onGetStarted }: { onBack: () => void;
             <strong>BuildFlow</strong>
           </div>
           <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
+            <a href="/" onClick={navigateInApp(onBack)}>
               Back to home
             </a>
             <a href="#privacy">Privacy</a>
@@ -12867,7 +12874,7 @@ function WelcomeLegalPage({
               This document is placeholder template language shared for review. It is{" "}
               <b>not yet in effect and is not a binding agreement</b>, and will apply only once BuildFlow&rsquo;s legal counsel has reviewed
               and published the final version.{" "}
-              <a role="button" tabIndex={0} onClick={onContactSales}>
+              <a href="#contact-sales" onClick={navigateInApp(onContactSales)}>
                 Contact our team
               </a>{" "}
               with any questions.
@@ -12940,7 +12947,7 @@ function WelcomeLegalPage({
               <h3>Questions about our {config.eyebrow.toLowerCase()}?</h3>
               <p>
                 We&rsquo;re happy to walk your team through how BuildFlow handles your data.{" "}
-                <a role="button" tabIndex={0} onClick={onContactSales}>
+                <a href="#contact-sales" onClick={navigateInApp(onContactSales)}>
                   Contact our team
                 </a>{" "}
                 and we&rsquo;ll follow up.
@@ -12957,16 +12964,16 @@ function WelcomeLegalPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Plans</h3>
-              <a onClick={onGetStarted} role="button" tabIndex={0}>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
                 Free
               </a>
-              <a onClick={onGetStarted} role="button" tabIndex={0}>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
                 Pro
               </a>
-              <a onClick={onGetStarted} role="button" tabIndex={0}>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
                 Business
               </a>
-              <a onClick={onContactSales} role="button" tabIndex={0}>
+              <a href="#contact-sales" onClick={navigateInApp(onContactSales)}>
                 Enterprise
               </a>
             </div>
@@ -13002,7 +13009,7 @@ function WelcomeLegalPage({
             <strong>BuildFlow</strong>
           </div>
           <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
+            <a href="/" onClick={navigateInApp(onBack)}>
               Back to home
             </a>
             <a href="#privacy">Privacy</a>
@@ -13886,7 +13893,7 @@ function WelcomeSharedFooter({ onBack }: { onBack: () => void; onGetStarted: () 
           <strong>BuildFlow</strong>
         </div>
         <div className="wx-footer-legal-links">
-          <a onClick={onBack} role="button" tabIndex={0}>
+          <a href="/" onClick={navigateInApp(onBack)}>
             Back to home
           </a>
           <a href="#privacy">Privacy</a>
@@ -14356,7 +14363,7 @@ function WelcomeComparePlansPage({
             <strong>BuildFlow</strong>
           </div>
           <div className="wx-footer-legal-links">
-            <a onClick={onBack} role="button" tabIndex={0}>
+            <a href="/" onClick={navigateInApp(onBack)}>
               Back to home
             </a>
             <a href="#privacy">Privacy</a>
