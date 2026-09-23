@@ -6,11 +6,11 @@ import { JOB_STATUSES } from "@buildflow/shared";
 import { describe, expect, it } from "vitest";
 import { KANBAN_LANES, kanbanLaneOf } from "./lanes";
 import { statusTone } from "./scheduleUtils";
-import { STATUSES, STATUS_PALETTE } from "./statusPalette";
+import { PANEL_STATUSES, PRIORITIES, PRIORITY_LABEL, STATUSES, STATUS_PALETTE, panelStatuses } from "./statusPalette";
 import { SCHEDULE_STATUSES } from "./useScheduleContext";
 
 describe("one status list", () => {
-  it("is the shared list on the filters, the drawer and the palette", () => {
+  it("is the shared list on the filters, the legend and the palette", () => {
     expect(SCHEDULE_STATUSES).toEqual([...JOB_STATUSES]);
     expect(STATUSES).toEqual([...JOB_STATUSES]);
     expect(Object.keys(STATUS_PALETTE).sort()).toEqual([...JOB_STATUSES].sort());
@@ -23,5 +23,18 @@ describe("one status list", () => {
 
   it("gives every status its own tone class", () => {
     expect(new Set(JOB_STATUSES.map(statusTone)).size).toBe(JOB_STATUSES.length);
+  });
+
+  it("gives the job panel three statuses to set by hand, and keeps a job's own", () => {
+    expect(panelStatuses("Confirmed")).toEqual(["Planned", "Confirmed", "Complete"]);
+    // a job the Kanban put somewhere else still shows where it is, in its place in the workflow
+    expect(panelStatuses("At Risk")).toEqual(["Planned", "Confirmed", "At Risk", "Complete"]);
+    for (const status of PANEL_STATUSES) expect(JOB_STATUSES).toContain(status);
+  });
+});
+
+describe("priorities", () => {
+  it("are named as the job panel shows them, most pressing first", () => {
+    expect(PRIORITIES.map((priority) => PRIORITY_LABEL[priority])).toEqual(["Mandatory", "Medium", "Low"]);
   });
 });

@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import type { FormEvent } from "react";
 import { formatScheduleDate } from "../week";
 import { scheduleStatusFilterOptions } from "./shared";
+import { PRIORITIES, PRIORITY_LABEL } from "../statusPalette";
 
 export function ScheduleJobPickerDialog({
   crew,
@@ -216,9 +217,9 @@ export function ScheduleJobPickerDialog({
             <label className="form-field">
               <span>Priority</span>
               <select value={priority} onChange={(event) => setPriority(event.target.value as Job["priority"])}>
-                {["Normal", "Medium", "High"].map((option) => (
+                {PRIORITIES.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {PRIORITY_LABEL[option]}
                   </option>
                 ))}
               </select>

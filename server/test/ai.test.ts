@@ -123,6 +123,8 @@ describe("what the workspace snapshot carries", () => {
     expect(context).toContain("Concrete Crew 1");
     expect(context).toContain("Pour deck");
     expect(context, "the at-risk count is the point of the jobs line").toMatch(/1 at-risk/);
+    // in the words the screen uses: the job panel calls a stored High "Mandatory"
+    expect(context).toContain("priority Mandatory");
   });
 
   /**

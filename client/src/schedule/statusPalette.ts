@@ -31,6 +31,28 @@ export const STATUS_PALETTE: Record<Status, GanttStatus> = {
   "At Risk": { id: "At Risk", name: "At Risk", color: "var(--bf-color-bad)", ...BAD }
 };
 
-/** The statuses in workflow order: the drawer's list and the legend's order. */
+/** The statuses in workflow order: the legend's order, and the order of the job panel's list. */
 export const STATUSES: Status[] = [...JOB_STATUSES];
+
+/**
+ * The statuses a person sets by hand in the job panel (asked for on 2026-09-23 as "Confirmed" and
+ * two more): pencilled in, booked, done. The other seven stay in the program — the Kanban's lanes,
+ * the Add-job picker and imports still set them — and a job already in one of them keeps it: the
+ * panel lists the job's own status with these three, so opening a job and saving it never changes
+ * its status by accident.
+ */
+export const PANEL_STATUSES: Status[] = ["Planned", "Confirmed", "Complete"];
+
+/** The job panel's Status list for a job now at `current`, in workflow order. */
+export const panelStatuses = (current: Status): Status[] =>
+  STATUSES.filter((status) => status === current || PANEL_STATUSES.includes(status));
+
+/** Most pressing first: the order every priority list shows. */
 export const PRIORITIES: Job["priority"][] = ["High", "Medium", "Normal"];
+
+/**
+ * What each priority is called on screen (asked for on 2026-09-23: Mandatory, Medium, Low). The
+ * stored values are older than the names and stay as they are, so no saved job, import or API
+ * caller has to change: High is shown as Mandatory and Normal as Low.
+ */
+export const PRIORITY_LABEL: Record<Job["priority"], string> = { High: "Mandatory", Medium: "Medium", Normal: "Low" };

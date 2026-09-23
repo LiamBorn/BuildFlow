@@ -225,6 +225,12 @@ describe("Schedule pages", () => {
     expect(within(drawer).getByText("Concrete Crew 1")).toBeInTheDocument();
     expect(within(drawer).getByLabelText("Status")).toHaveValue("Confirmed");
     expect(within(drawer).getByLabelText("Priority")).toHaveValue("High");
+    // the panel's own lists: three statuses a person sets by hand, and the priorities by their on-screen names
+    const optionsOf = (label: string) =>
+      Array.from((within(drawer).getByLabelText(label) as HTMLSelectElement).options, (option) => option.textContent);
+    expect(optionsOf("Status")).toEqual(["Planned", "Confirmed", "Complete"]);
+    expect(optionsOf("Priority")).toEqual(["Mandatory", "Medium", "Low"]);
+    expect((within(drawer).getByLabelText("Priority") as HTMLSelectElement).selectedOptions[0]).toHaveTextContent("Mandatory");
     expect(within(drawer).getByLabelText("Start")).toHaveValue("2026-06-15");
     expect(within(drawer).getByLabelText("Finish")).toHaveValue("2026-06-17");
     expect(within(drawer).getByLabelText("Notes")).toHaveValue("Slab pour.");
@@ -234,13 +240,13 @@ describe("Schedule pages", () => {
   });
 
   it("saves a job from the Month calendar drawer with a PATCH", async () => {
-    const updatedJob = { ...bootstrapFixture.jobs[0], status: "In Progress" as const, notes: "Pump on site at 6." };
+    const updatedJob = { ...bootstrapFixture.jobs[0], status: "Complete" as const, notes: "Pump on site at 6." };
     let jobUpdated = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, options?: RequestInit) => {
       if (pathOf(input) === "/api/jobs/j-riverside-concrete") {
         jobUpdated = true;
         expect(options?.method).toBe("PATCH");
-        expect(JSON.parse(String(options?.body))).toMatchObject({ status: "In Progress", notes: "Pump on site at 6." });
+        expect(JSON.parse(String(options?.body))).toMatchObject({ status: "Complete", notes: "Pump on site at 6." });
         return new Response(JSON.stringify(updatedJob), { status: 200 });
       }
       if (pathOf(input) === "/api/bootstrap" && jobUpdated) {
@@ -256,7 +262,7 @@ describe("Schedule pages", () => {
 
     fireEvent.click(chip(RIVERSIDE));
     const drawer = screen.getByRole("dialog", { name: "Riverside Office Building" });
-    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "In Progress" } });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "Complete" } });
     fireEvent.change(within(drawer).getByLabelText("Notes"), { target: { value: "Pump on site at 6." } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
 

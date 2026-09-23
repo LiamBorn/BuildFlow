@@ -1061,9 +1061,13 @@ describe("Conflicts ask before saving", () => {
     render(<MonthPage {...pageProps} />);
     fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
-    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    // the panel's three, with the job's own In Progress kept in its place, so a save never drops it by accident
+    const status = within(drawer).getByLabelText("Status") as HTMLSelectElement;
+    expect(Array.from(status.options, (option) => option.value)).toEqual(["Planned", "Confirmed", "In Progress", "Complete"]);
+    expect(status).toHaveValue("In Progress");
+    fireEvent.change(status, { target: { value: "Complete" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "On Site" }, undefined));
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "Complete" }, undefined));
     expect(rebookSchedule).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await waitFor(() => expect(updateJob).toHaveBeenLastCalledWith("j-pinecrest", { status: "In Progress" }));
@@ -1195,7 +1199,7 @@ describe("When somebody else got there first", () => {
     render(<MonthPage {...pageProps} />);
     fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
-    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "Confirmed" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
 
     // the server's words, not "could not save" — nothing was wrong with the request
@@ -1214,7 +1218,7 @@ describe("When somebody else got there first", () => {
     render(<MonthPage {...pageProps} />);
     fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
-    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "Confirmed" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(updateJob).toHaveBeenCalled());
     // the fixture's jobs carry no version, so this is the shape rather than the number
@@ -1265,9 +1269,9 @@ describe("When the write lands but the board cannot refresh", () => {
     render(<MonthPage {...pageProps} />);
     fireEvent.click(chip(PINECREST));
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
-    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "Confirmed" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
-    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "On Site" }, undefined));
+    await waitFor(() => expect(updateJob).toHaveBeenCalledWith("j-pinecrest", { status: "Confirmed" }, undefined));
     // the save worked, so the drawer closes and the notice carries the news about the board
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Pinecrest Foundations" })).toBeNull());
     expect(notice()).toHaveTextContent("Pinecrest Foundations saved. The board could not refresh");
@@ -1295,7 +1299,7 @@ describe("Transactional writes", () => {
     const drawer = await screen.findByRole("dialog", { name: "Pinecrest Foundations" });
     fireEvent.change(within(drawer).getByLabelText("Start"), { target: { value: "2026-06-24" } });
     fireEvent.change(within(drawer).getByLabelText("Finish"), { target: { value: "2026-06-25" } });
-    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "On Site" } });
+    fireEvent.change(within(drawer).getByLabelText("Status"), { target: { value: "Confirmed" } });
     fireEvent.change(within(drawer).getByLabelText("Notes"), { target: { value: "Pour after the inspection" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(rebookSchedule).toHaveBeenCalledTimes(1));
@@ -1306,7 +1310,7 @@ describe("Transactional writes", () => {
           id: "j-pinecrest",
           startDate: "2026-06-24",
           endDate: "2026-06-25",
-          status: "On Site",
+          status: "Confirmed",
           notes: "Pour after the inspection"
         },
         { op: "move", id: "as-2", date: "2026-06-24" }

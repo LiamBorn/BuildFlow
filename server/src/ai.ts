@@ -44,6 +44,13 @@ Answer using ONLY the workspace snapshot provided in the user message. Be concre
 
 Format for a busy field leader: open with a one-line takeaway, then 2–5 short bullet points. Keep it tight and skimmable. Plain text only (no markdown headers).`;
 
+/**
+ * A job's priority in the words the screen uses. The job panel names the stored High, Medium and
+ * Normal as Mandatory, Medium and Low (2026-09-23), so an answer says "Mandatory" where the person
+ * sees it.
+ */
+const PRIORITY_WORD: Record<string, string> = { High: "Mandatory", Medium: "Medium", Normal: "Low" };
+
 /** Compact, model-friendly summary of the workspace the question is about. */
 export function buildAiContext(data: BootstrapPayload): string {
   const lines: string[] = [];
@@ -69,7 +76,7 @@ export function buildAiContext(data: BootstrapPayload): string {
   lines.push(`\nJobs: ${jobs.length} total; ${atRisk.length} at-risk/delayIQed/waiting-on-materials.`);
   for (const j of cap(atRisk, 10)) {
     lines.push(
-      `- ${j.name} (${j.phase}) — status ${j.status}, priority ${j.priority}, materials ${j.materialsStatus}, ${j.startDate}→${j.endDate}`
+      `- ${j.name} (${j.phase}) — status ${j.status}, priority ${PRIORITY_WORD[j.priority] ?? j.priority}, materials ${j.materialsStatus}, ${j.startDate}→${j.endDate}`
     );
   }
 

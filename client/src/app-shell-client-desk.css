@@ -11745,7 +11745,13 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
 body.bf-shell > .bfsel {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  /* ABOVE EVERY PANEL A FIELD CAN BE IN (2026-09-23). It was 90, and the job and milestone panels
+     are a fixed layer at 95 in the shell (schedule/parts/ScheduleDrawer.tsx, since §83 took them out
+     of the page), so every list and calendar opened from the job panel's Status, Priority, Start and
+     Finish painted UNDER the panel: invisible, and the panel took the clicks. Reported as "make it
+     so that the user can interact with these buttons". tests/side-panels.test.ts holds every
+     overlay below this. */
+  z-index: 100;
   pointer-events: none;
   zoom: var(--bf-ui-scale);
 }
@@ -12026,7 +12032,13 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus[data-bfs
 body.bf-shell > .bfdate {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  /* ABOVE EVERY PANEL A FIELD CAN BE IN (2026-09-23). It was 90, and the job and milestone panels
+     are a fixed layer at 95 in the shell (schedule/parts/ScheduleDrawer.tsx, since §83 took them out
+     of the page), so every list and calendar opened from the job panel's Status, Priority, Start and
+     Finish painted UNDER the panel: invisible, and the panel took the clicks. Reported as "make it
+     so that the user can interact with these buttons". tests/side-panels.test.ts holds every
+     overlay below this. */
+  z-index: 100;
   pointer-events: none;
   zoom: var(--bf-ui-scale);
 }

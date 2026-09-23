@@ -64,6 +64,36 @@ describe("the panels that open from the right", () => {
     expect(declsIn("schedule.css", ".gantt-page .gantt-drawer-layer")["z-index"]).toBe("95");
   });
 
+  /**
+   * THE PROGRAM'S OWN LISTS AND CALENDARS OPEN ABOVE EVERY PANEL (2026-09-23). Every <select> and
+   * date field is drawn by a body-level layer (components/ui/selectMenu.tsx, dateMenu.tsx), and a
+   * list opened from a field inside a panel has to paint over that panel. The job and milestone
+   * panels are a fixed layer at 95, the layers were at 90: the job panel's Status, Priority, Start
+   * and Finish all opened UNDER it — invisible, with the panel taking the clicks — reported as
+   * "make it so that the user can interact with these buttons". Every panel a field can live in is
+   * held below both layers here.
+   */
+  it("opens the program's own lists and calendars above every panel a field can be in", () => {
+    const layers = [
+      declsIn("app-shell-client-desk.css", "body.bf-shell > .bfsel"),
+      declsIn("app-shell-client-desk.css", "body.bf-shell > .bfdate")
+    ];
+    const above = Math.min(...layers.map((layer) => Number(layer["z-index"])));
+    const panels: [string, string][] = [
+      ["schedule.css", ".gantt-page .gantt-drawer-layer"], // the job and milestone panels
+      ["project-dialog-redesign.css", ".pdx"], // every editing dialog
+      ["hs-breeze.css", ".bf-breeze"], // BuildFlow AI
+      ["section-picker.css", ".bfsp"], // Add a section
+      ["notifications-panel.css", ".bfnt"], // the notifications drawer
+      ["styles.css", ".schedule-dialog-backdrop"] // the add-job picker
+    ];
+    for (const [sheet, selector] of panels) {
+      const z = Number(declsIn(sheet, selector)["z-index"]);
+      expect(Number.isFinite(z), `${selector} has a z-index to compare`).toBe(true);
+      expect(z, `${selector} would paint over a list opened inside it`).toBeLessThan(above);
+    }
+  });
+
   it("gives the job drawer a header that stays and a body that scrolls", () => {
     const panel = declsIn("schedule.css", ".gantt-page .gantt-drawer");
     expect(panel.display).toBe("flex");
@@ -98,13 +128,10 @@ describe("the panels that open from the right", () => {
        animation outranks a declaration like this one — a fade here is simply never applied. */
     expect(hidden.opacity, "an opacity the shell's arrival animation will overrule").toBeUndefined();
     // and no Show tab, since there is nothing to bring the rail back to while the drawer is modal
-    expect(
-      declsIn(SKIN, "body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show").display
-    ).toBe("none");
+    expect(declsIn(SKIN, "body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show").display).toBe("none");
 
     /* The person's OWN Hide choice is a different mechanism and must stay untouched: that one is
        `display: none` from section 45, kept in localStorage by railHidden.ts. */
     expect(declsIn(SKIN, ".app-shell.hs-shell.bf-shell .sidebar.hs-rail.is-hidden").display).toBe("none");
   });
-
 });

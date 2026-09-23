@@ -14,7 +14,7 @@ import { ExternalLink, Link2, Unlink } from "lucide-react";
 import type { Job, JobDependency, Status } from "@buildflow/shared";
 import { parseIsoDate } from "../../components/ui/gantt";
 import { type JobSaveResult } from "../hooks";
-import { PRIORITIES, STATUSES } from "../statusPalette";
+import { PRIORITIES, PRIORITY_LABEL, panelStatuses } from "../statusPalette";
 import { ScheduleDrawer } from "./ScheduleDrawer";
 import { CallOffTag, jobCallOffs, useCallOffs } from "../callOffs";
 
@@ -178,7 +178,7 @@ export function JobDrawer({
           <label>
             <span>Status</span>
             <select autoFocus value={status} onChange={(event) => setStatus(event.target.value as Status)}>
-              {STATUSES.map((option) => (
+              {panelStatuses(job.status).map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -190,7 +190,7 @@ export function JobDrawer({
             <select value={priority} onChange={(event) => setPriority(event.target.value as Job["priority"])}>
               {PRIORITIES.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {PRIORITY_LABEL[option]}
                 </option>
               ))}
             </select>
