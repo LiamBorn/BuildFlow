@@ -39,6 +39,7 @@ import type { ScheduleTarget } from "../links";
 import { BackToScheduleButton, SchedulePageFrame, useSchedulePage } from "../page";
 import { insertInGroup, moveInGroup, orderGroupItems } from "../boardOrder";
 import { useBoardOrder } from "../useBoardOrder";
+import { PhaseWeather } from "../../weather/ScheduleWeather";
 
 /** The planner's own order for each day, kept per person (../boardOrder). */
 const MONTH_ORDER_KEY = "schedule:month-order";
@@ -405,7 +406,19 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
           phase={openPhase}
           project={openMarkerProject}
           onClose={() => setOpenMarkerId(null)}
+          onOpenSchedule={onOpenSchedule}
           onSave={(edit) => saveMarker(openMarker, edit)}
+          // the forecast on the days the marker covers: a phase's span, or the completion day
+          weather={
+            openMarkerProject ? (
+              <PhaseWeather
+                projectId={openMarkerProject.id}
+                from={openPhase?.startDate || openMarker.date}
+                to={openMarker.date}
+                today={today}
+              />
+            ) : undefined
+          }
         />
       )}
       <footer className="schedule-board-footer">

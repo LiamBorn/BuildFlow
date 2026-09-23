@@ -13,9 +13,24 @@
  * as of right now users are only able to open up a select amount of jobs to edit them." In the
  * month on the clip, 14 of the 20 chips were markers and opened nothing at all — they were plain
  * `<div>`s, on the reasoning that "a date is all it is". A date is still something you edit.
+ *
+ * THE JOB PANEL'S LAYOUT, PART FOR PART (2026-09-23). Asked for with a screenshot of each: "make
+ * the Month page right sidebar panel look the exact same as Kanban right sidebar panel". Its parts
+ * sit where the job panel's sit: four facts in the same 2 × 2 (Progress and Duration in the same
+ * corners), the WeatherIQ card under them, Start and Finish side by side under the same labels, and
+ * the same three buttons. Nothing shows focus when it opens, as nothing does in the job panel: a
+ * date field focused on arrival rings itself and selects its month (the screenshot's "Phase
+ * finishes"), so the dialog puts focus on its close button instead. What a phase does not have
+ * (crews, materials, links, a priority, notes) is left out rather than invented. That was the choice
+ * put to the user, and the one they took.
+ *
+ * The line saying the jobs keep their own dates used to stand under the fields at all times. It now
+ * appears once a date is changed, the moment it becomes true of something.
  */
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { ExternalLink } from "lucide-react";
 import type { Phase, Project } from "@buildflow/shared";
+import { parseIsoDate } from "../../components/ui/gantt";
 import { ScheduleDrawer } from "./ScheduleDrawer";
 import type { ScheduleMilestone } from "./month";
 
@@ -27,7 +42,9 @@ export function MilestoneDrawer({
   phase,
   project,
   onClose,
-  onSave
+  onOpenSchedule,
+  onSave,
+  weather
 }: {
   milestone: ScheduleMilestone;
   /** The phase the marker stands for, when it is a phase marker. */
@@ -35,11 +52,16 @@ export function MilestoneDrawer({
   /** The project it belongs to — the owner for a completion marker, the parent for a phase. */
   project?: Project;
   onClose: () => void;
+  /** "Open in Schedule": the Schedule overview, as the job panel's button opens it. */
+  onOpenSchedule?: () => void;
   /** Saves it; what comes back says whether it saved and, when it did not, why. */
   onSave: (edit: MilestoneEdit) => Promise<{ saved: boolean; problem?: string } | void>;
+  /** The weather on the days the marker covers, under its facts: WeatherIQ's card. */
+  weather?: ReactNode;
 }) {
   const isPhase = milestone.kind === "phase";
-  const [startDate, setStartDate] = useState(phase?.startDate ?? "");
+  const savedStart = phase?.startDate ?? "";
+  const [startDate, setStartDate] = useState(savedStart);
   const [endDate, setEndDate] = useState(milestone.date);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,6 +94,13 @@ export function MilestoneDrawer({
     }
   };
 
+  // counted the way the job panel counts its own: calendar days, both ends included, as the form has them
+  const days =
+    startDate && endDate
+      ? Math.max(1, Math.round((parseIsoDate(endDate).getTime() - parseIsoDate(startDate).getTime()) / 86_400_000) + 1)
+      : null;
+  const moved = endDate !== milestone.date || (isPhase && startDate !== savedStart);
+
   return (
     <ScheduleDrawer
       title={milestone.title}
@@ -85,54 +114,62 @@ export function MilestoneDrawer({
       onClose={onClose}
     >
       <dl className="gantt-drawer-facts">
-        <div>
-          <dt>Marks</dt>
-          <dd>{isPhase ? "When the phase is due" : "When the project is due"}</dd>
-        </div>
+        {/* NOT "the jobs in this phase" (or their crews and materials, as the job panel shows): there
+            is no such relation to count. A job's `phase` is free text ("Tear-Off Zone A", "Mainline
+            Milling") and a Phase row is a CPM record with its own name ("Tear-Off", "Milling") —
+            measured on the real payloads, 0 of 6 and then 0 of 7 jobs matched a phase exactly, and
+            matching on a prefix is wrong in both directions. A count nobody can derive is not a
+            fact, so the facts here are the marker's own, in the job panel's four places. */}
         <div>
           <dt>Project</dt>
           <dd title={milestone.project}>{milestone.project}</dd>
         </div>
-        {/* NOT "the jobs in this phase": there is no such relation to count. A job's `phase` is
-            free text ("Tear-Off Zone A", "Safety Setup") and a Phase row is a CPM record with its
-            own name ("Tear-Off") — measured on the real payload, 0 of 6 jobs matched a phase
-            exactly, and matching on a prefix is wrong in both directions ("Flashing and Punch"
-            belongs to two of them, "Deck Repair" to none). A count nobody can derive is not a
-            fact, so the phase's own status goes here instead. */}
-        {isPhase && (
-          <div>
-            <dt>Progress</dt>
-            <dd>{phase?.percentComplete ?? 0}% complete</dd>
-          </div>
-        )}
+        <div>
+          <dt>Progress</dt>
+          <dd>{(isPhase ? phase?.percentComplete : project?.percentComplete) ?? 0}% complete</dd>
+        </div>
         <div>
           <dt>Status</dt>
           <dd>{(isPhase ? phase?.status : project?.status) ?? "—"}</dd>
         </div>
+        {isPhase ? (
+          <div>
+            <dt>Duration</dt>
+            <dd>{days === null ? "—" : `${days} day${days === 1 ? "" : "s"}`}</dd>
+          </div>
+        ) : (
+          <div>
+            <dt>Health</dt>
+            <dd>{project?.scheduleHealth ?? "—"}</dd>
+          </div>
+        )}
       </dl>
+      {weather}
       <form className="gantt-drawer-form" onSubmit={submit}>
         {isPhase ? (
           <div className="gantt-drawer-row">
             <label>
-              <span>Phase starts</span>
+              <span>Start</span>
               <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
             </label>
             <label>
-              <span>Phase finishes</span>
-              <input autoFocus type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+              <span>Finish</span>
+              <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
             </label>
           </div>
         ) : (
           <label>
             <span>Target completion</span>
-            <input autoFocus type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
           </label>
         )}
-        <p className="gantt-drawer-note">
-          {isPhase
-            ? "The jobs inside this phase keep their own dates — move them on the calendar to reschedule the work."
-            : "This is the date the project is handed over. The jobs and phases under it keep their own dates."}
-        </p>
+        {moved && (
+          <p className="gantt-drawer-note">
+            {isPhase
+              ? "The jobs inside this phase keep their own dates — move them on the calendar to reschedule the work."
+              : "This is the date the project is handed over. The jobs and phases under it keep their own dates."}
+          </p>
+        )}
         {error && (
           <p className="gantt-drawer-error" role="alert">
             {error}
@@ -145,6 +182,11 @@ export function MilestoneDrawer({
           <button className="hs-btn" type="button" onClick={onClose}>
             Cancel
           </button>
+          {onOpenSchedule && (
+            <button className="hs-btn hs-btn-link" type="button" onClick={onOpenSchedule}>
+              <ExternalLink size={15} /> Open in Schedule
+            </button>
+          )}
         </div>
       </form>
     </ScheduleDrawer>

@@ -518,7 +518,10 @@ describe("Month page", () => {
     render(<MonthPage {...pageProps} data={marked} />);
     const all = chips();
     expect(all.length, "the fixture month has to hold both kinds").toBeGreaterThan(1);
-    expect(all.some((chip) => chip.classList.contains("is-milestone")), "no marker to test").toBe(true);
+    expect(
+      all.some((chip) => chip.classList.contains("is-milestone")),
+      "no marker to test"
+    ).toBe(true);
 
     for (const chip of all) {
       const label = chip.querySelector("strong")?.textContent ?? "";
@@ -545,13 +548,30 @@ describe("Month page", () => {
     render(<MonthPage {...pageProps} data={marked} />);
     fireEvent.click(chips().find((chip) => chip.querySelector("strong")?.textContent === "Foundation Complete")!);
     const drawer = await screen.findByRole("dialog", { name: "Foundation Complete" });
-    // the phase's OWN span, not the job's
-    const starts = within(drawer).getByLabelText("Phase starts") as HTMLInputElement;
-    const finishes = within(drawer).getByLabelText("Phase finishes") as HTMLInputElement;
+    // the phase's OWN span, not the job's — under the job panel's labels, in its places
+    const starts = within(drawer).getByLabelText("Start") as HTMLInputElement;
+    const finishes = within(drawer).getByLabelText("Finish") as HTMLInputElement;
     expect(starts.value).toBe("2026-06-17");
     expect(finishes.value).toBe("2026-06-24");
 
+    /* THE JOB PANEL'S LAYOUT (2026-09-23): "make the Month page right sidebar panel look the exact
+       same as Kanban right sidebar panel". Four facts in its 2 × 2, the WeatherIQ card under them,
+       its three buttons, and no date field ringed and selected on arrival. */
+    expect([...drawer.querySelectorAll(".gantt-drawer-facts dt")].map((term) => term.textContent)).toEqual([
+      "Project",
+      "Progress",
+      "Status",
+      "Duration"
+    ]);
+    expect(within(drawer).getByText("8 days")).toBeInTheDocument();
+    expect(within(drawer).getByRole("region", { name: "WeatherIQ" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: /Open in Schedule/ })).toBeInTheDocument();
+    expect(document.activeElement).not.toBe(finishes);
+    // what a phase's dates do NOT move is said once they are moved, not before
+    expect(drawer.querySelector(".gantt-drawer-note")).toBeNull();
+
     fireEvent.change(finishes, { target: { value: "2026-06-30" } });
+    expect(drawer.querySelector(".gantt-drawer-note")?.textContent).toMatch(/^The jobs inside this phase keep their own dates/);
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
     // both dates ride along, so a start edited in the same visit is not dropped
     await waitFor(() => expect(updatePhase).toHaveBeenCalledWith("phase-1", { startDate: "2026-06-17", endDate: "2026-06-30" }));
@@ -564,7 +584,7 @@ describe("Month page", () => {
     render(<MonthPage {...pageProps} data={marked} />);
     fireEvent.click(chips().find((chip) => chip.querySelector("strong")?.textContent === "Foundation Complete")!);
     const drawer = await screen.findByRole("dialog", { name: "Foundation Complete" });
-    fireEvent.change(within(drawer).getByLabelText("Phase finishes"), { target: { value: "2026-06-01" } });
+    fireEvent.change(within(drawer).getByLabelText("Finish"), { target: { value: "2026-06-01" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
     /* IN THE PANEL, not on the board's notice — which is behind it. The job drawer's rule. */
     await waitFor(() => expect(within(drawer).getByRole("alert")).toHaveTextContent("The finish cannot be before the start."));
@@ -583,7 +603,13 @@ describe("Month page", () => {
     const ctxKey = `bf:schedule:context:${userId}`;
     // parked in NOVEMBER, nowhere near the day the job is about to be made on
     window.localStorage.setItem(ctxKey, JSON.stringify({ weekStart: "2026-11-02", monthAnchor: "2026-06-01" }));
-    vi.mocked(createJob).mockResolvedValueOnce({ ...pinecrestJob, id: "j-new", name: "New Pour", startDate: "2026-06-24", endDate: "2026-06-24" });
+    vi.mocked(createJob).mockResolvedValueOnce({
+      ...pinecrestJob,
+      id: "j-new",
+      name: "New Pour",
+      startDate: "2026-06-24",
+      endDate: "2026-06-24"
+    });
     vi.mocked(assignJob).mockResolvedValueOnce({ id: "as-new" } as never);
 
     render(<MonthPage {...pageProps} />);
@@ -609,7 +635,13 @@ describe("Month page", () => {
     window.localStorage.setItem(ctxKey, JSON.stringify({ weekStart: "2026-11-02", monthAnchor: "2026-06-01" }));
     /* The picker's Start Date is editable, so the day you clicked and the day the job lands on
        are not always the same. The job is the thing that has to be on screen. */
-    vi.mocked(createJob).mockResolvedValueOnce({ ...pinecrestJob, id: "j-later", name: "Later Pour", startDate: "2026-07-08", endDate: "2026-07-08" });
+    vi.mocked(createJob).mockResolvedValueOnce({
+      ...pinecrestJob,
+      id: "j-later",
+      name: "Later Pour",
+      startDate: "2026-07-08",
+      endDate: "2026-07-08"
+    });
     vi.mocked(assignJob).mockResolvedValueOnce({ id: "as-later" } as never);
 
     render(<MonthPage {...pageProps} />);
@@ -632,7 +664,7 @@ describe("Month page", () => {
     fireEvent.click(chips().find((chip) => chip.querySelector("strong")?.textContent === "Certificate of Occupancy")!);
     const drawer = await screen.findByRole("dialog", { name: "Certificate of Occupancy" });
     // a project marker has ONE date and no phase span
-    expect(within(drawer).queryByLabelText("Phase starts")).toBeNull();
+    expect(within(drawer).queryByLabelText("Start")).toBeNull();
     fireEvent.change(within(drawer).getByLabelText("Target completion"), { target: { value: "2026-08-31" } });
     fireEvent.click(within(drawer).getByRole("button", { name: "Save changes" }));
     // the project's PATCH wants every field, so the change rides with the project as it stands
@@ -1482,7 +1514,6 @@ describe("An export says what happened", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /Print week sheets/ }));
     await waitFor(() => expect(notice()).toHaveTextContent("This browser would not open the print view"));
   });
-
 });
 
 describe("What a phone gets", () => {

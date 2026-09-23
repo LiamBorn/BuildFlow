@@ -13,38 +13,14 @@
  *
  * Pure functions: the routes in app.ts read the store, and the store keeps what a person decides.
  */
+import { DEFAULT_JOB_HOURS, jobHours } from "@buildflow/shared";
 import type { Job, Project, SiteWeatherForecast, VarianceProposal, WeatherConflict, WeatherWindow, WorkCalendar } from "@buildflow/shared";
 
-/** A job's clock, "7:00 AM" or "15:30", as "HH:mm". Null when it is not a time. */
-export function parseClock(value: string | undefined): string | null {
-  const text = (value ?? "").trim();
-  const twelve = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?$/i.exec(text);
-  const twentyFour = /^(\d{1,2}):(\d{2})$/.exec(text);
-  let hours: number;
-  let minutes: number;
-  if (twelve) {
-    hours = Number(twelve[1]) % 12;
-    if (twelve[3].toLowerCase() === "p") hours += 12;
-    minutes = Number(twelve[2] ?? 0);
-  } else if (twentyFour) {
-    hours = Number(twentyFour[1]);
-    minutes = Number(twentyFour[2]);
-  } else {
-    return null;
-  }
-  if (hours > 23 || minutes > 59) return null;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-}
-
-/** The program's working day when a job's own times cannot be read: 7:00 AM to 3:30 PM. */
-export const DEFAULT_HOURS = { start: "07:00", end: "15:30" } as const;
-
-/** The hours a job works, as "HH:mm". */
-export function jobHours(job: Pick<Job, "startTime" | "endTime">): { start: string; end: string } {
-  const start = parseClock(job.startTime);
-  const end = parseClock(job.endTime);
-  return start && end && end > start ? { start, end } : { ...DEFAULT_HOURS };
-}
+/* A job's clock and its working day are read in shared (parseClock, jobHours) since 2026-09-23, so
+   the schedule's job panel shows the hours this file finds weather in. The names stay exported
+   here for the route and the tests that import them from this module. */
+export { jobHours, parseClock } from "@buildflow/shared";
+export const DEFAULT_HOURS = DEFAULT_JOB_HOURS;
 
 export type ConflictDraft = Pick<
   WeatherConflict,

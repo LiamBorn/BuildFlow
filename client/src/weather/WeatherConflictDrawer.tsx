@@ -15,15 +15,12 @@
  * Calling a day off and deciding a reschedule are schedule writes: the Workspace Owner and Admins
  * hold them. Anyone else sees the same suggestion with a line saying who can act on it.
  */
-import { useState } from "react";
 import { createPortal } from "react-dom";
 import { CalendarCheck, CalendarX2, X } from "lucide-react";
-import type { BootstrapPayload, ScheduleVariance, SiteWeatherForecast, WeatherConflict } from "@buildflow/shared";
-import { acceptVariance, cancelWeatherConflict, keepWeatherConflict, rejectVariance } from "../api";
+import type { BootstrapPayload, SiteWeatherForecast, WeatherConflict } from "@buildflow/shared";
 import { useModalDialog } from "../schedule/hooks";
-import { CAUSE_LABEL, capital, dateWords, dayName, daySpoken, rowState, spanWords, timeRange, uncheckedReason } from "./weatherIQ";
-
-type Busy = "" | "cancel" | "keep" | "accept" | "reject";
+import { useWeatherDecision } from "./useWeatherDecision";
+import { CAUSE_LABEL, capital, dateWords, dayName, daySpoken, spanWords, timeRange } from "./weatherIQ";
 
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
 
@@ -46,53 +43,19 @@ export function WeatherConflictDrawer({
   onChanged: () => Promise<void>;
 }) {
   const panelRef = useModalDialog<HTMLElement>(onClose);
-  const [busy, setBusy] = useState<Busy>("");
-  const [error, setError] = useState("");
-  // the reschedule a call-off raised, until the Dashboard's own data has it
-  const [raised, setRaised] = useState<ScheduleVariance | null>(null);
+  // the decisions and what they have come to: the same rules the schedule's job panel offers
+  const { busy, error, state, variance, proposal, unchecked, inCharge, who, nobody, callOff, keepOn, reschedule, notNow } =
+    useWeatherDecision(conflict, data, onChanged);
 
   const job = data.jobs.find((item) => item.id === conflict.jobId);
   const project = data.projects.find((item) => item.id === conflict.projectId);
-  const person = (id?: string) => (id ? data.users.find((user) => user.id === id) : undefined);
-  const inCharge = person(conflict.assigneeId);
-  const decider = person(conflict.decidedBy);
-  const variances = raised && !data.variances.some((item) => item.id === raised.id) ? [...data.variances, raised] : data.variances;
-  const variance = conflict.varianceId ? variances.find((item) => item.id === conflict.varianceId) : undefined;
-  const state = rowState(conflict, variances);
   const hold = conflict.severity === "hold";
   const day = dayName(conflict.date, today);
   const hours = timeRange(conflict.start, conflict.end);
   const decided = conflict.decidedAt ? dateWords(conflict.decidedAt.slice(0, 10)) : "";
-  const who = decider ? (decider.id === data.activeUser?.id ? "you" : decider.name) : "someone";
-  const nobody = `Only the Workspace Owner or an Admin can decide this${inCharge ? `; ${inCharge.name} is in charge of the job` : ""}.`;
-
-  async function run(kind: Busy, work: () => Promise<void>) {
-    if (busy) return;
-    setBusy(kind);
-    setError("");
-    try {
-      await work();
-      await onChanged();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "That could not be saved. Try again.");
-    } finally {
-      setBusy("");
-    }
-  }
-
-  const callOff = () =>
-    run("cancel", async () => {
-      const result = await cancelWeatherConflict(conflict.id);
-      setRaised(result.variance);
-    });
-  const keepOn = () => run("keep", async () => void (await keepWeatherConflict(conflict.id)));
-  const reschedule = () => run("accept", async () => void (variance && (await acceptVariance(variance.id, data.activeUser.id))));
-  const notNow = () => run("reject", async () => void (variance && (await rejectVariance(variance.id, data.activeUser.id))));
 
   if (!job || !project) return null;
 
-  const proposal = variance?.proposal;
-  const unchecked = proposal ? uncheckedReason(proposal, conflict.date) : "";
   const phaseOf = (jobId: string, fallback: string) => data.jobs.find((item) => item.id === jobId)?.phase ?? fallback;
 
   return createPortal(
@@ -175,7 +138,7 @@ export function WeatherConflictDrawer({
                     {busy === "keep" ? "Saving" : "Keep it on"}
                   </button>
                   <button className="pdx-danger" type="button" disabled={Boolean(busy)} onClick={callOff}>
-                    <CalendarX2 size={17} /> {busy === "cancel" ? "Calling it off" : `Call off ${day}`}
+                    <CalendarX2 size={17} /> {busy === "cancel" ? "Calling it off" : `Call off ${day === "Today" ? "today" : day}`}
                   </button>
                 </div>
               ) : (

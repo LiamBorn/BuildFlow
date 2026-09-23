@@ -180,6 +180,41 @@ export type Project = {
   longitude: number;
 };
 
+/**
+ * A job's clock, "7:00 AM" or "15:30", as "HH:mm"; null when it is not a time. One reading for
+ * both sides (2026-09-23): the server finds the weather in a job's hours with it and the schedule's
+ * job panel shows the same hours with it, so the two can never disagree about which day is clear.
+ */
+export function parseClock(value: string | undefined): string | null {
+  const text = (value ?? "").trim();
+  const twelve = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?$/i.exec(text);
+  const twentyFour = /^(\d{1,2}):(\d{2})$/.exec(text);
+  let hours: number;
+  let minutes: number;
+  if (twelve) {
+    hours = Number(twelve[1]) % 12;
+    if (twelve[3].toLowerCase() === "p") hours += 12;
+    minutes = Number(twelve[2] ?? 0);
+  } else if (twentyFour) {
+    hours = Number(twentyFour[1]);
+    minutes = Number(twentyFour[2]);
+  } else {
+    return null;
+  }
+  if (hours > 23 || minutes > 59) return null;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+/** The program's working day when a job's own times cannot be read: 7:00 AM to 3:30 PM. */
+export const DEFAULT_JOB_HOURS = { start: "07:00", end: "15:30" } as const;
+
+/** The hours a job works, as "HH:mm". */
+export function jobHours(job: { startTime?: string; endTime?: string }): { start: string; end: string } {
+  const start = parseClock(job.startTime);
+  const end = parseClock(job.endTime);
+  return start && end && end > start ? { start, end } : { ...DEFAULT_JOB_HOURS };
+}
+
 export type UpdateProjectInput = Pick<
   Project,
   | "name"

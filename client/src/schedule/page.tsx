@@ -55,6 +55,7 @@ import type { ScheduleTarget } from "./links";
 import { useScheduleLive } from "./live";
 import { firstOfScheduleMonth } from "./month";
 import { JobDrawer } from "./parts/JobDrawer";
+import { JobWeather } from "../weather/ScheduleWeather";
 import { ScheduleKpiGrid, crewScheduleOrder } from "./parts/shared";
 import { ScheduleJobPickerDialog } from "./parts/week";
 import { getUnassignedJobs } from "./scheduleUtils";
@@ -672,6 +673,7 @@ export function SchedulePageFrame({
     onOpenPage,
     context,
     updateContext,
+    today,
     kpis,
     notice,
     news,
@@ -923,6 +925,8 @@ export function SchedulePageFrame({
           jobsById={jobsById}
           onLink={() => setLinkFrom(selectedJob)}
           onUnlink={(link) => void unlinkJobs(link)}
+          // WeatherIQ on the job's days, with the call-off it suggests (weather/ScheduleWeather.tsx)
+          weather={<JobWeather job={selectedJob} data={data} today={today} reload={reload} />}
           onClose={closeDrawer}
           onOpenSchedule={onOpenSchedule ?? closeDrawer}
           onSave={async (patch) => {

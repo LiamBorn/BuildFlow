@@ -23,27 +23,10 @@
  * like no weather at all.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  ChevronDown,
-  Cloud,
-  CloudDrizzle,
-  CloudFog,
-  CloudLightning,
-  CloudRain,
-  CloudSnow,
-  CloudSun,
-  Droplets,
-  MapPin,
-  Sun,
-  ThermometerSnowflake,
-  ThermometerSun,
-  Wind
-} from "lucide-react";
+import { ChevronDown, CloudSun, Droplets, MapPin } from "lucide-react";
 import type {
   BootstrapPayload,
   SiteWeatherForecast,
-  WeatherCause,
   WeatherForecastDay,
   WeatherForecastPayload,
   WeatherReading,
@@ -53,6 +36,7 @@ import { weatherForecast } from "../api";
 import { AnimatedFigure } from "../components/ui/animated-figure";
 import { WeatherConflictDrawer } from "./WeatherConflictDrawer";
 import { WeatherLocationDrawer } from "./WeatherLocationDrawer";
+import { CAUSE_ICON, CONDITION_ICON } from "./icons";
 import {
   alertRows,
   badgeFor,
@@ -70,7 +54,6 @@ import {
   readingWhen,
   siteName,
   timeRange,
-  type ConditionKind,
   type WeatherRow
 } from "./weatherIQ";
 
@@ -78,26 +61,6 @@ import {
 const REFRESH_MS = 30 * 60_000;
 /** Rows the section lists before it says how many more there are. */
 const ROWS = 4;
-
-const CONDITION_ICON: Record<ConditionKind, LucideIcon> = {
-  clear: Sun,
-  partly: CloudSun,
-  cloudy: Cloud,
-  fog: CloudFog,
-  drizzle: CloudDrizzle,
-  rain: CloudRain,
-  snow: CloudSnow,
-  storm: CloudLightning
-};
-const CAUSE_ICON: Record<WeatherCause, LucideIcon> = {
-  lightning: CloudLightning,
-  rain: CloudRain,
-  snow: CloudSnow,
-  wind: Wind,
-  heat: ThermometerSun,
-  cold: ThermometerSnowflake,
-  fog: CloudFog
-};
 
 const clock = (iso: string) => {
   const at = new Date(iso);
