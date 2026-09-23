@@ -23029,7 +23029,6 @@ function BreezeAssistant({
 
   /** The write half of the import, which runs only once a proposal has been accepted. */
   const commitImportPlan = async (plan: ImportProjectSpec[]) => {
-    const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
     setImporting(true);
     setImportStep("Adding jobs and projects to your BuildFlow schedule…");
     const importedNames: string[] = [];
