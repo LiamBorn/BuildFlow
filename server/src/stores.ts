@@ -7,7 +7,7 @@
 
    - The DEMO org maps to the shared MAIN store (data/buildflow.sqlite), which
      is already seeded AND holds the global tables (auth accounts/sessions,
-     waitlist, sales-desk, subscriptions).
+     waitlist, contact-sales leads, subscriptions).
    - A brand-new org gets an EMPTY store (seedDemo:false → schema only).
    - Stores are created lazily and cached for the process lifetime.
 

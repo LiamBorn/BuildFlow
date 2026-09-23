@@ -3,7 +3,8 @@
  *
  * Two things are worth holding down here, and neither is "does it call Claude".
  *
- * The first is the same invariant the admin portal got wrong and the sales desk got right:
+ * The first is the same invariant the admin portal got wrong and the sales desk got right
+ * (both consoles have since left the repo):
  * when the model is not reachable, say so — never hand back an answer that did not come from
  * it. askBuildFlowAI's contract is that `answer` exists only alongside mode "live".
  *

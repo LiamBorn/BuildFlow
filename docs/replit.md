@@ -12,16 +12,16 @@ It is one process. `npm run build` writes the pages to `client/dist`. `npm start
 (`server/src/serveClient.ts`). It listens on port 4300, and Replit publishes that port as the
 app's address (`.replit`).
 
-The Dev Admin Panel (`admin-portal/`) and the Sales & Support Desk (`sales-desk/`) are separate
-consoles and are not part of this app.
+Those are the only apps in the repository: the Dev Admin Panel and the Sales & Support Desk
+consoles left it on 2026-09-23 (README, "Removed from the repo").
 
 ## Getting it onto Replit
 
 1. On Replit, **Create App → Import from GitHub** and choose `LiamBorn/BuildFlow`. The repository is
    private, so Replit asks for access to it.
-2. **Switch to the branch `redesign/dashboard-21st`** in Replit's Git pane. `main` holds only the
-   first commit, and the product lives on that branch. Alternatively, make it the default branch on
-   GitHub before importing.
+2. **Switch to the branch `redesign/dashboard-21st`** in Replit's Git pane. New work lands on that
+   branch; `main` was brought up to it on 2026-09-23 and only moves when someone moves it.
+   Alternatively, make `redesign/dashboard-21st` the default branch on GitHub before importing.
 3. Press **Run**. The first run installs, builds and starts, which takes a few minutes. The preview
    shows the landing page.
 4. To give it a public address, use **Publish → Reserved VM**. The build and run commands come
@@ -40,7 +40,7 @@ on.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `SMTP_FROM` | Emails really go out: verification, invites, resets, digests. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | Paid plans. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Sign-in and Meetings calendars with Google and Microsoft. Register these redirect URIs with the provider, using the app's address in place of `<address>`: `<address>/api/auth/oauth/google/callback`, `<address>/api/auth/oauth/microsoft/callback`, `<address>/api/calendar/google/callback` and `<address>/api/calendar/microsoft/callback`. |
-| `OPS_ADMIN_TOKEN` | The ops endpoints the Dev Admin Panel calls. |
+| `OPS_ADMIN_TOKEN` | Opens the ops endpoints under `/api/ops` (take and list backups, platform counts, runtime stats), sent as the `x-ops-token` header. In production, leaving it unset keeps them closed. |
 
 `server/.env.example` describes every setting. Never put real values in the repository; Replit's
 Secrets are where they belong.

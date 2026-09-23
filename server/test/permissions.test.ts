@@ -1062,10 +1062,11 @@ describe("a gated route reaches the caller's own workspace, not the shared store
       // `store.` and not `mainStore.` — the control database is a different thing
       if (!/(?<!main)\bstore\.\w/.test(body.join("\n"))) return;
       if (gated(route[2])) return;
-      /* PUBLIC routes are allowed to fall through to the main store, and thirty-odd of
-         them do it on purpose: the waitlist, the updates list, contact-sales, and the
-         whole Sales and Support Desk hold data that belongs to the business rather than
-         to any workspace. What cannot be right is a route that REQUIRES a session — that
+      /* PUBLIC routes are allowed to fall through to the main store, and a few of them
+         do it on purpose: the waitlist, the updates list and contact-sales hold data that
+         belongs to the business rather than to any workspace. (So did the Sales and
+         Support Desk's thirty-odd routes until the desk left the repo on 2026-09-23.)
+         What cannot be right is a route that REQUIRES a session — that
          request is being made on behalf of a workspace, and reaching past it to the
          shared store is the bug this test exists for. */
       const policy = ROUTE_POLICY[`${route[1].toUpperCase()} ${route[2]}` as keyof typeof ROUTE_POLICY];
