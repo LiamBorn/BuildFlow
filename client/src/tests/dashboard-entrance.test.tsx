@@ -108,8 +108,6 @@ describe("the Dashboard's entrance", () => {
   });
 
   it("plays again on the Equipment page when its flyout entry is clicked while it is already showing", async () => {
-    // Equipment is an add-on page: without the product the rail opens the "Get Equipment Tracking" prompt
-    state.bootstrapPayload = { ...bootstrapFixture, selectedProducts: ["equipment-tracking"] };
     render(<App />);
     await enterDashboard();
     const resources = screen.getByRole("button", { name: /^Resources/ });

@@ -129,12 +129,14 @@ describe("BuildFlow app", () => {
     expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
   });
 
-  it("lands removed marketing hashes on the landing page", async () => {
+  it("lands a marketing hash on its own page (the routing came back on 2026-09-23)", async () => {
+    // the marketing pages fell through to the landing hero from the Frost rebuild (2026-09-16) until
+    // getWelcomeViewFromHash became a route table; tests/welcome-routes.test.ts guards the table itself
     window.history.pushState(null, "", "/#help-center");
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: /^Precision by Default\./ })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Help center" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Help center" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^Precision by Default\./ })).not.toBeInTheDocument();
   });
 
   it("opens the create account page from the landing nav", async () => {
@@ -331,7 +333,7 @@ describe("BuildFlow app", () => {
     await completeOnboarding({
       email: "ops@asphalt.test",
       businessType: "Asphalt",
-      products: ["Equipment Tracking"],
+      products: ["Time Cards"],
       plan: "Business"
     });
 
@@ -356,17 +358,19 @@ describe("BuildFlow app", () => {
       buildTutorialSteps({ selectedBusinessType: "Asphalt", selectedPlanId: "business", selectedProductIds }).map((step) => step.title);
 
     const core = titlesFor([]);
-    // (Map & Field Ops was the third add-on until 2026-09-22; it is in the backlog, docs/backlog.md)
-    const withTwo = titlesFor(["equipment-tracking", "time-cards"]);
+    // (Map & Field Ops was an add-on until 2026-09-22 — in the backlog, docs/backlog.md — and Equipment
+    // Tracking until 2026-09-23, when the Equipment page became part of every plan: its lesson is core now)
+    const withTwo = titlesFor(["time-cards", "schedule-ai"]);
 
-    expect(withTwo).toContain("Equipment Tracking lesson");
     expect(withTwo).toContain("Time Cards lesson");
-    expect(titlesFor(["equipment-tracking"])).not.toContain("Time Cards lesson");
-    expect(core).not.toContain("Equipment Tracking lesson");
+    expect(withTwo).toContain("AI lesson");
+    expect(titlesFor(["time-cards"])).not.toContain("AI lesson");
+    expect(core).not.toContain("Time Cards lesson");
+    expect(core).toContain("Equipment");
     expect(withTwo).toHaveLength(core.length + 2);
 
     // and a product chosen twice still earns one lesson
-    expect(titlesFor(["equipment-tracking", "equipment-tracking"])).toHaveLength(core.length + 1);
+    expect(titlesFor(["time-cards", "time-cards"])).toHaveLength(core.length + 1);
   });
 
   /**

@@ -40,7 +40,7 @@ const ASPHALT_SETUP = {
   /* Add-ons stopped being an onboarding question on 2026-09-22 (they are bought in Settings ›
      Billing), so every setup's key is its trade and plan over "core" — the harness accepts the
      list for the call sites that still name one and records none. */
-  products: ["Equipment Tracking"],
+  products: ["Time Cards"],
   plan: "Business" as const
 };
 const ASPHALT_KEY = setupKeyFor("asphalt", "business", []);

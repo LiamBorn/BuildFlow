@@ -125,14 +125,14 @@ describe("BuildFlow API", () => {
       .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
       .expect(201);
 
-    // Paid plan, two add-ons, eight seats → all on the org, plus a 14-day trial.
+    // Paid plan, one add-on, eight seats → all on the org, plus a 14-day trial.
     const setup = await agent
       .post("/api/business-profile")
-      .send({ businessType: "Asphalt", selectedPlan: "business", selectedProducts: ["equipment-tracking", "time-cards"], seats: 8 })
+      .send({ businessType: "Asphalt", selectedPlan: "business", selectedProducts: ["time-cards"], seats: 8 })
       .expect(200);
     expect(setup.body).toMatchObject({
       selectedPlan: "business",
-      selectedProducts: ["equipment-tracking", "time-cards"],
+      selectedProducts: ["time-cards"],
       seats: 8,
       billingStatus: "trial"
     });

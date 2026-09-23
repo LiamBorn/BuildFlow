@@ -43,7 +43,7 @@ Putting it back:
    `"map"` shape and `product-map-field-ops`), the Schedule's weather alert opening the page
    (`schedule/alerts.tsx` sends it to DelayIQs now), the 3.5 release entry in the product
    updates, the four marketing footers' "Map Ops" link, and the server test's product selection
-   (`server/test/api.test.ts` names `equipment-tracking` instead).
+   (`server/test/api.test.ts` named `equipment-tracking` instead, and `time-cards` since Equipment left the add-ons on 2026-09-23).
 
 Still on the site (deliberately left, and worth a decision when the feature returns or if it
 does not): the marketing product page `#map-field-ops`, the solutions page

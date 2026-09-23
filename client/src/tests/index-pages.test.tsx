@@ -18,10 +18,6 @@ function requestBody(fetchMock: { mock: { calls: unknown[] } }, url: string, met
   return JSON.parse(String(call![1]?.body));
 }
 
-/** Equipment is an add-on page (ADD_ON_PAGE_LOCKS): without the Equipment Tracking
-    add-on the rail opens the "Get Equipment Tracking" prompt instead of the page. */
-const equipmentUnlockedFixture: typeof bootstrapFixture = { ...bootstrapFixture, selectedProducts: ["equipment-tracking"] };
-
 /** The index card for a page: the section labelled by its h1 ("Projects", "Crews", ...). */
 async function findIndexCard(title: string) {
   const heading = await screen.findByRole("heading", { level: 1, name: new RegExp(`^${title}`) });
@@ -359,7 +355,7 @@ describe("BuildFlow index pages", () => {
 
   // replaces "renders equipment with the crew-style directory layout"
   it("lists equipment in the index table with status tabs and search", async () => {
-    state.bootstrapPayload = equipmentUnlockedFixture;
+    state.bootstrapPayload = bootstrapFixture;
     render(<App />);
     await enterDashboard();
     await openAppPage("Equipment");
@@ -402,7 +398,7 @@ describe("BuildFlow index pages", () => {
       if (url.includes("/api/bootstrap")) {
         return new Response(
           JSON.stringify({
-            ...equipmentUnlockedFixture,
+            ...bootstrapFixture,
             equipment: created ? [...bootstrapFixture.equipment, newEquipment] : bootstrapFixture.equipment
           }),
           { status: 200 }
@@ -453,7 +449,7 @@ describe("BuildFlow index pages", () => {
         return new Response(null, { status: 204 });
       }
       if (url.includes("/api/bootstrap")) {
-        return new Response(JSON.stringify({ ...equipmentUnlockedFixture, equipment }), { status: 200 });
+        return new Response(JSON.stringify({ ...bootstrapFixture, equipment }), { status: 200 });
       }
       return respondToBuildflowApi(input);
     });

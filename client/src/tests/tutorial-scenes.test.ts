@@ -12,12 +12,12 @@ import type { OnboardingProductId } from "@buildflow/shared";
 import { buildTutorialSteps } from "../App";
 import { TUTORIAL_SCENES, sceneForStep } from "../TutorialStage";
 
-/** Every step the tutorial can build: the core, the Schedule tour and all three add-ons. */
+/** Every step the tutorial can build: the core (Equipment's lesson included since 2026-09-23), the Schedule tour and both add-ons. */
 const everyStep = () =>
   buildTutorialSteps({
     selectedBusinessType: "Asphalt",
     selectedPlanId: "business",
-    selectedProductIds: ["schedule-ai", "time-cards", "equipment-tracking"] as OnboardingProductId[]
+    selectedProductIds: ["schedule-ai", "time-cards"] as OnboardingProductId[]
   });
 
 describe("the tutorial's demonstrations", () => {

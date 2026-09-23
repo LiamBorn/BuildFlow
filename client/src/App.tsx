@@ -686,15 +686,6 @@ type ProgramRegistryEntry = {
 };
 
 const programRegistry: Record<OnboardingProductId, ProgramRegistryEntry> = {
-  "equipment-tracking": {
-    id: "equipment-tracking",
-    label: "Equipment Tracking",
-    description: "See equipment assignment, usage, and maintenance status.",
-    icon: Wrench,
-    tone: "teal",
-    primaryPage: "equipment",
-    relatedPages: []
-  },
   "time-cards": {
     id: "time-cards",
     label: "Time Cards",
@@ -754,19 +745,13 @@ function PageReleaseTag({ page }: { page: Page }) {
 // Programs that aren't part of the workspace yet get a HubSpot-style up-arrow
 // in the navigation: hovering explains the add-on, choosing it prompts where
 // to buy it (Settings → Billing → Add-ons). AI ships in every tier, so it
-// never locks a page.
+// never locks a page; Equipment has been part of every plan since 2026-09-23
+// (it was a $9 add-on), so it never locks one either.
 const ADD_ON_PAGE_LOCKS: Partial<Record<Page, OnboardingProductId>> = {
-  equipment: "equipment-tracking",
   timecard: "time-cards"
 };
 type AddOnCatalogEntry = { price: string; unit: string; includedIn: ProductPlanId[]; pitch: string };
 const ADD_ON_CATALOG: Record<OnboardingProductId, AddOnCatalogEntry> = {
-  "equipment-tracking": {
-    price: "$9",
-    unit: "per user / month",
-    includedIn: ["business", "enterprise"],
-    pitch: "Assignment, utilization, and maintenance status for every machine in the fleet."
-  },
   "time-cards": {
     price: "$8",
     unit: "per user / month",
@@ -1278,7 +1263,6 @@ const productPlans: ProductPlan[] = [
       "Route and Equipment Coordination: routes and machines planned against the same schedule the crews run",
       "DelayIQ Management: delays logged with a cause, a severity and a schedule impact in days",
       "Map & Field Ops Included: live vehicle and equipment locations, traffic routing, and field operations on one map \u2014 a $12 per user add-on on Free and Pro",
-      "Equipment Tracking Included: assignment, utilization, and maintenance status for every machine in the fleet \u2014 a $9 per user add-on on Free and Pro",
       "Time Cards Included: crew hours logged against jobs and approved for payroll and job costing \u2014 an $8 per user add-on on Free and Pro",
       "Priority Support: a faster queue than the standard support on Pro"
     ],
@@ -1430,7 +1414,7 @@ const PLAN_FAQS: Partial<Record<ProductPlanId, Array<{ q: string; a: string }>>>
     },
     {
       q: "Are the add-on modules included?",
-      a: "Yes, all three. Map & Field Ops, Equipment Tracking and Time cards come with Business at no extra charge. On Free or Pro they are $12, $9 and $8 per user per month."
+      a: "Yes, both. Map & Field Ops and Time cards come with Business at no extra charge; on Free or Pro they are $12 and $8 per user per month. Equipment Tracking is part of every plan."
     },
     {
       q: "Is Business worth it over Pro plus add-ons?",
@@ -1877,7 +1861,16 @@ export function buildTutorialSteps({
       requirement: "Create and schedule a job to continue."
     },
     // the guided tour of the Schedule category, one stop per view (client/src/schedule/tour.ts)
-    ...scheduleTourSteps
+    ...scheduleTourSteps,
+    // Equipment is part of every plan (2026-09-23), so its lesson is a core one
+    {
+      id: "equipment-overview",
+      title: "Equipment",
+      shortTitle: "Equipment",
+      body: "Equipment shows fleet availability, current assignments, maintenance, and assets already committed to work.",
+      page: "equipment",
+      targetId: "equipment-page-title"
+    }
   ];
 
   // Keyed by the paid add-ons in `onboardingProductOptions`; the base product's
@@ -1901,16 +1894,6 @@ export function buildTutorialSteps({
         body: "TimeCard is where crews log hours against jobs, and where you review and approve them for payroll and job costing.",
         page: "timecard",
         targetId: "timecard-page-title"
-      }
-    ],
-    "equipment-tracking": [
-      {
-        id: "product-equipment",
-        title: "Equipment Tracking lesson",
-        shortTitle: "Equipment Tracking lesson",
-        body: "Equipment shows fleet availability, current assignments, maintenance, and assets already committed to work.",
-        page: "equipment",
-        targetId: "equipment-page-title"
       }
     ]
   };
@@ -5432,7 +5415,7 @@ const OVERVIEW_RELEASE_PRODUCT: Partial<Record<Page, { label: string; imageKey?:
   reports: { label: "Production Reports" },
   materials: { label: "Materials Readiness" },
   field: { label: "Field Updates & DelayIQs" },
-  equipment: { label: "Equipment Tracking", addOn: "equipment-tracking" }
+  equipment: { label: "Equipment Tracking" }
 };
 
 /** Per-release shot overrides, so two releases on the same product don't repeat a photo. */
@@ -5468,7 +5451,7 @@ const OVERVIEW_FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: "Do we have to buy every product?",
-    a: "No. The core schedule is one product, and Map & Field Ops, Equipment Tracking, Time Cards and Schedule AI are add-ons you turn on when you need them. Each one is priced per user per month, and some are included with Business."
+    a: "No. The core schedule is one product (Equipment Tracking comes with it), and Map & Field Ops, Time Cards and Schedule AI are add-ons you turn on when you need them. Each one is priced per user per month, and some are included with Business."
   },
   {
     q: "How long does it take to get running?",
@@ -6123,7 +6106,7 @@ const PLANS_FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: "Which modules cost extra?",
-    a: "Map & Field Ops at $12, Equipment Tracking at $9 and Time cards at $8 per user per month. All three are included with Business and Enterprise, so on Free or Pro you add only the ones you need."
+    a: "Map & Field Ops at $12 and Time cards at $8 per user per month. Both are included with Business and Enterprise, so on Free or Pro you add only the ones you need. Equipment Tracking is part of every plan."
   },
   {
     q: "Can we move between plans later?",
@@ -6272,7 +6255,7 @@ function WelcomePlansOverviewPage({
         tone: "ready"
       },
       { icon: Route, title: "Route dispatch", sub: "Map & Field Ops at no extra charge", badge: "INCLUDED", tone: "ready" },
-      { icon: Wrench, title: "Equipment context", sub: "Equipment Tracking and Time cards, included", badge: "INCLUDED", tone: "ready" },
+      { icon: Wrench, title: "Equipment context", sub: "Time cards included; Equipment Tracking is in every plan", badge: "INCLUDED", tone: "ready" },
       {
         icon: ShieldAlert,
         title: "Field permissions",
@@ -10367,7 +10350,7 @@ const EQUIPMENT_TRACKING_PAGE_CONTENT: ProductPageContent = {
   faqs: [
     {
       q: "Is Equipment Tracking included in our plan?",
-      a: "It is an add-on at $9 per user per month, and it comes with the Business and Enterprise plans. On Free or Pro you can add it to the seats that need it rather than the whole company."
+      a: "Yes. Equipment Tracking is part of every BuildFlow plan, Free included \u2014 no add-on and no per-seat charge."
     },
     {
       q: "Does this show me where a machine is?",

@@ -59,12 +59,9 @@ export type BusinessTypeId = (typeof businessTypeOptions)[number];
  */
 export const onboardingProductOptions = [
   // "map-field-ops" (Map & Field Ops) was here until 2026-09-22; the page is in the backlog
-  // (docs/backlog.md). A selection stored under its id is filtered out on both sides.
-  {
-    id: "equipment-tracking",
-    label: "Equipment Tracking",
-    description: "See equipment assignment, usage, and maintenance status."
-  },
+  // (docs/backlog.md). "equipment-tracking" (Equipment Tracking) was here until 2026-09-23,
+  // when the Equipment page became part of every plan. A selection stored under either id
+  // is filtered out on both sides.
   {
     id: "time-cards",
     label: "Time Cards",
