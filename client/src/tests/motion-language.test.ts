@@ -23,7 +23,7 @@
  */
 import { describe, expect, it } from "vitest";
 import postcss, { type Declaration, type Rule } from "postcss";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -518,7 +518,15 @@ describe("the reduced-motion branches the suite cannot execute", () => {
     // boolean replaces 'auto' and removes that gate, so the obvious
     // "useChartAnimation" helper would make reduced motion worse. The only licensed
     // explicit value is `false`, which is strictly less motion.
-    for (const file of ["App.tsx", "TimeCard.tsx"]) {
+    /* Every file that imports recharts, found rather than listed. This was ["App.tsx",
+       "TimeCard.tsx"] until the charts moved into charts/AppCharts.tsx to be loaded on demand,
+       at which point the list silently stopped covering the file holding most of the charts. A
+       derived list cannot drift out of date the same way. */
+    const chartFiles = readdirSync(SRC, { recursive: true })
+      .filter((rel) => /\.tsx?$/.test(rel) && !/\.test\.tsx?$/.test(rel))
+      .filter((rel) => read(rel).includes('from "recharts"'));
+    expect(chartFiles.length, "no file imports recharts — this scan has stopped reading").toBeGreaterThanOrEqual(2);
+    for (const file of chartFiles) {
       expect(read(file), `${file} must not force recharts animation on`).not.toMatch(/isAnimationActive=\{true\}/);
     }
     // and every TimeCard chart element has its duration pinned rather than inheriting a

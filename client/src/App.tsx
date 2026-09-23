@@ -1,5 +1,7 @@
 import {
   Fragment,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -126,20 +128,6 @@ import {
   Zap
 } from "lucide-react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart as RechartsLineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
-import {
   JOB_STATUSES,
   businessTypeOptions,
   defaultCrewRate,
@@ -257,7 +245,6 @@ import { InviteTeamPage } from "./onboarding/InviteTeamPage";
 import { checkInviteRows } from "./invites";
 import { AppFrame, PageSwap, PanelGoo, SegmentPill, TextReveal } from "./motion";
 import { AiProposalCard, ProposalFailed, type AiProposal } from "./components/ui/aiProposal";
-import { TimeCardPage, TimeCardDashboardCards } from "./TimeCard";
 import { GanttPage } from "./schedule/pages/GanttPage";
 import { DxTilt, KpiCard, isText, deriveScheduleMilestones, formatScheduleDate } from "./schedule/parts";
 import { KanbanPage } from "./schedule/pages/KanbanPage";
@@ -305,6 +292,32 @@ import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
 import { useRecordFocus, type RecordFocusRequest } from "./recordFocus";
 import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
+
+/*
+ * Time cards load when someone opens them, not when the landing page does.
+ *
+ * TimeCard.tsx and the recharts it draws with are 26 kB gzipped of a 560 kB bundle, and nothing
+ * outside the signed-in app renders them -- a visitor reading the marketing pages was downloading
+ * the whole time-card feature to look at a footer. Both exports come from the same module, so the
+ * first of them to render fetches one chunk and the second is already there.
+ */
+/*
+ * recharts arrives with the first chart, not with the landing page.
+ *
+ * It and its d3 dependencies are 113 kB gzipped of a 560 kB bundle. Charts are drawn on four
+ * signed-in pages, so a visitor reading the marketing site was paying for a charting library it
+ * never used. charts/AppCharts.tsx holds the chart JSX unchanged; these four share one chunk, so
+ * whichever page draws first pays for it and the rest are free.
+ */
+const DonutChart = lazy(() => import("./charts/AppCharts").then((m) => ({ default: m.DonutChart })));
+const ImpactBarChart = lazy(() => import("./charts/AppCharts").then((m) => ({ default: m.ImpactBarChart })));
+const PlannedActualChart = lazy(() => import("./charts/AppCharts").then((m) => ({ default: m.PlannedActualChart })));
+const BacklogChart = lazy(() => import("./charts/AppCharts").then((m) => ({ default: m.BacklogChart })));
+
+const TimeCardPage = lazy(() => import("./TimeCard").then((m) => ({ default: m.TimeCardPage })));
+const TimeCardDashboardCards = lazy(() =>
+  import("./TimeCard").then((m) => ({ default: m.TimeCardDashboardCards }))
+);
 
 type Page =
   | "welcome"
@@ -3316,7 +3329,11 @@ function App() {
               <DelayIQsPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
             )}
             {page === "reports" && <ReportsPage key={pageEntrance} data={data} />}
-            {page === "timecard" && <TimeCardPage key={pageEntrance} data={data} />}
+            {page === "timecard" && (
+              <Suspense fallback={null}>
+                <TimeCardPage key={pageEntrance} data={data} />
+              </Suspense>
+            )}
             {page === "settings" && (
               <SettingsPage
                 key={pageEntrance}
@@ -24370,15 +24387,16 @@ function Dashboard({
       <div className="cc-legacy-panel">
         {materialCounts.length > 0 ? (
           <div className="chart-row">
-            <ResponsiveContainer width="48%" height={190}>
-              <PieChart>
-                <Pie data={materialCounts} dataKey="value" innerRadius={42} outerRadius={78} paddingAngle={1}>
-                  {materialCounts.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<div style={{ width: "48%", height: 190 }} aria-hidden="true" />}>
+              <DonutChart
+                data={materialCounts}
+                width="48%"
+                height={190}
+                innerRadius={42}
+                outerRadius={78}
+                paddingAngle={1}
+              />
+            </Suspense>
             <div className="legend-list">
               {materialCounts.map((item) => (
                 <span key={item.name}>
@@ -24954,11 +24972,13 @@ function Dashboard({
         </section>
 
         <section data-reveal>
-          <TimeCardDashboardCards
-            data={data}
-            onOpen={() => setPage("timecard")}
-            locked={!isAddOnUnlocked("time-cards", selectedProductIds, selectedPlanId)}
-          />
+          <Suspense fallback={null}>
+            <TimeCardDashboardCards
+              data={data}
+              onOpen={() => setPage("timecard")}
+              locked={!isAddOnUnlocked("time-cards", selectedProductIds, selectedPlanId)}
+            />
+          </Suspense>
         </section>
       </div>
     </div>
@@ -26225,15 +26245,16 @@ function ProjectsPage({
             <div className="proj-health">
               <div className="proj-health-ring">
                 {healthDonut.length ? (
-                  <ResponsiveContainer width="100%" height={150}>
-                    <PieChart>
-                      <Pie data={healthDonut} dataKey="value" innerRadius={48} outerRadius={68} paddingAngle={2} stroke="none">
-                        {healthDonut.map((slice) => (
-                          <Cell key={slice.name} fill={slice.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <Suspense fallback={<div style={{ height: 150 }} aria-hidden="true" />}>
+                    <DonutChart
+                      data={healthDonut}
+                      height={150}
+                      innerRadius={48}
+                      outerRadius={68}
+                      paddingAngle={2}
+                      stroke="none"
+                    />
+                  </Suspense>
                 ) : (
                   <div className="proj-health-empty">No data</div>
                 )}
@@ -28973,15 +28994,11 @@ function DelayIQsPage({
           </Panel>
           <Panel title="Impact ForecastIQ">
             {data.delayIQs.length > 0 ? (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={data.delayIQs.map((delayIQ) => ({ name: delayIQ.title.slice(0, 12), days: delayIQ.impactDays }))}>
-                  <CartesianGrid stroke="rgba(28, 28, 26, 0.07)" />
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                  <Tooltip />
-                  <Bar dataKey="days" fill="var(--bf-color-bad)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<div style={{ height: 220 }} aria-hidden="true" />}>
+                <ImpactBarChart
+                  data={data.delayIQs.map((delayIQ) => ({ name: delayIQ.title.slice(0, 12), days: delayIQ.impactDays }))}
+                />
+              </Suspense>
             ) : (
               <InlineEmptyState icon={LineChart} title="No delayIQ forecastIQ yet" detail="ForecastIQ starts once delayIQs are logged." />
             )}
@@ -29147,22 +29164,9 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
             <h2>Planned vs Actual Hours</h2>
           </header>
           <div className="reports-chart-canvas">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={plannedActualHours} barGap={8} margin={{ top: 10, right: 18, bottom: 4, left: -8 }}>
-                <CartesianGrid stroke="var(--bf-line-solid)" strokeDasharray="4 6" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }} />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  ticks={[0, 1500, 3000, 4500, 6000]}
-                  domain={[0, 6500]}
-                  tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }}
-                />
-                <Tooltip cursor={{ fill: "var(--bf-hover)" }} />
-                <Bar dataKey="planned" fill="var(--bf-color-series-1)" radius={[5, 5, 0, 0]} barSize={22} />
-                <Bar dataKey="actual" fill="var(--bf-color-series-2)" radius={[5, 5, 0, 0]} barSize={22} />
-              </BarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<div style={{ height: 260 }} aria-hidden="true" />}>
+              <PlannedActualChart data={plannedActualHours} />
+            </Suspense>
             <div className="reports-legend" aria-hidden="true">
               <span>
                 <i className="planned" />
@@ -29181,28 +29185,9 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
             <h2>Backlog ForecastIQ (Hours)</h2>
           </header>
           <div className="reports-chart-canvas">
-            <ResponsiveContainer width="100%" height={260}>
-              <RechartsLineChart data={backlogForecastIQ} margin={{ top: 10, right: 18, bottom: 6, left: -8 }}>
-                <CartesianGrid stroke="var(--bf-line-solid)" strokeDasharray="4 6" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }} />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  ticks={[0, 2000, 4000, 6000, 8000]}
-                  domain={[0, 8200]}
-                  tick={{ fill: "var(--bf-ink-faint)", fontSize: 12 }}
-                />
-                <Tooltip content={<ReportsBacklogTooltip />} cursor={{ stroke: "#ccd5df", strokeWidth: 2 }} />
-                <Line
-                  type="monotone"
-                  dataKey="backlog"
-                  stroke="var(--bf-color-series-2)"
-                  strokeWidth={3}
-                  dot={{ fill: "var(--bf-color-series-2)", r: 5, stroke: "var(--bf-color-series-2)" }}
-                  activeDot={{ fill: "var(--bf-color-series-2)", r: 6, stroke: "#ffffff", strokeWidth: 3 }}
-                />
-              </RechartsLineChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<div style={{ height: 260 }} aria-hidden="true" />}>
+              <BacklogChart data={backlogForecastIQ} tooltip={<ReportsBacklogTooltip />} />
+            </Suspense>
           </div>
         </article>
       </section>

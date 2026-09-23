@@ -505,7 +505,12 @@ describe("the Client Desk skin", () => {
        rule that used to sit here silently beat it — an SVG fill on the element is a
        presentation attribute, so any rule wins over it. */
     expect(declsOf(`${S} .delayIQ-rx .recharts-bar-rectangle path`).fill).toBeUndefined();
-    expect(readFileSync(join(SRC, "App.tsx"), "utf8")).toContain('<Bar dataKey="days" fill="var(--bf-color-bad)"');
+    /* The chart JSX moved out of App.tsx into charts/AppCharts.tsx so recharts could be loaded on
+       demand instead of by every marketing visitor. What is being pinned is unchanged: the fill
+       comes from the chart, not from a rule here. */
+    expect(readFileSync(join(SRC, "charts", "AppCharts.tsx"), "utf8")).toContain(
+      '<Bar dataKey="days" fill="var(--bf-color-bad)"'
+    );
     expect(declsOf(`${S} .delayIQ-rx .hs-index-rail > *`)["animation-delay"]).toContain("var(--bfe-r, 0)");
   });
 
