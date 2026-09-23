@@ -4420,7 +4420,6 @@ function WelcomePage({
           key={welcomeView}
           doc={welcomeView}
           onBack={showWelcomeHome}
-          onGetStarted={showCreateAccountPage}
           onContactSales={showContactSalesPage}
         />
       ) : welcomeView === "templates" ? (
@@ -12772,12 +12771,10 @@ const legalDocs: Record<LegalDocId, LegalDocConfig> = {
 function WelcomeLegalPage({
   doc,
   onBack,
-  onGetStarted,
   onContactSales
 }: {
   doc: LegalDocId;
   onBack: () => void;
-  onGetStarted: () => void;
   onContactSales: () => void;
 }) {
   const rootRef = useRef<HTMLElement>(null);
@@ -12964,18 +12961,10 @@ function WelcomeLegalPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Plans</h3>
-              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
-                Free
-              </a>
-              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
-                Pro
-              </a>
-              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
-                Business
-              </a>
-              <a href="#contact-sales" onClick={navigateInApp(onContactSales)}>
-                Enterprise
-              </a>
+              <a href="#free-plan">Free</a>
+              <a href="#pro-plan">Pro</a>
+              <a href="#business-plan">Business</a>
+              <a href="#enterprise-plan">Enterprise</a>
             </div>
             <div>
               <h3>Resources</h3>
