@@ -23025,6 +23025,7 @@ function BreezeAssistant({
     let createdProjects = 0;
     let createdJobs = 0;
     let skippedBookings = 0;
+    let stoppedEarly = false;
     try {
       for (const spec of plan) {
         const project = await createProject(spec.input);
@@ -23054,29 +23055,34 @@ function BreezeAssistant({
           "I couldn't reach the schedule service to finish the import. Make sure BuildFlow's backend is running, then try again."
         );
       }
+      /* Something was created and then the run stopped. The same rule applies to a partial
+         import as to a failed one: the message below must not call it finished. */
+      stoppedEarly = true;
     }
 
-    setImportStep("Optimizing the imported schedule…");
-    await wait(850);
     setImporting(false);
     setMessages((prev) => [
       ...prev,
       {
         id: `m-${Date.now()}-a`,
         role: "assistant",
-        text: `Done — I read your old schedule and built ${createdJobs} jobs across ${createdProjects} projects, then placed them on your BuildFlow schedule (open the Schedule tab to see them).${skippedBookings > 0 ? ` ${skippedBookings} booking${skippedBookings === 1 ? " was" : "s were"} skipped because the crew was already booked that day — those jobs wait in the unbooked queue on the Schedule landing.` : ""} Here's what came over:`,
+        text: `${
+          stoppedEarly
+            ? `I got part of the way: ${createdJobs} jobs across ${createdProjects} of the ${plan.length} projects reached your BuildFlow schedule before the schedule service stopped answering. The rest were not created — run the import again to finish.`
+            : `Done — I read your old schedule and built ${createdJobs} jobs across ${createdProjects} projects, then placed them on your BuildFlow schedule (open the Schedule tab to see them).`
+        }${skippedBookings > 0 ? ` ${skippedBookings} booking${skippedBookings === 1 ? " was" : "s were"} skipped because the crew was already booked that day — those jobs wait in the unbooked queue on the Schedule landing.` : ""} Here's what came over:`,
         bullets: importedNames
       },
       {
-        id: `m-${Date.now()}-opt`,
+        /* This used to claim four optimisations -- sequencing the critical path, balancing
+           crews, front-loading pours, flagging materials -- after an 850ms wait labelled
+           "Optimizing the imported schedule…". None of it happened: the import creates
+           projects, creates jobs, assigns crews, reloads. There is no sequencing or balancing
+           code in the client, the server or shared to reach. A PM reading that would believe
+           their pours had been ordered and their crews levelled. */
+        id: `m-${Date.now()}-next`,
         role: "assistant",
-        text: "And here's how I optimized the imported plan:",
-        bullets: [
-          "Sequenced sitework and pours before framing and MEP to protect each project's critical path.",
-          "Balanced the imported jobs across your available crews so no single team is overbooked.",
-          "Front-loaded the high-priority concrete pours to early-week slots for better weather windows.",
-          "Flagged jobs waiting on materials so you can expedite deliveries before their start dates."
-        ],
+        text: "Nothing has been re-sequenced: every job sits on the date it had in your old schedule, with the crew it came with. Want me to look over it?",
         suggestions: ["What's at risk?", "Suggestions to optimize my week"]
       }
     ]);
