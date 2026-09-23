@@ -149,6 +149,25 @@ describe("every #anchor names a route or something on the page", () => {
   });
 });
 
+/**
+ * The end of a JSX opening tag. Cannot be `<tag[^>]*>`: `onClick={() => …}` holds a `>` that
+ * stops the match inside the attributes.
+ */
+const closeOfTagAt = (src: string, start: number) => {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = start; i < src.length; i += 1) {
+    const c = src[i];
+    if (quote) {
+      if (c === quote && src[i - 1] !== "\\") quote = null;
+    } else if (c === '"' || c === "'" || c === "`") quote = c;
+    else if (c === "{") depth += 1;
+    else if (c === "}") depth -= 1;
+    else if (c === ">" && depth === 0) return i;
+  }
+  return -1;
+};
+
 describe("an icon-only button says what it does", () => {
   /**
    * A button whose only content is an icon has no accessible name unless one is given. A screen
@@ -163,20 +182,6 @@ describe("an icon-only button says what it does", () => {
    * does not mean "icon": `<SlideLabel text="Log in" />` and `<ScheduleBadge status={s} />` both
    * render text, so only children imported from lucide-react count.
    */
-  const closeOfTag = (src: string, start: number) => {
-    let depth = 0;
-    let quote: string | null = null;
-    for (let i = start; i < src.length; i += 1) {
-      const c = src[i];
-      if (quote) {
-        if (c === quote && src[i - 1] !== "\\") quote = null;
-      } else if (c === '"' || c === "'" || c === "`") quote = c;
-      else if (c === "{") depth += 1;
-      else if (c === "}") depth -= 1;
-      else if (c === ">" && depth === 0) return i;
-    }
-    return -1;
-  };
 
   const lucideNames = (src: string) => {
     const names = new Set<string>();
@@ -194,7 +199,7 @@ describe("an icon-only button says what it does", () => {
   for (const { path, text } of files) {
     const icons = lucideNames(text);
     for (const m of text.matchAll(/<button\b/g)) {
-      const gt = closeOfTag(text, m.index);
+      const gt = closeOfTagAt(text, m.index);
       if (gt === -1 || text[gt - 1] === "/") continue;
       const end = text.indexOf("</button>", gt);
       if (end === -1) continue;
@@ -219,5 +224,78 @@ describe("an icon-only button says what it does", () => {
 
   it("gives every icon-only button an accessible name", () => {
     expect(nameless, "a screen reader announces these as \"button\" and nothing more").toEqual([]);
+  });
+});
+
+describe("every form control has an accessible name", () => {
+  /**
+   * A control with no name is announced as "edit text, blank" — the screen reader reads the box
+   * and not what goes in it. Like the icon-only button, it is invisible to anyone who can see the
+   * layout, because the visual label is sitting right there unassociated.
+   *
+   * Four ways a control is named, and a scan that knows only the first one is useless: the first
+   * version of this reported 83 of 185 controls unnamed, and 81 of those 83 were false. It could
+   * not see `<Field label="Colors" htmlFor={colorsId}>` pairing a variable id, and it could not
+   * see `<label>Site <input /></label>` wrapping one. It also stripped comments before counting
+   * lines, so every position it printed was wrong — App.tsx:12030 named an `<a>`.
+   */
+  const CONTROL = /<(input|select|textarea)[\s>]/g;
+  const EXEMPT_TYPE = /type=\{?["']?(hidden|submit|button|reset|image)/;
+
+  /**
+   * A `display: none` control is not in the accessibility tree and cannot be focused, so there is
+   * nothing to name — the standard hidden `<input type="file">` behind a "Choose file" button.
+   * Read from the stylesheets rather than allowlisted, so that un-hiding one brings it back into
+   * this test. A class hidden in one rule and shown in another would be exempted wrongly; that
+   * direction only ever loses a catch, and no file input in this codebase is styled that way.
+   */
+  const hiddenClasses = new Set<string>();
+  for (const rel of readdirSync(SRC, { recursive: true })) {
+    if (!/\.css$/.test(rel)) continue;
+    const css = readFileSync(join(SRC, rel), "utf8");
+    for (const m of css.matchAll(/\.([\w-]+)\s*\{([^}]*)\}/g)) {
+      if (/display\s*:\s*none/.test(m[2])) hiddenClasses.add(m[1]);
+    }
+  }
+
+  /** Everything a `<label>` points at: `htmlFor="x"`, `htmlFor={x}`, and a component that forwards it. */
+  const labelled = new Set<string>();
+  for (const { text } of files) {
+    for (const m of text.matchAll(/htmlFor=(?:\{([^}]+)\}|"([^"]+)")/g)) {
+      labelled.add((m[1] ?? m[2]).trim());
+    }
+  }
+
+  const nameless: string[] = [];
+  let scanned = 0;
+  for (const { path, text } of files) {
+    /* `<label>…</label>` spans, for a control named by being wrapped in one. */
+    const wraps: [number, number][] = [];
+    for (const m of text.matchAll(/<label[\s>]/g)) {
+      const end = text.indexOf("</label>", m.index);
+      if (end !== -1) wraps.push([m.index, end]);
+    }
+    for (const m of text.matchAll(CONTROL)) {
+      const gt = closeOfTagAt(text, m.index);
+      if (gt === -1) continue;
+      scanned += 1;
+      const tag = text.slice(m.index, gt + 1);
+      if (EXEMPT_TYPE.test(tag)) continue;
+      if (/\baria-label\b|\baria-labelledby\b|\btitle=/.test(tag)) continue;
+      if (wraps.some(([a, b]) => a < m.index && m.index < b)) continue;
+      const id = /\bid=(?:\{([^}]+)\}|"([^"]+)")/.exec(tag);
+      if (id && labelled.has((id[1] ?? id[2]).trim())) continue;
+      const cls = /className="([^"]*)"/.exec(tag);
+      if (cls && cls[1].split(/\s+/).some((c) => hiddenClasses.has(c))) continue;
+      nameless.push(`<${m[1]}> (${path}:${text.slice(0, m.index).split("\n").length})`);
+    }
+  }
+
+  it("finds controls to check", () => {
+    expect(scanned).toBeGreaterThan(150);
+  });
+
+  it("names every one", () => {
+    expect(nameless, 'a screen reader reads these as "edit text, blank"').toEqual([]);
   });
 });
