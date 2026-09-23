@@ -23,6 +23,7 @@ import { CalendarClock } from "lucide-react";
 import { calendarConnectUrl, calendarStatus, disconnectCalendar, type CalendarProviderId, type CalendarStatus } from "./api";
 import { CALENDAR_NAME, PROVIDER_IDS, PROVIDER_LABEL } from "./meetings/calendarModel";
 import { MeetingsCalendar } from "./meetings/MeetingsCalendar";
+import { SignInWaiting, useSignInWindow, type SignInResult } from "./meetings/signInWindow";
 
 const NOT_CONNECTED: CalendarStatus = {
   providers: {
@@ -65,7 +66,7 @@ function readStatus(value: unknown): CalendarStatus {
 const REASONS: Record<string, string> = {
   access_denied: "the request was cancelled on the consent screen",
   state_mismatch: "the sign-in expired or was started in another tab. Try again from here",
-  not_configured: "it is not set up on this deployment yet",
+  not_configured: "it is not switched on for this BuildFlow yet",
   no_code: "the provider sent nothing back",
   unknown_provider: "that provider is not one BuildFlow connects to"
 };
@@ -122,11 +123,24 @@ function MeetingsPreview() {
   );
 }
 
+/** What the card says when a sign-in window is done; nothing for one the person cancelled. */
+function signInNote({ provider, outcome, reason }: SignInResult): { ok: boolean; text: string } | null {
+  const name = CALENDAR_NAME[provider];
+  if (outcome === "connected") return { ok: true, text: `${name} is connected. Your meetings are below.` };
+  if (outcome === "error")
+    return { ok: false, text: `${name} could not be connected: ${REASONS[reason] ?? "the provider refused the request. Try again"}.` };
+  if (outcome === "closed") return { ok: true, text: `The ${PROVIDER_LABEL[provider]} sign-in window was closed before it finished.` };
+  if (outcome === "timeout")
+    return { ok: true, text: `The ${PROVIDER_LABEL[provider]} sign-in took too long, so the card stopped waiting. Try again.` };
+  return null;
+}
+
 export function MeetingsPanel() {
   const [status, setStatus] = useState<CalendarStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [returned] = useState(readConnectReturn);
+  /** How the last connection went: back from the provider in this tab, or from its window. */
+  const [note, setNote] = useState(readConnectReturn);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -136,21 +150,48 @@ export function MeetingsPanel() {
     };
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<CalendarStatus | null> => {
     try {
       const next = readStatus(await calendarStatus());
-      if (!alive.current) return;
+      if (!alive.current) return null;
       setStatus(next);
       setError(null);
+      return next;
     } catch {
       // A calendar that cannot be reached is worth saying; it is not worth breaking the board.
       if (alive.current) setError("Calendar is unavailable right now.");
+      return null;
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /* Coming back to the tab reads the connections again: a calendar connected in another tab, or in a
+     sign-in window whose last message never arrived, shows up without a reload. At most every 10s. */
+  useEffect(() => {
+    let last = 0;
+    const onFocus = () => {
+      const at = performance.now();
+      if (at - last < 10_000) return;
+      last = at;
+      void load();
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [load]);
+
+  // Signing in happens in a window over the Dashboard (meetings/signInWindow.tsx); the card waits with it.
+  const signIn = useSignInWindow({
+    readStatus: load,
+    onFinished: (result) => {
+      if (!alive.current) return;
+      const next = signInNote(result);
+      if (next) setNote(next);
+      if (result.outcome === "connected") setError(null);
+    }
+  });
 
   const disconnect = async (provider: CalendarProviderId) => {
     setBusy(true);
@@ -173,14 +214,20 @@ export function MeetingsPanel() {
         {isConnected ? connected.map((id) => status.providers[id].email || CALENDAR_NAME[id]).join(" · ") : "Not connected"}
       </span>
 
-      {returned && (
-        <p className={`bfmt-note${returned.ok ? "" : " is-error"}`} role="status">
-          {returned.text}
+      {note && (
+        <p className={`bfmt-note${note.ok ? "" : " is-error"}`} role="status">
+          {note.text}
         </p>
       )}
 
       {isConnected ? (
-        <MeetingsCalendar status={status} busy={busy} onDisconnect={(provider) => void disconnect(provider)} onSync={() => void load()} />
+        <MeetingsCalendar
+          status={status}
+          busy={busy}
+          signIn={signIn}
+          onDisconnect={(provider) => void disconnect(provider)}
+          onSync={() => void load()}
+        />
       ) : (
         <div className="bfmt-pitch">
           <div className="bfmt-pitch-copy">
@@ -189,34 +236,47 @@ export function MeetingsPanel() {
               Sign in with Google or Microsoft to bring your calendar onto the board: every meeting on a day, week and month calendar, a
               live countdown to the next one, and the link to join it.
             </p>
-            <div className="bfmt-connect">
-              {PROVIDER_IDS.map((provider) => {
-                const entry = status?.providers[provider];
-                // A provider with no credentials gets a disabled button that says so, rather
-                // than a live one that would bounce off the provider's error page.
-                const ready = entry?.configured === true;
-                return ready ? (
-                  <a key={provider} className={`bfmt-provider is-${provider}`} href={calendarConnectUrl(provider)}>
-                    <span className="bfmt-provider-mark" aria-hidden="true" />
-                    {PROVIDER_LABEL[provider]}
-                  </a>
-                ) : (
-                  <button
-                    key={provider}
-                    type="button"
-                    className={`bfmt-provider is-${provider}`}
-                    disabled
-                    title={`${PROVIDER_LABEL[provider]} is not set up on this deployment yet`}
-                  >
-                    <span className="bfmt-provider-mark" aria-hidden="true" />
-                    {PROVIDER_LABEL[provider]}
-                  </button>
-                );
-              })}
-            </div>
+            {signIn.waitingFor ? (
+              <SignInWaiting provider={signIn.waitingFor} onCancel={signIn.cancel} />
+            ) : (
+              <div className="bfmt-connect">
+                {PROVIDER_IDS.map((provider) => {
+                  const entry = status?.providers[provider];
+                  // A provider with no credentials gets a disabled button that says so, rather
+                  // than a live one that would bounce off the provider's error page.
+                  const ready = entry?.configured === true;
+                  return ready ? (
+                    <a
+                      key={provider}
+                      className={`bfmt-provider is-${provider}`}
+                      href={calendarConnectUrl(provider)}
+                      onClick={(event) => {
+                        // in a window over the Dashboard; a blocked pop-up lets the link sign in in the tab
+                        if (signIn.start(provider)) event.preventDefault();
+                      }}
+                    >
+                      <span className="bfmt-provider-mark" aria-hidden="true" />
+                      {PROVIDER_LABEL[provider]}
+                    </a>
+                  ) : (
+                    <button
+                      key={provider}
+                      type="button"
+                      className={`bfmt-provider is-${provider}`}
+                      disabled
+                      title={`${PROVIDER_LABEL[provider]} sign-in is not switched on for this BuildFlow yet`}
+                    >
+                      <span className="bfmt-provider-mark" aria-hidden="true" />
+                      {PROVIDER_LABEL[provider]}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {status && !PROVIDER_IDS.some((id) => status.providers[id].configured) && (
               <p className="bfmt-note" role="status">
-                No calendar provider is set up on this deployment yet.
+                Google and Outlook sign-in are not switched on for this BuildFlow yet: each needs an app registered once with Google and
+                with Microsoft, by whoever runs BuildFlow.
               </p>
             )}
             {status && PROVIDER_IDS.some((id) => status.providers[id].configured) && (

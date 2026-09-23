@@ -104,6 +104,56 @@
     linear-gradient(90deg, #0364b8 0 50%, #14447d 0) bottom / 100% 48% no-repeat;
 }
 
+/* ---- signing in: the card waits while the provider's window is open ----
+   (meetings/signInWindow.tsx). A row on the Dashboard's second surface, the ring turning while it
+   waits, and the two ways out as the panel's small pills. */
+.bfmt-signin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+}
+.bfmt-signin-spin {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(var(--bf-line-rgb), 0.16);
+  border-top-color: var(--bf-ink);
+  border-radius: 50%;
+  animation: bfmc-spin 0.9s linear infinite;
+}
+.bfmt-signin-text {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 180px;
+}
+.bfmt-signin-text strong {
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.bfmt-signin-text em {
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  line-height: 1.45;
+}
+.bfmt-signin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bfmt-signin-spin {
+    animation: none;
+  }
+}
+
 /* ---- the preview: what a connected panel looks like ------------------- */
 .bfmt-preview {
   display: grid;

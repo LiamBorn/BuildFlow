@@ -53,6 +53,7 @@ import {
   type PlacedMeeting
 } from "./calendarModel";
 import { MeetingDrawer } from "./MeetingDrawer";
+import { SignInWaiting, type SignIn } from "./signInWindow";
 
 /** How often the countdowns re-read the clock, and how often the calendar is read again. */
 const TICK_MS = 15_000;
@@ -103,12 +104,15 @@ const plural = (count: number, one: string, many = `${one}s`) => `${count} ${cou
 export function MeetingsCalendar({
   status,
   busy,
+  signIn,
   onDisconnect,
   onSync
 }: {
   status: CalendarStatus;
   /** A connection is being changed. */
   busy: boolean;
+  /** Connecting the other calendar happens in the same window over the Dashboard the first one did. */
+  signIn: SignIn;
   onDisconnect: (provider: CalendarProviderId) => void;
   /** Read the connections again: Sync is also how a revoked calendar finds out. */
   onSync: () => void;
@@ -181,9 +185,11 @@ export function MeetingsCalendar({
   }, []);
 
   const rangeKey = rangeKeyOf(anchor);
+  // a calendar connected (or let go) here changes what there is to read, so it is read again
+  const connectedKey = PROVIDER_IDS.filter((id) => status.providers[id].connected).join(",");
   useEffect(() => {
     void load();
-  }, [rangeKey, load]);
+  }, [rangeKey, connectedKey, load]);
   useEffect(() => {
     const refresh = window.setInterval(() => void load(), REFRESH_MS);
     const tick = window.setInterval(() => setNow(Date.now()), TICK_MS);
@@ -386,12 +392,22 @@ export function MeetingsCalendar({
                 </div>
               );
             })}
+            {signIn.waitingFor && <SignInWaiting provider={signIn.waitingFor} onCancel={signIn.cancel} />}
             <div className="bfmc-cal-links">
-              {connectable.map((id) => (
-                <a key={id} className="bfmt-link" href={calendarConnectUrl(id)}>
-                  <Plus size={13} /> Connect {PROVIDER_LABEL[id]}
-                </a>
-              ))}
+              {connectable
+                .filter((id) => id !== signIn.waitingFor)
+                .map((id) => (
+                  <a
+                    key={id}
+                    className="bfmt-link"
+                    href={calendarConnectUrl(id)}
+                    onClick={(event) => {
+                      if (signIn.start(id)) event.preventDefault();
+                    }}
+                  >
+                    <Plus size={13} /> Connect {PROVIDER_LABEL[id]}
+                  </a>
+                ))}
               {connected.map((id) => (
                 <button key={id} type="button" className="bfmt-link" disabled={busy} onClick={() => onDisconnect(id)}>
                   Disconnect {PROVIDER_LABEL[id]}

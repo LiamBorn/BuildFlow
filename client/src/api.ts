@@ -957,13 +957,15 @@ export function clearWeatherLocation(projectId: string) {
 }
 
 /**
- * Where the Connect button goes. A full-page navigation, not a fetch: the provider
- * has to show its own consent screen, and it sends the browser back to `returnTo`
- * with `?calendar=connected` or `?calendar=error&reason=…`.
+ * Where the Connect button goes. A navigation, not a fetch: the provider has to show its own
+ * consent screen. In a WINDOW (`popup`, how the Meetings panel opens it) the provider's answer
+ * comes back as a small page that tells the panel and closes itself; in the tab, the browser is
+ * sent back to `returnTo` with `?calendar=connected` or `?calendar=error&reason=…`.
  */
-export function calendarConnectUrl(provider: CalendarProviderId): string {
+export function calendarConnectUrl(provider: CalendarProviderId, options: { popup?: boolean } = {}): string {
   const returnTo = typeof window === "undefined" ? "" : window.location.origin;
-  return apiUrl(`/api/calendar/${provider}/start?returnTo=${encodeURIComponent(returnTo)}`);
+  const mode = options.popup ? "&mode=popup" : "";
+  return apiUrl(`/api/calendar/${provider}/start?returnTo=${encodeURIComponent(returnTo)}${mode}`);
 }
 
 export function disconnectCalendar(provider: CalendarProviderId): Promise<{ ok: true }> {

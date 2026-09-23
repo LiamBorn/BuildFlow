@@ -107,6 +107,113 @@ export function plainNotes(value: string | undefined): string {
   return text.length > 600 ? `${text.slice(0, 599).trimEnd()}…` : text;
 }
 
+/* ---- SIGNING IN IN A WINDOW (2026-09-23) -------------------------------------------------------
+   Asked for as "make it so that users are able to login to Google & outlook within the meeting
+   Section/Widget". The provider's consent page cannot be put INSIDE the card — Google's and
+   Microsoft's sign-in pages refuse to be framed, and a form of our own asking for a Google password
+   is exactly what people are taught never to fill in — so the panel opens it in a small window over
+   the Dashboard and waits. When the connection is made (or refused), the callback answers that
+   window with this page instead of sending the whole tab back to the app: it tells the panel that
+   opened it, and closes itself.
+
+   It says only what happened — never a token — and it says it only to the app's own origin
+   (`returnTo`, already held to the allowlist by safeReturnTo). The panel does not take its word for
+   "connected" either: it re-reads the connection from the server, and polls it while it waits, so a
+   window whose opener was cut off on the way (a cross-origin-opener policy) still ends well. */
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+/** Why a connection did not finish, in words. The panel keeps the same list (MeetingsPanel.tsx). */
+const WHY_NOT: Record<string, string> = {
+  access_denied: "The request was cancelled on the consent screen.",
+  state_mismatch: "The sign-in expired or was started in another tab.",
+  not_configured: "It is not switched on for this BuildFlow yet.",
+  no_code: "The provider sent nothing back.",
+  unknown_provider: "That is not a calendar BuildFlow connects to."
+};
+
+/** What the sign-in window shows when it is done, and what it tells the panel that opened it. */
+export function calendarPopupPage(result: { calendar: string; provider?: string; reason?: string }, returnTo: string): string {
+  const connected = result.calendar === "connected";
+  const name = result.provider === "google" ? "Google Calendar" : result.provider === "microsoft" ? "Outlook Calendar" : "Your calendar";
+  const title = connected ? `${name} is connected` : `${name} could not be connected`;
+  // worded for the times this page STAYS (a tab, or a window cut off from the panel): a window the
+  // panel opened has already closed by the time anyone could read it
+  const detail = connected
+    ? "Your meetings are on the Dashboard now."
+    : `${WHY_NOT[result.reason ?? ""] ?? "The provider did not finish the sign-in."} Try again from the Meetings panel.`;
+  let target: string;
+  try {
+    target = new URL(returnTo).origin;
+  } catch {
+    target = "";
+  }
+  // `<` is escaped so nothing in a reason can end the script early
+  const message = JSON.stringify({
+    type: "bf-calendar",
+    calendar: connected ? "connected" : "error",
+    provider: result.provider ?? "",
+    reason: result.reason ?? ""
+  }).replace(/</g, "\\u003c");
+  // the way back carries the result, so the panel says what happened even when this page is a tab
+  const query = new URLSearchParams(
+    Object.entries({ calendar: connected ? "connected" : "error", provider: result.provider, reason: result.reason }).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== ""
+    )
+  );
+  const back = `${returnTo}/?${query.toString()}#dashboard`;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)} · BuildFlow</title>
+<style>
+  :root { color-scheme: light dark; --ground: #f4f4f4; --card: #ffffff; --ink: #1c1c1c; --muted: #626262; --line: #e4e4e4; --ok: #1a7f43; --bad: #9e1f18; }
+  @media (prefers-color-scheme: dark) { :root { --ground: #121211; --card: #1b1b19; --ink: #f4f3f0; --muted: #a8a7a2; --line: #2e2e2b; --ok: #80d19b; --bad: #eb8178; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--ground); color: var(--ink); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width: min(380px, 100%); display: grid; gap: 10px; padding: 28px; border-radius: 20px; background: var(--card); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06); }
+  .brand { font-weight: 700; letter-spacing: -0.02em; }
+  .mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; font-weight: 700; color: var(--card); background: ${connected ? "var(--ok)" : "var(--bad)"}; }
+  h1 { margin: 6px 0 0; font-size: 18px; line-height: 1.3; letter-spacing: -0.02em; text-wrap: balance; }
+  p { margin: 0; color: var(--muted); }
+  a { justify-self: start; margin-top: 6px; padding: 8px 14px; border-radius: 999px; background: var(--ink); color: var(--card); font-weight: 600; text-decoration: none; }
+</style>
+</head>
+<body>
+<main>
+  <span class="brand">BuildFlow</span>
+  <span class="mark" aria-hidden="true">${connected ? "&#10003;" : "!"}</span>
+  <h1>${escapeHtml(title)}</h1>
+  <p>${escapeHtml(detail)}</p>
+  <a href="${escapeHtml(back)}">Back to BuildFlow</a>
+</main>
+<script>
+(function () {
+  var message = ${message};
+  var target = ${JSON.stringify(target).replace(/</g, "\\u003c")};
+  var opener = null;
+  try {
+    opener = window.opener;
+  } catch (error) {}
+  // Only a window the panel opened tells it and closes. Loaded as a TAB (a browser or an in-app view
+  // that opens a "window" in place of the page) this page stays, with its link back: closing it would
+  // close the only view the person has.
+  if (!opener || opener.closed || !target) return;
+  try {
+    opener.postMessage(message, target);
+  } catch (error) {}
+  window.setTimeout(function () {
+    window.close();
+  }, 300);
+})();
+</script>
+</body>
+</html>`;
+}
+
 /** What a join link opens: the provider's own name for it when it gives one, else read off the host. */
 export function conferenceName(url: string, named?: string): string {
   if (named?.trim()) return named.trim();

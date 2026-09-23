@@ -65,6 +65,7 @@ import {
   CALENDAR_PROVIDERS,
   calendarAuthorizeUrl,
   calendarConfigured,
+  calendarPopupPage,
   exchangeCalendarCode,
   fetchCalendarEvents,
   refreshCalendarTokens,
@@ -1200,13 +1201,19 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      panel says so rather than offering a button that cannot work. */
   const CAL_COOKIE = "bf_cal";
   const CAL_COOKIE_PATH = "/api/calendar";
-  type CalendarState = { provider: CalendarProvider; state: string; verifier: string; returnTo: string; issuedAt: number };
+  /* `popup`: the Meetings panel opened the consent page in a small window and is waiting on it, so the
+     callback answers THAT window (calendarPopupPage) instead of sending the tab back to the app. */
+  type CalendarState = { provider: CalendarProvider; state: string; verifier: string; returnTo: string; popup: boolean; issuedAt: number };
   const isCalProvider = (value: string): value is CalendarProvider => (CALENDAR_PROVIDERS as string[]).includes(value);
   const calCallbackUri = (req: express.Request, provider: CalendarProvider) => `${apiOriginFor(req)}/api/calendar/${provider}/callback`;
-  const calDone = (res: Response, returnTo: string, params: Record<string, string>) => {
+  const calDone = (res: Response, returnTo: string, params: { calendar: string; provider?: string; reason?: string }, popup = false) => {
     res.clearCookie(CAL_COOKIE, { path: CAL_COOKIE_PATH });
-    const query = new URLSearchParams(params).toString();
-    res.redirect(`${returnTo}/?${query}#dashboard`);
+    if (popup) {
+      res.status(200).type("html").send(calendarPopupPage(params, returnTo));
+      return;
+    }
+    const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    res.redirect(`${returnTo}/?${query.toString()}#dashboard`);
   };
 
   /** An access token that is good right now, refreshing and re-storing it when it is not. */
@@ -1249,18 +1256,21 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const provider = String(req.params.provider);
     const allowedReturn = [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
     const returnTo = safeReturnTo(typeof req.query.returnTo === "string" ? req.query.returnTo : undefined, allowedReturn);
+    const popup = req.query.mode === "popup";
     if (!isCalProvider(provider)) {
-      calDone(res, returnTo, { calendar: "error", reason: "unknown_provider" });
+      calDone(res, returnTo, { calendar: "error", reason: "unknown_provider" }, popup);
       return;
     }
     const { verifier, challenge } = pkcePair();
-    const state = crypto.randomBytes(24).toString("base64url");
+    // The state says which way the answer goes ("p." a window, "r." the tab) as well as proving the
+    // callback is ours, so even a callback whose cookie has gone answers in the right form.
+    const state = `${popup ? "p" : "r"}.${crypto.randomBytes(24).toString("base64url")}`;
     const url = calendarAuthorizeUrl(provider, { redirectUri: calCallbackUri(req, provider), state, challenge });
     if (!url) {
-      calDone(res, returnTo, { calendar: "error", reason: "not_configured", provider });
+      calDone(res, returnTo, { calendar: "error", reason: "not_configured", provider }, popup);
       return;
     }
-    res.cookie(CAL_COOKIE, signState<CalendarState>({ provider, state, verifier, returnTo, issuedAt: Date.now() }), {
+    res.cookie(CAL_COOKIE, signState<CalendarState>({ provider, state, verifier, returnTo, popup, issuedAt: Date.now() }), {
       httpOnly: true,
       sameSite: "lax",
       // Was `req.secure`, which is false behind a TLS-terminating proxy — see cookiesAreSecure.
@@ -1278,21 +1288,23 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     // here, and reaching for it is why the first version of this route saw no state at all.
     const saved = readState<CalendarState>(parseCookies(req.headers.cookie)[CAL_COOKIE]);
     const returnTo = saved?.returnTo ?? clientUrl.replace(/\/+$/, "");
+    // answered in a window if it was started from one; with no cookie left, the state's own mark says so
+    const popup = saved ? saved.popup === true : typeof req.query.state === "string" && req.query.state.startsWith("p.");
     if (!isCalProvider(provider) || !saved || saved.provider !== provider) {
-      calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" });
+      calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" }, popup);
       return;
     }
     if (typeof req.query.state !== "string" || req.query.state !== saved.state) {
-      calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" });
+      calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" }, popup);
       return;
     }
     if (typeof req.query.error === "string") {
-      calDone(res, returnTo, { calendar: "error", reason: req.query.error });
+      calDone(res, returnTo, { calendar: "error", reason: req.query.error }, popup);
       return;
     }
     const code = typeof req.query.code === "string" ? req.query.code : "";
     if (!code) {
-      calDone(res, returnTo, { calendar: "error", reason: "no_code" });
+      calDone(res, returnTo, { calendar: "error", reason: "no_code" }, popup);
       return;
     }
     try {
@@ -1309,9 +1321,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         accessToken: tokens.accessToken,
         expiresAt: tokens.expiresAt
       });
-      calDone(res, returnTo, { calendar: "connected", provider });
+      calDone(res, returnTo, { calendar: "connected", provider }, popup);
     } catch (error) {
-      calDone(res, returnTo, { calendar: "error", reason: error instanceof Error ? error.message.slice(0, 80) : "exchange_failed" });
+      calDone(res, returnTo, { calendar: "error", reason: error instanceof Error ? error.message.slice(0, 80) : "exchange_failed" }, popup);
     }
   });
 

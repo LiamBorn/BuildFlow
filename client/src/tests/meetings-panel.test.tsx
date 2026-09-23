@@ -16,6 +16,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeetingsPanel } from "../MeetingsPanel";
+import { SIGN_IN_TIMING } from "../meetings/signInWindow";
 
 const NOW = new Date(2026, 8, 14, 9, 0).getTime();
 const at = (minutes: number) => new Date(NOW + minutes * 60_000).toISOString();
@@ -106,7 +107,11 @@ describe("the Meetings panel", () => {
     // both providers are offered, and both are refused rather than pretending
     expect(screen.getByRole("button", { name: "Google" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Outlook" })).toBeDisabled();
-    expect(await screen.findByText("No calendar provider is set up on this deployment yet.")).toBeInTheDocument();
+    expect(await screen.findByText(/Google and Outlook sign-in are not switched on for this BuildFlow yet/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Google" })).toHaveAttribute(
+      "title",
+      "Google sign-in is not switched on for this BuildFlow yet"
+    );
   });
 
   it("offers a real sign-in link once a provider has credentials", async () => {
@@ -354,5 +359,161 @@ describe("the Meetings panel", () => {
       await screen.findByText("The calendar could not be connected: the request was cancelled on the consent screen.")
     ).toBeInTheDocument();
     expect(window.location.search).toBe("");
+  });
+
+  /**
+   * SIGNING IN WITHOUT LEAVING THE DASHBOARD (2026-09-23): "make it so that users are able to login to
+   * Google & outlook within the meeting Section/Widget". The provider's page opens in a window over the
+   * Dashboard; the card waits with it and becomes the calendar when it is done.
+   */
+  describe("signing in in a window", () => {
+    const TIMING = { ...SIGN_IN_TIMING };
+    let frame: HTMLIFrameElement | null = null;
+    /** A real window object, so a message can name it as its source, standing in for the pop-up. */
+    const signInWindow = () => {
+      frame = document.createElement("iframe");
+      document.body.appendChild(frame);
+      const popup = frame.contentWindow!;
+      vi.spyOn(popup, "close").mockImplementation(() => undefined);
+      vi.spyOn(popup, "focus").mockImplementation(() => undefined);
+      return popup;
+    };
+    const configured = (): Providers => ({ ...NOT_CONFIGURED(), google: { configured: true, connected: false, email: "" } });
+    const tellPanel = (source: Window, data: unknown) => window.dispatchEvent(new MessageEvent("message", { data, source }));
+
+    afterEach(() => {
+      Object.assign(SIGN_IN_TIMING, TIMING);
+      frame?.remove();
+      frame = null;
+    });
+
+    it("opens the provider in a window, waits with it, and becomes the calendar when it is done", async () => {
+      const providers = configured();
+      vi.stubGlobal("fetch", calendarApi(providers, [WALKTHROUGH]));
+      const popup = signInWindow();
+      const open = vi.fn(() => popup);
+      vi.stubGlobal("open", open);
+      render(<MeetingsPanel />);
+
+      // the link keeps its address (a new tab, no script), and a click opens the window instead
+      const google = await screen.findByRole("link", { name: "Google" });
+      expect(fireEvent.click(google)).toBe(false);
+      expect(open).toHaveBeenCalledWith(
+        expect.stringMatching(/\/api\/calendar\/google\/start\?returnTo=.*&mode=popup$/),
+        "bf-calendar-sign-in",
+        expect.stringContaining("popup=yes")
+      );
+      expect(screen.getByText("Finish signing in with Google")).toBeInTheDocument();
+
+      // the window finishes: the server now has the connection, and the window says so
+      providers.google = { configured: true, connected: true, email: "dana@asphaltco.com" };
+      tellPanel(popup, { type: "bf-calendar", calendar: "connected", provider: "google" });
+
+      expect(await screen.findByText("Google Calendar is connected. Your meetings are below.")).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "Week", pressed: true })).toBeInTheDocument();
+      expect(popup.close).toHaveBeenCalled();
+    });
+
+    it("takes the server's word for it when the window's message never arrives", async () => {
+      Object.assign(SIGN_IN_TIMING, { pollMs: 40 });
+      const providers = configured();
+      vi.stubGlobal("fetch", calendarApi(providers, [WALKTHROUGH]));
+      vi.stubGlobal(
+        "open",
+        vi.fn(() => signInWindow())
+      );
+      render(<MeetingsPanel />);
+
+      fireEvent.click(await screen.findByRole("link", { name: "Google" }));
+      expect(screen.getByText("Finish signing in with Google")).toBeInTheDocument();
+      // a message from any other window is not this one's to act on
+      tellPanel(window, { type: "bf-calendar", calendar: "error", reason: "access_denied" });
+      expect(screen.getByText("Finish signing in with Google")).toBeInTheDocument();
+
+      providers.google = { configured: true, connected: true, email: "dana@asphaltco.com" };
+      expect(await screen.findByRole("button", { name: "Week", pressed: true })).toBeInTheDocument();
+    });
+
+    it("says why when the window reports a sign-in that did not finish", async () => {
+      vi.stubGlobal("fetch", calendarApi(configured()));
+      const popup = signInWindow();
+      vi.stubGlobal(
+        "open",
+        vi.fn(() => popup)
+      );
+      render(<MeetingsPanel />);
+
+      fireEvent.click(await screen.findByRole("link", { name: "Google" }));
+      tellPanel(popup, { type: "bf-calendar", calendar: "error", provider: "google", reason: "access_denied" });
+
+      expect(
+        await screen.findByText("Google Calendar could not be connected: the request was cancelled on the consent screen.")
+      ).toBeInTheDocument();
+      // and the way in is back
+      expect(screen.getByRole("link", { name: "Google" })).toBeInTheDocument();
+    });
+
+    it("stops waiting when the window is closed before it finishes, and on Cancel", async () => {
+      Object.assign(SIGN_IN_TIMING, { watchMs: 20, closedGraceMs: 60 });
+      vi.stubGlobal("fetch", calendarApi(configured()));
+      const closing = { closed: false, close: vi.fn(), focus: vi.fn() };
+      vi.stubGlobal(
+        "open",
+        vi.fn(() => closing)
+      );
+      render(<MeetingsPanel />);
+
+      fireEvent.click(await screen.findByRole("link", { name: "Google" }));
+      expect(screen.getByText("Finish signing in with Google")).toBeInTheDocument();
+      closing.closed = true;
+      expect(await screen.findByText("The Google sign-in window was closed before it finished.")).toBeInTheDocument();
+
+      // Cancel closes the window and says nothing more
+      closing.closed = false;
+      fireEvent.click(screen.getByRole("link", { name: "Google" }));
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(closing.close).toHaveBeenCalled();
+      expect(screen.getByRole("link", { name: "Google" })).toBeInTheDocument();
+      expect(screen.queryByText("Finish signing in with Google")).not.toBeInTheDocument();
+    });
+
+    it("signs in in the tab when the browser blocks the window", async () => {
+      vi.stubGlobal("fetch", calendarApi(configured()));
+      vi.stubGlobal(
+        "open",
+        vi.fn(() => null)
+      );
+      render(<MeetingsPanel />);
+
+      // nothing in the panel stops the link, so the browser follows it to the provider as before
+      // (read after the panel's own handler, then stopped here: jsdom cannot navigate)
+      let stoppedByPanel: boolean | null = null;
+      const afterPanel = (event: Event) => {
+        stoppedByPanel = event.defaultPrevented;
+        event.preventDefault();
+      };
+      window.addEventListener("click", afterPanel);
+      fireEvent.click(await screen.findByRole("link", { name: "Google" }));
+      window.removeEventListener("click", afterPanel);
+      expect(stoppedByPanel).toBe(false);
+      expect(screen.queryByText("Finish signing in with Google")).not.toBeInTheDocument();
+    });
+
+    it("connects the other calendar from the calendar, in the same window", async () => {
+      vi.stubGlobal("fetch", calendarApi(GOOGLE(), [WALKTHROUGH]));
+      const open = vi.fn(() => signInWindow());
+      vi.stubGlobal("open", open);
+      render(<MeetingsPanel />);
+
+      expect(fireEvent.click(await screen.findByRole("link", { name: /Connect Outlook/ }))).toBe(false);
+      expect(open).toHaveBeenCalledWith(
+        expect.stringContaining("/api/calendar/microsoft/start"),
+        "bf-calendar-sign-in",
+        expect.any(String)
+      );
+      expect(screen.getByText("Finish signing in with Outlook")).toBeInTheDocument();
+      // the calendar stays up while it waits
+      expect(screen.getByRole("button", { name: "Week", pressed: true })).toBeInTheDocument();
+    });
   });
 });

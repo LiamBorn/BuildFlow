@@ -18,7 +18,7 @@ import path from "node:path";
 import request from "supertest";
 import type { Server } from "node:http";
 import { createApp } from "../src/app.js";
-import { conferenceName, plainNotes, readGraphEvents } from "../src/calendar.js";
+import { calendarPopupPage, conferenceName, plainNotes, readGraphEvents } from "../src/calendar.js";
 
 const CLIENT_ID = "test-google-client";
 
@@ -322,6 +322,68 @@ describe("Google Calendar and Outlook", () => {
     const forged = await agent.get("/api/calendar/google/callback?code=cal-code&state=not-the-one").expect(302);
     expect(forged.headers.location).toContain("reason=state_mismatch");
     expect((await agent.get("/api/calendar/status")).body.providers.google.connected).toBe(false);
+  });
+
+  /**
+   * SIGNING IN IN A WINDOW (2026-09-23): the panel opens the consent page in a small window over the
+   * Dashboard, so the callback answers that window — a page that tells the panel and closes itself —
+   * instead of sending the whole tab back to the app.
+   */
+  it("answers the sign-in window with a page that tells only the app, and closes itself", async () => {
+    configure();
+    const { agent } = await signedIn();
+
+    const start = await agent.get("/api/calendar/google/start?mode=popup&returnTo=http%3A%2F%2Flocalhost%3A5432").expect(302);
+    const consent = new URL(start.headers.location);
+    // the state carries the way back, so even a callback that has lost its cookie answers a window
+    expect(consent.searchParams.get("state")).toMatch(/^p\./);
+
+    const provider = await fetch(consent, { redirect: "manual" });
+    const back = new URL(provider.headers.get("location")!);
+    const page = await agent.get(`${back.pathname}${back.search}`).expect(200);
+    expect(page.headers["content-type"]).toContain("text/html");
+    expect(page.text).toContain("Google Calendar is connected");
+    // it tells the window that opened it, and only if that window is the app
+    expect(page.text).toContain('"calendar":"connected"');
+    expect(page.text).toContain("opener.postMessage(message, target)");
+    expect(page.text).toContain('var target = "http://localhost:5432"');
+    expect(page.text).toContain("window.close()");
+    // …but only as a window: loaded as a tab it stays, with a way back that carries the result
+    expect(page.text).toContain("if (!opener || opener.closed || !target) return;");
+    expect(page.text).toContain('href="http://localhost:5432/?calendar=connected&amp;provider=google#dashboard"');
+    // what happened, and nothing more: no token is ever in the page
+    expect(page.text).not.toContain("refresh-1");
+    expect(page.text).not.toContain("access-");
+
+    const status = await agent.get("/api/calendar/status").expect(200);
+    expect(status.body.providers.google).toEqual({ configured: true, connected: true, email: "dana@asphaltco.com" });
+  });
+
+  it("says in the window when a provider is not set up, or the sign-in cannot be matched", async () => {
+    const { agent } = await signedIn();
+    const off = await agent.get("/api/calendar/google/start?mode=popup").expect(200);
+    expect(off.text).toContain("Google Calendar could not be connected");
+    expect(off.text).toContain("It is not switched on for this BuildFlow yet.");
+    expect(off.text).toContain('"reason":"not_configured"');
+
+    // no cookie at all: the state's own mark still says the answer goes to a window…
+    const lost = await agent.get("/api/calendar/google/callback?code=cal-code&state=p.lost").expect(200);
+    expect(lost.text).toContain('"reason":"state_mismatch"');
+    // …and a tab's sign-in still goes back to the app the way it always has
+    const tab = await agent.get("/api/calendar/google/callback?code=cal-code&state=r.lost").expect(302);
+    expect(tab.headers.location).toContain("reason=state_mismatch");
+  });
+
+  it("never lets a reason out of the page's script or text", () => {
+    const page = calendarPopupPage(
+      { calendar: "error", provider: "google", reason: '</script><script>alert("x")</script><img src=x onerror=alert(1)>' },
+      "http://localhost:5432"
+    );
+    expect(page).not.toContain('<script>alert("x")');
+    expect(page).not.toContain("<img src=x");
+    expect(page).toContain("\\u003c/script>");
+    // an unknown reason reads as a plain sentence, not as the code
+    expect(page).toContain("The provider did not finish the sign-in.");
   });
 });
 
