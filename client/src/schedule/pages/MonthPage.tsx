@@ -412,7 +412,10 @@ export function MonthPage({ data: liveData, reload, onOpenSchedule, onOpenPage, 
           weather={
             openMarkerProject ? (
               <PhaseWeather
-                projectId={openMarkerProject.id}
+                project={openMarkerProject}
+                jobsHere={data.jobs.filter((job) => job.projectId === openMarkerProject.id).length}
+                canEdit={data.activeUser?.permission === "owner" || data.activeUser?.permission === "admin"}
+                reload={reload}
                 from={openPhase?.startDate || openMarker.date}
                 to={openMarker.date}
                 today={today}

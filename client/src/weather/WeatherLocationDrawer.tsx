@@ -9,12 +9,12 @@
  * an address, a ZIP code or a town. The server looks it up and keeps it for WeatherIQ alone; only the
  * ZIP code or the town ever leaves BuildFlow.
  */
-import { useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { MapPin, X } from "lucide-react";
 import type { Project, SiteWeatherForecast } from "@buildflow/shared";
-import { clearWeatherLocation, setWeatherLocation } from "../api";
 import { useModalDialog } from "../schedule/hooks";
+import { useLocationEdit } from "./useLocationEdit";
 
 const HOW: Record<SiteWeatherForecast["locatedBy"], string> = {
   custom: "Set for WeatherIQ",
@@ -36,39 +36,12 @@ export function WeatherLocationDrawer({
   onSaved: () => Promise<void>;
 }) {
   const panelRef = useModalDialog<HTMLElement>(onClose);
-  const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState<"" | "save" | "reset">("");
-  const [error, setError] = useState("");
-  const canSave = query.trim().length >= 2 && !busy;
-
-  async function save(event: FormEvent<HTMLFormElement>) {
+  // the same save the schedule panels' WeatherIQ card makes (useLocationEdit)
+  const { query, setQuery, busy, error, canSave, save, resetToAddress } = useLocationEdit(project.id, onSaved, onClose);
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSave) return;
-    setBusy("save");
-    setError("");
-    try {
-      await setWeatherLocation(project.id, query.trim());
-      await onSaved();
-      onClose();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "The location could not be saved.");
-      setBusy("");
-    }
-  }
-
-  async function useAddress() {
-    if (busy) return;
-    setBusy("reset");
-    setError("");
-    try {
-      await clearWeatherLocation(project.id);
-      await onSaved();
-      onClose();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "The location could not be reset.");
-      setBusy("");
-    }
-  }
+    void save();
+  };
 
   return createPortal(
     <div className="project-dialog-backdrop pdx" role="presentation">
@@ -101,7 +74,7 @@ export function WeatherLocationDrawer({
             <X size={18} />
           </button>
         </header>
-        <form className="project-form pdx-form wiq-location-form" onSubmit={save}>
+        <form className="project-form pdx-form wiq-location-form" onSubmit={submit}>
           <div className="project-form-wide wiq-location-now">
             <MapPin size={18} aria-hidden="true" />
             <span>
@@ -128,7 +101,12 @@ export function WeatherLocationDrawer({
           )}
           <div className="project-dialog-actions pdx-actions project-form-wide">
             {site?.locatedBy === "custom" && (
-              <button className="pdx-cancel wiq-location-reset" type="button" disabled={Boolean(busy)} onClick={useAddress}>
+              <button
+                className="pdx-cancel wiq-location-reset"
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => void resetToAddress()}
+              >
                 {busy === "reset" ? "Resetting" : "Use the project's address"}
               </button>
             )}

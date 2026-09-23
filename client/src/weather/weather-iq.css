@@ -514,6 +514,92 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The place, as the control that changes it (the Workspace Owner and Admins):
+   the same words, quiet until pointed at, with a pencil saying it can be edited.
+   The negative margin keeps the words where the plain text sits, so the head
+   does not move when the pill appears on hover. */
+.gantt-page .gantt-drawer-weather-place.is-editable {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 70%;
+  margin: -3px -8px -3px 0;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--bf-dur-hover) var(--bf-ease),
+    color var(--bf-dur-hover) var(--bf-ease);
+}
+.gantt-page .gantt-drawer-weather-place.is-editable span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gantt-page .gantt-drawer-weather-place.is-editable svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+.gantt-page .gantt-drawer-weather-place.is-editable:hover,
+.gantt-page .gantt-drawer-weather-place.is-editable[aria-expanded="true"] {
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+}
+.gantt-page .gantt-drawer-weather-place.is-editable:focus-visible {
+  outline: 2px solid var(--bf-ink);
+  outline-offset: 2px;
+}
+/* the editor, under the head: the Dashboard drawer's form at the card's size */
+.gantt-page .gantt-drawer-weather-where {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-surface);
+}
+.gantt-page .gantt-drawer-weather-where label {
+  display: grid;
+  gap: 6px;
+}
+.gantt-page .gantt-drawer-weather-where label > span {
+  color: var(--bf-ink-faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.gantt-page .gantt-drawer-weather-where input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  outline: 0;
+}
+.gantt-page .gantt-drawer-weather-where input::placeholder {
+  color: var(--bf-ink-faint);
+}
+.gantt-page .gantt-drawer-weather-where input:focus-visible {
+  box-shadow: 0 0 0 2px var(--bf-focus-ink);
+}
+.gantt-page .gantt-drawer-weather-where .gantt-drawer-weather-line {
+  margin: 0;
+}
 /* auto-fill, not auto-fit: a two-day job keeps two tiles at a tile's width
    instead of two stretched across the panel */
 .gantt-page .gantt-drawer-weather-days {

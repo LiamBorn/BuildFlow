@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapPayload, ScheduleVariance, WeatherConflict, WeatherForecastPayload, WeatherWindow } from "@buildflow/shared";
 import { JobDrawer } from "../schedule/parts/JobDrawer";
-import { JobWeather } from "../weather/ScheduleWeather";
+import { JobWeather, PhaseWeather } from "../weather/ScheduleWeather";
 import { __forgetForecast } from "../weather/useForecast";
 import { bootstrapFixture } from "../test/fixture";
 
@@ -97,10 +97,31 @@ const reschedule = (status: ScheduleVariance["status"] = "pending"): ScheduleVar
 
 /** A pretend server: the forecast route, and the call-off and reschedule the panel posts. */
 function server(answer: WeatherForecastPayload | { status: number }) {
-  const state = { forecast: answer, variances: [] as ScheduleVariance[], posts: [] as string[] };
+  const state = {
+    forecast: answer,
+    variances: [] as ScheduleVariance[],
+    posts: [] as string[],
+    /** Where each project's forecast was set, as the location route was sent it. */
+    located: [] as Array<{ url: string; query: string }>
+  };
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (init?.method && init.method !== "GET") state.posts.push(url);
+    if (/\/api\/weather\/locations\//.test(url) && init?.method === "PUT") {
+      const query = JSON.parse(String(init.body)).query as string;
+      state.located.push({ url, query });
+      if (query === "Nowhereville") {
+        return new Response(JSON.stringify({ error: 'No town or ZIP code matched "Nowhereville".' }), { status: 404 });
+      }
+      // the project's forecast is read at the new place from now on, for every job of it
+      if (!("status" in state.forecast)) {
+        state.forecast = {
+          ...state.forecast,
+          sites: state.forecast.sites.map((site) => ({ ...site, place: "Round Rock, Texas", locatedBy: "custom" as const }))
+        };
+      }
+      return new Response(JSON.stringify({ projectId: "p-riverside", query, place: "Round Rock, Texas" }), { status: 200 });
+    }
     if (url.includes("/api/weather/forecast")) {
       if ("status" in state.forecast) return new Response("{}", { status: state.forecast.status });
       return new Response(JSON.stringify(state.forecast), { status: 200 });
@@ -204,6 +225,63 @@ describe("WeatherIQ in the job panel", () => {
     ).toBeInTheDocument();
     expect(within(card).queryByRole("button", { name: /Call off/ })).toBeNull();
     expect(within(card).queryByRole("button", { name: "Keep it on" })).toBeNull();
+  });
+
+  it("lets the Owner change where the project's forecast is read, from the job panel, for every job there", async () => {
+    const pretend = server(forecast([], []));
+    const card = show(bootstrapFixture, pretend);
+    // the place is the control
+    const place = await within(card).findByRole("button", { name: "Change the forecast location for Riverside Office Building" });
+    expect(place).toHaveTextContent("Austin, Texas");
+    fireEvent.click(place);
+    expect(place).toHaveAttribute("aria-expanded", "true");
+
+    const field = within(card).getByLabelText("Forecast location");
+    // the project's own: every job of it reads what is saved here
+    const jobsThere = bootstrapFixture.jobs.filter((job) => job.projectId === "p-riverside").length;
+    expect(card.textContent).toContain(`so all ${jobsThere} jobs there and its milestones read it`);
+
+    // a place the lookup cannot find is said in the card, and nothing changes
+    fireEvent.change(field, { target: { value: "Nowhereville" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Save location" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent('No town or ZIP code matched "Nowhereville".');
+
+    fireEvent.change(field, { target: { value: "Round Rock, TX" } });
+    fireEvent.click(within(card).getByRole("button", { name: "Save location" }));
+    await within(card).findByText("Saved. Every job at Riverside Office Building now reads the weather at Round Rock, Texas.");
+    expect(pretend.state.located.at(-1)).toEqual({ url: "/api/weather/locations/p-riverside", query: "Round Rock, TX" });
+    expect(within(card).getByRole("button", { name: "Change the forecast location for Riverside Office Building" })).toHaveTextContent(
+      "Round Rock, Texas"
+    );
+    expect(within(card).queryByLabelText("Forecast location")).toBeNull();
+  });
+
+  it("shows a Member where the forecast is read, and no way to change it", async () => {
+    const member: BootstrapPayload = { ...bootstrapFixture, activeUser: { ...bootstrapFixture.activeUser, permission: "member" } };
+    const card = show(member, server(forecast([], [])));
+    expect(await within(card).findByText("Austin, Texas")).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: /Change the forecast location/ })).toBeNull();
+  });
+
+  it("offers the same control in a milestone's panel, for the project the milestone belongs to", async () => {
+    vi.stubGlobal("fetch", server(forecast([], [])).fetchMock);
+    render(
+      <div className="app-shell">
+        <PhaseWeather
+          project={bootstrapFixture.projects[0]}
+          jobsHere={2}
+          canEdit
+          reload={async () => undefined}
+          from="2026-06-17"
+          to="2026-06-18"
+          today={TODAY}
+        />
+      </div>
+    );
+    const card = screen.getByRole("region", { name: "WeatherIQ" });
+    fireEvent.click(await within(card).findByRole("button", { name: /^Change the forecast location for / }));
+    expect(within(card).getByLabelText("Forecast location")).toBeInTheDocument();
+    expect(card.textContent).toContain("so all 2 jobs there and its milestones read it");
   });
 
   it("says so when the forecast cannot be reached, and still offers the day from its last read", async () => {
