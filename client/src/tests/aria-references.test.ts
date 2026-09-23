@@ -299,3 +299,65 @@ describe("every form control has an accessible name", () => {
     expect(nameless, 'a screen reader reads these as "edit text, blank"').toEqual([]);
   });
 });
+
+describe("anything focusable and clickable can be worked from the keyboard", () => {
+  /**
+   * The shape this exists for, which App.tsx carried 15 times until 2026-09-23:
+   *
+   *     <a onClick={onBack} role="button" tabIndex={0}>Back to home</a>
+   *
+   * tabIndex={0} makes it focusable and role="button" makes a screen reader announce "button",
+   * but an `<a>` with no href has no activation behaviour: Enter and Space dispatch no click, and
+   * there was no key handler. Tab to it, hear "button", press Enter, nothing happens. A mouse
+   * never notices, which is how all 15 survived review on the most-visited pages in the product.
+   *
+   * They were fixed by giving them real hrefs and dropping role/tabIndex -- they were links all
+   * along -- which is why the count here is small. The rule is the regression guard, not a cleanup
+   * queue, and a denominator of 3 is too small to be evidence by itself: the proof that this reads
+   * anything is the mutation, not the floor.
+   *
+   * Three ways to be operable, matching what the platform actually does:
+   *   - a native control (<button>, <input>, <summary>, and <a> WITH an href)
+   *   - an explicit key handler
+   *   - nothing else. tabIndex alone grants focus, never activation.
+   *
+   * WHAT THIS RULE DOES NOT COVER, so its green is not read as more than it is: it only looks at
+   * elements that PRESENT as controls. An `<a onClick={...}>` with no href and no tabIndex is not
+   * focusable at all, so Tab never reaches it -- unreachable rather than inoperable, and invisible
+   * to this rule. There are 32 of those in App.tsx as of 2026-09-23, every link in the marketing
+   * footers ("Dashboard", "Schedule", "Get BuildFlow", "Log in"), inside <nav aria-label="Footer">.
+   *
+   * They are not fixable the way the 15 above were. `onExplore` reaches `openAppPage`, which calls
+   * pushState with pathname+search only (App.tsx:2702) and then setPage -- an in-app page has no
+   * URL, so an href would name a route that does not exist. They are buttons drawn as links, and
+   * making them buttons needs the footer CSS to follow. Handed to the session that owns those
+   * pages; extend this rule to `<a onClick>` without an href once they land.
+   */
+  const NATIVE = new Set(["button", "input", "select", "textarea", "summary", "label", "option"]);
+  const dead: string[] = [];
+  let scanned = 0;
+  for (const { path, text } of files) {
+    for (const m of text.matchAll(/<(\w+)(?=[\s/>])/g)) {
+      const gt = closeOfTagAt(text, m.index);
+      if (gt === -1) continue;
+      const tag = text.slice(m.index, gt + 1);
+      const name = m[1];
+      // "presents itself as a control": announced as one, or reachable by Tab on purpose.
+      const presents = /role=\{?["']button["']/.test(tag) || /tabIndex=\{0\}/.test(tag);
+      if (!presents || !/onClick/.test(tag)) continue;
+      scanned += 1;
+      // An <a> is only natively operable with an href; without one it is not a link at all.
+      if (NATIVE.has(name) && (name !== "a" || /\bhref=/.test(tag))) continue;
+      if (/onKeyDown|onKeyUp|onKeyPress/.test(tag)) continue;
+      dead.push(`<${name}> (${path}:${text.slice(0, m.index).split("\n").length})`);
+    }
+  }
+
+  it("finds elements to check", () => {
+    expect(scanned).toBeGreaterThan(2);
+  });
+
+  it("gives every one a way in that is not the mouse", () => {
+    expect(dead, "focusable, announced as a control, and activated by nothing but a click").toEqual([]);
+  });
+});
