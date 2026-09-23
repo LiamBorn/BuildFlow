@@ -258,7 +258,6 @@ import { relativeTime as relativeAlertTime } from "./schedule/alerts";
 import { useHudMotion } from "./useHudMotion";
 import { formatDate } from "./formatDate";
 import { DASH_COLS, type GridItem, type GridLimits } from "./dashGrid";
-import { buildTimecardModel, totalsFor } from "./timecardModel";
 import { ScheduleImportDialog } from "./schedule/ScheduleImportDialog";
 import { DelayEarlyWarning } from "./DelayEarlyWarning";
 import { TextShimmer } from "./components/ui/text-shimmer";
@@ -292,6 +291,7 @@ import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
 import { useRecordFocus, type RecordFocusRequest } from "./recordFocus";
 import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
+import { buildReportSeries, laborHoursWorked } from "./reports/series";
 
 /*
  * Time cards load when someone opens them, not when the landing page does.
@@ -29030,9 +29030,14 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
     const crewUtil = data.crews.length ? Math.round(data.crews.reduce((sum, crew) => sum + crew.utilization, 0) / data.crews.length) : 0;
     const inUse = data.equipment.filter((item) => item.status === "In Use").length;
     const equipUtil = data.equipment.length ? Math.round((inUse / data.equipment.length) * 100) : 0;
-    // 5. Labor hours: the same model the TimeCard page totals, so the two agree.
-    const timecard = buildTimecardModel(data);
-    const laborHours = totalsFor(timecard.entries, timecard.workerById).totalHours;
+    // 5. Labor hours actually worked: for every job the field has reported starting, the
+    //    working days from that report to its finish (or to today), times the job's own
+    //    working window, times the crew it needs. This used to come from
+    //    buildTimecardModel(data), which ignores its argument entirely and returns a fixed
+    //    demo week -- so the figure was the same for every workspace, including an empty one,
+    //    under a comment promising it came from the workspace's own records.
+    const laborHours = laborHoursWorked(data.jobs, dashboardToday, calendar);
+    const reportedJobs = data.jobs.filter((job) => job.actualStart).length;
     // 6. Backlog: the planned work still outstanding on unfinished jobs, measured
     //    against each job's OWN duration rather than the calendar ahead of it —
     //    an overdue job still carries its unfinished work, and counting remaining
@@ -29094,32 +29099,22 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
       {
         label: "Total Labor Hours",
         value: laborHours ? Math.round(laborHours).toLocaleString() : "—",
-        basis: laborHours ? "Logged this week" : "No hours logged"
+        basis: reportedJobs
+          ? `Worked to date on ${reportedJobs} ${reportedJobs === 1 ? "job" : "jobs"} the field has started`
+          : "No job has been reported started"
       },
       backlog
     ];
   }, [data]);
-  const plannedActualHours = [
-    { month: "Jan", planned: 4200, actual: 3850 },
-    { month: "Feb", planned: 4450, actual: 4250 },
-    { month: "Mar", planned: 4800, actual: 4700 },
-    { month: "Apr", planned: 5250, actual: 4900 },
-    { month: "May", planned: 5650, actual: 5100 }
-  ];
-  const backlogForecastIQ = [
-    { month: "Jun", backlog: 5200 },
-    { month: "Jul", backlog: 6100 },
-    { month: "Aug", backlog: 5800 },
-    { month: "Sep", backlog: 4900 },
-    { month: "Oct", backlog: 4200 },
-    { month: "Nov", backlog: 3600 }
-  ];
-  const crewEfficiency = [
-    { name: data.crews.find((crew) => crew.name === "Concrete Crew 1")?.name ?? "Concrete Crew 1", value: 94 },
-    { name: "Framing Crew 2", value: 88 },
-    { name: "Utility Crew 3", value: 81 },
-    { name: "Paving Crew 4", value: 76 }
-  ];
+  /*
+   * The three series the charts draw, from the workspace's own jobs and crews.
+   *
+   * All three were hardcoded until 2026-09-23: five months of planned-against-actual hours, six
+   * months of backlog, and four crew names at 94/88/81/76 percent. They sat directly beneath a
+   * comment promising every figure came from the workspace's own records, and they did not move
+   * for an empty workspace, a seeded one or a real one. A reader had no way to tell.
+   */
+  const reportSeries = useMemo(() => buildReportSeries(data, dashboardToday), [data]);
 
   return (
     <div className="page-stack reports-page">
@@ -29164,19 +29159,29 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
             <h2>Planned vs Actual Hours</h2>
           </header>
           <div className="reports-chart-canvas">
-            <Suspense fallback={<div style={{ height: 260 }} aria-hidden="true" />}>
-              <PlannedActualChart data={plannedActualHours} />
-            </Suspense>
-            <div className="reports-legend" aria-hidden="true">
-              <span>
-                <i className="planned" />
-                Planned
-              </span>
-              <span>
-                <i className="actual" />
-                Actual
-              </span>
-            </div>
+            {reportSeries.plannedActual.length > 0 ? (
+              <>
+                <Suspense fallback={<div style={{ height: 260 }} aria-hidden="true" />}>
+                  <PlannedActualChart data={reportSeries.plannedActual} />
+                </Suspense>
+                <div className="reports-legend" aria-hidden="true">
+                  <span>
+                    <i className="planned" />
+                    Planned
+                  </span>
+                  <span>
+                    <i className="actual" />
+                    Actual
+                  </span>
+                </div>
+              </>
+            ) : (
+              <InlineEmptyState
+                icon={TrendingUp}
+                title="No months to compare yet"
+                detail="Planned hours come from the schedule; actual hours appear once the field reports a job started."
+              />
+            )}
           </div>
         </article>
 
@@ -29185,9 +29190,17 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
             <h2>Backlog ForecastIQ (Hours)</h2>
           </header>
           <div className="reports-chart-canvas">
-            <Suspense fallback={<div style={{ height: 260 }} aria-hidden="true" />}>
-              <BacklogChart data={backlogForecastIQ} tooltip={<ReportsBacklogTooltip />} />
-            </Suspense>
+            {reportSeries.backlog.length > 0 ? (
+              <Suspense fallback={<div style={{ height: 260 }} aria-hidden="true" />}>
+                <BacklogChart data={reportSeries.backlog} tooltip={<ReportsBacklogTooltip />} />
+              </Suspense>
+            ) : (
+              <InlineEmptyState
+                icon={LineChart}
+                title="Nothing outstanding"
+                detail="The hours still owed on unfinished jobs appear here, in the month the plan puts them."
+              />
+            )}
           </div>
         </article>
       </section>
@@ -29197,7 +29210,10 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
           <h2>Crew Efficiency</h2>
         </header>
         <div className="reports-efficiency-list">
-          {crewEfficiency.map((crew) => (
+          {reportSeries.crews.length === 0 && (
+            <InlineEmptyState icon={Users} title="No crews yet" detail="Crew utilization appears once a crew exists." />
+          )}
+          {reportSeries.crews.map((crew) => (
             <div className="reports-efficiency-row" key={crew.name}>
               <strong>{crew.name}</strong>
               <span>
