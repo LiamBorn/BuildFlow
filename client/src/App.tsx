@@ -583,6 +583,76 @@ const welcomeRoutes: Record<string, WelcomeView> = {
   "#contact-sales": "contactSales"
 };
 
+/** The one title every page falls back to, and the tail of every specific one. */
+const SITE_TITLE = "BuildFlow — Construction Scheduling & Field Command Center";
+
+/**
+ * What each welcome route calls itself in the tab, the history entry and a bookmark.
+ *
+ * Restoring the routes (2026-09-23) made 42 of these URLs shareable for the first time since the
+ * Frost rebuild; until this they all reported the same `SITE_TITLE`, so a bookmark, a browser
+ * history list or a row of tabs could not tell Crew Scheduling from Privacy. Nothing reports that
+ * either -- the pages render correctly and only their names collide.
+ *
+ * The wording is the site's OWN, not new copy: these are the mega-menu labels from
+ * `welcomeNavMenus` where a page appears there, and the page's own eyebrow or heading where it
+ * does not. Two of them needed a decision rather than a lookup. The plan pages are "Free plan"
+ * and not the menu's bare "Free", which is no use as a title; and the solutions pages are
+ * prefixed "Solutions:" because four of them share a heading with a product page ("Map & Field
+ * Ops" is both), and two URLs with one title is the problem this is fixing.
+ *
+ * The onboarding and password views are deliberately absent and keep `SITE_TITLE`: they are
+ * private steps rather than pages anyone links to, and several take their heading from the
+ * workspace name.
+ */
+const welcomeTitles: Partial<Record<WelcomeView, string>> = {
+  overview: "Product overview",
+  plansOverview: "Plans overview",
+  resourcesOverview: "Resources overview",
+  companyOverview: "Company overview",
+  aiOverview: "AI overview",
+  crewScheduling: "Crew Scheduling",
+  scheduleAi: "Schedule AI",
+  mapFieldOps: "Map & Field Ops",
+  fieldUpdatesDelayIQs: "Field Updates & DelayIQs",
+  materialsReadiness: "Materials Readiness",
+  equipmentTracking: "Equipment Tracking",
+  productionReports: "Production Reports",
+  tonnageTracking: "Tonnage Tracking",
+  freePlan: "Free plan",
+  proPlan: "Pro plan",
+  businessPlan: "Business plan",
+  enterprisePlan: "Enterprise plan",
+  comparePlans: "Compare plans",
+  solutionSchedule: "Solutions: Schedule",
+  solutionField: "Solutions: Field Updates & DelayIQs",
+  solutionMap: "Solutions: Map & Field Ops",
+  solutionReports: "Solutions: Reports",
+  businessStartups: "Solutions: Startups",
+  businessSmallBusinesses: "Solutions: Small businesses",
+  businessEnterprise: "Solutions: Enterprise",
+  weatherIntegration: "Weather Integration",
+  scheduleSuggestions: "Schedule Suggestions",
+  crewSuggestions: "Crew Suggestions",
+  delayIQDetection: "DelayIQ Detection",
+  routeOptimization: "Route Optimization",
+  updates: "Updates",
+  reviews: "Customer Reviews",
+  helpCenter: "Help center",
+  integrations: "Integrations",
+  templates: "Templates",
+  partners: "Partner programs",
+  about: "About us",
+  customers: "Customers",
+  careers: "Careers",
+  apply: "Apply to BuildFlow",
+  contactSales: "Contact sales",
+  privacy: "Privacy",
+  terms: "Terms",
+  security: "Security",
+  waitlist: "Join the waitlist"
+};
+
 function getWelcomeViewFromHash(): WelcomeView {
   if (typeof window === "undefined") return "home";
   const hash = window.location.hash;
@@ -2581,7 +2651,11 @@ function App() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.title = "BuildFlow — Construction Scheduling & Field Command Center";
+    // The welcome routes name themselves, per view -- see `welcomeTitles`. React runs a child's
+    // effects before its parent's, so without this guard the generic title would land last and
+    // overwrite every one of them.
+    if (page === "welcome") return;
+    document.title = SITE_TITLE;
   }, [page]);
 
   const activeUser = useMemo(() => {
@@ -3622,6 +3696,14 @@ function WelcomePage({
   // so route changes don't produce native pageviews — we send them manually).
   useEffect(() => {
     trackPageView(welcomeView);
+  }, [welcomeView]);
+
+  // The tab, the history entry and the bookmark name. Same reason as the pageview above: a hash
+  // SPA changes route without the browser noticing, so nothing updates the title unless we do.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const name = welcomeTitles[welcomeView];
+    document.title = name ? `${name} — BuildFlow` : SITE_TITLE;
   }, [welcomeView]);
 
   // Mobile menu: close whenever the view changes (any navigation).

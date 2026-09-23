@@ -109,3 +109,48 @@ describe("every page the app navigates to is also reachable by its URL", () => {
     }
   });
 });
+
+/** The title table, as written. */
+function titleTable(): Record<string, string> {
+  const start = source.indexOf("const welcomeTitles: Partial<Record<WelcomeView, string>> = {");
+  const body = source.slice(start, source.indexOf("\n};", start));
+  const out: Record<string, string> = {};
+  for (const m of body.matchAll(/^\s{2}(\w+):\s*"([^"]+)"/gm)) out[m[1]] = m[2];
+  return out;
+}
+
+describe("every linkable page says which page it is", () => {
+  const titles = titleTable();
+  /**
+   * The private onboarding steps keep the generic site title on purpose: nobody links to them,
+   * and several take their heading from the workspace name, so a title would read oddly.
+   */
+  const PRIVATE_STEPS = new Set(["createAccount", "inviteTeam", "businessType", "additionalProducts"]);
+
+  it("reads the title table", () => {
+    expect(Object.keys(titles).length, "welcomeTitles entries").toBeGreaterThan(40);
+  });
+
+  it("titles every routed view that is not a private step", () => {
+    const routed = new Set(Object.values(table));
+    const untitled = [...routed].filter((view) => !titles[view] && !PRIVATE_STEPS.has(view));
+    expect(
+      untitled,
+      "routed, so linkable, but reports the generic site title in a tab, a bookmark and history"
+    ).toEqual([]);
+  });
+
+  it("gives no two pages the same title", () => {
+    // The whole point: before 2026-09-23 all 50 URLs shared one title, so a bookmark or a row
+    // of tabs could not tell them apart. Two solutions pages share a heading with a product
+    // page, which is why those carry a "Solutions:" prefix.
+    const seen = new Map<string, string>();
+    const clashes: string[] = [];
+    for (const [view, title] of Object.entries(titles)) {
+      const first = seen.get(title);
+      if (first) clashes.push(`"${title}" is used by both ${first} and ${view}`);
+      else seen.set(title, view);
+    }
+    expect(clashes).toEqual([]);
+  });
+});
