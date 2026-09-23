@@ -7,6 +7,7 @@ import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
 import { LATEST_SCHEMA_VERSION } from "./database.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
+import { serveClient } from "./serveClient.js";
 
 /**
  * Nothing was watching the process itself.
@@ -28,9 +29,14 @@ process.on("uncaughtException", (error) => {
 
 const port = Number(process.env.PORT ?? 4300);
 const app = await createApp();
+// One process, one address: in production the built pages are served from here too (serveClient.ts).
+const production = process.env.NODE_ENV === "production";
+const servesPages = production && serveClient(app);
 
 const server = app.listen(port, () => {
   console.log(`BuildFlow API listening on http://localhost:${port}`);
+  if (servesPages) console.log("🖥️  Pages: the landing page, sign-in and the program are served here too (client/dist).");
+  else if (production) console.log("🖥️  Pages: no client build in client/dist — run `npm run build` to serve them from here.");
   void reportMailStatus(); // logs LIVE (verified) vs LOG MODE + anything missing
   reportBillingStatus(); // logs Stripe billing mode (or NOT CONFIGURED)
   reportAiStatus(); // logs BuildFlow AI LIVE (Claude) vs DEMO MODE

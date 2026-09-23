@@ -971,7 +971,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   });
 
-  app.get("/", (_req, res) => {
+  app.get("/", (req, res, next) => {
+    // One process serving the built pages too (serveClient.ts, a deployment): the landing page is here.
+    if (req.app.locals.servesPages) return next();
     res.redirect(clientUrl);
   });
 

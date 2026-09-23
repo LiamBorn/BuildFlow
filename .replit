@@ -1,0 +1,20 @@
+# BuildFlow on Replit (docs/replit.md).
+# One process serves everything on one port: the landing page, signing in and registering, the
+# program, and the API behind them (server/src/serveClient.ts). `npm run build` writes the pages to
+# client/dist; `npm start` runs the API server, which serves them in production.
+# NODE_ENV=production is set only on the start command: during the install it would leave out the
+# dev dependencies the build and the server need (vite, tsx).
+
+modules = ["nodejs-22"]
+run = "npm install && npm run build && NODE_ENV=production TRUST_PROXY=1 npm start"
+
+[deployment]
+# One always-on machine, not autoscale: each workspace's database lives in the process and on its
+# disk, and the live updates and scheduled jobs expect a single instance.
+deploymentTarget = "vm"
+build = ["sh", "-c", "npm ci && npm run build"]
+run = ["sh", "-c", "NODE_ENV=production TRUST_PROXY=1 npm start"]
+
+[[ports]]
+localPort = 4300
+externalPort = 80
