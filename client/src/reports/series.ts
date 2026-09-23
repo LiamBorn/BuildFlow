@@ -25,6 +25,14 @@ import { scheduleCalendar } from "@buildflow/shared";
  */
 export type ReportPeriod = "last-quarter" | "last-6-months" | "year-to-date";
 
+/** What the select calls each choice. The options are built from this, so the control and anything
+    that names a period in an export cannot drift apart. */
+export const PERIOD_LABEL: Record<ReportPeriod, string> = {
+  "last-6-months": "Last 6 Months",
+  "last-quarter": "Last Quarter",
+  "year-to-date": "Year to Date"
+};
+
 const WINDOWS: Record<ReportPeriod, { back: number | "ytd"; ahead: number | "year-end"; past: string; future: string }> = {
   "last-quarter": { back: 3, ahead: 3, past: "last 3 months", future: "next 3 months" },
   "last-6-months": { back: 6, ahead: 6, past: "last 6 months", future: "next 6 months" },

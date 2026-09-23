@@ -291,7 +291,9 @@ import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
 import { useRecordFocus, type RecordFocusRequest } from "./recordFocus";
 import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
-import { buildReportSeries, laborHoursWorked, type ReportPeriod } from "./reports/series";
+import { buildReportSeries, laborHoursWorked, PERIOD_LABEL, type ReportPeriod } from "./reports/series";
+import { REPORT_CSV_COLUMNS, reportCsvRows, reportFilename } from "./reports/export";
+import { downloadCsv, toCsv } from "./schedule/export";
 
 /*
  * Time cards load when someone opens them, not when the landing page does.
@@ -29136,11 +29138,24 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
               onChange={(event) => setReportPeriod(event.target.value as ReportPeriod)}
               aria-label="Report period"
             >
-              <option value="last-6-months">Last 6 Months</option>
-              <option value="last-quarter">Last Quarter</option>
-              <option value="year-to-date">Year to Date</option>
+              {(Object.keys(PERIOD_LABEL) as ReportPeriod[]).map((id) => (
+                <option key={id} value={id}>
+                  {PERIOD_LABEL[id]}
+                </option>
+              ))}
             </select>
-            <button type="button">
+            <button
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  reportFilename(dashboardToday, reportPeriod),
+                  toCsv(
+                    reportCsvRows({ metrics: reportMetrics, series: reportSeries, period: reportPeriod, today: dashboardToday }),
+                    REPORT_CSV_COLUMNS
+                  )
+                )
+              }
+            >
               <Download size={18} />
               Export
             </button>
