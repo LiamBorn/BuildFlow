@@ -8,7 +8,9 @@
  * moved to the next day it can work, priced through the schedule so the reader sees which later
  * jobs move with it and whether the project's finish does; Reschedule accepts it and Not now keeps
  * the dates. The reschedule is the variance the server raised, resolved on the variance routes like
- * any other proposed change to the plan.
+ * any other proposed change to the plan. "The next day it can work" is only as good as the forecast
+ * behind it: when there was none to read, or the day is past the last one it covers, the working
+ * calendar alone chose it, and the card says so (`weatherCheck`).
  *
  * Calling a day off and deciding a reschedule are schedule writes: the Workspace Owner and Admins
  * hold them. Anyone else sees the same suggestion with a line saying who can act on it.
@@ -19,7 +21,7 @@ import { CalendarCheck, CalendarX2, X } from "lucide-react";
 import type { BootstrapPayload, ScheduleVariance, SiteWeatherForecast, WeatherConflict } from "@buildflow/shared";
 import { acceptVariance, cancelWeatherConflict, keepWeatherConflict, rejectVariance } from "../api";
 import { useModalDialog } from "../schedule/hooks";
-import { CAUSE_LABEL, capital, dateWords, dayName, daySpoken, rowState, spanWords, timeRange } from "./weatherIQ";
+import { CAUSE_LABEL, capital, dateWords, dayName, daySpoken, rowState, spanWords, timeRange, uncheckedReason } from "./weatherIQ";
 
 type Busy = "" | "cancel" | "keep" | "accept" | "reject";
 
@@ -90,6 +92,7 @@ export function WeatherConflictDrawer({
   if (!job || !project) return null;
 
   const proposal = variance?.proposal;
+  const unchecked = proposal ? uncheckedReason(proposal, conflict.date) : "";
   const phaseOf = (jobId: string, fallback: string) => data.jobs.find((item) => item.id === jobId)?.phase ?? fallback;
 
   return createPortal(
@@ -196,6 +199,7 @@ export function WeatherConflictDrawer({
                   <span>Move to</span>
                   <strong>{spanWords(proposal.proposedStart, proposal.proposedEnd)}</strong>
                 </div>
+                {unchecked && <p className="wiq-proposal-line is-warn">{unchecked}</p>}
                 {proposal.ripple.length > 0 && (
                   <>
                     <p className="wiq-proposal-line">Also moves {plural(proposal.ripple.length, "later job")}:</p>

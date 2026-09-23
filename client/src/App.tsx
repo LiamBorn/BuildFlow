@@ -299,7 +299,7 @@ import {
 } from "./board/panelBoard";
 import { MeetingsPanel } from "./MeetingsPanel";
 import { WeatherIQPanel } from "./weather/WeatherIQPanel";
-import { CAUSE_LABEL as WEATHER_CAUSE_LABEL, timeRange as weatherTimeRange } from "./weather/weatherIQ";
+import { approvalPrefix as weatherApprovalPrefix, CAUSE_LABEL as WEATHER_CAUSE_LABEL, timeRange as weatherTimeRange } from "./weather/weatherIQ";
 import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
 import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
@@ -24157,7 +24157,7 @@ function Dashboard({
     return {
       id: variance.id,
       title: job?.phase ?? job?.name ?? "Unknown job",
-      meta: `${variance.kind === "weather" ? "Weather reschedule · " : ""}${projectName(data, variance.projectId)} · ${variance.severity} severity${
+      meta: `${weatherApprovalPrefix(variance)}${projectName(data, variance.projectId)} · ${variance.severity} severity${
         variance.proposal.criticalPath ? " · critical path" : ""
       }`,
       side: drift === 0 ? "On plan" : `${late ? "+" : "−"}${drift} working day${drift === 1 ? "" : "s"}`,

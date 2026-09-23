@@ -44,6 +44,7 @@ import {
   sortByPosition,
   reconcileLayout,
   resizeItem,
+  separate,
   snapDelta,
   snapDragSameShape,
   type GridItem,
@@ -504,7 +505,9 @@ export function DashBoard({
         const h = Math.min(Math.max(needed, own.minH ?? 1), 14);
         return h === item.h ? item : { ...item, h };
       });
-      const fitted = compact(next);
+      // separate, not compact: a panel that grew pushes the one beneath it down instead of
+      // being painted over by it (dashGrid.ts)
+      const fitted = separate(next);
       if (!layoutsEqual(fitted, layout)) onFit(fitted);
     });
     return () => window.cancelAnimationFrame(frame);

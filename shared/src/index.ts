@@ -474,6 +474,13 @@ export type VarianceProposal = {
   criticalPath: boolean;
   /** Total float the reporting job had under the current plan, in working days. */
   totalFloatDays: number;
+  /**
+   * A weather reschedule only (kind "weather"): whether the day it moves the job to was checked
+   * against the site's forecast. "unavailable": the forecast could not be read when the day was
+   * called off; "beyond": the day is past the last one the forecast covered. In both, the working
+   * calendar alone chose it, and whoever decides the reschedule is told so.
+   */
+  weatherCheck?: "forecast" | "unavailable" | "beyond";
 };
 
 export type ScheduleVariance = {
@@ -575,6 +582,22 @@ export type WeatherWindow = {
   reason: string;
 };
 
+/**
+ * The weather at a site as its forecast was read: the temperature and the sky. The provider takes
+ * it every quarter hour, and the server re-reads a site at most every half hour, so `at` says how
+ * old it is.
+ */
+export type WeatherReading = {
+  /**
+   * When the provider took the reading (ISO). An instant, not the site's wall clock: it is read
+   * beside the section's "updated" time, which is the reader's own clock.
+   */
+  at: string;
+  tempF: number;
+  /** The WMO weather code, read the same way as a day's. */
+  code: number;
+};
+
 export type SiteWeatherForecast = {
   projectId: string;
   /** The place the forecast is for, as the site was found ("Austin, Texas"). */
@@ -588,6 +611,8 @@ export type SiteWeatherForecast = {
   timezone: string;
   /** When this site's forecast was read from the provider (ISO). */
   fetchedAt: string;
+  /** The weather there when it was read; null when the provider sent no reading with the forecast. */
+  current: WeatherReading | null;
   days: WeatherForecastDay[];
   /** The hours in the coming week that cross a threshold, per cause, soonest first. */
   windows: WeatherWindow[];

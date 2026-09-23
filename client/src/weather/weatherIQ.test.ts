@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import type { Job, ScheduleVariance, SiteWeatherForecast, WeatherAlert, WeatherConflict, WeatherWindow } from "@buildflow/shared";
+import type {
+  Job,
+  ScheduleVariance,
+  SiteWeatherForecast,
+  VarianceProposal,
+  WeatherAlert,
+  WeatherConflict,
+  WeatherWindow
+} from "@buildflow/shared";
 import {
   alertRows,
+  approvalPrefix,
   badgeFor,
   causeIn,
   clockWords,
@@ -15,9 +24,11 @@ import {
   nameList,
   readConflict,
   readForecast,
+  readingWhen,
   rowState,
   spanWords,
   timeRange,
+  uncheckedReason,
   windowsDuring
 } from "./weatherIQ";
 
@@ -52,9 +63,12 @@ const conflict = (id: string, overrides: Partial<WeatherConflict> = {}): Weather
 
 describe("the words WeatherIQ says", () => {
   it("names the weather, the day and the time the way a person does", () => {
-    expect(conditionOf(0)).toEqual({ kind: "clear", label: "Clear" });
-    expect(conditionOf(63)).toEqual({ kind: "rain", label: "Rain" });
-    expect(conditionOf(95)).toEqual({ kind: "storm", label: "Thunderstorms" });
+    expect(conditionOf(0)).toEqual({ kind: "clear", label: "Clear", short: "Clear" });
+    expect(conditionOf(63)).toEqual({ kind: "rain", label: "Rain", short: "Rain" });
+    // a day tile has room for "Partly cloudy" on two lines, but not for one long word
+    expect(conditionOf(2)).toEqual({ kind: "partly", label: "Partly cloudy", short: "Partly cloudy" });
+    expect(conditionOf(95)).toEqual({ kind: "storm", label: "Thunderstorms", short: "Storms" });
+    expect(conditionOf(99)).toEqual({ kind: "storm", label: "Storms with hail", short: "Hail" });
     expect(dayName("2026-06-16", "2026-06-16")).toBe("Today");
     expect(dayName("2026-06-18", "2026-06-16")).toBe("Thu");
     expect(daySpoken("2026-06-17", "2026-06-16")).toBe("tomorrow");
@@ -69,6 +83,13 @@ describe("the words WeatherIQ says", () => {
     expect(timeRange("2026-06-18T07:00", "2026-06-18T09:30")).toBe("7–9:30 AM");
     expect(nameList(["Harbor Tower", "Pier 9"])).toBe("Harbor Tower and Pier 9");
     expect(nameList(["A", "B", "C", "D", "E"])).toBe("A, B and 3 more");
+  });
+
+  it("says when a site's reading was taken on the reader's own clock", () => {
+    // built from the local clock, so it reads the same wherever the tests run
+    expect(readingWhen(new Date(2026, 5, 16, 10, 45).toISOString(), "2026-06-16")).toBe("10:45 AM");
+    expect(readingWhen(new Date(2026, 5, 15, 23, 45).toISOString(), "2026-06-16")).toBe("Mon 11:45 PM");
+    expect(readingWhen("not a time", "2026-06-16")).toBe("");
   });
 });
 
@@ -98,17 +119,22 @@ describe("what came back from the server", () => {
           locatedBy: "custom",
           timezone: "America/Chicago",
           fetchedAt: "x",
+          current: { at: "2026-06-16T15:45:00.000Z", tempF: 84, code: 2 },
           days: [{ date: "2026-06-16", code: 1, highF: 88, lowF: 70, rainChance: 10, rainInches: 0, gustMph: 12 }, { date: "2026-06-17" }],
           windows: [window("2026-06-17T13:00", "2026-06-17T15:00"), { cause: "hail", severity: "hold" }]
         },
-        { projectId: "p-empty", days: [] }
+        { projectId: "p-empty", days: [] },
+        // a reading without its sky is no reading, and the site keeps its week
+        { projectId: "p-half", current: { at: "2026-06-16T15:45:00.000Z", tempF: 84 }, days: [{ date: "2026-06-16", highF: 80, lowF: 60 }] }
       ],
       unplaced: ["p-lost", 7],
       conflicts: [conflict("wx-1"), { id: "broken" }]
     });
     expect(read?.sites.map((site) => [site.projectId, site.days.length, site.windows.length, site.locatedBy])).toEqual([
-      ["p-river", 1, 1, "custom"]
+      ["p-river", 1, 1, "custom"],
+      ["p-half", 1, 0, "project"]
     ]);
+    expect(read?.sites.map((site) => site.current)).toEqual([{ at: "2026-06-16T15:45:00.000Z", tempF: 84, code: 2 }, null]);
     expect(read?.unplaced).toEqual(["p-lost"]);
     expect(read?.conflicts.map((item) => item.id)).toEqual(["wx-1"]);
   });
@@ -117,6 +143,40 @@ describe("what came back from the server", () => {
     expect(readForecast({ projects: [], jobs: [] })).toBeNull();
     expect(readForecast("<html>")).toBeNull();
     expect(readConflict({ ...conflict("wx-1"), status: "maybe" })).toBeNull();
+  });
+});
+
+describe("a weather reschedule's dates", () => {
+  // the slab ran Monday to Wednesday and lost Wednesday: it keeps its start and finishes later
+  const proposal = (weatherCheck?: VarianceProposal["weatherCheck"]): VarianceProposal => ({
+    currentStart: "2026-06-15",
+    currentEnd: "2026-06-17",
+    proposedStart: "2026-06-15",
+    proposedEnd: "2026-06-23",
+    ripple: [],
+    projectSlipDays: 0,
+    criticalPath: false,
+    totalFloatDays: 3,
+    weatherCheck
+  });
+
+  it("says when the forecast did not check them, and why", () => {
+    expect(uncheckedReason(proposal("forecast"), "2026-06-17")).toBe("");
+    // a reschedule raised before the check was recorded reads as it always did
+    expect(uncheckedReason(proposal(), "2026-06-17")).toBe("");
+    expect(uncheckedReason(proposal("unavailable"), "2026-06-17")).toBe(
+      "The forecast could not be read when this day was called off, so these dates follow the working calendar only. Check the weather before you reschedule."
+    );
+    // a later day was lost, so the move turns on the new finish
+    expect(uncheckedReason(proposal("beyond"), "2026-06-17")).toBe(
+      "The forecast does not reach Tue, Jun 23 yet, so that day follows the working calendar only. Check the weather nearer the day."
+    );
+  });
+
+  it("names a weather reschedule in Pending Approvals, and one the forecast did not check as that", () => {
+    expect(approvalPrefix({ kind: "weather", proposal: proposal("forecast") })).toBe("Weather reschedule · ");
+    expect(approvalPrefix({ kind: "weather", proposal: proposal("beyond") })).toBe("Weather reschedule, forecast not checked · ");
+    expect(approvalPrefix({ kind: "slip", proposal: proposal() })).toBe("");
   });
 });
 

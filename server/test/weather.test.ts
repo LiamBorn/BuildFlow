@@ -14,6 +14,7 @@ import {
   hasRealPoint,
   MAX_SITES,
   PLACEHOLDER_POINT,
+  readCurrent,
   readDays,
   siteQueries,
   WeatherUnavailableError
@@ -33,6 +34,8 @@ function place(overrides: Record<string, unknown[]> = {}) {
     latitude: 30.27,
     longitude: -97.75,
     timezone: "America/Chicago",
+    utc_offset_seconds: -18000,
+    current: { time: "2026-09-23T08:00", interval: 900, temperature_2m: 84.6, weather_code: 2 },
     daily: {
       time: DATES,
       weather_code: [3, 61, 95, 0, 1, 2, 80],
@@ -140,6 +143,22 @@ describe("reading the forecast", () => {
     expect(readDays(undefined)).toEqual([]);
   });
 
+  it("reads the weather at the site now, and nothing when the temperature or the sky is missing", () => {
+    // 10:45 on a Central Daylight clock is 15:45 UTC
+    expect(readCurrent({ time: "2026-09-23T10:45", interval: 900, temperature_2m: 84.6, weather_code: 80 }, -18000)).toEqual({
+      at: "2026-09-23T15:45:00.000Z",
+      tempF: 85,
+      code: 80
+    });
+    // a missing code must not read as a clear sky, nor a missing temperature as 0 °F
+    expect(readCurrent({ time: "2026-09-23T10:45", temperature_2m: 84.6 }, -18000)).toBeNull();
+    expect(readCurrent({ time: "2026-09-23T10:45", temperature_2m: null, weather_code: 3 }, -18000)).toBeNull();
+    expect(readCurrent({ temperature_2m: 70, weather_code: 3 }, -18000)).toBeNull();
+    // without the site's offset the time cannot be placed
+    expect(readCurrent({ time: "2026-09-23T10:45", temperature_2m: 70, weather_code: 3 }, undefined)).toBeNull();
+    expect(readCurrent(undefined, 0)).toBeNull();
+  });
+
   it("forecasts the busiest sites first and leaves out finished projects", () => {
     const quiet = project({ id: "p-quiet", name: "Alpha" });
     const busy = project({ id: "p-busy", name: "Zulu" });
@@ -166,6 +185,7 @@ describe("reading the forecast", () => {
       ["p-pinecrest", "North Austin, TX"]
     ]);
     expect(first.sites[0]).toMatchObject({ timezone: "America/Chicago", fetchedAt: "2026-09-23T13:00:00.000Z" });
+    expect(first.sites[0].current).toEqual({ at: "2026-09-23T13:00:00.000Z", tempF: 85, code: 2 });
     expect(first.sites[0].days[2]).toEqual({
       date: "2026-09-25",
       code: 95,
@@ -186,6 +206,8 @@ describe("reading the forecast", () => {
     expect(read.searchParams.get("latitude")).toBe("30.27,30.40");
     expect(read.searchParams.get("temperature_unit")).toBe("fahrenheit");
     expect(read.searchParams.get("forecast_days")).toBe("7");
+    // the reading at each site comes with the forecast, not in a request of its own
+    expect(read.searchParams.get("current")).toBe("temperature_2m,weather_code");
 
     // inside half an hour nothing is asked again
     await forecastForSites(sites, now + 29 * 60_000);

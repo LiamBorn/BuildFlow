@@ -10,11 +10,13 @@
  * It took the place of Weather Impact and keeps that panel's id ("weather"), so every saved board,
  * hidden list and notification that names it still lands here.
  *
- * Top to bottom: a job site (the one with the soonest open decision, or pick another), its week as
- * day tiles tinted by the weather that could reach a crew that day, and the job days — each opens
- * the program's editing drawer (WeatherConflictDrawer) with the decision in it. The tiles and rows
- * arrive on the Dashboard's own row cascade (skin §20 / §74) and the temperatures count up like every
- * figure on the board, so nothing here animates by itself.
+ * Top to bottom: a job site (the one with the soonest open decision, or pick another), the weather
+ * there now — its temperature and sky, asked for so a person can read the weather at a glance —
+ * its week as day tiles (sky, high and low) tinted by the weather that could reach a crew that
+ * day, and the job days, each of which opens the program's editing drawer (WeatherConflictDrawer)
+ * with the decision in it. The tiles and rows arrive on the Dashboard's own row cascade (skin §20 /
+ * §74) and the temperatures count up like every figure on the board, so nothing here animates by
+ * itself.
  *
  * WHEN THE FORECAST CANNOT BE HAD the section says so, and shows the job days from its last read (which
  * bootstrap carries) or, failing those, the saved weather alerts — never an empty week that would look
@@ -44,6 +46,7 @@ import type {
   WeatherCause,
   WeatherForecastDay,
   WeatherForecastPayload,
+  WeatherReading,
   WeatherWindow
 } from "@buildflow/shared";
 import { weatherForecast } from "../api";
@@ -64,6 +67,7 @@ import {
   nameList,
   readConflicts,
   readForecast,
+  readingWhen,
   siteName,
   timeRange,
   type ConditionKind,
@@ -121,6 +125,9 @@ function DayTile({ day, today, windows }: { day: WeatherForecastDay; today: stri
         {dayName(day.date, today)}
       </span>
       <Icon className="wiq-day-icon" aria-hidden="true" />
+      <span className="wiq-day-sky" aria-hidden="true">
+        {condition.short}
+      </span>
       <strong className="wiq-day-high" aria-hidden="true">
         <AnimatedFigure text={`${day.highF}°`} />
       </strong>
@@ -132,6 +139,32 @@ function DayTile({ day, today, windows }: { day: WeatherForecastDay; today: stri
         {worst ? clockWords(worst.start) : `${day.rainChance}%`}
       </span>
     </li>
+  );
+}
+
+/**
+ * The weather at the site as the forecast was read — its temperature and sky, the way a weather
+ * app leads — with when it was taken and where, since the provider reads it every quarter hour and
+ * the server re-reads a site at most every half hour.
+ */
+function SiteReading({ reading, today, place }: { reading: WeatherReading; today: string; place: string }) {
+  const condition = conditionOf(reading.code);
+  const Icon = CONDITION_ICON[condition.kind];
+  const when = readingWhen(reading.at, today);
+  return (
+    <div className="wiq-now">
+      <span className="wiq-sr">
+        {`Now${place ? ` at ${place}` : ""}: ${reading.tempF}°F, ${condition.label.toLowerCase()}${when ? `, as of ${when}` : ""}.`}
+      </span>
+      <Icon className="wiq-now-icon" aria-hidden="true" />
+      <strong className="wiq-now-temp" aria-hidden="true">
+        <AnimatedFigure text={`${reading.tempF}°`} />
+      </strong>
+      <span className="wiq-now-read" aria-hidden="true">
+        <span className="wiq-now-sky">{condition.label}</span>
+        <span className="wiq-now-when">{[when && `As of ${when}`, place].filter(Boolean).join(" · ")}</span>
+      </span>
+    </div>
   );
 }
 
@@ -267,7 +300,8 @@ export function WeatherIQPanel({ data, today, reload }: { data: BootstrapPayload
               <span className="wiq-site is-single">{siteName(data.projects, site.projectId)}</span>
             )}
             <span className="wiq-place">
-              <span className="wiq-where">{site.place}</span>
+              {/* with a reading, the place goes under it, where there is room to read it */}
+              {!site.current && <span className="wiq-where">{site.place}</span>}
               {canAct && (
                 <button
                   type="button"
@@ -280,6 +314,7 @@ export function WeatherIQPanel({ data, today, reload }: { data: BootstrapPayload
               )}
             </span>
           </div>
+          {site.current && <SiteReading reading={site.current} today={today} place={site.place} />}
           <ol className="wiq-days" aria-label={`The week at ${siteName(data.projects, site.projectId)}`}>
             {site.days.map((day) => (
               <DayTile key={day.date} day={day} today={today} windows={daytimeWindows(site, day.date)} />

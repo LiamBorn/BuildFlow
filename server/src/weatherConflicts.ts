@@ -13,7 +13,7 @@
  *
  * Pure functions: the routes in app.ts read the store, and the store keeps what a person decides.
  */
-import type { Job, Project, SiteWeatherForecast, WeatherConflict, WeatherWindow, WorkCalendar } from "@buildflow/shared";
+import type { Job, Project, SiteWeatherForecast, VarianceProposal, WeatherConflict, WeatherWindow, WorkCalendar } from "@buildflow/shared";
 
 /** A job's clock, "7:00 AM" or "15:30", as "HH:mm". Null when it is not a time. */
 export function parseClock(value: string | undefined): string | null {
@@ -104,6 +104,25 @@ export function detectConflicts(input: {
     }
   }
   return drafts.sort((a, b) => a.date.localeCompare(b.date) || worstFirst(a, b) || a.jobId.localeCompare(b.jobId));
+}
+
+/**
+ * Whether the day a reschedule turns on — the new start when the job's first day was lost, else its
+ * new finish — was checked against the site's forecast. "unavailable": there was no forecast to
+ * check it against (`forecastDays` null); "beyond": it falls past the last day the forecast covers.
+ * In both, the working calendar alone chose it, and the reschedule has to say so.
+ */
+export function weatherCheckFor(input: {
+  job: Job;
+  lostDate: string;
+  dates: { start: string; end: string };
+  forecastDays: string[] | null;
+}): NonNullable<VarianceProposal["weatherCheck"]> {
+  const { job, lostDate, dates, forecastDays } = input;
+  if (!forecastDays) return "unavailable";
+  const movedTo = lostDate <= job.startDate ? dates.start : dates.end;
+  const last = forecastDays[forecastDays.length - 1];
+  return !last || movedTo > last ? "beyond" : "forecast";
 }
 
 /** The calendar day after this one. */

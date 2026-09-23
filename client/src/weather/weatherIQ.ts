@@ -19,11 +19,13 @@ import type {
   Project,
   ScheduleVariance,
   SiteWeatherForecast,
+  VarianceProposal,
   WeatherAlert,
   WeatherCause,
   WeatherConflict,
   WeatherForecastDay,
   WeatherForecastPayload,
+  WeatherReading,
   WeatherSeverity,
   WeatherWindow
 } from "@buildflow/shared";
@@ -31,19 +33,27 @@ import type {
 /** What a WMO weather code looks like, for the icon and the words beside it. */
 export type ConditionKind = "clear" | "partly" | "cloudy" | "fog" | "drizzle" | "rain" | "snow" | "storm";
 
-export function conditionOf(code: number): { kind: ConditionKind; label: string } {
-  if (code === 0) return { kind: "clear", label: "Clear" };
-  if (code === 1) return { kind: "partly", label: "Mostly clear" };
-  if (code === 2) return { kind: "partly", label: "Partly cloudy" };
-  if (code === 3) return { kind: "cloudy", label: "Overcast" };
-  if (code === 45 || code === 48) return { kind: "fog", label: "Fog" };
-  if (code >= 51 && code <= 57) return { kind: "drizzle", label: code >= 56 ? "Freezing drizzle" : "Drizzle" };
-  if (code >= 61 && code <= 67) return { kind: "rain", label: code >= 66 ? "Freezing rain" : code === 65 ? "Heavy rain" : "Rain" };
-  if (code >= 71 && code <= 77) return { kind: "snow", label: "Snow" };
-  if (code >= 80 && code <= 82) return { kind: "rain", label: "Showers" };
-  if (code === 85 || code === 86) return { kind: "snow", label: "Snow showers" };
-  if (code >= 95) return { kind: "storm", label: code === 95 ? "Thunderstorms" : "Storms with hail" };
-  return { kind: "cloudy", label: "Cloudy" };
+export type Condition = { kind: ConditionKind; label: string; short: string };
+
+/**
+ * The sky a WMO code names: the icon's kind, the name a sentence uses, and the word a day tile has
+ * room for. The short word only differs where the name is one word too long for a tile to wrap
+ * ("Thunderstorms").
+ */
+export function conditionOf(code: number): Condition {
+  const named = (kind: ConditionKind, label: string, short = label): Condition => ({ kind, label, short });
+  if (code === 0) return named("clear", "Clear");
+  if (code === 1) return named("partly", "Mostly clear");
+  if (code === 2) return named("partly", "Partly cloudy");
+  if (code === 3) return named("cloudy", "Overcast");
+  if (code === 45 || code === 48) return named("fog", "Fog");
+  if (code >= 51 && code <= 57) return named("drizzle", code >= 56 ? "Freezing drizzle" : "Drizzle");
+  if (code >= 61 && code <= 67) return named("rain", code >= 66 ? "Freezing rain" : code === 65 ? "Heavy rain" : "Rain");
+  if (code >= 71 && code <= 77) return named("snow", "Snow");
+  if (code >= 80 && code <= 82) return named("rain", "Showers");
+  if (code === 85 || code === 86) return named("snow", "Snow showers");
+  if (code >= 95) return code === 95 ? named("storm", "Thunderstorms", "Storms") : named("storm", "Storms with hail", "Hail");
+  return named("cloudy", "Cloudy");
 }
 
 /** How each cause is named where a person reads it. */
@@ -96,6 +106,19 @@ export function clockWords(time: string): string {
   return `${parts.text} ${parts.meridiem}`;
 }
 
+/**
+ * When a site's reading was taken, on the reader's own clock — the clock the section's "updated"
+ * time is on, which is what it is read beside: "10:45 AM" today, "Tue 11:45 PM" another day.
+ */
+export function readingWhen(at: string, today: string): string {
+  const moment = new Date(at);
+  if (Number.isNaN(moment.getTime())) return "";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const date = `${moment.getFullYear()}-${pad(moment.getMonth() + 1)}-${pad(moment.getDate())}`;
+  const clock = moment.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return date === today ? clock : `${dayName(date, today)} ${clock}`;
+}
+
 /** "1–3 PM", "11 AM–1 PM": when a stretch of weather runs, the way a person says it. */
 export function timeRange(start: string, end: string): string {
   const from = clockParts(start);
@@ -130,6 +153,12 @@ const isText = (value: unknown): value is string => typeof value === "string";
 const CAUSES: readonly WeatherCause[] = ["lightning", "rain", "snow", "wind", "heat", "cold", "fog"];
 const isCause = (value: unknown): value is WeatherCause => CAUSES.includes(value as WeatherCause);
 const isSeverity = (value: unknown): value is WeatherSeverity => value === "watch" || value === "hold";
+
+function readReading(value: unknown): WeatherReading | null {
+  const reading = value as Partial<WeatherReading> | null;
+  if (!reading || !isText(reading.at) || !isNumber(reading.tempF) || !isNumber(reading.code)) return null;
+  return { at: reading.at, tempF: reading.tempF, code: reading.code };
+}
 
 function readDay(value: unknown): WeatherForecastDay | null {
   const day = value as Partial<WeatherForecastDay> | null;
@@ -215,6 +244,7 @@ export function readForecast(value: unknown): WeatherForecastPayload | null {
         locatedBy,
         timezone: isText(site.timezone) ? site.timezone : "",
         fetchedAt: isText(site.fetchedAt) ? site.fetchedAt : "",
+        current: readReading(site.current),
         days,
         windows: Array.isArray(site.windows)
           ? site.windows.map(readWindow).filter((window): window is WeatherWindow => window !== null)
@@ -224,6 +254,35 @@ export function readForecast(value: unknown): WeatherForecastPayload | null {
   });
   const unplaced = Array.isArray(payload.unplaced) ? payload.unplaced.filter(isText) : [];
   return { source: "open-meteo", sites, unplaced, conflicts: readConflicts(payload.conflicts) };
+}
+
+/* ---- a reschedule's dates, and what checked them ------------------------------------------ */
+
+/**
+ * Why a weather reschedule's new dates were NOT checked against the forecast, in words for whoever
+ * decides it — or "" when they were (or the reschedule predates the check). Calling a day off works
+ * while the forecast cannot be read, and then the working calendar alone chose the dates.
+ */
+export function uncheckedReason(
+  proposal: Pick<VarianceProposal, "weatherCheck" | "currentStart" | "proposedStart" | "proposedEnd">,
+  lostDate: string
+): string {
+  if (proposal.weatherCheck === "unavailable") {
+    return "The forecast could not be read when this day was called off, so these dates follow the working calendar only. Check the weather before you reschedule.";
+  }
+  if (proposal.weatherCheck === "beyond") {
+    // the day the move turns on: the new start when the first day was lost, else the new finish
+    const movedTo = lostDate <= proposal.currentStart ? proposal.proposedStart : proposal.proposedEnd;
+    return `The forecast does not reach ${dateWords(movedTo)} yet, so that day follows the working calendar only. Check the weather nearer the day.`;
+  }
+  return "";
+}
+
+/** How Pending Approvals names a variance WeatherIQ raised, and whether the forecast checked its dates. */
+export function approvalPrefix(variance: Pick<ScheduleVariance, "kind" | "proposal">): string {
+  if (variance.kind !== "weather") return "";
+  const check = variance.proposal.weatherCheck;
+  return check === "unavailable" || check === "beyond" ? "Weather reschedule, forecast not checked · " : "Weather reschedule · ";
 }
 
 /* ---- the rows: what the section lists ----------------------------------------------------- */

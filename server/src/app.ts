@@ -87,7 +87,7 @@ import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.j
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
 import { activeSites, forecastForSites, placeForQuery, WeatherUnavailableError } from "./weather.js";
-import { detectConflicts, parseClock, rescheduleDates } from "./weatherConflicts.js";
+import { detectConflicts, parseClock, rescheduleDates, weatherCheckFor } from "./weatherConflicts.js";
 import { createRequestLogger } from "./requestLog.js";
 import { metrics } from "./metrics.js";
 
@@ -3046,17 +3046,28 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(404).json({ error: "That job is no longer on the schedule." });
       return;
     }
-    // the site's own weather decides where the job can go; without a forecast the calendar alone does
-    let windows: WeatherWindow[] = [];
+    /* The site's own weather decides where the job can go. Calling a day off has to work while the
+       forecast cannot be read — so it goes on, on the working calendar alone — but then the dates
+       were never checked against the weather, and the reschedule SAYS so (`weatherCheck`), for
+       whoever decides it, in the drawer or in Pending Approvals, however much later. The same goes
+       for a day past the last one the forecast covers. */
+    let site: { windows: WeatherWindow[]; days: Array<{ date: string }> } | undefined;
     try {
-      windows = (await forecastForSites([project], Date.now(), weatherCustom())).sites[0]?.windows ?? [];
+      site = (await forecastForSites([project], Date.now(), weatherCustom())).sites[0];
     } catch (error) {
       if (!(error instanceof WeatherUnavailableError)) throw error;
     }
     const jobs = store.jobs();
     const calendar = weatherCalendar(jobs);
-    const dates = rescheduleDates({ job, lostDate: conflict.date, calendar, windows });
-    const proposal = buildMoveProposal(jobs, store.dependencies(), job.id, dates.start, dates.end, calendar);
+    const dates = rescheduleDates({ job, lostDate: conflict.date, calendar, windows: site?.windows ?? [] });
+    const weatherCheck = weatherCheckFor({
+      job,
+      lostDate: conflict.date,
+      dates,
+      forecastDays: site ? site.days.map((day) => day.date) : null
+    });
+    const moved = buildMoveProposal(jobs, store.dependencies(), job.id, dates.start, dates.end, calendar);
+    const proposal = moved ? { ...moved, weatherCheck } : null;
     const shift = calendar.toIndex(dates.end) - calendar.toIndex(job.endDate);
     const day = new Date(`${conflict.date}T12:00:00Z`).toLocaleDateString("en-US", {
       weekday: "short",
@@ -3131,11 +3142,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     if (!point) {
-      res
-        .status(404)
-        .json({
-          error: `No town or ZIP code matched "${parsed.data.query}". Try a ZIP code, or a town and state such as "Round Rock, TX".`
-        });
+      res.status(404).json({
+        error: `No town or ZIP code matched "${parsed.data.query}". Try a ZIP code, or a town and state such as "Round Rock, TX".`
+      });
       return;
     }
     res.json(

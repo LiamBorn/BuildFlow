@@ -15,7 +15,7 @@ import { createApp } from "../src/app.js";
 import { BuildFlowStore } from "../src/database.js";
 import { can, ROUTE_POLICY } from "../src/permissions.js";
 import { __resetWeatherCaches, nextHour, scoreHour, windowsFromHours, type WeatherHour } from "../src/weather.js";
-import { DEFAULT_HOURS, detectConflicts, jobHours, parseClock, rescheduleDates } from "../src/weatherConflicts.js";
+import { DEFAULT_HOURS, detectConflicts, jobHours, parseClock, rescheduleDates, weatherCheckFor } from "../src/weatherConflicts.js";
 
 /**
  * WeatherIQ reaching the jobs (2026-09-23): the hours the weather crosses a line, the job days that
@@ -177,6 +177,7 @@ describe("the job days the weather reaches", () => {
     locatedBy: "project",
     timezone: "America/Chicago",
     fetchedAt: "2026-09-24T12:00:00.000Z",
+    current: null,
     days: Array.from({ length: 7 }, (_, index) => ({
       date: addDays(first, index),
       code: 1,
@@ -282,6 +283,23 @@ describe("the job days the weather reaches", () => {
         windows: [{ ...holdOn("2026-09-25"), severity: "watch" }]
       })
     ).toEqual({ start: "2026-09-25", end: "2026-09-25" });
+  });
+
+  it("says whether the day a reschedule turns on was checked against the forecast", () => {
+    const covered = site([]).days.map((day) => day.date); // the 24th to the 30th
+    const pour = job({ startDate: "2026-09-24", endDate: "2026-09-25" });
+    // the first day lost: the move turns on the new start, which the forecast covers
+    expect(
+      weatherCheckFor({ job: pour, lostDate: "2026-09-24", dates: { start: "2026-09-29", end: "2026-09-30" }, forecastDays: covered })
+    ).toBe("forecast");
+    // a later day lost: it turns on the new finish, and the 1st is past the forecast's last day
+    expect(
+      weatherCheckFor({ job: pour, lostDate: "2026-09-25", dates: { start: "2026-09-24", end: "2026-10-01" }, forecastDays: covered })
+    ).toBe("beyond");
+    // no forecast to check against at all
+    expect(
+      weatherCheckFor({ job: pour, lostDate: "2026-09-24", dates: { start: "2026-09-25", end: "2026-09-26" }, forecastDays: null })
+    ).toBe("unavailable");
   });
 });
 
@@ -469,6 +487,8 @@ describe("WeatherIQ's routes", () => {
     // the storm day falls inside the job, so it keeps its start and finishes a working day later
     expect(called.variance.proposal.proposedStart).toBe(today);
     expect(called.variance.proposal.proposedEnd > addDays(stormDay, 1)).toBe(true);
+    // on a day the forecast covers, checked against it
+    expect(called.variance.proposal.weatherCheck).toBe("forecast");
     expect(called.conflict).toMatchObject({
       status: "cancelled",
       decidedBy: boot.activeUser.id,
@@ -491,6 +511,34 @@ describe("WeatherIQ's routes", () => {
       (item: { id: string }) => item.id === conflict.id
     );
     expect(again.status).toBe("cancelled");
+  });
+
+  it("still calls a day off while the forecast cannot be read, and the reschedule says its dates were never checked", async () => {
+    const { owner } = await workspace();
+    const { today, stormDay, target } = await oneJobThisWeek(owner);
+    stubWeather(() => week(today, storm(stormDay)));
+    const conflict = (await owner.get("/api/weather/forecast").expect(200)).body.conflicts.find(
+      (item: { jobId: string }) => item.jobId === target.id
+    );
+
+    // the provider goes down, and nothing read earlier is left to fall back on
+    vi.restoreAllMocks();
+    __resetWeatherCaches();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/v1/search")) return Response.json(AUSTIN);
+      return new Response("unavailable", { status: 503 });
+    });
+
+    const called = (await owner.post(`/api/weather/conflicts/${conflict.id}/cancel`).send({}).expect(200)).body;
+    expect(called.conflict.status).toBe("cancelled");
+    expect(called.variance).toMatchObject({ kind: "weather", status: "pending" });
+    expect(called.variance.proposal.weatherCheck).toBe("unavailable");
+    // and it says so wherever the reschedule is read later, not only in this answer
+    const stored = (await owner.get("/api/bootstrap").expect(200)).body.variances.find(
+      (item: { id: string }) => item.id === called.variance.id
+    );
+    expect(stored.proposal.weatherCheck).toBe("unavailable");
   });
 
   it("keeps a day on when the person in charge says so, and a re-read does not ask again", async () => {

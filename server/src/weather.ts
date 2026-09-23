@@ -6,7 +6,8 @@
  * WHERE, and whether it lands in a job's working hours. So this reads the provider's days AND its
  * hours, turns the hours into windows — runs of hours that cross a threshold a jobsite plans around
  * (HOURLY, below) — and weatherConflicts.ts lays the jobs over them. Plain thresholds throughout; no
- * model is asked anything.
+ * model is asked anything. The same request brings the reading at each site as it is read (its
+ * temperature and sky), which the section leads with.
  *
  * WHY THE SERVER READS IT, NOT THE BROWSER. Two reasons, both about cost. A forecast is re-read at
  * most once per site every half hour however many people open the Dashboard, which keeps a busy
@@ -35,6 +36,7 @@ import type {
   WeatherForecastDay,
   WeatherForecastPayload,
   WeatherLocation,
+  WeatherReading,
   WeatherSeverity,
   WeatherWindow
 } from "@buildflow/shared";
@@ -358,7 +360,7 @@ export function windowsFromHours(hours: WeatherHour[]): WeatherWindow[] {
 
 /* ---- the forecast ------------------------------------------------------------------------ */
 
-type Forecast = { at: number; timezone: string; days: WeatherForecastDay[]; windows: WeatherWindow[] };
+type Forecast = { at: number; timezone: string; current: WeatherReading | null; days: WeatherForecastDay[]; windows: WeatherWindow[] };
 type Series = Record<string, unknown>;
 
 const forecasts = new Map<string, Forecast>();
@@ -413,6 +415,22 @@ export function readHours(hourly: Series | undefined): WeatherHour[] {
   });
 }
 
+/**
+ * One answer's `current` block: the temperature and the sky at the site as the forecast was read.
+ * Without both there is no reading — a missing code must not read as a clear sky. Its time is the
+ * site's wall clock (`timezone=auto`), so the answer's own UTC offset turns it into an instant.
+ */
+export function readCurrent(current: Series | undefined, utcOffsetSeconds: unknown): WeatherReading | null {
+  const temp = current?.temperature_2m;
+  const code = current?.weather_code;
+  if (typeof current?.time !== "string" || typeof temp !== "number" || !Number.isFinite(temp)) return null;
+  if (typeof code !== "number" || !Number.isFinite(code)) return null;
+  if (typeof utcOffsetSeconds !== "number" || !Number.isFinite(utcOffsetSeconds)) return null;
+  const wall = Date.parse(`${current.time}Z`);
+  if (!Number.isFinite(wall)) return null;
+  return { at: new Date(wall - utcOffsetSeconds * 1000).toISOString(), tempF: Math.round(temp), code: Math.round(code) };
+}
+
 /** One request for every cell; Open-Meteo answers a list of places with a list. */
 async function readCells(cells: string[], now: number): Promise<void> {
   const url = new URL(forecastUrl());
@@ -424,13 +442,21 @@ async function readCells(cells: string[], now: number): Promise<void> {
   );
   // imperial units apply to the hours too: snowfall in inches, visibility in feet
   url.searchParams.set("hourly", "weather_code,temperature_2m,precipitation_probability,precipitation,snowfall,wind_gusts_10m,visibility");
+  // what it is like there now, for the section's reading: same request, no extra call
+  url.searchParams.set("current", "temperature_2m,weather_code");
   url.searchParams.set("temperature_unit", "fahrenheit");
   url.searchParams.set("wind_speed_unit", "mph");
   url.searchParams.set("precipitation_unit", "inch");
   url.searchParams.set("timezone", "auto");
   url.searchParams.set("forecast_days", String(FORECAST_DAYS));
   const payload = await getJson(url);
-  const answers = (Array.isArray(payload) ? payload : [payload]) as Array<{ timezone?: unknown; daily?: Series; hourly?: Series }>;
+  const answers = (Array.isArray(payload) ? payload : [payload]) as Array<{
+    timezone?: unknown;
+    utc_offset_seconds?: unknown;
+    current?: Series;
+    daily?: Series;
+    hourly?: Series;
+  }>;
   /* A 200 that is not a forecast — a proxy's page, a stub, a changed API — must not read as clear
      skies at every site (the lesson of the Map page's forecast, 2026-09-22). Without days for
      every place asked about, there is no forecast. */
@@ -443,6 +469,7 @@ async function readCells(cells: string[], now: number): Promise<void> {
     forecasts.set(cell, {
       at: now,
       timezone: typeof timezone === "string" ? timezone : "UTC",
+      current: readCurrent(answers[index]?.current, answers[index]?.utc_offset_seconds),
       days: days[index],
       windows: windowsFromHours(readHours(answers[index]?.hourly))
     });
@@ -515,6 +542,7 @@ export async function forecastForSites(
       locatedBy: point.locatedBy,
       timezone: forecast.timezone,
       fetchedAt: new Date(forecast.at).toISOString(),
+      current: forecast.current,
       days: forecast.days,
       windows: forecast.windows
     };

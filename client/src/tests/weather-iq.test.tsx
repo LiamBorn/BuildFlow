@@ -14,6 +14,7 @@ import type {
   WeatherConflict,
   WeatherForecastDay,
   WeatherForecastPayload,
+  WeatherReading,
   WeatherWindow
 } from "@buildflow/shared";
 import { WeatherIQPanel } from "../weather/WeatherIQPanel";
@@ -53,7 +54,7 @@ const conflict = (overrides: Partial<WeatherConflict> = {}): WeatherConflict => 
 });
 
 const forecast = (
-  sites: Array<{ projectId: string; windows?: WeatherWindow[]; locatedBy?: "project" | "address" | "custom" }>,
+  sites: Array<{ projectId: string; windows?: WeatherWindow[]; locatedBy?: "project" | "address" | "custom"; current?: WeatherReading }>,
   conflicts: WeatherConflict[] = [],
   unplaced: string[] = []
 ): WeatherForecastPayload => ({
@@ -64,6 +65,7 @@ const forecast = (
     locatedBy: site.locatedBy ?? "address",
     timezone: "America/Chicago",
     fetchedAt: "2026-06-16T13:05:00.000Z",
+    current: site.current ?? null,
     days: week(),
     windows: site.windows ?? []
   })),
@@ -131,7 +133,11 @@ const reschedule = (status: ScheduleVariance["status"] = "pending"): ScheduleVar
  * A pretend server: what the forecast route answers, and the variances — changed by the decisions
  * the section posts, the way the real one changes them.
  */
-function server(initial: { forecast: WeatherForecastPayload | { status: number; body: unknown } }) {
+function server(initial: {
+  forecast: WeatherForecastPayload | { status: number; body: unknown };
+  /** What the server says checked the reschedule's dates (the forecast, unless it could not be read). */
+  weatherCheck?: ScheduleVariance["proposal"]["weatherCheck"];
+}) {
   const state = {
     forecast: initial.forecast,
     variances: [] as ScheduleVariance[],
@@ -151,7 +157,8 @@ function server(initial: { forecast: WeatherForecastPayload | { status: number; 
       return new Response(JSON.stringify(state.forecast), { status: 200 });
     }
     if (/\/api\/weather\/conflicts\/[^/]+\/cancel$/.test(url) && method === "POST") {
-      const variance = reschedule();
+      const raised = reschedule();
+      const variance = initial.weatherCheck ? { ...raised, proposal: { ...raised.proposal, weatherCheck: initial.weatherCheck } } : raised;
       state.variances = [variance];
       const next = conflict({
         status: "cancelled",
@@ -289,6 +296,8 @@ describe("the WeatherIQ section", () => {
     expect(within(proposal).getByText("Also moves 1 later job:")).toBeInTheDocument();
     // the ripple names the work, not the project the job belongs to
     expect(within(proposal).getByText("Interior Finishes")).toBeInTheDocument();
+    // dates the forecast checked carry no warning
+    expect(proposal.querySelector(".wiq-proposal-line.is-warn")).toBeNull();
     expect(within(proposal).getByText(/^The project's finish moves 1 working day\. Its target completion is /)).toBeInTheDocument();
     // and the section's row now waits on the reschedule
     await waitFor(() => expect(rowText(rows()[0])[2]).toBe("Reschedule?"));
@@ -297,6 +306,23 @@ describe("the WeatherIQ section", () => {
     await within(drawer).findByText("Rescheduled to Mon, Jun 15 – Thu, Jun 18, with 1 later job moved to follow.");
     expect(pretend.state.posts[1]).toMatchObject({ url: "/api/schedule/variances/var-weather-1/accept", body: { userId: "u-matt" } });
     expect(rowText(rows()[0])[2]).toBe("Rescheduled");
+  });
+
+  it("says so when the forecast could not check the reschedule's dates, and still offers it", async () => {
+    const pretend = server({
+      forecast: forecast([{ projectId: "p-riverside", windows: [storm(TOMORROW)] }], [conflict()]),
+      weatherCheck: "unavailable"
+    });
+    show(bootstrapFixture, pretend);
+    fireEvent.click(await screen.findByRole("button", { name: /Concrete - Level 3 Slab/ }));
+    const drawer = screen.getByRole("dialog", { name: "Lightning Wed 1–3 PM" });
+    fireEvent.click(within(drawer).getByRole("button", { name: /Call off Wed/ }));
+    await within(drawer).findByText("Suggested reschedule");
+    expect(drawer.querySelector(".wiq-proposal-line.is-warn")?.textContent).toBe(
+      "The forecast could not be read when this day was called off, so these dates follow the working calendar only. Check the weather before you reschedule."
+    );
+    // the caveat informs the choice; it does not take it away
+    expect(within(drawer).getByRole("button", { name: /Reschedule/ })).toBeEnabled();
   });
 
   it("keeps a day on when the person in charge says so, and stops asking", async () => {
@@ -360,9 +386,33 @@ describe("the WeatherIQ section", () => {
     expect(screen.getByRole("dialog", { name: "Forecast location" })).toHaveTextContent("Not found yet");
   });
 
+  it("leads with the weather at the site now, when it was read and where, and names every day's sky", async () => {
+    // the reading's time is built from the local clock, so it reads 8:15 AM wherever the tests run
+    const current = { at: new Date(2026, 5, 16, 8, 15).toISOString(), tempF: 84, code: 2 };
+    show(bootstrapFixture, server({ forecast: forecast([{ projectId: "p-riverside", current }]) }));
+    const now = await waitFor(() => {
+      const found = document.querySelector<HTMLElement>(".wiq-now");
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(now.querySelector(".wiq-now-temp")?.textContent).toBe("84°");
+    expect(now.querySelector(".wiq-now-sky")?.textContent).toBe("Partly cloudy");
+    expect(now.querySelector(".wiq-now-when")?.textContent).toBe("As of 8:15 AM · Austin, Texas");
+    // one sentence for a screen reader; the pieces it is made of are hidden from it
+    expect(now.querySelector(".wiq-sr")?.textContent).toBe("Now at Austin, Texas: 84°F, partly cloudy, as of 8:15 AM.");
+    expect(now.querySelector(".wiq-now-read")).toHaveAttribute("aria-hidden", "true");
+    // the place moved down to the reading, where the top row no longer cuts it short
+    expect(document.querySelector(".wiq-top .wiq-where")).toBeNull();
+    const days = within(screen.getByRole("list", { name: "The week at Riverside Office Building" })).getAllByRole("listitem");
+    expect(days.map((day) => day.querySelector(".wiq-day-sky")?.textContent)).toEqual(Array(7).fill("Mostly clear"));
+  });
+
   it("says the week is clear when no job's working hours meet bad weather", async () => {
     show(bootstrapFixture, server({ forecast: forecast([{ projectId: "p-riverside" }]) }));
     expect(await screen.findByText("Clear to work this week")).toBeInTheDocument();
+    // with no reading from the provider there is nothing to lead with, and the place stays up top
+    expect(document.querySelector(".wiq-now")).toBeNull();
+    expect(document.querySelector(".wiq-top .wiq-where")?.textContent).toBe("Austin, Texas");
     // one site is named, not offered as a choice of one
     expect(screen.queryByRole("combobox", { name: "Job site" })).toBeNull();
     expect(document.querySelector(".wiq-site.is-single")?.textContent).toBe("Riverside Office Building");

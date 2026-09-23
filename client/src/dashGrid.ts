@@ -53,6 +53,24 @@ export function compact(items: GridItem[]): GridItem[] {
 }
 
 /**
+ * Heights changed where the panels stand (the content-fit) can leave one panel on top of the
+ * next, and compact() alone cannot undo that: it only ever lifts. A panel that GREW kept the one
+ * beneath it painted over its lower half — WeatherIQ (2026-09-23) fits once while it reads the
+ * forecast and again, taller, when the week arrives, and Equipment Conflicts sat on its day tiles.
+ * So, in reading order, each panel moves down past anything placed before it that it now
+ * overlaps, and then everything packs back up.
+ */
+export function separate(items: GridItem[]): GridItem[] {
+  const placed: GridItem[] = [];
+  for (const original of sortByPosition(items)) {
+    const item = { ...original };
+    while (placed.some((other) => collides(other, item))) item.y += 1;
+    placed.push(item);
+  }
+  return compact(placed);
+}
+
+/**
  * With `fixedId` pinned where it is, move everything it overlaps out of the way
  * — above it when that fits (so dragging down past a panel swaps with it,
  * rather than shoving it down forever), otherwise below — then compact.

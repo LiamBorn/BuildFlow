@@ -14,6 +14,7 @@ import {
   placeItem,
   reconcileLayout,
   resizeItem,
+  separate,
   snapDelta,
   snapDragSameShape,
   type GridItem
@@ -34,6 +35,30 @@ describe("dashGrid", () => {
     expect(at(packed, "a").y).toBe(0);
     expect(at(packed, "b").y).toBe(2);
     expect(at(packed, "c").y).toBe(2);
+  });
+
+  it("a panel that grew where it stands pushes the one beneath it down, not under it", () => {
+    // the content-fit on the default board, WeatherIQ's second pass: it was fitted to two rows
+    // while it read the forecast, Equipment Conflicts packed up under it, and then it grew to six
+    const grown = [
+      item("apps", 0, 0, 6, 6),
+      item("weather", 0, 6, 3, 6),
+      item("readiness", 3, 6, 3, 5),
+      item("conflicts", 0, 8, 3, 5),
+      item("inspections", 3, 11, 3, 5),
+      item("meetings", 0, 16, 6, 6)
+    ];
+    const packedOnly = compact(grown);
+    expect(collides(at(packedOnly, "weather"), at(packedOnly, "conflicts"))).toBe(true);
+    const fitted = separate(grown);
+    expect(fitted.some((one) => fitted.some((other) => collides(one, other)))).toBe(false);
+    expect(at(fitted, "weather")).toMatchObject({ y: 6, h: 6 });
+    expect(at(fitted, "conflicts").y).toBe(12);
+    expect(at(fitted, "inspections").y).toBe(11);
+    expect(at(fitted, "meetings").y).toBe(17);
+    // and a panel that shrank lets everything under it back up
+    const shrunk = separate([item("a", 0, 0, 6, 2), item("b", 0, 6, 6, 2)]);
+    expect(at(shrunk, "b").y).toBe(2);
   });
 
   it("moving a panel onto another pushes that one down, then packs", () => {
@@ -119,10 +144,6 @@ describe("dashGrid", () => {
     const layout = reconcileLayout(stored, defaults);
     expect(at(layout, "c")).toMatchObject({ x: 3, y: 2, w: 3 });
   });
-
-
-
-
 
   it("placing a panel at half width beside another lands them side by side and settles the rest", () => {
     const start = [item("a", 0, 0, 6, 4), item("b", 0, 4, 6, 4), item("c", 0, 8, 6, 2)];
