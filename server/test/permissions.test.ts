@@ -185,6 +185,105 @@ describe("the route policy", () => {
     installRoutePolicy(app);
     expect(() => assertRoutePolicyCovers(app)).toThrow(/never got a guard/);
   });
+
+  /*
+   * The same branch again, as the only thing wrong with the app.
+   *
+   * The test above is the readable statement of the mechanism, but it cannot tell whether the
+   * unguarded branch still gates the throw: its bare app leaves every policy entry stale, so the
+   * function throws for that instead, and the message carries all three sections whether or not
+   * each one was consulted. Mutating `unguarded.length` out of the condition left it green.
+   *
+   * This is the branch that matters most of the three -- a route that exists, is named in the
+   * table, and never got a guard is a route serving traffic with no permission check at all.
+   */
+  it("refuses to boot when an unguarded route is the ONLY thing wrong", () => {
+    const app = express();
+    const keys = Object.keys(ROUTE_POLICY);
+    const victim = keys.find((key) => key.startsWith("GET "))!;
+
+    // The victim goes on before installRoutePolicy, so it is in the table and never wrapped.
+    app.get(victim.slice("GET ".length), (_req, res) => res.end());
+    installRoutePolicy(app);
+    // Everything else goes on through the wrapper, which empties `missing` and `stale` and
+    // leaves `unguarded` holding exactly one key.
+    const verbs: Record<string, "get" | "post" | "put" | "patch" | "delete"> = {
+      GET: "get", POST: "post", PUT: "put", PATCH: "patch", DELETE: "delete"
+    };
+    for (const key of keys) {
+      if (key === victim) continue;
+      const space = key.indexOf(" ");
+      const method = verbs[key.slice(0, space)];
+      // Every key in the table today uses one of the five wrapped verbs; if that stops being
+      // true, the missing-branch test above is the one that covers it.
+      expect(method, `unhandled verb in ${key}`).toBeDefined();
+      app[method](key.slice(space + 1), (_req, res) => res.end());
+    }
+
+    const thrown = (() => {
+      try {
+        assertRoutePolicyCovers(app);
+        return null;
+      } catch (error) {
+        return (error as Error).message;
+      }
+    })();
+    expect(thrown, "an unguarded route must stop the boot on its own").not.toBeNull();
+    expect(thrown).toContain("never got a guard");
+    expect(thrown).toContain(victim);
+    // Nothing else is wrong, so nothing else may be reported -- that is what makes this isolate.
+    expect(thrown).not.toContain("NO policy");
+    expect(thrown).not.toContain("no longer exist");
+  });
+
+  /*
+   * The three branches of assertRoutePolicyCovers, each asserted through the function itself.
+   *
+   * "has an entry for each of the app's routes" above checks the same two conditions, but it
+   * re-implements the walk inline, so it passes whether or not the real function still reports
+   * them -- and its walk reads only top-level layers, where the function recurses. Only the
+   * unguarded branch was exercised through the function before these.
+   */
+  it("says so when the policy names routes the router does not have", () => {
+    // installRoutePolicy and nothing else: every entry in the table now describes a route that
+    // does not exist, which is the shape of a path renamed without updating the policy.
+    const app = express();
+    installRoutePolicy(app);
+    expect(() => assertRoutePolicyCovers(app)).toThrow(/routes that no longer exist/);
+  });
+
+  it("says so when the router has a route the policy never named", async () => {
+    // On the real app every other branch is quiet, so this isolates `missing`: a bare express
+    // app would also be full of stale entries, and the thrown message carries all three sections
+    // whether or not each one gated the throw -- so a test built that way passes even if the
+    // missing branch stops firing. Found by mutating the condition and watching nothing go red.
+    //
+    // `options` is the vehicle because installRoutePolicy wraps only the five verbs the app uses.
+    // An unwrapped verb is exactly how a route reaches the router undecided, which is what the
+    // comment above installRoutePolicy warns about; this is that warning, asserted.
+    const app = await bootedApp();
+    expect(() => assertRoutePolicyCovers(app)).not.toThrow();
+
+    app.options("/api/slipped-in-unwrapped", (_req, res) => res.end());
+    expect(() => assertRoutePolicyCovers(app)).toThrow(/Routes with NO policy/);
+    expect(() => assertRoutePolicyCovers(app)).toThrow(/OPTIONS \/api\/slipped-in-unwrapped/);
+  });
+
+  it("still finds a route buried in a mounted router, and names it without its mount path", () => {
+    const app = express();
+    installRoutePolicy(app);
+    const mounted = express.Router();
+    mounted.get("/buried", (_req, res) => res.end());
+    app.use("/api/mounted", mounted);
+
+    // Caught, which is the part that matters: a sub-router is how a route would otherwise avoid
+    // both the registration wrapper and a walk that reads only the top level.
+    expect(() => assertRoutePolicyCovers(app)).toThrow(/Routes with NO policy/);
+    // Reported as "GET /buried", not "GET /api/mounted/buried": express keeps the mount path on
+    // the parent layer, and the walk does not carry it down. Pinned rather than called correct --
+    // the guard fails closed, but it sends the reader looking for a path that does not exist.
+    expect(() => assertRoutePolicyCovers(app)).toThrow(/GET \/buried/);
+  });
 });
 
 /* ── a second and third identity ──────────────────────────────────────────────
