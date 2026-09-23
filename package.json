@@ -21,7 +21,8 @@
     "format": "prettier --write \"client/src/**/*.{ts,tsx,css}\" \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/test/**/*.ts\"",
     "seed:schedule": "npm --workspace server run seed:schedule",
     "format:check": "prettier --check \"client/src/**/*.{ts,tsx,css}\" \"shared/src/**/*.ts\" \"server/src/**/*.ts\" \"server/test/**/*.ts\"",
-    "check:css": "node scripts/check-css.mjs"
+    "check:css": "node scripts/check-css.mjs",
+    "test:perf": "npm --workspace shared run test:perf"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
