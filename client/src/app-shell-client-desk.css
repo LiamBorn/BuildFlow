@@ -5818,6 +5818,9 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
+.app-shell.hs-shell.bf-shell .reports-page .reports-chart-window {
+  color: var(--bf-ink-faint);
+}
 .app-shell.hs-shell.bf-shell .reports-page .reports-actions select {
   min-height: 40px;
   width: auto;

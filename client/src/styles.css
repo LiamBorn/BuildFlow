@@ -11424,6 +11424,18 @@ button:disabled {
   text-transform: uppercase;
 }
 
+/* The window each chart is actually showing, stated beside its title so the period select above
+   cannot be read as covering more than it does. The header is a flex row, so this sits at its end. */
+.reports-chart-window {
+  margin: 0 0 0 auto;
+  color: #7a889b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .reports-chart-card {
   min-height: 350px;
 }

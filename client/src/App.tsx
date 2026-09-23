@@ -291,7 +291,7 @@ import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
 import { useRecordFocus, type RecordFocusRequest } from "./recordFocus";
 import { PREFERENCES_SETTING, preferenceAttributes, usePreferences } from "./preferences";
-import { buildReportSeries, laborHoursWorked } from "./reports/series";
+import { buildReportSeries, laborHoursWorked, type ReportPeriod } from "./reports/series";
 
 /*
  * Time cards load when someone opens them, not when the landing page does.
@@ -29117,7 +29117,11 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
    * comment promising every figure came from the workspace's own records, and they did not move
    * for an empty workspace, a seeded one or a real one. A reader had no way to tell.
    */
-  const reportSeries = useMemo(() => buildReportSeries(data, dashboardToday), [data]);
+  /* The select used to be decoration: defaultValue, no onChange, three options that changed
+     nothing. It drives both time-series charts now, and each heading states the window it is
+     showing so the reader is never guessing which months are on the axis. */
+  const [reportPeriod, setReportPeriod] = useState<ReportPeriod>("last-6-months");
+  const reportSeries = useMemo(() => buildReportSeries(data, dashboardToday, reportPeriod), [data, reportPeriod]);
 
   return (
     <div className="page-stack reports-page">
@@ -29127,7 +29131,11 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
         tutorialId="reports-page-title"
         actions={
           <div className="reports-actions">
-            <select defaultValue="last-6-months" aria-label="Report period">
+            <select
+              value={reportPeriod}
+              onChange={(event) => setReportPeriod(event.target.value as ReportPeriod)}
+              aria-label="Report period"
+            >
               <option value="last-6-months">Last 6 Months</option>
               <option value="last-quarter">Last Quarter</option>
               <option value="year-to-date">Year to Date</option>
@@ -29160,6 +29168,7 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
         <article className="reports-card reports-chart-card">
           <header>
             <h2>Planned vs Actual Hours</h2>
+            <p className="reports-chart-window">{reportSeries.window.past}</p>
           </header>
           <div className="reports-chart-canvas">
             {reportSeries.plannedActual.length > 0 ? (
@@ -29191,6 +29200,7 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
         <article className="reports-card reports-chart-card">
           <header>
             <h2>Backlog ForecastIQ (Hours)</h2>
+            <p className="reports-chart-window">{reportSeries.window.future}</p>
           </header>
           <div className="reports-chart-canvas">
             {reportSeries.backlog.length > 0 ? (
@@ -29211,6 +29221,9 @@ function ReportsPage({ data }: { data: BootstrapPayload }) {
       <section className="reports-card reports-efficiency-card" aria-label="Crew efficiency">
         <header>
           <h2>Crew Efficiency</h2>
+          {/* a snapshot of utilization now: it answers to no period, and says so rather than
+              looking as though the select above had filtered it */}
+          <p className="reports-chart-window">current utilization</p>
         </header>
         <div className="reports-efficiency-list">
           {reportSeries.crews.length === 0 && (

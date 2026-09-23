@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 import type { BootstrapPayload, Crew, Job } from "@buildflow/shared";
 import { scheduleCalendar } from "@buildflow/shared";
 import { buildReportSeries, jobDayHours, hoursBetween, laborHoursWorked } from "../reports/series";
+import type { ReportPeriod } from "../reports/series";
 
 /** A job that works 07:00–15:30 (8.5h) with the crew size given. */
 const job = (over: Partial<Job>): Job =>
@@ -166,5 +167,76 @@ describe("the report series", () => {
       ...series.crews.map((c) => c.value)
     ];
     expect(figures.filter((n) => invented.includes(n))).toEqual([]);
+  });
+});
+
+describe("the period select", () => {
+  /* One job per month across 2025 and 2026 so every window has something to include or leave out.
+     Each is two planned days, and each has been reported started and finished, so both series of
+     the planned-against-actual chart have a value in every month. */
+  const monthly = (months: string[]) =>
+    payload(
+      months.map((month) =>
+        job({
+          id: month,
+          startDate: `${month}-05`,
+          endDate: `${month}-06`,
+          actualStart: `${month}-05`,
+          actualFinish: `${month}-06`
+        })
+      )
+    );
+  const TODAY = "2026-09-23";
+  const ALL = ["2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
+  const monthsOf = (period: ReportPeriod) => buildReportSeries(monthly(ALL), TODAY, period).plannedActual.map((p) => p.month);
+
+  it("shows six months by default", () => {
+    expect(monthsOf("last-6-months")).toEqual(["Apr", "May", "Jun", "Jul", "Aug", "Sep"]);
+  });
+
+  it("narrows to three for a quarter", () => {
+    expect(monthsOf("last-quarter")).toEqual(["Jul", "Aug", "Sep"]);
+  });
+
+  it("starts year to date at January, not six months back", () => {
+    // The November and December before it are dropped: they are not in this year.
+    expect(monthsOf("year-to-date")).toEqual(["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"]);
+  });
+
+  it("gives each choice a window it can state, so a heading never has to guess", () => {
+    expect(buildReportSeries(monthly(ALL), TODAY, "last-quarter").window).toEqual({
+      past: "last 3 months",
+      future: "next 3 months"
+    });
+    expect(buildReportSeries(monthly(ALL), TODAY, "year-to-date").window).toEqual({
+      past: "year to date",
+      future: "rest of this year"
+    });
+  });
+
+  it("looks FORWARD for backlog, and stops at year end for year-to-date", () => {
+    /* Unfinished work in each of the next five months. A quarter takes three; year-to-date takes
+       the rest of this calendar year, so 2027 is excluded where "next 6 months" would have it. */
+    const ahead = payload(
+      ["2026-10", "2026-11", "2026-12", "2027-01", "2027-02"].map((month) =>
+        job({ id: month, startDate: `${month}-05`, endDate: `${month}-06` })
+      )
+    );
+    expect(buildReportSeries(ahead, TODAY, "last-quarter").backlog.map((b) => b.month)).toEqual(["Oct", "Nov", "Dec"]);
+    expect(buildReportSeries(ahead, TODAY, "last-6-months").backlog.map((b) => b.month)).toEqual([
+      "Oct",
+      "Nov",
+      "Dec",
+      "Jan",
+      "Feb"
+    ]);
+    expect(buildReportSeries(ahead, TODAY, "year-to-date").backlog.map((b) => b.month)).toEqual(["Oct", "Nov", "Dec"]);
+  });
+
+  it("leaves crew utilization alone, because it is a snapshot and not a period", () => {
+    const crews = [{ name: "Concrete", utilization: 80 }];
+    const a = buildReportSeries(payload([], crews), TODAY, "last-quarter").crews;
+    const b = buildReportSeries(payload([], crews), TODAY, "year-to-date").crews;
+    expect(a).toEqual(b);
   });
 });

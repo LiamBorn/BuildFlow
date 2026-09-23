@@ -14,6 +14,23 @@
 import { jobHours, type BootstrapPayload, type Job, type WorkCalendar } from "@buildflow/shared";
 import { scheduleCalendar } from "@buildflow/shared";
 
+/**
+ * What the Reports page's period select asks for.
+ *
+ * Each choice means one window looking back and one looking forward, because two of the three
+ * series point in opposite directions: planned-against-actual is history, backlog is what is still
+ * owed. "Year to date" is inherently backward, so forward it means the rest of this calendar year.
+ * Crew efficiency is a snapshot of current utilization and belongs to no period at all, which is
+ * why its heading says so rather than appearing to answer the select.
+ */
+export type ReportPeriod = "last-quarter" | "last-6-months" | "year-to-date";
+
+const WINDOWS: Record<ReportPeriod, { back: number | "ytd"; ahead: number | "year-end"; past: string; future: string }> = {
+  "last-quarter": { back: 3, ahead: 3, past: "last 3 months", future: "next 3 months" },
+  "last-6-months": { back: 6, ahead: 6, past: "last 6 months", future: "next 6 months" },
+  "year-to-date": { back: "ytd", ahead: "year-end", past: "year to date", future: "rest of this year" }
+};
+
 export type PlannedActualPoint = { month: string; planned: number; actual: number };
 export type BacklogPoint = { month: string; backlog: number };
 export type CrewPoint = { name: string; value: number };
@@ -21,6 +38,8 @@ export type ReportSeries = {
   plannedActual: PlannedActualPoint[];
   backlog: BacklogPoint[];
   crews: CrewPoint[];
+  /** What each chart is actually showing, for its own heading to state. */
+  window: { past: string; future: string };
 };
 
 /**
@@ -70,12 +89,21 @@ export function laborHoursWorked(jobs: Job[], today: string, calendar: WorkCalen
   );
 }
 
-export function buildReportSeries(data: BootstrapPayload, today: string): ReportSeries {
+export function buildReportSeries(
+  data: BootstrapPayload,
+  today: string,
+  period: ReportPeriod = "last-6-months"
+): ReportSeries {
+  const window = WINDOWS[period];
+  /* Only the two labels reach the caller. `back` and `ahead` are this function's business, and
+     returning the whole row leaked them into the shape the UI reads — the declared type said
+     { past, future } while the object carried four fields. */
+  const labels = { past: window.past, future: window.future };
   const crews = [...data.crews]
     .map((crew) => ({ name: crew.name, value: Math.round(crew.utilization) }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
-  if (data.jobs.length === 0) return { plannedActual: [], backlog: [], crews };
+  if (data.jobs.length === 0) return { plannedActual: [], backlog: [], crews, window: labels };
 
   const calendar = scheduleCalendar(data.jobs.reduce((min, job) => (job.startDate < min ? job.startDate : min), today));
   const planned = new Map<string, number>();
@@ -104,15 +132,23 @@ export function buildReportSeries(data: BootstrapPayload, today: string): Report
 
   /* Planned against actual only for months that have already happened: a future month has no
      actual hours yet, and drawing it beside its plan would read as a shortfall. */
-  const past = [...new Set([...planned.keys(), ...actual.keys()])].filter((month) => month <= thisMonth).sort();
-  const plannedActual = past.slice(-6).map((month) => ({
+  const januaryThisYear = `${today.slice(0, 4)}-01`;
+  const decemberThisYear = `${today.slice(0, 4)}-12`;
+  const past = [...new Set([...planned.keys(), ...actual.keys()])]
+    .filter((month) => month <= thisMonth)
+    .filter((month) => window.back !== "ytd" || month >= januaryThisYear)
+    .sort();
+  const plannedActual = (window.back === "ytd" ? past : past.slice(-window.back)).map((month) => ({
     month: monthLabel(month),
     planned: Math.round(planned.get(month) ?? 0),
     actual: Math.round(actual.get(month) ?? 0)
   }));
-  const backlog = [...ahead.keys()]
+  const future = [...ahead.keys()]
     .sort()
-    .slice(0, 6)
-    .map((month) => ({ month: monthLabel(month), backlog: Math.round(ahead.get(month) ?? 0) }));
-  return { plannedActual, backlog, crews };
+    .filter((month) => window.ahead !== "year-end" || month <= decemberThisYear);
+  const backlog = (window.ahead === "year-end" ? future : future.slice(0, window.ahead)).map((month) => ({
+    month: monthLabel(month),
+    backlog: Math.round(ahead.get(month) ?? 0)
+  }));
+  return { plannedActual, backlog, crews, window: labels };
 }
