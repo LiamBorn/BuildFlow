@@ -89,6 +89,8 @@ export function SalesApp() {
   );
   const [data, setData] = useState<SalesBootstrap>(EMPTY);
   const [live, setLive] = useState(false);
+  /** Set when the server refused an optimistic change and we put the record back. */
+  const [writeError, setWriteError] = useState<string | null>(null);
   const [view, setView] = useState<View>("dashboard");
   const [focusId, setFocusId] = useState<string | undefined>();
   const [query, setQuery] = useState("");
@@ -137,6 +139,21 @@ export function SalesApp() {
     window.scrollTo({ top: 0 });
   };
 
+  /**
+   * An optimistic change the server refused.
+   *
+   * These four toggles apply to local state first, which is the right thing to do -- a status
+   * flip should feel instant. What they used to do on failure was keep the change anyway, so the
+   * board showed a status the server had never accepted and the next refresh quietly undid it.
+   * So: put the record back, and say so. In sample mode there is no server to refuse anything and
+   * the header already says "Sample data", so the change stands -- that is the demo working.
+   */
+  const refused = (restore: () => void, message: string) => {
+    if (!live) return;
+    restore();
+    setWriteError(message);
+  };
+
   const desk: Desk = {
     data,
     live,
@@ -171,11 +188,16 @@ export function SalesApp() {
       }
     },
     async moveLead(id, status) {
+      const before = data.leads.find((l) => l.id === id);
       setData((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? { ...l, status, lastActivityAt: new Date().toISOString() } : l)) }));
       try {
         await updateLead(id, { status });
+        setWriteError(null);
       } catch {
-        /* optimistic only */
+        refused(
+          () => before && setData((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? before : l)) })),
+          `Couldn't move ${before?.name ?? "that lead"} to ${status} — it's back where it was. Check the connection and try again.`
+        );
       }
     },
     async addTask(title, dueAt, leadId) {
@@ -194,16 +216,32 @@ export function SalesApp() {
       setData((d) => ({ ...d, tasks: d.tasks.map((t) => (t.id === task.id ? { ...t, done } : t)) }));
       try {
         await updateTask(task.id, { done: Boolean(done) });
+        setWriteError(null);
       } catch {
-        /* optimistic only */
+        refused(
+          () => setData((d) => ({ ...d, tasks: d.tasks.map((t) => (t.id === task.id ? { ...t, done: task.done } : t)) })),
+          `Couldn't mark "${task.title}" ${done ? "done" : "not done"} — it's back as it was. Check the connection and try again.`
+        );
       }
     },
     async removeTask(id) {
+      const index = data.tasks.findIndex((t) => t.id === id);
+      const removed = data.tasks[index];
       setData((d) => ({ ...d, tasks: d.tasks.filter((t) => t.id !== id) }));
       try {
         await deleteTask(id);
+        setWriteError(null);
       } catch {
-        /* optimistic only */
+        refused(() => {
+          if (!removed) return;
+          // Back at its own position, not appended: a to-do that reappears at the bottom of the
+          // list reads as a different one.
+          setData((d) => {
+            const tasks = [...d.tasks];
+            tasks.splice(Math.min(index, tasks.length), 0, removed);
+            return { ...d, tasks };
+          });
+        }, `Couldn't delete "${removed?.title ?? "that to-do"}" — it's still here. Check the connection and try again.`);
       }
     },
     async reply(conversationId, _body) {
@@ -215,11 +253,16 @@ export function SalesApp() {
       }));
     },
     async setConversation(id, patch) {
+      const before = data.conversations.find((c) => c.id === id);
       setData((d) => ({ ...d, conversations: d.conversations.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
       try {
         await patchConversation(id, patch);
+        setWriteError(null);
       } catch {
-        /* optimistic only */
+        refused(
+          () => before && setData((d) => ({ ...d, conversations: d.conversations.map((c) => (c.id === id ? before : c)) })),
+          `Couldn't update ${before?.subject ?? "that conversation"} — it's back as it was. Check the connection and try again.`
+        );
       }
     }
   };
@@ -357,6 +400,14 @@ export function SalesApp() {
         </header>
 
         <main className="sd-content">
+          {writeError && (
+            <p className="sd-write-error" role="status">
+              {writeError}
+              <button type="button" onClick={() => setWriteError(null)}>
+                Dismiss
+              </button>
+            </p>
+          )}
           {view === "dashboard" && <Dashboard desk={desk} />}
           {view === "leads" && department === "sales" && <Leads desk={desk} />}
           {view === "pipeline" && department === "sales" && <Pipeline desk={desk} />}

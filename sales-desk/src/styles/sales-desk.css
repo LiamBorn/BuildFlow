@@ -597,6 +597,14 @@ button.sd-badge.on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--tone); }
 .sd-member-form .sd-select.compact { height: 42px; min-width: 120px; }
 .sd-member-error { margin: 0 0 12px; font-size: 12.5px; font-weight: 600; color: var(--cc-red); }
 
+/* A change the server refused, shown above whichever view is open. Same voice as
+   .sd-member-error; it sits in the content flow rather than floating, because the app has no
+   toast layer and a message that disappears on its own is the wrong shape for "your change did
+   not save". */
+.sd-write-error { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; font-size: 12.5px; font-weight: 600; color: var(--cc-red); }
+.sd-write-error button { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+.sd-write-error button:hover { opacity: 0.75; }
+
 .sd-members { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .sd-member { display: flex; align-items: center; gap: 12px; padding: 11px 8px; border-radius: 11px; transition: background 0.14s ease; }
 .sd-member:hover { background: var(--wx-bg-2); }
