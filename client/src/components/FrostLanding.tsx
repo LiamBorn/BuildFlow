@@ -452,29 +452,45 @@ function FrostNavbar({
 function FrostHero() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "joined" | "error">("idle");
+  /** Why it failed. The error state only reddened the field, which says nothing to someone
+      whose address was fine and whose signup did not reach us. */
+  const [problem, setProblem] = useState("");
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const value = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setProblem("That doesn't look like an email address.");
       setState("error");
       return;
     }
     setState("sending");
     try {
       // The same endpoint the waitlist page posts to: it saves the signup and
-      // sends the confirmation email. A 400 is the server rejecting the address.
+      // sends the confirmation email.
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: value })
       });
-      if (response.status === 400) {
+      // Anything but a success means the address never reached the list. This used to
+      // check only for a 400 and then confirm anyway, so a 500 or an unreachable
+      // backend told someone they had joined while nothing had been recorded. Nobody
+      // would know to try again -- not them, and not us. Before launch the list is the
+      // whole asset, so a signup that fails has to say so.
+      if (!response.ok) {
+        setProblem(
+          response.status === 400
+            ? "That address was rejected — check it and try again."
+            : "We couldn't add you just now. Please try again in a moment."
+        );
         setState("error");
         return;
       }
     } catch {
-      // Backend unreachable — still confirm; the waitlist page does the same.
+      setProblem("We couldn't reach the waitlist. Check your connection and try again.");
+      setState("error");
+      return;
     }
     setState("joined");
   };
@@ -631,7 +647,10 @@ function FrostHero() {
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
-                  if (state === "error") setState("idle");
+                  if (state === "error") {
+                    setState("idle");
+                    setProblem("");
+                  }
                 }}
                 style={{
                   flex: 1,
@@ -682,6 +701,20 @@ function FrostHero() {
             </>
           )}
         </motion.form>
+        {problem ? (
+          <p
+            role="alert"
+            style={{
+              margin: "10px 0 0",
+              fontSize: "10px",
+              lineHeight: 1.5,
+              color: "#fecaca",
+              textAlign: "center"
+            }}
+          >
+            {problem}
+          </p>
+        ) : null}
       </div>
 
       {/* Footer strip */}

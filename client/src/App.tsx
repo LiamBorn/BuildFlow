@@ -11890,16 +11890,14 @@ function WelcomeWaitlistPage({ onBack }: { onBack: () => void }) {
     }
     setError("");
     setSubmitting(true);
-    // Keep a local copy too — powers the count offline and is a graceful
-    // fallback if the backend is unreachable.
-    const list = readWaitlistEmails();
-    if (!list.includes(value)) list.push(value);
-    try {
-      window.localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(list));
-    } catch {
-      // ignore storage failures — the confirmation still shows
-    }
-    let total = WAITLIST_BASE_COUNT + list.length;
+    /* The signup has to reach the server before any of this is true. The local copy
+       used to be written FIRST and then treated as a fallback when the POST failed,
+       so an unreachable or erroring backend produced a full confirmation screen and
+       a position number while nothing had been recorded anywhere we can see —
+       localStorage is in that person's browser, not on our list. Only a 400 was
+       treated as a failure, so a 500 confirmed too. Before launch the list is the
+       whole asset, and a signup lost this way is invisible on both sides. */
+    let total = WAITLIST_BASE_COUNT;
     try {
       // POST to the backend, which saves the signup and sends the confirmation email.
       const response = await fetch("/api/waitlist", {
@@ -11907,18 +11905,31 @@ function WelcomeWaitlistPage({ onBack }: { onBack: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: value })
       });
-      if (response.status === 400) {
-        setError("Please enter a valid email address.");
+      if (!response.ok) {
+        setError(
+          response.status === 400
+            ? "Please enter a valid email address."
+            : "We couldn't add you to the list just now. Please try again in a moment."
+        );
         setSubmitting(false);
         return;
       }
-      if (response.ok) {
-        const data = (await response.json().catch(() => null)) as { count?: number } | null;
-        if (data && typeof data.count === "number") total = WAITLIST_BASE_COUNT + data.count;
-      }
+      const data = (await response.json().catch(() => null)) as { count?: number } | null;
+      if (data && typeof data.count === "number") total = WAITLIST_BASE_COUNT + data.count;
     } catch {
-      // Backend unreachable — fall back to the local success state.
+      setError("We couldn't reach the waitlist. Check your connection and try again.");
+      setSubmitting(false);
+      return;
     }
+    // Saved. Keep a local copy so the count survives a reload on this machine.
+    const list = readWaitlistEmails();
+    if (!list.includes(value)) list.push(value);
+    try {
+      window.localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore storage failures — the signup is already saved on the server
+    }
+    if (total === WAITLIST_BASE_COUNT) total = WAITLIST_BASE_COUNT + list.length;
     setSubmittedEmail(value);
     setPosition(total);
     setCount(total);

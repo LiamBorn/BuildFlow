@@ -4,7 +4,7 @@
  * board writes as an inline variable; and clicking Home in the rail while the Dashboard is
  * already showing remounts it, so the entrance plays again.
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import App from "../App";
 import { bootstrapFixture } from "../test/fixture";
@@ -312,16 +312,20 @@ describe("the Dashboard's opening", () => {
     await enterDashboard();
 
     expect(document.querySelector(".app-shell.hs-shell")).not.toBeNull();
-    // The DURABLE facts, not the transient class. `bfm-open` comes off on a real
-    // 2.4s timer, and signing in through the form takes longer than that under a
-    // loaded full-suite run — asserting the class here made this case fail on
-    // machine speed rather than on behaviour. motion/AppFrame.test.tsx holds the
-    // class and the settle to fake timers, where they can be checked exactly.
     // Only the durable fact. `bfm-open` and openingRunning() are both cleared by a
     // real 2.4s timer, and signing in through the form takes longer than that under
     // a loaded full-suite run — asserting either here fails on machine speed rather
     // than on behaviour. motion/AppFrame.test.tsx holds both to fake timers.
-    expect(window.sessionStorage.getItem("bf:shell-opened"), "the session is spent").toBe("1");
+    //
+    // The flag needs waiting for, though, and for the same reason the others were
+    // dropped. AppFrame marks the session inside an effect that returns early when
+    // `.app-shell.hs-shell` is not in the DOM yet, and its deps are `[reduce]`, so
+    // it does not re-run when the shell arrives — it runs again when AppFrame next
+    // renders. Under a loaded full-suite run that lands after this line, which is
+    // how it failed twice in a row while passing 16/16 in isolation.
+    await waitFor(() =>
+      expect(window.sessionStorage.getItem("bf:shell-opened"), "the session is spent").toBe("1")
+    );
 
     // leaving the Dashboard and coming back does not spend a second opening
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
