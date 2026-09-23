@@ -20069,14 +20069,14 @@ function TeamSettingsPanel({ data, reload }: { data: BootstrapPayload; reload: (
     setNotice("");
     try {
       const response = await apiSendInvites(valid);
-      track(EVENTS.invitesSent, {
-        count: valid.length,
-        held: response.results.filter((r) => r.status === "held").length,
-        source: "settings"
-      });
       const sent = response.results.filter((r) => r.status === "sent").length;
       const held = response.results.filter((r) => r.status === "held").length;
       const skipped = response.results.filter((r) => r.status === "skipped");
+      /* The event is called invites_sent, so it reports how many were sent. It used to carry
+         only `count`, the number ATTEMPTED, which counts addresses that already had accounts as
+         invites — inviting five people who are all already members logged five. `count` stays so
+         nothing reading it breaks; the decomposition is now alongside it. */
+      track(EVENTS.invitesSent, { count: valid.length, sent, held, skipped: skipped.length, source: "settings" });
       setNotice(
         [
           sent ? `${sent} invite${sent === 1 ? "" : "s"} sent.` : "",

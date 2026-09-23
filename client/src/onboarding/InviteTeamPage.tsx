@@ -115,9 +115,13 @@ export function InviteTeamPage({ onDone }: { onDone: () => void }) {
     setFormError("");
     try {
       const response = await sendInvites(valid);
+      // See the note in App.tsx's Settings copy of this: `count` is how many were attempted, and
+      // an address that already has an account is skipped rather than invited.
       track(EVENTS.invitesSent, {
         count: valid.length,
+        sent: response.results.filter((result) => result.status === "sent").length,
         held: response.results.filter((result) => result.status === "held").length,
+        skipped: response.results.filter((result) => result.status === "skipped").length,
         source: "onboarding"
       });
       setResults(response.results);
