@@ -48,6 +48,7 @@ on.
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `SMTP_FROM` | Emails really go out: verification, invites, resets, digests. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | Paid plans. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Sign-in and Meetings calendars with Google and Microsoft. Register these redirect URIs with the provider, using the app's address in place of `<address>`: `<address>/api/auth/oauth/google/callback`, `<address>/api/auth/oauth/microsoft/callback`, `<address>/api/calendar/google/callback` and `<address>/api/calendar/microsoft/callback`. |
+| `BUILDFLOW_SECRET` | Signs the cookie that carries a sign-in or Connect round trip. Unset, the key is invented per process, so a restart between the click and the provider's redirect refuses the sign-in — and if the deployment ever runs more than one instance (Autoscale), every attempt is refused, because one instance signs and another verifies. Any long random string, kept the same across restarts. Only matters once a provider above is set, and the server says so at startup. |
 | `OPS_ADMIN_TOKEN` | Opens the ops endpoints under `/api/ops` (take and list backups, platform counts, runtime stats), sent as the `x-ops-token` header. In production, leaving it unset keeps them closed. |
 | `BUILDFLOW_DATA_FILE` | Where the databases and their backups live. Unset means `server/data`, which a published app does not keep — see below. |
 

@@ -59,6 +59,7 @@ import {
   readState,
   safeReturnTo,
   signState,
+  stateSecretWarning,
   type OAuthProvider
 } from "./oauth.js";
 import {
@@ -603,6 +604,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const exposeTokens = process.env.NODE_ENV === "test" || process.env.BUILDFLOW_EXPOSE_AUTH_TOKENS === "1";
 
   const app = express();
+
+  /* Said once, at startup, because the failure it describes does not announce itself: a rejected
+     sign-in looks like the provider's fault. Only printed when a provider is actually configured. */
+  {
+    const providers = { ...configuredProviders(), ...calendarConfigured() };
+    const warning = stateSecretWarning(Object.values(providers).some(Boolean));
+    if (warning) console.warn(warning);
+  }
   /**
    * A route answers only to the case it was registered with.
    *

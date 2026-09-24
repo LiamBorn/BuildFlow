@@ -107,9 +107,41 @@ export type OAuthState = {
   issuedAt: number;
 };
 
-// A per-process secret is fine: the cookie only has to survive one redirect
-// round trip. Set BUILDFLOW_SECRET to keep flows alive across restarts.
+/*
+ * The state cookie is signed, and BUILDFLOW_SECRET is the key. Left unset the process invents one at
+ * startup, which is enough for the case this was written for: one process, and a cookie that only has
+ * to survive one redirect round trip.
+ *
+ * It stops being enough the moment the redirect can come back somewhere else. A restart or redeploy
+ * between the click and the callback invalidates the cookie; a deployment running more than one
+ * instance breaks the flow outright, because the cookie is signed by whichever instance sent the
+ * person to Google and verified by whichever one the browser returns to. .replit deploys to a single
+ * Reserved VM today, so that second case is not live — but Autoscale is one setting away, and what it
+ * produces is a rejected sign-in with nothing in it that points back here.
+ */
 const secret = env("BUILDFLOW_SECRET") ?? crypto.randomBytes(32).toString("hex");
+
+/**
+ * The startup warning about that, or null when there is nothing worth saying.
+ *
+ * Quiet unless it matters: a deployment with no OAuth or calendar provider configured never signs a
+ * state cookie, and a startup that warns about things which do not apply is how the warnings that do
+ * apply get skipped.
+ */
+export function stateSecretWarning(
+  signsStateCookies: boolean,
+  vars: { BUILDFLOW_SECRET?: string; NODE_ENV?: string } = process.env
+): string | null {
+  if (vars.BUILDFLOW_SECRET?.trim()) return null;
+  if (vars.NODE_ENV !== "production") return null;
+  if (!signsStateCookies) return null;
+  return (
+    "🔐 ⚠️  BUILDFLOW_SECRET is not set, so the OAuth and calendar state cookie is signed with a key this " +
+    "process invented at startup. Sign-in and Connect will fail whenever the redirect comes back to a " +
+    "different process than it left — after a restart or redeploy, and on every attempt if the deployment " +
+    "ever runs more than one instance. Set BUILDFLOW_SECRET to a long random string."
+  );
+}
 
 /**
  * Generic over the payload since 2026-09-14, so the calendar connect flow can ride the same
