@@ -1383,6 +1383,15 @@
   height: 12px;
   color: var(--hsh-blue);
 }
+/* The preview pill borrows the add-on badge's shape and takes a caution tone, so the two read as
+   different statements when both are showing: not bought, versus not your numbers. */
+.dash-rx.hs-home .tc-dash-head h2 .tc-dash-addon.is-preview {
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+}
+.dash-rx.hs-home .tc-dash-head h2 .tc-dash-addon.is-preview svg {
+  color: var(--bf-color-warn);
+}
 .dash-rx.hs-home .tc-dash-open.locked {
   border-style: dashed;
 }

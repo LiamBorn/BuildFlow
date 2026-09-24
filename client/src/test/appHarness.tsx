@@ -138,7 +138,8 @@ export const HUB_OF: Record<string, string> = {
   Inventory: "Resources",
   "Field Updates": "Field",
   DelayIQs: "Field",
-  Reports: "Reporting"
+  Reports: "Reporting",
+  TimeCard: "TimeCard"
 };
 /** Open an app page from the rail: hover its hub (React listens to mouseover, not mouseenter), then pick it from the flyout. */
 export async function openAppPage(item: string) {

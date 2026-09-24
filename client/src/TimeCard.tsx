@@ -14,6 +14,7 @@ import {
   DollarSign,
   Download,
   FileCheck2,
+  FlaskConical,
   Gauge,
   HardHat,
   Layers,
@@ -227,6 +228,26 @@ export function TimeCardPage({ data }: { data: BootstrapPayload }) {
           </button>
         </div>
       </div>
+
+      {/*
+        Said once, at the top, before any of the numbers.
+
+        Every figure on this page comes from buildTimecardModel(), whose parameter is named `_data`
+        and is never read: the workers, the entries, the timecards, the approval chains, the audit
+        trail and the lien records are all fixed sample values. They are identical for an empty
+        workspace and a real one. Time Cards is also a paid add-on, so someone could be paying for
+        a page whose figures are not theirs — which is why this says so plainly rather than in a
+        footnote, and why it names what IS real: the labor hours on Reports, which are computed
+        from the workspace's own jobs and the days the field reported.
+      */}
+      <p className="tc-preview" role="note">
+        <FlaskConical size={16} aria-hidden="true" />
+        <span>
+          <strong>Preview.</strong> Every hour, cost and approval below comes from a built-in sample week — not from this workspace.
+          BuildFlow does not record time entries yet, so nothing here reflects your crews. The labor hours on <strong>Reports</strong> are
+          the real ones: those come from your own jobs.
+        </span>
+      </p>
 
       <section className="tc-stat-grid" aria-label="TimeCard summary">
         <TcStat
@@ -1676,6 +1697,13 @@ export function TimeCardDashboardCards({
       <header className="tc-dash-head">
         <h2>
           <Clock size={18} /> TimeCard
+          {/* These cards read the same sample week the page does, so they carry the same warning.
+              It sits beside the add-on badge rather than replacing it: one says the workspace has
+              not bought the feature, the other says the numbers are not the workspace's. Both can
+              be true, and they are not the same thing. */}
+          <span className="tc-dash-addon is-preview" title="These figures come from a built-in sample week, not from this workspace">
+            <FlaskConical size={12} /> Preview
+          </span>
           {locked && (
             <span className="tc-dash-addon" title="TimeCard is an add-on — choose it to see where to get it">
               <CircleArrowUp size={12} /> Add-on

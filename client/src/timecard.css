@@ -22,6 +22,33 @@
   align-items: flex-start;
 }
 
+/* The preview notice, above every figure on the page. Tokens rather than literals so it follows
+   dark mode: the Reports page's light literals were exactly what the 2026-09-18 dark sweep had to
+   go back and fix. */
+.tc-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--bf-line-solid);
+  border-left: 3px solid var(--bf-color-warn);
+  border-radius: var(--bf-radius-card);
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.tc-preview svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--bf-color-warn);
+}
+.tc-preview strong {
+  color: var(--bf-ink);
+  font-weight: 700;
+}
+
 .tc-title-actions {
   display: flex;
   align-items: center;
