@@ -11644,8 +11644,8 @@ button:disabled {
   }
 
   .dashboard-grid,
-.project-detail-grid,
-.project-card-grid {
+  .project-detail-grid,
+  .project-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -12734,12 +12734,12 @@ button:disabled {
   }
 
   .kpi-grid,
-.dashboard-grid,
-.crew-stat-grid,
-.crew-directory-grid,
-.project-detail-grid,
-.project-card-grid,
-.resource-grid {
+  .dashboard-grid,
+  .crew-stat-grid,
+  .crew-directory-grid,
+  .project-detail-grid,
+  .project-card-grid,
+  .resource-grid {
     grid-template-columns: 1fr;
   }
 

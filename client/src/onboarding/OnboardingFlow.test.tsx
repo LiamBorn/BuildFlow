@@ -25,7 +25,12 @@ vi.mock("../api", async (importOriginal) => {
 
 const PLANS: OnboardingFlowProps["plans"] = [
   { id: "free", name: "Free", priceMonthly: 0, features: ["Full Calendar: every crew", "Work Orders: the basics"] },
-  { id: "pro", name: "Pro", priceMonthly: 20, features: ["Everything in Free: all of it", "Unlimited Seats: everyone", "Readiness Rules: hold work"] },
+  {
+    id: "pro",
+    name: "Pro",
+    priceMonthly: 20,
+    features: ["Everything in Free: all of it", "Unlimited Seats: everyone", "Readiness Rules: hold work"]
+  },
   { id: "business", name: "Business", priceMonthly: 48, features: ["Everything in Pro: all of it", "Cross-Project Dispatch: one board"] },
   { id: "enterprise", name: "Enterprise", priceMonthly: null, features: ["Custom Seat Count: agreed with you"] }
 ];
@@ -56,7 +61,16 @@ const fillAccount = (password = "Reyes-Paving-2026") => {
 /** test/setup.ts stubs matchMedia to `matches: false`; the reduced-motion case needs to choose. */
 const setReduce = (matches: boolean) => {
   window.matchMedia = ((query: string) =>
-    ({ matches, media: query, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent: () => false }) as MediaQueryList) as typeof window.matchMedia;
+    ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent: () => false
+    }) as MediaQueryList) as typeof window.matchMedia;
 };
 
 beforeEach(() => setReduce(false));

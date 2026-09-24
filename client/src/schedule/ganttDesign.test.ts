@@ -93,7 +93,9 @@ describe("a group's dot and rule report its project's health", () => {
       /const GROUP_HEALTH_COLOUR: Record<string, string> = \{([\s\S]*?)\};/
     );
     expect(block, "GROUP_HEALTH_COLOUR not found in GanttPage.tsx").toBeTruthy();
-    return Object.fromEntries([...block![1].matchAll(/"?([A-Za-z ]+)"?:\s*"(var\(--[a-z0-9-]+\)|#[0-9a-f]{6})"/g)].map((m) => [m[1].trim(), m[2]]));
+    return Object.fromEntries(
+      [...block![1].matchAll(/"?([A-Za-z ]+)"?:\s*"(var\(--[a-z0-9-]+\)|#[0-9a-f]{6})"/g)].map((m) => [m[1].trim(), m[2]])
+    );
   };
 
   it("covers all four values the shared Project type can hold", () => {

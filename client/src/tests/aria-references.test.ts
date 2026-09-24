@@ -207,7 +207,13 @@ describe("an icon-only button says what it does", () => {
       const attrs = text.slice(m.index + "<button".length, gt);
       const body = text.slice(gt + 1, end);
       if (/\baria-label\b|\baria-labelledby\b|\btitle=/.test(attrs)) continue;
-      if (body.replace(/<[^>]*>/g, "").replace(/\{[^{}]*\}/g, "").trim()) continue;
+      if (
+        body
+          .replace(/<[^>]*>/g, "")
+          .replace(/\{[^{}]*\}/g, "")
+          .trim()
+      )
+        continue;
       const kids = [...body.matchAll(/<(\w+)[^>]*\/>/g)].map((k) => k[1]);
       if (!kids.length || body.replace(/<\w+[^>]*\/>/g, "").trim()) continue;
       if (kids.every((k) => icons.has(k))) {
@@ -223,7 +229,7 @@ describe("an icon-only button says what it does", () => {
   });
 
   it("gives every icon-only button an accessible name", () => {
-    expect(nameless, "a screen reader announces these as \"button\" and nothing more").toEqual([]);
+    expect(nameless, 'a screen reader announces these as "button" and nothing more').toEqual([]);
   });
 });
 

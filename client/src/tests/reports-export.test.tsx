@@ -32,8 +32,7 @@ const blobText = (blob: Blob) =>
     reader.onload = () => resolve(String(reader.result));
     reader.readAsText(blob);
   });
-const rowsFor = (s: ReportSeries) =>
-  reportCsvRows({ metrics, series: s, period: "last-6-months", today: "2026-09-23" });
+const rowsFor = (s: ReportSeries) => reportCsvRows({ metrics, series: s, period: "last-6-months", today: "2026-09-23" });
 
 describe("the report CSV", () => {
   it("writes the date and both windows into the file, not just the filename", () => {
@@ -56,9 +55,7 @@ describe("the report CSV", () => {
 
   it("says a section is empty instead of leaving it out, which would read as lost", () => {
     const rows = rowsFor(series({ plannedActual: [], backlog: [], crews: [] }));
-    expect(rows.map((r) => r[1])).toEqual(
-      expect.arrayContaining(["No months to compare yet", "Nothing outstanding", "No crews yet"])
-    );
+    expect(rows.map((r) => r[1])).toEqual(expect.arrayContaining(["No months to compare yet", "Nothing outstanding", "No crews yet"]));
     // and nothing anywhere reads as a zero measurement
     expect(rows.filter((r) => r[2] === "0")).toEqual([]);
   });

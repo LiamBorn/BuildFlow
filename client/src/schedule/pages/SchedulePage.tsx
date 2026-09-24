@@ -525,14 +525,7 @@ export function SchedulePage({
       group: "Planning",
       blurb: "The three schedule views — Month, Gantt Chart, Kanban — one click each, on the week and filters you have here.",
       action: <span className="sched-section-note">The week and filters follow you · keys 1–3 open a view</span>,
-      body: (
-        <ScheduleViewCards
-          headless
-          jobs={jobs}
-          monthAnchor={monthAnchor}
-          onOpen={(target) => openView(target)}
-        />
-      ),
+      body: <ScheduleViewCards headless jobs={jobs} monthAnchor={monthAnchor} onOpen={(target) => openView(target)} />,
       h: 5
     },
     {

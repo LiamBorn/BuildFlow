@@ -35,7 +35,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const OAUTH_MESSAGES: Record<string, string> = {
   cancelled: "Sign-in was cancelled. You can try again or use your email.",
   no_account: "There's no BuildFlow account for that email yet. Create one below, or sign in with a different address.",
-  email_unverified: "That provider hasn't confirmed the email on the account. Use an address they have verified, or sign up with your email.",
+  email_unverified:
+    "That provider hasn't confirmed the email on the account. Use an address they have verified, or sign up with your email.",
   not_configured: "That sign-in option isn't set up yet. Use your email for now.",
   state_missing: "That sign-in took too long or the browser lost track of it. Please try again.",
   state_mismatch: "That sign-in took too long or the browser lost track of it. Please try again.",
@@ -160,7 +161,16 @@ export function LoginPage({
       preview={
         /* The Dashboard, because that is where signing in lands. `signingInAs` is the address as
            it is typed — the only thing known about this person before they are through. */
-        <OnboardingPreview step={1} firstName="" lastName="" businessName="" trade={null} revenueLabel={null} teamLabel={null} signingInAs={email.trim()} />
+        <OnboardingPreview
+          step={1}
+          firstName=""
+          lastName=""
+          businessName=""
+          trade={null}
+          revenueLabel={null}
+          teamLabel={null}
+          signingInAs={email.trim()}
+        />
       }
     >
       <form className="onb-form" onSubmit={submit} noValidate>

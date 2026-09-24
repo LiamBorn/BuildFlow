@@ -134,10 +134,7 @@ describe("every linkable page says which page it is", () => {
   it("titles every routed view that is not a private step", () => {
     const routed = new Set(Object.values(table));
     const untitled = [...routed].filter((view) => !titles[view] && !PRIVATE_STEPS.has(view));
-    expect(
-      untitled,
-      "routed, so linkable, but reports the generic site title in a tab, a bookmark and history"
-    ).toEqual([]);
+    expect(untitled, "routed, so linkable, but reports the generic site title in a tab, a bookmark and history").toEqual([]);
   });
 
   it("gives no two pages the same title", () => {

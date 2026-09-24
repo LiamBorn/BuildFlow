@@ -21,12 +21,7 @@ export const REPORT_CSV_COLUMNS = ["Section", "Item", "Value", "Notes"] as const
 
 export type ReportMetric = { label: string; value: string; basis: string };
 
-export function reportCsvRows(input: {
-  metrics: ReportMetric[];
-  series: ReportSeries;
-  period: ReportPeriod;
-  today: string;
-}): string[][] {
+export function reportCsvRows(input: { metrics: ReportMetric[]; series: ReportSeries; period: ReportPeriod; today: string }): string[][] {
   const { metrics, series, period, today } = input;
   const rows: string[][] = [
     ["Report", "Generated", today, ""],

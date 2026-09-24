@@ -95,7 +95,16 @@ export function AcceptInvitePage({
            from typing. Until then (and if the invite turns out to be dead) there is no workspace
            to name, so the card falls back to the generic first screen rather than showing a
            "Your business" placeholder for a place that may not exist. */
-        <OnboardingPreview step={preview ? 2 : 1} firstName="" lastName="" businessName={org} trade={null} revenueLabel={null} teamLabel={null} signingInAs={preview ? undefined : ""} />
+        <OnboardingPreview
+          step={preview ? 2 : 1}
+          firstName=""
+          lastName=""
+          businessName={org}
+          trade={null}
+          revenueLabel={null}
+          teamLabel={null}
+          signingInAs={preview ? undefined : ""}
+        />
       }
     >
       {stage === "checking" ? (
@@ -150,7 +159,14 @@ export function AcceptInvitePage({
             </div>
             <div className="onb-field">
               <label htmlFor="invite-email">Email</label>
-              <input id="invite-email" className="onb-input is-readonly" type="email" value={preview?.email ?? ""} readOnly aria-readonly="true" />
+              <input
+                id="invite-email"
+                className="onb-input is-readonly"
+                type="email"
+                value={preview?.email ?? ""}
+                readOnly
+                aria-readonly="true"
+              />
               <p className="onb-hint">This is the address the invite was sent to, so it&apos;s already confirmed.</p>
             </div>
             <PasswordField
@@ -180,7 +196,8 @@ export function AcceptInvitePage({
               />
               {/* the links sit outside the <label> so opening the Terms doesn't also tick the box */}
               <span>
-                <label htmlFor="invite-terms">I agree to the</label> <a href="#terms">Terms &amp; Conditions</a> and <a href="#privacy">Privacy Policy</a>.
+                <label htmlFor="invite-terms">I agree to the</label> <a href="#terms">Terms &amp; Conditions</a> and{" "}
+                <a href="#privacy">Privacy Policy</a>.
                 {errors.terms && (
                   <span className="onb-error" role="alert">
                     {errors.terms}

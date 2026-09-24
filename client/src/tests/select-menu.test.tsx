@@ -157,7 +157,11 @@ describe("the program's dropdown list", () => {
     );
     press(screen.getByLabelText("Access level 1"));
     const list = screen.getByRole("listbox", { name: "Access level 1" });
-    expect(within(list).getAllByRole("option").map((row) => row.textContent)).toEqual(["Admin", "Member"]);
+    expect(
+      within(list)
+        .getAllByRole("option")
+        .map((row) => row.textContent)
+    ).toEqual(["Admin", "Member"]);
   });
 
   /* A control named by a `<label for>` rather than an `aria-label` — the signup screens' way —

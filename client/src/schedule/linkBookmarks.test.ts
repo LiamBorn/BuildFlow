@@ -49,7 +49,12 @@ describe("link bookmarks", () => {
     expect(toggleLinkBookmark("u-1", week)).toEqual([month]);
     window.localStorage.setItem(
       "bf:nav:links:u-3",
-      JSON.stringify([{ page: "mars" }, { page: "schedule", hash: "#elsewhere", label: "x" }, { page: "week", hash: "#schedule/week", label: "old" }, month])
+      JSON.stringify([
+        { page: "mars" },
+        { page: "schedule", hash: "#elsewhere", label: "x" },
+        { page: "week", hash: "#schedule/week", label: "old" },
+        month
+      ])
     );
     expect(readLinkBookmarks("u-3")).toEqual([month]); // only real schedule links survive — a retired page's pin is dropped too
   });

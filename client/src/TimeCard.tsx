@@ -134,8 +134,8 @@ function TcStat({
       <div>
         <p>{label}</p>
         <strong>
-        <AnimatedFigure text={String(value)} />
-      </strong>
+          <AnimatedFigure text={String(value)} />
+        </strong>
         <em>{hint}</em>
       </div>
     </article>
@@ -1234,8 +1234,22 @@ function IntegrationsTab({ model, data }: { model: Model; data: BootstrapPayload
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} />
               <Tooltip cursor={{ fill: "rgba(28, 28, 28, 0.04)" }} />
-              <Bar dataKey="planned" name="Planned" fill="var(--bf-color-series-1)" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
-              <Bar dataKey="actual" name="Actual" fill="var(--bf-color-series-2)" radius={[5, 5, 0, 0]} barSize={20} animationDuration={400} />
+              <Bar
+                dataKey="planned"
+                name="Planned"
+                fill="var(--bf-color-series-1)"
+                radius={[5, 5, 0, 0]}
+                barSize={20}
+                animationDuration={400}
+              />
+              <Bar
+                dataKey="actual"
+                name="Actual"
+                fill="var(--bf-color-series-2)"
+                radius={[5, 5, 0, 0]}
+                barSize={20}
+                animationDuration={400}
+              />
             </BarChart>
           </ResponsiveContainer>
           <div className="tc-legend">
@@ -1331,8 +1345,22 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} />
               <Tooltip cursor={{ stroke: "var(--bf-line-solid)", strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="planned" stroke="var(--bf-color-series-1)" strokeWidth={2} dot={{ r: 3 }} animationDuration={600} />
-              <Line type="monotone" dataKey="actual" stroke="var(--bf-color-series-2)" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
+              <Line
+                type="monotone"
+                dataKey="planned"
+                stroke="var(--bf-color-series-1)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                animationDuration={600}
+              />
+              <Line
+                type="monotone"
+                dataKey="actual"
+                stroke="var(--bf-color-series-2)"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+                animationDuration={600}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1352,8 +1380,22 @@ function ReportingTab({ model, entries }: { model: Model; entries: TcEntry[] }) 
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={chartTick} />
               <YAxis axisLine={false} tickLine={false} tick={chartTick} domain={[1200, 1800]} />
               <Tooltip cursor={{ stroke: "var(--bf-line-solid)", strokeWidth: 2 }} />
-              <Area type="monotone" dataKey="forecastIQ" stroke="var(--bf-color-series-1)" strokeWidth={3} fill="url(#tcForecastIQ)" animationDuration={600} />
-              <Line type="monotone" dataKey="actual" stroke="var(--bf-color-series-2)" strokeWidth={3} dot={{ r: 4 }} animationDuration={600} />
+              <Area
+                type="monotone"
+                dataKey="forecastIQ"
+                stroke="var(--bf-color-series-1)"
+                strokeWidth={3}
+                fill="url(#tcForecastIQ)"
+                animationDuration={600}
+              />
+              <Line
+                type="monotone"
+                dataKey="actual"
+                stroke="var(--bf-color-series-2)"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+                animationDuration={600}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1509,7 +1551,16 @@ function ComplianceTab({ model, entries }: { model: Model; entries: TcEntry[] })
         <div className="tc-class-chart">
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie data={classData} dataKey="value" nameKey="name" innerRadius={46} outerRadius={72} paddingAngle={3} animationDuration={400} animationBegin={0}>
+              <Pie
+                data={classData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={46}
+                outerRadius={72}
+                paddingAngle={3}
+                animationDuration={400}
+                animationBegin={0}
+              >
                 {classData.map((slice) => (
                   <Cell key={slice.name} fill={slice.color} />
                 ))}
@@ -1693,7 +1744,14 @@ export function TimeCardDashboardCards({
           <span className="tc-spark">
             <ResponsiveContainer width="100%" height={40}>
               <LineChart data={laborCostTrend} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
-                <Line type="monotone" dataKey="actual" stroke="var(--bf-color-series-1)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="var(--bf-color-series-1)"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </span>

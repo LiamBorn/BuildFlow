@@ -14,7 +14,13 @@ import { Beats } from "./Beats";
 import { OnboardingPreview } from "./OnboardingPreview";
 import { PasswordField } from "./PasswordField";
 
-export function ResetPasswordPage({ onBack, onReset }: { onBack: () => void; onReset: (token: string, password: string) => Promise<void> }) {
+export function ResetPasswordPage({
+  onBack,
+  onReset
+}: {
+  onBack: () => void;
+  onReset: (token: string, password: string) => Promise<void>;
+}) {
   const [token, setToken] = useState(tokenFromHash);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -53,14 +59,27 @@ export function ResetPasswordPage({ onBack, onReset }: { onBack: () => void; onR
       onBack={onBack}
       backLabel="Back to sign in"
       paneKey={missingToken ? "no-token" : "form"}
-      preview={<OnboardingPreview step={1} firstName="" lastName="" businessName="" trade={null} revenueLabel={null} teamLabel={null} signingInAs="" />}
+      preview={
+        <OnboardingPreview
+          step={1}
+          firstName=""
+          lastName=""
+          businessName=""
+          trade={null}
+          revenueLabel={null}
+          teamLabel={null}
+          signingInAs=""
+        />
+      }
     >
       {missingToken ? (
         <Beats>
           <h1 className="onb-h1" id="onb-title">
             That link is incomplete.
           </h1>
-          <p className="onb-sub">It arrived without its token, so there is nothing here to unlock. Open the link straight from the email, or ask for a new one.</p>
+          <p className="onb-sub">
+            It arrived without its token, so there is nothing here to unlock. Open the link straight from the email, or ask for a new one.
+          </p>
           <div className="onb-actions">
             <button type="button" className="onb-btn onb-btn-primary" onClick={onBack}>
               Request a new link

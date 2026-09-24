@@ -59,7 +59,18 @@ export function VerifyEmailPage({ onContinue, onLogin }: { onContinue: () => Pro
       backLabel="Back to sign in"
       paneKey={state}
       leaving={leaving}
-      preview={<OnboardingPreview step={1} firstName="" lastName="" businessName="" trade={null} revenueLabel={null} teamLabel={null} signingInAs="" />}
+      preview={
+        <OnboardingPreview
+          step={1}
+          firstName=""
+          lastName=""
+          businessName=""
+          trade={null}
+          revenueLabel={null}
+          teamLabel={null}
+          signingInAs=""
+        />
+      }
     >
       <Beats>
         <h1 className="onb-h1" id="onb-title">

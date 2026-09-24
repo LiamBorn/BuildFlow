@@ -23,16 +23,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 
 /** The screen a demonstration draws. */
-export type TutorialShape =
-  | "tiles"
-  | "table"
-  | "calendar"
-  | "lanes"
-  | "timeline"
-  | "list"
-  | "form"
-  | "switcher"
-  | "status";
+export type TutorialShape = "tiles" | "table" | "calendar" | "lanes" | "timeline" | "list" | "form" | "switcher" | "status";
 
 /** What the cursor does over it. */
 export type TutorialAction = "read" | "click" | "drag" | "fill";

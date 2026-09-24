@@ -101,10 +101,7 @@ describe("the report series", () => {
   });
 
   it("puts each job's planned hours in the month the plan puts them", () => {
-    const series = buildReportSeries(
-      payload([job({ startDate: "2026-08-03", endDate: "2026-08-04", requiredLabor: 2 })]),
-      "2026-09-23"
-    );
+    const series = buildReportSeries(payload([job({ startDate: "2026-08-03", endDate: "2026-08-04", requiredLabor: 2 })]), "2026-09-23");
     expect(series.plannedActual).toEqual([{ month: "Aug", planned: 2 * 17, actual: 0 }]);
   });
 
@@ -129,10 +126,7 @@ describe("the report series", () => {
 
   it("drops an overdue job's unbuilt share into this month, since the plan has no days left for it", () => {
     // Two planned days at 8.5h = 17h, 40% still to do, all of it owed now rather than never.
-    const series = buildReportSeries(
-      payload([job({ startDate: "2026-09-01", endDate: "2026-09-02", percentComplete: 60 })]),
-      "2026-09-23"
-    );
+    const series = buildReportSeries(payload([job({ startDate: "2026-09-01", endDate: "2026-09-02", percentComplete: 60 })]), "2026-09-23");
     expect(series.backlog).toEqual([{ month: "Sep", backlog: Math.round(17 * 0.4) }]);
   });
 
@@ -146,7 +140,13 @@ describe("the report series", () => {
 
   it("ranks crews by their own utilization, worst last", () => {
     const series = buildReportSeries(
-      payload([], [{ name: "Paving", utilization: 61 }, { name: "Concrete", utilization: 93 }]),
+      payload(
+        [],
+        [
+          { name: "Paving", utilization: 61 },
+          { name: "Concrete", utilization: 93 }
+        ]
+      ),
       "2026-09-23"
     );
     expect(series.crews).toEqual([
@@ -223,13 +223,7 @@ describe("the period select", () => {
       )
     );
     expect(buildReportSeries(ahead, TODAY, "last-quarter").backlog.map((b) => b.month)).toEqual(["Oct", "Nov", "Dec"]);
-    expect(buildReportSeries(ahead, TODAY, "last-6-months").backlog.map((b) => b.month)).toEqual([
-      "Oct",
-      "Nov",
-      "Dec",
-      "Jan",
-      "Feb"
-    ]);
+    expect(buildReportSeries(ahead, TODAY, "last-6-months").backlog.map((b) => b.month)).toEqual(["Oct", "Nov", "Dec", "Jan", "Feb"]);
     expect(buildReportSeries(ahead, TODAY, "year-to-date").backlog.map((b) => b.month)).toEqual(["Oct", "Nov", "Dec"]);
   });
 

@@ -271,7 +271,10 @@ describe("spec §6.5", () => {
     const input: ScheduleInput = { project: PROJECT, calendars: [FIVE_DAY], activities, relationships };
     runSchedule(input); // warm up the JIT and the calendar index, as a live app would be
     const { ms: elapsed, result: r } = fastestRun(5, () => runSchedule(input));
-    expect(elapsed, `fastest of 5 recalculations took ${elapsed.toFixed(1)}ms (limit ${target(100)}ms, strict=${STRICT_PERF})`).toBeLessThan(target(100));
+    expect(
+      elapsed,
+      `fastest of 5 recalculations took ${elapsed.toFixed(1)}ms (limit ${target(100)}ms, strict=${STRICT_PERF})`
+    ).toBeLessThan(target(100));
     expect(r.stats.scheduled).toBe(2000);
     expect(r.stats.relationships).toBe(3500);
     expect(r.cycles).toEqual([]);
@@ -439,7 +442,9 @@ describe("spec §7 targets", () => {
     const input: ScheduleInput = { project: PROJECT, calendars: [FIVE_DAY], activities, relationships };
     runSchedule(input); // warm
     const { ms: elapsed, result: r } = fastestRun(5, () => runSchedule(input));
-    expect(elapsed, `fastest of 5 recalculations took ${elapsed.toFixed(1)}ms (limit ${target(50)}ms, strict=${STRICT_PERF})`).toBeLessThan(target(50));
+    expect(elapsed, `fastest of 5 recalculations took ${elapsed.toFixed(1)}ms (limit ${target(50)}ms, strict=${STRICT_PERF})`).toBeLessThan(
+      target(50)
+    );
     expect(r.stats.scheduled).toBe(1000);
     expect(r.cycles).toEqual([]);
   });

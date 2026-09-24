@@ -94,7 +94,13 @@ export function ScheduleStatusBand({
     // the Schedule landing keeps the band's place (and the tour's anchor) while it loads or has nothing to compare yet
     if (!compact) return null;
     return (
-      <div key="empty" className="ss-strip ss-empty is-compact" role="status" aria-label="Schedule status" data-tutorial-id="schedule-status-band">
+      <div
+        key="empty"
+        className="ss-strip ss-empty is-compact"
+        role="status"
+        aria-label="Schedule status"
+        data-tutorial-id="schedule-status-band"
+      >
         <span>{status ? "No dated projects yet — the status band fills in as work is planned." : "Checking where the plan stands…"}</span>
       </div>
     );

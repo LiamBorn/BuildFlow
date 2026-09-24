@@ -91,9 +91,7 @@ describe("the waitlist page", () => {
 
       await screen.findByRole("alert");
       const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "[]");
-      expect(stored, "a signup the server never took must leave no trace claiming it did").not.toContain(
-        "lost@example.com"
-      );
+      expect(stored, "a signup the server never took must leave no trace claiming it did").not.toContain("lost@example.com");
     });
 
     it("still rejects a bad address as a bad address", async () => {

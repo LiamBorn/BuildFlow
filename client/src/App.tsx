@@ -211,7 +211,7 @@ import {
   type SignupInput,
   logout as apiLogout,
   askAi as apiAskAi,
-  importSchedule as apiImportSchedule,
+  importSchedule as apiImportSchedule
 } from "./api";
 import { announcementIsLive } from "./announcements";
 import { statusTone, toLocalIsoDate, weekDays } from "./schedule/scheduleUtils";
@@ -285,7 +285,11 @@ import {
 } from "./board/panelBoard";
 import { MeetingsPanel } from "./MeetingsPanel";
 import { WeatherIQPanel } from "./weather/WeatherIQPanel";
-import { approvalPrefix as weatherApprovalPrefix, CAUSE_LABEL as WEATHER_CAUSE_LABEL, timeRange as weatherTimeRange } from "./weather/weatherIQ";
+import {
+  approvalPrefix as weatherApprovalPrefix,
+  CAUSE_LABEL as WEATHER_CAUSE_LABEL,
+  timeRange as weatherTimeRange
+} from "./weather/weatherIQ";
 import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
 import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
@@ -317,9 +321,7 @@ const PlannedActualChart = lazy(() => import("./charts/AppCharts").then((m) => (
 const BacklogChart = lazy(() => import("./charts/AppCharts").then((m) => ({ default: m.BacklogChart })));
 
 const TimeCardPage = lazy(() => import("./TimeCard").then((m) => ({ default: m.TimeCardPage })));
-const TimeCardDashboardCards = lazy(() =>
-  import("./TimeCard").then((m) => ({ default: m.TimeCardDashboardCards }))
-);
+const TimeCardDashboardCards = lazy(() => import("./TimeCard").then((m) => ({ default: m.TimeCardDashboardCards })));
 
 type Page =
   | "welcome"
@@ -2477,8 +2479,7 @@ function App() {
      on a clock, and under test the clock is frozen outright (setup.ts fakes Date so the
      fixtures' dates stay put), which would make every click after the first a no-op. */
   const focusTicket = useRef(0);
-  const recordFocusFor = (target: Page) =>
-    recordFocus?.page === target ? { id: recordFocus.id, nonce: recordFocus.nonce } : null;
+  const recordFocusFor = (target: Page) => (recordFocus?.page === target ? { id: recordFocus.id, nonce: recordFocus.nonce } : null);
   const openNotificationTarget = (target: NotificationTarget) => {
     if (target.kind === "record") {
       setRecordFocus({ page: target.page, id: target.recordId, nonce: (focusTicket.current += 1) });
@@ -3256,110 +3257,112 @@ function App() {
             {/* the page you are leaving goes rather than vanishing (docs/motion-spec.md §4).
                 The children below are untouched: PageSwap only keys them by page. */}
             <PageSwap page={page}>
-            {page === "dashboard" && (
-              <Dashboard
-                key={pageEntrance}
-                onOpenBilling={() => openSettingsView("billing")}
-                data={data}
-                activeUser={activeUser}
-                setPage={setPage}
-                reload={reload}
-                selectedBusinessType={selectedBusinessType}
-                selectedPlanId={selectedPlanId}
-                selectedProductIds={selectedProductIds}
-                panelFocus={panelFocus}
-                workspaces={workspaces}
-                onSwitchWorkspace={handleSwitchWorkspace}
-                onCreateWorkspace={handleCreateWorkspace}
-                workspaceBusy={workspaceBusy}
-                workspaceError={workspaceError}
-              />
-            )}
-            {page === "bookmarks" && (
-              <BookmarksPage
-                key={pageEntrance}
-                bookmarks={bookmarks}
-                onToggleBookmark={toggleBookmark}
-                setPage={openAppPage}
-                selectedProductIds={selectedProductIds}
-                selectedPlanId={selectedPlanId}
-                onRequestAddOn={setAddOnPrompt}
-                links={linkBookmarks}
-                onToggleLink={toggleLinkBookmark}
-              />
-            )}
-            {page === "schedule" && <SchedulePage key={pageEntrance} data={data} reload={reload} onOpenPage={openAppPage} />}
-            {page === "gantt" && (
-              <GanttPage
-                data={data}
-                reload={reload}
-                onOpenSchedule={() => openAppPage("schedule")}
-                onOpenPage={openAppPage}
-                releaseTag={<PageReleaseTag page="gantt" />}
-              />
-            )}
-            {page === "kanban" && (
-              <KanbanPage
-                data={data}
-                reload={reload}
-                onOpenSchedule={() => openAppPage("schedule")}
-                onOpenPage={openAppPage}
-                releaseTag={<PageReleaseTag page="kanban" />}
-              />
-            )}
-            {page === "month" && (
-              <MonthPage
-                data={data}
-                reload={reload}
-                onOpenSchedule={() => openAppPage("schedule")}
-                onOpenPage={openAppPage}
-                releaseTag={<PageReleaseTag page="month" />}
-              />
-            )}
-            {page === "projects" && (
-              <ProjectsPage
-                key={pageEntrance}
-                data={data}
-                reload={reload}
-                setPage={setPage}
-                selectedProjectId={selectedProjectId}
-                setSelectedProjectId={setSelectedProjectId}
-              />
-            )}
-            {page === "crews" && <CrewsPage key={pageEntrance} data={data} reload={reload} />}
-            {page === "inventory" && (
-              <InventoryPage
-                key={pageEntrance}
-                data={data}
-                reload={reload}
-                focus={recordFocusFor("inventory")}
-                quantityHint={materialQuantityHint()}
-              />
-            )}
-            {page === "field" && <FieldUpdatesPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("field")} />}
-            {page === "delayIQs" && (
-              <DelayIQsPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
-            )}
-            {page === "reports" && <ReportsPage key={pageEntrance} data={data} />}
-            {page === "timecard" && (
-              <Suspense fallback={null}>
-                <TimeCardPage key={pageEntrance} data={data} />
-              </Suspense>
-            )}
-            {page === "settings" && (
-              <SettingsPage
-                key={pageEntrance}
-                onClose={closeSettingsPage}
-                initialView={settingsInitialView ?? undefined}
-                focusAddOn={settingsFocusAddOn}
-                selectedProductIds={selectedProductIds}
-                selectedPlanId={selectedPlanId}
-                onAddProduct={addProductToWorkspace}
-                data={data}
-                reload={reload}
-                onChangeBusinessType={changeBusinessType}
-              />
-            )}
+              {page === "dashboard" && (
+                <Dashboard
+                  key={pageEntrance}
+                  onOpenBilling={() => openSettingsView("billing")}
+                  data={data}
+                  activeUser={activeUser}
+                  setPage={setPage}
+                  reload={reload}
+                  selectedBusinessType={selectedBusinessType}
+                  selectedPlanId={selectedPlanId}
+                  selectedProductIds={selectedProductIds}
+                  panelFocus={panelFocus}
+                  workspaces={workspaces}
+                  onSwitchWorkspace={handleSwitchWorkspace}
+                  onCreateWorkspace={handleCreateWorkspace}
+                  workspaceBusy={workspaceBusy}
+                  workspaceError={workspaceError}
+                />
+              )}
+              {page === "bookmarks" && (
+                <BookmarksPage
+                  key={pageEntrance}
+                  bookmarks={bookmarks}
+                  onToggleBookmark={toggleBookmark}
+                  setPage={openAppPage}
+                  selectedProductIds={selectedProductIds}
+                  selectedPlanId={selectedPlanId}
+                  onRequestAddOn={setAddOnPrompt}
+                  links={linkBookmarks}
+                  onToggleLink={toggleLinkBookmark}
+                />
+              )}
+              {page === "schedule" && <SchedulePage key={pageEntrance} data={data} reload={reload} onOpenPage={openAppPage} />}
+              {page === "gantt" && (
+                <GanttPage
+                  data={data}
+                  reload={reload}
+                  onOpenSchedule={() => openAppPage("schedule")}
+                  onOpenPage={openAppPage}
+                  releaseTag={<PageReleaseTag page="gantt" />}
+                />
+              )}
+              {page === "kanban" && (
+                <KanbanPage
+                  data={data}
+                  reload={reload}
+                  onOpenSchedule={() => openAppPage("schedule")}
+                  onOpenPage={openAppPage}
+                  releaseTag={<PageReleaseTag page="kanban" />}
+                />
+              )}
+              {page === "month" && (
+                <MonthPage
+                  data={data}
+                  reload={reload}
+                  onOpenSchedule={() => openAppPage("schedule")}
+                  onOpenPage={openAppPage}
+                  releaseTag={<PageReleaseTag page="month" />}
+                />
+              )}
+              {page === "projects" && (
+                <ProjectsPage
+                  key={pageEntrance}
+                  data={data}
+                  reload={reload}
+                  setPage={setPage}
+                  selectedProjectId={selectedProjectId}
+                  setSelectedProjectId={setSelectedProjectId}
+                />
+              )}
+              {page === "crews" && <CrewsPage key={pageEntrance} data={data} reload={reload} />}
+              {page === "inventory" && (
+                <InventoryPage
+                  key={pageEntrance}
+                  data={data}
+                  reload={reload}
+                  focus={recordFocusFor("inventory")}
+                  quantityHint={materialQuantityHint()}
+                />
+              )}
+              {page === "field" && (
+                <FieldUpdatesPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("field")} />
+              )}
+              {page === "delayIQs" && (
+                <DelayIQsPage key={pageEntrance} data={data} activeUser={activeUser} reload={reload} focus={recordFocusFor("delayIQs")} />
+              )}
+              {page === "reports" && <ReportsPage key={pageEntrance} data={data} />}
+              {page === "timecard" && (
+                <Suspense fallback={null}>
+                  <TimeCardPage key={pageEntrance} data={data} />
+                </Suspense>
+              )}
+              {page === "settings" && (
+                <SettingsPage
+                  key={pageEntrance}
+                  onClose={closeSettingsPage}
+                  initialView={settingsInitialView ?? undefined}
+                  focusAddOn={settingsFocusAddOn}
+                  selectedProductIds={selectedProductIds}
+                  selectedPlanId={selectedPlanId}
+                  onAddProduct={addProductToWorkspace}
+                  data={data}
+                  reload={reload}
+                  onChangeBusinessType={changeBusinessType}
+                />
+              )}
             </PageSwap>
           </section>
         </main>
@@ -4336,7 +4339,9 @@ function WelcomePage({
            It stays mounted across the three hashes so a step can fade into the next; the hash says
            which group of steps it is on. */
         <OnboardingFlow
-          entry={welcomeView === "createAccount" ? "create-account" : welcomeView === "businessType" ? "business-type" : "additional-products"}
+          entry={
+            welcomeView === "createAccount" ? "create-account" : welcomeView === "businessType" ? "business-type" : "additional-products"
+          }
           plans={productPlans}
           onSignup={onSignup}
           onTradeChosen={handleBusinessTypeSelected}
@@ -4445,12 +4450,7 @@ function WelcomePage({
       ) : welcomeView === "contactSales" ? (
         <WelcomeContactSalesPage onBack={showWelcomeHome} onGetStarted={showCreateAccountPage} onOpenPlans={showComparePlansPage} />
       ) : welcomeView === "privacy" || welcomeView === "terms" || welcomeView === "security" ? (
-        <WelcomeLegalPage
-          key={welcomeView}
-          doc={welcomeView}
-          onBack={showWelcomeHome}
-          onContactSales={showContactSalesPage}
-        />
+        <WelcomeLegalPage key={welcomeView} doc={welcomeView} onBack={showWelcomeHome} onContactSales={showContactSalesPage} />
       ) : welcomeView === "templates" ? (
         <WelcomeTemplatesPage onBack={showWelcomeHome} onGetStarted={showCreateAccountPage} onContactSales={showContactSalesPage} />
       ) : welcomeView === "partners" ? (
@@ -4787,7 +4787,6 @@ function WxTypewriter({ normal, em }: { normal: string; em: string }) {
   );
 }
 
-
 function WxRotatingHeadline({ prefix, phrases }: { prefix: string; phrases: string[] }) {
   const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const longest = phrases.reduce((a, b) => (b.length > a.length ? b : a), "");
@@ -4836,7 +4835,6 @@ function WxRotatingHeadline({ prefix, phrases }: { prefix: string; phrases: stri
     </>
   );
 }
-
 
 const aiRecoveryPhrases = [
   "Recovery suggested.",
@@ -4974,9 +4972,6 @@ function WxTypeIn({ text, className }: { text: string; className?: string }) {
     </p>
   );
 }
-
-
-
 
 type OverviewIcon = typeof CalendarDays;
 type OverviewModule = {
@@ -6387,7 +6382,13 @@ function WelcomePlansOverviewPage({
         tone: "ready"
       },
       { icon: Route, title: "Route dispatch", sub: "Map & Field Ops at no extra charge", badge: "INCLUDED", tone: "ready" },
-      { icon: Wrench, title: "Equipment context", sub: "Time cards included; Equipment Tracking is in every plan", badge: "INCLUDED", tone: "ready" },
+      {
+        icon: Wrench,
+        title: "Equipment context",
+        sub: "Time cards included; Equipment Tracking is in every plan",
+        badge: "INCLUDED",
+        tone: "ready"
+      },
       {
         icon: ShieldAlert,
         title: "Field permissions",
@@ -6680,22 +6681,42 @@ function WelcomePlansOverviewPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>
+                Dashboard
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>
+                Schedule
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>
+                Projects
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>
+                Reports
+              </button>
             </div>
             <div>
               <h3>Modules</h3>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("crews")}>Crews</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("inventory")}>Inventory</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("field")}>Field updates</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("delayIQs")}>DelayIQs</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("crews")}>
+                Crews
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("inventory")}>
+                Inventory
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("field")}>
+                Field updates
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("delayIQs")}>
+                DelayIQs
+              </button>
             </div>
             <div>
               <h3>Get started</h3>
-              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>Get BuildFlow</a>
-              <button type="button" className="wx-footer-link" onClick={onLogIn}>Log in</button>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
+                Get BuildFlow
+              </a>
+              <button type="button" className="wx-footer-link" onClick={onLogIn}>
+                Log in
+              </button>
             </div>
           </nav>
         </div>
@@ -7241,22 +7262,42 @@ function WelcomeOverviewPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>
+                Dashboard
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>
+                Schedule
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>
+                Projects
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>
+                Reports
+              </button>
             </div>
             <div>
               <h3>Modules</h3>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("crews")}>Crews</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("inventory")}>Inventory</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("field")}>Field updates</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("delayIQs")}>DelayIQs</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("crews")}>
+                Crews
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("inventory")}>
+                Inventory
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("field")}>
+                Field updates
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("delayIQs")}>
+                DelayIQs
+              </button>
             </div>
             <div>
               <h3>Get started</h3>
-              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>Get BuildFlow</a>
-              <button type="button" className="wx-footer-link" onClick={onLogIn}>Log in</button>
+              <a href="#create-account" onClick={navigateInApp(onGetStarted)}>
+                Get BuildFlow
+              </a>
+              <button type="button" className="wx-footer-link" onClick={onLogIn}>
+                Log in
+              </button>
             </div>
           </nav>
         </div>
@@ -7286,11 +7327,9 @@ function WelcomeOverviewPage({
   );
 }
 
-
 // Deliberately loose: the server does the real check; this only catches "jordan"
 // or "jordan@reyes" before a round trip.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
 
 /* How the Confirm-email pill keeps watch after "Sent": every fifteen seconds, for ten minutes. */
 const VERIFY_WATCH_MS = 15_000;
@@ -7448,7 +7487,6 @@ function InviteRows({
 /** Validates drafts; blank rows are dropped, bad emails are named. */
 
 /** Last onboarding step: who else should be in the workspace. Skippable — invites also live in Settings. */
-
 
 const automationParticles = Array.from({ length: 30 }, (_, i) => ({
   x: (i * 37) % 100,
@@ -11697,7 +11735,6 @@ function WelcomeScheduleAiPage({
   );
 }
 
-
 function WelcomeMapFieldOpsPage({
   onBack,
   onOpenMap,
@@ -11717,7 +11754,6 @@ function WelcomeMapFieldOpsPage({
   );
 }
 
-
 function WelcomeFieldUpdatesDelayIQsPage({
   onBack,
   onOpenField,
@@ -11736,7 +11772,6 @@ function WelcomeFieldUpdatesDelayIQsPage({
     />
   );
 }
-
 
 function WelcomeMaterialsReadinessPage({
   onBack,
@@ -12797,15 +12832,7 @@ const legalDocs: Record<LegalDocId, LegalDocConfig> = {
   }
 };
 
-function WelcomeLegalPage({
-  doc,
-  onBack,
-  onContactSales
-}: {
-  doc: LegalDocId;
-  onBack: () => void;
-  onContactSales: () => void;
-}) {
+function WelcomeLegalPage({ doc, onBack, onContactSales }: { doc: LegalDocId; onBack: () => void; onContactSales: () => void }) {
   const rootRef = useRef<HTMLElement>(null);
   const config = legalDocs[doc];
   const NoteIcon = config.icon;
@@ -15285,15 +15312,27 @@ function WelcomeProductPage({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>
+                Dashboard
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>
+                Schedule
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>
+                Projects
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>
+                Reports
+              </button>
             </div>
             <div>
               <h3>Resources</h3>
-              <a href="#updates" onClick={navigateInApp(() => onShowUpdates())}>Updates</a>
-              <a href="#help-center" onClick={navigateInApp(onShowHelp)}>Help center</a>
+              <a href="#updates" onClick={navigateInApp(() => onShowUpdates())}>
+                Updates
+              </a>
+              <a href="#help-center" onClick={navigateInApp(onShowHelp)}>
+                Help center
+              </a>
               <a href="#templates">Templates</a>
               <a href="#partners">Partner programs</a>
               <a href="#integrations">Integrations</a>
@@ -15550,15 +15589,27 @@ function WelcomePlanShowcase({
           <nav className="wx-footer-links" aria-label="Footer">
             <div>
               <h3>Product</h3>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>Dashboard</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>Schedule</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>Projects</button>
-              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>Reports</button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("dashboard")}>
+                Dashboard
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("schedule")}>
+                Schedule
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("projects")}>
+                Projects
+              </button>
+              <button type="button" className="wx-footer-link" onClick={() => onExplore("reports")}>
+                Reports
+              </button>
             </div>
             <div>
               <h3>Resources</h3>
-              <a href="#updates" onClick={navigateInApp(() => onShowUpdates())}>Updates</a>
-              <a href="#help-center" onClick={navigateInApp(onShowHelp)}>Help center</a>
+              <a href="#updates" onClick={navigateInApp(() => onShowUpdates())}>
+                Updates
+              </a>
+              <a href="#help-center" onClick={navigateInApp(onShowHelp)}>
+                Help center
+              </a>
               <a href="#templates">Templates</a>
               <a href="#partners">Partner programs</a>
               <a href="#integrations">Integrations</a>
@@ -15597,7 +15648,6 @@ function WelcomePlanShowcase({
     </>
   );
 }
-
 
 type UpdateSection = { label: string; items: string[] };
 
@@ -15825,7 +15875,6 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
     ]
   }
 ];
-
 
 const UPDATES_FAQS: Array<{ q: string; a: string }> = [
   {
@@ -17762,8 +17811,6 @@ function WelcomeCustomerReviewsPage({ onOpenSchedule }: { onBack: () => void; on
   );
 }
 
-
-
 const helpCenterNav: Array<{ title: string; items: Array<{ title: string; text: string }> }> = [
   {
     title: "Get started",
@@ -18917,136 +18964,142 @@ function Sidebar({
         </button>
       )}
       <aside className={`sidebar hs-rail${collapsed ? " is-hidden" : ""}`} aria-label="Primary navigation" onMouseLeave={scheduleClose}>
-      {/* the collapse control sits at the rail's HEAD, under the logo — and the Show arrow that
+        {/* the collapse control sits at the rail's HEAD, under the logo — and the Show arrow that
           brings the rail back stands in exactly this spot (skin §45) */}
-      <div className="hs-rail-top">
-        <button type="button" className="hs-rail-btn hs-rail-hide" aria-label="Hide the sidebar" title="Hide the sidebar" onClick={onToggleCollapsed}>
-          <ChevronLeft size={20} />
-        </button>
-      </div>
-      <nav className="hs-rail-list" aria-label="Hubs">
-        {navHubs.map((hub) => {
-          const Icon = hub.icon;
-          const isActive = hub.id === activeHubId;
-          const isOpen = hub.id === openHubId;
-          const isRecommended = !isActive && hub.pages.some((hubPage) => highlightedPages.has(hubPage));
-          const isSingle = hub.pages.length === 1;
-          const hubTag = hub.pages.map((hubPage) => pageReleaseTag(hubPage)).find((tag): tag is PageReleaseTag => tag !== null) ?? null;
-          return (
-            <div key={hub.id} className="hs-rail-slot" onMouseEnter={(event) => openHub(hub.id, event.currentTarget)}>
-              <button
-                type="button"
-                className={["hs-rail-btn", isActive ? "active" : "", isOpen ? "open" : "", isRecommended ? "recommended" : ""]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-label={hubTag ? `${hub.label} (${hubTag})` : hub.label}
-                title={hubTag ? `${hub.label} · ${hubTag}` : hub.label}
-                aria-haspopup={isSingle ? undefined : "menu"}
-                aria-expanded={isSingle ? undefined : isOpen}
-                data-tutorial-id={isSingle ? `nav-${hub.pages[0]}` : undefined}
-                onFocus={(event) => openHub(hub.id, event.currentTarget.parentElement as HTMLElement)}
-                onClick={() => {
-                  setOpenHubId(null);
-                  // land on the hub's first page that's in the workspace; when the
-                  // whole hub is an add-on, prompt for it instead
-                  const target = hub.pages.find((hubPage) => !lockedAddOnForPage(hubPage)) ?? hub.pages[0];
-                  const lockedAddOn = lockedAddOnForPage(target);
-                  if (lockedAddOn) onRequestAddOn(lockedAddOn);
-                  else setPage(target);
-                }}
-              >
-                <Icon size={20} />
-                {hubTag && <span className={`hs-rail-tag ${hubTag.toLowerCase()}`} aria-hidden="true" />}
-              </button>
-            </div>
-          );
-        })}
-      </nav>
-      <div className="hs-rail-bottom">
-        <button
-          type="button"
-          className={`hs-rail-btn${page === "settings" ? " active" : ""}`}
-          aria-label="Settings"
-          title="Settings"
-          onClick={onOpenSettings}
-        >
-          <Settings size={20} />
-        </button>
-      </div>
-      {flyoutHub && (
-        <div
-          className="hs-flyout"
-          role="menu"
-          aria-label={`${flyoutHub.label} menu`}
-          style={{ "--hs-flyout-top": `${flyoutTop}px` } as CSSProperties}
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-        >
-          <div className="hs-flyout-head">{flyoutHub.label}</div>
-          {flyoutHub.pages.map((hubPage) => {
-            const item = navItemByPage[hubPage];
-            const ItemIcon = item.icon;
-            const lockedAddOn = lockedAddOnForPage(hubPage);
-            const addOnTip = lockedAddOn ? addOnTipCopy(lockedAddOn) : null;
-            const releaseTag = pageReleaseTag(hubPage);
-            const bookmarked = bookmarks.includes(hubPage);
-            // the Bookmarks page is where bookmarks live; starring it would be circular
-            const starrable = hubPage !== "bookmarks";
+        <div className="hs-rail-top">
+          <button
+            type="button"
+            className="hs-rail-btn hs-rail-hide"
+            aria-label="Hide the sidebar"
+            title="Hide the sidebar"
+            onClick={onToggleCollapsed}
+          >
+            <ChevronLeft size={20} />
+          </button>
+        </div>
+        <nav className="hs-rail-list" aria-label="Hubs">
+          {navHubs.map((hub) => {
+            const Icon = hub.icon;
+            const isActive = hub.id === activeHubId;
+            const isOpen = hub.id === openHubId;
+            const isRecommended = !isActive && hub.pages.some((hubPage) => highlightedPages.has(hubPage));
+            const isSingle = hub.pages.length === 1;
+            const hubTag = hub.pages.map((hubPage) => pageReleaseTag(hubPage)).find((tag): tag is PageReleaseTag => tag !== null) ?? null;
             return (
-              <div key={hubPage} className="hs-flyout-row">
+              <div key={hub.id} className="hs-rail-slot" onMouseEnter={(event) => openHub(hub.id, event.currentTarget)}>
                 <button
                   type="button"
-                  role="menuitem"
-                  className={[
-                    "hs-flyout-item",
-                    page === hubPage ? "active" : "",
-                    highlightedPages.has(hubPage) ? "recommended" : "",
-                    lockedAddOn ? "locked" : ""
-                  ]
+                  className={["hs-rail-btn", isActive ? "active" : "", isOpen ? "open" : "", isRecommended ? "recommended" : ""]
                     .filter(Boolean)
                     .join(" ")}
-                  data-tutorial-id={`nav-${hubPage}`}
-                  aria-describedby={lockedAddOn ? `hs-addon-tip-${hubPage}` : undefined}
+                  aria-label={hubTag ? `${hub.label} (${hubTag})` : hub.label}
+                  title={hubTag ? `${hub.label} · ${hubTag}` : hub.label}
+                  aria-haspopup={isSingle ? undefined : "menu"}
+                  aria-expanded={isSingle ? undefined : isOpen}
+                  data-tutorial-id={isSingle ? `nav-${hub.pages[0]}` : undefined}
+                  onFocus={(event) => openHub(hub.id, event.currentTarget.parentElement as HTMLElement)}
                   onClick={() => {
                     setOpenHubId(null);
+                    // land on the hub's first page that's in the workspace; when the
+                    // whole hub is an add-on, prompt for it instead
+                    const target = hub.pages.find((hubPage) => !lockedAddOnForPage(hubPage)) ?? hub.pages[0];
+                    const lockedAddOn = lockedAddOnForPage(target);
                     if (lockedAddOn) onRequestAddOn(lockedAddOn);
-                    else setPage(hubPage);
+                    else setPage(target);
                   }}
                 >
-                  <ItemIcon size={16} />
-                  <span className="hs-flyout-label">{item.label}</span>
-                  {releaseTag && <span className={`hs-flyout-tag ${releaseTag.toLowerCase()}`}>{releaseTag}</span>}
-                  {/* HubSpot-style: an up-arrow marks a program that takes an add-on to unlock */}
-                  {lockedAddOn && <CircleArrowUp size={16} className="hs-flyout-upgrade" aria-hidden="true" />}
-                  {addOnTip && (
-                    <span className="hs-flyout-tip" role="tooltip" id={`hs-addon-tip-${hubPage}`}>
-                      <strong>{addOnTip.title}</strong>
-                      {addOnTip.body}
-                    </span>
-                  )}
+                  <Icon size={20} />
+                  {hubTag && <span className={`hs-rail-tag ${hubTag.toLowerCase()}`} aria-hidden="true" />}
                 </button>
-                {starrable && (
-                  <button
-                    type="button"
-                    className={`hs-flyout-star${bookmarked ? " is-on" : ""}`}
-                    aria-pressed={bookmarked}
-                    aria-label={bookmarked ? `Remove ${item.label} from bookmarks` : `Bookmark ${item.label}`}
-                    title={bookmarked ? "Remove bookmark" : "Bookmark for quick access"}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onToggleBookmark(hubPage);
-                    }}
-                  >
-                    <Star size={14} />
-                  </button>
-                )}
               </div>
             );
           })}
-          {flyoutHub.id === "schedule" && scheduleViews}
+        </nav>
+        <div className="hs-rail-bottom">
+          <button
+            type="button"
+            className={`hs-rail-btn${page === "settings" ? " active" : ""}`}
+            aria-label="Settings"
+            title="Settings"
+            onClick={onOpenSettings}
+          >
+            <Settings size={20} />
+          </button>
         </div>
-      )}
-    </aside>
+        {flyoutHub && (
+          <div
+            className="hs-flyout"
+            role="menu"
+            aria-label={`${flyoutHub.label} menu`}
+            style={{ "--hs-flyout-top": `${flyoutTop}px` } as CSSProperties}
+            onMouseEnter={cancelClose}
+            onMouseLeave={scheduleClose}
+          >
+            <div className="hs-flyout-head">{flyoutHub.label}</div>
+            {flyoutHub.pages.map((hubPage) => {
+              const item = navItemByPage[hubPage];
+              const ItemIcon = item.icon;
+              const lockedAddOn = lockedAddOnForPage(hubPage);
+              const addOnTip = lockedAddOn ? addOnTipCopy(lockedAddOn) : null;
+              const releaseTag = pageReleaseTag(hubPage);
+              const bookmarked = bookmarks.includes(hubPage);
+              // the Bookmarks page is where bookmarks live; starring it would be circular
+              const starrable = hubPage !== "bookmarks";
+              return (
+                <div key={hubPage} className="hs-flyout-row">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={[
+                      "hs-flyout-item",
+                      page === hubPage ? "active" : "",
+                      highlightedPages.has(hubPage) ? "recommended" : "",
+                      lockedAddOn ? "locked" : ""
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    data-tutorial-id={`nav-${hubPage}`}
+                    aria-describedby={lockedAddOn ? `hs-addon-tip-${hubPage}` : undefined}
+                    onClick={() => {
+                      setOpenHubId(null);
+                      if (lockedAddOn) onRequestAddOn(lockedAddOn);
+                      else setPage(hubPage);
+                    }}
+                  >
+                    <ItemIcon size={16} />
+                    <span className="hs-flyout-label">{item.label}</span>
+                    {releaseTag && <span className={`hs-flyout-tag ${releaseTag.toLowerCase()}`}>{releaseTag}</span>}
+                    {/* HubSpot-style: an up-arrow marks a program that takes an add-on to unlock */}
+                    {lockedAddOn && <CircleArrowUp size={16} className="hs-flyout-upgrade" aria-hidden="true" />}
+                    {addOnTip && (
+                      <span className="hs-flyout-tip" role="tooltip" id={`hs-addon-tip-${hubPage}`}>
+                        <strong>{addOnTip.title}</strong>
+                        {addOnTip.body}
+                      </span>
+                    )}
+                  </button>
+                  {starrable && (
+                    <button
+                      type="button"
+                      className={`hs-flyout-star${bookmarked ? " is-on" : ""}`}
+                      aria-pressed={bookmarked}
+                      aria-label={bookmarked ? `Remove ${item.label} from bookmarks` : `Bookmark ${item.label}`}
+                      title={bookmarked ? "Remove bookmark" : "Bookmark for quick access"}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleBookmark(hubPage);
+                      }}
+                    >
+                      <Star size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {flyoutHub.id === "schedule" && scheduleViews}
+          </div>
+        )}
+      </aside>
     </>
   );
 }
@@ -19490,7 +19543,7 @@ function TopBar({
             aria-haspopup="menu"
             aria-expanded={isBookmarksOpen}
             onClick={() => {
-                        setIsNotificationsOpen(false);
+              setIsNotificationsOpen(false);
               setIsAccountMenuOpen(false);
               setIsBookmarksOpen((isOpen) => !isOpen);
             }}
@@ -19633,7 +19686,7 @@ function TopBar({
             onClick={() => {
               setIsNotificationsOpen(false);
               setIsAccountMenuOpen(false);
-                        setIsPreferencesOpen((isOpen) => !isOpen);
+              setIsPreferencesOpen((isOpen) => !isOpen);
             }}
           >
             <Settings size={20} />
@@ -20070,8 +20123,7 @@ function SettingsBillingPlans({
             provides for exactly this — "a placeholder for where a link might otherwise have been
             placed" — so it keeps the `.sx-plans-foot a` styling while losing the link role and
             the tab stop. Give it an href if usage limits ever get a page. */}
-        <a>*Usage limits apply.</a>{" "}
-        Prices and plans are subject to change at BuildFlow's discretion.
+        <a>*Usage limits apply.</a> Prices and plans are subject to change at BuildFlow's discretion.
       </p>
     </div>
   );
@@ -21395,7 +21447,9 @@ function SettingsPage({
             </span>
             <div>
               <strong>Liam Santos</strong>
-              <em>{data.activeUser?.permission ? permissionLevelLabels[data.activeUser.permission] : (data.activeUser?.title ?? "Teammate")}</em>
+              <em>
+                {data.activeUser?.permission ? permissionLevelLabels[data.activeUser.permission] : (data.activeUser?.title ?? "Teammate")}
+              </em>
             </div>
           </div>
           <div className="settings-nav-groups">
@@ -22056,7 +22110,14 @@ function DashKpiCard({
 type AiAttachment = { id: string; name: string; url: string; kind: "image" | "video" };
 
 type AiAnswer = { text: string; bullets?: string[]; suggestions?: string[] };
-type AiMessage = { id: string; role: "user" | "assistant"; text: string; bullets?: string[]; suggestions?: string[]; proposal?: AiProposal };
+type AiMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  bullets?: string[];
+  suggestions?: string[];
+  proposal?: AiProposal;
+};
 
 const GENERIC_AI_STARTERS = ["What's at risk this week?", "How's crew capacity?", "Any material shortages?"];
 /** Starter chips in the trade's own language when a trade is set, generic otherwise. */
@@ -23054,7 +23115,10 @@ function BreezeAssistant({
             label: "AI suggested import",
             runs: [
               { text: "Add " },
-              { text: `${plan.length} project${plan.length === 1 ? "" : "s"} and ${jobCount} job${jobCount === 1 ? "" : "s"}`, mark: "added" },
+              {
+                text: `${plan.length} project${plan.length === 1 ? "" : "s"} and ${jobCount} job${jobCount === 1 ? "" : "s"}`,
+                mark: "added"
+              },
               { text: " read from your schedule — " },
               { text: planNames.join(", "), mark: "added" },
               { text: " — booking each job to a crew where the day is free." }
@@ -24400,14 +24464,7 @@ function Dashboard({
         {materialCounts.length > 0 ? (
           <div className="chart-row">
             <Suspense fallback={<div style={{ width: "48%", height: 190 }} aria-hidden="true" />}>
-              <DonutChart
-                data={materialCounts}
-                width="48%"
-                height={190}
-                innerRadius={42}
-                outerRadius={78}
-                paddingAngle={1}
-              />
+              <DonutChart data={materialCounts} width="48%" height={190} innerRadius={42} outerRadius={78} paddingAngle={1} />
             </Suspense>
             <div className="legend-list">
               {materialCounts.map((item) => (
@@ -24767,12 +24824,7 @@ function Dashboard({
             Resolved
           </button>
         </div>
-        <button
-          type="button"
-          className="cc-link"
-          aria-label="View all approvals on the schedule page"
-          onClick={() => setPage("schedule")}
-        >
+        <button type="button" className="cc-link" aria-label="View all approvals on the schedule page" onClick={() => setPage("schedule")}>
           View all
         </button>
       </>
@@ -24917,7 +24969,12 @@ function Dashboard({
 
         <ScheduleStatusBand onOpenProjects={() => setPage("projects")} projects={data.projects} />
 
-        <DndContext sensors={dragSensors} collisionDetection={dashCollisionDetection} modifiers={dragModifiers} onDragEnd={handleDashDragEnd}>
+        <DndContext
+          sensors={dragSensors}
+          collisionDetection={dashCollisionDetection}
+          modifiers={dragModifiers}
+          onDragEnd={handleDashDragEnd}
+        >
           <div className="cc-grid">
             <div className="cc-main" data-tutorial-id="dashboard-production-context">
               {/* the panel board: move any panel anywhere, resize it from its corner; the
@@ -25105,7 +25162,6 @@ function InlineEmptyState({ icon: Icon, title, detail }: { icon: typeof Building
     </div>
   );
 }
-
 
 function ResourceRow({ icon: Icon, title, detail, badge }: { icon: typeof CalendarDays; title: string; detail: string; badge: string }) {
   return (
@@ -26258,14 +26314,7 @@ function ProjectsPage({
               <div className="proj-health-ring">
                 {healthDonut.length ? (
                   <Suspense fallback={<div style={{ height: 150 }} aria-hidden="true" />}>
-                    <DonutChart
-                      data={healthDonut}
-                      height={150}
-                      innerRadius={48}
-                      outerRadius={68}
-                      paddingAngle={2}
-                      stroke="none"
-                    />
+                    <DonutChart data={healthDonut} height={150} innerRadius={48} outerRadius={68} paddingAngle={2} stroke="none" />
                   </Suspense>
                 ) : (
                   <div className="proj-health-empty">No data</div>
@@ -26403,7 +26452,6 @@ function crewFormInput(name: string, specialty: string, foreman: string, laborMi
     rate: rate.trim() ? Math.max(0, Number(rate)) : undefined
   };
 }
-
 
 function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Promise<void> }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -27660,10 +27708,16 @@ function FieldUpdatesPage({
   };
   /* A notification pointed at one of these rows: clear the saved view and every filter that
      could hide it, turn to the page it lands on, and light it. */
-  const focusedId = useRecordFocus(focus ?? null, filteredUpdates.map((row) => row.update.id), fieldPerPage, setFieldPage, () => {
-    setFieldView("all");
-    clearFieldFilters();
-  });
+  const focusedId = useRecordFocus(
+    focus ?? null,
+    filteredUpdates.map((row) => row.update.id),
+    fieldPerPage,
+    setFieldPage,
+    () => {
+      setFieldView("all");
+      clearFieldFilters();
+    }
+  );
   const fieldSortHeader = (key: typeof fieldSortKey, label: string, className = "") => (
     <th className={`${className}${fieldSortKey === key ? " sorted" : ""}`.trim()}>
       <button type="button" onClick={() => toggleFieldSort(key)}>
@@ -27721,7 +27775,9 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">Total Updates</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(data.fieldUpdates.length)} /></span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(data.fieldUpdates.length)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -27730,7 +27786,9 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">On Site</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(onSiteUpdates)} /></span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(onSiteUpdates)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -27739,7 +27797,9 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">DelayIQed</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(delayIQedUpdates)} /></span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(delayIQedUpdates)} />
+            </span>
           </div>
         </div>
         <div className="hs-kpi">
@@ -27748,7 +27808,9 @@ function FieldUpdatesPage({
           </span>
           <div className="hs-kpi-body">
             <span className="hs-kpi-label">With Photos</span>
-            <span className="hs-kpi-value"><AnimatedFigure text={String(updatesWithPhotos)} /></span>
+            <span className="hs-kpi-value">
+              <AnimatedFigure text={String(updatesWithPhotos)} />
+            </span>
           </div>
         </div>
       </div>
@@ -28572,10 +28634,16 @@ function DelayIQsPage({
   };
   /* A notification pointed at one of these rows: clear the saved view and every filter that
      could hide it, turn to the page it lands on, and light it. */
-  const focusedId = useRecordFocus(focus ?? null, filteredDelayIQs.map((delayIQ) => delayIQ.id), delayPerPage, setDelayPage, () => {
-    setDelayView("all");
-    clearDelayFilters();
-  });
+  const focusedId = useRecordFocus(
+    focus ?? null,
+    filteredDelayIQs.map((delayIQ) => delayIQ.id),
+    delayPerPage,
+    setDelayPage,
+    () => {
+      setDelayView("all");
+      clearDelayFilters();
+    }
+  );
   const delaySortHeader = (key: typeof delaySortKey, label: string, className = "") => (
     <th className={`${className}${delaySortKey === key ? " sorted" : ""}`.trim()}>
       <button type="button" onClick={() => toggleDelaySort(key)}>
@@ -28834,11 +28902,7 @@ function DelayIQsPage({
                       const delayStatusTone = delayIQ.status === "Open" ? "red" : delayIQ.status === "Monitoring" ? "amber" : "green";
                       const isChecked = delaySelected.has(delayIQ.id);
                       return (
-                        <tr
-                          key={delayIQ.id}
-                          data-bf-focus={delayIQ.id}
-                          className={indexRowClass(isChecked, focusedId === delayIQ.id)}
-                        >
+                        <tr key={delayIQ.id} data-bf-focus={delayIQ.id} className={indexRowClass(isChecked, focusedId === delayIQ.id)}>
                           <td className="hs-cell-check">
                             <input
                               type="checkbox"
@@ -29007,9 +29071,7 @@ function DelayIQsPage({
           <Panel title="Impact ForecastIQ">
             {data.delayIQs.length > 0 ? (
               <Suspense fallback={<div style={{ height: 220 }} aria-hidden="true" />}>
-                <ImpactBarChart
-                  data={data.delayIQs.map((delayIQ) => ({ name: delayIQ.title.slice(0, 12), days: delayIQ.impactDays }))}
-                />
+                <ImpactBarChart data={data.delayIQs.map((delayIQ) => ({ name: delayIQ.title.slice(0, 12), days: delayIQ.impactDays }))} />
               </Suspense>
             ) : (
               <InlineEmptyState icon={LineChart} title="No delayIQ forecastIQ yet" detail="ForecastIQ starts once delayIQs are logged." />
@@ -29340,9 +29402,6 @@ function fieldUpdateProgress(update: FieldUpdate) {
       return 8;
   }
 }
-
-
-
 
 function materialReadiness(data: BootstrapPayload) {
   const totals = data.materials.reduce<Record<string, number>>((acc, material) => {

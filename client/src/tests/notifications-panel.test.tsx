@@ -46,7 +46,10 @@ const openBell = () => {
   fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
   return screen.getByRole("region", { name: "Recent BuildFlow activity" });
 };
-const rows = (panel: HTMLElement) => within(panel).getAllByRole("button").filter((node) => node.className.includes("bfnt-row"));
+const rows = (panel: HTMLElement) =>
+  within(panel)
+    .getAllByRole("button")
+    .filter((node) => node.className.includes("bfnt-row"));
 /** The one row that is about a named thing — how a person picks a notification out of the list. */
 const rowFor = (panel: HTMLElement, text: RegExp) => {
   const found = rows(panel).find((row) => text.test(row.textContent ?? ""));

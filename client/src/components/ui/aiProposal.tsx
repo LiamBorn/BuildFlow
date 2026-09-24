@@ -78,11 +78,7 @@ export function AiProposalCard({ proposal }: { proposal: AiProposal }) {
       /* The change did not land, so the proposal goes back to open: a reader who sees
          "couldn't apply" has to be able to try again or refuse. An apply that throws a
          ProposalFailed is telling the reader something specific; say that instead. */
-      setFailed(
-        error instanceof ProposalFailed
-          ? error.message
-          : "I couldn't apply that — nothing was changed. Try again, or reject it."
-      );
+      setFailed(error instanceof ProposalFailed ? error.message : "I couldn't apply that — nothing was changed. Try again, or reject it.");
       setState("open");
     }
   };

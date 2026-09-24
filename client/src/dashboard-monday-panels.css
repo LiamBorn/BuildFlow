@@ -44,9 +44,7 @@
 .bf-shell .dash-rx {
   --bf-radius-card: 16px;
   --bf-line-solid: #d0d4e4;
-  --bf-shadow-card:
-    0 10px 23px rgba(222, 222, 222, 0.1),
-    0 42px 42px rgba(222, 222, 222, 0.09);
+  --bf-shadow-card: 0 10px 23px rgba(222, 222, 222, 0.1), 0 42px 42px rgba(222, 222, 222, 0.09);
 }
 
 /* ---- 1b. the same tokens, dark -------------------------------------------
@@ -60,16 +58,12 @@
 .bf-shell[data-bf-mode="dark"] .dash-rx,
 .bf-shell[data-bf-theme="dark"] .dash-rx {
   --bf-line-solid: #333338;
-  --bf-shadow-card:
-    0 10px 23px rgba(0, 0, 0, 0.28),
-    0 42px 42px rgba(0, 0, 0, 0.22);
+  --bf-shadow-card: 0 10px 23px rgba(0, 0, 0, 0.28), 0 42px 42px rgba(0, 0, 0, 0.22);
 }
 @media (prefers-color-scheme: dark) {
   .bf-shell[data-bf-mode="system"] .dash-rx {
     --bf-line-solid: #333338;
-    --bf-shadow-card:
-      0 10px 23px rgba(0, 0, 0, 0.28),
-      0 42px 42px rgba(0, 0, 0, 0.22);
+    --bf-shadow-card: 0 10px 23px rgba(0, 0, 0, 0.28), 0 42px 42px rgba(0, 0, 0, 0.22);
   }
 }
 
@@ -360,4 +354,3 @@
     transition: none;
   }
 }
-

@@ -95,10 +95,9 @@ describe("the job drawer is an overlay, not part of the page", () => {
     const { layer } = open();
     const page = document.querySelector('[data-testid="page"]');
     expect(page, "the page host is missing from the fixture").not.toBeNull();
-    expect(
-      page!.contains(layer),
-      "the drawer is inside .schedule-page again — z-index 95 cannot beat the top bar from in there"
-    ).toBe(false);
+    expect(page!.contains(layer), "the drawer is inside .schedule-page again — z-index 95 cannot beat the top bar from in there").toBe(
+      false
+    );
     expect(document.querySelector(".bfm-page")!.contains(layer), "and inside .bfm-page").toBe(false);
     cleanup();
   });

@@ -183,7 +183,11 @@ export function NotificationsPanel({ id, items, data, onClose, onOpenSettings, o
 
   const unreadCount = items.filter((item) => !read.isRead(item.id)).length;
   const countFor = (id: NotificationTab) =>
-    id === "all" ? items.length : id === "attention" ? items.filter(needsAttention).length : items.filter((item) => item.projectId && myProjects.has(item.projectId)).length;
+    id === "all"
+      ? items.length
+      : id === "attention"
+        ? items.filter(needsAttention).length
+        : items.filter((item) => item.projectId && myProjects.has(item.projectId)).length;
 
   return (
     /* role and name are unchanged: tutorial.test.tsx finds this panel by them */

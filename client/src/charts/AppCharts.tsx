@@ -14,20 +14,7 @@
  * the point of the exercise is where the bytes go, not how the charts look. Anything that came
  * from App.tsx's own scope, like the backlog tooltip, arrives as a prop rather than moving here.
  */
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { ReactElement } from "react";
 
 export type DonutSlice = { name: string; value: number; color: string };
@@ -57,14 +44,7 @@ export function DonutChart({
   return (
     <ResponsiveContainer width={width} height={height}>
       <PieChart>
-        <Pie
-          data={data}
-          dataKey="value"
-          innerRadius={innerRadius}
-          outerRadius={outerRadius}
-          paddingAngle={paddingAngle}
-          stroke={stroke}
-        >
+        <Pie data={data} dataKey="value" innerRadius={innerRadius} outerRadius={outerRadius} paddingAngle={paddingAngle} stroke={stroke}>
           {data.map((entry) => (
             <Cell key={entry.name} fill={entry.color} />
           ))}

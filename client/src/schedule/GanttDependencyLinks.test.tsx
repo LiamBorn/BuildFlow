@@ -58,9 +58,13 @@ describe("GanttDependencyLinks", () => {
     );
     await act(async () => root.render(tree(new Set())));
     const list = container.querySelector(".gantt-feature-list") as HTMLElement & { currentCSSZoom?: number };
-    const rect = (top: number, height: number) => () => ({ top, height, left: 0, right: 0, bottom: top + height, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
+    const rect = (top: number, height: number) => () =>
+      ({ top, height, left: 0, right: 0, bottom: top + height, width: 0, x: 0, y: top, toJSON: () => ({}) }) as DOMRect;
     list.getBoundingClientRect = rect(100, 400);
-    for (const [id, top] of [["a", 120], ["b", 160]] as const) {
+    for (const [id, top] of [
+      ["a", 120],
+      ["b", 160]
+    ] as const) {
       (container.querySelector(`.gantt-feature[data-feature-id="${id}"]`) as HTMLElement).getBoundingClientRect = rect(top, 20);
     }
     // the shell is drawn at 50%: a's centre sits 30 screen px under the list's top, which is 60 of the chart's own; b's 70 → 140

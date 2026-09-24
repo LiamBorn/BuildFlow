@@ -63,7 +63,11 @@ describe("choosing a new password from the emailed link", () => {
   it("sends the token from the link, and takes the fresh one a refusal hands back", async () => {
     const onReset = vi
       .fn<(token: string, password: string) => Promise<void>>()
-      .mockRejectedValueOnce(Object.assign(new ApiError("That password is too common. Pick something harder to guess.", 400, "password", "weak_password"), { token: "tok-fresh" }))
+      .mockRejectedValueOnce(
+        Object.assign(new ApiError("That password is too common. Pick something harder to guess.", 400, "password", "weak_password"), {
+          token: "tok-fresh"
+        })
+      )
       .mockResolvedValueOnce(undefined);
     render(<ResetPasswordPage onBack={vi.fn()} onReset={onReset} />);
 
@@ -177,7 +181,13 @@ describe("accepting an invite", () => {
     fireEvent.click(screen.getByLabelText("I agree to the"));
     fireEvent.click(screen.getByRole("button", { name: "Join Reyes Paving" }));
     await waitFor(() =>
-      expect(onAccept).toHaveBeenCalledWith({ token: "inv-1", name: "Sam Ortiz", password: "Harborview-Deck-Pour", acceptTerms: true, remember: true })
+      expect(onAccept).toHaveBeenCalledWith({
+        token: "inv-1",
+        name: "Sam Ortiz",
+        password: "Harborview-Deck-Pour",
+        acceptTerms: true,
+        remember: true
+      })
     );
   });
 

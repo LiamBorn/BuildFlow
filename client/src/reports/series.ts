@@ -97,11 +97,7 @@ export function laborHoursWorked(jobs: Job[], today: string, calendar: WorkCalen
   );
 }
 
-export function buildReportSeries(
-  data: BootstrapPayload,
-  today: string,
-  period: ReportPeriod = "last-6-months"
-): ReportSeries {
+export function buildReportSeries(data: BootstrapPayload, today: string, period: ReportPeriod = "last-6-months"): ReportSeries {
   const window = WINDOWS[period];
   /* Only the two labels reach the caller. `back` and `ahead` are this function's business, and
      returning the whole row leaked them into the shape the UI reads — the declared type said
@@ -151,9 +147,7 @@ export function buildReportSeries(
     planned: Math.round(planned.get(month) ?? 0),
     actual: Math.round(actual.get(month) ?? 0)
   }));
-  const future = [...ahead.keys()]
-    .sort()
-    .filter((month) => window.ahead !== "year-end" || month <= decemberThisYear);
+  const future = [...ahead.keys()].sort().filter((month) => window.ahead !== "year-end" || month <= decemberThisYear);
   const backlog = (window.ahead === "year-end" ? future : future.slice(0, window.ahead)).map((month) => ({
     month: monthLabel(month),
     backlog: Math.round(ahead.get(month) ?? 0)

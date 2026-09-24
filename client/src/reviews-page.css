@@ -6,7 +6,9 @@
    product-overview.css. Only the rv-* additions live here.
    ──────────────────────────────────────────────────────────────────────────── */
 
-.welcome-rx .rv-page .cpx-inner-narrow { margin-bottom: clamp(28px, 4vw, 44px); }
+.welcome-rx .rv-page .cpx-inner-narrow {
+  margin-bottom: clamp(28px, 4vw, 44px);
+}
 
 /* Proof strip under the lede. */
 .welcome-rx .rv-trust {
@@ -39,7 +41,9 @@
 }
 
 /* Featured story. */
-.welcome-rx .rv-featured .cpx-statement { max-width: 18ch; }
+.welcome-rx .rv-featured .cpx-statement {
+  max-width: 18ch;
+}
 .welcome-rx .rv-brands {
   display: flex;
   align-items: center;
@@ -49,7 +53,10 @@
   font-size: 17px;
   color: var(--cpx-ink);
 }
-.welcome-rx .rv-brands svg { width: 24px; height: 24px; }
+.welcome-rx .rv-brands svg {
+  width: 24px;
+  height: 24px;
+}
 .welcome-rx .rv-featured-metric {
   display: inline-flex;
   align-items: center;
@@ -58,13 +65,27 @@
   font-size: 14.5px;
   color: var(--cpx-mut);
 }
-.welcome-rx .rv-featured-panel { padding: 0; overflow: hidden; }
-.welcome-rx .rv-featured-panel img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.welcome-rx .rv-featured-panel {
+  padding: 0;
+  overflow: hidden;
+}
+.welcome-rx .rv-featured-panel img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
 
 /* Stories and quotes — one grid, two card shapes. Cards size to their own
    content: stretched rows leave a tall gap inside a short quote card. */
-.welcome-rx .rv-list .pov-latest-grid { align-items: start; }
-.welcome-rx .rv-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.welcome-rx .rv-list .pov-latest-grid {
+  align-items: start;
+}
+.welcome-rx .rv-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .welcome-rx .rv-tab {
   min-height: 36px;
   padding: 0 16px;
@@ -76,9 +97,14 @@
   font-weight: 500;
   color: var(--cpx-ink);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
-.welcome-rx .rv-tab:hover { background: var(--cpx-ground-2); }
+.welcome-rx .rv-tab:hover {
+  background: var(--cpx-ground-2);
+}
 .welcome-rx .rv-tab.is-active {
   border-color: var(--cpx-blue);
   background: var(--cpx-blue);
@@ -103,12 +129,21 @@
   border-top: 4px solid var(--cpx-blue);
   opacity: 0;
   transform: translateY(18px);
-  transition: opacity 0.7s var(--cpx-ease), transform 0.7s var(--cpx-ease);
+  transition:
+    opacity 0.7s var(--cpx-ease),
+    transform 0.7s var(--cpx-ease);
   transition-delay: calc(var(--i, 0) * 70ms);
 }
-.welcome-rx .rv-quote.in { opacity: 1; transform: none; }
-.welcome-rx .rv-quote.accent-green { border-top-color: var(--cpx-green); }
-.welcome-rx .rv-quote.accent-amber { border-top-color: var(--cpx-amber); }
+.welcome-rx .rv-quote.in {
+  opacity: 1;
+  transform: none;
+}
+.welcome-rx .rv-quote.accent-green {
+  border-top-color: var(--cpx-green);
+}
+.welcome-rx .rv-quote.accent-amber {
+  border-top-color: var(--cpx-amber);
+}
 .welcome-rx .rv-quote blockquote {
   margin: 14px 0 0;
   font-size: clamp(1.1rem, 1.5vw, 1.3rem);
@@ -125,7 +160,13 @@
   font-size: 14.5px;
   color: var(--cpx-mut);
 }
-.welcome-rx .rv-quote-by strong { font-size: 15.5px; font-weight: 600; color: var(--cpx-ink); }
+.welcome-rx .rv-quote-by strong {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
 @media (max-width: 720px) {
-  .welcome-rx .rv-page .pov-head { gap: 16px; }
+  .welcome-rx .rv-page .pov-head {
+    gap: 16px;
+  }
 }

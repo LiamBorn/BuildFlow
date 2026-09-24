@@ -508,9 +508,7 @@ describe("the Client Desk skin", () => {
     /* The chart JSX moved out of App.tsx into charts/AppCharts.tsx so recharts could be loaded on
        demand instead of by every marketing visitor. What is being pinned is unchanged: the fill
        comes from the chart, not from a rule here. */
-    expect(readFileSync(join(SRC, "charts", "AppCharts.tsx"), "utf8")).toContain(
-      '<Bar dataKey="days" fill="var(--bf-color-bad)"'
-    );
+    expect(readFileSync(join(SRC, "charts", "AppCharts.tsx"), "utf8")).toContain('<Bar dataKey="days" fill="var(--bf-color-bad)"');
     expect(declsOf(`${S} .delayIQ-rx .hs-index-rail > *`)["animation-delay"]).toContain("var(--bfe-r, 0)");
   });
 
@@ -890,15 +888,7 @@ describe("the Client Desk skin", () => {
     expect(portalRoots.size, "no createPortal roots found — the pattern must have changed").toBeGreaterThan(5);
     /* The palette is declared for these; a root counts as covered when ANY of its classes is one
        (the project and crew dialogs are `.pdx` as well, and the assistant keeps its own copy). */
-    const darkened = [
-      ".pdx",
-      ".schedule-dialog-backdrop",
-      ".bfsel",
-      ".bfdate",
-      ".hs-upd-backdrop",
-      ".bfsp",
-      ".bf-breeze"
-    ];
+    const darkened = [".pdx", ".schedule-dialog-backdrop", ".bfsel", ".bfdate", ".hs-upd-backdrop", ".bfsp", ".bf-breeze"];
     for (const one of darkened) {
       if (one === ".bf-breeze") continue;
       expect(

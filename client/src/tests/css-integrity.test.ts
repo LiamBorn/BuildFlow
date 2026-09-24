@@ -37,9 +37,7 @@ const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
  * Node's globals to a 39,000-line DOM program is not free. Walking with `withFileTypes` typechecks
  * nowhere here, and reading only the top level also missed onboarding/onboarding.css.
  */
-const paths = readdirSync(SRC, { recursive: true }).filter(
-  (rel) => !rel.includes("node_modules") && !rel.includes("dist")
-);
+const paths = readdirSync(SRC, { recursive: true }).filter((rel) => !rel.includes("node_modules") && !rel.includes("dist"));
 const inTests = (rel: string) => rel.split(/[\\/]/).includes("tests");
 
 /** Read as bytes -- vitest resolves a CSS *import* to an empty string. */
@@ -66,10 +64,30 @@ describe("every animation names a keyframe that exists", () => {
    * parses as a number, whatever identifiers remain are names.
    */
   const NOT_A_NAME = new Set([
-    "none", "infinite", "alternate", "reverse", "alternate-reverse", "forwards", "backwards",
-    "both", "normal", "running", "paused", "linear", "ease", "ease-in", "ease-out",
-    "ease-in-out", "step-start", "step-end", "initial", "inherit", "unset", "revert",
-    "revert-layer", "auto"
+    "none",
+    "infinite",
+    "alternate",
+    "reverse",
+    "alternate-reverse",
+    "forwards",
+    "backwards",
+    "both",
+    "normal",
+    "running",
+    "paused",
+    "linear",
+    "ease",
+    "ease-in",
+    "ease-out",
+    "ease-in-out",
+    "step-start",
+    "step-end",
+    "initial",
+    "inherit",
+    "unset",
+    "revert",
+    "revert-layer",
+    "auto"
   ]);
 
   const defined = new Set<string>();
@@ -103,9 +121,7 @@ describe("every animation names a keyframe that exists", () => {
       // cubic-bezier(0.22, 1, 0.36, 1) and steps(4, end) carry commas and bare words that would
       // otherwise read as names.
       const flat = stripCalls(decl.value);
-      const names = flat
-        .split(/[\s,]+/)
-        .filter((w) => /^[a-zA-Z_-][\w-]*$/.test(w) && !NOT_A_NAME.has(w.toLowerCase()));
+      const names = flat.split(/[\s,]+/).filter((w) => /^[a-zA-Z_-][\w-]*$/.test(w) && !NOT_A_NAME.has(w.toLowerCase()));
       if (names.length === 0) {
         // Nothing static left. Either the name itself came from a custom property -- which a
         // static read cannot judge -- or this is an `animation: none`. Only the former is
@@ -137,7 +153,10 @@ describe("every animation names a keyframe that exists", () => {
   it("defines every keyframe that a rule animates with", () => {
     const missing = referenced.filter((r) => !defined.has(r.name));
     // The message carries the site, because the whole difficulty of this bug is finding it.
-    expect(missing.map((m) => `${m.name} (${m.at})`), "animated but defined nowhere").toEqual([]);
+    expect(
+      missing.map((m) => `${m.name} (${m.at})`),
+      "animated but defined nowhere"
+    ).toEqual([]);
   });
 });
 
@@ -186,9 +205,11 @@ describe("every var() resolves to a token that exists", () => {
 
   it("declares every token that a rule reads without a fallback", () => {
     const missing = bare.filter((b) => !declared.has(b.name));
-    expect(missing.map((m) => `${m.name} (${m.at})`), "read with no fallback, declared nowhere").toEqual([]);
+    expect(
+      missing.map((m) => `${m.name} (${m.at})`),
+      "read with no fallback, declared nowhere"
+    ).toEqual([]);
   });
-
 });
 
 describe("every url(#id) points at a paint server that exists", () => {
@@ -222,6 +243,9 @@ describe("every url(#id) points at a paint server that exists", () => {
 
   it("resolves every one to a declared id", () => {
     const dangling = references.filter((r) => !ids.has(r.id));
-    expect(dangling.map((d) => `url(#${d.id}) (${d.at})`), "paints with a gradient defined nowhere").toEqual([]);
+    expect(
+      dangling.map((d) => `url(#${d.id}) (${d.at})`),
+      "paints with a gradient defined nowhere"
+    ).toEqual([]);
   });
 });

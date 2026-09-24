@@ -11,9 +11,11 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-.frost-page * ,
+.frost-page *,
 .frost-page *::before,
-.frost-page *::after { box-sizing: border-box; }
+.frost-page *::after {
+  box-sizing: border-box;
+}
 /* ── The nav scales with the window ────────────────────────────────────────
    The prompt's fixed values are the TOP of every clamp (40px padding, 34px link
    gap, 14.5px links, 12/24px pill), so a wide window looks exactly like the
@@ -32,9 +34,24 @@
   column-gap: clamp(12px, 2vw, 32px);
   padding: clamp(14px, 1.8vw, 24px) clamp(16px, 3vw, 40px);
 }
-.frost-page .frost-brand { grid-column: 1; display: flex; align-items: center; gap: clamp(7px, 0.8vw, 10px); flex-shrink: 0; }
-.frost-page .frost-brand svg { width: clamp(22px, 2vw, 26px); height: clamp(22px, 2vw, 26px); }
-.frost-page .frost-brand-name { font-size: clamp(15px, 1.35vw, 18px); font-weight: 600; color: #fff; letter-spacing: -0.01em; white-space: nowrap; }
+.frost-page .frost-brand {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: clamp(7px, 0.8vw, 10px);
+  flex-shrink: 0;
+}
+.frost-page .frost-brand svg {
+  width: clamp(22px, 2vw, 26px);
+  height: clamp(22px, 2vw, 26px);
+}
+.frost-page .frost-brand-name {
+  font-size: clamp(15px, 1.35vw, 18px);
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
 .frost-page .frost-links {
   grid-column: 2;
   display: flex;
@@ -53,9 +70,21 @@
   transition: color 0.2s ease;
 }
 .frost-page .frost-link:hover,
-.frost-page .frost-link[aria-expanded="true"] { color: #fff; }
-.frost-page .frost-link { padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer; }
-.frost-page .frost-link:focus-visible { outline: 2px solid #fff; outline-offset: 4px; border-radius: 4px; }
+.frost-page .frost-link[aria-expanded="true"] {
+  color: #fff;
+}
+.frost-page .frost-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.frost-page .frost-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
 
 /* ── Category menus: the full-width band (reference recording) ───────────
    One dark, frosted band behind the bar grows to the open category's content
@@ -65,7 +94,10 @@
    entry is white and its neighbours fall back the same way. */
 .frost-page .frost-brand,
 .frost-page .frost-links,
-.frost-page .frost-nav-right { position: relative; z-index: 1; }
+.frost-page .frost-nav-right {
+  position: relative;
+  z-index: 1;
+}
 .frost-page .frost-mega-dim {
   position: fixed;
   inset: 0;
@@ -85,7 +117,10 @@
   backdrop-filter: blur(28px);
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
 }
-.frost-page .frost-mega-content { padding-right: 40px; padding-bottom: 46px; }
+.frost-page .frost-mega-content {
+  padding-right: 40px;
+  padding-bottom: 46px;
+}
 .frost-page .frost-mega-columns {
   display: flex;
   align-items: flex-start;
@@ -97,7 +132,13 @@
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.45);
 }
-.frost-page .frost-mega-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.frost-page .frost-mega-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
 .frost-page .frost-mega-item {
   display: block;
   padding: 0;
@@ -116,22 +157,39 @@
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
-.frost-page .frost-mega-column:not(:first-child) .frost-mega-list { gap: 4px; }
+.frost-page .frost-mega-column:not(:first-child) .frost-mega-list {
+  gap: 4px;
+}
 .frost-page .frost-mega-column:not(:first-child) .frost-mega-item {
   font-size: 14.5px;
   font-weight: 400;
   line-height: 1.55;
 }
-.frost-page .frost-mega-list:hover .frost-mega-item { color: rgba(255, 255, 255, 0.5); }
+.frost-page .frost-mega-list:hover .frost-mega-item {
+  color: rgba(255, 255, 255, 0.5);
+}
 .frost-page .frost-mega-list .frost-mega-item:hover,
-.frost-page .frost-mega-list .frost-mega-item:focus-visible { color: #fff; outline: none; }
-.frost-page .frost-links[data-menu-open="true"] .frost-link:not([aria-expanded="true"]) { color: rgba(255, 255, 255, 0.5); }
+.frost-page .frost-mega-list .frost-mega-item:focus-visible {
+  color: #fff;
+  outline: none;
+}
+.frost-page .frost-links[data-menu-open="true"] .frost-link:not([aria-expanded="true"]) {
+  color: rgba(255, 255, 255, 0.5);
+}
 /* grid-column pins keep the buttons on the right once the names hide below
    980px (a hidden grid item frees its column, and auto-placement would pull
    the buttons into the middle). */
-.frost-page .frost-nav-right { grid-column: 3; justify-self: end; }
+.frost-page .frost-nav-right {
+  grid-column: 3;
+  justify-self: end;
+}
 .frost-page .frost-nav-right,
-.frost-page .frost-nav-actions { display: flex; align-items: center; gap: clamp(10px, 1.6vw, 22px); flex-shrink: 0; }
+.frost-page .frost-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.6vw, 22px);
+  flex-shrink: 0;
+}
 .frost-page .frost-join {
   flex-shrink: 0;
   padding: clamp(9px, 0.9vw, 12px) clamp(14px, 1.8vw, 24px);
@@ -162,14 +220,20 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.frost-input::placeholder { color: rgba(255, 255, 255, 0.6); }
+.frost-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
 /* Below this the names no longer fit between the logo and the buttons even at
    the smallest scale; the drawer carries them from here down. */
 @media (max-width: 980px) {
-  .frost-page .frost-links { display: none; }
+  .frost-page .frost-links {
+    display: none;
+  }
 }
 @media (max-width: 720px) {
-  .frost-page .frost-brand-name { font-size: 16px; }
+  .frost-page .frost-brand-name {
+    font-size: 16px;
+  }
 }
 
 /* ── Narrow windows: "Menu +" pill and the side drawer ─────────────────────── */
@@ -193,10 +257,16 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   background-color: rgba(255, 255, 255, 0.92);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  transition: scale 0.5s cubic-bezier(0.165, 0.84, 0.44, 1), background-color 0.2s ease;
+  transition:
+    scale 0.5s cubic-bezier(0.165, 0.84, 0.44, 1),
+    background-color 0.2s ease;
 }
-.frost-page .frost-menu-btn:hover::after { background-color: #fff; }
-.frost-page .frost-menu-plus { display: inline-block; }
+.frost-page .frost-menu-btn:hover::after {
+  background-color: #fff;
+}
+.frost-page .frost-menu-plus {
+  display: inline-block;
+}
 /* The email pill's submit: the white pill is its ::after so the label and the
    arrow stay put while the shape contracts on hover. */
 .frost-page .frost-submit::after {
@@ -204,11 +274,22 @@
   background-color: #fff;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
-.frost-page .frost-submit:disabled { cursor: default; opacity: 0.85; }
-.frost-page .frost-menu-btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.frost-page .frost-menu-btn span { font-size: 16px; line-height: 1; }
+.frost-page .frost-submit:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+.frost-page .frost-menu-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.frost-page .frost-menu-btn span {
+  font-size: 16px;
+  line-height: 1;
+}
 @media (max-width: 720px) {
-  .frost-page .frost-nav-actions { display: none; }
+  .frost-page .frost-nav-actions {
+    display: none;
+  }
 }
 
 /* ── The stage: everything but the drawer ─────────────────────────────────
@@ -224,14 +305,18 @@
   border-radius: 0;
   transform: scale(1);
   transform-origin: 50% 50%;
-  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .frost-page .frost-stage.is-open {
   transform: scale(var(--frost-sx, 0.98), var(--frost-sy, 0.97));
   border-radius: 14px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .frost-page .frost-stage { transition: none; }
+  .frost-page .frost-stage {
+    transition: none;
+  }
 }
 
 /* The hover strip on the right edge that slides the drawer out. Under the
@@ -245,10 +330,16 @@
   z-index: 70;
 }
 @media (hover: none) {
-  .frost-page .frost-edge-zone { display: none; }
+  .frost-page .frost-edge-zone {
+    display: none;
+  }
 }
 
-.frost-drawer-root { position: fixed; inset: 0; z-index: 80; }
+.frost-drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
 .frost-drawer-backdrop {
   position: absolute;
   inset: 0;
@@ -284,15 +375,26 @@
   cursor: pointer;
   transition: transform 0.2s ease;
 }
-.frost-drawer-close:hover { transform: rotate(90deg); }
-.frost-drawer-close:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.frost-drawer-close:hover {
+  transform: rotate(90deg);
+}
+.frost-drawer-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
 .frost-drawer-label {
   margin: 0 0 18px;
   font-size: 11px;
   letter-spacing: 0.02em;
   color: rgba(255, 255, 255, 0.5);
 }
-.frost-drawer-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.frost-drawer-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
 .frost-drawer-link {
   display: inline-flex;
   align-items: center;
@@ -306,7 +408,9 @@
   line-height: 1.25;
   color: #fff;
   cursor: pointer;
-  transition: color 0.2s ease, transform 0.25s ease;
+  transition:
+    color 0.2s ease,
+    transform 0.25s ease;
 }
 /* The reference's orange dash grows in ahead of the word on hover. */
 .frost-drawer-dash {
@@ -315,14 +419,30 @@
   height: 2px;
   margin-right: 0;
   background: #f47b20;
-  transition: width 0.25s ease, margin-right 0.25s ease;
+  transition:
+    width 0.25s ease,
+    margin-right 0.25s ease;
 }
 .frost-drawer-link:hover,
-.frost-drawer-link:focus-visible { color: #f47b20; outline: none; }
+.frost-drawer-link:focus-visible {
+  color: #f47b20;
+  outline: none;
+}
 .frost-drawer-link:hover .frost-drawer-dash,
-.frost-drawer-link:focus-visible .frost-drawer-dash { width: 14px; margin-right: 10px; }
-.frost-drawer-rule { height: 1px; margin: 26px 0 22px; background: rgba(255, 255, 255, 0.12); }
-.frost-drawer-secondary { display: grid; gap: 12px; justify-items: start; }
+.frost-drawer-link:focus-visible .frost-drawer-dash {
+  width: 14px;
+  margin-right: 10px;
+}
+.frost-drawer-rule {
+  height: 1px;
+  margin: 26px 0 22px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.frost-drawer-secondary {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
 .frost-drawer-secondary button {
   padding: 0;
   border: 0;
@@ -333,7 +453,9 @@
   cursor: pointer;
   transition: color 0.2s ease;
 }
-.frost-drawer-secondary button:hover { color: #fff; }
+.frost-drawer-secondary button:hover {
+  color: #fff;
+}
 
 /* ── button-01: the hover-animated label ─────────────────────────────────
    Ported from the prompt (pure CSS; SlideLabel in FrostLanding.tsx builds the
@@ -379,9 +501,15 @@
   transition: scale 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
   z-index: -1;
 }
-.button-01:not(.ghost):active::after { scale: 0.98; }
-.button-01:hover .span-text { transform: translateY(-2em); }
-.button-01:not(.ghost):hover::after { scale: 0.97; }
+.button-01:not(.ghost):active::after {
+  scale: 0.98;
+}
+.button-01:hover .span-text {
+  transform: translateY(-2em);
+}
+.button-01:not(.ghost):hover::after {
+  scale: 0.97;
+}
 /* The accessible-name copy: present for readers and tests, never painted. */
 .frost-sr {
   position: absolute;
@@ -396,6 +524,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .button-01 .span-text,
-  .button-01:not(.ghost)::after { transition: none; }
-  .button-01:hover .span-text { transform: none; }
+  .button-01:not(.ghost)::after {
+    transition: none;
+  }
+  .button-01:hover .span-text {
+    transform: none;
+  }
 }

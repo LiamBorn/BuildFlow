@@ -8,7 +8,9 @@
    are no longer used by this route.
    ──────────────────────────────────────────────────────────────────────────── */
 
-.welcome-rx .itx-page .cpx-inner-narrow { margin-bottom: clamp(26px, 3.5vw, 42px); }
+.welcome-rx .itx-page .cpx-inner-narrow {
+  margin-bottom: clamp(26px, 3.5vw, 42px);
+}
 .welcome-rx .itx-page .itx-note {
   display: inline-flex;
   align-items: center;
@@ -35,10 +37,15 @@
   border-top: 4px solid var(--itx-accent, var(--cpx-blue));
   opacity: 0;
   transform: translateY(18px);
-  transition: opacity 0.7s var(--cpx-ease), transform 0.7s var(--cpx-ease);
+  transition:
+    opacity 0.7s var(--cpx-ease),
+    transform 0.7s var(--cpx-ease);
   transition-delay: calc(var(--i, 0) * 80ms);
 }
-.welcome-rx .itx-page .itx-card.in { opacity: 1; transform: none; }
+.welcome-rx .itx-page .itx-card.in {
+  opacity: 1;
+  transform: none;
+}
 .welcome-rx .itx-page .itx-card-head {
   display: flex;
   align-items: center;
@@ -75,7 +82,13 @@
   line-height: 1.6;
   color: var(--cpx-mut);
 }
-.welcome-rx .itx-page .itx-points { margin: 20px 0 0; padding: 0; list-style: none; display: grid; gap: 11px; }
+.welcome-rx .itx-page .itx-points {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 11px;
+}
 .welcome-rx .itx-page .itx-points li {
   display: flex;
   align-items: flex-start;
@@ -84,7 +97,11 @@
   line-height: 1.5;
   color: var(--cpx-mut);
 }
-.welcome-rx .itx-page .itx-points svg { flex: 0 0 auto; margin-top: 3px; color: var(--itx-accent, var(--cpx-blue)); }
+.welcome-rx .itx-page .itx-points svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  color: var(--itx-accent, var(--cpx-blue));
+}
 .welcome-rx .itx-page .itx-card-foot {
   display: flex;
   flex-wrap: wrap;
@@ -111,7 +128,9 @@
   color: var(--cpx-blue);
   text-decoration: none;
 }
-.welcome-rx .itx-page .itx-learn:hover { text-decoration: underline; }
+.welcome-rx .itx-page .itx-learn:hover {
+  text-decoration: underline;
+}
 
 /* The directory. */
 .welcome-rx .itx-page .itx-cat-grid {
@@ -127,11 +146,21 @@
   background: var(--cpx-card);
   opacity: 0;
   transform: translateY(16px);
-  transition: opacity 0.7s var(--cpx-ease), transform 0.7s var(--cpx-ease);
+  transition:
+    opacity 0.7s var(--cpx-ease),
+    transform 0.7s var(--cpx-ease);
   transition-delay: calc(var(--i, 0) * 70ms);
 }
-.welcome-rx .itx-page .itx-cat.in { opacity: 1; transform: none; }
-.welcome-rx .itx-page .itx-cat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.welcome-rx .itx-page .itx-cat.in {
+  opacity: 1;
+  transform: none;
+}
+.welcome-rx .itx-page .itx-cat-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
 .welcome-rx .itx-page .itx-cat-ic {
   display: inline-flex;
   align-items: center;
@@ -149,7 +178,11 @@
   letter-spacing: -0.015em;
   color: var(--cpx-ink);
 }
-.welcome-rx .itx-page .itx-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.welcome-rx .itx-page .itx-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .welcome-rx .itx-page .itx-pill {
   padding: 6px 13px;
   border-radius: 999px;
@@ -185,7 +218,12 @@
   letter-spacing: -0.02em;
   color: var(--cpx-ink);
 }
-.welcome-rx .itx-page .itx-step p { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--cpx-mut); }
+.welcome-rx .itx-page .itx-step p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--cpx-mut);
+}
 
 /* What procurement asks. */
 .welcome-rx .itx-page .itx-trust-grid {
@@ -218,4 +256,9 @@
   letter-spacing: -0.015em;
   color: var(--cpx-ink);
 }
-.welcome-rx .itx-page .itx-trust-item p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--cpx-mut); }
+.welcome-rx .itx-page .itx-trust-item p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--cpx-mut);
+}

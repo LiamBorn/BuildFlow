@@ -70,7 +70,10 @@ describe("schedule deep links", () => {
     });
     // a link to a page that has left the product (the Week board, the List, the Matrix — 2026-09-22) still
     // lands: on the Month, which the week it carries brings to the right month
-    expect(parseScheduleHash("#schedule/week?w=2026-07-13&crew=c-1")).toEqual({ page: "month", patch: { weekStart: "2026-07-13", crewId: "c-1" } });
+    expect(parseScheduleHash("#schedule/week?w=2026-07-13&crew=c-1")).toEqual({
+      page: "month",
+      patch: { weekStart: "2026-07-13", crewId: "c-1" }
+    });
     expect(parseScheduleHash("#schedule/matrix")).toEqual({ page: "month", patch: {} });
     expect(parseScheduleHash("#schedule?w=not-a-day&status=Nope")).toEqual({ page: "schedule", patch: {} });
     // the board's old view links open the page that view became

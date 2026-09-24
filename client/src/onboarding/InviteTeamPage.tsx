@@ -135,10 +135,12 @@ export function InviteTeamPage({ onDone }: { onDone: () => void }) {
 
   /* The tray on the card: the addresses typed so far, or — once sent — the ones that went. */
   const tray =
-    results?.filter((result) => result.status !== "skipped").map((result) => {
-      const row = rows.find((r) => r.email.trim().toLowerCase() === result.email);
-      return { email: result.email, level: permissionLevelLabels[row?.permission ?? "member"] };
-    }) ??
+    results
+      ?.filter((result) => result.status !== "skipped")
+      .map((result) => {
+        const row = rows.find((r) => r.email.trim().toLowerCase() === result.email);
+        return { email: result.email, level: permissionLevelLabels[row?.permission ?? "member"] };
+      }) ??
     rows.filter((row) => row.email.trim()).map((row) => ({ email: row.email.trim(), level: permissionLevelLabels[row.permission] }));
 
   const said = results ? outcome(results) : null;
@@ -153,7 +155,18 @@ export function InviteTeamPage({ onDone }: { onDone: () => void }) {
       paneKey={stage}
       leaving={leaving}
       progress={{ label: "Last step", fill: 1 }}
-      preview={<OnboardingPreview step={2} firstName="" lastName="" businessName={org} trade={null} revenueLabel={null} teamLabel={null} invites={tray} />}
+      preview={
+        <OnboardingPreview
+          step={2}
+          firstName=""
+          lastName=""
+          businessName={org}
+          trade={null}
+          revenueLabel={null}
+          teamLabel={null}
+          invites={tray}
+        />
+      }
     >
       {/* Each row's access level opens the program's own list, not the system's. The shell mounts
           this layer beside its other overlays, but the shell is not on the welcome page, so the
@@ -170,7 +183,11 @@ export function InviteTeamPage({ onDone }: { onDone: () => void }) {
               <li key={result.email} data-status={result.status}>
                 <b>{result.email}</b>
                 <span>
-                  {result.status === "sent" ? "Invite sent" : result.status === "held" ? "Sends once you confirm your email" : (result.reason ?? "Skipped")}
+                  {result.status === "sent"
+                    ? "Invite sent"
+                    : result.status === "held"
+                      ? "Sends once you confirm your email"
+                      : (result.reason ?? "Skipped")}
                 </span>
               </li>
             ))}
@@ -226,7 +243,12 @@ export function InviteTeamPage({ onDone }: { onDone: () => void }) {
                     <ChevronDown aria-hidden="true" />
                   </div>
                   {rows.length > 1 ? (
-                    <button type="button" className="onb-invite-remove" aria-label={`Remove row ${index + 1}`} onClick={() => remove(row.id)}>
+                    <button
+                      type="button"
+                      className="onb-invite-remove"
+                      aria-label={`Remove row ${index + 1}`}
+                      onClick={() => remove(row.id)}
+                    >
                       <X aria-hidden="true" />
                     </button>
                   ) : (

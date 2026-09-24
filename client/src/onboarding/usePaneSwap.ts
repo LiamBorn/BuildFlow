@@ -51,12 +51,15 @@ export function usePaneSwap<T>(initial: T): PaneSwap<T> {
       return;
     }
     setLeaving(true);
-    timer.current = window.setTimeout(() => {
-      setCurrent(next);
-      setLeaving(false);
-      pending.current = null;
-      timer.current = null;
-    }, ms(PANE_EXIT) + ms(PANE_GAP));
+    timer.current = window.setTimeout(
+      () => {
+        setCurrent(next);
+        setLeaving(false);
+        pending.current = null;
+        timer.current = null;
+      },
+      ms(PANE_EXIT) + ms(PANE_GAP)
+    );
   };
 
   useEffect(

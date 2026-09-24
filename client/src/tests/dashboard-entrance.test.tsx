@@ -32,7 +32,10 @@ describe("the Dashboard's entrance", () => {
     for (let i = 1; i < inOrder.length; i += 1) {
       const before = inOrder[i - 1];
       const after = inOrder[i];
-      expect(after.top > before.top || (after.top === before.top && after.left >= before.left), `rank ${after.rank} after ${before.rank}`).toBe(true);
+      expect(
+        after.top > before.top || (after.top === before.top && after.left >= before.left),
+        `rank ${after.rank} after ${before.rank}`
+      ).toBe(true);
     }
   });
 
@@ -323,9 +326,7 @@ describe("the Dashboard's opening", () => {
     // it does not re-run when the shell arrives — it runs again when AppFrame next
     // renders. Under a loaded full-suite run that lands after this line, which is
     // how it failed twice in a row while passing 16/16 in isolation.
-    await waitFor(() =>
-      expect(window.sessionStorage.getItem("bf:shell-opened"), "the session is spent").toBe("1")
-    );
+    await waitFor(() => expect(window.sessionStorage.getItem("bf:shell-opened"), "the session is spent").toBe("1"));
 
     // leaving the Dashboard and coming back does not spend a second opening
     fireEvent.click(screen.getByRole("button", { name: "Home" }));

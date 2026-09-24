@@ -36,8 +36,7 @@ const rules = (): Rule[] => {
   });
   return found;
 };
-const declaring = (property: string) =>
-  rules().filter((rule) => rule.nodes.some((node) => node.type === "decl" && node.prop === property));
+const declaring = (property: string) => rules().filter((rule) => rule.nodes.some((node) => node.type === "decl" && node.prop === property));
 const keyframes = (name: string) => {
   let found: AtRule | undefined;
   sheet.walkAtRules(/keyframes$/, (at) => {

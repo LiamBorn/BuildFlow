@@ -18,8 +18,7 @@ async function freshStore() {
   return BuildFlowStore.create(path.join(tempDir("buildflow-sweep-"), "store.sqlite"), true);
 }
 
-const countRows = (store: BuildFlowStore, table: string) =>
-  store.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`)?.n ?? 0;
+const countRows = (store: BuildFlowStore, table: string) => store.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table}`)?.n ?? 0;
 
 describe("sweeping expired auth rows", () => {
   it("removes what has expired and keeps what has not", async () => {

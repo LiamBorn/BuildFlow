@@ -92,11 +92,7 @@ function SlideLabel({ text, stagger = false }: { text: string; stagger?: boolean
               {wordIndex > 0 ? <span className="word-space"> </span> : null}
               <span className="span-wrapper">
                 {[...word].map((char, index) => (
-                  <span
-                    key={`${index}-${char}`}
-                    className="span-text"
-                    style={{ transitionDelay: `${charIndex++ * STAGGER_DELAY}s` }}
-                  >
+                  <span key={`${index}-${char}`} className="span-text" style={{ transitionDelay: `${charIndex++ * STAGGER_DELAY}s` }}>
                     {char}
                   </span>
                 ))}
@@ -125,16 +121,7 @@ type FrostNavbarProps = FrostLandingProps & {
   onBandChange: (open: boolean) => void;
 };
 
-function FrostNavbar({
-  logo,
-  onLogin,
-  onJoinWaitlist,
-  open,
-  setOpen,
-  onDrawerEnter,
-  onDrawerLeave,
-  onBandChange
-}: FrostNavbarProps) {
+function FrostNavbar({ logo, onLogin, onJoinWaitlist, open, setOpen, onDrawerEnter, onDrawerLeave, onBandChange }: FrostNavbarProps) {
   const menuButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const reduced = useReducedMotion();
@@ -234,217 +221,215 @@ function FrostNavbar({
 
   return (
     <>
-    <motion.nav
-      initial={{ opacity: 0, y: -14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      aria-label="Welcome"
-      className="frost-nav"
-      ref={navRef}
-      onMouseLeave={activeMenu !== null ? leaveMenu : undefined}
-    >
-      {/* Page dim + the full-width band behind the bar (the reference recording):
+      <motion.nav
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        aria-label="Welcome"
+        className="frost-nav"
+        ref={navRef}
+        onMouseLeave={activeMenu !== null ? leaveMenu : undefined}
+      >
+        {/* Page dim + the full-width band behind the bar (the reference recording):
           the band grows to its content's height under the names and the hero
           darkens beneath it. Both sit under the bar's own row (z-index). */}
-      <motion.div
-        className="frost-mega-dim"
-        aria-hidden="true"
-        initial={false}
-        animate={{ opacity: activeMenu !== null ? 1 : 0 }}
-        transition={{ duration: reduced ? 0 : 0.4 }}
-      />
-      <motion.div
-        className="frost-mega"
-        aria-hidden={activeMenu === null}
-        initial={false}
-        animate={{ height: activeMenu !== null ? megaHeight : 0, opacity: activeMenu !== null ? 1 : 0 }}
-        transition={reduced ? { duration: 0 } : { height: slide, opacity: { duration: 0.3 } }}
-        style={{ pointerEvents: activeMenu !== null ? "auto" : "none" }}
-      >
-        <div
-          ref={megaContent}
-          className="frost-mega-content"
-          style={{ paddingLeft: megaInset.left, paddingTop: megaInset.top }}
+        <motion.div
+          className="frost-mega-dim"
+          aria-hidden="true"
+          initial={false}
+          animate={{ opacity: activeMenu !== null ? 1 : 0 }}
+          transition={{ duration: reduced ? 0 : 0.4 }}
+        />
+        <motion.div
+          className="frost-mega"
+          aria-hidden={activeMenu === null}
+          initial={false}
+          animate={{ height: activeMenu !== null ? megaHeight : 0, opacity: activeMenu !== null ? 1 : 0 }}
+          transition={reduced ? { duration: 0 } : { height: slide, opacity: { duration: 0.3 } }}
+          style={{ pointerEvents: activeMenu !== null ? "auto" : "none" }}
         >
-          {activeMenu !== null ? (
-            <motion.div
-              key={activeMenu}
-              id={`frost-menu-${activeMenu.toLowerCase()}`}
-              className="frost-mega-columns"
-              role="region"
-              aria-label={`${activeMenu} menu`}
-              initial={reduced ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
+          <div ref={megaContent} className="frost-mega-content" style={{ paddingLeft: megaInset.left, paddingTop: megaInset.top }}>
+            {activeMenu !== null ? (
+              <motion.div
+                key={activeMenu}
+                id={`frost-menu-${activeMenu.toLowerCase()}`}
+                className="frost-mega-columns"
+                role="region"
+                aria-label={`${activeMenu} menu`}
+                initial={reduced ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+              >
+                {CATEGORY_MENUS[activeMenu].map((column) => (
+                  <div key={column.heading} className="frost-mega-column">
+                    <p className="frost-mega-heading">{column.heading}</p>
+                    <ul className="frost-mega-list">
+                      {column.items.map((item) => (
+                        <li key={item}>
+                          <button type="button" className="frost-mega-item" onClick={() => setActiveMenu(null)}>
+                            {item}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </motion.div>
+            ) : null}
+          </div>
+        </motion.div>
+        {/* Logo */}
+        <div className="frost-brand">
+          {logo}
+          <span className="frost-brand-name">BuildFlow</span>
+        </div>
+
+        {/* Centered category names */}
+        <div className="frost-links" ref={linksRef} data-menu-open={activeMenu !== null}>
+          {NAV_LINKS.map((label) => {
+            const isOpen = activeMenu === label;
+            return (
+              <button
+                key={label}
+                type="button"
+                className="frost-link button-01 ghost"
+                aria-haspopup="true"
+                aria-expanded={isOpen}
+                aria-controls={`frost-menu-${label.toLowerCase()}`}
+                onMouseEnter={() => hoverMenu(label)}
+                onClick={() => toggleMenu(label)}
+              >
+                <SlideLabel text={label} stagger />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="frost-nav-right">
+          {/* CTA + Login (hidden on narrow windows — the drawer carries them) */}
+          <div className="frost-nav-actions">
+            <button
+              type="button"
+              className="frost-join button-01"
+              onClick={onJoinWaitlist}
+              aria-label="Join the waitlist from welcome navigation"
             >
-              {CATEGORY_MENUS[activeMenu].map((column) => (
-                <div key={column.heading} className="frost-mega-column">
-                  <p className="frost-mega-heading">{column.heading}</p>
-                  <ul className="frost-mega-list">
-                    {column.items.map((item) => (
-                      <li key={item}>
-                        <button type="button" className="frost-mega-item" onClick={() => setActiveMenu(null)}>
-                          {item}
+              <SlideLabel text="Join the Waitlist" />
+            </button>
+            <button type="button" className="frost-login button-01 ghost" onClick={onLogin} aria-label="Login from welcome navigation">
+              <SlideLabel text="Log in" />
+            </button>
+          </div>
+
+          {/* The side drawer, at every width; on narrow windows it is all that is left of the bar. */}
+          <button
+            ref={menuButton}
+            type="button"
+            className="frost-menu-btn button-01"
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            aria-controls="frost-drawer"
+            aria-label="Open menu"
+          >
+            <SlideLabel text="Menu" />
+            <span className="frost-menu-plus" aria-hidden="true">
+              +
+            </span>
+          </button>
+        </div>
+      </motion.nav>
+
+      {/* The drawer lives on <body>, outside the stage, so the page can shrink
+        into its black frame behind it without taking the drawer along. */}
+      {createPortal(
+        <AnimatePresence>
+          {open ? (
+            <div key="drawer" className="frost-drawer-root">
+              <motion.div
+                className="frost-drawer-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: reduced ? 0 : 0.35 }}
+                onClick={() => setOpen(false)}
+                aria-hidden="true"
+              />
+              <motion.aside
+                id="frost-drawer"
+                onMouseEnter={onDrawerEnter}
+                onMouseLeave={onDrawerLeave}
+                className="frost-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menu"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={slide}
+              >
+                <button
+                  ref={closeButton}
+                  type="button"
+                  className="frost-drawer-close"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                  </svg>
+                </button>
+                <p className="frost-drawer-label">Navigation</p>
+                <nav aria-label="Categories">
+                  <ul className="frost-drawer-list">
+                    {NAV_LINKS.map((label, index) => (
+                      <motion.li
+                        key={label}
+                        initial={reduced ? false : { opacity: 0, x: 18 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.45, delay: reduced ? 0 : 0.18 + index * 0.06, ease: "easeOut" }}
+                      >
+                        <button type="button" className="frost-drawer-link button-01 ghost" onClick={() => setOpen(false)}>
+                          <span className="frost-drawer-dash" aria-hidden="true" />
+                          <SlideLabel text={label} stagger />
                         </button>
-                      </li>
+                      </motion.li>
                     ))}
                   </ul>
-                </div>
-              ))}
-            </motion.div>
-          ) : null}
-        </div>
-      </motion.div>
-      {/* Logo */}
-      <div className="frost-brand">
-        {logo}
-        <span className="frost-brand-name">BuildFlow</span>
-      </div>
-
-      {/* Centered category names */}
-      <div className="frost-links" ref={linksRef} data-menu-open={activeMenu !== null}>
-        {NAV_LINKS.map((label) => {
-          const isOpen = activeMenu === label;
-          return (
-            <button
-              key={label}
-              type="button"
-              className="frost-link button-01 ghost"
-              aria-haspopup="true"
-              aria-expanded={isOpen}
-              aria-controls={`frost-menu-${label.toLowerCase()}`}
-              onMouseEnter={() => hoverMenu(label)}
-              onClick={() => toggleMenu(label)}
-            >
-              <SlideLabel text={label} stagger />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="frost-nav-right">
-      {/* CTA + Login (hidden on narrow windows — the drawer carries them) */}
-      <div className="frost-nav-actions">
-        <button
-          type="button"
-          className="frost-join button-01"
-          onClick={onJoinWaitlist}
-          aria-label="Join the waitlist from welcome navigation"
-        >
-          <SlideLabel text="Join the Waitlist" />
-        </button>
-        <button type="button" className="frost-login button-01 ghost" onClick={onLogin} aria-label="Login from welcome navigation">
-          <SlideLabel text="Log in" />
-        </button>
-      </div>
-
-      {/* The side drawer, at every width; on narrow windows it is all that is left of the bar. */}
-      <button
-        ref={menuButton}
-        type="button"
-        className="frost-menu-btn button-01"
-        onClick={() => setOpen(true)}
-        aria-expanded={open}
-        aria-controls="frost-drawer"
-        aria-label="Open menu"
-      >
-        <SlideLabel text="Menu" />
-        <span className="frost-menu-plus" aria-hidden="true">+</span>
-      </button>
-      </div>
-    </motion.nav>
-
-    {/* The drawer lives on <body>, outside the stage, so the page can shrink
-        into its black frame behind it without taking the drawer along. */}
-    {createPortal(
-    <AnimatePresence>
-      {open ? (
-        <div key="drawer" className="frost-drawer-root">
-          <motion.div
-            className="frost-drawer-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduced ? 0 : 0.35 }}
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <motion.aside
-            id="frost-drawer"
-            onMouseEnter={onDrawerEnter}
-            onMouseLeave={onDrawerLeave}
-            className="frost-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={slide}
-          >
-            <button
-              ref={closeButton}
-              type="button"
-              className="frost-drawer-close"
-              onClick={() => setOpen(false)}
-              aria-label="Close menu"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </button>
-            <p className="frost-drawer-label">Navigation</p>
-            <nav aria-label="Categories">
-              <ul className="frost-drawer-list">
-                {NAV_LINKS.map((label, index) => (
-                  <motion.li
-                    key={label}
-                    initial={reduced ? false : { opacity: 0, x: 18 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.45, delay: reduced ? 0 : 0.18 + index * 0.06, ease: "easeOut" }}
+                </nav>
+                <div className="frost-drawer-rule" aria-hidden="true" />
+                <motion.div
+                  className="frost-drawer-secondary"
+                  initial={reduced ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: reduced ? 0 : 0.5 }}
+                >
+                  <button
+                    type="button"
+                    className="button-01 ghost"
+                    onClick={() => {
+                      setOpen(false);
+                      onJoinWaitlist();
+                    }}
                   >
-                    <button type="button" className="frost-drawer-link button-01 ghost" onClick={() => setOpen(false)}>
-                      <span className="frost-drawer-dash" aria-hidden="true" />
-                      <SlideLabel text={label} stagger />
-                    </button>
-                  </motion.li>
-                ))}
-              </ul>
-            </nav>
-            <div className="frost-drawer-rule" aria-hidden="true" />
-            <motion.div
-              className="frost-drawer-secondary"
-              initial={reduced ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: reduced ? 0 : 0.5 }}
-            >
-              <button
-                type="button"
-                className="button-01 ghost"
-                onClick={() => {
-                  setOpen(false);
-                  onJoinWaitlist();
-                }}
-              >
-                <SlideLabel text="Join the Waitlist" />
-              </button>
-              <button
-                type="button"
-                className="button-01 ghost"
-                onClick={() => {
-                  setOpen(false);
-                  onLogin();
-                }}
-              >
-                <SlideLabel text="Log in" />
-              </button>
-            </motion.div>
-          </motion.aside>
-        </div>
-      ) : null}
-    </AnimatePresence>,
-    document.body
-    )}
+                    <SlideLabel text="Join the Waitlist" />
+                  </button>
+                  <button
+                    type="button"
+                    className="button-01 ghost"
+                    onClick={() => {
+                      setOpen(false);
+                      onLogin();
+                    }}
+                  >
+                    <SlideLabel text="Log in" />
+                  </button>
+                </motion.div>
+              </motion.aside>
+            </div>
+          ) : null}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }
@@ -584,10 +569,26 @@ function FrostHero() {
           transition={{ duration: 0.85, delay: 0.22, ease: "easeOut" }}
           style={{ margin: 0, color: "#fff", textShadow: "0 2px 40px rgba(0,0,0,0.4)" }}
         >
-          <span style={{ display: "block", fontWeight: 800, fontSize: "clamp(1.8rem, 4.95vw, 3.7rem)", lineHeight: 1, letterSpacing: "-0.035em" }}>
+          <span
+            style={{
+              display: "block",
+              fontWeight: 800,
+              fontSize: "clamp(1.8rem, 4.95vw, 3.7rem)",
+              lineHeight: 1,
+              letterSpacing: "-0.035em"
+            }}
+          >
             Precision by Default.
           </span>
-          <span style={{ display: "block", fontWeight: 200, fontSize: "clamp(1.95rem, 5.2vw, 3.9rem)", lineHeight: 1.08, letterSpacing: "-0.025em" }}>
+          <span
+            style={{
+              display: "block",
+              fontWeight: 200,
+              fontSize: "clamp(1.95rem, 5.2vw, 3.9rem)",
+              lineHeight: 1.08,
+              letterSpacing: "-0.025em"
+            }}
+          >
             Clarity in Everything.
           </span>
         </motion.h1>
@@ -736,7 +737,17 @@ function FrostHero() {
             flexWrap: "wrap"
           }}
         >
-          <p style={{ margin: 0, flex: 1, minWidth: "260px", textAlign: "center", fontSize: "12.5px", lineHeight: 1.6, color: "rgba(255,255,255,0.55)" }}>
+          <p
+            style={{
+              margin: 0,
+              flex: 1,
+              minWidth: "260px",
+              textAlign: "center",
+              fontSize: "12.5px",
+              lineHeight: 1.6,
+              color: "rgba(255,255,255,0.55)"
+            }}
+          >
             We believe great tools should feel invisible. Explore the ideas, details, and small decisions we&rsquo;ve obsessed over to help
             your team do its best work.
           </p>
@@ -845,13 +856,7 @@ export default function FrostLanding(props: FrostLandingProps) {
       {/* Hover zone along the right edge of the window (mouse only; hidden on
           touch devices by frost-landing.css). Sits outside the stage so it
           stays on the viewport edge while the stage shrinks. */}
-      <div
-        className="frost-edge-zone"
-        data-testid="frost-edge-zone"
-        aria-hidden="true"
-        onMouseEnter={edgeEnter}
-        onMouseLeave={edgeLeave}
-      />
+      <div className="frost-edge-zone" data-testid="frost-edge-zone" aria-hidden="true" onMouseEnter={edgeEnter} onMouseLeave={edgeLeave} />
     </div>
   );
 }

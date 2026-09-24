@@ -17,7 +17,11 @@ export function Beats({ children }: { children: ReactNode }) {
   return (
     <>
       {Children.toArray(children).map((child, index) => (
-        <div key={isValidElement(child) && child.key != null ? child.key : index} className="onb-beat" style={{ "--i": index } as CSSProperties}>
+        <div
+          key={isValidElement(child) && child.key != null ? child.key : index}
+          className="onb-beat"
+          style={{ "--i": index } as CSSProperties}
+        >
           {child}
         </div>
       ))}

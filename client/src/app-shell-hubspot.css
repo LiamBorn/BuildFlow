@@ -1100,7 +1100,7 @@
     gap: 2px;
   }
   .hs-shell .topbar.hs-topbar .topbar-actions > .hs-bookmarks,
-.hs-shell .topbar.hs-topbar .topbar-actions > .hs-settings-button {
+  .hs-shell .topbar.hs-topbar .topbar-actions > .hs-settings-button {
     display: none;
   }
 }

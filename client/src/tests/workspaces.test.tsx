@@ -27,7 +27,7 @@ const ROOFING = {
   trialEndsAt: "2026-06-21T12:00:00.000Z",
   createdAt: "2026-06-16T00:00:00.000Z"
 };
-const withActive = (workspaces: typeof HOME[], activeId: string) => ({
+const withActive = (workspaces: (typeof HOME)[], activeId: string) => ({
   ...workspacesFixture,
   activeId,
   remaining: 2,
@@ -67,7 +67,10 @@ describe("workspaces", () => {
     // the app re-enters on the other workspace: its own data, its own trade line
     expect(await screen.findByRole("button", { name: "Workspace: Roofing" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Workspaces" })).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/workspaces\/org-roofing\/switch$/), expect.objectContaining({ method: "POST" }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/workspaces\/org-roofing\/switch$/),
+      expect.objectContaining({ method: "POST" })
+    );
     await waitFor(() => expect(screen.getByText(/Roofing workspace/)).toBeInTheDocument());
   });
 
@@ -77,7 +80,14 @@ describe("workspaces", () => {
    * workspace being opened is labelled with the trade of the one just left.
    */
   it("does not carry one workspace's trade over to the next", async () => {
-    const GENERAL = { ...HOME, id: "org-general", title: "Santos Builders", businessType: "" as const, kind: "extra" as const, active: false };
+    const GENERAL = {
+      ...HOME,
+      id: "org-general",
+      title: "Santos Builders",
+      businessType: "" as const,
+      kind: "extra" as const,
+      active: false
+    };
     let active = "org-home";
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -89,7 +99,9 @@ describe("workspaces", () => {
       if (url.includes("/api/bootstrap")) {
         // org-general has no trade of its own, and is already set up, so it opens on the Dashboard
         const businessType = active === "org-general" ? "" : "Asphalt";
-        return new Response(JSON.stringify({ ...bootstrapFixture, businessType, selectedPlan: null, selectedProducts: [] }), { status: 200 });
+        return new Response(JSON.stringify({ ...bootstrapFixture, businessType, selectedPlan: null, selectedProducts: [] }), {
+          status: 200
+        });
       }
       return respondToBuildflowApi(input);
     });
@@ -112,7 +124,15 @@ describe("workspaces", () => {
       const url = String(input);
       if (url.endsWith("/api/workspaces") && init?.method === "POST") {
         created = true;
-        const fresh = { ...HOME, id: "org-new", title: "Reyes Construction", businessType: "" as const, kind: "extra" as const, onboardingCompletedAt: null, trialEndsAt: "2026-06-23T12:00:00.000Z" };
+        const fresh = {
+          ...HOME,
+          id: "org-new",
+          title: "Reyes Construction",
+          businessType: "" as const,
+          kind: "extra" as const,
+          onboardingCompletedAt: null,
+          trialEndsAt: "2026-06-23T12:00:00.000Z"
+        };
         return new Response(JSON.stringify({ ...withActive([HOME, fresh], "org-new"), session: {} }), { status: 201 });
       }
       if (url.includes("/api/bootstrap") && created) return new Response(JSON.stringify(newOrgWorkspaceFixture), { status: 200 });
@@ -164,14 +184,30 @@ describe("workspaces", () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/api/auth/me")) {
-        return new Response(JSON.stringify({ account: { id: "acct-demo", email: "demo@buildflow.com", name: "Demo User", role: "owner" }, org: { id: "org-home", name: "BuildFlow Demo Co." }, demo: true }), { status: 200 });
+        return new Response(
+          JSON.stringify({
+            account: { id: "acct-demo", email: "demo@buildflow.com", name: "Demo User", role: "owner" },
+            org: { id: "org-home", name: "BuildFlow Demo Co." },
+            demo: true
+          }),
+          { status: 200 }
+        );
       }
       if (url.endsWith("/api/workspaces") && init?.method === "POST") {
         created = true;
-        const fresh = { ...HOME, id: "org-new", title: "BuildFlow Demo Co.", businessType: "" as const, kind: "extra" as const, onboardingCompletedAt: null, trialEndsAt: "2026-06-23T12:00:00.000Z" };
+        const fresh = {
+          ...HOME,
+          id: "org-new",
+          title: "BuildFlow Demo Co.",
+          businessType: "" as const,
+          kind: "extra" as const,
+          onboardingCompletedAt: null,
+          trialEndsAt: "2026-06-23T12:00:00.000Z"
+        };
         return new Response(JSON.stringify({ ...withActive([HOME, fresh], "org-new"), session: {} }), { status: 201 });
       }
-      if (url.includes("/api/bootstrap") && created) return new Response(JSON.stringify({ ...newOrgWorkspaceFixture, workspaceTrial: true }), { status: 200 });
+      if (url.includes("/api/bootstrap") && created)
+        return new Response(JSON.stringify({ ...newOrgWorkspaceFixture, workspaceTrial: true }), { status: 200 });
       return respondToBuildflowApi(input);
     });
     vi.stubGlobal("fetch", fetchMock);

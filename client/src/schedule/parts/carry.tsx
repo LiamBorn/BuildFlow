@@ -144,7 +144,6 @@ function CarriedCard({
        drop in another section moves the real card between sections mid-drag, so `source` becomes a
        different element several times in one drag — and re-cloning it each time cost a
        `cloneNode(true)` and a restart of the lean loop for a picture that had not changed. */
-     
   }, [itemId]);
   useEffect(() => {
     const node = holder.current;

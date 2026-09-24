@@ -208,7 +208,11 @@ describe("the route policy", () => {
     // Everything else goes on through the wrapper, which empties `missing` and `stale` and
     // leaves `unguarded` holding exactly one key.
     const verbs: Record<string, "get" | "post" | "put" | "patch" | "delete"> = {
-      GET: "get", POST: "post", PUT: "put", PATCH: "patch", DELETE: "delete"
+      GET: "get",
+      POST: "post",
+      PUT: "put",
+      PATCH: "patch",
+      DELETE: "delete"
     };
     for (const key of keys) {
       if (key === victim) continue;
@@ -757,15 +761,24 @@ describe("the routes the permissions were waiting for", () => {
     expect(stored).toMatchObject({ status: "Ready", quantity: "380 gal", name: "Tack coat" });
 
     // the same checks the create makes
-    await owner.patch(`/api/materials/${id}`).send({ ...line, status: "Lost" }).expect(400);
-    await owner.patch(`/api/materials/${id}`).send({ ...line, projectId: "p-nowhere" }).expect(404);
+    await owner
+      .patch(`/api/materials/${id}`)
+      .send({ ...line, status: "Lost" })
+      .expect(400);
+    await owner
+      .patch(`/api/materials/${id}`)
+      .send({ ...line, projectId: "p-nowhere" })
+      .expect(404);
     await owner.patch("/api/materials/mat-nowhere").send(line).expect(404);
 
     // resources.write: an Admin writes the inventory, a Member reads it
     const member = await join("member");
     expect((await member.patch(`/api/materials/${id}`).send(line).expect(403)).body.need).toBe("resources.write");
     const admin = await join("admin");
-    await admin.patch(`/api/materials/${id}`).send({ ...line, status: "Missing" }).expect(200);
+    await admin
+      .patch(`/api/materials/${id}`)
+      .send({ ...line, status: "Missing" })
+      .expect(200);
   });
 
   it("removes a teammate's access without removing what they did", async () => {

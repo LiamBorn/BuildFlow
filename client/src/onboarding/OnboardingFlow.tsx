@@ -48,7 +48,8 @@ export type StepId = 1 | 2 | 3 | 4 | 5;
 export const STEP_COUNT = 5;
 
 const FIRST_STEP: Record<OnboardingEntry, StepId> = { "create-account": 1, "business-type": 3, "additional-products": 4 };
-export const groupOf = (step: StepId): OnboardingEntry => (step <= 2 ? "create-account" : step === 3 ? "business-type" : "additional-products");
+export const groupOf = (step: StepId): OnboardingEntry =>
+  step <= 2 ? "create-account" : step === 3 ? "business-type" : "additional-products";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 /* Consumer mailboxes. A signup from one still works — plenty of small contractors run on
@@ -86,7 +87,8 @@ const TERMS_MESSAGE = "Please agree to the Terms & Conditions and Privacy Policy
 const OAUTH_MESSAGES: Record<string, string> = {
   cancelled: "Sign-in was cancelled. You can try again or use your email.",
   no_account: "There's no BuildFlow account for that email yet. Create one below, or sign in with a different address.",
-  email_unverified: "That provider hasn't confirmed the email on the account. Use an address they have verified, or sign up with your email.",
+  email_unverified:
+    "That provider hasn't confirmed the email on the account. Use an address they have verified, or sign up with your email.",
   terms_required: TERMS_MESSAGE,
   not_configured: "That sign-in option isn't set up yet. Use your email for now.",
   state_missing: "That sign-in took too long or the browser lost track of it. Please try again.",
@@ -411,7 +413,9 @@ export function OnboardingFlow({
                         )}
                       </p>
                     ) : isPersonalEmail(email) ? (
-                      <p className="onb-hint">That looks like a personal address. It works — a work email just keeps invites and invoices with the company.</p>
+                      <p className="onb-hint">
+                        That looks like a personal address. It works — a work email just keeps invites and invoices with the company.
+                      </p>
                     ) : null}
                   </div>
                   <div className="onb-field">
@@ -460,7 +464,8 @@ export function OnboardingFlow({
                     />
                     {/* the links sit outside the <label> so opening the Terms doesn't also tick the box */}
                     <span>
-                      <label htmlFor="onb-terms">I agree to the</label> <a href="#terms">Terms &amp; Conditions</a> and <a href="#privacy">Privacy Policy</a>.
+                      <label htmlFor="onb-terms">I agree to the</label> <a href="#terms">Terms &amp; Conditions</a> and{" "}
+                      <a href="#privacy">Privacy Policy</a>.
                       {errors.terms && (
                         <span className="onb-error" role="alert">
                           {errors.terms}
@@ -521,7 +526,9 @@ export function OnboardingFlow({
                   <h1 className="onb-h1" id="onb-title">
                     Nice to meet you, {first || "there"}!
                   </h1>
-                  <p className="onb-sub">What&apos;s your business called? It becomes your workspace, and it&apos;s on every schedule you share.</p>
+                  <p className="onb-sub">
+                    What&apos;s your business called? It becomes your workspace, and it&apos;s on every schedule you share.
+                  </p>
                   <div className="onb-field">
                     <label htmlFor="onb-business">Business name</label>
                     <input
@@ -542,7 +549,9 @@ export function OnboardingFlow({
                         {errors.business}
                       </p>
                     ) : (
-                      <p className="onb-hint">You can use your own name if you don&apos;t have a business name yet — plenty of contractors do.</p>
+                      <p className="onb-hint">
+                        You can use your own name if you don&apos;t have a business name yet — plenty of contractors do.
+                      </p>
                     )}
                   </div>
                   <div className="onb-form-note">
@@ -570,7 +579,10 @@ export function OnboardingFlow({
                   <h1 className="onb-h1" id="onb-title">
                     What type of construction business do you own?
                   </h1>
-                  <p className="onb-sub">BuildFlow builds the workspace around your trade: its crews, its phases, its readiness checks and the ways it loses days.</p>
+                  <p className="onb-sub">
+                    BuildFlow builds the workspace around your trade: its crews, its phases, its readiness checks and the ways it loses
+                    days.
+                  </p>
                   <div className="onb-tiles" role="radiogroup" aria-label="Business type">
                     {businessTypeOptions.map((id) => {
                       const profile = tradeProfiles[id];
@@ -580,8 +592,19 @@ export function OnboardingFlow({
                       /* `is-active` is the mark motion/SegmentPill.tsx reads: the chosen tile's ring is the
                          group's own ::before, and it TRAVELS to the next choice (onboarding.css) */
                       return (
-                        <label key={id} className={`onb-tile${on ? " is-on is-active" : ""}`} style={{ "--tone": toneColor(profile.tone) } as CSSProperties}>
-                          <input type="radio" name="business-type" value={id} checked={on} onChange={() => setTrade(id)} aria-labelledby={labelId} />
+                        <label
+                          key={id}
+                          className={`onb-tile${on ? " is-on is-active" : ""}`}
+                          style={{ "--tone": toneColor(profile.tone) } as CSSProperties}
+                        >
+                          <input
+                            type="radio"
+                            name="business-type"
+                            value={id}
+                            checked={on}
+                            onChange={() => setTrade(id)}
+                            aria-labelledby={labelId}
+                          />
                           <Icon aria-hidden="true" />
                           <span id={labelId}>{profile.label}</span>
                           {on && (
@@ -608,7 +631,9 @@ export function OnboardingFlow({
                   <h1 className="onb-h1" id="onb-title">
                     How big is {business || "the business"} today?
                   </h1>
-                  <p className="onb-sub">Two rough answers, and we&apos;ll put the right plan in front of you. Nothing here is a commitment.</p>
+                  <p className="onb-sub">
+                    Two rough answers, and we&apos;ll put the right plan in front of you. Nothing here is a commitment.
+                  </p>
                   <div className="onb-group" role="radiogroup" aria-label="Monthly revenue">
                     <span>Monthly revenue</span>
                     <div className="onb-chips">
@@ -616,7 +641,14 @@ export function OnboardingFlow({
                         const on = revenue === option.id;
                         return (
                           <label key={option.id} className={`onb-chip${on ? " is-on" : ""}`}>
-                            <input type="radio" name="revenue" value={option.id} checked={on} onChange={() => setRevenue(option.id)} aria-labelledby={`onb-rev-${option.id}`} />
+                            <input
+                              type="radio"
+                              name="revenue"
+                              value={option.id}
+                              checked={on}
+                              onChange={() => setRevenue(option.id)}
+                              aria-labelledby={`onb-rev-${option.id}`}
+                            />
                             {on && <Check aria-hidden="true" />}
                             <span id={`onb-rev-${option.id}`}>{option.label}</span>
                           </label>
@@ -631,7 +663,14 @@ export function OnboardingFlow({
                         const on = team === option.id;
                         return (
                           <label key={option.id} className={`onb-chip${on ? " is-on" : ""}`}>
-                            <input type="radio" name="team" value={option.id} checked={on} onChange={() => setTeam(option.id)} aria-labelledby={`onb-team-${option.id}`} />
+                            <input
+                              type="radio"
+                              name="team"
+                              value={option.id}
+                              checked={on}
+                              onChange={() => setTeam(option.id)}
+                              aria-labelledby={`onb-team-${option.id}`}
+                            />
                             {on && <Check aria-hidden="true" />}
                             <span id={`onb-team-${option.id}`}>{option.label}</span>
                           </label>

@@ -109,7 +109,11 @@ describe("the signup flow's last step", () => {
   });
 
   it("says the invites are waiting on the owner when their own address is not confirmed yet", async () => {
-    vi.mocked(api.sendInvites).mockResolvedValue({ results: [{ email: "carlos@reyespaving.com", status: "held" }], invites: [], emailVerified: false });
+    vi.mocked(api.sendInvites).mockResolvedValue({
+      results: [{ email: "carlos@reyespaving.com", status: "held" }],
+      invites: [],
+      emailVerified: false
+    });
     render(<InviteTeamPage onDone={vi.fn()} />);
     typeInto("Email 1", "carlos@reyespaving.com");
     fireEvent.click(screen.getByRole("button", { name: "Send invites" }));
@@ -140,7 +144,11 @@ describe("the signup flow's last step", () => {
     fireEvent.pointerDown(screen.getByLabelText("Access level 2"), { bubbles: true });
 
     const list = screen.getByRole("listbox", { name: "Access level 2" });
-    expect(within(list).getAllByRole("option").map((row) => row.textContent)).toEqual(["Admin", "Member"]);
+    expect(
+      within(list)
+        .getAllByRole("option")
+        .map((row) => row.textContent)
+    ).toEqual(["Admin", "Member"]);
     expect(within(list).getByRole("option", { name: "Member" })).toHaveAttribute("aria-selected", "true");
 
     fireEvent.click(within(list).getByRole("option", { name: "Admin" }));

@@ -485,7 +485,6 @@ describe("the card a DragOverlay carries", () => {
       );
     }
   });
-
 });
 
 describe("the reduced-motion branches the suite cannot execute", () => {

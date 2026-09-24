@@ -21,7 +21,13 @@ const sheet = postcss.parse(readFileSync(join(SRC, "schedule-board.css"), "utf8"
 const declsOf = (selector: string): Record<string, string> => {
   const out: Record<string, string> = {};
   sheet.walkRules((rule: Rule) => {
-    if (rule.selector.split(",").map((part) => part.trim()).includes(selector)) rule.walkDecls((decl) => {
+    if (
+      rule.selector
+        .split(",")
+        .map((part) => part.trim())
+        .includes(selector)
+    )
+      rule.walkDecls((decl) => {
         out[decl.prop] = decl.value;
       });
   });
@@ -36,7 +42,10 @@ const panels = () => [...document.querySelectorAll<HTMLElement>(".sched-board-ho
 const settingsWrites = (mock: ReturnType<typeof vi.fn>) =>
   mock.mock.calls
     .filter(([url]) => String(url).includes("/api/me/settings/"))
-    .map(([url, init]) => ({ url: decodeURIComponent(String(url)), value: JSON.parse(String((init as RequestInit | undefined)?.body)).value as string }));
+    .map(([url, init]) => ({
+      url: decodeURIComponent(String(url)),
+      value: JSON.parse(String((init as RequestInit | undefined)?.body)).value as string
+    }));
 const settingsFetch = () =>
   vi.fn(async (input: RequestInfo | URL) => {
     if (String(input).includes("/api/me/settings/")) return new Response(JSON.stringify({ ok: true }), { status: 200 });
@@ -114,7 +123,13 @@ describe("the Schedule page's board", () => {
     // a board this person had customized: two half-width sections and one removed
     localStorage.setItem(
       KEY,
-      JSON.stringify({ items: [{ id: "kpis", x: 0, y: 0, w: 3, h: 4 }, { id: "views", x: 3, y: 0, w: 3, h: 5 }], hidden: ["digest"] })
+      JSON.stringify({
+        items: [
+          { id: "kpis", x: 0, y: 0, w: 3, h: 4 },
+          { id: "views", x: 3, y: 0, w: 3, h: 5 }
+        ],
+        hidden: ["digest"]
+      })
     );
     render(<App />);
     await enterDashboard();
@@ -123,7 +138,11 @@ describe("the Schedule page's board", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Reset layout/ }));
     expect(await screen.findByRole("heading", { name: "What changed this week" })).toBeInTheDocument();
-    const saved = JSON.parse(localStorage.getItem(KEY) ?? "{}") as { items: Array<{ id: string; x: number; w: number }>; hidden: string[]; fit?: boolean };
+    const saved = JSON.parse(localStorage.getItem(KEY) ?? "{}") as {
+      items: Array<{ id: string; x: number; w: number }>;
+      hidden: string[];
+      fit?: boolean;
+    };
     expect(saved.hidden).toEqual([]);
     expect(saved.fit).toBe(true);
     expect(saved.items.map((item) => item.id)).toEqual(SECTION_ORDER);

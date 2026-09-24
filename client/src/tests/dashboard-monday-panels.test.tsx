@@ -23,7 +23,12 @@ const sheet = postcss.parse(readFileSync(join(SRC, "dashboard-monday-panels.css"
 const declsOf = (selector: string): Record<string, string> => {
   const out: Record<string, string> = {};
   sheet.walkRules((rule: Rule) => {
-    if (rule.selector.split(",").map((part) => part.trim()).includes(selector)) {
+    if (
+      rule.selector
+        .split(",")
+        .map((part) => part.trim())
+        .includes(selector)
+    ) {
       rule.walkDecls((decl) => {
         out[decl.prop] = decl.value;
       });
@@ -150,7 +155,11 @@ describe("the monday card sheet", () => {
     // makes an un-hovered section solid
     let restSolid = false;
     sheet.walkRules((rule: Rule) => {
-      if (rule.selector.includes("is-customizing") && rule.selector.includes(".dash-block") && !/:hover|:focus-within|is-dragging/.test(rule.selector)) {
+      if (
+        rule.selector.includes("is-customizing") &&
+        rule.selector.includes(".dash-block") &&
+        !/:hover|:focus-within|is-dragging/.test(rule.selector)
+      ) {
         rule.walkDecls("outline-style", (decl) => {
           if (decl.value === "solid") restSolid = true;
         });

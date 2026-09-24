@@ -9,7 +9,6 @@ describe("schedule utilities", () => {
     expect(unassigned).toHaveLength(1);
     expect(unassigned[0].id).toBe("j-unassigned");
   });
-
 });
 
 describe("calendar-day maths", () => {

@@ -53,7 +53,9 @@ export function PlanStep({
         ? { label: "Continue for free", run: () => onChoose("free") }
         : { label: `Continue with ${plan.name}`, run: () => onChoose(recommended) };
   const secondary =
-    recommended === "free" ? { label: "Start with Pro instead", run: () => onChoose("pro") } : { label: "Continue for free", run: () => onChoose("free") };
+    recommended === "free"
+      ? { label: "Start with Pro instead", run: () => onChoose("pro") }
+      : { label: "Continue for free", run: () => onChoose("free") };
 
   return (
     <div className="onb-plan">

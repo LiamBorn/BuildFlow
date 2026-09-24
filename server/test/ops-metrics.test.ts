@@ -55,9 +55,7 @@ describe("GET /api/ops/metrics", () => {
     const res = await request(app).get("/api/ops/metrics").expect(200);
 
     expect(res.body.byKind).toEqual(seeded);
-    expect(res.body.objects).toBe(
-      seeded.projects + seeded.jobs + seeded.crews + seeded.equipment + seeded.materials
-    );
+    expect(res.body.objects).toBe(seeded.projects + seeded.jobs + seeded.crews + seeded.equipment + seeded.materials);
     expect(res.body.workspaces).toBe(manager.main.listOrgs().length);
     /* Counted, not constant. Worth knowing: on a FRESH seed this total is 31, exactly what
        the portal's fallback claimed -- which is why the fallback passed for real data. The
@@ -81,12 +79,8 @@ describe("GET /api/ops/metrics", () => {
     /* The reason this route can be handed to a console that /api/bootstrap cannot: the
        payload is integers. If a future change adds a field here, this fails and the
        author has to decide deliberately whether an operator tool should carry it. */
-    expect(Object.keys(res.body).sort()).toEqual(
-      ["byKind", "coldWorkspaces", "generatedAt", "objects", "workspaces"].sort()
-    );
-    expect(Object.keys(res.body.byKind).sort()).toEqual(
-      ["crews", "equipment", "jobs", "materials", "projects"].sort()
-    );
+    expect(Object.keys(res.body).sort()).toEqual(["byKind", "coldWorkspaces", "generatedAt", "objects", "workspaces"].sort());
+    expect(Object.keys(res.body.byKind).sort()).toEqual(["crews", "equipment", "jobs", "materials", "projects"].sort());
     for (const value of Object.values(res.body.byKind)) expect(Number.isInteger(value)).toBe(true);
     /* Every value is a number except the timestamp, so no name, rate or contract value can
        be riding along in one of them. */

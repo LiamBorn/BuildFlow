@@ -62,7 +62,9 @@ describe("Dashboard board on the account", () => {
     const projects = bootstrap.body.projects as Array<{ scheduleHealth: string }>;
     const crews = bootstrap.body.crews as Array<{ utilization: number }>;
     expect(thisWeek.projects).toBe(projects.length);
-    expect(thisWeek.onTrackProjects).toBe(projects.filter((p) => p.scheduleHealth === "On Track" || p.scheduleHealth === "Complete").length);
+    expect(thisWeek.onTrackProjects).toBe(
+      projects.filter((p) => p.scheduleHealth === "On Track" || p.scheduleHealth === "Complete").length
+    );
     expect(thisWeek.crewUtilization).toBe(Math.round(crews.reduce((sum, crew) => sum + crew.utilization, 0) / crews.length));
     // a second request in the same week keeps the first reading
     const again = await agent.get("/api/schedule/status").expect(200);
