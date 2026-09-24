@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { savedFile } from "./fileDurability.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
@@ -1332,6 +1333,7 @@ export class BuildFlowStore {
         fs.closeSync(fd);
       }
       fs.renameSync(tmp, this.dataFile);
+      savedFile(this.dataFile);
       // Counted because this is the server's characteristic cost: a whole-file rewrite plus
       // an fsync, per write, everywhere. See metrics.ts.
       metrics.recordSave(data.length, Number(process.hrtime.bigint() - startedAt) / 1e6);

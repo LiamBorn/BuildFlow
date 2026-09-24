@@ -7,6 +7,9 @@ import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
 import path from "node:path";
 import { defaultDataFile, LATEST_SCHEMA_VERSION } from "./database.js";
+import { startFileDurability } from "./fileDurability.js";
+import { liveHubFor } from "./schedule/live.js";
+import { createShutdown } from "./shutdown.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
 import { serveClient } from "./serveClient.js";
 
@@ -29,7 +32,13 @@ process.on("uncaughtException", (error) => {
 });
 
 const port = Number(process.env.PORT ?? 4300);
+const fileDurability = await startFileDurability();
 const app = await createApp();
+
+const liveHub = liveHubFor(app);
+// Persist any migration or fresh demo file before the new process accepts requests.
+await fileDurability?.flush();
+if (fileDurability?.hasPending) throw new Error("Could not save initial SQLite files to PostgreSQL; refusing to serve requests.");
 // One process, one address: in production the built pages are served from here too (serveClient.ts).
 const production = process.env.NODE_ENV === "production";
 const servesPages = production && serveClient(app);
@@ -44,6 +53,7 @@ const server = app.listen(port, () => {
   void reportMailStatus(); // logs LIVE (verified) vs LOG MODE + anything missing
   reportBillingStatus(); // logs Stripe billing mode (or NOT CONFIGURED)
   reportAiStatus(); // logs BuildFlow AI LIVE (Claude) vs DEMO MODE
+  console.log(`🗄️  Data storage: ${fileDurability ? "PostgreSQL-backed SQLite files" : "local SQLite files only"}.`);
   reportNotifyStatus(); // logs notification channels (email/SMS/push) + recipients
   // Says out loud whether the auth limits hold across instances or only within this one.
   console.log(
@@ -109,34 +119,8 @@ const server = app.listen(port, () => {
   }
 });
 
-/**
- * Shut down on a deploy's signal instead of being killed mid-request.
- *
- * Nothing handled SIGTERM, so a restart dropped every connection that was open and cut the
- * process off wherever it happened to be — including inside a store's save, which is a
- * whole-file rewrite. (That write is now atomic, so an interrupted one can no longer leave a
- * torn database; this is the other half — finishing the work already in flight rather than
- * relying on the write being safe to interrupt.)
- *
- * Idle keep-alive sockets are closed at once, because they hold `server.close()` open while
- * doing nothing; requests actually being served are allowed to finish. The timer is the
- * backstop for a request that never ends, and is unref'd so it cannot itself keep the
- * process alive.
- */
-let shuttingDown = false;
+const shutdown = createShutdown(server, liveHub, fileDurability);
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.on(signal, () => {
-    if (shuttingDown) return; // a second Ctrl-C should not race the first
-    shuttingDown = true;
-    console.log(`\n[server] ${signal} — finishing in-flight requests, then closing.`);
-    server.closeIdleConnections();
-    server.close(() => {
-      console.log("[server] closed cleanly.");
-      process.exit(0);
-    });
-    setTimeout(() => {
-      console.warn("[server] still busy after 10s — exiting anyway.");
-      process.exit(1);
-    }, 10_000).unref();
-  });
+  process.on(signal, () => shutdown(signal));
 }
+if (fileDurability) fileDurability.onHandoff = () => shutdown("handoff");

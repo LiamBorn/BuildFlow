@@ -9,8 +9,15 @@
 # Replit app may expose exactly one port, and it has to be the one on 80: an extra [[ports]] entry,
 # or a server listening on a port that is not mapped to 80, fails the publish. (2026-09-24: Replit's
 # Agent had moved Run to 5000, left the publish command on 4300 and exposed three ports.)
+#
+# Replit adds a [[ports]] entry by itself whenever something in the workspace listens on another
+# port: the server's default 4300 came back as 4300 → 3000 after a verification run on 2026-09-24.
+# Delete any such entry before publishing.
+#
+# The Run button goes through the workflow below, so the workflow does what `run` does: install,
+# build, then start. Starting without the build serves whatever client/dist was left behind.
 
-modules = ["nodejs-22"]
+modules = ["nodejs-22", "postgresql-16", "python-base-3.13"]
 run = "npm install && npm run build && NODE_ENV=production TRUST_PROXY=1 PORT=5000 npm start"
 
 [deployment]
@@ -26,3 +33,31 @@ externalPort = 80
 
 [nix]
 channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install && npm run build && NODE_ENV=production TRUST_PROXY=1 PORT=5000 npm start"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000

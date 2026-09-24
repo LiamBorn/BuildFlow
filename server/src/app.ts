@@ -3704,7 +3704,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   };
   const backupsDir = () => path.join(path.dirname(mainStore.dataFilePath), "backups");
 
-  app.post("/api/ops/backup", (req, res) => {
+  app.post("/api/ops/backup", async (req, res) => {
     if (!opsAuthorized(req)) {
       res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
       return;
