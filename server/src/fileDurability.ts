@@ -13,6 +13,26 @@ export function fileDurabilityEnabled(): boolean {
   return !!process.env.DATABASE_URL && process.env.NODE_ENV !== "test" && !process.env.VITEST;
 }
 
+/**
+ * Whether this process may only run with its database: `BUILDFLOW_REQUIRE_DATABASE`, which
+ * `.replit` sets on the published app's start command and nowhere else.
+ *
+ * Without it, a deployment that has lost its DATABASE_URL starts on local files, serves normally,
+ * and loses everything at the next publish, with one log line as the only sign. That is how the
+ * published app ran on 2026-09-24 until its production database was created. A laptop, the
+ * Replit workspace and the tests still run on files without a database, as they always have.
+ */
+export function databaseRequired(env: { BUILDFLOW_REQUIRE_DATABASE?: string } = process.env): boolean {
+  const configured = env.BUILDFLOW_REQUIRE_DATABASE?.trim().toLowerCase();
+  return configured === "1" || configured === "on" || configured === "true" || configured === "yes";
+}
+
+function missingDatabaseError(): Error {
+  return new Error(
+    'BuildFlow is set to run only with its database (BUILDFLOW_REQUIRE_DATABASE), but DATABASE_URL is not set, so it refuses to start rather than keep data in local files that the next publish would erase. On Replit: open Publishing, turn on "Create production database", and publish again.'
+  );
+}
+
 export class SupersededWriterError extends Error {
   constructor() {
     super("A newer BuildFlow process owns the saved data; this process cannot write to PostgreSQL.");
@@ -345,7 +365,10 @@ export class FileDurability {
 let active: FileDurability | undefined;
 
 export async function startFileDurability(): Promise<FileDurability | undefined> {
-  if (!fileDurabilityEnabled()) return undefined;
+  if (!fileDurabilityEnabled()) {
+    if (databaseRequired() && !process.env.DATABASE_URL?.trim()) throw missingDatabaseError();
+    return undefined;
+  }
   const pool = await newPool();
   const mirror = new FileDurability(path.dirname(defaultDataFile), pool);
   try {

@@ -23,9 +23,11 @@ run = "npm install && npm run build && NODE_ENV=production TRUST_PROXY=1 PORT=50
 [deployment]
 # A Reserved VM ("gce"; Autoscale is "cloudrun"): each workspace's database lives in the process and
 # on its disk, and the live updates and scheduled jobs expect a single, always-on instance.
+# BUILDFLOW_REQUIRE_DATABASE=1 is here and only here: the published app refuses to start without its
+# production database (DATABASE_URL) instead of running on files that the next publish erases.
 deploymentTarget = "gce"
 build = ["sh", "-c", "npm ci && npm run build"]
-run = ["sh", "-c", "NODE_ENV=production TRUST_PROXY=1 PORT=5000 npm start"]
+run = ["sh", "-c", "NODE_ENV=production TRUST_PROXY=1 PORT=5000 BUILDFLOW_REQUIRE_DATABASE=1 npm start"]
 
 [[ports]]
 localPort = 5000
