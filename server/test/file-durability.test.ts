@@ -1,30 +1,43 @@
 import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { EventEmitter } from "node:events";
+import express from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FileDurability, fileDurabilityEnabled, persistRestoredFile } from "../src/fileDurability.js";
+import { FileDurability, dataStartupError, fileDurabilityEnabled, persistRestoredFile } from "../src/fileDurability.js";
+import { ScheduleLiveHub } from "../src/schedule/live.js";
+import { createShutdown } from "../src/shutdown.js";
 
-class MemoryPg {
+class MemoryPg extends EventEmitter {
   epoch = 0;
   files = new Map<string, Buffer>();
   writes = 0;
   failNext = false;
   locked = false;
-  notification?: () => void;
+  holder?: EventEmitter;
+  dropOwner() {
+    const owner = this.holder;
+    this.holder = undefined;
+    this.locked = false;
+    owner?.emit("error", new Error("connection reset"));
+    owner?.emit("end");
+  }
   async connect() {
     let epoch = this.epoch;
     let files = new Map(this.files);
-    return {
-      on: (_event: string, listener: () => void) => { this.notification = listener; },
+    const client = Object.assign(new EventEmitter(), {
       query: async (sql: string, params: unknown[] = []) => {
         if (sql.includes("pg_try_advisory_lock")) {
           const acquired = !this.locked;
           if (acquired) this.locked = true;
+          if (acquired) this.holder = client;
           return { rows: [{ acquired }] };
         } else if (sql.includes("pg_advisory_unlock")) {
           this.locked = false;
+          this.holder = undefined;
         } else if (sql.includes("pg_notify")) {
-          queueMicrotask(() => this.notification?.());
+          queueMicrotask(() => this.holder?.emit("notification"));
         } else if (sql === "BEGIN") {
           epoch = this.epoch;
           files = new Map(this.files);
@@ -51,8 +64,14 @@ class MemoryPg {
         }
         return { rows: [] };
       },
-      release: () => undefined
-    };
+      release: (broken?: boolean) => {
+        if (broken && this.holder === client) {
+          this.locked = false;
+          this.holder = undefined;
+        }
+      }
+    });
+    return client;
   }
   async end() {}
 }
@@ -137,9 +156,12 @@ describe("PostgreSQL-backed SQLite images", () => {
     await newer.flush();
     fs.writeFileSync(file, "old request");
     old.save(file);
+    const handoff = vi.fn();
+    old.onHandoff = handoff;
     const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
     await old.flush();
-    expect(errors).toHaveBeenCalledWith("[data] old process fenced out:", expect.any(String));
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining("[data] old process fenced out:"));
+    await vi.waitFor(() => expect(handoff).toHaveBeenCalledOnce());
     expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("newer");
   });
 
@@ -147,7 +169,12 @@ describe("PostgreSQL-backed SQLite images", () => {
     const dir = directory();
     const file = path.join(dir, "buildflow.sqlite");
     fs.writeFileSync(file, "keep this");
-    const disconnected = { connect: async () => { throw new Error("database offline"); }, end: async () => undefined };
+    const disconnected = {
+      connect: async () => {
+        throw new Error("database offline");
+      },
+      end: async () => undefined
+    };
     await expect(mirror(dir, disconnected as never).start()).rejects.toThrow("database offline");
     expect(fs.readFileSync(file, "utf8")).toBe("keep this");
   });
@@ -182,13 +209,94 @@ describe("PostgreSQL-backed SQLite images", () => {
     fs.writeFileSync(file, "old pending update");
     old.save(file);
     let closed: Promise<void> | undefined;
-    old.onHandoff = () => { closed ??= old.close(); };
+    old.onHandoff = () => {
+      closed ??= old.close();
+    };
     const newer = mirror(dir, pg);
     await newer.start();
     await closed;
     expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("old pending update");
     expect(fs.readFileSync(file, "utf8")).toBe("old pending update");
     await newer.close();
+  });
+
+  it("finishes shutdown with a real SSE connection open and saves the pending change", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const file = path.join(dir, "buildflow.sqlite");
+    fs.writeFileSync(file, "before");
+    const store = mirror(dir, pg);
+    await store.start();
+    const hub = new ScheduleLiveHub();
+    const app = express();
+    app.get("/events", (_req, res) => hub.subscribe("org", res));
+    const server = http.createServer(app);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as { port: number }).port;
+    const req = http.get(`http://127.0.0.1:${port}/events`);
+    const stream = await new Promise<http.IncomingMessage>((resolve) => req.once("response", resolve));
+    stream.resume();
+    fs.writeFileSync(file, "last change");
+    store.save(file);
+    const exited = new Promise<number>((resolve) => createShutdown(server, hub, store, resolve, 1000)("SIGTERM"));
+    expect(await exited).toBe(0);
+    expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("last change");
+    await vi.waitFor(() => expect(stream.complete).toBe(true));
+    req.destroy();
+  });
+
+  it("logs pool errors, reacquires a dropped lock connection and keeps saving", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const file = path.join(dir, "buildflow.sqlite");
+    fs.writeFileSync(file, "before");
+    const store = mirror(dir, pg);
+    await store.start();
+    const oldOwner = pg.holder;
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    pg.emit("error", new Error("idle pool connection reset"));
+    pg.dropOwner();
+    await vi.waitFor(() => expect(pg.holder).toBeDefined());
+    expect(pg.holder).not.toBe(oldOwner);
+    const recoveredOwner = pg.holder;
+    pg.dropOwner();
+    await vi.waitFor(() => expect(pg.holder).toBeDefined());
+    expect(pg.holder).not.toBe(recoveredOwner);
+    fs.writeFileSync(file, "after reconnect");
+    store.save(file);
+    await store.flush();
+    expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("after reconnect");
+    expect(errors).toHaveBeenCalled();
+    await store.close();
+  });
+
+  it("tries a final save and exits by the deadline if a request never finishes", async () => {
+    const app = express();
+    app.get("/stuck", (_req, res) => {
+      res.write("waiting");
+    });
+    const server = http.createServer(app);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as { port: number }).port;
+    const req = http.get(`http://127.0.0.1:${port}/stuck`);
+    const stream = await new Promise<http.IncomingMessage>((resolve) => req.once("response", resolve));
+    stream.resume();
+    const flush = vi.fn(async () => undefined);
+    const closed = vi.fn(async () => undefined);
+    const exitCode = new Promise<number>((resolve) =>
+      createShutdown(server, new ScheduleLiveHub(), { flush, close: closed }, resolve, 50)("SIGTERM")
+    );
+    expect(await exitCode).toBe(1);
+    expect(flush).toHaveBeenCalledOnce();
+    expect(closed).not.toHaveBeenCalled();
+    req.destroy();
+    server.closeAllConnections();
+  });
+
+  it("explains how to install the schema when a table is missing", () => {
+    const missing = Object.assign(new Error("relation does not exist"), { code: "42P01" });
+    expect(dataStartupError(missing).message).toContain("Apply server/sql/file-images.sql");
+    expect(dataStartupError(new Error("network offline")).message).toContain("refusing to start");
   });
 
   it("disables database persistence in tests even if DATABASE_URL is set", () => {

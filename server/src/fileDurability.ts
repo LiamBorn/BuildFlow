@@ -4,12 +4,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { Pool, type PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import { defaultDataFile } from "./database.js";
 
 const fileName = (name: string) => name.endsWith(".sqlite") && !name.includes("/") && !name.includes("\\");
-const diskFiles = (dir: string) =>
-  fs.existsSync(dir) ? fs.readdirSync(dir).filter(fileName).sort() : [];
+const diskFiles = (dir: string) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter(fileName).sort() : []);
 
 export function fileDurabilityEnabled(): boolean {
   return !!process.env.DATABASE_URL && process.env.NODE_ENV !== "test" && !process.env.VITEST;
@@ -21,9 +20,33 @@ export class SupersededWriterError extends Error {
   }
 }
 
-type Connection = Pick<PoolClient, "query" | "release">;
-type Connector = { connect(): Promise<Connection>; end(): Promise<void> };
+type Connection = Pick<PoolClient, "query" | "release"> & Partial<Pick<PoolClient, "on">>;
+type Connector = {
+  connect(): Promise<Connection>;
+  end(): Promise<void>;
+  on?: (event: "error", handler: (error: Error) => void) => unknown;
+};
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+function isMissingSchema(error: unknown): boolean {
+  let current: unknown = error;
+  while (current instanceof Error) {
+    if ("code" in current && current.code === "42P01") return true;
+    current = current.cause;
+  }
+  return false;
+}
+export function dataStartupError(error: unknown): Error {
+  return isMissingSchema(error)
+    ? new Error(
+        "PostgreSQL is missing BuildFlow's saved-file tables. Apply server/sql/file-images.sql to the development database, then publish the schema to production before starting.",
+        { cause: error }
+      )
+    : new Error("Cannot load BuildFlow files from PostgreSQL; refusing to start with disk-only data.", { cause: error });
+}
+async function newPool(): Promise<Connector> {
+  const { Pool } = await import("pg");
+  return new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+}
 
 export class FileDurability {
   private epoch = "";
@@ -32,13 +55,96 @@ export class FileDurability {
   private running?: Promise<void>;
   private superseded = false;
   private owner?: Connection;
+  private started = false;
+  private closing = false;
+  private recovering?: Promise<void>;
+  private readonly released = new WeakSet<Connection>();
   onHandoff?: () => void;
 
   get hasPending(): boolean {
     return this.pending.size > 0 || !!this.running;
   }
 
-  constructor(private readonly dir: string, private readonly pool: Connector) {}
+  constructor(
+    private readonly dir: string,
+    private readonly pool: Connector
+  ) {
+    this.pool.on?.("error", (error) => console.error("[data] PostgreSQL pool connection lost:", error));
+  }
+
+  private release(candidate: Connection, broken = false): void {
+    if (this.released.has(candidate)) return;
+    this.released.add(candidate);
+    candidate.release(broken);
+  }
+
+  private lostOwner(candidate: Connection, error?: Error): void {
+    if (this.owner !== candidate) return;
+    console.error("[data] PostgreSQL lock connection lost; reconnecting:", error ?? "connection ended");
+    this.owner = undefined;
+    this.release(candidate, true);
+    this.beginRecovery();
+  }
+
+  private beginRecovery(): void {
+    if (!this.started || this.closing || this.superseded || this.owner || this.recovering) return;
+    this.recovering = this.recoverLock()
+      .catch((failure: unknown) => {
+        console.error("[data] PostgreSQL lock recovery failed:", failure);
+      })
+      .finally(() => {
+        this.recovering = undefined;
+        if (!this.owner) this.beginRecovery();
+      });
+  }
+
+  private watchOwner(candidate: Connection): void {
+    candidate.on?.("error", (error: Error) => {
+      if (this.owner === candidate) this.lostOwner(candidate, error);
+      else console.error("[data] PostgreSQL connection lost:", error);
+    });
+    candidate.on?.("end", () => this.lostOwner(candidate));
+    candidate.on?.("notification", () => this.onHandoff?.());
+  }
+
+  private supersede(): void {
+    if (this.superseded) return;
+    this.superseded = true;
+    this.pending.clear();
+    console.error("[data] old process fenced out: a newer BuildFlow process owns the saved files.");
+    queueMicrotask(() => this.onHandoff?.());
+  }
+
+  private async recoverLock(): Promise<void> {
+    while (!this.closing && !this.superseded) {
+      let candidate: Connection | undefined;
+      let locked = false;
+      try {
+        candidate = await this.pool.connect();
+        this.watchOwner(candidate);
+        const lock = await candidate.query<{ acquired: boolean }>("SELECT pg_try_advisory_lock(702345, 1) AS acquired");
+        locked = !!lock.rows[0]?.acquired;
+        const epoch = await candidate.query<{ epoch: string }>("SELECT epoch FROM buildflow_file_epoch WHERE id = 1");
+        if (String(epoch.rows[0]?.epoch) !== this.epoch) {
+          this.supersede();
+          return;
+        }
+        if (locked && !this.closing) {
+          this.owner = candidate;
+          await candidate.query("LISTEN buildflow_handoff");
+          if (this.owner !== candidate) continue;
+          console.log("[data] PostgreSQL lock reacquired.");
+          return;
+        }
+      } catch (error) {
+        if (this.owner === candidate) this.owner = undefined;
+        console.error("[data] PostgreSQL lock reconnect failed; retrying:", error);
+      } finally {
+        if (candidate && this.owner !== candidate) this.release(candidate, locked);
+      }
+      if (!this.closing && !this.superseded) await wait(1000);
+    }
+  }
 
   async start(): Promise<void> {
     // A dedicated connection holds this session lock until all outstanding writes
@@ -47,19 +153,17 @@ export class FileDurability {
     const deadline = Date.now() + 30_000;
     while (true) {
       const candidate = await this.pool.connect();
+      this.watchOwner(candidate);
       try {
-        const result = await candidate.query<{ acquired: boolean }>(
-          "SELECT pg_try_advisory_lock(702345, 1) AS acquired"
-        );
+        const result = await candidate.query<{ acquired: boolean }>("SELECT pg_try_advisory_lock(702345, 1) AS acquired");
         if (result.rows[0]?.acquired) {
           this.owner = candidate;
           await candidate.query("LISTEN buildflow_handoff");
-          (candidate as PoolClient).on?.("notification", () => this.onHandoff?.());
           break;
         }
         await candidate.query("SELECT pg_notify('buildflow_handoff', 'start')");
       } finally {
-        if (this.owner !== candidate) candidate.release();
+        if (this.owner !== candidate) this.release(candidate);
       }
       if (Date.now() > deadline) throw new Error("Timed out waiting for the previous BuildFlow process to flush its saved files.");
       await wait(250);
@@ -80,13 +184,14 @@ export class FileDurability {
       // previous use is not a reason to resurrect a stale disk snapshot.
       if (!result.rows.length && this.epoch === "1") {
         for (const name of diskFiles(this.dir)) {
-          await client.query(
-            "INSERT INTO buildflow_files (filename, contents) VALUES ($1, $2)",
-            [name, fs.readFileSync(path.join(this.dir, name))]
-          );
+          await client.query("INSERT INTO buildflow_files (filename, contents) VALUES ($1, $2)", [
+            name,
+            fs.readFileSync(path.join(this.dir, name))
+          ]);
         }
       } else {
-        if (!result.rows.length) throw new Error("PostgreSQL has no saved files after a prior start; refusing to import or erase local data.");
+        if (!result.rows.length)
+          throw new Error("PostgreSQL has no saved files after a prior start; refusing to import or erase local data.");
         fs.mkdirSync(this.dir, { recursive: true });
         const names = new Set(result.rows.map((row) => row.filename));
         for (const row of result.rows) {
@@ -105,11 +210,18 @@ export class FileDurability {
         }
       }
       await client.query("COMMIT");
+      if (!this.owner) throw new Error("PostgreSQL lock connection was lost during startup.");
+      this.started = true;
+      const imported = this.epoch === "1" && !result.rows.length;
+      const count = imported ? diskFiles(this.dir).length : result.rows.length;
+      console.log(
+        `[data] ${imported ? "Imported" : "Loaded"} ${count} SQLite file image(s) ${imported ? "into" : "from"} PostgreSQL before opening stores.`
+      );
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
       throw error;
     } finally {
-      client.release();
+      this.release(client);
     }
   }
 
@@ -127,10 +239,11 @@ export class FileDurability {
       throw new Error(`Not a BuildFlow data file: ${file}`);
     }
     this.pending.set(path.basename(file), action);
-    if (!this.timer) this.timer = setTimeout(() => {
-      this.timer = undefined;
-      void this.flush();
-    }, 400);
+    if (!this.timer)
+      this.timer = setTimeout(() => {
+        this.timer = undefined;
+        void this.flush();
+      }, 400);
   }
 
   /** Serializes all saves; each file's latest queued state wins during a burst. */
@@ -158,9 +271,7 @@ export class FileDurability {
         const client = await this.pool.connect();
         try {
           await client.query("BEGIN");
-          const owner = await client.query<{ epoch: string }>(
-            "SELECT epoch FROM buildflow_file_epoch WHERE id = 1 FOR UPDATE"
-          );
+          const owner = await client.query<{ epoch: string }>("SELECT epoch FROM buildflow_file_epoch WHERE id = 1 FOR UPDATE");
           if (String(owner.rows[0]?.epoch) !== this.epoch) throw new SupersededWriterError();
           if (effectiveAction === "delete") {
             await client.query("DELETE FROM buildflow_files WHERE filename = $1", [name]);
@@ -176,35 +287,39 @@ export class FileDurability {
           await client.query("ROLLBACK").catch(() => undefined);
           throw error;
         } finally {
-          client.release();
+          this.release(client);
         }
       } catch (error) {
         if (error instanceof SupersededWriterError) {
-          this.superseded = true;
-          this.pending.clear();
-          console.error("[data] old process fenced out:", error.message);
+          this.supersede();
           return;
         }
         if (!this.pending.has(name)) this.pending.set(name, action);
         console.error(`[data] PostgreSQL save failed for ${name}; retrying:`, error);
-        if (!this.timer) this.timer = setTimeout(() => {
-          this.timer = undefined;
-          void this.flush();
-        }, 1000);
+        if (!this.timer)
+          this.timer = setTimeout(() => {
+            this.timer = undefined;
+            void this.flush();
+          }, 1000);
         return;
       }
     }
   }
 
   async close(): Promise<void> {
+    this.closing = true;
     while (this.pending.size || this.running) {
       await this.flush();
       if (this.pending.size && !this.superseded) await wait(1000);
     }
     if (this.owner) {
-      await this.owner.query("SELECT pg_advisory_unlock(702345, 1)");
-      this.owner.release();
+      const owner = this.owner;
       this.owner = undefined;
+      try {
+        await owner.query("SELECT pg_advisory_unlock(702345, 1)");
+      } finally {
+        this.release(owner);
+      }
     }
     await this.pool.end();
   }
@@ -214,13 +329,13 @@ let active: FileDurability | undefined;
 
 export async function startFileDurability(): Promise<FileDurability | undefined> {
   if (!fileDurabilityEnabled()) return undefined;
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+  const pool = await newPool();
   const mirror = new FileDurability(path.dirname(defaultDataFile), pool);
   try {
     await mirror.start();
   } catch (error) {
     await mirror.close();
-    throw new Error("Cannot load BuildFlow files from PostgreSQL; refusing to start with disk-only data.", { cause: error });
+    throw dataStartupError(error);
   }
   active = mirror;
   return mirror;
@@ -238,7 +353,7 @@ export function deletedFile(file: string): void {
  * restored bytes before allowing the next startup to hydrate from PostgreSQL. */
 export async function persistRestoredFile(file: string, connector?: Connector): Promise<void> {
   if (!connector && !fileDurabilityEnabled()) return;
-  const pool = connector ?? new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+  const pool = connector ?? (await newPool());
   let client: Connection;
   try {
     client = await pool.connect();

@@ -11,9 +11,14 @@ const HEARTBEAT_MS = 25_000;
 
 export class ScheduleLiveHub {
   private streams = new Map<string, Set<Response>>();
+  private closing = false;
 
   /** Opens the stream on `res` and keeps it until the tab goes away. */
   subscribe(orgId: string, res: Response) {
+    if (this.closing) {
+      res.status(503).end();
+      return;
+    }
     res.status(200);
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -51,6 +56,7 @@ export class ScheduleLiveHub {
 
   /** Ends every stream (shutdown, tests). */
   closeAll() {
+    this.closing = true;
     for (const tabs of this.streams.values()) for (const res of tabs) res.end();
     this.streams.clear();
   }
