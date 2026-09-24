@@ -6,12 +6,16 @@ import { EventEmitter } from "node:events";
 import express from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FileDurability, dataStartupError, fileDurabilityEnabled, persistRestoredFile } from "../src/fileDurability.js";
+import { listRestorePoints } from "../src/restore.js";
+import { BuildFlowStore } from "../src/database.js";
 import { ScheduleLiveHub } from "../src/schedule/live.js";
 import { createShutdown } from "../src/shutdown.js";
 
 class MemoryPg extends EventEmitter {
   epoch = 0;
   files = new Map<string, Buffer>();
+  backups = new Map<string, Buffer>();
+  backupImported = false;
   writes = 0;
   failNext = false;
   dropDuringSave = false;
@@ -29,6 +33,8 @@ class MemoryPg extends EventEmitter {
   async connect() {
     let epoch = this.epoch;
     let files = new Map(this.files);
+    let backups = new Map(this.backups);
+    let backupImported = this.backupImported;
     const client = Object.assign(new EventEmitter(), {
       query: async (sql: string, params: unknown[] = []) => {
         if (sql.includes("pg_try_advisory_lock")) {
@@ -44,6 +50,8 @@ class MemoryPg extends EventEmitter {
         } else if (sql === "BEGIN") {
           epoch = this.epoch;
           files = new Map(this.files);
+          backups = new Map(this.backups);
+          backupImported = this.backupImported;
         } else if (sql.includes("buildflow_file_epoch") && sql.includes("INSERT")) {
           epoch++;
           return { rows: [{ epoch: String(epoch) }] };
@@ -55,7 +63,22 @@ class MemoryPg extends EventEmitter {
             client.emit("error", new Error("connection reset during load"));
             throw new Error("connection reset during load");
           }
-          return { rows: [...files].map(([filename, contents]) => ({ filename, contents })) };
+          const selected = sql.includes("buildflow_backups") ? backups : files;
+          return { rows: [...selected].map(([filename, contents]) => ({ filename, contents })) };
+        } else if (sql.includes("SELECT id FROM buildflow_backup_import")) {
+          return { rows: backupImported ? [{ id: 1 }] : [] };
+        } else if (sql.includes("INSERT INTO buildflow_backup_import")) {
+          backupImported = true;
+        } else if (sql.includes("INSERT INTO buildflow_backups")) {
+          if (this.failNext) {
+            this.failNext = false;
+            throw new Error("network unavailable");
+          }
+          backups.set(params[0] as string, params[1] as Buffer);
+          this.writes++;
+        } else if (sql.includes("DELETE FROM buildflow_backups")) {
+          backups.delete(params[0] as string);
+          this.writes++;
         } else if (sql.includes("INSERT INTO buildflow_files")) {
           if (this.dropDuringSave) {
             this.dropDuringSave = false;
@@ -74,6 +97,8 @@ class MemoryPg extends EventEmitter {
         } else if (sql === "COMMIT") {
           this.epoch = epoch;
           this.files = files;
+          this.backups = backups;
+          this.backupImported = backupImported;
         }
         return { rows: [] };
       },
@@ -112,17 +137,130 @@ describe("PostgreSQL-backed SQLite images", () => {
     fs.writeFileSync(path.join(dir, "buildflow.sqlite"), "first main");
     fs.writeFileSync(path.join(dir, "org-one.sqlite"), "first org");
     fs.mkdirSync(path.join(dir, "backups"));
-    fs.writeFileSync(path.join(dir, "backups", "snapshot.sqlite"), "backup stays local");
+    const snapshot = "buildflow-2026-09-24T10-00-00-000Z.sqlite";
+    fs.writeFileSync(path.join(dir, "backups", snapshot), "first backup");
     const original = mirror(dir, pg);
     await original.start();
     expect(pg.files.size).toBe(2);
+    expect(pg.backups.get(snapshot)?.toString()).toBe("first backup");
     fs.writeFileSync(path.join(dir, "buildflow.sqlite"), "stale main");
     fs.writeFileSync(path.join(dir, "org-old.sqlite"), "stale org");
     await original.close();
     await mirror(dir, pg).start();
     expect(fs.readFileSync(path.join(dir, "buildflow.sqlite"), "utf8")).toBe("first main");
     expect(fs.existsSync(path.join(dir, "org-old.sqlite"))).toBe(false);
-    expect(fs.existsSync(path.join(dir, "backups", "snapshot.sqlite"))).toBe(true);
+    expect(fs.readFileSync(path.join(dir, "backups", snapshot), "utf8")).toBe("first backup");
+    expect(pg.backupImported).toBe(true);
+  });
+
+  it("prefers saved images and backups to stale local files; never reimports deleted snapshots", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const snapshot = "buildflow-2026-09-24T10-00-00-000Z.sqlite";
+    pg.files.set("buildflow.sqlite", Buffer.from("pg main"));
+    pg.backups.set(snapshot, Buffer.from("pg backup"));
+    fs.writeFileSync(path.join(dir, "buildflow.sqlite"), "stale main");
+    fs.mkdirSync(path.join(dir, "backups"));
+    fs.writeFileSync(path.join(dir, "backups", snapshot), "stale backup");
+    const stale = "buildflow-2026-09-23T10-00-00-000Z.sqlite";
+    fs.writeFileSync(path.join(dir, "backups", stale), "deleted backup");
+    const first = mirror(dir, pg);
+    await first.start();
+    expect(fs.readFileSync(path.join(dir, "buildflow.sqlite"), "utf8")).toBe("pg main");
+    expect(fs.readFileSync(path.join(dir, "backups", snapshot), "utf8")).toBe("pg backup");
+    expect(fs.existsSync(path.join(dir, "backups", stale))).toBe(false);
+    await first.close();
+    pg.backups.clear();
+    fs.writeFileSync(path.join(dir, "backups", stale), "stale again");
+    const second = mirror(dir, pg);
+    await second.start();
+    expect(listRestorePoints(dir)).toEqual([]);
+    await second.close();
+  });
+
+  it("hydrates and restores retained backups from a clean data directory", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const file = path.join(dir, "buildflow.sqlite");
+    const snapshot = "buildflow-2026-09-24T10-00-00-000Z.sqlite";
+    fs.writeFileSync(file, "main");
+    const first = mirror(dir, pg);
+    await first.start();
+    const backup = path.join(dir, "backups", snapshot);
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.writeFileSync(backup, "point in time");
+    first.save(backup);
+    await first.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+    const second = mirror(dir, pg);
+    await second.start();
+    expect(fs.readFileSync(file, "utf8")).toBe("main");
+    expect(listRestorePoints(dir).map((point) => point.file)).toEqual([snapshot]);
+    await second.close();
+    fs.writeFileSync(file, fs.readFileSync(backup));
+    await persistRestoredFile(file, pg as never);
+    const third = mirror(dir, pg);
+    await third.start();
+    expect(fs.readFileSync(file, "utf8")).toBe("point in time");
+    await third.close();
+  });
+
+  it("retries backup writes and fences old backup writers after handoff", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    fs.writeFileSync(path.join(dir, "buildflow.sqlite"), "main");
+    const backup = path.join(dir, "backups", "buildflow-2026-09-24T10-00-00-000Z.sqlite");
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    const old = mirror(dir, pg);
+    await old.start();
+    fs.writeFileSync(backup, "snapshot");
+    old.save(backup);
+    pg.failNext = true;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await old.flush();
+    expect(old.hasPending).toBe(true);
+    await old.close();
+    expect(pg.backups.get(path.basename(backup))?.toString()).toBe("snapshot");
+    const next = mirror(dir, pg);
+    await next.start();
+    fs.unlinkSync(backup);
+    next.delete(backup);
+    await next.flush();
+    expect(pg.backups.size).toBe(0);
+    await next.close();
+    old.save(backup);
+    await old.flush();
+    expect(pg.backups.size).toBe(0);
+  });
+
+  it("mirrors retention deletions for cold workspace snapshots", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const main = path.join(dir, "buildflow.sqlite");
+    const cold = path.join(dir, "org-cold.sqlite");
+    await BuildFlowStore.create(main, true);
+    await BuildFlowStore.create(cold, true, { seedDemo: false });
+    const store = mirror(dir, pg);
+    await store.start();
+    const snapshots = ["org-cold-2026-09-21T10-00-00-000Z.sqlite", "org-cold-2026-09-22T10-00-00-000Z.sqlite"];
+    fs.mkdirSync(path.join(dir, "backups"), { recursive: true });
+    for (const name of snapshots) {
+      const backup = path.join(dir, "backups", name);
+      fs.copyFileSync(cold, backup);
+      store.save(backup);
+    }
+    await store.flush();
+    // Retain one snapshot; the same deletion path used by backupFile removes
+    // the old point from PostgreSQL rather than resurrecting it next boot.
+    const newest = BuildFlowStore.backupFile(cold, 1);
+    for (const name of snapshots) store.delete(path.join(dir, "backups", name));
+    store.save(newest);
+    await store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+    const restarted = mirror(dir, pg);
+    await restarted.start();
+    expect(listRestorePoints(dir).map((point) => point.file)).toEqual([path.basename(newest)]);
+    await restarted.close();
   });
 
   it("coalesces a burst, retries failures without throwing, and deletes saved workspaces", async () => {
@@ -268,8 +406,12 @@ describe("PostgreSQL-backed SQLite images", () => {
     expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("last write");
 
     fs.writeFileSync(file, "restored backup");
-    await persistRestoredFile(file, pg as never);
+    const safety = path.join(dir, "backups", "buildflow-2026-09-24T10-00-00-000Z.sqlite");
+    fs.mkdirSync(path.dirname(safety), { recursive: true });
+    fs.writeFileSync(safety, "last write");
+    await persistRestoredFile(file, pg as never, safety);
     expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("restored backup");
+    expect(pg.backups.get(path.basename(safety))?.toString()).toBe("last write");
     fs.writeFileSync(file, "stale disk");
     await mirror(dir, pg).start();
     expect(fs.readFileSync(file, "utf8")).toBe("restored backup");
@@ -284,6 +426,10 @@ describe("PostgreSQL-backed SQLite images", () => {
     await old.start();
     fs.writeFileSync(file, "old pending update");
     old.save(file);
+    const backup = path.join(dir, "backups", "buildflow-2026-09-24T10-00-00-000Z.sqlite");
+    fs.mkdirSync(path.dirname(backup), { recursive: true });
+    fs.writeFileSync(backup, "old pending snapshot");
+    old.save(backup);
     let closed: Promise<void> | undefined;
     old.onHandoff = () => {
       closed ??= old.close();
@@ -292,6 +438,7 @@ describe("PostgreSQL-backed SQLite images", () => {
     await newer.start();
     await closed;
     expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("old pending update");
+    expect(pg.backups.get(path.basename(backup))?.toString()).toBe("old pending snapshot");
     expect(fs.readFileSync(file, "utf8")).toBe("old pending update");
     await newer.close();
   });

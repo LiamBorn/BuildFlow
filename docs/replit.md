@@ -55,19 +55,28 @@ Secrets are where they belong.
 
 ## Know this before real customers use it
 
-- **The data is still SQLite files** in `server/data`: one main file and one per workspace.
-  When `DATABASE_URL` is present, Replit PostgreSQL also stores each complete file as a `bytea`
-  image. On startup, the server loads the saved images before opening SQLite; only on the first
-  start with no saved images does it import existing local files. The development and published
-  apps use their separate Replit PostgreSQL databases, so their users and workspaces stay separate.
-  The schema is recorded in `server/sql/file-images.sql` and has been applied to the development
-  database. Publish applies that development schema to the separate production database; do not
-  choose the Publish option that overwrites production data with development data. Do not enable
-  the app before the schema is present; an unreachable database
-  stops startup rather than allowing empty data. File changes are coalesced and retried, deletes
-  remove the saved image, and shutdown flushes pending writes. A newer server fences older
-  servers from writing stale images during a publish. Backups remain local in `server/data/backups`;
-  the restore CLI updates the saved image after restoring while the API is stopped.
+- **SQLite is the working copy; PostgreSQL is the durable copy** when `DATABASE_URL` is present.
+  The main account/demo image, each workspace image, and retained snapshots under
+  `server/data/backups` are stored as byte-for-byte `bytea` images, not relational BuildFlow
+  tables. Startup hydrates the local working files and snapshots before opening stores.
+  The first PostgreSQL-backed start imports existing local images; a one-time backup migration
+  imports local snapshots only when PostgreSQL has none. PostgreSQL rows always take precedence,
+  and later starts remove stale/deleted local snapshots instead of reimporting them. Saves and
+  retention deletions are queued, retried, flushed on shutdown, and fenced against older servers.
+  The schema is in `server/sql/file-images.sql` and must exist in **development** before running.
+  A missing/unreachable PostgreSQL database stops startup rather than opening disk-only data.
   Without `DATABASE_URL` (or during tests), BuildFlow remains file-only.
+- **Before a future Publish:** development and production are separate databases. Publish the
+  schema changes (including `buildflow_backups` and `buildflow_backup_import`) through Replit's
+  schema promotion; never select an option that copies development records over production.
+  If a previous production VM has files or backups that are *only on its disk*, export them
+  separately **before** replacing that VM and reconcile them with the production PostgreSQL
+  images. This workspace currently has no production database attached, so production-only disk
+  files cannot be inventoried here. Do not import development records into production.
+- **Restore:** stop the API, run `npm --workspace server run restore` to list hydrated snapshots,
+  then `npm --workspace server run restore -- --latest` (or specify a workspace base or snapshot
+  filename). The CLI verifies the selected SQLite image, preserves the replaced image as a new
+  snapshot, and commits the restored image and safety snapshot to PostgreSQL before success.
+  Do not swap SQLite files while the API is running: its in-memory stores would overwrite them.
 - **A visitor who opens the program without signing in lands in the shared demo workspace.** Every
   such visitor sees the same one, including whatever the others changed in it.

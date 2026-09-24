@@ -44,6 +44,7 @@ import {
 } from "./database.js";
 import type { ScheduleAssignment, ScheduleLiveEvent, WeatherWindow } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
+import { flushSavedFiles } from "./fileDurability.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
 import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds } from "./rateLimit.js";
@@ -3668,7 +3669,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   };
   const backupsDir = () => path.join(path.dirname(mainStore.dataFilePath), "backups");
 
-  app.post("/api/ops/backup", (req, res) => {
+  app.post("/api/ops/backup", async (req, res) => {
     if (!opsAuthorized(req)) {
       res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
       return;
@@ -3676,6 +3677,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
     try {
       const files = manager.backupAll(retain).map((f) => path.basename(f));
+      await flushSavedFiles();
       res.status(201).json({ ok: true, count: files.length, files });
     } catch (error) {
       console.error("[ops] backup failed:", error instanceof Error ? error.message : error);

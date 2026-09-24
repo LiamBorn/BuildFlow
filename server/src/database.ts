@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { savedFile } from "./fileDurability.js";
+import { savedFile, deletedFile } from "./fileDurability.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
@@ -1395,6 +1395,7 @@ export class BuildFlowStore {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const dest = path.join(dir, `${base}-${stamp}.sqlite`);
     fs.copyFileSync(file, dest);
+    savedFile(dest);
     // ISO timestamps sort chronologically — drop all but the newest `retain`.
     const mine = fs
       .readdirSync(dir)
@@ -1403,6 +1404,7 @@ export class BuildFlowStore {
     for (const old of mine.slice(0, Math.max(0, mine.length - Math.max(1, retain)))) {
       try {
         fs.unlinkSync(path.join(dir, old));
+        deletedFile(path.join(dir, old));
       } catch {
         /* best-effort prune */
       }
