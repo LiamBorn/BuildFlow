@@ -73,7 +73,7 @@ import {
   type CalendarEvent,
   type CalendarProvider
 } from "./calendar.js";
-import { assertRoutePolicyCovers, can, installRoutePolicy, outranks } from "./permissions.js";
+import { assertRoutePolicyCovers, can, demoLockOn, installRoutePolicy, outranks } from "./permissions.js";
 import crypto from "node:crypto";
 import {
   parseCookies,
@@ -97,6 +97,8 @@ declare module "express-serve-static-core" {
   interface Request {
     account?: Account;
     org?: Org;
+    /** This session is the shared demo: it may read, and change nothing (permissions.ts). */
+    readOnlyDemo?: boolean;
   }
 }
 import {
@@ -827,6 +829,16 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     req.account = session.account;
     req.org = session.org;
+    /* The demo is one shared account in one shared workspace, handed to every signed-out visitor as
+       an owner. Marked here, where the session is read, so the permission guard can refuse its writes
+       without permissions.ts having to know what a demo is — or having to import the data layer to
+       find out.
+
+       Only where the address is public. On a developer's machine, and in the test suite, the demo is
+       the sandbox you work in: it is the identity most of these tests sign in as, and locking it
+       would be locking the workbench rather than the shop window. DEMO_READ_ONLY forces it either
+       way — which is also how the tests for it get a locked demo without pretending to be deployed. */
+    req.readOnlyDemo = demoLockOn() && session.account.email === DEMO_ACCOUNT_EMAIL;
     // Identity is enough for a public path; only a gated one binds the tenant store.
     if (!gated) return next();
     try {
