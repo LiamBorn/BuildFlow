@@ -90,6 +90,22 @@ describe("whether Claude is reachable at all", () => {
     });
   });
 
+  /**
+   * Replit's address ends in /v1, and the SDK appends /v1/messages itself: passed through as
+   * given, every call on the published app went to …/v1/v1/messages and came back 404.
+   */
+  it("drops the /v1 Replit's address ends in, because the SDK adds its own", () => {
+    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY = "replit-key";
+    for (const given of [
+      "https://replit.example/anthropic/v1",
+      "https://replit.example/anthropic/v1/",
+      "https://replit.example/anthropic"
+    ]) {
+      process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL = given;
+      expect(aiConnection()?.options.baseURL, given).toBe("https://replit.example/anthropic");
+    }
+  });
+
   it("prefers the operator's own Anthropic credential over the integration", () => {
     process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY = "replit-key";
     process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL = "https://replit.example/anthropic";

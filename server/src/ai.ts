@@ -50,7 +50,10 @@ export function aiConnection(
 ): { via: "anthropic" | "replit"; options: { apiKey?: string; baseURL?: string } } | null {
   if (env.ANTHROPIC_API_KEY?.trim() || env.ANTHROPIC_AUTH_TOKEN?.trim()) return { via: "anthropic", options: {} };
   const apiKey = env.AI_INTEGRATIONS_ANTHROPIC_API_KEY?.trim();
-  const baseURL = env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL?.trim();
+  /* Replit's address ends in /v1, for clients that append only the endpoint. The Anthropic SDK
+     appends /v1/messages itself, so with it left in, every request went to …/v1/v1/messages and
+     came back 404 — on the published app, 2026-09-24, until this. */
+  const baseURL = env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL?.trim().replace(/\/+$/, "").replace(/\/v1$/, "");
   if (apiKey && baseURL) return { via: "replit", options: { apiKey, baseURL } };
   return null;
 }
