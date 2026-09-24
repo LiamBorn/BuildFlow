@@ -84,6 +84,14 @@ Secrets are where they belong.
     ticking together could both send before either marks it — a duplicate email to a customer.
   - Rate limits are per-process unless `REDIS_URL` is set (`server/src/rateLimit.ts` falls back to an
     in-process limiter on purpose), so N instances allow N times the intended ceiling.
+- **`TRUST_PROXY=1` is in the run command for a reason — do not drop it when editing `.replit`.**
+  Replit terminates TLS and forwards, so without it every request looks like it came from the proxy:
+  all visitors share one rate-limit bucket (one caller can spend the public ceilings for everybody and
+  lock everybody out of `/api/ops`), and `req.secure` is false so HSTS is never sent. Unset is still
+  the *safe* default rather than a hole — `req.ip` falls back to the socket address, which a client
+  cannot choose, so nobody can pick their own bucket — but it is the wrong default behind a proxy. The
+  server says so once, on the first request that arrives with an `X-Forwarded-*` header while the
+  variable is unset, rather than on every request.
 - **What the `[data]` lines in the deployment log mean.** The durable copy is guarded by a
   PostgreSQL advisory lock as well as the epoch, and the lock's connection is the part most likely to
   be dropped by a managed database that suspends idle sessions — so these appear in normal operation:

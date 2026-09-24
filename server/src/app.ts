@@ -565,6 +565,37 @@ export function trustedAppOrigin(args: {
   return (header ?? args.fallback).replace(/\/+$/, "");
 }
 
+/**
+ * Said once when a proxy is plainly in front and TRUST_PROXY has not been set.
+ *
+ * Unset is the SAFE default and stays that way: `req.ip` is then the socket address, which a client
+ * cannot choose, so nobody can mint a fresh rate-limit bucket per request. What it cannot do is tell
+ * two visitors apart behind a load balancer, because every request then arrives from the proxy and
+ * shares one bucket. That is not a small degradation:
+ *
+ *   · the ops lockout counts ten wrong tokens and then refuses — from ONE address. Shared, one
+ *     scanner locks out the operator too, which is the moment they most need those routes.
+ *   · the public ceilings become global rather than per visitor, so one caller's ten waitlist
+ *     signups spend everybody's.
+ *   · `req.secure` is false, so HSTS is never sent, however the connection really arrived.
+ *
+ * .replit passes TRUST_PROXY=1, so a Replit deployment is right by default. This exists for the
+ * deployment that is not, and it is conditioned on a forwarded header actually being present rather
+ * than on NODE_ENV — a server genuinely exposed with nothing in front should hear nothing, and a
+ * developer behind a tunnel should hear it. Once per process: a line per request would be the
+ * recoverLock mistake, thousands of copies burying the log somebody is reading.
+ */
+export function proxyHeaderWarning(trustProxySet: boolean, headers: { [key: string]: unknown }): string | null {
+  if (trustProxySet) return null;
+  if (!headers["x-forwarded-for"] && !headers["x-forwarded-proto"]) return null;
+  return (
+    "🛡️  ⚠️  A request arrived with X-Forwarded-* headers but TRUST_PROXY is not set, so BuildFlow is " +
+    "treating the proxy as the client. Every visitor then shares one rate-limit bucket — one caller can " +
+    "spend the public ceilings for everyone and lock everyone out of /api/ops — and HSTS is never sent " +
+    "because the connection looks like plain http. Set TRUST_PROXY=1 for a single proxy in front."
+  );
+}
+
 /** Said at startup when a published deployment has not told us its own address. */
 export function emailLinkWarning(vars: { NODE_ENV?: string; BUILDFLOW_CLIENT_URL?: string } = process.env): string | null {
   if (vars.NODE_ENV !== "production") return null;
@@ -711,6 +742,19 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   if (trustProxy) {
     app.set("trust proxy", /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy === "true" ? true : trustProxy);
   }
+  /* Noticed from a real request rather than from the environment: the question is not whether someone
+     MEANT to run a proxy, it is whether one is there and being ignored. See proxyHeaderWarning. */
+  let saidAboutProxy = false;
+  app.use((req, _res, next) => {
+    if (!saidAboutProxy) {
+      const warning = proxyHeaderWarning(Boolean(trustProxy), req.headers);
+      if (warning) {
+        saidAboutProxy = true;
+        console.warn(warning);
+      }
+    }
+    next();
+  });
   /* Every route registered from here on gets its permission check prepended, and any route
      with no entry in ROUTE_POLICY throws as it is registered. See server/src/permissions.ts. */
   installRoutePolicy(app);
