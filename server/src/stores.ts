@@ -30,11 +30,43 @@ function sameContents(a: string, b: string): boolean {
   }
 }
 
+/**
+ * How many tenant stores stay in memory. Beyond this, the least recently used unpinned one is closed.
+ *
+ * sql.js holds a whole database in the WASM heap, so a resident store is not a handle — it is the
+ * file. Measured at ~1.13MB of RSS per EMPTY workspace (540KB on disk), and it was never given back:
+ * the cache had no cap and the only removal was deleting a workspace. A thousand workspaces served
+ * since boot was a gigabyte that never came down, on a VM with fixed RAM — a ceiling measured in
+ * customers rather than in load.
+ *
+ * Sixty-four is deliberately generous. The cost of being wrong upwards is memory; the cost of being
+ * wrong downwards is re-opening stores, which reads and migrates a file, so a cap smaller than the
+ * number of workspaces in use at once would turn every request into a reload.
+ *
+ * The constructor takes it as an option so a test can choose one. Reading the environment at module
+ * load and then trying to change it per test is the kind of thing that works until it silently does
+ * not: the value is captured once, and a test that sets the variable afterwards passes for the wrong
+ * reason. A parameter cannot lie about which number was used.
+ */
+const MAX_RESIDENT_TENANT_STORES = (() => {
+  const configured = Number(process.env.MAX_RESIDENT_TENANT_STORES ?? "");
+  return Number.isInteger(configured) && configured > 0 ? configured : 64;
+})();
+
 export class StoreManager {
+  /** Insertion order IS the LRU order: a hit re-inserts, so the oldest key is the coldest store. */
   private readonly cache = new Map<string, BuildFlowStore>();
+  /** Requests currently holding a store. Eviction never touches one of these. */
+  private readonly pins = new Map<string, number>();
   private readonly dataDir: string;
 
-  constructor(private readonly mainStore: BuildFlowStore) {
+  private readonly maxResident: number;
+
+  constructor(
+    private readonly mainStore: BuildFlowStore,
+    options: { maxResidentStores?: number } = {}
+  ) {
+    this.maxResident = options.maxResidentStores ?? MAX_RESIDENT_TENANT_STORES;
     // Demo org shares the seeded main store; co-locate per-org files beside it.
     this.cache.set(DEMO_ORG_ID, mainStore);
     this.dataDir = path.dirname(mainStore.dataFilePath);
@@ -48,17 +80,83 @@ export class StoreManager {
   /** Get (or lazily create) the operational store for an org. */
   async getOrgStore(orgId: string): Promise<BuildFlowStore> {
     const cached = this.cache.get(orgId);
-    if (cached) return cached;
+    if (cached) {
+      // re-insert so this becomes the newest key; Map order is the LRU order
+      this.cache.delete(orgId);
+      this.cache.set(orgId, cached);
+      return cached;
+    }
     const file = path.join(this.dataDir, `org-${orgId}.sqlite`);
     const store = await BuildFlowStore.create(file, false, { seedDemo: false });
     this.cache.set(orgId, store);
+    this.evictColdStores(orgId);
     return store;
+  }
+
+  /**
+   * Say that a request is using this org's store, so eviction leaves it alone.
+   *
+   * Not optional politeness. app.ts binds one store to a request for its whole life
+   * (`orgStoreALS.run(orgStore, …)`), and handlers write after awaits — an AI answer, a calendar
+   * read, a notification. Closing a store underneath one of those either throws on the next write
+   * (a 500) or, if it were merely dropped rather than closed, leaves two live stores writing
+   * whole-file images of one file, where the last save wins and the other workspace's rows vanish
+   * with nothing logged. The second is the reason this exists.
+   */
+  pin(orgId: string): void {
+    this.pins.set(orgId, (this.pins.get(orgId) ?? 0) + 1);
+  }
+
+  /** The request is done with it. Safe to call more than once; it never goes below zero. */
+  unpin(orgId: string): void {
+    const held = (this.pins.get(orgId) ?? 0) - 1;
+    if (held > 0) this.pins.set(orgId, held);
+    else this.pins.delete(orgId);
+  }
+
+  /** Resident tenant stores, and how many are held by a request. Read by /api/ops/metrics. */
+  residency(): { resident: number; pinned: number; cap: number } {
+    return {
+      resident: this.cache.size - (this.cache.has(DEMO_ORG_ID) ? 1 : 0),
+      pinned: this.pins.size,
+      cap: this.maxResident
+    };
+  }
+
+  /**
+   * Close the coldest unpinned tenant stores until the cache is back under its cap.
+   *
+   * THE CAP IS A TARGET, NOT AN INVARIANT. If every resident store is pinned, the cache goes over and
+   * stays over until requests finish. That is the right way round: running above a memory target is a
+   * slower server, whereas closing a store a request is holding is a 500 or lost rows. The main store
+   * is never a candidate — it is the demo workspace and holds the global auth tables.
+   *
+   * `justOpened` is never a candidate either, and that is not tidiness. Eviction runs from inside
+   * getOrgStore AFTER the new store is cached, and the new store is the newest key, so it is last in
+   * LRU order — which means that when everything older is pinned, the one thing eviction could take
+   * was the store it was about to hand back. A caller would have received a CLOSED store and thrown on
+   * its first write. Found by the test below, which opened ten workspaces while pinning each and got
+   * four: every store after the fourth evicted itself on the way out of the call that created it.
+   */
+  private evictColdStores(justOpened?: string): void {
+    for (const [orgId, store] of this.cache) {
+      if (this.residency().resident <= this.maxResident) return;
+      if (orgId === DEMO_ORG_ID || orgId === justOpened) continue;
+      if (this.pins.has(orgId)) continue;
+      this.cache.delete(orgId);
+      store.close();
+    }
   }
 
   /** Forget a tenant's store and its file. The demo org, which is the main store, is never dropped. */
   async dropOrgStore(orgId: string): Promise<void> {
     if (orgId === DEMO_ORG_ID) return;
+    const open = this.cache.get(orgId);
     this.cache.delete(orgId);
+    this.pins.delete(orgId);
+    // Closed to give the memory back, but NOT flushed: the file is deleted on the next line, and
+    // flushing would upload it to PostgreSQL first and then delete it.
+    if (open) open.close({ flush: false });
     await fs.promises.rm(path.join(this.dataDir, `org-${orgId}.sqlite`), { force: true });
     deletedFile(path.join(this.dataDir, `org-${orgId}.sqlite`));
   }

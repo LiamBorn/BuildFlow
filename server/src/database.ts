@@ -1397,6 +1397,32 @@ export class BuildFlowStore {
     return Number(this.db.exec("SELECT total_changes()")[0]?.values[0]?.[0] ?? 0);
   }
 
+  /**
+   * Let go of this store's memory.
+   *
+   * sql.js keeps the whole database in the WASM heap, and dropping the JS wrapper does NOT give that
+   * back — measured: forty empty tenant stores cost 45MB of RSS, and clearing the map that held them
+   * plus three forced garbage collections moved it by one megabyte. `db.close()` is the only thing
+   * that frees it, which is why StoreManager could not bound its cache until this existed.
+   *
+   * Flushes first, and the check is not belt-and-braces. The public `run()` does not save — it
+   * prepares, binds, runs and frees — so the schedule repository's own BEGIN/COMMIT leaves rows in
+   * memory until something else writes the file. Closing without this would lose exactly those rows,
+   * silently, and only for whichever workspace happened to be evicted. `unsavedChanges()` makes the
+   * flush exact: a clean store closes without a whole-file write, which is what makes eviction cheap
+   * enough to do at all.
+   *
+   * `flush: false` is for a store whose FILE is about to be deleted. Flushing there would write the
+   * file, tell the PostgreSQL mirror to upload it, and then delete it a line later — a round trip for
+   * bytes nobody will read again.
+   *
+   * Nothing may touch the store afterwards; StoreManager drops its reference in the same breath.
+   */
+  close(options: { flush?: boolean } = {}) {
+    if (options.flush !== false && this.unsavedChanges() > 0) this.save();
+    this.db.close();
+  }
+
   /** A read that proves the database is actually answering — what the health check needs
    *  past "the process is up". Deliberately touches no table, so it stays valid whatever
    *  the schema does next. */

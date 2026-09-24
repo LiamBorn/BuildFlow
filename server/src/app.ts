@@ -970,7 +970,21 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     // Identity is enough for a public path; only a gated one binds the tenant store.
     if (!gated) return next();
     try {
-      const orgStore = await manager.getOrgStore(session.org.id);
+      const orgId = session.org.id;
+      const orgStore = await manager.getOrgStore(orgId);
+      /* Held for the life of the request, so the store cache's eviction cannot close it underneath a
+         handler. This binding lasts the whole request and handlers write AFTER awaits — an AI answer,
+         a calendar read, a notification — so an evictor that ignored this would either throw on the
+         next write or, worse, leave two live stores writing whole-file images of one file with the
+         last save winning. See StoreManager.pin.
+
+         Released on 'close', which fires whether the response finished or the connection died. Work
+         that OUTLIVES the response is not covered: a `void store.something()` left running past the
+         reply would lose its pin while still writing. Nothing does that today — the fire-and-forget
+         paths here send mail, and the one that writes a token writes to the main store, which is
+         never evicted — but a new one would need its own pin rather than this. */
+      manager.pin(orgId);
+      res.on("close", () => manager.unpin(orgId));
       orgStoreALS.run(orgStore, () => next());
     } catch {
       res.status(500).json({ error: "Workspace unavailable." });
