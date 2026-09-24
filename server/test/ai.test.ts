@@ -15,9 +15,14 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapPayload } from "@buildflow/shared";
-import { askBuildFlowAI, buildAiContext, importScheduleFromImages, isAiConfigured } from "../src/ai.js";
+import { aiConnection, askBuildFlowAI, buildAiContext, importScheduleFromImages, isAiConfigured } from "../src/ai.js";
 
-const KEYS = ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"] as const;
+const KEYS = [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "AI_INTEGRATIONS_ANTHROPIC_API_KEY",
+  "AI_INTEGRATIONS_ANTHROPIC_BASE_URL"
+] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -69,6 +74,68 @@ describe("whether Claude is reachable at all", () => {
     delete process.env.ANTHROPIC_API_KEY;
     process.env.ANTHROPIC_AUTH_TOKEN = "oauth-token";
     expect(isAiConfigured(), "an OAuth token is a credential too").toBe(true);
+  });
+
+  /** Replit AI Integrations: a key for Replit's endpoint, and that endpoint's address. */
+  it("is configured by Replit AI Integrations only when both its key and its address are there", () => {
+    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY = "replit-key";
+    expect(isAiConfigured(), "the key alone would be sent to Anthropic, which does not know it").toBe(false);
+    delete process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+    process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL = "https://replit.example/anthropic";
+    expect(isAiConfigured(), "an address with no key is not a credential").toBe(false);
+    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY = "replit-key";
+    expect(aiConnection()).toEqual({
+      via: "replit",
+      options: { apiKey: "replit-key", baseURL: "https://replit.example/anthropic" }
+    });
+  });
+
+  it("prefers the operator's own Anthropic credential over the integration", () => {
+    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY = "replit-key";
+    process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL = "https://replit.example/anthropic";
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test";
+    expect(aiConnection(), "the SDK reads the operator's key itself, so nothing is passed").toEqual({
+      via: "anthropic",
+      options: {}
+    });
+  });
+});
+
+/**
+ * The integration's key only works at the integration's address, so both requests Claude
+ * serves have to be built with the pair. Seen from the SDK's side: the options its client is
+ * constructed with.
+ */
+describe("calling Claude through Replit AI Integrations", () => {
+  it("builds the client with the integration's key and address, for questions and for imports", async () => {
+    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY = "replit-key";
+    process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL = "https://replit.example/anthropic";
+    const constructed: unknown[] = [];
+    vi.doMock("@anthropic-ai/sdk", () => ({
+      default: class {
+        constructor(options: unknown) {
+          constructed.push(options);
+        }
+        messages = {
+          stream: () => ({
+            finalMessage: async () => ({ content: [{ type: "text", text: '{"projects":[]}' }] })
+          })
+        };
+      }
+    }));
+    vi.resetModules();
+    const fresh = await import("../src/ai.js");
+
+    const answer = await fresh.askBuildFlowAI("Which crews are free on Thursday?", "SNAPSHOT");
+    await fresh.importScheduleFromImages(["data:image/png;base64,iVBORw0KGgo="], workspace());
+
+    expect(answer.mode, "the question reached the (mocked) model").toBe("live");
+    expect(constructed).toEqual([
+      { apiKey: "replit-key", baseURL: "https://replit.example/anthropic" },
+      { apiKey: "replit-key", baseURL: "https://replit.example/anthropic" }
+    ]);
+    vi.doUnmock("@anthropic-ai/sdk");
+    vi.resetModules();
   });
 });
 

@@ -2,10 +2,10 @@
    BuildFlow AI — real Claude behind the "Ask BuildFlow AI" prompt.
 
    Uses the official Anthropic SDK (claude-opus-5, adaptive thinking, streamed).
-   Mirrors email.ts: without an ANTHROPIC_API_KEY it runs in "DEMO MODE" and the
-   client falls back to its built-in simulated answers, so the whole flow works
-   before any credential is added. The SDK is imported lazily so the server runs
-   fine even if the package isn't installed until you go live.
+   Mirrors email.ts: without a Claude credential (see aiConnection) it runs in
+   "DEMO MODE" and the client falls back to its built-in simulated answers, so the
+   whole flow works before any credential is added. The SDK is imported lazily so
+   the server runs fine even if the package isn't installed until you go live.
    ========================================================================= */
 import {
   tradeProfileFor,
@@ -31,9 +31,33 @@ export type ImportJobSpec = Omit<CreateJobInput, "projectId"> & { crewId?: strin
 export type ImportProjectSpec = { input: CreateProjectInput; jobs: ImportJobSpec[] };
 export type ImportResult = { mode: "live" | "demo"; plan?: ImportProjectSpec[] };
 
-/** True when a Claude credential is configured (API key or auth token). */
+/**
+ * Where BuildFlow AI's calls go, read from the environment. There are two ways in:
+ *
+ * - The operator's own Anthropic credential (ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN). The SDK
+ *   reads it itself and calls Anthropic directly. It wins when present, because setting it is
+ *   a deliberate choice to use that account.
+ * - Replit AI Integrations ("Anthropic, Replit managed"). Replit hands the app
+ *   AI_INTEGRATIONS_ANTHROPIC_API_KEY and AI_INTEGRATIONS_ANTHROPIC_BASE_URL — a key for
+ *   Replit's endpoint and that endpoint's address — and bills the calls to the Replit
+ *   account's credits. Both are needed: the key without its address would go to Anthropic,
+ *   which does not know it.
+ *
+ * null when neither is configured, which is demo mode.
+ */
+export function aiConnection(
+  env: NodeJS.ProcessEnv = process.env
+): { via: "anthropic" | "replit"; options: { apiKey?: string; baseURL?: string } } | null {
+  if (env.ANTHROPIC_API_KEY?.trim() || env.ANTHROPIC_AUTH_TOKEN?.trim()) return { via: "anthropic", options: {} };
+  const apiKey = env.AI_INTEGRATIONS_ANTHROPIC_API_KEY?.trim();
+  const baseURL = env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL?.trim();
+  if (apiKey && baseURL) return { via: "replit", options: { apiKey, baseURL } };
+  return null;
+}
+
+/** True when a Claude credential is configured, either way aiConnection accepts. */
 export function isAiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+  return aiConnection() !== null;
 }
 
 export type AiResult = { mode: "live" | "demo"; answer?: string };
@@ -130,10 +154,11 @@ The crews this business fields: ${profile.crewTypes.join(", ")}. Its production 
 }
 
 export async function askBuildFlowAI(question: string, context: string, businessType?: BusinessTypeId | ""): Promise<AiResult> {
-  if (!isAiConfigured()) return { mode: "demo" };
+  const connection = aiConnection();
+  if (!connection) return { mode: "demo" };
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic(); // resolves ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN from env
+    const client = new Anthropic(connection.options);
     const stream = client.messages.stream({
       model: MODEL,
       max_tokens: 4096,
@@ -190,7 +215,8 @@ Respond with ONLY a JSON object — no prose, no markdown, no code fences — of
 Rules: extract the REAL names, phases, and dates visible in the image. If a field isn't shown, infer a sensible value (near-term dates within the next ~8 weeks, labor 3–8). Only include projects/jobs actually present. Keep it under 6 projects.`;
 
 export async function importScheduleFromImages(imageUrls: string[], data: BootstrapPayload): Promise<ImportResult> {
-  if (!isAiConfigured()) return { mode: "demo" };
+  const connection = aiConnection();
+  if (!connection) return { mode: "demo" };
   const images = imageUrls
     .map(parseDataUrl)
     .filter((x): x is DataUrlImage => x !== null)
@@ -198,7 +224,7 @@ export async function importScheduleFromImages(imageUrls: string[], data: Bootst
   if (images.length === 0) return { mode: "demo" }; // nothing Claude can read (e.g. only a video)
   try {
     const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic();
+    const client = new Anthropic(connection.options);
     const message = await client.messages
       .stream({
         model: MODEL,
@@ -300,11 +326,16 @@ function normalizePlan(rawProjects: unknown[], data: BootstrapPayload): ImportPr
 
 /* Boot-time status line, logged once at startup (like reportMailStatus). */
 export function reportAiStatus(): void {
-  if (isAiConfigured()) {
-    console.log(`🤖 BuildFlow AI: LIVE — "Ask BuildFlow AI" calls go to Claude (${MODEL}).`);
+  const connection = aiConnection();
+  if (connection?.via === "replit") {
+    console.log(
+      `🤖 BuildFlow AI: LIVE — "Ask BuildFlow AI" calls go to Claude (${MODEL}) through Replit AI Integrations, billed to the Replit account's credits.`
+    );
+  } else if (connection) {
+    console.log(`🤖 BuildFlow AI: LIVE — "Ask BuildFlow AI" calls go to Claude (${MODEL}) on this server's own Anthropic credential.`);
   } else {
     console.warn(
-      '🤖 BuildFlow AI: DEMO MODE — no ANTHROPIC_API_KEY set, so "Ask BuildFlow AI" uses the built-in simulated answers. Set ANTHROPIC_API_KEY in server/.env to answer with real Claude.'
+      '🤖 BuildFlow AI: DEMO MODE — no Claude credential, so "Ask BuildFlow AI" uses the built-in simulated answers. On Replit, enable AI Integrations for Anthropic; elsewhere, set ANTHROPIC_API_KEY in server/.env.'
     );
   }
 }
