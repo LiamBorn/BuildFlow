@@ -1782,15 +1782,58 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   // ── BuildFlow AI: real Claude behind the "Ask BuildFlow AI" prompt ──────────
-  // Public for now (uses the demo workspace); once auth is fully wired, move to
-  // OPS_PREFIXES so it answers over req.orgStore. Returns {mode:"demo"} when no
-  // ANTHROPIC_API_KEY is set, and the client falls back to its simulated answers.
+  // Returns {mode:"demo"} when no ANTHROPIC_API_KEY is set, and the client falls back to its
+  // simulated answers. These are NOT public any more, whatever this comment used to say: both have an
+  // entry in ROUTE_POLICY (ask = schedule.read, import = import.commit) and answer over req.orgStore,
+  // which is what the note below used to be waiting for. The out-of-date half mattered — it reads like
+  // nothing is in front of these, and what is actually in front of them is the only thing standing
+  // between a stranger and a bill, so see aiLimit.
   const aiAskSchema = z.object({
     question: z.string().trim().min(1).max(2000),
     // the trade the workspace was set up for — shapes the answer's vocabulary
     businessType: z.enum(businessTypeOptions).optional()
   });
-  app.post("/api/ai/ask", async (req, res) => {
+  /**
+   * A ceiling on the two routes that spend money when they are called.
+   *
+   * Every other limit here protects a table or an inbox. These protect a bill: each call reaches
+   * Anthropic, and import-schedule sends up to six images of up to 20MB as vision input, which is the
+   * most expensive request BuildFlow can make. Both are reachable by any visitor, because a signed-out
+   * page load takes a demo session and the demo is an owner — so "requires a session" is not a
+   * ceiling, it is one extra POST.
+   *
+   * Keyed per account where there is a real one, and per address otherwise. The demo account is
+   * SHARED, so keying it by account would put every visitor in one bucket and let the first spend the
+   * afternoon's allowance for everybody; keying a real customer by address would make one office share
+   * one allowance. Each half of that is wrong for the other case, which is why it is not just byIp.
+   *
+   * Fails open, like byIp and unlike opsGate: the backend already falls back to counting in process,
+   * so reaching the catch means something unforeseen, and a customer who cannot ask a question is a
+   * worse outcome than a few calls that went uncounted. opsGate is the opposite because letting an
+   * uncounted request past an AUTH gate hands over the ops routes.
+   */
+  const aiActor = (req: express.Request) =>
+    req.account && req.account.email !== DEMO_ACCOUNT_EMAIL ? `acct:${req.account.id}` : clientIp(req);
+  const aiLimit =
+    (bucket: string, max: number, windowMs: number): express.RequestHandler =>
+    (req, res, next) => {
+      limiter
+        .hit(bucket, aiActor(req), max, windowMs)
+        .then((result) => {
+          if (result.ok) return next();
+          res.setHeader("Retry-After", String(result.retryAfterSec));
+          res.status(429).json({
+            error: `That is a lot of questions at once. Try again in ${humanSeconds(result.retryAfterSec)}.`,
+            retryAfterSec: result.retryAfterSec
+          });
+        })
+        .catch((error: unknown) => {
+          console.error("[ai] letting a request through after an unexpected limiter failure:", error);
+          next();
+        });
+    };
+
+  app.post("/api/ai/ask", aiLimit("ai-ask", 40, HOUR), async (req, res) => {
     const parsed = aiAskSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Ask a question." });
@@ -1808,7 +1851,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // Schedule import via Claude vision: read uploaded image(s) of another scheduler
   // → a project/job plan the client creates. {mode:"demo"} → client uses its sample.
   const aiImportSchema = z.object({ images: z.array(z.string().max(20_000_000)).min(1).max(6) });
-  app.post("/api/ai/import-schedule", async (req, res) => {
+  app.post("/api/ai/import-schedule", aiLimit("ai-import", 6, HOUR), async (req, res) => {
     const parsed = aiImportSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Attach at least one schedule image." });

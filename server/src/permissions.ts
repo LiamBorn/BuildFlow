@@ -398,8 +398,18 @@ export function decide(policy: Policy | undefined, level: PermissionLevel | null
  *
  * Feedback is about BuildFlow, not about the workspace, so a visitor telling us something is not a
  * visitor changing what the next one sees. Signing in and out are `"public"` and never reach this.
+ *
+ * `POST /api/ai/ask` is here because the method is a lie about what it does: asking BuildFlow AI a
+ * question is a read that happens to need a body. Its capability says so — `schedule.read` — and the
+ * handler only calls `store.bootstrap` and the model. `readOnlyRefusal` reads the METHOD on purpose,
+ * because three capability names hide a mutation; this is the same coin's other face, and it cost the
+ * demo its most visible feature. A visitor who cannot ask the assistant anything is being shown a
+ * worse product than the one on the pricing page.
+ *
+ * `POST /api/ai/import-schedule` is deliberately NOT here. Its capability is `import.commit` and it
+ * means it: the answer becomes projects and jobs in the workspace everyone else is looking at.
  */
-const READ_ONLY_EXCEPTIONS = new Set(["POST /api/feedback"]);
+const READ_ONLY_EXCEPTIONS = new Set(["POST /api/feedback", "POST /api/ai/ask"]);
 
 /**
  * Whether the shared demo is locked, from the environment.
