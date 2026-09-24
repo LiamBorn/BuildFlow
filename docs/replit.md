@@ -83,4 +83,13 @@ Secrets are where they belong.
   databases, and local backups together. This setting does not make the files durable by itself;
   PostgreSQL makes the workspace files durable when a database is attached.
 - **A visitor who opens the program without signing in lands in the shared demo workspace.** Every
-  such visitor sees the same one, including whatever the others changed in it.
+  such visitor sees the same one, as the same account (`demo@buildflow.com`, role owner), so on a
+  published address the demo is not one person poking at seed data — it is everyone at once. It is
+  therefore **read-only on a published app**: writes are refused with `403 demo-read-only` and a
+  message pointing at signing up, and the shell shows a bar saying so before anything is clicked.
+  Reads are untouched, and `POST /api/feedback` still works, because that says something about
+  BuildFlow rather than changing the workspace.
+  The lock follows the deployment, not the code: on when `NODE_ENV=production`, off on a developer's
+  machine — where the demo is the sandbox the suite and the dev server work in. `DEMO_READ_ONLY=on`
+  or `off` forces it either way, which is how to demonstrate the locked behaviour locally, or to
+  unlock a published copy temporarily.
