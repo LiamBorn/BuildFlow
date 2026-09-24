@@ -44,7 +44,6 @@ import {
 } from "./database.js";
 import type { ScheduleAssignment, ScheduleLiveEvent, WeatherWindow } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
-import { flushSavedFiles } from "./fileDurability.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
 import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds } from "./rateLimit.js";
@@ -3677,7 +3676,6 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
     try {
       const files = manager.backupAll(retain).map((f) => path.basename(f));
-      await flushSavedFiles();
       res.status(201).json({ ok: true, count: files.length, files });
     } catch (error) {
       console.error("[ops] backup failed:", error instanceof Error ? error.message : error);

@@ -88,7 +88,7 @@ const onto = targetFor(point);
 console.log(`Restoring ${point.file}`);
 console.log(`        → ${onto}`);
 const outcome = await restore(point);
-await persistRestoredFile(outcome.onto, undefined, outcome.previousSnapshot);
+await persistRestoredFile(outcome.onto);
 if (outcome.previousSnapshot) {
   console.log(`\nWhat was there is kept: ${path.basename(outcome.previousSnapshot)}`);
   console.log("If this was the wrong point in time, restore that one the same way.");

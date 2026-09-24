@@ -9,8 +9,6 @@ import { defaultDataFile } from "./database.js";
 
 const fileName = (name: string) => name.endsWith(".sqlite") && !name.includes("/") && !name.includes("\\");
 const diskFiles = (dir: string) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter(fileName).sort() : []);
-
-const backupName = (name: string) => /^[a-zA-Z0-9_-]+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.sqlite$/.test(name);
 export function fileDurabilityEnabled(): boolean {
   return !!process.env.DATABASE_URL && process.env.NODE_ENV !== "test" && !process.env.VITEST;
 }
@@ -194,11 +192,6 @@ export class FileDurability {
       const result = await client.query<{ filename: string; contents: Buffer }>(
         "SELECT filename, contents FROM buildflow_files ORDER BY filename"
       );
-      const backupDir = path.join(this.dir, "backups");
-      const backups = await client.query<{ filename: string; contents: Buffer }>(
-        "SELECT filename, contents FROM buildflow_backups ORDER BY filename"
-      );
-      const importedBefore = await client.query<{ id: number }>("SELECT id FROM buildflow_backup_import WHERE id = 1");
       // Only the very first owner may import local files. An empty store after
       // previous use is not a reason to resurrect a stale disk snapshot.
       if (!result.rows.length && this.epoch === "1") {
@@ -213,19 +206,6 @@ export class FileDurability {
           throw new Error("PostgreSQL has no saved files after a prior start; refusing to import or erase local data.");
         hydrate(this.dir, result.rows, diskFiles(this.dir), fileName);
       }
-      // Upgrade existing installations once. Existing PG snapshots always win;
-      // the marker survives even if retention later removes every snapshot.
-      if (!importedBefore.rows.length && !backups.rows.length) {
-        for (const name of diskBackups(backupDir)) {
-          await client.query("INSERT INTO buildflow_backups (filename, contents) VALUES ($1, $2)", [
-            name,
-            fs.readFileSync(path.join(backupDir, name))
-          ]);
-        }
-      } else {
-        hydrate(backupDir, backups.rows, diskBackups(backupDir), backupName);
-      }
-      if (!importedBefore.rows.length) await client.query("INSERT INTO buildflow_backup_import (id) VALUES (1)");
       await client.query("COMMIT");
       if (!this.owner) throw new Error("PostgreSQL lock connection was lost during startup.");
       this.started = true;
@@ -252,12 +232,10 @@ export class FileDurability {
 
   private queue(file: string, action: "save" | "delete"): void {
     if (this.superseded) return;
-    const parent = path.dirname(path.resolve(file));
-    const backup = parent === path.resolve(this.dir, "backups");
-    if ((!backup || !backupName(path.basename(file))) && (parent !== path.resolve(this.dir) || !fileName(path.basename(file)))) {
+    if (path.dirname(path.resolve(file)) !== path.resolve(this.dir) || !fileName(path.basename(file))) {
       throw new Error(`Not a BuildFlow data file: ${file}`);
     }
-    this.pending.set(backup ? `backups/${path.basename(file)}` : path.basename(file), action);
+    this.pending.set(path.basename(file), action);
     if (!this.timer)
       this.timer = setTimeout(() => {
         this.timer = undefined;
@@ -284,9 +262,6 @@ export class FileDurability {
       const [name, action] = this.pending.entries().next().value!;
       this.pending.delete(name);
       try {
-        const backup = name.startsWith("backups/");
-        const filename = backup ? name.slice("backups/".length) : name;
-        const table = backup ? "buildflow_backups" : "buildflow_files";
         const file = path.join(this.dir, name);
         const effectiveAction = action === "save" && !fs.existsSync(file) ? "delete" : action;
         const bytes = effectiveAction === "save" ? fs.readFileSync(file) : undefined;
@@ -296,12 +271,12 @@ export class FileDurability {
           const owner = await client.query<{ epoch: string }>("SELECT epoch FROM buildflow_file_epoch WHERE id = 1 FOR UPDATE");
           if (String(owner.rows[0]?.epoch) !== this.epoch) throw new SupersededWriterError();
           if (effectiveAction === "delete") {
-            await client.query(`DELETE FROM ${table} WHERE filename = $1`, [filename]);
+            await client.query("DELETE FROM buildflow_files WHERE filename = $1", [name]);
           } else {
             await client.query(
-              `INSERT INTO ${table} (filename, contents) VALUES ($1, $2)
+              `INSERT INTO buildflow_files (filename, contents) VALUES ($1, $2)
                ON CONFLICT (filename) DO UPDATE SET contents = EXCLUDED.contents`,
-              [filename, bytes]
+              [name, bytes]
             );
           }
           await client.query("COMMIT");
@@ -371,13 +346,9 @@ export function deletedFile(file: string): void {
   active?.delete(file);
 }
 
-export async function flushSavedFiles(): Promise<void> {
-  await active?.flush();
-  if (active?.hasPending) throw new Error("PostgreSQL did not save all BuildFlow files; retry before reporting success.");
-}
 /** The CLI runs while the API is stopped. Fence prior owners and store the
  * restored bytes before allowing the next startup to hydrate from PostgreSQL. */
-export async function persistRestoredFile(file: string, connector?: Connector, previousSnapshot?: string): Promise<void> {
+export async function persistRestoredFile(file: string, connector?: Connector): Promise<void> {
   if (!connector && !fileDurabilityEnabled()) return;
   const pool = connector ?? (await newPool());
   pool.on?.("error", (error) => console.error("[data] PostgreSQL restore pool connection lost:", error));
@@ -409,15 +380,6 @@ export async function persistRestoredFile(file: string, connector?: Connector, p
        ON CONFLICT (filename) DO UPDATE SET contents = EXCLUDED.contents`,
       [path.basename(file), fs.readFileSync(file)]
     );
-    if (previousSnapshot) {
-      if (path.dirname(previousSnapshot) !== path.join(path.dirname(file), "backups") || !backupName(path.basename(previousSnapshot)))
-        throw new Error("Invalid pre-restore snapshot path");
-      await client.query(
-        `INSERT INTO buildflow_backups (filename, contents) VALUES ($1, $2)
-         ON CONFLICT (filename) DO UPDATE SET contents = EXCLUDED.contents`,
-        [path.basename(previousSnapshot), fs.readFileSync(previousSnapshot)]
-      );
-    }
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
@@ -451,5 +413,3 @@ function hydrate(
   }
   for (const name of namesOnDisk) if (!names.has(name)) fs.unlinkSync(path.join(dir, name));
 }
-
-const diskBackups = (dir: string) => (fs.existsSync(dir) ? fs.readdirSync(dir).filter(backupName).sort() : []);

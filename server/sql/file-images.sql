@@ -10,14 +10,3 @@ CREATE TABLE IF NOT EXISTS buildflow_files (
   filename text PRIMARY KEY,
   contents bytea NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS buildflow_backups (
-  filename text PRIMARY KEY,
-  contents bytea NOT NULL
-);
-
--- A marker independent of row count: deleting every backup must not import
--- stale local snapshots at the next start.
-CREATE TABLE IF NOT EXISTS buildflow_backup_import (
-  id integer PRIMARY KEY CHECK (id = 1)
-);

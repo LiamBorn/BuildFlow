@@ -49,6 +49,7 @@ on.
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | Paid plans. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Sign-in and Meetings calendars with Google and Microsoft. Register these redirect URIs with the provider, using the app's address in place of `<address>`: `<address>/api/auth/oauth/google/callback`, `<address>/api/auth/oauth/microsoft/callback`, `<address>/api/calendar/google/callback` and `<address>/api/calendar/microsoft/callback`. |
 | `OPS_ADMIN_TOKEN` | Opens the ops endpoints under `/api/ops` (take and list backups, platform counts, runtime stats), sent as the `x-ops-token` header. In production, leaving it unset keeps them closed. |
+| `BUILDFLOW_DATA_FILE` | Where the databases and their backups live. Unset means `server/data`, which a published app does not keep — see below. |
 
 `server/.env.example` describes every setting. Never put real values in the repository; Replit's
 Secrets are where they belong.
@@ -56,27 +57,30 @@ Secrets are where they belong.
 ## Know this before real customers use it
 
 - **SQLite is the working copy; PostgreSQL is the durable copy** when `DATABASE_URL` is present.
-  The main account/demo image, each workspace image, and retained snapshots under
-  `server/data/backups` are stored as byte-for-byte `bytea` images, not relational BuildFlow
-  tables. Startup hydrates the local working files and snapshots before opening stores.
-  The first PostgreSQL-backed start imports existing local images; a one-time backup migration
-  imports local snapshots only when PostgreSQL has none. PostgreSQL rows always take precedence,
-  and later starts remove stale/deleted local snapshots instead of reimporting them. Saves and
-  retention deletions are queued, retried, flushed on shutdown, and fenced against older servers.
+  The main account/demo image and each workspace image are stored as byte-for-byte `bytea`
+  images, not relational BuildFlow tables. Startup hydrates the local working files before
+  opening stores. The first PostgreSQL-backed start imports existing local workspace images;
+  later starts use PostgreSQL images rather than stale local workspace files. Workspace saves
+  and deletions are queued, retried, flushed on shutdown, and fenced against older servers.
   The schema is in `server/sql/file-images.sql` and must exist in **development** before running.
   A missing/unreachable PostgreSQL database stops startup rather than opening disk-only data.
-  Without `DATABASE_URL` (or during tests), BuildFlow remains file-only.
+  Without `DATABASE_URL` (or during tests), BuildFlow remains file-only. Backups stay local
+  under the configured data directory and are not copied to PostgreSQL; they are not durable
+  restore points for a published app.
 - **Before a future Publish:** development and production are separate databases. Publish the
-  schema changes (including `buildflow_backups` and `buildflow_backup_import`) through Replit's
-  schema promotion; never select an option that copies development records over production.
-  If a previous production VM has files or backups that are *only on its disk*, export them
-  separately **before** replacing that VM and reconcile them with the production PostgreSQL
-  images. This workspace currently has no production database attached, so production-only disk
-  files cannot be inventoried here. Do not import development records into production.
-- **Restore:** stop the API, run `npm --workspace server run restore` to list hydrated snapshots,
+  two-table schema through Replit's schema promotion; never select an option that copies
+  development records over production. If a previous production VM has files that are *only
+  on its disk*, export them separately **before** replacing that VM and reconcile them with
+  the production PostgreSQL images. This workspace currently has no production database
+  attached, so production-only disk files cannot be inventoried here. Do not import development
+  records into production.
+- **Restore:** stop the API, run `npm --workspace server run restore` to list local snapshots,
   then `npm --workspace server run restore -- --latest` (or specify a workspace base or snapshot
   filename). The CLI verifies the selected SQLite image, preserves the replaced image as a new
-  snapshot, and commits the restored image and safety snapshot to PostgreSQL before success.
+  local snapshot, and commits only the restored workspace image to PostgreSQL before success.
   Do not swap SQLite files while the API is running: its in-memory stores would overwrite them.
+- **`BUILDFLOW_DATA_FILE` sets the local data location.** It moves the main database, per-workspace
+  databases, and local backups together. This setting does not make the files durable by itself;
+  PostgreSQL makes the workspace files durable when a database is attached.
 - **A visitor who opens the program without signing in lands in the shared demo workspace.** Every
   such visitor sees the same one, including whatever the others changed in it.

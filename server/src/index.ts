@@ -5,8 +5,9 @@ import { reportBillingStatus } from "./billing.js";
 import { reportAiStatus } from "./ai.js";
 import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
-import { LATEST_SCHEMA_VERSION } from "./database.js";
-import { startFileDurability, flushSavedFiles } from "./fileDurability.js";
+import path from "node:path";
+import { defaultDataFile, LATEST_SCHEMA_VERSION } from "./database.js";
+import { startFileDurability } from "./fileDurability.js";
 import { liveHubFor } from "./schedule/live.js";
 import { createShutdown } from "./shutdown.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
@@ -34,20 +35,19 @@ const port = Number(process.env.PORT ?? 4300);
 const fileDurability = await startFileDurability();
 const app = await createApp();
 
-const manager = app.locals.storeManager as StoreManager;
 const liveHub = liveHubFor(app);
 // Persist any migration or fresh demo file before the new process accepts requests.
 await fileDurability?.flush();
 if (fileDurability?.hasPending) throw new Error("Could not save initial SQLite files to PostgreSQL; refusing to serve requests.");
-const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
-const bootFiles = manager.backupAll(retain);
-await flushSavedFiles();
 // One process, one address: in production the built pages are served from here too (serveClient.ts).
 const production = process.env.NODE_ENV === "production";
 const servesPages = production && serveClient(app);
 
 const server = app.listen(port, () => {
-  console.log(`BuildFlow API listening on http://localhost:${port}`);
+  /* Not "http://localhost": the socket is bound on every interface, and on a deployment the address
+     people use is the platform's, not this one. Saying localhost sent anyone reading a Replit log
+     looking for a URL that only exists inside the container. */
+  console.log(`BuildFlow API listening on port ${port} (all interfaces); locally that is http://127.0.0.1:${port}`);
   if (servesPages) console.log("🖥️  Pages: the landing page, sign-in and the program are served here too (client/dist).");
   else if (production) console.log("🖥️  Pages: no client build in client/dist — run `npm run build` to serve them from here.");
   void reportMailStatus(); // logs LIVE (verified) vs LOG MODE + anything missing
@@ -65,21 +65,28 @@ const server = app.listen(port, () => {
   // Data layer: versioned schema + backups. A boot snapshot gives a restore point
   // each start; BACKUP_INTERVAL_MIN>0 adds periodic snapshots. Retained per
   // BACKUP_RETAIN (default 20) in data/backups/; on-demand via POST /api/ops/backup.
-  console.log(
-    `🗄️  Data: schema v${LATEST_SCHEMA_VERSION}; boot backup → data/backups/ (${bootFiles.length} file${bootFiles.length === 1 ? "" : "s"}).`
-  );
+  const manager = app.locals.storeManager as StoreManager;
+  const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
+  try {
+    const files = manager.backupAll(retain);
+    /* The real directory, not the literal "data/backups/" this used to print: BUILDFLOW_DATA_FILE can
+       move it, and a log that names a path the files are not in is worse than one that names none. */
+    const where = files[0] ? path.dirname(files[0]) : path.join(path.dirname(defaultDataFile), "backups");
+    console.log(
+      `🗄️  Data: schema v${LATEST_SCHEMA_VERSION}; boot backup → ${where} (${files.length} file${files.length === 1 ? "" : "s"}).`
+    );
+  } catch (error) {
+    console.error("🗄️  Data: boot backup failed:", error instanceof Error ? error.message : error);
+  }
   const intervalMin = Number(process.env.BACKUP_INTERVAL_MIN ?? 0);
   if (intervalMin > 0) {
     setInterval(() => {
-      void (async () => {
-        try {
-          const files = manager.backupAll(retain);
-          await flushSavedFiles();
-          console.log(`🗄️  Backup: periodic snapshot → ${files.length} file(s).`);
-        } catch (error) {
-          console.error("🗄️  Backup: periodic snapshot failed:", error instanceof Error ? error.message : error);
-        }
-      })();
+      try {
+        const files = manager.backupAll(retain);
+        console.log(`🗄️  Backup: periodic snapshot → ${files.length} file(s).`);
+      } catch (error) {
+        console.error("🗄️  Backup: periodic snapshot failed:", error instanceof Error ? error.message : error);
+      }
     }, intervalMin * 60_000).unref(); // .unref so backups never keep the process alive
     console.log(`🗄️  Backup: periodic snapshots every ${intervalMin} min (BACKUP_INTERVAL_MIN).`);
   } else {
