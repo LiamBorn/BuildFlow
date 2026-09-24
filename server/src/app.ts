@@ -527,7 +527,12 @@ function handleBillingEvent(store: BuildFlowStore, event: Stripe.Event) {
 const TERMS_VERSION = "2026-09";
 
 /**
- * The origin that goes into an emailed link — a verification link, an invite, a password reset.
+ * An origin the CALLER supplied, resolved to one we are willing to send a person to.
+ *
+ * Three places need this: the origin in an emailed link — a verification link, an invite, a password
+ * reset — and the post-payment redirect on the two billing routes, which accept an `origin` in the
+ * request BODY as well as the header. Each had grown its own fallback chain; this is the one rule.
+ * The emailed reset link is the sharpest case and the rest of this comment is about it.
  *
  * These carry a token, so whoever owns the origin owns the token. The origin used to be
  * `req.headers.origin` whenever it looked like a URL, and any client can send any Origin it likes:
@@ -549,7 +554,7 @@ const TERMS_VERSION = "2026-09";
  * client is on another port entirely. A published deployment in that state is warned about at
  * startup by `emailLinkWarning` below, because it is the one case where this is still open.
  */
-export function emailLinkOrigin(args: {
+export function trustedAppOrigin(args: {
   originHeader: string | undefined;
   configuredClientUrl: string | undefined;
   fallback: string;
@@ -565,10 +570,10 @@ export function emailLinkWarning(vars: { NODE_ENV?: string; BUILDFLOW_CLIENT_URL
   if (vars.NODE_ENV !== "production") return null;
   if (vars.BUILDFLOW_CLIENT_URL?.trim()) return null;
   return (
-    "🔗 ⚠️  BUILDFLOW_CLIENT_URL is not set. Emailed verification, invite and password-reset links are " +
-    "therefore built from the caller's own Origin header, which any client can set to any address — so a " +
-    "stranger can make BuildFlow email one of your users a real reset link pointing at their site. Set " +
-    "BUILDFLOW_CLIENT_URL to this app's address; it then wins over the header."
+    "🔗 ⚠️  BUILDFLOW_CLIENT_URL is not set. Emailed verification, invite and password-reset links — and the " +
+    "redirect after a Stripe checkout — are therefore built from the origin the CALLER supplied, which any " +
+    "client can set to any address. A stranger can make BuildFlow email one of your users a real reset link " +
+    "pointing at their site. Set BUILDFLOW_CLIENT_URL to this app's address; it then wins over the caller."
   );
 }
 
@@ -628,9 +633,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const RESET_TTL_MS = HOUR;
   /** The origins that ARE this app: the configured client URL, and the public URL when it differs. */
   const appOrigins = () => [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
-  /** The web app's origin for emailed links. See emailLinkOrigin — the header is not trusted once configured. */
+  /** Where a billing redirect may land. Same rule; the body may offer an origin here as well as the header. */
+  const redirectBase = (req: express.Request, supplied?: string) =>
+    trustedAppOrigin({
+      originHeader: supplied ?? (typeof req.headers.origin === "string" ? req.headers.origin : undefined),
+      configuredClientUrl: process.env.BUILDFLOW_CLIENT_URL,
+      fallback: process.env.BUILDFLOW_PUBLIC_URL ?? "http://localhost:5315",
+      allowed: appOrigins()
+    });
+  /** The web app's origin for emailed links. See trustedAppOrigin — the caller is not trusted once configured. */
   const appOriginFor = (req: express.Request) =>
-    emailLinkOrigin({
+    trustedAppOrigin({
       originHeader: typeof req.headers.origin === "string" ? req.headers.origin : undefined,
       configuredClientUrl: process.env.BUILDFLOW_CLIENT_URL,
       fallback: clientUrl,
@@ -3678,8 +3691,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     const { plan, period, seats, email, returnTo } = parsed.data;
-    const origin = parsed.data.origin ?? req.headers.origin ?? process.env.BUILDFLOW_PUBLIC_URL ?? "http://localhost:5315";
-    const base = origin.replace(/\/+$/, "");
+    const base = redirectBase(req, parsed.data.origin);
     // After onboarding or from Settings the person is signed in, so land them in the app, not on the pricing page.
     const suffix = returnTo === "onboarding" ? "&from=onboarding" : returnTo === "settings" ? "&from=settings" : "#compare-plans";
     try {
@@ -3721,7 +3733,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(404).json({ error: "No subscription found for that account yet." });
       return;
     }
-    const base = (origin ?? req.headers.origin ?? process.env.BUILDFLOW_PUBLIC_URL ?? "http://localhost:5315").replace(/\/+$/, "");
+    const base = redirectBase(req, origin);
     try {
       const result = await createPortalSession({
         customerId: resolvedCustomer,
