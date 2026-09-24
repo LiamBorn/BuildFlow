@@ -148,7 +148,10 @@ export type Account = {
 };
 export type Org = { id: string; name: string; plan: string; createdAt: string };
 /** `demo` marks the shared demo login — a real signup is never demo. */
-export type AuthSession = { account: Account; org: Org; demo?: boolean };
+/** `demo` is the shared demo login; `readOnly` is that demo LOCKED, which only the server knows —
+ *  it depends on where the server runs, so a demo session is a sandbox locally and read-only on a
+ *  public address. See server/src/permissions.ts. */
+export type AuthSession = { account: Account; org: Org; demo?: boolean; readOnly?: boolean };
 
 /* ── team + invites ─────────────────────────────────────────────────────── */
 export type TeamPayload = { users: User[]; invites: TeamInvite[]; emailVerified: boolean; canManage?: boolean };

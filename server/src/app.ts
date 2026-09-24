@@ -943,8 +943,21 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // `remember: false` issues a browser-session cookie instead, so closing the
   // browser signs the account out. The session row itself is unchanged — the
   // cookie is the credential, so dropping it is what ends the sign-in.
-  /** The session payload the client keeps: `demo` marks the shared demo login, which is not a real signup. */
-  const sessionPayload = (account: Account, org: Org) => ({ account, org, demo: account.email === DEMO_ACCOUNT_EMAIL });
+  /**
+   * The session payload the client keeps. `demo` marks the shared demo login, which is not a real
+   * signup; `readOnly` says that demo is locked here.
+   *
+   * The client cannot work the second one out for itself. Whether the demo is locked depends on where
+   * the server is running — on by default in production, off on a developer's machine, and either way
+   * with DEMO_READ_ONLY — so `demo: true` means "writable sandbox" on a laptop and "look, do not
+   * touch" on a public address. Telling the client rather than letting it infer is also what keeps
+   * one rule: permissions.ts decides, and the UI reports the same decision instead of keeping a copy
+   * that can drift from it.
+   */
+  const sessionPayload = (account: Account, org: Org) => {
+    const demo = account.email === DEMO_ACCOUNT_EMAIL;
+    return { account, org, demo, readOnly: demo && demoLockOn() };
+  };
   const issueSession = (res: Response, account: Account, org: Org, remember = true) => {
     const { token } = mainStore.createSession(account.id, org.id);
     res.cookie(SESSION_COOKIE, token, sessionCookieOptions(remember ? SESSION_TTL_MS : null));
@@ -1726,7 +1739,12 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   app.get("/api/bootstrap", (req, res) => {
     // Gated route: req.account is the signed-in person, who is the active user.
-    res.json(withPermissions(withBilling(store.bootstrap(req.account?.id), req.account), req.org!.id));
+    // `readOnly` rides along so the shell can say so before anyone clicks: the permission guard
+    // already refuses these writes, and this is the same decision reported rather than a second one.
+    res.json({
+      ...withPermissions(withBilling(store.bootstrap(req.account?.id), req.account), req.org!.id),
+      ...(req.readOnlyDemo ? { readOnly: true } : {})
+    });
   });
 
   /* ── Team: people in the workspace + open invites ────────────────────────── */

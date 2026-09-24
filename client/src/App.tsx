@@ -64,6 +64,7 @@ import {
   Database,
   DollarSign,
   Download,
+  Eye,
   FileText,
   FileUp,
   FolderKanban,
@@ -2952,6 +2953,15 @@ function App() {
 
   // Escape hatch off the data-error screen, so a failed load is never a dead end:
   // it always leaves a way back to the welcome page (and its Log in / Sign up).
+  /* The demo bar's way out. The hash goes first so the welcome page is already on the sign-up form
+     when it mounts, rather than landing on the home page and relying on the hashchange listener
+     having attached by then. handleLogout ends the shared session, which is the point: the visitor
+     should not carry the demo's cookie into their own workspace. */
+  const leaveDemoForSignup = async () => {
+    if (typeof window !== "undefined") window.location.hash = "#create-account";
+    await handleLogout();
+  };
+
   const returnToWelcome = () => {
     setError(null);
     setPage("welcome");
@@ -3253,6 +3263,23 @@ function App() {
           />
         )}
         <main className={page === "settings" ? "main-panel settings-main-panel" : "main-panel"}>
+          {/* Said before anything is clicked, not after a refusal. Everyone who opens BuildFlow
+              without signing in shares this one workspace, so the server refuses its writes
+              (server/src/permissions.ts) — and a program that only tells you that on the third
+              attempt is a program that looks broken. The server decides; this reports it. */}
+          {data.readOnly && (
+            <p className="bf-demo-bar" role="status" aria-label="Shared demo">
+              <Eye size={15} aria-hidden="true" />
+              <span>
+                <strong>Shared demo.</strong> Everyone who opens BuildFlow without signing in sees this same workspace, so it is read-only —
+                anything you changed would be everyone&rsquo;s.{" "}
+                <button type="button" className="bf-demo-bar-cta" onClick={leaveDemoForSignup}>
+                  Create a free workspace
+                </button>{" "}
+                to get one of your own.
+              </span>
+            </p>
+          )}
           <section className={page === "settings" ? "settings-content-scroll" : "content-scroll"}>
             {/* the page you are leaving goes rather than vanishing (docs/motion-spec.md §4).
                 The children below are untouched: PageSwap only keys them by page. */}

@@ -6903,6 +6903,46 @@ button:disabled {
   min-width: 0;
 }
 
+/* The shared-demo bar. Sits inside the content column and above the scroller, so it stays put while
+   the page moves and the shell's own grid is untouched. Tokens throughout: the skin re-points them
+   and dark mode follows, which the Reports page's light literals did not. */
+.bf-demo-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--bf-line-solid);
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.bf-demo-bar svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--bf-color-warn);
+}
+.bf-demo-bar strong {
+  color: var(--bf-ink);
+  font-weight: 700;
+}
+/* A real button, not a link: it ends the demo session before it navigates, so it is an action. */
+.bf-demo-bar-cta {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--bf-ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.bf-demo-bar-cta:hover {
+  color: var(--bf-color-warn);
+}
+
 .topbar {
   position: sticky;
   z-index: 5;
