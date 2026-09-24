@@ -1285,7 +1285,7 @@ export class BuildFlowStore {
     const fileBuffer = fs.existsSync(dataFile) ? fs.readFileSync(dataFile) : undefined;
     const db = fileBuffer ? new SQL.Database(fileBuffer) : new SQL.Database();
     const store = new BuildFlowStore(SQL, db, dataFile);
-    store.migrate();
+    const migrated = store.migrate();
     if (seedDemo) {
       store.seed();
       if (store.hasStarterWorkspace()) {
@@ -1294,7 +1294,21 @@ export class BuildFlowStore {
       store.ensureCrewRoleCounts();
       store.seedDemoAccount();
     }
-    store.save();
+    /**
+     * Write only if opening it actually changed something.
+     *
+     * This used to save unconditionally, which meant merely OPENING an up-to-date tenant database
+     * rewrote the whole file and handed the PostgreSQL mirror a fresh image of bytes identical to the
+     * ones already there. Harmless while a store was opened once and kept forever. Now that the cache
+     * has a cap, a workspace evicted and asked for again is re-opened — so an unconditional save turned
+     * every cache miss into a whole-file write plus an upload, and made eviction cost more than the
+     * memory it returned.
+     *
+     * Three reasons to write, and they catch different things: no file yet, so the schema has nowhere
+     * to live; a migration ran, which total_changes() cannot see because DDL changes no rows; or
+     * seeding inserted something, which it can.
+     */
+    if (!fileBuffer || migrated || store.unsavedChanges() > 0) store.save();
     return store;
   }
 
@@ -1494,9 +1508,16 @@ export class BuildFlowStore {
     return typeof raw === "number" ? raw : Number(raw ?? 0);
   }
 
-  /** Apply any SCHEMA_MIGRATIONS newer than this DB's recorded user_version. */
-  private runMigrations() {
+  /**
+   * Apply any SCHEMA_MIGRATIONS newer than this DB's recorded user_version.
+   *
+   * Returns whether it applied any, which `create()` needs in order to decide whether opening this
+   * database has to write it back. total_changes() cannot answer that on its own: a migration that is
+   * pure DDL changes no rows, so the counter stays at zero while the schema on disk is now stale.
+   */
+  private runMigrations(): boolean {
     let version = this.getUserVersion();
+    let applied = false;
     // Apply in version order regardless of array order: a newer migration
     // listed earlier would otherwise bump user_version past the ones after it
     // and silently skip them on fresh databases.
@@ -1506,11 +1527,14 @@ export class BuildFlowStore {
       migration.up(this.db);
       this.db.exec(`PRAGMA user_version = ${Math.floor(migration.version)}`);
       version = migration.version;
+      applied = true;
       console.log(`🗄️  DB migrate → v${migration.version} (${migration.name}) [${path.basename(this.dataFile)}]`);
     }
+    return applied;
   }
 
-  private migrate() {
+  /** Returns whether anything about the schema actually changed — see runMigrations. */
+  private migrate(): boolean {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -1848,7 +1872,7 @@ export class BuildFlowStore {
     `);
 
     // Apply forward-versioned migrations on top of the baseline schema above.
-    this.runMigrations();
+    return this.runMigrations();
   }
 
   private seed() {

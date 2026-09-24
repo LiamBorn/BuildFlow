@@ -19,7 +19,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BuildFlowStore } from "../src/database.js";
+import { metrics } from "../src/metrics.js";
+import { BuildFlowStore, LATEST_SCHEMA_VERSION } from "../src/database.js";
 import { StoreManager } from "../src/stores.js";
 
 const CAP = 4;
@@ -113,5 +114,64 @@ describe("what an evicted workspace keeps", () => {
 
     const reopened = await manager.getOrgStore("org-keeper");
     expect(reopened.waitlistCount(), "an evicted store must not lose what it was told").toBeGreaterThan(0);
+  });
+});
+
+describe("what opening a workspace costs", () => {
+  /** Whole-file rewrites during `work`. */
+  async function writesDuring(work: () => Promise<unknown>) {
+    const before = metrics.snapshot().databaseWrites.total;
+    await work();
+    return metrics.snapshot().databaseWrites.total - before;
+  }
+
+  it("writes the file the first time, because the schema has nowhere else to live", async () => {
+    const { manager } = await freshManager();
+    const writes = await writesDuring(() => manager.getOrgStore("org-brand-new"));
+    expect(writes, "a database that does not exist yet has to be written").toBeGreaterThan(0);
+  });
+
+  it("writes nothing to open one that is already up to date", async () => {
+    /* This is what makes eviction affordable. create() used to save unconditionally, so opening an
+       up-to-date tenant database rewrote the whole file and handed PostgreSQL an image of bytes
+       identical to the ones already there. Harmless when a store was opened once and kept forever;
+       with a cap, every cache miss paid it. */
+    const { manager } = await freshManager();
+    await manager.getOrgStore("org-settled");
+    for (let n = 1; n <= 10; n += 1) await manager.getOrgStore(`org-churn-${n}`); // evict it
+
+    const writes = await writesDuring(() => manager.getOrgStore("org-settled"));
+    expect(writes, "reopening an evicted workspace should cost no write at all").toBe(0);
+  });
+
+  it("writes when a migration ran, which total_changes() cannot see", async () => {
+    /* The third reason create() writes, and the one that needs its own case: a migration that is pure
+       DDL changes no rows, so the dirty counter stays at zero while the schema on disk is now stale.
+       Left unwritten, every open of that database would re-run the migration.
+
+       Arranged by rewinding user_version one step and persisting it, so exactly one migration reapplies
+       on the next open. That relies on the newest migration being safe to re-run, which it is today —
+       if a future one is not, this case failing is the right place to find that out. */
+    const { manager, dir } = await freshManager();
+    const file = path.join(dir, "org-rewound.sqlite");
+    const store = await manager.getOrgStore("rewound");
+    expect(store.dataFilePath).toBe(file);
+    store.run(`PRAGMA user_version = ${LATEST_SCHEMA_VERSION - 1}`);
+    store.addWaitlistSubscriber("persist@example.com"); // a write, which saves, keeping the rewind
+    for (let n = 1; n <= 10; n += 1) await manager.getOrgStore(`org-evict-${n}`); // push it out
+
+    const writes = await writesDuring(() => manager.getOrgStore("rewound"));
+    expect(writes, "a database whose schema was brought forward has to be written back").toBeGreaterThan(0);
+    const reopened = await manager.getOrgStore("rewound");
+    expect(reopened.get<{ user_version: number }>("PRAGMA user_version")?.user_version).toBe(LATEST_SCHEMA_VERSION);
+  });
+
+  it("still has the rows it was told about before it was evicted", async () => {
+    // The pairing that matters: no write on open must not mean no data.
+    const { manager } = await freshManager();
+    const store = await manager.getOrgStore("org-memory");
+    store.addWaitlistSubscriber("before@example.com");
+    for (let n = 1; n <= 10; n += 1) await manager.getOrgStore(`org-noise-${n}`);
+    expect((await manager.getOrgStore("org-memory")).waitlistCount()).toBeGreaterThan(0);
   });
 });
