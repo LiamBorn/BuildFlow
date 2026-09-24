@@ -1787,20 +1787,22 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // entry in ROUTE_POLICY (ask = schedule.read, import = import.commit) and answer over req.orgStore,
   // which is what the note below used to be waiting for. The out-of-date half mattered — it reads like
   // nothing is in front of these, and what is actually in front of them is the only thing standing
-  // between a stranger and a bill, so see aiLimit.
+  // between a stranger and a bill, so see costLimit.
   const aiAskSchema = z.object({
     question: z.string().trim().min(1).max(2000),
     // the trade the workspace was set up for — shapes the answer's vocabulary
     businessType: z.enum(businessTypeOptions).optional()
   });
   /**
-   * A ceiling on the two routes that spend money when they are called.
+   * A ceiling on the routes whose cost is paid by somebody outside this process.
    *
-   * Every other limit here protects a table or an inbox. These protect a bill: each call reaches
+   * Two spend money and one spends a person's attention. The AI pair reach a bill: each call reaches
    * Anthropic, and import-schedule sends up to six images of up to 20MB as vision input, which is the
-   * most expensive request BuildFlow can make. Both are reachable by any visitor, because a signed-out
-   * page load takes a demo session and the demo is an owner — so "requires a session" is not a
-   * ceiling, it is one extra POST.
+   * most expensive request BuildFlow can make. POST /api/feedback reaches an inbox a person reads, with
+   * up to three attachments of up to 10MB each, and is a read-only-demo exception on purpose — so it is
+   * the one route a locked demo can use to send something outward. All three are reachable by any
+   * visitor, because a signed-out page load takes a demo session and the demo is an owner: "requires a
+   * session" is not a ceiling, it is one extra POST.
    *
    * Keyed per account where there is a real one, and per address otherwise. The demo account is
    * SHARED, so keying it by account would put every visitor in one bucket and let the first spend the
@@ -1812,13 +1814,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * worse outcome than a few calls that went uncounted. opsGate is the opposite because letting an
    * uncounted request past an AUTH gate hands over the ops routes.
    */
-  const aiActor = (req: express.Request) =>
+  const countedActor = (req: express.Request) =>
     req.account && req.account.email !== DEMO_ACCOUNT_EMAIL ? `acct:${req.account.id}` : clientIp(req);
-  const aiLimit =
+  const costLimit =
     (bucket: string, max: number, windowMs: number): express.RequestHandler =>
     (req, res, next) => {
       limiter
-        .hit(bucket, aiActor(req), max, windowMs)
+        .hit(bucket, countedActor(req), max, windowMs)
         .then((result) => {
           if (result.ok) return next();
           res.setHeader("Retry-After", String(result.retryAfterSec));
@@ -1833,7 +1835,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         });
     };
 
-  app.post("/api/ai/ask", aiLimit("ai-ask", 40, HOUR), async (req, res) => {
+  app.post("/api/ai/ask", costLimit("ai-ask", 40, HOUR), async (req, res) => {
     const parsed = aiAskSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Ask a question." });
@@ -1851,7 +1853,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // Schedule import via Claude vision: read uploaded image(s) of another scheduler
   // → a project/job plan the client creates. {mode:"demo"} → client uses its sample.
   const aiImportSchema = z.object({ images: z.array(z.string().max(20_000_000)).min(1).max(6) });
-  app.post("/api/ai/import-schedule", aiLimit("ai-import", 6, HOUR), async (req, res) => {
+  app.post("/api/ai/import-schedule", costLimit("ai-import", 6, HOUR), async (req, res) => {
     const parsed = aiImportSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Attach at least one schedule image." });
@@ -3722,7 +3724,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      workspace and the person off the session, so the recipient always knows who wrote.
      The address is the one the product owner asked for; FEEDBACK_EMAIL overrides it. */
   const feedbackInbox = process.env.FEEDBACK_EMAIL ?? "ljsantos020803@gmail.com";
-  app.post("/api/feedback", async (req, res) => {
+  app.post("/api/feedback", costLimit("feedback", 10, HOUR), async (req, res) => {
     const parsed = feedbackSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Please write a few words." });

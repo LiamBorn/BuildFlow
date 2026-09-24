@@ -1,5 +1,6 @@
 /**
- * The two routes that spend money, and the one the demo lock had quietly taken away.
+ * The routes whose cost lands on somebody outside this process, and the one the demo lock had
+ * quietly taken away.
  *
  * Both reach Anthropic when a key is configured, and import-schedule sends up to six images of up to
  * 20MB as vision input — the most expensive request BuildFlow can make. Neither had a ceiling, and
@@ -13,6 +14,11 @@
  * lock took the assistant away from every demo visitor on the published app, which is the one feature
  * the pricing page leads with. Importing a schedule stays refused, and should: its capability is
  * `import.commit` and the result becomes projects and jobs everyone else can see.
+ *
+ * `POST /api/feedback` is here for the third version of the same problem: it reaches an inbox a person
+ * reads, with up to three attachments of up to 10MB each, and it is a read-only-demo exception on
+ * purpose — the one thing a locked demo can still send outward. Unlimited, that is a way to fill
+ * somebody's mailbox and spend the SMTP quota, from a session anyone can have for the asking.
  *
  * The keying case is the one worth keeping. Per-account for a real customer and per-address for the
  * demo is not fussiness: the demo ACCOUNT is shared, so counting it per account lets the first visitor
@@ -118,5 +124,27 @@ describe("who the allowance belongs to", () => {
     });
     expect(signup.status).toBeLessThan(400);
     expect((await ask(owner)).status, "a customer must not inherit a stranger's exhausted bucket").toBe(200);
+  });
+});
+
+describe("feedback, the one a locked demo can still send", () => {
+  const send = (agent: ReturnType<typeof request.agent>) =>
+    agent.post("/api/feedback").send({ category: "idea", message: "The Month page could use a week view.", page: "#schedule/month" });
+
+  it("takes the feedback a real person came to give", async () => {
+    process.env.DEMO_READ_ONLY = "on";
+    const app = await freshApp();
+    const res = await send(await demoAgent(app));
+    expect(res.body?.code, "the lock exempts feedback on purpose").not.toBe("demo-read-only");
+    expect(res.status).toBe(201);
+  });
+
+  it("stops being a way to fill somebody's inbox", async () => {
+    const app = await freshApp();
+    const agent = await demoAgent(app);
+    let at = -1;
+    for (let i = 0; i < 20 && at < 0; i += 1) if ((await send(agent)).status === 429) at = i + 1;
+    expect(at, "an unlimited route never refuses").toBeGreaterThan(0);
+    expect(at, "ten an hour, then the refusal").toBeLessThanOrEqual(11);
   });
 });
