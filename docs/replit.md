@@ -88,10 +88,13 @@ Secrets are where they belong.
   PostgreSQL advisory lock as well as the epoch, and the lock's connection is the part most likely to
   be dropped by a managed database that suspends idle sessions — so these appear in normal operation:
   - `PostgreSQL lock connection lost; reconnecting` — the lock's connection dropped. Expected.
-  - `PostgreSQL lock reconnect failed; retrying` — printed **once a second, indefinitely**, while the
-    database is unreachable. There is no backoff and no cap, so an outage of any length fills the log
-    at that rate. Loud on purpose; just know that the volume is not itself a second problem.
-  - `PostgreSQL lock reacquired` — back to normal.
+  - `PostgreSQL lock reconnect failed; retrying` — the first three failed attempts while the
+    database is unreachable, then `PostgreSQL lock reconnect still failing: N attempts in Ns,
+    retrying every second` once a minute. It keeps retrying every second with no cap for as long as
+    the outage lasts; only the printing is thinned, so a long outage stays visible without burying
+    every other line of the log.
+  - `PostgreSQL lock reacquired` (with `after N failed attempt(s)` when there were any) — back to
+    normal.
   - `old process fenced out: a newer BuildFlow process owns the saved files` — a newer process took
     over and this one is shutting itself down. Normal on a republish.
   **Losing the lock does not stop saves, and does not risk a mixed image.** Every save opens a

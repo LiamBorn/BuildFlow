@@ -26,6 +26,11 @@ type Connector = {
   on?: (event: "error", handler: (error: Error) => void) => unknown;
 };
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/* A lost lock is retried every second for as long as it takes, but printing every failure would bury
+   every other line of a deployment log during a long outage, the log the cause is looked for in. So
+   the first few failures are printed as they happen, then one line a minute with the running count. */
+const RECONNECT_FAILURES_PRINTED = 3;
+const RECONNECT_REPORT_EVERY_MS = 60_000;
 function isMissingSchema(error: unknown): boolean {
   let current: unknown = error;
   while (current instanceof Error) {
@@ -130,6 +135,9 @@ export class FileDurability {
   }
 
   private async recoverLock(): Promise<void> {
+    const startedAt = Date.now();
+    let failures = 0;
+    let reportedAt = 0;
     while (!this.closing && !this.superseded) {
       let candidate: Connection | undefined;
       let locked = false;
@@ -146,12 +154,24 @@ export class FileDurability {
           this.owner = candidate;
           await candidate.query("LISTEN buildflow_handoff");
           if (this.owner !== candidate) continue;
-          console.log("[data] PostgreSQL lock reacquired.");
+          console.log(`[data] PostgreSQL lock reacquired${failures ? ` after ${failures} failed attempt(s)` : ""}.`);
           return;
         }
       } catch (error) {
         if (this.owner === candidate) this.owner = undefined;
-        console.error("[data] PostgreSQL lock reconnect failed; retrying:", error);
+        failures += 1;
+        const now = Date.now();
+        if (failures <= RECONNECT_FAILURES_PRINTED) {
+          reportedAt = now;
+          console.error("[data] PostgreSQL lock reconnect failed; retrying:", error);
+        } else if (now - reportedAt >= RECONNECT_REPORT_EVERY_MS) {
+          reportedAt = now;
+          const seconds = Math.round((now - startedAt) / 1000);
+          console.error(
+            `[data] PostgreSQL lock reconnect still failing: ${failures} attempts in ${seconds}s, retrying every second. Latest error:`,
+            error
+          );
+        }
       } finally {
         if (candidate && this.owner !== candidate) this.release(candidate, locked);
       }

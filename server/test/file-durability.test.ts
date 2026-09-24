@@ -369,6 +369,39 @@ describe("PostgreSQL-backed SQLite images", () => {
     await store.close();
   });
 
+  it("keeps retrying a lost lock every second, but reports a long outage once a minute", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    fs.writeFileSync(path.join(dir, "buildflow.sqlite"), "before");
+    const store = mirror(dir, pg);
+    await store.start();
+    const connect = pg.connect.bind(pg);
+    let down = true;
+    let attempts = 0;
+    pg.connect = async () => {
+      if (!down) return connect();
+      attempts += 1;
+      throw new Error("database unreachable");
+    };
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const logs = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.useFakeTimers();
+    pg.dropOwner();
+    await vi.advanceTimersByTimeAsync(3 * 60_000);
+    // it never stopped trying...
+    expect(attempts).toBeGreaterThanOrEqual(170);
+    // ...but three minutes of failures are a handful of lines, not one a second
+    const reports = errors.mock.calls.map(([line]) => String(line)).filter((line) => line.includes("lock reconnect"));
+    expect(reports.slice(0, 3)).toEqual(Array(3).fill("[data] PostgreSQL lock reconnect failed; retrying:"));
+    expect(reports.length).toBeLessThanOrEqual(6);
+    expect(reports.at(-1)).toMatch(/still failing: \d+ attempts in \d+s, retrying every second/);
+    down = false;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(logs).toHaveBeenCalledWith(expect.stringMatching(/^\[data\] PostgreSQL lock reacquired after \d+ failed attempt\(s\)\.$/));
+    vi.useRealTimers();
+    await store.close();
+  });
+
   it("tries a final save and exits by the deadline if a request never finishes", async () => {
     const app = express();
     app.get("/stuck", (_req, res) => {
