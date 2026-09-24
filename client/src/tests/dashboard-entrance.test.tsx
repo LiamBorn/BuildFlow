@@ -5,11 +5,59 @@
  * already showing remounts it, so the entrance plays again.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import App from "../App";
 import { bootstrapFixture } from "../test/fixture";
 import { enterDashboard, installAppHarness, state } from "../test/appHarness";
 import { BOARD_RANK_CAP, __resetOpeningGate } from "../motion";
+
+/**
+ * Load TimeCard.tsx before any case needs it, because two lazy components share it.
+ *
+ * Since 06a51d4 both the TimeCard PAGE and the Dashboard's TimeCard CARDS are React.lazy over the
+ * same module, so `enterDashboard()` starts that import in every case here. The TimeCard case then
+ * clicks through to the page and wins or loses a race with a load it did not start.
+ *
+ * Measured, rather than guessed at: opening the page cold — module not yet loaded — takes 2,119ms
+ * idle and 1,866ms under load. Warm, once the module is in, the same open takes 442ms. Testing
+ * Library's async default is 1000ms. So a cold open never fits and a warm one always does, and
+ * which of the two the case gets depends on whether the Dashboard's copy of that import happened
+ * to finish first. That is the flake: it failed three times across two sessions, each time reading
+ * "Unable to find role=heading TimeCard", which looks like a broken page rather than a module still
+ * arriving.
+ *
+ * Importing it here settles it before any case runs. Deterministic, rather than a timeout raised
+ * until the machine usually wins.
+ */
+beforeAll(async () => {
+  await import("../TimeCard");
+});
+
+/**
+ * The element at `selector`, once it is a DIFFERENT one from `before`.
+ *
+ * Every case below clicks a rail control and checks the page remounted, which is how the entrance
+ * replays. They each used to read the DOM on the line after the click, which assumes React has
+ * committed by then. It usually has; under load it sometimes has not, and the read then sees either
+ * the old element or nothing, so the case failed for a reason that had nothing to do with the
+ * entrance. It cost three separate diagnoses across two sessions before being called a flake.
+ *
+ * The TimeCard case was the one that actually failed, because it is the only page mounted inside a
+ * Suspense boundary — TimeCard.tsx is loaded on demand since 06a51d4 so the marketing pages stop
+ * shipping it — which gives React one more reason to defer the commit. The other eleven carried the
+ * same race latently; the Crews case had already failed once earlier the same day.
+ *
+ * Waiting does not weaken anything. The assertion is still "present AND not the same element"; if
+ * the entrance genuinely stops replaying, this retries and then fails, which is the right outcome
+ * reached a second later.
+ */
+async function remounted(selector: string, before: Element | null) {
+  await waitFor(() => {
+    const now = document.querySelector(selector);
+    expect(now, `${selector} is not on the page`).not.toBeNull();
+    expect(now, `${selector} did not remount, so the entrance did not replay`).not.toBe(before);
+  });
+}
 
 describe("the Dashboard's entrance", () => {
   installAppHarness();
@@ -47,9 +95,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Home" }));
 
-    const after = document.querySelector(".dash-block");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before); // a fresh mount: the animations run from their first frame
+    await remounted(".dash-block", before); // a fresh mount: the animations run from their first frame
     expect(await screen.findByRole("heading", { name: "Pending Approvals" })).toBeInTheDocument();
   });
 
@@ -65,9 +111,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Schedule (New)" }));
 
-    const after = document.querySelector(".sched-board-host");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".sched-board-host", before);
     expect(await screen.findByRole("heading", { name: /The whole plan/ })).toBeInTheDocument();
   });
 
@@ -83,9 +127,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Operations" }));
 
-    const after = document.querySelector(".projects-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".projects-page", before);
     expect(await screen.findByRole("heading", { name: "Projects" })).toBeInTheDocument();
   });
 
@@ -105,9 +147,7 @@ describe("the Dashboard's entrance", () => {
 
     await openCrews();
 
-    const after = document.querySelector(".crews-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".crews-page", before);
   });
 
   it("plays again on the Inventory page when the Resources rail button is clicked while it is already showing", async () => {
@@ -120,9 +160,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Resources( \(.*\))?$/ }));
 
-    const after = document.querySelector(".inventory-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".inventory-page", before);
   });
 
   it("plays again on the DelayIQs page when its flyout entry is clicked while it is already showing", async () => {
@@ -138,9 +176,7 @@ describe("the Dashboard's entrance", () => {
     fireEvent.mouseEnter(field.parentElement as HTMLElement);
     fireEvent.click(screen.getByRole("menuitem", { name: /^DelayIQs/ }));
 
-    const after = document.querySelector(".delayIQ-rx");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".delayIQ-rx", before);
   });
 
   it("plays again on the Reports page when the Reporting rail button is clicked while it is already showing", async () => {
@@ -153,9 +189,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Reporting( \(.*\))?$/ }));
 
-    const after = document.querySelector(".reports-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".reports-page", before);
   });
 
   it("plays again on the TimeCard page when its rail button is clicked while it is already showing", async () => {
@@ -170,9 +204,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^TimeCard( \(.*\))?$/ }));
 
-    const after = document.querySelector(".tc-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".tc-page", before);
   });
 
   it("plays again on the Inventory page when its flyout entry is clicked while it is already showing", async () => {
@@ -188,9 +220,7 @@ describe("the Dashboard's entrance", () => {
     fireEvent.mouseEnter(resources.parentElement as HTMLElement);
     fireEvent.click(screen.getByRole("menuitem", { name: /^Inventory/ }));
 
-    const after = document.querySelector(".inventory-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".inventory-page", before);
   });
 
   it("plays again on the Field Updates page when its flyout entry is clicked while it is already showing", async () => {
@@ -206,9 +236,7 @@ describe("the Dashboard's entrance", () => {
     fireEvent.mouseEnter(field.parentElement as HTMLElement);
     fireEvent.click(screen.getByRole("menuitem", { name: /^Field Updates/ }));
 
-    const after = document.querySelector(".field-updates-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".field-updates-page", before);
   });
 
   it("plays again on the Settings page when it is opened from the account menu while it is already showing", async () => {
@@ -225,9 +253,7 @@ describe("the Dashboard's entrance", () => {
 
     openSettings();
 
-    const after = document.querySelector(".settings-rx");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".settings-rx", before);
   });
 
   it("plays again on the Bookmarks page when its rail button is clicked while it is already showing", async () => {
@@ -242,9 +268,7 @@ describe("the Dashboard's entrance", () => {
 
     fireEvent.click(rail().getByRole("button", { name: /^Bookmarks( \(.*\))?$/ }));
 
-    const after = document.querySelector(".bookmarks-page");
-    expect(after).not.toBeNull();
-    expect(after).not.toBe(before);
+    await remounted(".bookmarks-page", before);
   });
 });
 

@@ -1,7 +1,25 @@
 import * as matchers from "@testing-library/jest-dom/matchers";
+import { configure } from "@testing-library/react";
 import { expect, vi } from "vitest";
 
 expect.extend(matchers);
+
+// `findBy*` and `waitFor` get patience proportionate to what they are waiting for.
+//
+// vite.config and appHarness both allow a case 20 seconds, but Testing Library's own async default
+// is 1000ms, so every `findBy` gave up after a twentieth of the budget. Almost every case here
+// opens a page of the product, and those renders are not small: measured on this machine, opening
+// the TimeCard page takes 442ms warm and 2,119ms cold, and the Dashboard's panel board is the same
+// order. Under load they cross a second, and the failure then reads "Unable to find role=heading X"
+// — which looks like a broken page rather than one still rendering.
+//
+// That mismatch is what the suite's recurring "flakes" were: dashboard-entrance's TimeCard case and
+// App.test's phone-first case each failed in a full run and passed alone, three times across two
+// sessions, and each cost a fresh diagnosis.
+//
+// Five seconds, not twenty: long enough that a slow machine finishes, short enough that a case
+// whose element never arrives still fails promptly. It only spends the extra time on failure.
+configure({ asyncUtilTimeout: 5000 });
 
 // The schedule board opens on the week containing "today", and scheduleUtils picks
 // that week once at module load (`export const weekDays = buildCurrentWeek()`), as
