@@ -266,9 +266,28 @@ const JOB_COLUMNS = [
   "actualFinish"
 ] as const;
 
-/** The main database's path. Exported so tooling (the restore CLI) resolves the same data
- *  directory this server uses, rather than working it out a second time. */
-export const defaultDataFile = path.resolve(__dirname, "../data/buildflow.sqlite");
+/**
+ * The main database's path. Exported so tooling (the restore CLI) resolves the same data directory
+ * this server uses, rather than working it out a second time.
+ *
+ * `BUILDFLOW_DATA_FILE` moves it, and everything follows from here: the per-workspace databases sit
+ * beside it (stores.ts derives its directory from the main store's path), the backups go in
+ * `backups/` next to it (restore.ts and the ops routes), and the restore CLI reads this same value.
+ * One variable, because two would be a way for the server and the CLI to disagree about where the
+ * data is.
+ *
+ * It exists because the location was otherwise changeable only by editing this line. On a platform
+ * configured through environment variables — Replit's Secrets — that is the difference between being
+ * able to point the data somewhere durable and not.
+ *
+ * A relative value resolves against the working directory, which is what a deployment's start
+ * command means by a relative path. The default resolves from this module instead, so it stays
+ * `server/data/buildflow.sqlite` whether the process was started from the repo root or from server/.
+ */
+export const defaultDataFile = (() => {
+  const configured = process.env.BUILDFLOW_DATA_FILE?.trim();
+  return configured ? path.resolve(configured) : path.resolve(__dirname, "../data/buildflow.sqlite");
+})();
 
 function parseJsonArray(value: string | null | undefined): string[] {
   if (!value) return [];

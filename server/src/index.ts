@@ -5,7 +5,8 @@ import { reportBillingStatus } from "./billing.js";
 import { reportAiStatus } from "./ai.js";
 import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
-import { LATEST_SCHEMA_VERSION } from "./database.js";
+import path from "node:path";
+import { defaultDataFile, LATEST_SCHEMA_VERSION } from "./database.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
 import { serveClient } from "./serveClient.js";
 
@@ -34,7 +35,10 @@ const production = process.env.NODE_ENV === "production";
 const servesPages = production && serveClient(app);
 
 const server = app.listen(port, () => {
-  console.log(`BuildFlow API listening on http://localhost:${port}`);
+  /* Not "http://localhost": the socket is bound on every interface, and on a deployment the address
+     people use is the platform's, not this one. Saying localhost sent anyone reading a Replit log
+     looking for a URL that only exists inside the container. */
+  console.log(`BuildFlow API listening on port ${port} (all interfaces); locally that is http://127.0.0.1:${port}`);
   if (servesPages) console.log("🖥️  Pages: the landing page, sign-in and the program are served here too (client/dist).");
   else if (production) console.log("🖥️  Pages: no client build in client/dist — run `npm run build` to serve them from here.");
   void reportMailStatus(); // logs LIVE (verified) vs LOG MODE + anything missing
@@ -55,8 +59,11 @@ const server = app.listen(port, () => {
   const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
   try {
     const files = manager.backupAll(retain);
+    /* The real directory, not the literal "data/backups/" this used to print: BUILDFLOW_DATA_FILE can
+       move it, and a log that names a path the files are not in is worse than one that names none. */
+    const where = files[0] ? path.dirname(files[0]) : path.join(path.dirname(defaultDataFile), "backups");
     console.log(
-      `🗄️  Data: schema v${LATEST_SCHEMA_VERSION}; boot backup → data/backups/ (${files.length} file${files.length === 1 ? "" : "s"}).`
+      `🗄️  Data: schema v${LATEST_SCHEMA_VERSION}; boot backup → ${where} (${files.length} file${files.length === 1 ? "" : "s"}).`
     );
   } catch (error) {
     console.error("🗄️  Data: boot backup failed:", error instanceof Error ? error.message : error);
