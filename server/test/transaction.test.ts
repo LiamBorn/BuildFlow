@@ -1,7 +1,7 @@
 /**
  * Transactional writes: a re-book is one request that fully happens or doesn't, its job
  * step carries the drawer's other changes, and the store's multi-row writes land whole —
- * the file written once, after the commit.
+ * the file written once, after the commit, and not at all when the commit changed nothing.
  */
 import fs from "node:fs";
 import os from "node:os";
@@ -105,7 +105,7 @@ describe("transactional writes", () => {
     const writes = vi.spyOn(fs, "renameSync");
     try {
       // A patch carrying no writable column is a no-op, and a no-op is not worth exporting the
-      // whole SQLite image and writing it to disk — which committing a transaction always does.
+      // whole SQLite image and writing it to disk.
       await agent.patch(`/api/jobs/${job.id}`).send({}).expect(200);
       expect(writes).not.toHaveBeenCalled();
 
@@ -140,5 +140,30 @@ describe("transactional writes", () => {
     } finally {
       writes.mockRestore();
     }
+  });
+
+  it("does not rewrite the file for a transaction that changed no row, and does for one only SQLite saw", async () => {
+    const store = await BuildFlowStore.create(path.join(tempDir("buildflow-quiet-"), "store.sqlite"), true);
+    const crew = store.crews()[0];
+
+    const writes = vi.spyOn(fs, "renameSync"); // the atomic publish; one per save
+    try {
+      // Reads, and an update that matches nothing: the file would come out exactly as it went in.
+      store.transaction(() => {
+        store.crews();
+        store.run("UPDATE crews SET name = ? WHERE id = ?", ["Nobody", "crew-that-is-not-there"]);
+      });
+      expect(writes).not.toHaveBeenCalled();
+
+      // run() never saves or flags anything on its own, so only the commit can notice this change.
+      store.transaction(() => store.run("UPDATE crews SET name = ? WHERE id = ?", ["Renamed at the commit", crew.id]));
+      expect(writes).toHaveBeenCalledTimes(1);
+    } finally {
+      writes.mockRestore();
+    }
+
+    // and the change is in the file, not only in memory
+    const reopened = await BuildFlowStore.create(store.dataFilePath, false, { seedDemo: false });
+    expect(reopened.crews().find((row) => row.id === crew.id)?.name).toBe("Renamed at the commit");
   });
 });

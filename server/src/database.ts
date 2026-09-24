@@ -1349,7 +1349,8 @@ export class BuildFlowStore {
 
   /**
    * Runs `work` as one SQLite transaction: every write in it lands, or none does, and
-   * the file is written once, after the commit. A call from inside a transaction joins it.
+   * the file is written once, after the commit — or not at all, when the file already holds
+   * every row. A call from inside a transaction joins it.
    */
   transaction<T>(work: () => T): T {
     if (this.inTransaction) return work();
@@ -1373,8 +1374,27 @@ export class BuildFlowStore {
     } finally {
       this.inTransaction = false;
     }
-    this.save();
+    // A transaction that only read, or found its rows already written (a week's schedule snapshot
+    // on every load after the first), leaves the file as it was: rewriting it would buy nothing but
+    // an export, an fsync and a PostgreSQL upload. The saves its writers asked for were deferred to
+    // here, so skipping this one skips them all.
+    if (this.unsavedChanges() > 0) this.save();
     return result as T;
+  }
+
+  /**
+   * Rows inserted, updated or deleted since the file was last written: SQLite's total_changes(),
+   * which counts per connection — and sql.js's export() closes and reopens the connection, so every
+   * save() starts it again at 0. Read from SQLite rather than kept as a flag in the write helpers
+   * because it also counts the writes that go straight to this.db.
+   *
+   * Two limits, both safe. It does not count schema changes, which is fine while migrations run
+   * outside transaction() (create() saves after them). And if a sql.js upgrade ever stopped
+   * reopening on export, the count would never return to 0 and every transaction would save again —
+   * the old cost, never a lost write; test/status-snapshot-writes would catch it.
+   */
+  private unsavedChanges(): number {
+    return Number(this.db.exec("SELECT total_changes()")[0]?.values[0]?.[0] ?? 0);
   }
 
   /** A read that proves the database is actually answering — what the health check needs

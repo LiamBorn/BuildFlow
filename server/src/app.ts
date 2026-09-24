@@ -3319,27 +3319,31 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       (project) => project.scheduleHealth === "On Track" || project.scheduleHealth === "Complete"
     ).length;
     const crewUtilization = crews.length > 0 ? Math.round(crews.reduce((sum, crew) => sum + crew.utilization, 0) / crews.length) : null;
-    store.recordScheduleSnapshot({
-      weekOf,
-      projectId: "",
-      daysAhead: portfolio.daysAhead,
-      percentComplete: portfolio.percentComplete,
-      forecastFinish: "",
-      plannedFinish: "",
-      onTrackProjects,
-      projects: projects.length,
-      crewUtilization
-    });
-    for (const status of statuses) {
+    // One transaction, so the first load of a week writes the file once for all its rows instead
+    // of once per row, and a week already recorded writes nothing (test/status-snapshot-writes).
+    store.transaction(() => {
       store.recordScheduleSnapshot({
         weekOf,
-        projectId: status.projectId,
-        daysAhead: status.daysAhead,
-        percentComplete: status.percentComplete,
-        forecastFinish: status.forecastFinish,
-        plannedFinish: status.plannedFinish
+        projectId: "",
+        daysAhead: portfolio.daysAhead,
+        percentComplete: portfolio.percentComplete,
+        forecastFinish: "",
+        plannedFinish: "",
+        onTrackProjects,
+        projects: projects.length,
+        crewUtilization
       });
-    }
+      for (const status of statuses) {
+        store.recordScheduleSnapshot({
+          weekOf,
+          projectId: status.projectId,
+          daysAhead: status.daysAhead,
+          percentComplete: status.percentComplete,
+          forecastFinish: status.forecastFinish,
+          plannedFinish: status.plannedFinish
+        });
+      }
+    });
 
     const priorPortfolio = priorFor("");
     res.json({
