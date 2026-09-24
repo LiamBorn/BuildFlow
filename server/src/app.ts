@@ -46,7 +46,7 @@ import type { ScheduleAssignment, ScheduleLiveEvent, WeatherWindow } from "@buil
 import { StoreManager } from "./stores.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
-import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds } from "./rateLimit.js";
+import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds, clientIp } from "./rateLimit.js";
 import {
   OAUTH_COOKIE,
   OAUTH_STATE_TTL_MS,
@@ -573,6 +573,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const limitBackend = createBackendFromEnv();
   const limiter = createRateLimiter(limitBackend);
   const loginGuard = createLoginGuard(limitBackend);
+  /* The same primitive again, for the ops token, keyed on the caller rather than an account.
+     Ten wrong tokens in fifteen minutes from one address buys a fifteen-minute lockout. */
+  const opsGuard = createLoginGuard(limitBackend, 10, 15 * 60_000, 15 * 60_000);
   const HOUR = 60 * 60 * 1000;
   const QUARTER = 15 * 60 * 1000;
   const VERIFY_TTL_MS = 24 * HOUR;
@@ -3724,11 +3727,57 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   };
   const backupsDir = () => path.join(path.dirname(mainStore.dataFilePath), "backups");
 
-  app.post("/api/ops/backup", async (req, res) => {
-    if (!opsAuthorized(req)) {
-      res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
-      return;
-    }
+  /**
+   * The ops routes' guard, with a lockout on wrong tokens.
+   *
+   * These four are reachable from the public address and `OPS_ADMIN_TOKEN` is the only thing in
+   * front of them — and behind them are the platform's object counts, its runtime stats and a
+   * backup trigger that writes files. secretsMatch() is constant-time, so a guess learns nothing
+   * from timing, but nothing stopped a caller from simply guessing as fast as it could ask.
+   *
+   * A per-request ceiling was the wrong tool and is why this was left alone earlier: the callers
+   * here are monitors, a monitor polls, and a limit low enough to slow a guesser would have
+   * throttled the thing you need working when something else is wrong. A lockout on FAILURE has
+   * no such tension. A caller with the right token never touches it — and a success clears what
+   * came before, so the fix-the-config-and-retry loop does not accumulate.
+   *
+   * Only armed when a token is configured. Without one these routes are already closed in
+   * production, and there is no secret to protect, so counting attempts would only replace a 403
+   * that tells you to set OPS_ADMIN_TOKEN with a 429 that does not.
+   */
+  const opsGate: express.RequestHandler = (req, res, next) => {
+    const required = process.env.OPS_ADMIN_TOKEN?.trim();
+    const key = `ops:${clientIp(req)}`;
+    const refuse = () => res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
+
+    void (async () => {
+      if (!required) return opsAuthorized(req) ? next() : refuse();
+
+      const lockedSec = await opsGuard.lockedFor(key);
+      if (lockedSec > 0) {
+        res.setHeader("Retry-After", String(lockedSec));
+        res.status(429).json({
+          error: `Too many attempts. Try again in ${humanSeconds(lockedSec)}.`,
+          retryAfterSec: lockedSec
+        });
+        return;
+      }
+      if (opsAuthorized(req)) {
+        await opsGuard.clear(key);
+        return next();
+      }
+      await opsGuard.noteFailure(key);
+      refuse();
+    })().catch((error: unknown) => {
+      /* The opposite of the rate limiter's choice, deliberately. That one lets a request through
+         when it cannot count, because a limiter that fails closed is an outage. This is an AUTH
+         gate: failing open would hand over the ops routes to whatever made the counting break. */
+      console.error("[ops] gate failed; refusing:", error);
+      if (!res.headersSent) refuse();
+    });
+  };
+
+  app.post("/api/ops/backup", opsGate, async (req, res) => {
     const retain = process.env.BACKUP_RETAIN ? Number(process.env.BACKUP_RETAIN) : undefined;
     try {
       const files = manager.backupAll(retain).map((f) => path.basename(f));
@@ -3739,11 +3788,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   });
 
-  app.get("/api/ops/backups", (req, res) => {
-    if (!opsAuthorized(req)) {
-      res.status(403).json({ error: "Forbidden." });
-      return;
-    }
+  app.get("/api/ops/backups", opsGate, (req, res) => {
     const dir = backupsDir();
     let backups: Array<{ file: string; size: number; modified: string }> = [];
     try {
@@ -3781,11 +3826,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      data exists. Same operator guard. Prometheus text with ?format=prometheus, JSON
      otherwise, so it is readable both by a scraper and by a person with curl. Nothing
      identifying is in it — see metrics.ts. */
-  app.get("/api/ops/stats", (req, res) => {
-    if (!opsAuthorized(req)) {
-      res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
-      return;
-    }
+  app.get("/api/ops/stats", opsGate, (req, res) => {
     if (String(req.query.format ?? "") === "prometheus") {
       res.type("text/plain; version=0.0.4").send(metrics.prometheus());
       return;
@@ -3793,11 +3834,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json(metrics.snapshot());
   });
 
-  app.get("/api/ops/metrics", async (req, res) => {
-    if (!opsAuthorized(req)) {
-      res.status(403).json({ error: "Forbidden. Set OPS_ADMIN_TOKEN and send it as the x-ops-token header." });
-      return;
-    }
+  app.get("/api/ops/metrics", opsGate, async (req, res) => {
     try {
       const { workspaces, cold, totals } = await manager.objectCounts();
       const objects = totals.projects + totals.jobs + totals.crews + totals.equipment + totals.materials;
