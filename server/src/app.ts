@@ -3653,13 +3653,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // fire accidentally: returns 503 until that env var is set, then requires a
   // matching `x-waitlist-token` header. Sends the launch email to everyone not
   // yet notified and marks them notified.
-  app.post("/api/waitlist/announce", async (req, res) => {
-    const token = process.env.WAITLIST_ADMIN_TOKEN;
+  /* Limited, and the token compared the way every other secret here is.
+     One accepted call emails EVERY waitlist subscriber who has not been written to yet — the single
+     highest-consequence request in this API, and it lands in thousands of real inboxes from BuildFlow's
+     own domain. The token was compared with `!==` while secretsMatch sat two hundred lines away, and
+     nothing capped the guessing, so it could be ground at line speed. There is no polling tension here
+     of the kind that kept a per-request limit off /api/ops: a launch broadcast is sent once. */
+  app.post("/api/waitlist/announce", limiter.byIp("waitlist-announce", 5, HOUR), async (req, res) => {
+    const token = process.env.WAITLIST_ADMIN_TOKEN?.trim();
     if (!token) {
       res.status(503).json({ error: "Launch broadcast disabled — set WAITLIST_ADMIN_TOKEN to enable it." });
       return;
     }
-    if (req.get("x-waitlist-token") !== token) {
+    const offered = req.get("x-waitlist-token");
+    if (typeof offered !== "string" || !secretsMatch(offered, token)) {
       res.status(401).json({ error: "Invalid or missing x-waitlist-token header." });
       return;
     }
