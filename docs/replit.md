@@ -108,22 +108,24 @@ Secrets are where they belong.
     normal.
   - `old process fenced out: a newer BuildFlow process owns the saved files` — a newer process took
     over and this one is shutting itself down. Normal on a republish.
+  - `The PostgreSQL handoff lock was not released within 30s; taking over by raising the epoch` — a
+    starting process waited for the lock and nobody gave it back, so it took over anyway (below).
+    Not normal, but not an outage: the app starts and serves.
   **Losing the lock does not stop SAVES, and does not risk a mixed image.** Every save opens a
   transaction and re-reads the epoch `FOR UPDATE`, refusing if it is no longer the owner, so a process
   that has lost the *lock* still saves correctly while its *epoch* is current.
-  **STARTING UP is the exception, and it is the one that has bitten.** `FileDurability.start` waits up
-  to 30 seconds for the lock and then throws `Timed out waiting for the previous BuildFlow process to
-  flush its saved files`, which Replit turns into a crash loop — so a lock left held by a session
-  PostgreSQL has not yet reaped stops the app from starting at all, even though every save would have
-  been safe. If the deployment is looping on that message, this is why, and it is being fixed by taking
-  the lock over after the wait rather than giving up: raising the epoch fences any old owner, which is
-  exactly the guarantee the paragraph above describes. Until then the sentence to remember is that the
-  lock is a courtesy *once running* and a requirement *to start*. What the lock buys is
-  the courtesy of a clean handoff: a starting process waits on it and signals `buildflow_handoff` so
-  the outgoing one can flush first. If the outgoing process never gets the lock back, a republish
-  takes it anyway, bumps the epoch, and fences it — dropping at most the queued writes inside the
-  400ms save debounce. The worst case is losing the last instant before a republish, never a
-  half-written image.
+  **STARTING UP was the exception, and it is the one that bit.** Until 2026-09-24 `FileDurability.start`
+  waited up to 30 seconds for the lock and then threw `Timed out waiting for the previous BuildFlow
+  process to flush its saved files`, which Replit turned into a crash loop. A lock still held by a
+  session PostgreSQL had not yet reaped kept the published app from starting at all (for about 36
+  minutes that day), even though every save would have been safe. Now the lock is a courtesy at
+  startup too. What it buys is a clean handoff: a starting process waits up to 30 seconds for it and
+  signals `buildflow_handoff` so the outgoing one can flush first. If nobody gives it back (an owner
+  that stopped answering, or a session whose client died without the database noticing), the starting
+  process **takes over anyway by raising the epoch**. That fences any previous owner, which is exactly
+  the guarantee above. It then logs the line listed above and keeps trying for the lock in the
+  background. The worst case is losing the queued writes of an owner that could not flush (at most the
+  400ms save debounce), never a half-written image.
 - **The published page carries two `Strict-Transport-Security` headers** on `*.replit.app`: Replit's
   edge sends one and BuildFlow sends its own. Browsers process only the first, so this is harmless,
   and BuildFlow's is kept deliberately — it is the app's own guarantee, and on a custom domain or any

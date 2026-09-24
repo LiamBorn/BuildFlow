@@ -217,7 +217,18 @@ export class FileDurability {
       } finally {
         if (this.owner !== candidate) this.release(candidate);
       }
-      if (Date.now() > deadline) throw new Error("Timed out waiting for the previous BuildFlow process to flush its saved files.");
+      if (Date.now() > deadline) {
+        /* THE LOCK IS A COURTESY; THE EPOCH IS THE GUARANTEE. Waiting gives a running owner the chance
+           to flush before it is replaced, but a lock nobody will give back must not keep BuildFlow
+           down. A session whose client died without the database noticing still holds it: on
+           2026-09-24 every start of a republish timed out here and the published app stayed down.
+           So after the wait, take over anyway. Raising the epoch below fences any previous owner (its
+           next write is refused), and the lock is retried in the background. */
+        console.warn(
+          "[data] The PostgreSQL handoff lock was not released within 30s; taking over by raising the epoch. A previous owner, if still running, is fenced out."
+        );
+        break;
+      }
       await wait(250);
     }
     const client = await this.connect();
@@ -247,8 +258,10 @@ export class FileDurability {
         hydrate(this.dir, result.rows, diskFiles(this.dir), fileName);
       }
       await client.query("COMMIT");
-      if (!this.owner) throw new Error("PostgreSQL lock connection was lost during startup.");
       this.started = true;
+      // Without the lock (taken over above, or its connection lost during startup) this process still
+      // owns the data by epoch, so it serves; the lock is retried in the background.
+      if (!this.owner) this.beginRecovery();
       const imported = this.epoch === "1" && !result.rows.length;
       const count = imported ? diskFiles(this.dir).length : result.rows.length;
       console.log(

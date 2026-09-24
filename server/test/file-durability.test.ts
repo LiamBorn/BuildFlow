@@ -264,6 +264,48 @@ describe("PostgreSQL-backed SQLite images", () => {
     expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("newer");
   });
 
+  it("takes over after the wait when the lock is never given back, and fences the old owner", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const file = path.join(dir, "buildflow.sqlite");
+    fs.writeFileSync(file, "saved before");
+    // the first owner stops answering without releasing the lock: a session the database has not noticed is dead
+    const stale = mirror(dir, pg);
+    await stale.start();
+    const warnings = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const logs = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.useFakeTimers();
+    const next = mirror(dir, pg);
+    const starting = next.start();
+    await vi.advanceTimersByTimeAsync(31_000);
+    await starting; // it started instead of refusing
+    expect(warnings).toHaveBeenCalledWith(expect.stringContaining("taking over by raising the epoch"));
+    expect(pg.epoch).toBe(2);
+    expect(fs.readFileSync(file, "utf8")).toBe("saved before");
+
+    // the new owner saves without the lock...
+    fs.writeFileSync(file, "after takeover");
+    next.save(file);
+    await next.flush();
+    expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("after takeover");
+    // ...and the old one can never overwrite it
+    fs.writeFileSync(file, "stale write");
+    stale.save(file);
+    await stale.flush();
+    expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("after takeover");
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining("[data] old process fenced out:"));
+
+    // when the database finally lets the stale lock go, the new owner takes it
+    pg.locked = false;
+    pg.holder = undefined;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(pg.locked).toBe(true);
+    expect(logs).toHaveBeenCalledWith("[data] PostgreSQL lock reacquired.");
+    vi.useRealTimers();
+    await next.close();
+  });
+
   it("refuses startup on an unreachable database without changing files", async () => {
     const dir = directory();
     const file = path.join(dir, "buildflow.sqlite");
