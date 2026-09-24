@@ -2,19 +2,27 @@
 # One process serves everything on one port: the landing page, signing in and registering, the
 # program, and the API behind them (server/src/serveClient.ts). `npm run build` writes the pages to
 # client/dist; `npm start` runs the API server, which serves them in production.
-# NODE_ENV=production is set only on the start command: during the install it would leave out the
+# NODE_ENV=production is set only on the start commands: during the install it would leave out the
 # dev dependencies the build and the server need (vite, tsx).
+#
+# ONE PORT, 5000, ON THE PUBLIC PORT 80, in the workspace and when published alike. A published
+# Replit app may expose exactly one port, and it has to be the one on 80: an extra [[ports]] entry,
+# or a server listening on a port that is not mapped to 80, fails the publish. (2026-09-24: Replit's
+# Agent had moved Run to 5000, left the publish command on 4300 and exposed three ports.)
 
 modules = ["nodejs-22"]
-run = "npm install && npm run build && NODE_ENV=production TRUST_PROXY=1 npm start"
+run = "npm install && npm run build && NODE_ENV=production TRUST_PROXY=1 PORT=5000 npm start"
 
 [deployment]
-# One always-on machine, not autoscale: each workspace's database lives in the process and on its
-# disk, and the live updates and scheduled jobs expect a single instance.
-deploymentTarget = "vm"
+# A Reserved VM ("gce"; Autoscale is "cloudrun"): each workspace's database lives in the process and
+# on its disk, and the live updates and scheduled jobs expect a single, always-on instance.
+deploymentTarget = "gce"
 build = ["sh", "-c", "npm ci && npm run build"]
-run = ["sh", "-c", "NODE_ENV=production TRUST_PROXY=1 npm start"]
+run = ["sh", "-c", "NODE_ENV=production TRUST_PROXY=1 PORT=5000 npm start"]
 
 [[ports]]
-localPort = 4300
+localPort = 5000
 externalPort = 80
+
+[nix]
+channel = "stable-25_05"
