@@ -65,7 +65,10 @@ Secrets are where they belong.
   and deletions are queued, retried, flushed on shutdown, and fenced against older servers.
   The schema is in `server/sql/file-images.sql` and must exist in **development** before running.
   A missing/unreachable PostgreSQL database stops startup rather than opening disk-only data.
-  Without `DATABASE_URL` (or during tests), BuildFlow remains file-only. Backups stay local
+  Without `DATABASE_URL` (or during tests), BuildFlow remains file-only — except the published
+  app: `.replit`'s publish command sets `BUILDFLOW_REQUIRE_DATABASE=1`, so a deployment without
+  `DATABASE_URL` stops at startup with a message naming the fix, instead of serving from files that
+  the next publish erases. Backups stay local
   under the configured data directory and are not copied to PostgreSQL; they are not durable
   restore points for a published app.
 - **Reserved VM, and only one of it.** Step 4 above says Reserved VM rather than Autoscale, and this
@@ -118,13 +121,19 @@ Secrets are where they belong.
   and BuildFlow's is kept deliberately — it is the app's own guarantee, and on a custom domain or any
   host whose proxy does not add HSTS it is the only one. Nothing to fix; it just looks odd in a
   response-header list.
+- **The production database had to be switched on.** Replit's docs say the production database is
+  created during publishing when needed; for this app it was not, and the published app ran on
+  files, losing its accounts at every publish, until **Create production database** was turned on
+  in the Republish dialog (2026-09-24). The deployment log then said `[data] Imported … into
+  PostgreSQL` once and `[data] Loaded … from PostgreSQL` on every start since. `BUILDFLOW_REQUIRE_DATABASE`
+  (above) now makes a missing production database stop the start rather than go unnoticed.
 - **Before a future Publish:** development and production are separate databases. Publish the
-  two-table schema through Replit's schema promotion; never select an option that copies
-  development records over production. If a previous production VM has files that are *only
-  on its disk*, export them separately **before** replacing that VM and reconcile them with
-  the production PostgreSQL images. This workspace currently has no production database
-  attached, so production-only disk files cannot be inventoried here. Do not import development
-  records into production.
+  two-table schema through Replit's schema promotion. Leave **Set up your production database with
+  your current development data** off on every publish from now on: it copies development records
+  over production, which would erase the live site's accounts and workspaces. (It was used once, to
+  create the production database, when the live site held only test data.) If a previous production
+  VM has files that are *only on its disk*, export them separately **before** replacing that VM and
+  reconcile them with the production PostgreSQL images.
 - **Restore:** stop the API, run `npm --workspace server run restore` to list local snapshots,
   then `npm --workspace server run restore -- --latest` (or specify a workspace base or snapshot
   filename). The CLI verifies the selected SQLite image, preserves the replaced image as a new
