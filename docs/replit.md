@@ -49,6 +49,7 @@ on.
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | Paid plans. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Sign-in and Meetings calendars with Google and Microsoft. Register these redirect URIs with the provider, using the app's address in place of `<address>`: `<address>/api/auth/oauth/google/callback`, `<address>/api/auth/oauth/microsoft/callback`, `<address>/api/calendar/google/callback` and `<address>/api/calendar/microsoft/callback`. |
 | `OPS_ADMIN_TOKEN` | Opens the ops endpoints under `/api/ops` (take and list backups, platform counts, runtime stats), sent as the `x-ops-token` header. In production, leaving it unset keeps them closed. |
+| `BUILDFLOW_DATA_FILE` | Where the databases and their backups live. Unset means `server/data`, which a published app does not keep — see below. |
 
 `server/.env.example` describes every setting. Never put real values in the repository; Replit's
 Secrets are where they belong.
@@ -61,5 +62,9 @@ Secrets are where they belong.
     starts from the code, so the accounts and workspaces made on the published app would be lost.
   - For customers, the data needs a home that outlives a publish, such as Replit's PostgreSQL. That
     is a change to BuildFlow's data layer, not a setting.
+  - `BUILDFLOW_DATA_FILE` moves the files, if Replit ever offers a path that survives a publish. It
+    carries the per-workspace databases and the backups with it, not only the main file. It does not
+    make the files durable by itself, so it is a smaller thing than the fix above, not a substitute
+    for it.
 - **A visitor who opens the program without signing in lands in the shared demo workspace.** Every
   such visitor sees the same one, including whatever the others changed in it.
