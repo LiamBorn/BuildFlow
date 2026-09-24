@@ -28,6 +28,7 @@
  * reported as unplaced rather than forecast in Austin, because weather for the wrong city reads
  * exactly like weather for the right one.
  */
+import { fetchWithDeadline } from "./outbound.js";
 import type {
   Job,
   Project,
@@ -126,7 +127,7 @@ async function getJson(url: URL): Promise<unknown> {
   if (key) url.searchParams.set("apikey", key);
   let response: Response;
   try {
-    response = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    response = await fetchWithDeadline(url, { headers: { Accept: "application/json" } }, "The weather service", TIMEOUT_MS);
   } catch {
     throw new WeatherUnavailableError("The weather service could not be reached");
   }

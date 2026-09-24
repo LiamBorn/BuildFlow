@@ -18,6 +18,7 @@
 
    NEVER THROWS — a failed notification must not break the operation that fired it.
    ========================================================================= */
+import { fetchWithDeadline } from "./outbound.js";
 import { sendMail } from "./email.js";
 
 export type NotifyChannel = "email" | "sms" | "push";
@@ -59,14 +60,18 @@ export async function sendSms(to: string, body: string): Promise<{ ok: boolean; 
   if (process.env.TWILIO_MESSAGING_SERVICE_SID) params.set("MessagingServiceSid", process.env.TWILIO_MESSAGING_SERVICE_SID);
   else params.set("From", process.env.TWILIO_FROM!);
   try {
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded"
+    const res = await fetchWithDeadline(
+      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: params.toString()
       },
-      body: params.toString()
-    });
+      "Twilio"
+    );
     if (!res.ok) {
       console.error(`📱 [sms] Twilio ${res.status}: ${(await res.text()).slice(0, 200)}`);
       return { ok: false, mode: "twilio" };

@@ -45,6 +45,7 @@
    service and a link back to it in Google or Outlook. A cancelled meeting is not
    sent at all.
    ========================================================================= */
+import { fetchWithDeadline } from "./outbound.js";
 import { OAUTH_PROVIDERS, type OAuthProvider, providerConfig } from "./oauth.js";
 
 export const CALENDAR_PROVIDERS = OAUTH_PROVIDERS;
@@ -323,11 +324,15 @@ async function postToken(provider: CalendarProvider, body: URLSearchParams): Pro
   if (!config) throw new Error("not_configured");
   body.set("client_id", config.clientId);
   body.set("client_secret", config.clientSecret);
-  const response = await fetch(config.tokenUrl, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
-    body
-  });
+  const response = await fetchWithDeadline(
+    config.tokenUrl,
+    {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+      body
+    },
+    `${provider}'s calendar token endpoint`
+  );
   const json = (await response.json().catch(() => ({}))) as TokenResponse;
   if (!response.ok || json.error) throw new Error(json.error_description || json.error || `token endpoint answered ${response.status}`);
   if (!json.access_token) throw new Error("token endpoint returned no access_token");
@@ -420,7 +425,11 @@ async function fetchGoogleEvents(accessToken: string, from: Date, to: Date): Pro
   url.searchParams.set("singleEvents", "true");
   url.searchParams.set("orderBy", "startTime");
   url.searchParams.set("maxResults", String(CALENDAR_PAGE));
-  const response = await fetch(url, { headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" } });
+  const response = await fetchWithDeadline(
+    url,
+    { headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" } },
+    "Google Calendar"
+  );
   if (!response.ok) throw new Error(`google calendar answered ${response.status}`);
   return readGoogleEvents((await response.json()) as GoogleEventsAnswer);
 }
@@ -505,9 +514,11 @@ async function fetchMicrosoftEvents(accessToken: string, from: Date, to: Date): 
     "$select",
     "id,subject,isAllDay,isCancelled,isOrganizer,start,end,location,onlineMeeting,onlineMeetingProvider,attendees,organizer,bodyPreview,webLink,responseStatus"
   );
-  const response = await fetch(url, {
-    headers: { authorization: `Bearer ${accessToken}`, accept: "application/json", prefer: 'outlook.timezone="UTC"' }
-  });
+  const response = await fetchWithDeadline(
+    url,
+    { headers: { authorization: `Bearer ${accessToken}`, accept: "application/json", prefer: 'outlook.timezone="UTC"' } },
+    "Microsoft Graph"
+  );
   if (!response.ok) throw new Error(`microsoft graph answered ${response.status}`);
   return readGraphEvents((await response.json()) as GraphEventsAnswer);
 }

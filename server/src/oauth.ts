@@ -16,6 +16,7 @@
    with each provider. Unconfigured providers simply do not show a button.
    ========================================================================= */
 import crypto from "node:crypto";
+import { fetchWithDeadline } from "./outbound.js";
 
 export type OAuthProvider = "google" | "microsoft";
 export const OAUTH_PROVIDERS: OAuthProvider[] = ["google", "microsoft"];
@@ -209,11 +210,15 @@ export async function exchangeCode(
     client_secret: config.clientSecret,
     code_verifier: args.verifier
   });
-  const response = await fetch(config.tokenUrl, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
-    body
-  });
+  const response = await fetchWithDeadline(
+    config.tokenUrl,
+    {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+      body
+    },
+    `the sign-in token endpoint at ${new URL(config.tokenUrl).host}`
+  );
   if (!response.ok) throw new Error(`token endpoint answered ${response.status}`);
   const json = (await response.json()) as { id_token?: string };
   if (!json.id_token) throw new Error("token endpoint returned no id_token");
