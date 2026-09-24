@@ -68,6 +68,27 @@ Secrets are where they belong.
   Without `DATABASE_URL` (or during tests), BuildFlow remains file-only. Backups stay local
   under the configured data directory and are not copied to PostgreSQL; they are not durable
   restore points for a published app.
+- **Reserved VM, and only one of it.** Step 4 above says Reserved VM rather than Autoscale, and this
+  is why: the durable copy is owned by one process at a time. A starting process claims it by bumping
+  `epoch` in `buildflow_file_epoch`, and every save checks it still holds the current epoch. That is
+  exactly what makes a redeploy safe — the old process is fenced out, shuts itself down through the
+  handoff, and the new one takes over — and it is the same mechanism that makes a second *concurrent*
+  instance unworkable: two would fence each other in turn, each shutting down as it loses, so
+  Autoscale would leave them restarting one another instead of serving. The failure is loud, which is
+  the good news; nothing is silently written to a copy that is no longer owned.
+  Three smaller things assume one process too, and would each need solving before more than one:
+  - `BUILDFLOW_SECRET` (above). Unset, a sign-in or Connect cookie only verifies on the instance that
+    issued it, so the flow fails whenever the provider's redirect lands on another one.
+  - Monday's weekly digest skips an org whose store already records this week's send
+    (`digest:lastSentWeek`), and that record is written *after* the mail goes out. Two instances
+    ticking together could both send before either marks it — a duplicate email to a customer.
+  - Rate limits are per-process unless `REDIS_URL` is set (`server/src/rateLimit.ts` falls back to an
+    in-process limiter on purpose), so N instances allow N times the intended ceiling.
+- **The published page carries two `Strict-Transport-Security` headers** on `*.replit.app`: Replit's
+  edge sends one and BuildFlow sends its own. Browsers process only the first, so this is harmless,
+  and BuildFlow's is kept deliberately — it is the app's own guarantee, and on a custom domain or any
+  host whose proxy does not add HSTS it is the only one. Nothing to fix; it just looks odd in a
+  response-header list.
 - **Before a future Publish:** development and production are separate databases. Publish the
   two-table schema through Replit's schema promotion; never select an option that copies
   development records over production. If a previous production VM has files that are *only
