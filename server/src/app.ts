@@ -1051,7 +1051,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   });
 
   // Credential-free demo sign-in — powers "Preview the live demo".
-  app.post("/api/auth/demo", async (_req, res) => {
+  /* Generous on purpose: this is the fallback the client uses when a bootstrap comes back 401, so a
+     visitor can reach it a few times in a session legitimately. The limit is here to stop a script
+     minting sessions by the thousand, not to ration the demo. */
+  app.post("/api/auth/demo", limiter.byIp("demo", 30, QUARTER), async (_req, res) => {
     const row = mainStore.getAccountRowByEmail(DEMO_ACCOUNT_EMAIL);
     const org = row ? mainStore.getOrg(row.orgId) : undefined;
     if (!row || !org) {
@@ -3440,7 +3443,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json({ count: store.updateSubscriberCount() });
   });
 
-  app.post("/api/updates/subscribe", async (req, res) => {
+  // Same shape as the waitlist, and the same reason: it emails the address it is given.
+  app.post("/api/updates/subscribe", limiter.byIp("updates-subscribe", 10, HOUR), async (req, res) => {
     const parsed = waitlistEmailSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Please provide a valid email address." });
@@ -3459,7 +3463,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json({ count: store.waitlistCount() });
   });
 
-  app.post("/api/waitlist", async (req, res) => {
+  /* Limited because it EMAILS THE ADDRESS IN THE BODY. Unlimited, on a public address with SMTP
+     configured, that is a way to make BuildFlow send mail to anyone, as fast as a script can ask —
+     which is how a sending domain ends up on a blocklist — and a way to fill the table while doing
+     it. Ten an hour is the same allowance signing up already had; a person joins a waitlist once. */
+  app.post("/api/waitlist", limiter.byIp("waitlist", 10, HOUR), async (req, res) => {
     const parsed = waitlistEmailSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Please provide a valid email address." });
@@ -3508,7 +3516,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      sales inbox to route lead notifications there. ──────────────────────────── */
   const salesEmail = process.env.SALES_EMAIL ?? process.env.SMTP_USER ?? "sales@buildflow.com";
 
-  app.post("/api/contact-sales", async (req, res) => {
+  /* Tighter than the other two, because this one emails the sender AND the sales address: an
+     unlimited version floods an inbox somebody has to read. Five an hour still covers a person who
+     sends, corrects and re-sends. */
+  app.post("/api/contact-sales", limiter.byIp("contact-sales", 5, HOUR), async (req, res) => {
     const parsed = contactSalesSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Please include your name, a valid work email, and your company." });
