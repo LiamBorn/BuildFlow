@@ -667,10 +667,16 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      cheap, no-configuration protections are the right ones: never let a browser re-guess
      a response's type, never let the JSON be framed, and never leak a feed URL (which
      carries its key in the query string) into another site's referer log. */
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "no-referrer");
+    /* HSTS only when the connection really is secure — `req.secure` reads x-forwarded-proto through
+       `trust proxy`, which TRUST_PROXY sets and .replit passes. Sending it over plain http would pin
+       a developer's browser to https for localhost, which is a thing you then have to go and undo in
+       browser settings. No `preload`: that is a submission to a list shipped inside browsers, and it
+       is not this file's decision to make on someone's domain. */
+    if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
     next();
   });
   /* Before the body parsers on purpose: a request the parser refuses (413, 400) never

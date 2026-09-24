@@ -25,6 +25,59 @@ const isApi = (url: string) => url === "/api" || url.startsWith("/api/");
 
 const notFound = (res: express.Response) => res.status(404).type("text/plain").send("Not found");
 
+/**
+ * The Content-Security-Policy for BuildFlow's own page.
+ *
+ * Set on the HTML and nowhere else, because a policy governs a DOCUMENT: on a JSON response it is
+ * noise, and in development Vite serves the page and the API is a different origin, so a policy from
+ * here would not reach the document anyway. This function only runs when we are the one serving it.
+ *
+ * Every source below was read off the build rather than guessed:
+ *   - `script-src 'self'` is safe because the built index.html has NO inline script. Vite emits one
+ *     module tag pointing at /assets, so nothing needs 'unsafe-inline' or a nonce.
+ *   - `style-src` DOES need 'unsafe-inline': the product sets style attributes from React all over
+ *     (`style={{ height: 260 }}`), and CSP treats a style attribute under style-src-attr, which
+ *     falls back to style-src. Inline styles cannot exfiltrate anything the way inline script can,
+ *     which is why this is the usual place to draw the line.
+ *   - fonts.googleapis.com serves the stylesheet index.html links, fonts.gstatic.com the font files.
+ *   - `blob:` for images and media because attachments are previewed through
+ *     URL.createObjectURL, and `data:` for the inlined icons in the CSS.
+ *   - The three analytics hosts are listed although analytics ships off (VITE_ANALYTICS_PROVIDER
+ *     defaults to none), so that turning it on does not silently break instead of working.
+ *
+ * CONTENT_SECURITY_POLICY=off turns it off from the environment. A policy that can only be relaxed
+ * by editing source and redeploying is a policy someone disables by deleting the whole line in a
+ * hurry; this is the same reasoning as BUILDFLOW_DATA_FILE.
+ */
+const ANALYTICS = ["https://plausible.io", "https://www.googletagmanager.com", "https://us.i.posthog.com"];
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  // Two hosts the marketing pages hotlink photographs from: Unsplash on the templates, customers
+  // and help pages, and cdn.21st.dev in the nav's hover links. Found by loading the built site under
+  // this policy and reading the violations — the first draft had 'self' data: blob: and blocked every
+  // photograph on the public site, which is the kind of thing a policy written from the imports alone
+  // gets wrong.
+  "img-src 'self' data: blob: https://images.unsplash.com https://cdn.21st.dev",
+  "media-src 'self' blob:",
+  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  `script-src 'self' ${ANALYTICS.join(" ")}`,
+  `connect-src 'self' https://www.google-analytics.com ${ANALYTICS.join(" ")}`
+].join("; ");
+
+/** The headers BuildFlow's own page carries, over and above the API's. */
+export function pageHeaders(res: express.Response) {
+  if ((process.env.CONTENT_SECURITY_POLICY ?? "on").trim().toLowerCase() === "off") return;
+  res.setHeader("Content-Security-Policy", CSP);
+  /* Nothing in BuildFlow asks for a camera, a microphone or a location, so nothing embedded in it
+     should be able to either. */
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+}
+
 /** Serves the built client in `dir`. False, with nothing added, when there is no build there. */
 export function serveClient(app: express.Application, dir = DEFAULT_CLIENT_DIST): boolean {
   const page = path.join(dir, "index.html");
@@ -39,7 +92,10 @@ export function serveClient(app: express.Application, dir = DEFAULT_CLIENT_DIST)
       maxAge: "1h",
       // index.html itself, asked for by name, is the page: never cached either
       setHeaders: (res, file) => {
-        if (file.endsWith(".html")) res.setHeader("Cache-Control", "no-cache");
+        if (file.endsWith(".html")) {
+          res.setHeader("Cache-Control", "no-cache");
+          pageHeaders(res);
+        }
       }
     })
   );
@@ -48,6 +104,7 @@ export function serveClient(app: express.Application, dir = DEFAULT_CLIENT_DIST)
     // a file that is not there (/logo.png) is missing, not a page of the program
     if (path.extname(req.path) && path.extname(req.path) !== ".html") return notFound(res);
     res.setHeader("Cache-Control", "no-cache");
+    pageHeaders(res);
     res.sendFile(page, (error) => {
       if (error && !res.headersSent) res.status(500).type("text/plain").send("Something went wrong. Please try again.");
     });

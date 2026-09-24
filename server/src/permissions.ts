@@ -243,6 +243,12 @@ export const ROUTE_POLICY: Record<string, Policy> = {
      route has no session and no workspace — it is the platform operator, guarded by
      OPS_ADMIN_TOKEN in opsAuthorized() (app.ts), or by being on localhost in dev. "public"
      here means "no workspace capability applies", not "unguarded". */
+  /* "public" here means the permission LADDER does not gate these, not that anyone may call them.
+     They are gated inside their handlers by the OPS_ADMIN_TOKEN header, because an operator holding
+     a deployment secret is not a workspace role — there is no org to be an Owner of when you are
+     taking a backup of all of them. Said out loud because this table is the first place anyone looks
+     to answer "what can an anonymous caller reach?", and on that reading these four look open.
+     Unset token means closed in production, so they fail shut. See app.ts's /api/ops routes. */
   "GET /api/ops/backups": "public",
   "GET /api/ops/metrics": "public",
   "GET /api/ops/stats": "public",
