@@ -526,6 +526,52 @@ function handleBillingEvent(store: BuildFlowStore, event: Stripe.Event) {
 /** Bump when the Terms or Privacy Policy change materially; stored on each account at signup. */
 const TERMS_VERSION = "2026-09";
 
+/**
+ * The origin that goes into an emailed link — a verification link, an invite, a password reset.
+ *
+ * These carry a token, so whoever owns the origin owns the token. The origin used to be
+ * `req.headers.origin` whenever it looked like a URL, and any client can send any Origin it likes:
+ *
+ *   curl -X POST <site>/api/auth/reset/request -H 'Origin: https://evil.example' -d '{"email":"…"}'
+ *
+ * That answers 200 either way (deliberately, so nobody can enumerate accounts), and the person whose
+ * address it was then receives a genuine BuildFlow email — real sender, real wording, real token —
+ * whose link points at evil.example. The token sits in the fragment, so evil.example's SERVER never
+ * sees it, but its page reads `location.hash` in one line. One click is an account.
+ *
+ * So: once the deployment has told us its own address, that address wins and the header is only
+ * consulted through the allowlist. `safeReturnTo` does the comparing, the same way the OAuth return
+ * is already checked — and it lets a localhost origin through, which is fine here because a link to
+ * the victim's own machine is no use to anyone else.
+ *
+ * With BUILDFLOW_CLIENT_URL unset there is nothing trustworthy to prefer, so the header is still
+ * used rather than sending everyone a localhost link — that is the shape a developer runs, where the
+ * client is on another port entirely. A published deployment in that state is warned about at
+ * startup by `emailLinkWarning` below, because it is the one case where this is still open.
+ */
+export function emailLinkOrigin(args: {
+  originHeader: string | undefined;
+  configuredClientUrl: string | undefined;
+  fallback: string;
+  allowed: string[];
+}): string {
+  const header = typeof args.originHeader === "string" && /^https?:\/\//.test(args.originHeader) ? args.originHeader : undefined;
+  if (args.configuredClientUrl?.trim()) return safeReturnTo(header, args.allowed);
+  return (header ?? args.fallback).replace(/\/+$/, "");
+}
+
+/** Said at startup when a published deployment has not told us its own address. */
+export function emailLinkWarning(vars: { NODE_ENV?: string; BUILDFLOW_CLIENT_URL?: string } = process.env): string | null {
+  if (vars.NODE_ENV !== "production") return null;
+  if (vars.BUILDFLOW_CLIENT_URL?.trim()) return null;
+  return (
+    "🔗 ⚠️  BUILDFLOW_CLIENT_URL is not set. Emailed verification, invite and password-reset links are " +
+    "therefore built from the caller's own Origin header, which any client can set to any address — so a " +
+    "stranger can make BuildFlow email one of your users a real reset link pointing at their site. Set " +
+    "BUILDFLOW_CLIENT_URL to this app's address; it then wins over the header."
+  );
+}
+
 export async function createApp(options: { dataFile?: string; reset?: boolean } = {}) {
   const mainStore = await BuildFlowStore.create(options.dataFile, options.reset);
   const manager = new StoreManager(mainStore);
@@ -580,11 +626,16 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const QUARTER = 15 * 60 * 1000;
   const VERIFY_TTL_MS = 24 * HOUR;
   const RESET_TTL_MS = HOUR;
-  /** The web app's origin for emailed links: the caller's origin in dev, the configured client URL otherwise. */
-  const appOriginFor = (req: express.Request) => {
-    const origin = typeof req.headers.origin === "string" && /^https?:\/\//.test(req.headers.origin) ? req.headers.origin : clientUrl;
-    return origin.replace(/\/+$/, "");
-  };
+  /** The origins that ARE this app: the configured client URL, and the public URL when it differs. */
+  const appOrigins = () => [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
+  /** The web app's origin for emailed links. See emailLinkOrigin — the header is not trusted once configured. */
+  const appOriginFor = (req: express.Request) =>
+    emailLinkOrigin({
+      originHeader: typeof req.headers.origin === "string" ? req.headers.origin : undefined,
+      configuredClientUrl: process.env.BUILDFLOW_CLIENT_URL,
+      fallback: clientUrl,
+      allowed: appOrigins()
+    });
   const sendVerificationEmail = async (req: express.Request, account: { id: string; name: string; email: string }) => {
     const token = mainStore.createAuthToken(account.id, "verify", VERIFY_TTL_MS);
     const link = `${appOriginFor(req)}/#verify-email?token=${encodeURIComponent(token)}`;
@@ -614,6 +665,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     const providers = { ...configuredProviders(), ...calendarConfigured() };
     const warning = stateSecretWarning(Object.values(providers).some(Boolean));
     if (warning) console.warn(warning);
+    const links = emailLinkWarning();
+    if (links) console.warn(links);
   }
   /**
    * A route answers only to the case it was registered with.
@@ -1168,7 +1221,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   app.get("/api/calendar/:provider/start", limiter.byIp("calendar-start", 30, QUARTER), (req, res) => {
     const provider = String(req.params.provider);
-    const allowedReturn = [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
+    const allowedReturn = appOrigins();
     const returnTo = safeReturnTo(typeof req.query.returnTo === "string" ? req.query.returnTo : undefined, allowedReturn);
     const popup = req.query.mode === "popup";
     if (!isCalProvider(provider)) {
@@ -1290,7 +1343,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   // The button lands here; we build the provider URL and send the browser on.
   app.get("/api/auth/oauth/:provider/start", limiter.byIp("oauth-start", 30, QUARTER), (req, res) => {
     const provider = String(req.params.provider);
-    const allowedReturn = [clientUrl.replace(/\/+$/, ""), (process.env.BUILDFLOW_PUBLIC_URL ?? clientUrl).replace(/\/+$/, "")];
+    const allowedReturn = appOrigins();
     const returnTo = safeReturnTo(typeof req.query.returnTo === "string" ? req.query.returnTo : undefined, allowedReturn);
     if (!isProvider(provider)) {
       oauthFail(res, returnTo, "unknown_provider");

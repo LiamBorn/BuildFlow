@@ -43,7 +43,7 @@ on.
 
 | Secret | What it turns on |
 | --- | --- |
-| `BUILDFLOW_PUBLIC_URL`, `BUILDFLOW_CLIENT_URL` | The app's own address (for example `https://buildflow.<you>.replit.app/`), used in email links, sign-in return addresses and the weekly digest. **Set these once the address exists.** |
+| `BUILDFLOW_PUBLIC_URL`, `BUILDFLOW_CLIENT_URL` | The app's own address (for example `https://buildflow.<you>.replit.app/`), used in email links, sign-in return addresses and the weekly digest. **Set these first — it is a security setting, not a cosmetic one.** Until `BUILDFLOW_CLIENT_URL` is set, the origin in an emailed verification, invite or password-reset link is taken from the caller's own `Origin` header, which any client can set to any address; a stranger can then make BuildFlow email one of your users a genuine reset link that points at their site. Once set, the configured address wins and the header is only accepted if it matches. The server warns about this at startup. |
 | `ANTHROPIC_API_KEY` | BuildFlow AI answers for real. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `SMTP_FROM` | Emails really go out: verification, invites, resets, digests. |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` | Paid plans. |
