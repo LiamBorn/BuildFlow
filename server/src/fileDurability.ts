@@ -20,7 +20,7 @@ export class SupersededWriterError extends Error {
   }
 }
 
-type Connection = Pick<PoolClient, "query" | "release"> & Partial<Pick<PoolClient, "on">>;
+type Connection = Pick<PoolClient, "query" | "release"> & Partial<Pick<PoolClient, "on" | "off">>;
 type Connector = {
   connect(): Promise<Connection>;
   end(): Promise<void>;
@@ -59,6 +59,8 @@ export class FileDurability {
   private closing = false;
   private recovering?: Promise<void>;
   private readonly released = new WeakSet<Connection>();
+  private readonly watched = new WeakSet<Connection>();
+  private readonly broken = new WeakSet<Connection>();
   onHandoff?: () => void;
 
   get hasPending(): boolean {
@@ -75,7 +77,29 @@ export class FileDurability {
   private release(candidate: Connection, broken = false): void {
     if (this.released.has(candidate)) return;
     this.released.add(candidate);
-    candidate.release(broken);
+    candidate.release(broken || this.broken.has(candidate));
+  }
+
+  private async connect(): Promise<Connection> {
+    const candidate = await this.pool.connect();
+    this.released.delete(candidate); // a pooled client can be checked out again
+    this.broken.delete(candidate);
+    if (!this.watched.has(candidate)) {
+      this.watched.add(candidate);
+      candidate.on?.("error", (error: Error) => {
+        this.broken.add(candidate);
+        if (this.owner === candidate) this.lostOwner(candidate, error);
+        else console.error("[data] PostgreSQL connection lost:", error);
+      });
+      candidate.on?.("end", () => {
+        this.broken.add(candidate);
+        this.lostOwner(candidate);
+      });
+      candidate.on?.("notification", () => {
+        if (this.owner === candidate) this.onHandoff?.();
+      });
+    }
+    return candidate;
   }
 
   private lostOwner(candidate: Connection, error?: Error): void {
@@ -98,15 +122,6 @@ export class FileDurability {
       });
   }
 
-  private watchOwner(candidate: Connection): void {
-    candidate.on?.("error", (error: Error) => {
-      if (this.owner === candidate) this.lostOwner(candidate, error);
-      else console.error("[data] PostgreSQL connection lost:", error);
-    });
-    candidate.on?.("end", () => this.lostOwner(candidate));
-    candidate.on?.("notification", () => this.onHandoff?.());
-  }
-
   private supersede(): void {
     if (this.superseded) return;
     this.superseded = true;
@@ -120,8 +135,7 @@ export class FileDurability {
       let candidate: Connection | undefined;
       let locked = false;
       try {
-        candidate = await this.pool.connect();
-        this.watchOwner(candidate);
+        candidate = await this.connect();
         const lock = await candidate.query<{ acquired: boolean }>("SELECT pg_try_advisory_lock(702345, 1) AS acquired");
         locked = !!lock.rows[0]?.acquired;
         const epoch = await candidate.query<{ epoch: string }>("SELECT epoch FROM buildflow_file_epoch WHERE id = 1");
@@ -152,8 +166,7 @@ export class FileDurability {
     // reading its images. This avoids losing the old instance's queued saves.
     const deadline = Date.now() + 30_000;
     while (true) {
-      const candidate = await this.pool.connect();
-      this.watchOwner(candidate);
+      const candidate = await this.connect();
       try {
         const result = await candidate.query<{ acquired: boolean }>("SELECT pg_try_advisory_lock(702345, 1) AS acquired");
         if (result.rows[0]?.acquired) {
@@ -168,7 +181,7 @@ export class FileDurability {
       if (Date.now() > deadline) throw new Error("Timed out waiting for the previous BuildFlow process to flush its saved files.");
       await wait(250);
     }
-    const client = await this.pool.connect();
+    const client = await this.connect();
     try {
       await client.query("BEGIN");
       const claim = await client.query<{ epoch: string }>(
@@ -268,7 +281,7 @@ export class FileDurability {
         const file = path.join(this.dir, name);
         const effectiveAction = action === "save" && !fs.existsSync(file) ? "delete" : action;
         const bytes = effectiveAction === "save" ? fs.readFileSync(file) : undefined;
-        const client = await this.pool.connect();
+        const client = await this.connect();
         try {
           await client.query("BEGIN");
           const owner = await client.query<{ epoch: string }>("SELECT epoch FROM buildflow_file_epoch WHERE id = 1 FOR UPDATE");
@@ -354,6 +367,7 @@ export function deletedFile(file: string): void {
 export async function persistRestoredFile(file: string, connector?: Connector): Promise<void> {
   if (!connector && !fileDurabilityEnabled()) return;
   const pool = connector ?? (await newPool());
+  pool.on?.("error", (error) => console.error("[data] PostgreSQL restore pool connection lost:", error));
   let client: Connection;
   try {
     client = await pool.connect();
@@ -361,6 +375,16 @@ export async function persistRestoredFile(file: string, connector?: Connector): 
     await pool.end();
     throw error;
   }
+  let broken = false;
+  const onError = (error: Error) => {
+    broken = true;
+    console.error("[data] PostgreSQL restore connection lost:", error);
+  };
+  const onEnd = () => {
+    broken = true;
+  };
+  client.on?.("error", onError);
+  client.on?.("end", onEnd);
   try {
     await client.query("BEGIN");
     await client.query(
@@ -377,7 +401,9 @@ export async function persistRestoredFile(file: string, connector?: Connector): 
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;
   } finally {
-    client.release();
+    client.off?.("error", onError);
+    client.off?.("end", onEnd);
+    client.release(broken);
     await pool.end();
   }
 }

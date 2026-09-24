@@ -4,7 +4,7 @@
  * tabs reload and flash what changed. In memory only — a restart drops the streams
  * and the browsers reconnect on their own (EventSource retries).
  */
-import type { Response } from "express";
+import type { Express, Response } from "express";
 import type { ScheduleLiveEvent } from "@buildflow/shared";
 
 const HEARTBEAT_MS = 25_000;
@@ -60,4 +60,11 @@ export class ScheduleLiveHub {
     for (const tabs of this.streams.values()) for (const res of tabs) res.end();
     this.streams.clear();
   }
+}
+
+/** Fail before listening if the real app has not wired its live stream into shutdown. */
+export function liveHubFor(app: Express): ScheduleLiveHub {
+  const hub: unknown = app.locals.live;
+  if (!(hub instanceof ScheduleLiveHub)) throw new Error("BuildFlow live-update hub is missing from the app.");
+  return hub;
 }

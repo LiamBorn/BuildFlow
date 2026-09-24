@@ -7,6 +7,7 @@ import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
 import { LATEST_SCHEMA_VERSION } from "./database.js";
 import { startFileDurability } from "./fileDurability.js";
+import { liveHubFor } from "./schedule/live.js";
 import { createShutdown } from "./shutdown.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
 import { serveClient } from "./serveClient.js";
@@ -32,6 +33,7 @@ process.on("uncaughtException", (error) => {
 const port = Number(process.env.PORT ?? 4300);
 const fileDurability = await startFileDurability();
 const app = await createApp();
+const liveHub = liveHubFor(app);
 // Persist any migration or fresh demo file before the new process accepts requests.
 await fileDurability?.flush();
 if (fileDurability?.hasPending) throw new Error("Could not save initial SQLite files to PostgreSQL; refusing to serve requests.");
@@ -109,7 +111,7 @@ const server = app.listen(port, () => {
   }
 });
 
-const shutdown = createShutdown(server, app.locals.live, fileDurability);
+const shutdown = createShutdown(server, liveHub, fileDurability);
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.on(signal, () => shutdown(signal));
 }

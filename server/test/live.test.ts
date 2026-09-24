@@ -6,9 +6,11 @@ import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import express from "express";
 import request from "supertest";
 import { afterAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
+import { liveHubFor, ScheduleLiveHub } from "../src/schedule/live.js";
 
 const servers: http.Server[] = [];
 afterAll(() => {
@@ -62,6 +64,28 @@ async function until(check: () => boolean, ms = 4000) {
 }
 
 describe("schedule live feed", () => {
+  it("refuses to start without the live-update hub", () => {
+    expect(() => liveHubFor(express())).toThrow("live-update hub is missing");
+  });
+
+  it("exposes the real route's hub to shutdown", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-live-"));
+    const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+    const hub = liveHubFor(app);
+    expect(hub).toBeInstanceOf(ScheduleLiveHub);
+    const base = await listen(app);
+    const login = await request(app).post("/api/auth/demo").expect(200);
+    const cookie = (login.headers["set-cookie"] as unknown as string[]).map((c) => c.split(";")[0]).join("; ");
+    const stream = await openStream(base, cookie);
+    await stream.ready;
+    const hello = stream.frames().find((frame) => frame.startsWith("event: hello"))!;
+    const { orgId } = JSON.parse(hello.split("\ndata: ")[1]) as { orgId: string };
+    expect(hub.size(orgId)).toBe(1);
+    hub.closeAll();
+    expect(hub.size(orgId)).toBe(0);
+    stream.close();
+  });
+
   it("tells the org's other tabs what a drop changed, who did it and which tab it came from", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-live-"));
     const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });

@@ -14,6 +14,9 @@ class MemoryPg extends EventEmitter {
   files = new Map<string, Buffer>();
   writes = 0;
   failNext = false;
+  dropDuringSave = false;
+  dropDuringLoad = false;
+  brokenReleases = 0;
   locked = false;
   holder?: EventEmitter;
   dropOwner() {
@@ -47,8 +50,18 @@ class MemoryPg extends EventEmitter {
         } else if (sql.includes("SELECT epoch")) {
           return { rows: [{ epoch: String(this.epoch) }] };
         } else if (sql.includes("SELECT filename")) {
+          if (this.dropDuringLoad) {
+            this.dropDuringLoad = false;
+            client.emit("error", new Error("connection reset during load"));
+            throw new Error("connection reset during load");
+          }
           return { rows: [...files].map(([filename, contents]) => ({ filename, contents })) };
         } else if (sql.includes("INSERT INTO buildflow_files")) {
+          if (this.dropDuringSave) {
+            this.dropDuringSave = false;
+            client.emit("error", new Error("connection reset during save"));
+            throw new Error("connection reset during save");
+          }
           if (this.failNext) {
             this.failNext = false;
             throw new Error("network unavailable");
@@ -65,6 +78,7 @@ class MemoryPg extends EventEmitter {
         return { rows: [] };
       },
       release: (broken?: boolean) => {
+        if (broken) this.brokenReleases++;
         if (broken && this.holder === client) {
           this.locked = false;
           this.holder = undefined;
@@ -139,6 +153,68 @@ describe("PostgreSQL-backed SQLite images", () => {
     store.delete(org);
     await store.flush();
     expect(pg.files.has("org-one.sqlite")).toBe(false);
+  });
+
+  it("handles an in-use connection error during a save and succeeds on retry", async () => {
+    const dir = directory();
+    const pg = new MemoryPg();
+    const file = path.join(dir, "buildflow.sqlite");
+    fs.writeFileSync(file, "before");
+    const store = mirror(dir, pg);
+    await store.start();
+    vi.useFakeTimers();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    fs.writeFileSync(file, "after");
+    pg.dropDuringSave = true;
+    store.save(file);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("before");
+    expect(pg.brokenReleases).toBe(1);
+    expect(errors).toHaveBeenCalledWith("[data] PostgreSQL connection lost:", expect.any(Error));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(pg.files.get("buildflow.sqlite")?.toString()).toBe("after");
+    await store.close();
+  });
+
+  it("handles in-use connection errors during startup load and restore", async () => {
+    const dir = directory();
+    const file = path.join(dir, "buildflow.sqlite");
+    fs.writeFileSync(file, "before");
+    const pg = new MemoryPg();
+    const store = mirror(dir, pg);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    pg.dropDuringLoad = true;
+    await expect(store.start()).rejects.toThrow("connection reset during load");
+    expect(pg.brokenReleases).toBe(1);
+    await store.close();
+
+    pg.dropDuringSave = true;
+    await expect(persistRestoredFile(file, pg as never)).rejects.toThrow("connection reset during save");
+    expect(pg.brokenReleases).toBe(2);
+    expect(errors).toHaveBeenCalledWith("[data] PostgreSQL restore connection lost:", expect.any(Error));
+  });
+
+  it("attaches listeners once when a waiting lock client is checked out repeatedly", async () => {
+    const dir = directory();
+    fs.writeFileSync(path.join(dir, "buildflow.sqlite"), "before");
+    const pg = new MemoryPg();
+    const release = vi.fn();
+    const waiting = Object.assign(new EventEmitter(), {
+      query: async (sql: string) => (sql.includes("pg_try_advisory_lock") ? { rows: [{ acquired: false }] } : { rows: [] }),
+      release
+    });
+    let attempts = 0;
+    const connector = {
+      connect: async () => (++attempts <= 3 ? waiting : pg.connect()),
+      end: async () => undefined
+    };
+    const store = new FileDurability(dir, connector as never);
+    await store.start();
+    expect(release).toHaveBeenCalledTimes(3);
+    expect(waiting.listenerCount("error")).toBe(1);
+    expect(waiting.listenerCount("end")).toBe(1);
+    expect(waiting.listenerCount("notification")).toBe(1);
+    await store.close();
   });
 
   it("fences an older owner and never lets it overwrite the newer owner's image", async () => {
