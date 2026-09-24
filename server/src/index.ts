@@ -6,6 +6,7 @@ import { reportAiStatus } from "./ai.js";
 import { reportNotifyStatus } from "./notify.js";
 import type { StoreManager } from "./stores.js";
 import { LATEST_SCHEMA_VERSION } from "./database.js";
+import { startFileDurability } from "./fileDurability.js";
 import { startWeeklyDigestScheduler } from "./schedule/digest.js";
 import { serveClient } from "./serveClient.js";
 
@@ -28,7 +29,11 @@ process.on("uncaughtException", (error) => {
 });
 
 const port = Number(process.env.PORT ?? 4300);
+const fileDurability = await startFileDurability();
 const app = await createApp();
+// Persist any migration or fresh demo file before the new process accepts requests.
+await fileDurability?.flush();
+if (fileDurability?.hasPending) throw new Error("Could not save initial SQLite files to PostgreSQL; refusing to serve requests.");
 // One process, one address: in production the built pages are served from here too (serveClient.ts).
 const production = process.env.NODE_ENV === "production";
 const servesPages = production && serveClient(app);
@@ -40,6 +45,7 @@ const server = app.listen(port, () => {
   void reportMailStatus(); // logs LIVE (verified) vs LOG MODE + anything missing
   reportBillingStatus(); // logs Stripe billing mode (or NOT CONFIGURED)
   reportAiStatus(); // logs BuildFlow AI LIVE (Claude) vs DEMO MODE
+  console.log(`🗄️  Data storage: ${fileDurability ? "PostgreSQL-backed SQLite files" : "local SQLite files only"}.`);
   reportNotifyStatus(); // logs notification channels (email/SMS/push) + recipients
   // Says out loud whether the auth limits hold across instances or only within this one.
   console.log(
@@ -124,12 +130,23 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
     console.log(`\n[server] ${signal} — finishing in-flight requests, then closing.`);
     server.closeIdleConnections();
     server.close(() => {
-      console.log("[server] closed cleanly.");
-      process.exit(0);
+      void (async () => {
+        await fileDurability?.close();
+        console.log("[server] closed cleanly.");
+        process.exit(0);
+      })().catch((error) => {
+        console.error("[server] failed to flush saved files:", error);
+        process.exit(1);
+      });
     });
     setTimeout(() => {
-      console.warn("[server] still busy after 10s — exiting anyway.");
-      process.exit(1);
-    }, 10_000).unref();
+      if (fileDurability) {
+        console.warn("[server] still busy after 15s — waiting for requests and PostgreSQL saves.");
+      } else {
+        console.warn("[server] still busy after 15s — exiting anyway.");
+        process.exit(1);
+      }
+    }, 15_000).unref();
   });
 }
+if (fileDurability) fileDurability.onHandoff = () => process.emit("SIGTERM");

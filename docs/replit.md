@@ -55,11 +55,19 @@ Secrets are where they belong.
 
 ## Know this before real customers use it
 
-- **The data lives in files** (`server/data`: one SQLite database per workspace, plus backups).
-  - In the Replit workspace, the files stay.
-  - A published Replit app does not keep files the app writes while it runs. Publishing again
-    starts from the code, so the accounts and workspaces made on the published app would be lost.
-  - For customers, the data needs a home that outlives a publish, such as Replit's PostgreSQL. That
-    is a change to BuildFlow's data layer, not a setting.
+- **The data is still SQLite files** in `server/data`: one main file and one per workspace.
+  When `DATABASE_URL` is present, Replit PostgreSQL also stores each complete file as a `bytea`
+  image. On startup, the server loads the saved images before opening SQLite; only on the first
+  start with no saved images does it import existing local files. The development and published
+  apps use their separate Replit PostgreSQL databases, so their users and workspaces stay separate.
+  The schema is recorded in `server/sql/file-images.sql` and has been applied to the development
+  database. Publish applies that development schema to the separate production database; do not
+  choose the Publish option that overwrites production data with development data. Do not enable
+  the app before the schema is present; an unreachable database
+  stops startup rather than allowing empty data. File changes are coalesced and retried, deletes
+  remove the saved image, and shutdown flushes pending writes. A newer server fences older
+  servers from writing stale images during a publish. Backups remain local in `server/data/backups`;
+  the restore CLI updates the saved image after restoring while the API is stopped.
+  Without `DATABASE_URL` (or during tests), BuildFlow remains file-only.
 - **A visitor who opens the program without signing in lands in the shared demo workspace.** Every
   such visitor sees the same one, including whatever the others changed in it.

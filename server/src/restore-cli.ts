@@ -11,6 +11,7 @@ import "./loadEnv.js";
 import path from "node:path";
 import { apiIsRunning, backupsDir, listRestorePoints, restore, targetFor, type RestorePoint } from "./restore.js";
 import { defaultDataFile } from "./database.js";
+import { persistRestoredFile } from "./fileDurability.js";
 
 const argv = process.argv.slice(2);
 const force = argv.includes("--force");
@@ -70,12 +71,14 @@ if (args.length === 0) {
 const point = pick();
 
 if (!force) {
-  const port = Number(process.env.PORT ?? 4300);
-  if (await apiIsRunning(port)) {
-    console.error(`The API is answering on port ${port}.`);
-    console.error("It holds the database in memory and would overwrite this restore on its next save.");
-    console.error("Stop it and run this again (or pass --force if you are certain it is not this database).");
-    process.exit(1);
+  // The Replit run command sets PORT=5000 for the server, not for this CLI.
+  for (const port of process.env.PORT ? [Number(process.env.PORT)] : [4300, 5000]) {
+    if (await apiIsRunning(port)) {
+      console.error(`The API is answering on port ${port}.`);
+      console.error("It holds the database in memory and would overwrite this restore on its next save.");
+      console.error("Stop it and run this again (or pass --force if you are certain it is not this database).");
+      process.exit(1);
+    }
   }
 }
 
@@ -83,6 +86,7 @@ const onto = targetFor(point);
 console.log(`Restoring ${point.file}`);
 console.log(`        → ${onto}`);
 const outcome = await restore(point);
+await persistRestoredFile(outcome.onto);
 if (outcome.previousSnapshot) {
   console.log(`\nWhat was there is kept: ${path.basename(outcome.previousSnapshot)}`);
   console.log("If this was the wrong point in time, restore that one the same way.");

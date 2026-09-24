@@ -17,6 +17,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { BuildFlowStore, DEMO_ORG_ID } from "./database.js";
+import { deletedFile } from "./fileDurability.js";
 
 /** Whether two files hold the same bytes. Size first, because it settles most cases without
  *  reading anything. */
@@ -59,6 +60,7 @@ export class StoreManager {
     if (orgId === DEMO_ORG_ID) return;
     this.cache.delete(orgId);
     await fs.promises.rm(path.join(this.dataDir, `org-${orgId}.sqlite`), { force: true });
+    deletedFile(path.join(this.dataDir, `org-${orgId}.sqlite`));
   }
 
   /**
