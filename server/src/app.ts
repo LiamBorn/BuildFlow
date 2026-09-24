@@ -1804,6 +1804,15 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * visitor, because a signed-out page load takes a demo session and the demo is an owner: "requires a
    * session" is not a ceiling, it is one extra POST.
    *
+   * The two billing routes are here for a cost that is not money. Each call creates a session through
+   * Stripe's API, and Stripe rates-limits per ACCOUNT — so a flood does not spend anything, it spends
+   * BuildFlow's Stripe budget, which is the same budget a real customer's checkout needs a moment later.
+   * Checkout is `anonymous: "allow"` on purpose, because somebody buys from the pricing page before they
+   * sign up, so this one genuinely has no session in front of it at all.
+   *
+   * POST /api/billing/webhook is deliberately NOT capped and must stay that way: Stripe is the caller,
+   * it retries, and a 429 to Stripe is a payment that never reaches the subscriptions table.
+   *
    * Keyed per account where there is a real one, and per address otherwise. The demo account is
    * SHARED, so keying it by account would put every visitor in one bucket and let the first spend the
    * afternoon's allowance for everybody; keying a real customer by address would make one office share
@@ -3780,7 +3789,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     });
   });
 
-  app.post("/api/billing/checkout", async (req, res) => {
+  app.post("/api/billing/checkout", costLimit("billing-checkout", 20, HOUR), async (req, res) => {
     const parsed = billingCheckoutSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Choose a plan (pro or business), a billing period, and an optional seat count." });
@@ -3812,7 +3821,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   });
 
-  app.post("/api/billing/portal", async (req, res) => {
+  app.post("/api/billing/portal", costLimit("billing-portal", 20, HOUR), async (req, res) => {
     const parsed = billingPortalSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Provide the email or Stripe customer id to manage." });

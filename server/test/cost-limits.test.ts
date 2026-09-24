@@ -148,3 +148,42 @@ describe("feedback, the one a locked demo can still send", () => {
     expect(at, "ten an hour, then the refusal").toBeLessThanOrEqual(11);
   });
 });
+
+describe("the Stripe pair, whose cost is not money", () => {
+  /* Creating a checkout session charges nobody. It spends BuildFlow's Stripe API budget, which Stripe
+     meters per ACCOUNT — so a flood here is a real customer's checkout failing a moment later. Checkout
+     is anonymous: "allow" on purpose, because people buy from the pricing page before they sign up, so
+     this is one of the few routes with genuinely no session in front of it. */
+  const checkout = (app: Awaited<ReturnType<typeof createApp>>) =>
+    request(app).post("/api/billing/checkout").send({ plan: "pro", period: "monthly" });
+
+  it("lets a buyer through, and they may change their mind a few times", async () => {
+    const app = await freshApp();
+    for (let i = 0; i < 3; i += 1) expect((await checkout(app)).status, `attempt ${i + 1}`).toBeLessThan(400);
+  });
+
+  it("stops a flood of session creations", async () => {
+    const app = await freshApp();
+    let at = -1;
+    for (let i = 0; i < 40 && at < 0; i += 1) if ((await checkout(app)).status === 429) at = i + 1;
+    expect(at, "an unlimited route never refuses").toBeGreaterThan(0);
+    expect(at).toBeLessThanOrEqual(21);
+  });
+
+  it("NEVER limits the webhook, because a 429 to Stripe is a payment that never arrives", async () => {
+    /* The case that protects a decision rather than a behaviour. Stripe is the caller and it retries;
+       capping it would drop events on the floor, and entitlement comes from nowhere else. A later sweep
+       that rate-limits every POST would break paying customers silently, and this is what would object.
+       Without a signature these answer 400 — the point is that none of them answers 429. */
+    const app = await freshApp();
+    const statuses: number[] = [];
+    for (let i = 0; i < 40; i += 1) {
+      const res = await request(app).post("/api/billing/webhook").set("Content-Type", "application/json").send("{}");
+      statuses.push(res.status);
+    }
+    expect(
+      statuses.filter((s) => s === 429),
+      "Stripe must never be told to come back later"
+    ).toHaveLength(0);
+  });
+});
