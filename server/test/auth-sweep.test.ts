@@ -67,7 +67,7 @@ describe("sweeping expired auth rows", () => {
 
     const manager = app.locals.storeManager as {
       main: BuildFlowStore;
-      pruneExpiredAuthAll(): { sessions: number; tokens: number };
+      pruneExpiredAuthAll(): Promise<{ sessions: number; tokens: number }>;
     };
 
     /* Give the sweep something to actually delete. Without this the row counts are zero,
@@ -75,7 +75,7 @@ describe("sweeping expired auth rows", () => {
        sweep that deletes every session, which is the failure that logs everyone out. */
     const account = manager.main.getAccountRowByEmail("demo@buildflow.com")!;
     manager.main.createAuthToken(account.id, "reset", -1000);
-    const pruned = manager.pruneExpiredAuthAll();
+    const pruned = await manager.pruneExpiredAuthAll();
     expect(pruned.tokens, "the sweep must have taken the delete path, not the early return").toBeGreaterThan(0);
 
     // The cookie issued a moment ago has ~30 days left on it, so the sweep must not reach it.

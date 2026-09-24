@@ -97,16 +97,19 @@ const server = app.listen(port, () => {
      because save() rewrites the whole database file, rows nobody can use any more are paid
      for by every later write rather than merely taking up space. Once at boot, then daily;
      unref'd so it never holds the process open, and silent when it finds nothing. */
-  const sweep = (label: string) => {
+  const sweep = async (label: string) => {
     try {
-      const { sessions, tokens } = manager.pruneExpiredAuthAll();
+      const { sessions, tokens } = await manager.pruneExpiredAuthAll();
       if (sessions || tokens) console.log(`🧹 Auth ${label}: removed ${sessions} expired session(s), ${tokens} token(s).`);
     } catch (error) {
       console.error(`🧹 Auth ${label} failed:`, error instanceof Error ? error.message : error);
     }
   };
-  sweep("sweep");
-  setInterval(() => sweep("sweep"), 24 * 60 * 60_000).unref();
+  /* Awaited nowhere on purpose: it now opens every workspace on disk that is not already in memory,
+     which on a big installation is a long walk, and nothing is waiting on the answer. It runs after
+     the server is already listening, and one workspace at a time, so it yields between each. */
+  void sweep("sweep");
+  setInterval(() => void sweep("sweep"), 24 * 60 * 60_000).unref();
 
   // Monday's "what changed this week" email, once per org (WEEKLY_DIGEST=off, DIGEST_WEEKDAY, DIGEST_HOUR).
   if ((process.env.WEEKLY_DIGEST ?? "on").toLowerCase() !== "off") {

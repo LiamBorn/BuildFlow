@@ -261,13 +261,56 @@ export class StoreManager {
    * load a whole database into memory and write it back out, which is the opposite of what
    * this is for.
    */
-  pruneExpiredAuthAll(): { sessions: number; tokens: number } {
+  async pruneExpiredAuthAll(): Promise<{ sessions: number; tokens: number }> {
     const total = { sessions: 0, tokens: 0 };
-    for (const store of new Set(this.cache.values())) {
-      const pruned = store.pruneExpiredAuth();
+    const add = (pruned: { sessions: number; tokens: number }) => {
       total.sessions += pruned.sessions;
       total.tokens += pruned.tokens;
+    };
+
+    for (const store of new Set(this.cache.values())) add(store.pruneExpiredAuth());
+
+    /**
+     * Then every workspace on disk that nobody has opened.
+     *
+     * This walked the cache alone, and at boot the cache holds only the main store — so a workspace's
+     * expired sessions and used-up tokens were swept only if somebody happened to sign into it during
+     * that process's life AND the daily tick came round afterwards. A workspace nobody visited was
+     * never swept at all, which is precisely the set of rows this exists to remove. backupAll had the
+     * same bug and was fixed; this is its neighbour, twenty lines down, which was not.
+     *
+     * It matters more than tidiness: save() rewrites the WHOLE file, so rows nobody can use any more
+     * are paid for again by every later write in that workspace, forever.
+     *
+     * Reached THROUGH getOrgStore rather than by opening the file directly. Opening it behind the
+     * cache's back means a request can open the same org through the cache a moment later, and two
+     * live stores writing whole-file images of one file is last-save-wins: one of them loses its rows
+     * with nothing logged. Going through the cache keeps exactly one store per file, and the cache's
+     * own cap bounds how many stay resident while this walks a thousand workspaces.
+     *
+     * Each store is opened, counted and left to the cache. An open costs no write now (create() only
+     * saves when something changed), and pruneExpiredAuth returns without writing when there is
+     * nothing expired — so sweeping a quiet workspace reads it and writes nothing.
+     */
+    for (const orgId of this.tenantIdsOnDisk()) {
+      if (this.cache.has(orgId)) continue; // already swept above
+      try {
+        add((await this.getOrgStore(orgId)).pruneExpiredAuth());
+      } catch (error) {
+        // One unreadable workspace must not stop the sweep reaching the rest.
+        console.error(`🧹 Auth sweep skipped ${orgId}:`, error instanceof Error ? error.message : error);
+      }
     }
     return total;
+  }
+
+  /** The org ids behind `org-<id>.sqlite`, which is the name getOrgStore writes. */
+  private tenantIdsOnDisk(): string[] {
+    return this.tenantFilesOnDisk().map((file) =>
+      path
+        .basename(file)
+        .replace(/^org-/, "")
+        .replace(/\.sqlite$/, "")
+    );
   }
 }
