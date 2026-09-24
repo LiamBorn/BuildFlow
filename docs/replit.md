@@ -84,6 +84,24 @@ Secrets are where they belong.
     ticking together could both send before either marks it — a duplicate email to a customer.
   - Rate limits are per-process unless `REDIS_URL` is set (`server/src/rateLimit.ts` falls back to an
     in-process limiter on purpose), so N instances allow N times the intended ceiling.
+- **What the `[data]` lines in the deployment log mean.** The durable copy is guarded by a
+  PostgreSQL advisory lock as well as the epoch, and the lock's connection is the part most likely to
+  be dropped by a managed database that suspends idle sessions — so these appear in normal operation:
+  - `PostgreSQL lock connection lost; reconnecting` — the lock's connection dropped. Expected.
+  - `PostgreSQL lock reconnect failed; retrying` — printed **once a second, indefinitely**, while the
+    database is unreachable. There is no backoff and no cap, so an outage of any length fills the log
+    at that rate. Loud on purpose; just know that the volume is not itself a second problem.
+  - `PostgreSQL lock reacquired` — back to normal.
+  - `old process fenced out: a newer BuildFlow process owns the saved files` — a newer process took
+    over and this one is shutting itself down. Normal on a republish.
+  **Losing the lock does not stop saves, and does not risk a mixed image.** Every save opens a
+  transaction and re-reads the epoch `FOR UPDATE`, refusing if it is no longer the owner, so a process
+  that has lost the *lock* still saves correctly while its *epoch* is current. What the lock buys is
+  the courtesy of a clean handoff: a starting process waits on it and signals `buildflow_handoff` so
+  the outgoing one can flush first. If the outgoing process never gets the lock back, a republish
+  takes it anyway, bumps the epoch, and fences it — dropping at most the queued writes inside the
+  400ms save debounce. The worst case is losing the last instant before a republish, never a
+  half-written image.
 - **The published page carries two `Strict-Transport-Security` headers** on `*.replit.app`: Replit's
   edge sends one and BuildFlow sends its own. Browsers process only the first, so this is harmless,
   and BuildFlow's is kept deliberately — it is the app's own guarantee, and on a custom domain or any
