@@ -9,6 +9,21 @@ import type { ScheduleLiveEvent } from "@buildflow/shared";
 
 const HEARTBEAT_MS = 25_000;
 
+/**
+ * How much unsent data a stream may have queued before it is dropped.
+ *
+ * `res.write()` on a socket that is not being drained does not fail; Node buffers it in memory and
+ * says so by returning false, which this used to ignore. A tab that stops reading — asleep, a
+ * suspended phone, or a client opened deliberately and never read from — therefore had every publish
+ * frame kept for it, and a busy schedule publishes on every write. Nothing ever freed that.
+ *
+ * A frame here is a few hundred bytes, so a megabyte is thousands of missed events: not a slow
+ * reader, a reader that is gone. Dropping it is safe and self-healing — the stream sets
+ * `retry: 3000`, so a browser that is actually still there reconnects in three seconds and gets a
+ * fresh `hello`.
+ */
+const MAX_BUFFERED_BYTES = 1_048_576;
+
 export class ScheduleLiveHub {
   private streams = new Map<string, Set<Response>>();
   private closing = false;
@@ -30,23 +45,56 @@ export class ScheduleLiveHub {
     const tabs = this.streams.get(orgId) ?? new Set<Response>();
     tabs.add(res);
     this.streams.set(orgId, tabs);
-    // a comment frame keeps proxies and browsers from closing a quiet stream
-    const heartbeat = setInterval(() => res.write(": ping\n\n"), HEARTBEAT_MS);
+    // a comment frame keeps proxies and browsers from closing a quiet stream — and goes through the
+    // same guard as a real frame, because a heartbeat to a dead socket is the same mistake
+    const heartbeat = setInterval(() => this.send(tabs, res, ": ping\n\n"), HEARTBEAT_MS);
     heartbeat.unref?.();
-    res.on("close", () => {
+    const forget = () => {
       clearInterval(heartbeat);
       tabs.delete(res);
       if (tabs.size === 0) this.streams.delete(orgId);
-    });
+    };
+    res.on("close", forget);
+    /* A socket that fails mid-write emits 'error' on the response, and an 'error' with no listener is
+       how a Node process dies. This is the listener, and it does the same thing as a close. */
+    res.on("error", forget);
   }
 
-  /** Tells every open tab of the org what changed; returns how many heard it. */
+  /**
+   * Tells every open tab of the org what changed; returns how many actually heard it.
+   *
+   * The count is of tabs written to, not tabs on the list: a stream that has died or stopped reading
+   * is dropped here rather than counted, so `publish` returning 2 means two tabs were sent the frame.
+   */
   publish(orgId: string, event: ScheduleLiveEvent) {
     const tabs = this.streams.get(orgId);
     if (!tabs) return 0;
     const frame = `event: schedule\ndata: ${JSON.stringify(event)}\n\n`;
-    for (const res of tabs) res.write(frame);
-    return tabs.size;
+    let heard = 0;
+    for (const res of [...tabs]) if (this.send(tabs, res, frame)) heard += 1;
+    if (tabs.size === 0) this.streams.delete(orgId);
+    return heard;
+  }
+
+  /**
+   * One frame to one stream, or the stream goes.
+   *
+   * Three states a Response can be in that a bare `res.write()` does not distinguish. Already
+   * finished or destroyed: writing to it is at best pointless and at worst an unhandled 'error' on a
+   * stream nobody is listening to. Not draining: see MAX_BUFFERED_BYTES. Otherwise, write it.
+   */
+  private send(tabs: Set<Response>, res: Response, frame: string): boolean {
+    if (res.writableEnded || res.destroyed) {
+      tabs.delete(res);
+      return false;
+    }
+    if (res.writableLength > MAX_BUFFERED_BYTES) {
+      tabs.delete(res);
+      res.end();
+      return false;
+    }
+    res.write(frame);
+    return true;
   }
 
   /** How many tabs of the org are listening. */
