@@ -388,6 +388,59 @@ export function decide(policy: Policy | undefined, level: PermissionLevel | null
 }
 
 /**
+ * Requests a shared read-only session may make even though they are not reads.
+ *
+ * Feedback is about BuildFlow, not about the workspace, so a visitor telling us something is not a
+ * visitor changing what the next one sees. Signing in and out are `"public"` and never reach this.
+ */
+const READ_ONLY_EXCEPTIONS = new Set(["POST /api/feedback"]);
+
+/**
+ * Whether the shared demo is locked, from the environment.
+ *
+ * On by default only where the address is public. On a developer's machine, and in the test suite,
+ * the demo is the sandbox nearly everything signs in as — locking it there would lock the workbench
+ * rather than the shop window. `DEMO_READ_ONLY` forces it either way, which is also how the cases
+ * covering the lock get one without pretending to be deployed.
+ */
+export function demoLockOn(env: { DEMO_READ_ONLY?: string; NODE_ENV?: string } = process.env): boolean {
+  const configured = env.DEMO_READ_ONLY?.trim().toLowerCase();
+  if (configured) return configured !== "off";
+  return env.NODE_ENV === "production";
+}
+
+/**
+ * The refusal a shared read-only session gets, or null.
+ *
+ * The demo workspace is ONE workspace and ONE account — `stores.ts` maps the demo org to the main
+ * store — and every signed-out visitor is issued a session for it as an owner. On a developer's
+ * laptop that is one person. On a public address it is every visitor at once, each able to edit or
+ * delete what the others are looking at, which is what this stops.
+ *
+ * Decided by METHOD rather than by capability, because capability would leak: `field.report`,
+ * `variance.resolve` and `delayiq.log` all change data without a name that says so, and a rule
+ * matching `.write` would wave them through. A method rule refuses everything unsafe by default, so
+ * a capability or route added later is refused until someone decides otherwise.
+ *
+ * A `"public"` route is never refused on these grounds. Those are open to a caller with no session
+ * at all, so a demo session using one — joining the waitlist, asking for a reset link — is no
+ * different from a stranger doing it, and blocking them would make the demo worse without making
+ * anything safer.
+ */
+export function readOnlyRefusal(policy: Policy | undefined, method: string, key: string): PermissionDenial | null {
+  if (policy === "public") return null;
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return null;
+  if (READ_ONLY_EXCEPTIONS.has(key)) return null;
+  return {
+    status: 403,
+    body: {
+      error: "The demo workspace is shared and read-only. Create a free workspace to make changes of your own.",
+      code: "demo-read-only"
+    }
+  };
+}
+
+/**
  * The keys `installRoutePolicy` attached a guard to, kept on the app rather than in a
  * module-level Set: createApp runs once per test file, and a shared Set would let one
  * app's install wipe another's record of what it had covered.
@@ -462,7 +515,12 @@ export function installRoutePolicy(app: express.Application): void {
 function guard(app: express.Application, key: string): express.RequestHandler {
   guardedKeysFor(app).add(key);
   return (req, res, next) => {
-    const denial = decide(ROUTE_POLICY[key], req.account?.role ?? null);
+    const policy = ROUTE_POLICY[key];
+    const denial =
+      decide(policy, req.account?.role ?? null) ??
+      // after the ladder, not instead of it: a demo session is an owner, so the ladder lets it
+      // through everything and this is the only thing standing between it and the next visitor's work
+      (req.readOnlyDemo ? readOnlyRefusal(policy, req.method, key) : null);
     if (!denial) return next();
     res.status(denial.status).json(denial.body);
   };
