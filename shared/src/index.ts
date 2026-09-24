@@ -736,6 +736,15 @@ export type BootstrapPayload = {
   phases: Phase[];
   inspections: Inspection[];
   weatherAlerts: WeatherAlert[];
+  /**
+   * This session may read the workspace and change nothing — the shared demo on a public address.
+   *
+   * A property of the SESSION rather than of the workspace, carried here because the shell already
+   * holds this payload and would otherwise need a second fetch to find out. The server decides
+   * (server/src/permissions.ts): whether the demo is locked depends on where the server runs, so the
+   * client cannot work it out and must not keep its own copy of the rule.
+   */
+  readOnly?: boolean;
   /** WeatherIQ's job days at risk, from today on (cleared ones left out). Optional: a workspace that never read a forecast has none. */
   weatherConflicts?: WeatherConflict[];
   /**
