@@ -74,7 +74,6 @@ import {
   fetchCalendarEvents,
   refreshCalendarTokens,
   sortEvents,
-  type CalendarEvent,
   type CalendarProvider
 } from "./calendar.js";
 import { NOTIFICATION_STATE_SETTING, buildNotificationItems, mergeNotificationStateValues } from "@buildflow/shared";
@@ -463,6 +462,24 @@ const billingPortalSchema = z.object({
   origin: z.string().url().optional(),
   returnTo: z.enum(["plans", "settings"]).optional()
 });
+
+/** The promise's answer, or a rejection once `ms` have passed; the work itself carries on either way. */
+function within<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`gave up after ${ms} ms`)), ms);
+    timer.unref?.();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
 
 /* Map a verified Stripe webhook event onto our subscriptions table. Only the
    events we care about are handled; anything else is acknowledged and ignored.
@@ -1329,6 +1346,42 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   };
 
+  /**
+   * A person's meetings between two instants, from every calendar they connected, through the
+   * five-minute cache (calendar.ts). One provider being unreachable must not blank the other's
+   * meetings, so a provider that fails is named in `failed` and the rest are answered.
+   *
+   * `waitMs` bounds how long a provider may take, for a caller that cannot wait on it: the Mac's voice
+   * answers without meetings rather than keep the person listening to silence. A provider past it is
+   * reported failed, and its read carries on into the cache for the next question.
+   */
+  const meetingsFor = async (accountId: string, from: Date, to: Date, options: { fresh?: boolean; waitMs?: number } = {}) => {
+    const reads = await Promise.all(
+      CALENDAR_PROVIDERS.map(async (provider) => {
+        if (!mainStore.calendarConnection(accountId, provider)) return { provider, state: "none" as const };
+        const read = (async () => {
+          const token = await calendarAccessToken(accountId, provider);
+          if (!token) return null; // the provider refused the refresh, and the connection is gone
+          return calendarEventCache.read(accountId, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
+            fresh: options.fresh
+          });
+        })();
+        read.catch(() => undefined); // a read that loses the race below still settles somewhere
+        try {
+          const events = await (options.waitMs ? within(read, options.waitMs) : read);
+          return events ? { provider, state: "read" as const, events } : { provider, state: "none" as const };
+        } catch {
+          return { provider, state: "failed" as const };
+        }
+      })
+    );
+    return {
+      events: sortEvents(reads.flatMap((one) => (one.state === "read" ? one.events : []))),
+      connected: reads.filter((one) => one.state !== "none").map((one) => one.provider),
+      failed: reads.filter((one) => one.state === "failed").map((one) => one.provider)
+    };
+  };
+
   app.get("/api/calendar/status", (req, res) => {
     const configured = calendarConfigured();
     const rows = mainStore.calendarConnectionsForAccount(req.account!.id);
@@ -1440,25 +1493,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       from = start;
       to = end;
     }
-    const events: CalendarEvent[] = [];
-    const failed: CalendarProvider[] = [];
-    const fresh = req.query.fresh === "1"; // the panel's Sync: ask the provider now, not the cache
-    for (const provider of CALENDAR_PROVIDERS) {
-      const token = await calendarAccessToken(req.account!.id, provider);
-      if (!token) continue;
-      try {
-        // five minutes per account and range (calendar.ts): the panel re-reads, the provider is not asked again
-        events.push(
-          ...(await calendarEventCache.read(req.account!.id, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
-            fresh
-          }))
-        );
-      } catch {
-        // one provider being unreachable must not blank the other's meetings
-        failed.push(provider);
-      }
-    }
-    res.json({ events: sortEvents(events), failed, fetchedAt: new Date().toISOString(), from: from.toISOString(), to: to.toISOString() });
+    // the panel's Sync asks the provider now; otherwise five minutes per account and range, so a re-read asks nobody
+    const { events, failed } = await meetingsFor(req.account!.id, from, to, { fresh: req.query.fresh === "1" });
+    res.json({ events, failed, fetchedAt: new Date().toISOString(), from: from.toISOString(), to: to.toISOString() });
   });
 
   app.delete("/api/calendar/:provider", (req, res) => {
