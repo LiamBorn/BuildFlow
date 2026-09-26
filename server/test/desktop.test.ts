@@ -247,13 +247,14 @@ describe("the Connect page", () => {
     const app = await freshApp();
     const { owner } = await workspace(app);
     const p = pkce();
-    for (const bad of [
+    const refused: Array<Record<string, string>> = [
       { redirect_uri: "https://evil.example/steal" },
       { redirect_uri: "buildflow://connect/elsewhere" },
       { code_challenge_method: "plain" },
       { code_challenge: "too-short" },
       { state: "" }
-    ]) {
+    ];
+    for (const bad of refused) {
       const page = await owner.get(connectUrl(p, bad)).expect(400);
       expect(page.text).toContain("This link can&#39;t connect a Mac");
       expect(approvalIn(page.text)).toBeUndefined();

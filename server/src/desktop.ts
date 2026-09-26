@@ -85,27 +85,22 @@ const VERIFIER_SHAPE = /^[A-Za-z0-9._~-]{43,128}$/;
 /** The Mac's CSRF nonce, echoed back untouched. Unreserved characters only, so it needs no escaping anywhere. */
 const STATE_SHAPE = /^[A-Za-z0-9._~-]{8,256}$/;
 
+/* A device name and a version string are shown on a page and in a list, so a newline or an escape in
+   one is stripped; matching the control range IS the point. */
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/g;
+
 /** Something a person can read in a list: control characters out, whitespace folded, 80 characters. */
 export function cleanDeviceName(raw: unknown, fallback = "Mac"): string {
   if (typeof raw !== "string") return fallback;
-  // eslint-disable-next-line no-control-regex
-  const cleaned = raw
-    .replace(/[\u0000-\u001f\u007f]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 80)
-    .trim();
+  const cleaned = raw.replace(CONTROL_CHARACTERS, " ").replace(/\s+/g, " ").trim().slice(0, 80).trim();
   return cleaned || fallback;
 }
 
 /** A version or OS string the app reports. Short, printable, or nothing. */
 function cleanLabel(raw: unknown, max: number): string | null {
   if (typeof raw !== "string") return null;
-  // eslint-disable-next-line no-control-regex
-  const cleaned = raw
-    .replace(/[\u0000-\u001f\u007f]/g, "")
-    .trim()
-    .slice(0, max);
+  const cleaned = raw.replace(CONTROL_CHARACTERS, "").trim().slice(0, max);
   return cleaned || null;
 }
 
