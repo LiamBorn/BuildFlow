@@ -35,8 +35,6 @@ import {
 import {
   BuildFlowStore,
   DependencyError,
-  RebookConflictError,
-  StaleWriteError,
   clashMessage,
   toAccount,
   DEMO_ACCOUNT_EMAIL,
@@ -47,6 +45,7 @@ import {
 } from "./database.js";
 import type { ScheduleAssignment, ScheduleLiveEvent, WeatherWindow } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
+import { editJob, rebookJobs, SPAN_MESSAGE, spanIsForwards } from "./jobWrites.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
 import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds, clientIp } from "./rateLimit.js";
@@ -153,10 +152,6 @@ const scheduleHealthValues = ["On Track", "Monitor", "At Risk", "Complete"] as c
 
 /** Every date a schedule route takes is a plain day. "banana", a timestamp or a half-typed date is a 400, not a row. */
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date as YYYY-MM-DD");
-/** A job's span cannot run backwards; the message says which way round it should be. */
-const spanIsForwards = <T extends { startDate?: string; endDate?: string }>(value: T) =>
-  !value.startDate || !value.endDate || value.endDate >= value.startDate;
-const SPAN_MESSAGE = { message: "The finish cannot be before the start", path: ["endDate"] };
 
 /* A booking has no status of its own — it wears its job's — so none of these accept one. */
 const assignSchema = z.object({
@@ -2736,41 +2731,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     announce(req, { kind: "jobs", op: "job", ids: [job.id] });
   });
 
+  /* The span rule, the version check and the write are jobWrites.ts's, shared with the Mac's Accept. */
   app.patch("/api/jobs/:id", (req, res) => {
     const parsed = jobPatchSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const current = store.job(String(req.params.id));
-    if (!current) {
-      res.status(404).json({ error: "Job not found" });
+    const saved = editJob(store, String(req.params.id), parsed.data);
+    if (!saved.ok) {
+      res.status(saved.status).json(saved.body);
       return;
     }
-    // one date may move on its own; what counts is the span the job ends up with
-    const span = { startDate: parsed.data.startDate ?? current.startDate, endDate: parsed.data.endDate ?? current.endDate };
-    if (!spanIsForwards(span)) {
-      res.status(400).json({ error: "The finish cannot be before the start", field: "endDate" });
-      return;
-    }
-    const { version, ...edits } = parsed.data;
-    let job;
-    try {
-      job = store.updateJob(String(req.params.id), edits, version);
-    } catch (error) {
-      // Somebody else replaced the row between the read and this write: say so and change nothing.
-      if (error instanceof StaleWriteError) {
-        res.status(409).json({ error: error.message, code: error.code, current: error.current });
-        return;
-      }
-      throw error;
-    }
-    if (!job) {
-      res.status(404).json({ error: "Job not found" });
-      return;
-    }
-    res.json(job);
-    announce(req, { kind: "jobs", op: "job", ids: [job.id] });
+    res.json(saved.value);
+    announce(req, { kind: "jobs", op: "job", ids: [saved.value.id] });
   });
 
   app.get("/api/schedule", (_req, res) => {
@@ -2992,36 +2966,29 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     announce(req, { kind: "assignments", op: "unbook", ids: [id] });
   });
 
-  /* Everything one drop touches, in one transaction: a failed re-book changes nothing. */
+  /* Everything one drop touches, in one transaction: a failed re-book changes nothing. The write and
+     its refusals are jobWrites.ts's, shared with the Mac's Accept. */
   app.post("/api/schedule/rebook", (req, res) => {
     const parsed = rebookSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    try {
-      const result = store.rebook(parsed.data.moves, { force: parsed.data.force });
-      res.json(result);
-      const booksSomething = parsed.data.moves.some((move) => move.op === "book");
-      announce(req, {
-        kind: "assignments",
-        op: booksSomething ? "book" : "move",
-        ids: [...result.assignments.flatMap((a) => [a.id, a.jobId]), ...result.removed, ...result.jobs.map((job) => job.id)]
-      });
-      for (const assignment of result.assignments) {
-        if (assignment.conflicts.length > 0 || booksSomething) notifyAssignment(req, assignment);
-      }
-    } catch (error) {
-      if (error instanceof RebookConflictError) {
-        answerClash(res, error.clashes);
-        return;
-      }
-      // A step written against a row somebody else has replaced: the whole batch is refused.
-      if (error instanceof StaleWriteError) {
-        res.status(409).json({ error: error.message, code: error.code, current: error.current });
-        return;
-      }
-      res.status(404).json({ error: error instanceof Error ? error.message : "Re-book failed" });
+    const saved = rebookJobs(store, parsed.data.moves, { force: parsed.data.force });
+    if (!saved.ok) {
+      res.status(saved.status).json(saved.body);
+      return;
+    }
+    const result = saved.value;
+    res.json(result);
+    const booksSomething = parsed.data.moves.some((move) => move.op === "book");
+    announce(req, {
+      kind: "assignments",
+      op: booksSomething ? "book" : "move",
+      ids: [...result.assignments.flatMap((a) => [a.id, a.jobId]), ...result.removed, ...result.jobs.map((job) => job.id)]
+    });
+    for (const assignment of result.assignments) {
+      if (assignment.conflicts.length > 0 || booksSomething) notifyAssignment(req, assignment);
     }
   });
 
