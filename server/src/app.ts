@@ -74,6 +74,7 @@ import {
   type CalendarEvent,
   type CalendarProvider
 } from "./calendar.js";
+import { NOTIFICATION_STATE_SETTING, buildNotificationItems, mergeNotificationStateValues } from "@buildflow/shared";
 import { assertRoutePolicyCovers, can, demoLockOn, installRoutePolicy, outranks } from "./permissions.js";
 import crypto from "node:crypto";
 import {
@@ -2297,13 +2298,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     // The person behind the request: their linked workspace user, or the demo's
     // active user when signed in to the shared demo store.
-    const me = store.bootstrap(req.account?.id).activeUser;
+    const data = store.bootstrap(req.account?.id);
+    const me = data.activeUser;
     if (!me) {
       res.status(404).json({ error: "No workspace user for this login yet." });
       return;
     }
-    store.setUserSetting(me.id, key, parsed.data.value);
-    res.json({ ok: true, key, value: parsed.data.value });
+    /* Seen and read notifications MERGE with what is kept, against the server's own list, so the
+       bell and the Mac can each mark things without undoing the other (shared notificationState). */
+    const value =
+      key === NOTIFICATION_STATE_SETTING
+        ? mergeNotificationStateValues(store.userSettings(me.id)[key], parsed.data.value, buildNotificationItems(data))
+        : parsed.data.value;
+    store.setUserSetting(me.id, key, value);
+    res.json({ ok: true, key, value });
   });
 
   /* ── Workspaces: one login, several BuildFlow programs (2026-09-15) ──────────

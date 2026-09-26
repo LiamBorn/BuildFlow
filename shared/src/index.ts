@@ -1028,3 +1028,21 @@ export {
   type NeedsYouTask,
   type PendingTimeEntry
 } from "./needsYou";
+
+/* Seen and read notifications, kept on the server per person so the bell and the Mac agree. */
+export {
+  NOTIFICATION_STATE_BUDGET,
+  NOTIFICATION_STATE_SETTING,
+  decodeNotificationState,
+  emptyNotificationState,
+  encodeNotificationState,
+  isNotificationRead,
+  isNotificationSeen,
+  markNotifications,
+  mergeNotificationStateValues,
+  mergeNotificationStates,
+  notificationKey,
+  unseenNotificationCount,
+  type NotificationReadState,
+  type NotificationStamp
+} from "./notificationState";

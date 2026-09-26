@@ -162,7 +162,7 @@ import {
   plannedPercentAt,
   scheduleCalendar
 } from "@buildflow/shared";
-import { greetingFor } from "@buildflow/shared";
+import { NOTIFICATION_STATE_SETTING, greetingFor } from "@buildflow/shared";
 import {
   applyBusinessProfile,
   startCheckout as apiStartCheckout,
@@ -19312,7 +19312,7 @@ function TopBar({
   const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
   const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
   const notificationItems = useMemo(() => bellNotificationItems(data), [data]);
-  const readNotifications = useReadNotifications(data.activeUser.id);
+  const readNotifications = useReadNotifications(data.activeUser.id, notificationItems, data.userSettings?.[NOTIFICATION_STATE_SETTING]);
   /* The badge counts what this person has NOT BEEN SHOWN yet — not the total, which never goes
      down, and not the unread rows, which stay unread until each is clicked and would leave the
      badge saying "15" after the drawer had been opened and read top to bottom. Opening the

@@ -11,9 +11,10 @@
  * It shows ALL of them. `buildNotificationItems` used to end `.slice(0, 7)`, so the bell had
  * been quietly dropping everything past the seventh newest. The cap is gone and this scrolls.
  *
- * Read state is real. monday's unread toggle needs something behind it, so read ids are kept
- * per user in localStorage — clicking a row marks it read, and the "more" menu marks the lot.
- * The bell's badge counts UNREAD, which is what a badge is for.
+ * Read state is real. monday's unread toggle needs something behind it, so read and seen state
+ * is kept per person — on the server since 2026-09-26, so the bell and the Mac's notch agree
+ * (notifications/readState.ts). Clicking a row marks it read, and the "more" menu marks the lot.
+ * The bell's badge counts what has not been SEEN (see useReadNotifications).
  *
  * The third tab means something. monday's is "Assigned to me"; BuildFlow has no per-person
  * assignment on a notification, so inventing that tab would leave it permanently empty.
@@ -29,6 +30,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Check, ChevronRight, MoreHorizontal, Search, Settings, X } from "lucide-react";
 import { notificationNeedsAttention, projectsManagedBy, type BootstrapPayload } from "@buildflow/shared";
 import type { NotificationItem, NotificationTarget } from "./notifications/bellItems";
+import type { useReadNotifications } from "./notifications/readState";
+
+/* The read and seen state moved beside the list it describes (2026-09-26); re-exported here, where
+   App.tsx has always imported it from. */
+export { useReadNotifications } from "./notifications/readState";
 
 export type NotificationTab = "all" | "attention" | "mine";
 
@@ -40,68 +46,6 @@ const TABS: Array<{ id: NotificationTab; label: string }> = [
 
 /** Red and amber are the two tones that mean someone has to do something. */
 const needsAttention = notificationNeedsAttention;
-
-const readKey = (userId: string) => `bf:notifications:read:${userId}`;
-const seenKey = (userId: string) => `bf:notifications:seen:${userId}`;
-
-function storedIds(key: string): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(key);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : null;
-    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
-  } catch {
-    // private mode, or a corrupt value: everything simply reads as new
-    return new Set();
-  }
-}
-
-/**
- * Two things a notification can be, kept apart because they answer different questions.
- *
- * SEEN is what the bell's badge counts: has this person been shown it yet? Opening the drawer
- * shows them everything in it, so opening marks the lot seen and the badge clears — which is
- * what a badge that says "15" has to mean, or it says 15 forever. READ is per row: has this
- * one been opened? It is the dot on the row and the "Unread only" switch, and it only changes
- * when the row is clicked or "Mark all as read" is used. Marking read implies seen; seeing does
- * not imply read. Both are kept per person.
- */
-export function useReadNotifications(userId: string) {
-  const [read, setRead] = useState<Set<string>>(() => storedIds(readKey(userId)));
-  const [seen, setSeen] = useState<Set<string>>(() => storedIds(seenKey(userId)));
-  useEffect(() => {
-    setRead(storedIds(readKey(userId)));
-    setSeen(storedIds(seenKey(userId)));
-  }, [userId]);
-  const persist = (key: string, next: Set<string>) => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify([...next]));
-    } catch {
-      /* the in-memory copy still stands for this session */
-    }
-  };
-  const addSeen = (ids: string[]) => {
-    if (ids.every((id) => seen.has(id))) return;
-    const next = new Set([...seen, ...ids]);
-    setSeen(next);
-    persist(seenKey(userId), next);
-  };
-  const addRead = (ids: string[]) => {
-    if (ids.every((id) => read.has(id))) return;
-    const next = new Set([...read, ...ids]);
-    setRead(next);
-    persist(readKey(userId), next);
-    addSeen(ids);
-  };
-  return {
-    isRead: (id: string) => read.has(id),
-    isSeen: (id: string) => seen.has(id),
-    markRead: (id: string) => addRead([id]),
-    markAllRead: (all: string[]) => addRead(all),
-    /** The drawer has been opened on these: the badge stops counting them. */
-    markSeen: (all: string[]) => addSeen(all)
-  };
-}
 
 /**
  * What the row promises, for the screen reader. The visible row already reads as a link from
