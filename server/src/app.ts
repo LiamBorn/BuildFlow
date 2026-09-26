@@ -66,6 +66,7 @@ import {
   CALENDAR_PROVIDERS,
   calendarAuthorizeUrl,
   calendarConfigured,
+  calendarEventCache,
   calendarPopupPage,
   exchangeCalendarCode,
   fetchCalendarEvents,
@@ -1273,6 +1274,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       // A refresh token the provider has revoked cannot be recovered, and leaving the row would
       // make the panel claim a connection that no longer works. Drop it; the panel offers Connect.
       mainStore.deleteCalendarConnection(accountId, provider);
+      calendarEventCache.clear(accountId, provider);
       return null;
     }
   };
@@ -1360,6 +1362,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         accessToken: tokens.accessToken,
         expiresAt: tokens.expiresAt
       });
+      calendarEventCache.clear(req.account!.id, provider);
       calDone(res, returnTo, { calendar: "connected", provider }, popup);
     } catch (error) {
       calDone(res, returnTo, { calendar: "error", reason: error instanceof Error ? error.message.slice(0, 80) : "exchange_failed" }, popup);
@@ -1393,7 +1396,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       const token = await calendarAccessToken(req.account!.id, provider);
       if (!token) continue;
       try {
-        events.push(...(await fetchCalendarEvents(provider, token, from, to)));
+        // five minutes per account and range (calendar.ts): the panel re-reads, the provider is not asked again
+        events.push(
+          ...(await calendarEventCache.read(req.account!.id, provider, from, to, () => fetchCalendarEvents(provider, token, from, to)))
+        );
       } catch {
         // one provider being unreachable must not blank the other's meetings
         failed.push(provider);
@@ -1409,6 +1415,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     mainStore.deleteCalendarConnection(req.account!.id, provider);
+    calendarEventCache.clear(req.account!.id, provider);
     res.json({ ok: true });
   });
 

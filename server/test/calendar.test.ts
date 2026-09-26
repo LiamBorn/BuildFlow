@@ -27,6 +27,7 @@ function fakeProvider() {
   const app = express();
   app.use(express.urlencoded({ extended: false }));
   let refreshCount = 0;
+  let eventReads = 0;
   let events: unknown[] = [];
   /** The window the last events read asked for. */
   let lastWindow: { timeMin: string; timeMax: string; maxResults: string } | null = null;
@@ -74,6 +75,7 @@ function fakeProvider() {
       res.status(401).json({ error: "unauthorized" });
       return;
     }
+    eventReads += 1;
     lastWindow = {
       timeMin: String(req.query.timeMin ?? ""),
       timeMax: String(req.query.timeMax ?? ""),
@@ -87,7 +89,8 @@ function fakeProvider() {
       events = next;
     },
     lastWindow: () => lastWindow,
-    refreshes: () => refreshCount
+    refreshes: () => refreshCount,
+    eventReads: () => eventReads
   };
 }
 
@@ -96,6 +99,7 @@ describe("Google Calendar and Outlook", () => {
   let base = "";
   let setEvents: (next: unknown[]) => void;
   let refreshes: () => number;
+  let eventReads: () => number;
   let lastWindow: () => { timeMin: string; timeMax: string; maxResults: string } | null;
 
   const configure = () => {
@@ -121,6 +125,7 @@ describe("Google Calendar and Outlook", () => {
     const fake = fakeProvider();
     setEvents = fake.setEvents;
     refreshes = fake.refreshes;
+    eventReads = fake.eventReads;
     lastWindow = fake.lastWindow;
     await new Promise<void>((resolve) => {
       server = fake.app.listen(0, () => resolve());
@@ -298,6 +303,40 @@ describe("Google Calendar and Outlook", () => {
     setEvents([]);
     const again = await agent.get("/api/calendar/events").expect(200);
     expect(again.body.failed).toEqual([]);
+  });
+
+  /* The five-minute cache (2026-09-26, notch step 3): the panel's month and the Mac's week are the
+     same range all day, so reading them again must not ask Google again — until the connection changes. */
+  it("asks the provider once in five minutes for the same range, and afresh after reconnecting", async () => {
+    configure();
+    const { agent } = await signedIn();
+    const connect = async () => {
+      const start = await agent.get("/api/calendar/google/start").expect(302);
+      const provider = await fetch(new URL(start.headers.location), { redirect: "manual" });
+      const back = new URL(provider.headers.get("location")!);
+      await agent.get(`${back.pathname}${back.search}`).expect(302);
+    };
+    await connect();
+    const titled = (title: string) => [
+      { id: title, summary: title, start: { dateTime: "2026-09-28T14:00:00Z" }, end: { dateTime: "2026-09-28T14:30:00Z" } }
+    ];
+    const week = "/api/calendar/events?from=2026-09-28T04:00:00.000Z&to=2026-10-05T04:00:00.000Z";
+    const titles = (body: { events: Array<{ title: string }> }) => body.events.map((event) => event.title);
+
+    setEvents(titled("Standup"));
+    const before = eventReads();
+    expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Standup"]);
+    setEvents(titled("Moved standup"));
+    // the same range again inside five minutes: the kept answer, and no call to Google
+    expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Standup"]);
+    expect(eventReads() - before).toBe(1);
+
+    // disconnecting forgets it, and a new connection reads the calendar as it is now
+    await agent.delete("/api/calendar/google").expect(200);
+    expect((await agent.get(week).expect(200)).body.events).toEqual([]);
+    await connect();
+    expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Moved standup"]);
+    expect(eventReads() - before).toBe(2);
   });
 
   it("forgets a connection on request", async () => {
