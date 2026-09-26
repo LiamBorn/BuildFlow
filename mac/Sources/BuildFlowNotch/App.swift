@@ -34,51 +34,69 @@ enum BuildFlowNotchMain {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = NotchModel()
     private var controller: NotchController!
     private var greeter: GreetingCoordinator!
     private var statusMenu: StatusMenu!
-    private var hotKey: HotKey?
-    /// Step 5 replaces this with a source for `GET /api/desktop/inbox`.
-    private var source: InboxSource?
+    private var chord: ChordMonitor!
+    private var session: BuildFlowSession!
+    private var connector: ConnectCoordinator!
+    private var voice: VoiceController!
     var quitAfter: Double?
     var cycleStates = false
 
+    @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
         ScriptFont.registerBundledFonts()
 
         controller = NotchController(model: model)
         controller.install()
 
+        session = BuildFlowSession(model: model)
+        connector = ConnectCoordinator(session: session)
+        voice = VoiceController(model: model, session: session)
+        DeepLinks.connector = connector
+
+        controller.session = session
+        controller.voice = voice
+        controller.onConnect = { [weak self] in self?.connector.connect() }
+        voice.onConnect = { [weak self] in self?.connector.connect() }
+        voice.onDone = { [weak self] in
+            guard let self, self.model.state == .voice else { return }
+            self.controller.rest()
+        }
+        session.onAlert = { [weak self] alert in self?.controller.presentAlert(alert) }
+
         greeter = GreetingCoordinator(controller: controller, model: model)
-        statusMenu = StatusMenu(controller: controller, greeter: greeter)
+        statusMenu = StatusMenu(controller: controller, greeter: greeter, session: session, connector: connector)
+        session.onConnectionChange = { [weak self] in
+            guard let self else { return }
+            self.statusMenu.refresh()
+            // Not connected any more: nothing may count down or alert from the example.
+            if !self.model.connection.isConnected, self.model.state == .live || self.model.state == .alert { self.controller.rest() }
+        }
         controller.onOpenSettings = { [weak self] in self?.statusMenu.popUp() }
 
-        hotKey = HotKey()
-        hotKey?.onPress = { [weak self] in self?.controller.hotKeyPressed() }
-        hotKey?.onRelease = { [weak self] in self?.controller.hotKeyReleased() }
-        Log.info(hotKey == nil ? "hot key: ⌥Space not available" : "hot key: ⌥Space registered (tap = inbox, hold = voice)")
+        // Left ⌃ + left ⌥: tap for the inbox, hold to talk.
+        chord = ChordMonitor()
+        chord.isSpeaking = { [weak self] in self?.voice.isSpeaking ?? false }
+        chord.onEvent = { [weak self] e in self?.controller.chord(e) }
+        chord.onStatusChange = { [weak self] in self?.statusMenu.refresh() }
+        statusMenu.chord = chord
+        chord.start()
 
-        if let url = ExampleInboxSource.defaultURL() {
-            source = ExampleInboxSource(url: url, rebaseTo: Date(), calendar: model.calendar)
-        } else {
-            Log.info("inbox: example-inbox.json is missing from the bundle")
-        }
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            do {
-                if let source = self.source {
-                    self.model.inbox = try await source.fetchInbox()
-                    let p = self.model.presenter()
-                    Log.info("inbox: \(p.inbox.notifications.count) notifications, \(p.jobsToday.count) jobs today, "
-                        + "\(p.inbox.meetings.count) meetings, \(p.inbox.tasks.count) tasks (example data)")
-                }
-            } catch {
-                Log.info("inbox: couldn't read the example data: \(error)")
-            }
+        session.start()
+        // Greet once the day line can be real: the first inbox, or "not connected" (6 s at most).
+        var greeted = false
+        let greet = { [weak self] in
+            guard let self, !greeted else { return }
+            greeted = true
             self.greeter.start()
         }
+        session.whenReady(greet)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { greet() }
 
         if cycleStates {
             // After the launch greeting has folded away.

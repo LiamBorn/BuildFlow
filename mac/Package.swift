@@ -13,7 +13,7 @@ let package = Package(
     targets: [
         // Pure logic: inbox model and wording, greeting rules, notch geometry. No AppKit.
         .target(name: "BuildFlowNotchKit", path: "Sources/BuildFlowNotchKit"),
-        // The menu-bar app: panel, SwiftUI states, hot key, status menu, triggers.
+        // The menu-bar app: panel, SwiftUI states, the ⌃⌥ chord, status menu, triggers.
         .executableTarget(name: "BuildFlowNotch", dependencies: ["BuildFlowNotchKit"], path: "Sources/BuildFlowNotch"),
         // XCTest isn't available with the Command Line Tools, so the logic is
         // checked by a small executable that exits non-zero on any failure.

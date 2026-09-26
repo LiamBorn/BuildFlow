@@ -6,15 +6,16 @@ import SwiftUI
 enum Opener {
     /// Hovering the notch: closes when the pointer leaves.
     case hover
-    /// A click, the menu, or a ⌥Space tap: closes on a click outside or another toggle.
+    /// A click, the menu, or a ⌃⌥ tap: closes on a click outside or another toggle.
     case click
-    /// Holding ⌥Space: lasts while the key is held.
+    /// Holding ⌃⌥ to talk: lasts while the keys are held.
     case hold
     /// The greeting or an alert: closes itself.
     case system
 }
 
 /// Owns the panel, places it on the notch, and moves between the six states.
+@MainActor
 final class NotchController {
     let model: NotchModel
     private(set) var panel: NotchPanel?
@@ -27,11 +28,19 @@ final class NotchController {
     private var hoverWork: DispatchWorkItem?
     private var leaveWork: DispatchWorkItem?
     private var autoCloseWork: DispatchWorkItem?
-    private var recognizer = HoldTapRecognizer(holdThreshold: 0.3)
-    private var holdTimer: Timer?
     private var pollTimer: Timer?
 
     var onOpenSettings: (() -> Void)?
+    /// Set by the app delegate once the account and voice exist.
+    var session: BuildFlowSession?
+    var voice: VoiceController?
+    var onConnect: (() -> Void)?
+
+    /// Alerts waiting for the notch to be free, most urgent first.
+    private var pendingAlerts: [AlertContent] = []
+    private var ambientTimer: Timer?
+    /// A menu (the crew picker) is open over the inbox: don't fold it away.
+    private var menuOpen = false
 
     init(model: NotchModel) {
         self.model = model
@@ -58,6 +67,11 @@ final class NotchController {
 
         model.onTap = { [weak self] point in self?.tapped(at: point) }
         model.onAction = { [weak self] action in self?.perform(action) }
+
+        // Once a second: start or end a countdown, and let a waiting alert through.
+        let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.tickAmbient() }
+        RunLoop.main.add(t, forMode: .common)
+        ambientTimer = t
     }
 
     /// The screen with a notch, else the one with the menu bar.
@@ -112,7 +126,8 @@ final class NotchController {
         self.opener = opener
         openedAt = Date()
         pointerWasInside = false
-        if state == model.state && state != .greeting { refreshPointer(); return }
+        if model.state == .voice && state != .voice { voice?.dismiss() }
+        if state == model.state && state != .greeting && state != .alert { refreshPointer(); return }
         withAnimation(state == .resting ? Motion.close : Motion.open) {
             model.state = state
         }
@@ -123,12 +138,53 @@ final class NotchController {
             closeLater(after: 6, ifStill: .alert)       // then it waits in the inbox
         case .greeting:
             closeLater(after: GreetingTimeline.holdDuration, ifStill: .greeting)
+        case .inbox:
+            // Opening the inbox shows every alert there is: none needs to drop down later.
+            pendingAlerts.removeAll()
+            if model.tab == .notifications { session?.markShownSeen() }
         default:
             break
         }
     }
 
-    func rest() { show(.resting, opener: .system) }
+    /// Put the notch away: to a countdown, a waiting alert, or rest.
+    func rest() {
+        let next = ambientState()
+        if next == .alert, let alert = pendingAlerts.first {
+            pendingAlerts.removeFirst()
+            model.alert = alert
+        }
+        show(next, opener: .system)
+    }
+
+    /// What the notch shows when nobody has it open (plan: you talking, an alert,
+    /// a meeting within 15 min, a job within 30 min, else rest). Only for a
+    /// connected Mac: the example never counts down or alerts.
+    func ambientState() -> NotchState {
+        guard model.connection.isConnected else { return .resting }
+        let live = model.presenter().liveActivity()
+        return NotchPriority.ambient(talking: false, alertPending: !pendingAlerts.isEmpty, live: live)
+    }
+
+    private func tickAmbient() {
+        guard model.state == .resting || model.state == .live else { return }
+        guard hoverWork == nil else { return }
+        let next = ambientState()
+        if next != model.state { rest() }
+    }
+
+    /// A new alert from the live inbox: now if the notch is free, else when it is.
+    func presentAlert(_ alert: AlertContent) {
+        if model.state == .resting || model.state == .live {
+            model.alert = alert
+            show(.alert, opener: .system)
+        } else if model.state == .inbox {
+            // It's in the list in front of them already.
+        } else if !pendingAlerts.contains(where: { $0.notificationId == alert.notificationId }) {
+            pendingAlerts.append(alert)
+            pendingAlerts = Array(pendingAlerts.prefix(3))
+        }
+    }
 
     private func closeLater(after seconds: Double, ifStill state: NotchState) {
         let startedAt = openedAt
@@ -154,10 +210,11 @@ final class NotchController {
     /// "Preview state" in the menu.
     func preview(_ state: NotchState) {
         if state == .greeting {
-            let p = model.presenter()
             let part = PartOfDay.at(Date(), calendar: model.calendar)
-            presentGreeting(text: GreetingWording.text(part: part, firstName: model.inbox.me.firstName), dayLine: p.dayLine())
+            presentGreeting(text: GreetingWording.text(part: part, firstName: model.greetingFirstName), dayLine: model.greetingDayLine())
         } else {
+            if state == .voice, model.voice == .idle { model.voice = .example }
+            if state == .alert { model.alert = nil }
             show(state, opener: state == .resting ? .system : .click)
         }
     }
@@ -226,7 +283,10 @@ final class NotchController {
             }
         case .inbox:
             let zone = r.insetBy(dx: -10, dy: -10)
-            if zone.contains(p) {
+            if menuOpen {
+                leaveWork?.cancel()
+                leaveWork = nil
+            } else if zone.contains(p) {
                 pointerWasInside = true
                 leaveWork?.cancel()
                 leaveWork = nil
@@ -249,7 +309,7 @@ final class NotchController {
 
     private func clickedElsewhere() {
         // A click that reached another app: close what a click or the menu opened.
-        guard model.state == .inbox || model.state == .voice, opener != .hold else { return }
+        guard model.state == .inbox || model.state == .voice, opener != .hold, !menuOpen else { return }
         rest()
     }
 
@@ -267,6 +327,12 @@ final class NotchController {
     }
 
     private func perform(_ action: NotchAction) {
+        // Hovering the notch opens the inbox under a pointer that may be on its way to the menu bar;
+        // a click that lands this soon was meant for the menu bar, not for "Call it off".
+        if case .tabShown = action {} else if opener == .hover, Date().timeIntervalSince(openedAt) < 0.6 {
+            Log.info("notch: ignored a click \(Int(Date().timeIntervalSince(openedAt) * 1000)) ms after the inbox opened under the pointer")
+            return
+        }
         switch action {
         case let .join(url):
             NSWorkspace.shared.open(url)
@@ -274,38 +340,88 @@ final class NotchController {
             onOpenSettings?()
         case .startVoice:
             show(.voice, opener: .click)
+            voice?.begin(hold: false)
         case .markAllRead:
-            withAnimation(.easeOut(duration: 0.2)) { model.markAllRead() }
+            withAnimation(.easeOut(duration: 0.2)) { session?.markAllRead() }
         case let .proposal(choice):
-            // UI only until step 6; nothing is changed on the server.
-            Log.info("voice: proposal \(choice) pressed (no-op until step 6)")
-            if choice != .edit { rest() }
+            voice?.proposal(choice)
+        case let .open(target):
+            session?.open(target)
+        case let .task(taskId, actionId):
+            runTask(taskId: taskId, actionId: actionId)
+        case .connect:
+            onConnect?()
+        case let .voiceButton(b):
+            voice?.button(b)
+        case let .tabShown(tab):
+            if tab == .notifications && model.state == .inbox { session?.markShownSeen() }
         }
     }
 
-    // MARK: ⌥Space
-
-    func hotKeyPressed() {
-        recognizer.press(at: Date())
-        holdTimer?.invalidate()
-        holdTimer = Timer.scheduledTimer(withTimeInterval: recognizer.holdThreshold, repeats: false) { [weak self] _ in
-            guard let self else { return }
-            if self.recognizer.tick(at: Date().addingTimeInterval(0.001)) == .holdBegan {
-                self.show(.voice, opener: .hold)
-            }
+    /// A task's button. Booking a crew asks which crew first, in a menu at the pointer.
+    private func runTask(taskId: String, actionId: String) {
+        guard let session, let task = session.task(taskId), let action = task.actions.first(where: { $0.id == actionId }) else { return }
+        guard action.request.needs.contains("crewId") else {
+            session.run(taskId: taskId, actionId: actionId)
+            return
+        }
+        let crews = model.inbox.crewChoices
+        guard !crews.isEmpty, let view = panel?.contentView else {
+            session.showBanner("There's no crew to choose here. Book it in BuildFlow.")
+            NSWorkspace.shared.open(session.url(for: .task(taskId)) ?? session.website)
+            return
+        }
+        let menu = NSMenu(title: "Choose a crew")
+        let header = NSMenuItem(title: "Book \(task.title.replacingOccurrences(of: "No crew on ", with: "")) with…", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        var chosen: InboxCrew?
+        let handler = MenuHandler { chosen = $0 as? InboxCrew }
+        for crew in crews {
+            let item = NSMenuItem(title: crew.name, action: #selector(MenuHandler.pick(_:)), keyEquivalent: "")
+            item.representedObject = crew
+            item.target = handler
+            menu.addItem(item)
+        }
+        let inWindow = panel!.convertPoint(fromScreen: NSEvent.mouseLocation)
+        menuOpen = true
+        menu.popUp(positioning: nil, at: view.convert(inWindow, from: nil), in: view)
+        menuOpen = false
+        withExtendedLifetime(handler) {}
+        if let crew = chosen {
+            session.run(taskId: taskId, actionId: actionId, filling: ["crewId": .string(crew.id)])
         }
     }
 
-    func hotKeyReleased() {
-        holdTimer?.invalidate()
-        holdTimer = nil
-        switch recognizer.release(at: Date()) {
-        case .tap:
+    // MARK: Left ⌃ + left ⌥
+
+    /// The chord (see ChordMonitor): a tap toggles the inbox, a hold talks.
+    func chord(_ event: ChordEvent) {
+        switch event {
+        case .toggleInbox:
+            // Opens from resting, a countdown, an alert or the greeting; closes an open inbox.
             toggleInbox(opener: .click)
-        case .holdEnded:
-            if model.state == .voice && opener == .hold { rest() }
-        default:
-            break
+        case .stopSpeaking:
+            voice?.stopSpeaking()
+        case .talkBegan:
+            show(.voice, opener: .hold)
+            voice?.begin(hold: true)
+        case .talkEnded:
+            guard model.state == .voice, opener == .hold else { return }
+            // Let go: send, and keep the answer up until a click elsewhere.
+            opener = .click
+            voice?.end()
+        case .talkCancelled:
+            // Another key or a click joined: part of some other shortcut. Nothing is sent.
+            voice?.cancelTalk()
+            if model.state == .voice { rest() }
         }
     }
+}
+
+/// Target for the crew picker's items.
+final class MenuHandler: NSObject {
+    let onPick: (Any?) -> Void
+    init(_ onPick: @escaping (Any?) -> Void) { self.onPick = onPick }
+    @objc func pick(_ sender: NSMenuItem) { onPick(sender.representedObject) }
 }

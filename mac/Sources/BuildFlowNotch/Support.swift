@@ -93,15 +93,19 @@ enum FullScreenProbe {
     }
 }
 
-/// `buildflow://` links. Step 2's sign-in hand-off lands here: the Connect page
-/// redirects to `buildflow://connect?code=…&state=…`, and this is where the app
-/// checks `state`, swaps the code (with its PKCE verifier) for a device key at
-/// `POST /api/desktop/token`, and keeps the key in the Keychain.
+/// `buildflow://` links. The Connect page answers `buildflow://connect?code=…&state=…`;
+/// normally ASWebAuthenticationSession catches it, but one that reaches the app
+/// another way (Safari) is handed to the Connect in progress, if there is one.
 enum DeepLinks {
+    static weak var connector: ConnectCoordinator?
+
     static func handle(_ urls: [URL]) {
-        for url in urls where url.scheme == "buildflow" {
-            // Never log the query: it will carry one-time codes.
-            Log.info("link: buildflow://\(url.host ?? "")\(url.path) (not handled until step 2)")
+        for url in urls where url.scheme?.lowercased() == "buildflow" {
+            // Never log the query: it carries one-time codes.
+            Log.info("link: buildflow://\(url.host ?? "")\(url.path)")
+            if url.host?.lowercased() == "connect" {
+                Task { @MainActor in connector?.handle(url) }
+            }
         }
     }
 }

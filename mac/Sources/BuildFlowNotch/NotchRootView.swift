@@ -52,7 +52,7 @@ struct NotchRootView: View {
                 case .inbox:
                     InboxContent(model: model, spec: model.spec(for: .inbox)).transition(.notchContent)
                 case .voice:
-                    VoiceView(model: model, content: .example, spec: model.spec(for: .voice)).transition(.notchContent)
+                    VoiceView(model: model, content: model.voice, spec: model.spec(for: .voice)).transition(.notchContent)
                 }
             }
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
