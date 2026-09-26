@@ -98,6 +98,7 @@ import { activeSites, forecastForSites, placeForQuery, WeatherUnavailableError }
 import { detectConflicts, parseClock, rescheduleDates, weatherCheckFor } from "./weatherConflicts.js";
 import { createRequestLogger } from "./requestLog.js";
 import { metrics } from "./metrics.js";
+import { registerMacDownloads } from "./macDownloads.js";
 
 // Attach the authenticated account/org to the request (set by the ops auth gate).
 declare module "express-serve-static-core" {
@@ -1053,6 +1054,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     if (req.app.locals.servesPages) return next();
     res.redirect(clientUrl);
   });
+  // BuildFlow for Mac's appcast and disk images (macDownloads.ts): public, and outside /api.
+  registerMacDownloads(app);
 
   /* The crew calendar feed: outside the session gate on purpose (a phone's calendar app cannot sign in);
      the key in the link is the workspace's feed secret. */

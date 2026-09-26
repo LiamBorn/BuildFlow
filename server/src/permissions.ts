@@ -252,6 +252,10 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/delayIQs": "schedule.read",
   "GET /api/delayiq/early-warning": "schedule.read",
   "GET /api/feeds/:orgId/:crewId.ics": "public",
+  /* BuildFlow for Mac's update feed and disk images (macDownloads.ts): the same files for everyone,
+     read by apps that have not connected yet and by the website's download page. */
+  "GET /downloads/mac": "public",
+  "GET /downloads/mac/:file": "public",
   "GET /api/field-updates": "schedule.read",
   "GET /api/health": "public",
   "GET /api/jobs": "schedule.read",
