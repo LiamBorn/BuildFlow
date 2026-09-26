@@ -89,7 +89,7 @@ import {
   SESSION_TTL_MS,
   sessionCookieOptions
 } from "./auth.js";
-import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
+import { AI_QUESTION_LIMIT, askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
 import { activeSites, forecastForSites, placeForQuery, WeatherUnavailableError } from "./weather.js";
@@ -1937,11 +1937,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    */
   const countedActor = (req: express.Request) =>
     req.account && req.account.email !== DEMO_ACCOUNT_EMAIL ? `acct:${req.account.id}` : clientIp(req);
+  /** One hit against a cost bucket for this caller. The Mac's voice spends the AI allowance through it too. */
+  const costHit = (req: express.Request, bucket: string, max: number, windowMs: number) =>
+    limiter.hit(bucket, countedActor(req), max, windowMs);
   const costLimit =
     (bucket: string, max: number, windowMs: number): express.RequestHandler =>
     (req, res, next) => {
-      limiter
-        .hit(bucket, countedActor(req), max, windowMs)
+      costHit(req, bucket, max, windowMs)
         .then((result) => {
           if (result.ok) return next();
           res.setHeader("Retry-After", String(result.retryAfterSec));
@@ -1956,7 +1958,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         });
     };
 
-  app.post("/api/ai/ask", costLimit("ai-ask", 40, HOUR), async (req, res) => {
+  app.post("/api/ai/ask", costLimit(AI_QUESTION_LIMIT.bucket, AI_QUESTION_LIMIT.max, AI_QUESTION_LIMIT.windowMs), async (req, res) => {
     const parsed = aiAskSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Ask a question." });
@@ -4294,7 +4296,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   /* BuildFlow for Mac: the Connect page, the token exchange, the device's own routes and Settings ›
      Devices. The device gate above is what makes /api/desktop answer to a key and nothing else. */
-  registerDesktopRoutes(app, { mainStore, store, limiter, webOrigin: () => clientUrl });
+  registerDesktopRoutes(app, {
+    mainStore,
+    store,
+    limiter,
+    webOrigin: () => clientUrl,
+    voice: {
+      countQuestion: (req) => costHit(req, AI_QUESTION_LIMIT.bucket, AI_QUESTION_LIMIT.max, AI_QUESTION_LIMIT.windowMs),
+      meetingsFor,
+      announce
+    }
+  });
 
   /* Last thing before the app is handed back: prove the policy and the router still agree. */
   assertRoutePolicyCovers(app);
