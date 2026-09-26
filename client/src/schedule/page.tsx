@@ -51,6 +51,7 @@ import {
   useScheduleSensors,
   useSettleWrite
 } from "./hooks";
+import { JOB_REQUEST_EVENT, takeJobRequest } from "./jobRequest";
 import { computeScheduleKpis, workCalendarOf } from "./kpis";
 import type { ScheduleTarget } from "./links";
 import { useScheduleLive } from "./live";
@@ -252,6 +253,17 @@ export function useSchedulePage({
   const selectedJob = selected ? (data.jobs.find((job) => job.id === selected.jobId) ?? null) : null;
   const selectedAssignmentId = selected?.assignmentId ?? null;
   const openJob = useCallback((jobId: string) => setSelected({ jobId, assignmentId: null }), []);
+  /* A job asked for from outside — a record link, `#open/job/<id>` (./jobRequest.ts) — opens its
+     drawer here: on mounting, and at once if this page is already up. */
+  useEffect(() => {
+    const take = () => {
+      const jobId = takeJobRequest();
+      if (jobId) setSelected({ jobId, assignmentId: null });
+    };
+    take();
+    window.addEventListener(JOB_REQUEST_EVENT, take);
+    return () => window.removeEventListener(JOB_REQUEST_EVENT, take);
+  }, []);
   const openBooking = useCallback(
     (assignment: ScheduleAssignment) => setSelected({ jobId: assignment.jobId, assignmentId: assignment.id }),
     []

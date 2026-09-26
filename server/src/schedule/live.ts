@@ -6,58 +6,24 @@
  */
 import type { Express, Response } from "express";
 import type { ScheduleLiveEvent } from "@buildflow/shared";
-
-const HEARTBEAT_MS = 25_000;
+import { SseHub } from "../sseHub.js";
 
 /**
- * How much unsent data a stream may have queued before it is dropped.
- *
- * `res.write()` on a socket that is not being drained does not fail; Node buffers it in memory and
- * says so by returning false, which this used to ignore. A tab that stops reading — asleep, a
- * suspended phone, or a client opened deliberately and never read from — therefore had every publish
- * frame kept for it, and a busy schedule publishes on every write. Nothing ever freed that.
- *
- * A frame here is a few hundred bytes, so a megabyte is thousands of missed events: not a slow
- * reader, a reader that is gone. Dropping it is safe and self-healing — the stream sets
- * `retry: 3000`, so a browser that is actually still there reconnects in three seconds and gets a
- * fresh `hello`.
+ * The rules that make a tab that has gone, or stopped reading, cost nothing — never writing to a
+ * finished or destroyed response, ending a stream with more than a megabyte queued, listening for
+ * 'error' as well as 'close', and a heartbeat that goes through the same guard — were written here
+ * first. They moved to ../sseHub.ts (2026-09-26) so the Mac's nudges keep them too; this feed is
+ * that hub with the schedule's frames. live-stream-health.test.ts still holds this class to them.
  */
-const MAX_BUFFERED_BYTES = 1_048_576;
-
 export class ScheduleLiveHub {
-  private streams = new Map<string, Set<Response>>();
-  private closing = false;
+  private readonly hub = new SseHub();
 
   /** Opens the stream on `res` and keeps it until the tab goes away. */
   subscribe(orgId: string, res: Response) {
-    if (this.closing) {
-      res.status(503).end();
-      return;
-    }
-    res.status(200);
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();
-    res.write("retry: 3000\n\n");
-    res.write(`event: hello\ndata: ${JSON.stringify({ orgId, at: new Date().toISOString() })}\n\n`);
-    const tabs = this.streams.get(orgId) ?? new Set<Response>();
-    tabs.add(res);
-    this.streams.set(orgId, tabs);
-    // a comment frame keeps proxies and browsers from closing a quiet stream — and goes through the
-    // same guard as a real frame, because a heartbeat to a dead socket is the same mistake
-    const heartbeat = setInterval(() => this.send(tabs, res, ": ping\n\n"), HEARTBEAT_MS);
-    heartbeat.unref?.();
-    const forget = () => {
-      clearInterval(heartbeat);
-      tabs.delete(res);
-      if (tabs.size === 0) this.streams.delete(orgId);
-    };
-    res.on("close", forget);
-    /* A socket that fails mid-write emits 'error' on the response, and an 'error' with no listener is
-       how a Node process dies. This is the listener, and it does the same thing as a close. */
-    res.on("error", forget);
+    this.hub.open(orgId, res, undefined, {
+      retryMs: 3000,
+      hello: `event: hello\ndata: ${JSON.stringify({ orgId, at: new Date().toISOString() })}\n\n`
+    });
   }
 
   /**
@@ -67,46 +33,17 @@ export class ScheduleLiveHub {
    * is dropped here rather than counted, so `publish` returning 2 means two tabs were sent the frame.
    */
   publish(orgId: string, event: ScheduleLiveEvent) {
-    const tabs = this.streams.get(orgId);
-    if (!tabs) return 0;
-    const frame = `event: schedule\ndata: ${JSON.stringify(event)}\n\n`;
-    let heard = 0;
-    for (const res of [...tabs]) if (this.send(tabs, res, frame)) heard += 1;
-    if (tabs.size === 0) this.streams.delete(orgId);
-    return heard;
-  }
-
-  /**
-   * One frame to one stream, or the stream goes.
-   *
-   * Three states a Response can be in that a bare `res.write()` does not distinguish. Already
-   * finished or destroyed: writing to it is at best pointless and at worst an unhandled 'error' on a
-   * stream nobody is listening to. Not draining: see MAX_BUFFERED_BYTES. Otherwise, write it.
-   */
-  private send(tabs: Set<Response>, res: Response, frame: string): boolean {
-    if (res.writableEnded || res.destroyed) {
-      tabs.delete(res);
-      return false;
-    }
-    if (res.writableLength > MAX_BUFFERED_BYTES) {
-      tabs.delete(res);
-      res.end();
-      return false;
-    }
-    res.write(frame);
-    return true;
+    return this.hub.broadcast(orgId, `event: schedule\ndata: ${JSON.stringify(event)}\n\n`);
   }
 
   /** How many tabs of the org are listening. */
   size(orgId: string) {
-    return this.streams.get(orgId)?.size ?? 0;
+    return this.hub.size(orgId);
   }
 
   /** Ends every stream (shutdown, tests). */
   closeAll() {
-    this.closing = true;
-    for (const tabs of this.streams.values()) for (const res of tabs) res.end();
-    this.streams.clear();
+    this.hub.closeAll();
   }
 }
 

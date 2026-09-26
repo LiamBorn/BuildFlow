@@ -71,14 +71,14 @@ import {
   calendarEventCache,
   calendarPopupPage,
   exchangeCalendarCode,
-  fetchCalendarEvents,
-  refreshCalendarTokens,
-  sortEvents,
+  meetingsFor,
   type CalendarProvider
 } from "./calendar.js";
-import { NOTIFICATION_STATE_SETTING, buildNotificationItems, mergeNotificationStateValues } from "@buildflow/shared";
+import { NOTIFICATION_STATE_SETTING, buildNotificationItems } from "@buildflow/shared";
 import { assertRoutePolicyCovers, can, demoLockOn, installRoutePolicy, outranks } from "./permissions.js";
 import { authenticateDevice, DESKTOP_TOKEN_PATH, isDesktopApiPath, LAST_SEEN_INTERVAL_MS, registerDesktopRoutes } from "./desktop.js";
+import { mergeNotificationStateSetting, type TaskOutcome } from "./desktopInboxRoutes.js";
+import { DesktopNudges } from "./desktopNudges.js";
 import crypto from "node:crypto";
 import {
   parseCookies,
@@ -462,24 +462,6 @@ const billingPortalSchema = z.object({
   origin: z.string().url().optional(),
   returnTo: z.enum(["plans", "settings"]).optional()
 });
-
-/** The promise's answer, or a rejection once `ms` have passed; the work itself carries on either way. */
-function within<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`gave up after ${ms} ms`)), ms);
-    timer.unref?.();
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error: unknown) => {
-        clearTimeout(timer);
-        reject(error);
-      }
-    );
-  });
-}
 
 /* Map a verified Stripe webhook event onto our subscriptions table. Only the
    events we care about are handled; anything else is acknowledged and ignored.
@@ -948,9 +930,26 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     if (PUBLIC_EXCEPTIONS.has(p)) return false;
     return OPS_PREFIXES_LOWER.some((pre) => p === pre || p.startsWith(`${pre}/`));
   };
+  /**
+   * What one of the website's task endpoints answered, kept apart from the response so the Mac's
+   * mirror (desktopInboxRoutes.ts) can run the very same operation and read its answer: accepting a
+   * variance, calling a rain day off or keeping it, booking a crew, approving time. `after` is what the
+   * endpoint did once it had answered -- telling the other tabs, sending the crew's notice -- and runs
+   * after the answer, as it always did.
+   */
+  type Outcome = TaskOutcome;
+  const sendOutcome = (res: Response, outcome: Outcome) => {
+    res.status(outcome.status).json(outcome.body);
+    outcome.after?.();
+  };
+
   // The schedule's live feed: every schedule write announces itself to the org's other open tabs.
   const live = new ScheduleLiveHub();
   app.locals.live = live;
+  /* The Mac's nudges (/api/desktop/events): every write to a workspace's file tells that workspace's
+     connected Macs to read their inbox again. Ended at shutdown beside the schedule's feed. */
+  const desktopNudges = new DesktopNudges(mainStore, manager);
+  app.locals.desktopNudges = desktopNudges;
   const announce = (req: express.Request, event: Pick<ScheduleLiveEvent, "kind" | "op" | "ids">) => {
     if (!req.org) return;
     const client = req.headers["x-buildflow-client"];
@@ -1310,7 +1309,18 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const CAL_COOKIE_PATH = "/api/calendar";
   /* `popup`: the Meetings panel opened the consent page in a small window and is waiting on it, so the
      callback answers THAT window (calendarPopupPage) instead of sending the tab back to the app. */
-  type CalendarState = { provider: CalendarProvider; state: string; verifier: string; returnTo: string; popup: boolean; issuedAt: number };
+  /* `accountId`: whose connection this is. Everyone connects their OWN calendar (2026-09-26, the Mac
+     plan's decision 3), so the answer is kept only for the login that asked for it -- a callback that
+     arrives under any other session is refused, whatever else about it checks out. */
+  type CalendarState = {
+    provider: CalendarProvider;
+    state: string;
+    verifier: string;
+    returnTo: string;
+    popup: boolean;
+    issuedAt: number;
+    accountId: string;
+  };
   const isCalProvider = (value: string): value is CalendarProvider => (CALENDAR_PROVIDERS as string[]).includes(value);
   const calCallbackUri = (req: express.Request, provider: CalendarProvider) => `${apiOriginFor(req)}/api/calendar/${provider}/callback`;
   const calDone = (res: Response, returnTo: string, params: { calendar: string; provider?: string; reason?: string }, popup = false) => {
@@ -1321,65 +1331,6 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
     res.redirect(`${returnTo}/?${query.toString()}#dashboard`);
-  };
-
-  /** An access token that is good right now, refreshing and re-storing it when it is not. */
-  const calendarAccessToken = async (accountId: string, provider: CalendarProvider): Promise<string | null> => {
-    const row = mainStore.calendarConnection(accountId, provider);
-    if (!row) return null;
-    // a minute of head room, so a token does not expire mid-request
-    if (row.accessToken && row.expiresAt > Date.now() + 60_000) return row.accessToken;
-    try {
-      const fresh = await refreshCalendarTokens(provider, row.refreshToken);
-      mainStore.updateCalendarTokens(accountId, provider, {
-        accessToken: fresh.accessToken,
-        refreshToken: fresh.refreshToken ?? row.refreshToken,
-        expiresAt: fresh.expiresAt
-      });
-      return fresh.accessToken;
-    } catch {
-      // A refresh token the provider has revoked cannot be recovered, and leaving the row would
-      // make the panel claim a connection that no longer works. Drop it; the panel offers Connect.
-      mainStore.deleteCalendarConnection(accountId, provider);
-      calendarEventCache.clear(accountId, provider);
-      return null;
-    }
-  };
-
-  /**
-   * A person's meetings between two instants, from every calendar they connected, through the
-   * five-minute cache (calendar.ts). One provider being unreachable must not blank the other's
-   * meetings, so a provider that fails is named in `failed` and the rest are answered.
-   *
-   * `waitMs` bounds how long a provider may take, for a caller that cannot wait on it: the Mac's voice
-   * answers without meetings rather than keep the person listening to silence. A provider past it is
-   * reported failed, and its read carries on into the cache for the next question.
-   */
-  const meetingsFor = async (accountId: string, from: Date, to: Date, options: { fresh?: boolean; waitMs?: number } = {}) => {
-    const reads = await Promise.all(
-      CALENDAR_PROVIDERS.map(async (provider) => {
-        if (!mainStore.calendarConnection(accountId, provider)) return { provider, state: "none" as const };
-        const read = (async () => {
-          const token = await calendarAccessToken(accountId, provider);
-          if (!token) return null; // the provider refused the refresh, and the connection is gone
-          return calendarEventCache.read(accountId, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
-            fresh: options.fresh
-          });
-        })();
-        read.catch(() => undefined); // a read that loses the race below still settles somewhere
-        try {
-          const events = await (options.waitMs ? within(read, options.waitMs) : read);
-          return events ? { provider, state: "read" as const, events } : { provider, state: "none" as const };
-        } catch {
-          return { provider, state: "failed" as const };
-        }
-      })
-    );
-    return {
-      events: sortEvents(reads.flatMap((one) => (one.state === "read" ? one.events : []))),
-      connected: reads.filter((one) => one.state !== "none").map((one) => one.provider),
-      failed: reads.filter((one) => one.state === "failed").map((one) => one.provider)
-    };
   };
 
   app.get("/api/calendar/status", (req, res) => {
@@ -1405,6 +1356,12 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       calDone(res, returnTo, { calendar: "error", reason: "unknown_provider" }, popup);
       return;
     }
+    /* The public demo is one login shared by every visitor: a calendar connected to it would be shown
+       to the next person who opens the demo. It may look at the panel, never hold a connection. */
+    if (req.readOnlyDemo) {
+      calDone(res, returnTo, { calendar: "error", reason: "demo", provider }, popup);
+      return;
+    }
     const { verifier, challenge } = pkcePair();
     // The state says which way the answer goes ("p." a window, "r." the tab) as well as proving the
     // callback is ours, so even a callback whose cookie has gone answers in the right form.
@@ -1414,14 +1371,18 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       calDone(res, returnTo, { calendar: "error", reason: "not_configured", provider }, popup);
       return;
     }
-    res.cookie(CAL_COOKIE, signState<CalendarState>({ provider, state, verifier, returnTo, popup, issuedAt: Date.now() }), {
-      httpOnly: true,
-      sameSite: "lax",
-      // Was `req.secure`, which is false behind a TLS-terminating proxy — see cookiesAreSecure.
-      secure: cookiesAreSecure(req),
-      path: CAL_COOKIE_PATH,
-      maxAge: OAUTH_STATE_TTL_MS
-    });
+    res.cookie(
+      CAL_COOKIE,
+      signState<CalendarState>({ provider, state, verifier, returnTo, popup, issuedAt: Date.now(), accountId: req.account!.id }),
+      {
+        httpOnly: true,
+        sameSite: "lax",
+        // Was `req.secure`, which is false behind a TLS-terminating proxy — see cookiesAreSecure.
+        secure: cookiesAreSecure(req),
+        path: CAL_COOKIE_PATH,
+        maxAge: OAUTH_STATE_TTL_MS
+      }
+    );
     res.redirect(url);
   });
 
@@ -1438,8 +1399,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" }, popup);
       return;
     }
-    if (typeof req.query.state !== "string" || req.query.state !== saved.state) {
+    // the same login that started it: nobody's consent lands on somebody else's account
+    if (typeof req.query.state !== "string" || req.query.state !== saved.state || saved.accountId !== req.account!.id) {
       calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" }, popup);
+      return;
+    }
+    if (req.readOnlyDemo) {
+      calDone(res, returnTo, { calendar: "error", reason: "demo", provider }, popup);
       return;
     }
     if (typeof req.query.error === "string") {
@@ -1466,6 +1432,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         expiresAt: tokens.expiresAt
       });
       calendarEventCache.clear(req.account!.id, provider);
+      // the person's Macs show their meetings now
+      desktopNudges.nudgeAccount(req.account!.id);
       calDone(res, returnTo, { calendar: "connected", provider }, popup);
     } catch (error) {
       calDone(res, returnTo, { calendar: "error", reason: error instanceof Error ? error.message.slice(0, 80) : "exchange_failed" }, popup);
@@ -1493,8 +1461,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       from = start;
       to = end;
     }
-    // the panel's Sync asks the provider now; otherwise five minutes per account and range, so a re-read asks nobody
-    const { events, failed } = await meetingsFor(req.account!.id, from, to, { fresh: req.query.fresh === "1" });
+    // five minutes per account and range (calendar.ts): the panel re-reads, the provider is not asked
+    // again -- except on the panel's Sync, which asks it now. One provider being unreachable never
+    // blanks the other's meetings: it is listed in `failed` instead.
+    const { events, failed } = await meetingsFor(mainStore, req.account!.id, from, to, { fresh: req.query.fresh === "1" });
     res.json({ events, failed, fetchedAt: new Date().toISOString(), from: from.toISOString(), to: to.toISOString() });
   });
 
@@ -1504,8 +1474,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: "unknown_provider" });
       return;
     }
+    // only ever the caller's own: nothing about another person's connection is reachable from here
     mainStore.deleteCalendarConnection(req.account!.id, provider);
     calendarEventCache.clear(req.account!.id, provider);
+    desktopNudges.nudgeAccount(req.account!.id);
     res.json({ ok: true });
   });
 
@@ -2404,13 +2376,15 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     /* Seen and read notifications MERGE with what is kept, against the server's own list, so the
-       bell and the Mac can each mark things without undoing the other (shared notificationState). */
-    const value =
-      key === NOTIFICATION_STATE_SETTING
-        ? mergeNotificationStateValues(store.userSettings(me.id)[key], parsed.data.value, buildNotificationItems(data))
-        : parsed.data.value;
-    store.setUserSetting(me.id, key, value);
-    res.json({ ok: true, key, value });
+       bell and the Mac can each mark things without undoing the other (shared notificationState) --
+       the one merge both use, which writes only when something new was marked. */
+    if (key === NOTIFICATION_STATE_SETTING) {
+      const { value } = mergeNotificationStateSetting(store, me.id, parsed.data.value, buildNotificationItems(data));
+      res.json({ ok: true, key, value });
+      return;
+    }
+    store.setUserSetting(me.id, key, parsed.data.value);
+    res.json({ ok: true, key, value: parsed.data.value });
   });
 
   /* ── Workspaces: one login, several BuildFlow programs (2026-09-15) ──────────
@@ -2885,9 +2859,11 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   };
   /* 409: the crew is already booked that day. Nothing was written; the client asks "book anyway?" and retries with force. */
-  const answerClash = (res: Response, clashes: Parameters<typeof clashMessage>[0]) => {
-    res.status(409).json({ error: clashMessage(clashes), code: "conflict", clashes });
-  };
+  const clashOutcome = (clashes: Parameters<typeof clashMessage>[0]): Outcome => ({
+    status: 409,
+    body: { error: clashMessage(clashes), code: "conflict", clashes }
+  });
+  const answerClash = (res: Response, clashes: Parameters<typeof clashMessage>[0]) => sendOutcome(res, clashOutcome(clashes));
 
   /* What changed this week: this Monday's plan snapshot against the previous one. */
   app.get("/api/schedule/digest", (_req, res) => {
@@ -2929,34 +2905,34 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     live.subscribe(req.org!.id, res);
   });
 
-  app.post("/api/schedule/assign", (req, res) => {
-    const parsed = assignSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
+  /** Book a crew on a job's day: the website's Book, and the Mac's "Book a crew" on a job with none. */
+  const bookCrew = (req: express.Request, body: unknown): Outcome => {
+    const parsed = assignSchema.safeParse(body);
+    if (!parsed.success) return { status: 400, body: { error: parsed.error.flatten() } };
     const { force, ...input } = parsed.data;
     try {
       // A job sits on a crew's day once: booking it there again answers with the booking it already has,
       // writes nothing, and asks nothing — there is no new clash to weigh.
       const already = store.bookingFor(input.jobId, input.crewId, input.date);
-      if (already) {
-        res.status(200).json(already);
-        return;
-      }
+      if (already) return { status: 200, body: already };
       const clashes = store.crewClashes(input.crewId, input.date, input.jobId);
-      if (clashes.length > 0 && !force) {
-        answerClash(res, clashes);
-        return;
-      }
+      if (clashes.length > 0 && !force) return clashOutcome(clashes);
       const assignment = store.assignJob(input);
-      res.status(201).json(assignment);
-      announce(req, { kind: "assignments", op: "book", ids: [assignment.id, assignment.jobId] });
-      // Notify PMs of the new assignment — or the crew conflict if it double-books.
-      notifyAssignment(req, assignment);
+      return {
+        status: 201,
+        body: assignment,
+        after: () => {
+          announce(req, { kind: "assignments", op: "book", ids: [assignment.id, assignment.jobId] });
+          // Notify PMs of the new assignment — or the crew conflict if it double-books.
+          notifyAssignment(req, assignment);
+        }
+      };
     } catch (error) {
-      res.status(404).json({ error: error instanceof Error ? error.message : "Assignment failed" });
+      return { status: 404, body: { error: error instanceof Error ? error.message : "Assignment failed" } };
     }
+  };
+  app.post("/api/schedule/assign", (req, res) => {
+    sendOutcome(res, bookCrew(req, req.body));
   });
 
   app.patch("/api/schedule/:id", (req, res) => {
@@ -3239,18 +3215,14 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * the project's finish does. Accepting or rejecting it is the variance routes' job, as for any
    * other proposed change to the plan.
    */
-  app.post("/api/weather/conflicts/:id/cancel", async (req, res) => {
-    const conflict = store.weatherConflict(String(req.params.id));
+  const callOffWeatherDay = async (req: express.Request, id: string): Promise<Outcome> => {
+    const conflict = store.weatherConflict(id);
     if (!conflict || (conflict.status !== "open" && conflict.status !== "kept")) {
-      res.status(404).json({ error: "No open weather conflict with that id." });
-      return;
+      return { status: 404, body: { error: "No open weather conflict with that id." } };
     }
     const job = store.job(conflict.jobId);
     const project = weatherProject(conflict.projectId);
-    if (!job || !project) {
-      res.status(404).json({ error: "That job is no longer on the schedule." });
-      return;
-    }
+    if (!job || !project) return { status: 404, body: { error: "That job is no longer on the schedule." } };
     /* The site's own weather decides where the job can go. Calling a day off has to work while the
        forecast cannot be read — so it goes on, on the working calendar alone — but then the dates
        were never checked against the weather, and the reschedule SAYS so (`weatherCheck`), for
@@ -3308,22 +3280,28 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
           }
         : null
     });
-    if (!result) {
-      res.status(404).json({ error: "No open weather conflict with that id." });
-      return;
-    }
-    res.json(result);
-    if (result.releasedAssignmentIds.length > 0) announce(req, { kind: "assignments", op: "unbook", ids: result.releasedAssignmentIds });
+    if (!result) return { status: 404, body: { error: "No open weather conflict with that id." } };
+    return {
+      status: 200,
+      body: result,
+      after: () => {
+        if (result.releasedAssignmentIds.length > 0)
+          announce(req, { kind: "assignments", op: "unbook", ids: result.releasedAssignmentIds });
+      }
+    };
+  };
+  app.post("/api/weather/conflicts/:id/cancel", async (req, res) => {
+    sendOutcome(res, await callOffWeatherDay(req, String(req.params.id)));
   });
 
   /** The person in charge keeps the day on. The conflict stays on the record and stops asking. */
+  const keepWeatherDay = (req: express.Request, id: string): Outcome => {
+    const kept = store.keepWeatherConflict(id, weatherActor(req));
+    if (!kept) return { status: 404, body: { error: "No open weather conflict with that id." } };
+    return { status: 200, body: kept };
+  };
   app.post("/api/weather/conflicts/:id/keep", (req, res) => {
-    const kept = store.keepWeatherConflict(String(req.params.id), weatherActor(req));
-    if (!kept) {
-      res.status(404).json({ error: "No open weather conflict with that id." });
-      return;
-    }
-    res.json(kept);
+    sendOutcome(res, keepWeatherDay(req, String(req.params.id)));
   });
 
   /** An Owner or Admin says where a project's forecast should be read: an address, a ZIP code or a town. */
@@ -3480,7 +3458,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
      `timecard.approve`. It takes the entries the approver was shown, by id, so time put in after
      they looked is not approved unseen, and time that has gone since simply answers as nothing.
      Reopening takes an approval back, for the approval made by mistake. */
-  const entryIds = (req: express.Request, res: express.Response, verb: "approve" | "reopen") => {
+  const entryIds = (body: unknown, verb: "approve" | "reopen"): { ids: string[] } | { refused: Outcome } => {
     const parsed = z
       .object({
         ids: z
@@ -3488,26 +3466,30 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
           .min(1, `Choose the time to ${verb}.`)
           .max(500, `${verb === "approve" ? "Approve" : "Reopen"} up to 500 entries at a time.`)
       })
-      .safeParse(req.body);
+      .safeParse(body);
     if (!parsed.success) {
-      refuseEntry(res, 400, "ids", parsed.error.issues[0]?.message ?? `Choose the time to ${verb}.`);
-      return null;
+      return { refused: { status: 400, body: { error: parsed.error.issues[0]?.message ?? `Choose the time to ${verb}.`, field: "ids" } } };
     }
-    return [...new Set(parsed.data.ids)];
+    return { ids: [...new Set(parsed.data.ids)] };
+  };
+  /** Approve the time an approver was shown: the website's Approve, and the Mac's time-card task. */
+  const approveTime = (req: express.Request, body: unknown): Outcome => {
+    const asked = entryIds(body, "approve");
+    if ("refused" in asked) return asked.refused;
+    const entries = store.approveTimeEntries(asked.ids, req.account!.id);
+    if (!entries.length) return { status: 404, body: { error: "None of that time is here any more." } };
+    return { status: 200, body: { entries } };
   };
   app.post("/api/time-entries/approve", (req, res) => {
-    const ids = entryIds(req, res, "approve");
-    if (!ids) return;
-    const entries = store.approveTimeEntries(ids, req.account!.id);
-    if (!entries.length) {
-      res.status(404).json({ error: "None of that time is here any more." });
-      return;
-    }
-    res.json({ entries });
+    sendOutcome(res, approveTime(req, req.body));
   });
   app.post("/api/time-entries/reopen", (req, res) => {
-    const ids = entryIds(req, res, "reopen");
-    if (!ids) return;
+    const asked = entryIds(req.body, "reopen");
+    if ("refused" in asked) {
+      sendOutcome(res, asked.refused);
+      return;
+    }
+    const { ids } = asked;
     const entries = store.reopenTimeEntries(ids);
     if (!entries.length) {
       res.status(404).json({ error: "None of that time is here any more." });
@@ -3660,35 +3642,27 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     res.json(store.variances(status as ScheduleVariance["status"] | undefined));
   });
 
-  /** Believe the field: apply the proposal to the master schedule. */
+  /**
+   * Decide a proposed change to the plan. Accept believes the field and applies the proposal to the
+   * master schedule; reject keeps the plan, and the report and the disagreement both stay on the record.
+   */
+  const resolveVariance = (req: express.Request, id: string, verb: "accept" | "reject", body: unknown): Outcome => {
+    const parsed = varianceResolutionSchema.safeParse(body);
+    if (!parsed.success) return { status: 400, body: { error: parsed.error.flatten() } };
+    if (verb === "accept") {
+      const result = store.acceptVariance(id, parsed.data.userId, parsed.data.note);
+      if (!result) return { status: 404, body: { error: "No pending variance with that id." } };
+      return { status: 200, body: result, after: () => announce(req, { kind: "jobs", op: "dates", ids: result.movedJobIds }) };
+    }
+    const variance = store.rejectVariance(id, parsed.data.userId, parsed.data.note);
+    if (!variance) return { status: 404, body: { error: "No pending variance with that id." } };
+    return { status: 200, body: variance };
+  };
   app.post("/api/schedule/variances/:id/accept", (req, res) => {
-    const parsed = varianceResolutionSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
-    const result = store.acceptVariance(String(req.params.id), parsed.data.userId, parsed.data.note);
-    if (!result) {
-      res.status(404).json({ error: "No pending variance with that id." });
-      return;
-    }
-    res.json(result);
-    announce(req, { kind: "jobs", op: "dates", ids: result.movedJobIds });
+    sendOutcome(res, resolveVariance(req, String(req.params.id), "accept", req.body));
   });
-
-  /** Keep the plan. The report and the disagreement both stay on the record. */
   app.post("/api/schedule/variances/:id/reject", (req, res) => {
-    const parsed = varianceResolutionSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
-    const variance = store.rejectVariance(String(req.params.id), parsed.data.userId, parsed.data.note);
-    if (!variance) {
-      res.status(404).json({ error: "No pending variance with that id." });
-      return;
-    }
-    res.json(variance);
+    sendOutcome(res, resolveVariance(req, String(req.params.id), "reject", req.body));
   });
 
   app.get("/api/delayIQs", (_req, res) => {
@@ -4303,8 +4277,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     webOrigin: () => clientUrl,
     voice: {
       countQuestion: (req) => costHit(req, AI_QUESTION_LIMIT.bucket, AI_QUESTION_LIMIT.max, AI_QUESTION_LIMIT.windowMs),
-      meetingsFor,
+      meetingsFor: (accountId, from, to, options) => meetingsFor(mainStore, accountId, from, to, options),
       announce
+    },
+    inbox: {
+      // the roster with each person's level on it, exactly as the website's bootstrap sends it
+      workspaceData: (req) => withPermissions(store.bootstrap(req.account!.id), req.org!.id),
+      meetings: (accountId, from, to) => meetingsFor(mainStore, accountId, from, to),
+      // the origin emailed links are built from; the Mac sends no Origin, so it is the configured one
+      webOrigin: appOriginFor,
+      tasks: { resolveVariance, callOffWeatherDay, keepWeatherDay, bookCrew, approveTime },
+      nudges: desktopNudges
     }
   });
 

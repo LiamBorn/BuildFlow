@@ -1061,8 +1061,9 @@ describe("a gated route reaches the caller's own workspace, not the shared store
 
     /* The routes registered from their own module are held to the same rule. desktop.ts is here because
        /api/desktop's reason to exist is reading the caller's workspace, and the device gate is a
-       second way into that binding. desktopAsk.ts (step 6, voice) reads and writes it too. */
-    const moduleSources = ["../src/desktop.ts", "../src/desktopAsk.ts"].map((file) =>
+       second way into that binding. desktopInboxRoutes.ts (step 5) is the inbox that reads it, and
+       desktopAsk.ts (step 6, voice) reads and writes it too. */
+    const moduleSources = ["../src/desktop.ts", "../src/desktopInboxRoutes.ts", "../src/desktopAsk.ts"].map((file) =>
       fs.readFileSync(new URL(file, import.meta.url), "utf8")
     );
     const lines = [source, ...moduleSources].join("\n").split("\n");

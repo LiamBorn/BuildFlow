@@ -45,6 +45,7 @@
    service and a link back to it in Google or Outlook. A cancelled meeting is not
    sent at all.
    ========================================================================= */
+import type { BuildFlowStore } from "./database.js";
 import { fetchWithDeadline } from "./outbound.js";
 import { OAUTH_PROVIDERS, type OAuthProvider, providerConfig } from "./oauth.js";
 
@@ -131,7 +132,8 @@ const WHY_NOT: Record<string, string> = {
   state_mismatch: "The sign-in expired or was started in another tab.",
   not_configured: "It is not switched on for this BuildFlow yet.",
   no_code: "The provider sent nothing back.",
-  unknown_provider: "That is not a calendar BuildFlow connects to."
+  unknown_provider: "That is not a calendar BuildFlow connects to.",
+  demo: "The demo is shared by every visitor, so it cannot hold anyone's calendar. Create a free workspace to connect yours."
 };
 
 /** What the sign-in window shows when it is done, and what it tells the panel that opened it. */
@@ -678,3 +680,110 @@ export class CalendarEventCache {
 
 /** The server's one cache: the Meetings routes read through it, and the Mac's inbox will too. */
 export const calendarEventCache = new CalendarEventCache();
+
+/* ── a person's meetings, for whoever needs them ──────────────────────────
+   The Meetings panel's feed and the Mac's inbox read a person's meetings the same way: a token
+   that is good right now, then the five-minute cache, one provider at a time. Both lived inside
+   app.ts's calendar route until the inbox needed them too (2026-09-26, notch step 5). */
+
+/** The connections live in the control database, beside the logins they belong to. */
+type CalendarConnections = Pick<
+  BuildFlowStore,
+  "calendarConnection" | "updateCalendarTokens" | "deleteCalendarConnection" | "calendarConnectionsForAccount"
+>;
+
+/**
+ * An access token that is good right now, refreshing and re-storing it when it is not; null when the
+ * person has not connected this provider, or the provider has taken the connection back.
+ *
+ * The one write a read of meetings can cause: a refreshed token is stored (about once an hour per
+ * connection, in the control database), and a refused one is dropped with its cached meetings.
+ */
+export async function calendarAccessToken(
+  connections: CalendarConnections,
+  accountId: string,
+  provider: CalendarProvider,
+  cache: CalendarEventCache = calendarEventCache
+): Promise<string | null> {
+  const row = connections.calendarConnection(accountId, provider);
+  if (!row) return null;
+  // a minute of head room, so a token does not expire mid-request
+  if (row.accessToken && row.expiresAt > Date.now() + 60_000) return row.accessToken;
+  try {
+    const fresh = await refreshCalendarTokens(provider, row.refreshToken);
+    connections.updateCalendarTokens(accountId, provider, {
+      accessToken: fresh.accessToken,
+      refreshToken: fresh.refreshToken ?? row.refreshToken,
+      expiresAt: fresh.expiresAt
+    });
+    return fresh.accessToken;
+  } catch {
+    // A refresh token the provider has revoked cannot be recovered, and leaving the row would
+    // make the panel claim a connection that no longer works. Drop it; the panel offers Connect.
+    connections.deleteCalendarConnection(accountId, provider);
+    cache.clear(accountId, provider);
+    return null;
+  }
+}
+
+export type PersonsMeetings = {
+  events: CalendarEvent[];
+  /** The providers this person has connected and could be asked. */
+  connected: CalendarProvider[];
+  /** The ones that could not be read this time: one being down never blanks the other's meetings. */
+  failed: CalendarProvider[];
+};
+
+/** A person's meetings between two instants, from every calendar they connected, through the cache. */
+export async function meetingsFor(
+  connections: CalendarConnections,
+  accountId: string,
+  from: Date,
+  to: Date,
+  options: { fresh?: boolean; waitMs?: number; cache?: CalendarEventCache } = {}
+): Promise<PersonsMeetings> {
+  const cache = options.cache ?? calendarEventCache;
+  // Both providers are asked at once. `waitMs` bounds how long one may take, for a caller that cannot
+  // wait on it: the Mac's voice answers without meetings rather than keep the person listening to
+  // silence. A provider past it is reported failed, and its read carries on into the cache.
+  const reads = await Promise.all(
+    CALENDAR_PROVIDERS.map(async (provider) => {
+      if (!connections.calendarConnection(accountId, provider)) return { provider, state: "none" as const };
+      const read = (async () => {
+        const token = await calendarAccessToken(connections, accountId, provider, cache);
+        if (!token) return null; // the provider refused the refresh, and the connection is gone
+        return cache.read(accountId, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), { fresh: options.fresh });
+      })();
+      read.catch(() => undefined); // a read that loses the race below still settles somewhere
+      try {
+        const events = await (options.waitMs ? within(read, options.waitMs) : read);
+        return events ? { provider, state: "read" as const, events } : { provider, state: "none" as const };
+      } catch {
+        return { provider, state: "failed" as const };
+      }
+    })
+  );
+  return {
+    events: sortEvents(reads.flatMap((one) => (one.state === "read" ? one.events : []))),
+    connected: reads.filter((one) => one.state !== "none").map((one) => one.provider),
+    failed: reads.filter((one) => one.state === "failed").map((one) => one.provider)
+  };
+}
+
+/** The promise's answer, or a rejection once `ms` have passed; the work itself carries on either way. */
+function within<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`gave up after ${ms} ms`)), ms);
+    timer.unref?.();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}

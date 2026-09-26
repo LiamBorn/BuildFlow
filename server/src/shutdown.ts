@@ -5,7 +5,8 @@ import type { ScheduleLiveHub } from "./schedule/live.js";
 /** Close long-lived streams first so server.close can finish and release the PG lock. */
 export function createShutdown(
   server: http.Server,
-  live: ScheduleLiveHub,
+  /** The long-lived streams to end first: the schedule's live feed, and the Macs' nudges beside it. */
+  live: Pick<ScheduleLiveHub, "closeAll">,
   durability?: Pick<FileDurability, "close" | "flush">,
   exit: (code: number) => void = (code) => process.exit(code),
   timeoutMs = 10_000

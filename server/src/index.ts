@@ -122,7 +122,15 @@ const server = app.listen(port, () => {
   }
 });
 
-const shutdown = createShutdown(server, liveHub, fileDurability);
+// the website's schedule feed and the Macs' nudges are both long-lived streams, ended first
+const desktopNudges = app.locals.desktopNudges as { closeAll(): void } | undefined;
+const streams = {
+  closeAll: () => {
+    liveHub.closeAll();
+    desktopNudges?.closeAll();
+  }
+};
+const shutdown = createShutdown(server, streams, fileDurability);
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
   process.on(signal, () => shutdown(signal));
 }

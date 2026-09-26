@@ -7,9 +7,8 @@
  * a change somebody meant.
  */
 import { describe, expect, it } from "vitest";
-import type { NeedsYouTask, UpcomingJob } from "@buildflow/shared";
 import { conversation } from "../src/desktopAsk.js";
-import type { DesktopInbox, DesktopMeeting, DesktopNotification } from "../src/desktopInbox.js";
+import type { DesktopInbox, DesktopJob, DesktopMeeting, DesktopNotification, DesktopTask } from "../src/desktopInbox.js";
 import {
   NOT_CONNECTED_CHANGE,
   NOT_CONNECTED_OTHER,
@@ -40,10 +39,11 @@ const meeting = (over: Partial<DesktopMeeting>): DesktopMeeting => ({
   location: "",
   myResponse: "accepted",
   state: "later",
+  url: null,
   ...over
 });
 
-const job = (over: Partial<UpcomingJob>): UpcomingJob => ({
+const job = (over: Partial<DesktopJob>): DesktopJob => ({
   id: "job-1",
   name: "Framing",
   projectId: "p-1",
@@ -57,6 +57,7 @@ const job = (over: Partial<UpcomingJob>): UpcomingJob => ({
   weather: null,
   mine: true,
   days: [TODAY],
+  url: null,
   ...over
 });
 
@@ -73,10 +74,11 @@ const notification = (over: Partial<DesktopNotification>): DesktopNotification =
   projectId: "p-2",
   target: { kind: "material", id: "mat-1" },
   opens: { kind: "record", page: "inventory", recordId: "mat-1" },
+  url: null,
   ...over
 });
 
-const task = (over: Partial<NeedsYouTask>): NeedsYouTask => ({
+const task = (over: Partial<DesktopTask>): DesktopTask => ({
   id: "t",
   kind: "weather-call",
   title: "Call the rain day",
@@ -87,6 +89,7 @@ const task = (over: Partial<NeedsYouTask>): NeedsYouTask => ({
   tone: "amber",
   target: { kind: "weatherConflict", id: "wc-1" },
   actions: [],
+  url: null,
   ...over
 });
 

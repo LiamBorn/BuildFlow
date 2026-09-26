@@ -401,7 +401,7 @@ function todayStamp() {
  * The Owner's and Admin's TimeCard. Team's time first — the week the Members put in themselves —
  * then the crews' week, its costs, approvals and compliance, which are a sample week.
  */
-function TeamTimeCard({ data }: { data: BootstrapPayload }) {
+function TeamTimeCard({ data, week: askedWeek }: { data: BootstrapPayload; week?: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
   useHudMotion(rootRef);
   const model = useMemo(() => buildTimecardModel(data), [data]);
@@ -418,7 +418,8 @@ function TeamTimeCard({ data }: { data: BootstrapPayload }) {
   const live = tab === "team";
   const today = localIsoDate();
   const thisMonday = weekDays[0].date;
-  const [teamMonday, setTeamMonday] = useState(thisMonday);
+  // a time-cards task's link names the week that is waiting (`#open/timecard/<monday>`); otherwise this one
+  const [teamMonday, setTeamMonday] = useState(askedWeek && /^\d{4}-\d{2}-\d{2}$/.test(askedWeek) ? askedWeek : thisMonday);
   const team = useTeamTime(live, teamMonday);
   const teamDays = useMemo(() => weekOf(teamMonday), [teamMonday]);
   const roster = useMemo(() => (team.entries ? teamRows(team.entries, team.people) : []), [team.entries, team.people]);
@@ -861,9 +862,9 @@ function Kpi({ icon: Icon, tone, label, value, note }: { icon: typeof Clock; ton
  * place gets the smaller of the two, because the week of hours and costs is not theirs to see; the
  * server draws the same line, since nothing a Member can call reaches anybody else's time.
  */
-export function TimeCardPage({ data }: { data: BootstrapPayload }) {
+export function TimeCardPage({ data, week }: { data: BootstrapPayload; week?: string }) {
   const level = data.activeUser?.permission;
-  return level === "owner" || level === "admin" ? <TeamTimeCard data={data} /> : <MyTimeCard data={data} />;
+  return level === "owner" || level === "admin" ? <TeamTimeCard data={data} week={week} /> : <MyTimeCard data={data} />;
 }
 
 /** The next view the arrow keys, Home and End ask for, or -1 for any other key. */

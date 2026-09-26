@@ -66,6 +66,12 @@ export const capabilities = [
      reaches anybody else's entries. */
   "timecard.log",
   "timecard.approve",
+  /* Connecting YOUR OWN Google or Outlook calendar (2026-09-26, decision 3 of the Mac plan: everyone
+     connects their own). Every level holds it, like putting in your own time: the connection is the
+     person's, the routes only ever read and write the caller's own row, and a Meetings panel that
+     only the Owner could fill was empty for everyone else. Connecting something for the WORKSPACE is
+     still `integrations.connect`, the Owner's. */
+  "meetings.connect",
   "feeds.read",
   "notify.send",
   // team
@@ -78,11 +84,13 @@ export const capabilities = [
   "org.settings",
   "billing.plan",
   "billing.pay",
-  /* Declared and granted, with no route on purpose. Connecting an integration has no backend to
-     connect to, and nothing in the product deletes a workspace. They are named here so the Owner's
-     reserved set is complete and so the day either is built, the permission is already decided --
-     which is also why the boot assertion checks routes against the table and not capabilities
-     against routes: a capability ahead of its route is a plan, not a hole. */
+  /* Declared and granted, with no route on purpose. Connecting an integration for the workspace has
+     no backend to connect to, and nothing in the product deletes a workspace. They are named here so
+     the Owner's reserved set is complete and so the day either is built, the permission is already
+     decided -- which is also why the boot assertion checks routes against the table and not
+     capabilities against routes: a capability ahead of its route is a plan, not a hole.
+     (The calendar routes rode `integrations.connect` from 2026-09-23 to 09-26; a calendar turned out
+     to be a person's, not the workspace's, and they moved to `meetings.connect`.) */
   "integrations.connect",
   "org.danger",
   "org.transfer",
@@ -104,6 +112,7 @@ const MEMBER: readonly Capability[] = [
   "reports.read",
   "timecard.read",
   "timecard.log",
+  "meetings.connect",
   "team.read",
   "org.leave"
 ];
@@ -184,12 +193,13 @@ export const outranks = (actor: PermissionLevel, subject: PermissionLevel): bool
    The one inline role check the codebase used to have, owner-only job-title changes, is now
    the "team.permission" row below and the conditional is gone from its handler.
 
-   Two checks are still deliberately NOT here, because a route-level capability cannot express
-   either. The commercial fields of POST /api/business-profile: one route carrying two
+   Three checks are still deliberately NOT here, because a route-level capability cannot express
+   them. The commercial fields of POST /api/business-profile: one route carrying two
    permissions, since naming the trade is a workspace setting and the plan is the commercial
-   relationship. And the rank rule on DELETE /api/team/users/:id, where the answer depends on
-   the subject as well as the caller. Both are can()/outranks() calls that say so where they
-   are.
+   relationship. The rank rule on DELETE /api/team/users/:id, where the answer depends on
+   the subject as well as the caller. And the Mac's POST /api/desktop/tasks/:taskId/:actionId,
+   one route for every kind of task, which asks the capability of the answer given. All are
+   can()/outranks() calls that say so where they are.
 
    The keys are "METHOD <the path as Express registered it>". The boot assertion compares
    them against the live router, so a typo here is a startup failure rather than a hole. */
@@ -199,14 +209,17 @@ export type AnonymousOrCapability = { anonymous: "allow"; signedIn: Capability }
 export type Policy = Capability | "public" | "signed-in" | AnonymousOrCapability;
 
 export const ROUTE_POLICY: Record<string, Policy> = {
-  /* Calendar connections (Google Calendar / Outlook), behind `integrations.connect`.
-     Reading what is on your own calendar is "signed-in": the events come from the tokens on
-     YOUR account and nobody else's, so there is nothing a permission level would protect.
-     Making or breaking the connection is the privileged half, and that is the capability the
-     workspace-permissions work declared and deliberately left unrouted until now. */
-  "DELETE /api/calendar/:provider": "integrations.connect",
-  "GET /api/calendar/:provider/callback": "integrations.connect",
-  "GET /api/calendar/:provider/start": "integrations.connect",
+  /* Calendar connections (Google Calendar / Outlook): YOUR OWN, at every level (2026-09-26).
+     Reading what is on your own calendar is "signed-in": the events come from the tokens on YOUR
+     account and nobody else's, so there is nothing a permission level would protect. Making or
+     breaking the connection is `meetings.connect`, which every level holds, because it only ever
+     reaches the caller's own row: no route takes a person, the consent's signed state names the
+     login that started it and the callback refuses any other, and the shared public demo is refused
+     in the handler (a calendar there would be every visitor's). It was the Owner's
+     `integrations.connect` until then, which left the Meetings panel empty for everyone else. */
+  "DELETE /api/calendar/:provider": "meetings.connect",
+  "GET /api/calendar/:provider/callback": "meetings.connect",
+  "GET /api/calendar/:provider/start": "meetings.connect",
   "GET /api/calendar/events": "signed-in",
   "GET /api/calendar/status": "signed-in",
   /* "Give feedback": every signed-in person may write to the product team. The session, not
@@ -397,6 +410,16 @@ export const ROUTE_POLICY: Record<string, Policy> = {
      teammate, which deletes the login and every key it holds. See desktop.ts. */
   "GET /api/me/devices": "signed-in",
   "DELETE /api/me/devices/:id": "signed-in",
+  /* BuildFlow for Mac, step 5: the live inbox (desktopInboxRoutes.ts), under the device gate. Reading
+     the inbox and hearing its nudges is reading as yourself, like /api/desktop/me; the read state is
+     your own, like /api/me/settings. Answering a task is "signed-in" at the route because one route
+     carries every kind of task: the handler re-derives the task and asks the capability of THAT
+     answer -- variance.resolve, assignments.write or timecard.approve, exactly what the website's own
+     endpoint for it asks -- and runs the website's own operation, so the two cannot disagree. */
+  "GET /api/desktop/inbox": "signed-in",
+  "POST /api/desktop/inbox/state": "signed-in",
+  "POST /api/desktop/tasks/:taskId/:actionId": "signed-in",
+  "GET /api/desktop/events": "signed-in",
   "PUT /api/schedule-tool/projects/:projectId/activities/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/baselines/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/calendars/:id": "scheduletool.write",

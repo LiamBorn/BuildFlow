@@ -163,7 +163,7 @@ import {
   plannedPercentAt,
   scheduleCalendar
 } from "@buildflow/shared";
-import { NOTIFICATION_STATE_SETTING, greetingFor } from "@buildflow/shared";
+import { NOTIFICATION_STATE_SETTING, greetingFor, type LinkDestination } from "@buildflow/shared";
 import {
   applyBusinessProfile,
   startCheckout as apiStartCheckout,
@@ -221,6 +221,8 @@ import { forgetDesktopConnect, pendingDesktopConnect, rememberDesktopConnect, re
 import { DevicesSettingsPanel } from "./DevicesSettingsPanel";
 import { statusTone, toLocalIsoDate, weekDays } from "./schedule/scheduleUtils";
 import { startOfScheduleWeek } from "./schedule/week";
+import { requestJobDrawer } from "./schedule/jobRequest";
+import { consumeOpenLink, noteOpenLink } from "./openLinks";
 import {
   EMPTY_SCHEDULE_CONTEXT,
   consumeScheduleDeepLink,
@@ -2478,20 +2480,56 @@ function App() {
      Dashboard and have no page to send anyone to. */
   const [recordFocus, setRecordFocus] = useState<{ page: Page; id: string; nonce: number } | null>(null);
   const [panelFocus, setPanelFocus] = useState<{ id: string; nonce: number } | null>(null);
+  /* A week of the team's time to open TimeCard on: a time-cards task's link (`#open/timecard/<monday>`).
+     Let go once the reader leaves TimeCard, so the next visit opens on this week as it always has. */
+  const [timecardFocus, setTimecardFocus] = useState<{ week: string; nonce: number } | null>(null);
+  useEffect(() => {
+    if (page !== "timecard") setTimecardFocus(null);
+  }, [page]);
   /* The nonce is a counter, not `Date.now()`. Two clicks inside one millisecond would collide
      on a clock, and under test the clock is frozen outright (setup.ts fakes Date so the
      fixtures' dates stay put), which would make every click after the first a no-op. */
   const focusTicket = useRef(0);
   const recordFocusFor = (target: Page) => (recordFocus?.page === target ? { id: recordFocus.id, nonce: recordFocus.nonce } : null);
-  const openNotificationTarget = (target: NotificationTarget) => {
+  /**
+   * Takes the reader to where a thing is dealt with: the bell's click-through, and every `#open/…`
+   * record link followed on a cold load (./openLinks.ts, the Mac's links), through the one function
+   * so the two cannot disagree. `fresh` is the workspace a load has only just brought in, which this
+   * render's state has not caught up with: the job, the person and the add-ons are read off it.
+   */
+  const openDestination = (target: LinkDestination, fresh?: BootstrapPayload) => {
+    const from = fresh ?? data;
     if (target.kind === "record") {
       setRecordFocus({ page: target.page, id: target.recordId, nonce: (focusTicket.current += 1) });
-      openAppPage(target.page);
+      openAppPage(target.page, fresh);
       return;
     }
     if (target.kind === "panel") {
       setPanelFocus({ id: target.panelId, nonce: (focusTicket.current += 1) });
-      openAppPage("dashboard");
+      openAppPage("dashboard", fresh);
+      return;
+    }
+    if (target.kind === "timecard") {
+      setTimecardFocus({ week: target.week, nonce: (focusTicket.current += 1) });
+      openAppPage("timecard", fresh);
+      return;
+    }
+    const userId = from?.activeUser.id;
+    if (!userId) return; // no bootstrap, no notifications to have clicked
+    /* A job: the Month at the day it is about, with nothing filtered that could hide it, and its
+       drawer open — where a crew is booked and its dates and status are changed. */
+    if (target.kind === "job") {
+      const day = target.date ?? from?.jobs.find((job) => job.id === target.jobId)?.startDate;
+      writeScheduleContext(userId, {
+        ...(day ? { weekStart: startOfScheduleWeek(day) } : {}),
+        crewId: null,
+        crewType: null,
+        projectId: null,
+        region: null,
+        statuses: null
+      });
+      requestJobDrawer(target.jobId);
+      openAppPage("month", fresh);
       return;
     }
     /* A booking on the calendar. The calendar is addressed by date, not by row, and it remembers
@@ -2499,8 +2537,6 @@ function App() {
        point it at the booking's week (the month follows it) and the crew, and drop the filters that
        could hide it. This is the same thing a pasted `#schedule/month?…&crew=…` link does, through
        the same writer. */
-    const userId = data?.activeUser.id;
-    if (!userId) return; // no bootstrap, no notifications to have clicked
     writeScheduleContext(userId, {
       weekStart: startOfScheduleWeek(target.date),
       crewId: target.crewId,
@@ -2509,7 +2545,20 @@ function App() {
       region: null,
       statuses: null
     });
-    openAppPage("month");
+    openAppPage("month", fresh);
+  };
+  const openNotificationTarget = (target: NotificationTarget) => openDestination(target);
+  /* A record link followed on a fresh load: where it goes, then the Dashboard's landing light let go
+     after a moment, as the calendar's return does, so a later visit opens at the top. */
+  const followOpenLink = (from: BootstrapPayload) => {
+    const link = consumeOpenLink();
+    if (!link) return false;
+    openDestination(link, from);
+    if (link.kind === "panel") {
+      const nonce = focusTicket.current;
+      window.setTimeout(() => setPanelFocus((current) => (current?.nonce === nonce ? null : current)), 3000);
+    }
+    return true;
   };
   // BuildFlow AI (HubSpot Breeze-style): a panel that opens from the sparkle
   // button on any page, docked beside the rail or expanded across the content;
@@ -2529,6 +2578,12 @@ function App() {
     },
     [selectedProductIds, selectedPlanId]
   );
+  /** The add-on a page needs that this workspace does not have, read off the workspace itself. */
+  const lockedAddOnIn = (nextPage: Page, workspace: BootstrapPayload): OnboardingProductId | null => {
+    const productId = ADD_ON_PAGE_LOCKS[nextPage];
+    const plan = workspace.selectedPlan && isProductPlanId(workspace.selectedPlan) ? workspace.selectedPlan : "";
+    return productId && !isAddOnUnlocked(productId, workspace.selectedProducts ?? [], plan) ? productId : null;
+  };
   const setPage = useCallback(
     (nextPage: Page) => {
       const lockedAddOn = lockedAddOnForPage(nextPage);
@@ -2671,6 +2726,19 @@ function App() {
         ) {
           openAppPage("dashboard");
         }
+        /* A record link (#open/…) on a fresh load with a session opens that record or panel, exactly
+           where the bell's click-through would. It is noted either way: with nobody signed in the
+           landing stays and the link waits, and signing in follows it (enterAfterAuth). */
+        if (
+          noteOpenLink() &&
+          !params.get("from") &&
+          !params.get("oauth") &&
+          !params.get("calendar") &&
+          !demoFallback.current &&
+          payload.onboardingCompletedAt
+        ) {
+          followOpenLink(payload);
+        }
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to load BuildFlow data"))
       .finally(() => setIsLoading(false));
@@ -2713,14 +2781,18 @@ function App() {
   // bookmarked schedule views: a page as it is (week, month, filters), kept as its link
   const { links: linkBookmarks, toggle: toggleLinkBookmark } = useLinkBookmarks(activeUser?.id ?? "anon");
 
-  const openAppPage = (requestedPage: Page) => {
+  /* `workspace`: decide an add-on page's lock by this workspace rather than this render's copy of it —
+     for a load that has only just finished, whose products the state has not caught up with yet. */
+  const openAppPage = (requestedPage: Page, workspace?: BootstrapPayload | null) => {
     // a schedule link opened before signing in (#schedule/week?w=…) lands there instead of Home
     const deepLink = requestedPage === "dashboard" ? consumeScheduleDeepLink() : null;
     const nextPage: Page = deepLink ? deepLink.page : requestedPage;
     // a locked add-on page prompts for the add-on instead of opening
-    const lockedAddOn = lockedAddOnForPage(nextPage);
+    const lockedAddOn = workspace ? lockedAddOnIn(nextPage, workspace) : lockedAddOnForPage(nextPage);
     if (lockedAddOn) {
       setAddOnPrompt(lockedAddOn);
+      // a link followed on a fresh load has no page behind it yet: the Dashboard, with the offer over it
+      if (workspace && page === "welcome") setPageRaw("dashboard");
       return;
     }
     // Funnel activation: fire once when leaving the welcome site for the app
@@ -2732,7 +2804,8 @@ function App() {
     if (typeof window !== "undefined" && window.location.hash && !isSchedulePage(nextPage)) {
       window.history.pushState(null, "", `${window.location.pathname}${window.location.search}`);
     }
-    setPage(nextPage);
+    if (workspace) setPageRaw(nextPage);
+    else setPage(nextPage);
   };
 
   // Schedule pages live at #schedule/<page>?…: a page change pushes a history entry so Back
@@ -2835,6 +2908,10 @@ function App() {
        schedule page. Landing predictably on the Dashboard is what was asked for; the
        link is still in the hash, so the page is one reload away. */
     consumeScheduleDeepLink();
+    /* The one exception is a record link (#open/…) followed while signed out — from the Mac, or an
+       email. It is never this tab's leftover: the app never writes one into the address, and takes it
+       out as it follows it (openLinks.ts). Someone who followed it meant it, so signing in goes there. */
+    if (followOpenLink(payload)) return;
     openAppPage("dashboard");
   };
   const handleSignup = async (input: SignupInput) => {
@@ -3383,7 +3460,7 @@ function App() {
               {page === "reports" && <ReportsPage key={pageEntrance} data={data} />}
               {page === "timecard" && (
                 <Suspense fallback={null}>
-                  <TimeCardPage key={pageEntrance} data={data} />
+                  <TimeCardPage key={`${pageEntrance}:${timecardFocus?.nonce ?? 0}`} data={data} week={timecardFocus?.week} />
                 </Suspense>
               )}
               {page === "settings" && (

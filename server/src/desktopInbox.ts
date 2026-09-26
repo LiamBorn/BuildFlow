@@ -5,13 +5,18 @@
    greeting. Everything it shows comes from this one answer, so the Mac never
    downloads /api/bootstrap (every row in the workspace, and inline photos).
 
-   PURE, AND NO ROUTE YET. This builds the answer from what the caller already
-   has: the store's bootstrap for the account, the account, the workspace's
-   name, the person's read state (a per-person setting), and the meetings the
-   calendar cache holds. It reads nothing and writes nothing, because every
-   write rewrites the whole database file and the Mac asks every minute. The
-   route, GET /api/desktop/inbox, is step 5's, on top of the device-key auth
-   being built on another branch; see the notes at the end of this file.
+   PURE. This builds the answer from what the caller already has: the store's
+   bootstrap for the account, the account, the workspace's name, the person's
+   read state (a per-person setting), and the meetings the calendar cache holds.
+   It reads nothing and writes nothing, because every write rewrites the whole
+   database file and the Mac asks every minute. The route that serves it,
+   GET /api/desktop/inbox, is in desktopInboxRoutes.ts (step 5).
+
+   LINKS AND ANSWERS (step 5). Every notification, job, meeting and task carries
+   `url`: the website address that opens it on a cold load (shared recordLinks,
+   `#open/…`), or null when the website's address is not known. And every task's
+   answers point at the Mac's own mirror, /api/desktop/tasks/<task>/<action>,
+   rather than at the website's endpoints, which a device key cannot call.
 
    THE SAME LIST AS THE BELL. Notifications, the greeting, the meeting clock,
    the jobs and the tasks are all @buildflow/shared's — the website's bell,
@@ -25,6 +30,7 @@
    ========================================================================= */
 import crypto from "node:crypto";
 import {
+  MEETINGS_LINK,
   NOTIFICATION_STATE_SETTING,
   allDaySpan,
   buildNotificationItems,
@@ -32,12 +38,16 @@ import {
   greetingFor,
   isNotificationRead,
   isNotificationSeen,
+  jobLinkDestination,
+  linkUrl,
   localIsoDate,
   meetingState,
   needsYou,
+  taskLinkDestination,
   upNext,
   upcomingJobs,
   type BootstrapPayload,
+  type LinkDestination,
   type GreetingKind,
   type MeetingState,
   type NeedsYouCapability,
@@ -70,7 +80,23 @@ export type DesktopNotification = {
   target: NotificationRecordRef;
   /** Where the website opens it today. */
   opens: NotificationDestination;
+  /** The website address that opens it on a cold load: the same place the bell's click-through goes. */
+  url: string | null;
 };
+
+/** A job coming up, with the address that opens it on the website: the Month at its day, its drawer open. */
+export type DesktopJob = UpcomingJob & { url: string | null };
+
+/**
+ * What is waiting on you, with the address of the place the website deals with it. Each of its
+ * `actions` points at the Mac's mirror (POST /api/desktop/tasks/<task>/<action>), with the body and
+ * `needs` the website's own endpoint takes.
+ */
+export type DesktopTask = NeedsYouTask & { url: string | null };
+
+/** Where a device key sends a task's answer: the mirror that re-derives the task and runs the website's own operation. */
+export const desktopTaskPath = (taskId: string, actionId: string) =>
+  `/api/desktop/tasks/${encodeURIComponent(taskId)}/${encodeURIComponent(actionId)}`;
 
 export type DesktopMeeting = {
   id: string;
@@ -85,6 +111,8 @@ export type DesktopMeeting = {
   myResponse: CalendarEvent["myResponse"];
   /** Against the clock when this was built: "soon" is the last fifteen minutes. The Mac counts down itself. */
   state: MeetingState;
+  /** The Dashboard's Meetings panel. */
+  url: string | null;
 };
 
 export type DesktopInbox = {
@@ -111,11 +139,11 @@ export type DesktopInbox = {
     meetingsToday: number;
   };
   notifications: DesktopNotification[];
-  jobs: UpcomingJob[];
+  jobs: DesktopJob[];
   meetings: DesktopMeeting[];
   /** Which calendars are connected, and which could not be read this time. */
   calendar: { connected: CalendarProvider[]; failed: CalendarProvider[] };
-  tasks: NeedsYouTask[];
+  tasks: DesktopTask[];
 };
 
 export type DesktopInboxInput = {
@@ -137,6 +165,8 @@ export type DesktopInboxInput = {
   /** The server's permission check for this person (permissions.ts `can`); their level decides otherwise. */
   can?: (capability: NeedsYouCapability) => boolean;
   limits?: { notifications?: number; jobs?: number; meetings?: number };
+  /** The website's origin ("https://build-flow.replit.app"), for each item's `url`; without it every `url` is null. */
+  webOrigin?: string;
 };
 
 /** A day, YYYY-MM-DD, on the reader's calendar. */
@@ -157,6 +187,7 @@ export function buildDesktopInbox(input: DesktopInboxInput): { inbox: DesktopInb
   const today = dayIn(now, input.timeZone);
   const limits = { notifications: 100, jobs: 50, meetings: 8, ...input.limits };
 
+  const url = (destination: LinkDestination) => (input.webOrigin ? linkUrl(input.webOrigin, destination) : null);
   const state = decodeNotificationState(input.readState ?? data.userSettings?.[NOTIFICATION_STATE_SETTING]);
   const all = buildNotificationItems(data, now);
   const notifications: DesktopNotification[] = all.map((item) => ({
@@ -171,12 +202,22 @@ export function buildDesktopInbox(input: DesktopInboxInput): { inbox: DesktopInb
     alertable: item.alertable,
     projectId: item.projectId ?? null,
     target: item.target,
-    opens: item.opens
+    opens: item.opens,
+    url: url(item.opens)
   }));
 
   const userId = data.activeUser?.id ?? "";
-  const jobs = upcomingJobs(data, { today, userId, limit: limits.jobs });
-  const tasks = needsYou(data, { today, userId, permission: account.role, can: input.can, timeEntries: input.timeEntries });
+  const jobs: DesktopJob[] = upcomingJobs(data, { today, userId, limit: limits.jobs }).map((job) => ({
+    ...job,
+    url: url(jobLinkDestination(job))
+  }));
+  const tasks: DesktopTask[] = desktopTasks(data, {
+    today,
+    userId,
+    permission: account.role,
+    can: input.can,
+    timeEntries: input.timeEntries
+  }).map((task) => ({ ...task, url: url(taskLinkDestination(task)) }));
 
   const events = input.meetings?.events ?? [];
   const meetings: DesktopMeeting[] = upNext(events, now, limits.meetings, today).map((event) => ({
@@ -190,7 +231,8 @@ export function buildDesktopInbox(input: DesktopInboxInput): { inbox: DesktopInb
     conference: event.conference,
     location: event.location,
     myResponse: event.myResponse,
-    state: meetingState(event, now, today)
+    state: meetingState(event, now, today),
+    url: url(MEETINGS_LINK)
   }));
   const meetsToday = (meeting: DesktopMeeting) => {
     if (meeting.allDay) {
@@ -231,6 +273,17 @@ export function buildDesktopInbox(input: DesktopInboxInput): { inbox: DesktopInb
   return { inbox, etag: desktopInboxEtag(inbox) };
 }
 
+/**
+ * What is waiting on this person, each answer pointed at the Mac's mirror. The one derivation both
+ * the inbox and the mirror use, so the mirror re-derives exactly the task the Mac was shown.
+ */
+export function desktopTasks(data: BootstrapPayload, options: Parameters<typeof needsYou>[1]): Array<NeedsYouTask> {
+  return needsYou(data, options).map((task) => ({
+    ...task,
+    actions: task.actions.map((action) => ({ ...action, request: { ...action.request, path: desktopTaskPath(task.id, action.id) } }))
+  }));
+}
+
 /** JSON with every object's keys in order, so the same content always hashes the same. */
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -255,29 +308,3 @@ export function desktopInboxEtag(inbox: DesktopInbox): string {
   };
   return `"bfi-${crypto.createHash("sha256").update(canonical(stable)).digest("base64url").slice(0, 32)}"`;
 }
-
-/* ── what step 5 has to do to serve this ─────────────────────────────────────
-   On the device-auth branch, inside the /api/desktop prefix (which must be in
-   OPS_PREFIXES so `store` is the caller's workspace, and in ROUTE_POLICY):
-
-     app.get("/api/desktop/inbox", async (req, res) => {
-       const data = store.bootstrap(req.account!.id);
-       const events = … for each connected provider:
-         calendarEventCache.read(account, provider, dayStart, dayStart + 8 days,
-                                 () => fetchCalendarEvents(provider, token, from, to))
-       const { inbox, etag } = buildDesktopInbox({
-         data, account: req.account!, workspace: { name: req.org!.name },
-         meetings: { events, connected, failed },
-         timeZone: String(req.query.tz ?? "") || undefined,
-         can: (capability) => can(req.account!.role, capability),
-         now: Date.now()
-       });
-       if (req.headers["if-none-match"] === etag) return res.status(304).end();
-       res.setHeader("ETag", etag).setHeader("Cache-Control", "private, no-cache").json(inbox);
-     });
-
-   The range must be day-aligned (the reader's midnight) or the cache never
-   hits. Marking read or seen from the Mac goes through the same merge as the
-   website — `mergeNotificationStateValues(stored, incoming, buildNotificationItems(data))`,
-   then `store.setUserSetting(me.id, NOTIFICATION_STATE_SETTING, value)` — batched on
-   the Mac, because each write rewrites the database file. */

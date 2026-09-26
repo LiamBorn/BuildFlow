@@ -32,6 +32,7 @@ import { bearerDeviceKey, hashToken, parseCookies, pkceVerifierMatches, secretsM
 import { readState, signState } from "./oauth.js";
 import type { RateLimiter } from "./rateLimit.js";
 import { registerDesktopAskRoutes, type DesktopAskHooks } from "./desktopAsk.js";
+import { registerDesktopInboxRoutes, type DesktopInboxDeps } from "./desktopInboxRoutes.js";
 
 /** The only place a connect code may be sent. The Mac registers this scheme; nothing else is accepted. */
 export const DESKTOP_REDIRECT_URI = "buildflow://connect";
@@ -256,9 +257,11 @@ export type DesktopRouteDeps = {
   webOrigin: () => string;
   /** Step 6, voice (desktopAsk.ts): the question limit, the calendar read and the schedule announcer it shares with the website. */
   voice: DesktopAskHooks;
+  /** Step 5, the live inbox: what its routes need beyond the two stores (desktopInboxRoutes.ts). */
+  inbox: Omit<DesktopInboxDeps, "mainStore" | "store">;
 };
 
-export function registerDesktopRoutes(app: express.Application, { mainStore, store, limiter, webOrigin, voice }: DesktopRouteDeps) {
+export function registerDesktopRoutes(app: express.Application, { mainStore, store, limiter, webOrigin, voice, inbox }: DesktopRouteDeps) {
   const workspaceName = (orgId: string) => mainStore.getOrg(orgId)?.name ?? "";
 
   /** The website's sign-in, set to come back to this exact Connect page once it has a real session. */
@@ -462,6 +465,8 @@ export function registerDesktopRoutes(app: express.Application, { mainStore, sto
 
   /* Step 6, voice: asking out loud, and Accept or Reject on a proposed change. */
   registerDesktopAskRoutes(app, { store, ...voice });
+  /* Step 5: the live inbox, its task answers, read state and nudges. */
+  registerDesktopInboxRoutes(app, { mainStore, store, ...inbox });
 
   /* 5. The website's half: your own connected Macs, and taking one back. Session cookie, as ever. */
   app.get("/api/me/devices", (req, res) => {
