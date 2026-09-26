@@ -1144,3 +1144,17 @@ export {
   type NotificationReadState,
   type NotificationStamp
 } from "./notificationState";
+
+/* Links that open a record or a Dashboard panel on a cold load (notch plan, step 5): the server writes
+   them for the Mac, the website follows them, and the bell's click-through is the same destination. */
+export {
+  LINK_PANEL_IDS,
+  MEETINGS_LINK,
+  jobLinkDestination,
+  linkHash,
+  linkUrl,
+  parseLinkHash,
+  taskLinkDestination,
+  type LinkDestination,
+  type LinkPanelId
+} from "./recordLinks";
