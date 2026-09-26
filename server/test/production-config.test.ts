@@ -88,7 +88,12 @@ describe("the calendar OAuth state cookie", () => {
       process.env.NODE_ENV = "development";
       const app = await freshApp();
       const agent = request.agent(app);
-      await agent.post("/api/auth/demo").expect(200);
+      /* A real login, not the demo: in production the shared demo is locked, and connecting a
+         calendar is refused to it outright -- the calendar would be every visitor's (app.ts). */
+      await agent
+        .post("/api/auth/signup")
+        .send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026", name: "Dana Brooks", orgName: "Asphalt Co", acceptTerms: true })
+        .expect(201);
 
       process.env.NODE_ENV = "production";
       const res = await agent.get("/api/calendar/google/start");

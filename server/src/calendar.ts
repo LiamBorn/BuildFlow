@@ -132,7 +132,8 @@ const WHY_NOT: Record<string, string> = {
   state_mismatch: "The sign-in expired or was started in another tab.",
   not_configured: "It is not switched on for this BuildFlow yet.",
   no_code: "The provider sent nothing back.",
-  unknown_provider: "That is not a calendar BuildFlow connects to."
+  unknown_provider: "That is not a calendar BuildFlow connects to.",
+  demo: "The demo is shared by every visitor, so it cannot hold anyone's calendar. Create a free workspace to connect yours."
 };
 
 /** What the sign-in window shows when it is done, and what it tells the panel that opened it. */

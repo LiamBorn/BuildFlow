@@ -66,6 +66,12 @@ export const capabilities = [
      reaches anybody else's entries. */
   "timecard.log",
   "timecard.approve",
+  /* Connecting YOUR OWN Google or Outlook calendar (2026-09-26, decision 3 of the Mac plan: everyone
+     connects their own). Every level holds it, like putting in your own time: the connection is the
+     person's, the routes only ever read and write the caller's own row, and a Meetings panel that
+     only the Owner could fill was empty for everyone else. Connecting something for the WORKSPACE is
+     still `integrations.connect`, the Owner's. */
+  "meetings.connect",
   "feeds.read",
   "notify.send",
   // team
@@ -78,11 +84,13 @@ export const capabilities = [
   "org.settings",
   "billing.plan",
   "billing.pay",
-  /* Declared and granted, with no route on purpose. Connecting an integration has no backend to
-     connect to, and nothing in the product deletes a workspace. They are named here so the Owner's
-     reserved set is complete and so the day either is built, the permission is already decided --
-     which is also why the boot assertion checks routes against the table and not capabilities
-     against routes: a capability ahead of its route is a plan, not a hole. */
+  /* Declared and granted, with no route on purpose. Connecting an integration for the workspace has
+     no backend to connect to, and nothing in the product deletes a workspace. They are named here so
+     the Owner's reserved set is complete and so the day either is built, the permission is already
+     decided -- which is also why the boot assertion checks routes against the table and not
+     capabilities against routes: a capability ahead of its route is a plan, not a hole.
+     (The calendar routes rode `integrations.connect` from 2026-09-23 to 09-26; a calendar turned out
+     to be a person's, not the workspace's, and they moved to `meetings.connect`.) */
   "integrations.connect",
   "org.danger",
   "org.transfer",
@@ -104,6 +112,7 @@ const MEMBER: readonly Capability[] = [
   "reports.read",
   "timecard.read",
   "timecard.log",
+  "meetings.connect",
   "team.read",
   "org.leave"
 ];
@@ -200,14 +209,17 @@ export type AnonymousOrCapability = { anonymous: "allow"; signedIn: Capability }
 export type Policy = Capability | "public" | "signed-in" | AnonymousOrCapability;
 
 export const ROUTE_POLICY: Record<string, Policy> = {
-  /* Calendar connections (Google Calendar / Outlook), behind `integrations.connect`.
-     Reading what is on your own calendar is "signed-in": the events come from the tokens on
-     YOUR account and nobody else's, so there is nothing a permission level would protect.
-     Making or breaking the connection is the privileged half, and that is the capability the
-     workspace-permissions work declared and deliberately left unrouted until now. */
-  "DELETE /api/calendar/:provider": "integrations.connect",
-  "GET /api/calendar/:provider/callback": "integrations.connect",
-  "GET /api/calendar/:provider/start": "integrations.connect",
+  /* Calendar connections (Google Calendar / Outlook): YOUR OWN, at every level (2026-09-26).
+     Reading what is on your own calendar is "signed-in": the events come from the tokens on YOUR
+     account and nobody else's, so there is nothing a permission level would protect. Making or
+     breaking the connection is `meetings.connect`, which every level holds, because it only ever
+     reaches the caller's own row: no route takes a person, the consent's signed state names the
+     login that started it and the callback refuses any other, and the shared public demo is refused
+     in the handler (a calendar there would be every visitor's). It was the Owner's
+     `integrations.connect` until then, which left the Meetings panel empty for everyone else. */
+  "DELETE /api/calendar/:provider": "meetings.connect",
+  "GET /api/calendar/:provider/callback": "meetings.connect",
+  "GET /api/calendar/:provider/start": "meetings.connect",
   "GET /api/calendar/events": "signed-in",
   "GET /api/calendar/status": "signed-in",
   /* "Give feedback": every signed-in person may write to the product team. The session, not

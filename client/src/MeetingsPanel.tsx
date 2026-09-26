@@ -68,7 +68,8 @@ const REASONS: Record<string, string> = {
   state_mismatch: "the sign-in expired or was started in another tab. Try again from here",
   not_configured: "it is not switched on for this BuildFlow yet",
   no_code: "the provider sent nothing back",
-  unknown_provider: "that provider is not one BuildFlow connects to"
+  unknown_provider: "that provider is not one BuildFlow connects to",
+  demo: "the demo is shared by every visitor, so it cannot hold anyone's calendar. Create a free workspace to connect yours"
 };
 
 /**
@@ -329,7 +330,10 @@ export function MeetingsPanel() {
               </p>
             )}
             {status && PROVIDER_IDS.some((id) => status.providers[id].configured) && (
-              <p className="bfmt-note">Read-only: BuildFlow can see your meetings and never changes them.</p>
+              <p className="bfmt-note">
+                Read-only: BuildFlow can see your meetings and never changes them. Your calendar is yours: everyone on the team connects
+                their own, and nobody else sees your meetings.
+              </p>
             )}
           </div>
           <MeetingsPreview />

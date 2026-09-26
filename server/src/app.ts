@@ -1314,7 +1314,18 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   const CAL_COOKIE_PATH = "/api/calendar";
   /* `popup`: the Meetings panel opened the consent page in a small window and is waiting on it, so the
      callback answers THAT window (calendarPopupPage) instead of sending the tab back to the app. */
-  type CalendarState = { provider: CalendarProvider; state: string; verifier: string; returnTo: string; popup: boolean; issuedAt: number };
+  /* `accountId`: whose connection this is. Everyone connects their OWN calendar (2026-09-26, the Mac
+     plan's decision 3), so the answer is kept only for the login that asked for it -- a callback that
+     arrives under any other session is refused, whatever else about it checks out. */
+  type CalendarState = {
+    provider: CalendarProvider;
+    state: string;
+    verifier: string;
+    returnTo: string;
+    popup: boolean;
+    issuedAt: number;
+    accountId: string;
+  };
   const isCalProvider = (value: string): value is CalendarProvider => (CALENDAR_PROVIDERS as string[]).includes(value);
   const calCallbackUri = (req: express.Request, provider: CalendarProvider) => `${apiOriginFor(req)}/api/calendar/${provider}/callback`;
   const calDone = (res: Response, returnTo: string, params: { calendar: string; provider?: string; reason?: string }, popup = false) => {
@@ -1350,6 +1361,12 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       calDone(res, returnTo, { calendar: "error", reason: "unknown_provider" }, popup);
       return;
     }
+    /* The public demo is one login shared by every visitor: a calendar connected to it would be shown
+       to the next person who opens the demo. It may look at the panel, never hold a connection. */
+    if (req.readOnlyDemo) {
+      calDone(res, returnTo, { calendar: "error", reason: "demo", provider }, popup);
+      return;
+    }
     const { verifier, challenge } = pkcePair();
     // The state says which way the answer goes ("p." a window, "r." the tab) as well as proving the
     // callback is ours, so even a callback whose cookie has gone answers in the right form.
@@ -1359,14 +1376,18 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       calDone(res, returnTo, { calendar: "error", reason: "not_configured", provider }, popup);
       return;
     }
-    res.cookie(CAL_COOKIE, signState<CalendarState>({ provider, state, verifier, returnTo, popup, issuedAt: Date.now() }), {
-      httpOnly: true,
-      sameSite: "lax",
-      // Was `req.secure`, which is false behind a TLS-terminating proxy — see cookiesAreSecure.
-      secure: cookiesAreSecure(req),
-      path: CAL_COOKIE_PATH,
-      maxAge: OAUTH_STATE_TTL_MS
-    });
+    res.cookie(
+      CAL_COOKIE,
+      signState<CalendarState>({ provider, state, verifier, returnTo, popup, issuedAt: Date.now(), accountId: req.account!.id }),
+      {
+        httpOnly: true,
+        sameSite: "lax",
+        // Was `req.secure`, which is false behind a TLS-terminating proxy — see cookiesAreSecure.
+        secure: cookiesAreSecure(req),
+        path: CAL_COOKIE_PATH,
+        maxAge: OAUTH_STATE_TTL_MS
+      }
+    );
     res.redirect(url);
   });
 
@@ -1383,8 +1404,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" }, popup);
       return;
     }
-    if (typeof req.query.state !== "string" || req.query.state !== saved.state) {
+    // the same login that started it: nobody's consent lands on somebody else's account
+    if (typeof req.query.state !== "string" || req.query.state !== saved.state || saved.accountId !== req.account!.id) {
       calDone(res, returnTo, { calendar: "error", reason: "state_mismatch" }, popup);
+      return;
+    }
+    if (req.readOnlyDemo) {
+      calDone(res, returnTo, { calendar: "error", reason: "demo", provider }, popup);
       return;
     }
     if (typeof req.query.error === "string") {
@@ -1453,6 +1479,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       res.status(400).json({ error: "unknown_provider" });
       return;
     }
+    // only ever the caller's own: nothing about another person's connection is reachable from here
     mainStore.deleteCalendarConnection(req.account!.id, provider);
     calendarEventCache.clear(req.account!.id, provider);
     desktopNudges.nudgeAccount(req.account!.id);

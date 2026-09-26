@@ -122,7 +122,9 @@ describe("the Meetings panel", () => {
     expect(google).toHaveAttribute("href", expect.stringContaining("/api/calendar/google/start"));
     // the one without credentials is still refused
     expect(screen.getByRole("button", { name: "Outlook" })).toBeDisabled();
-    expect(screen.getByText("Read-only: BuildFlow can see your meetings and never changes them.")).toBeInTheDocument();
+    expect(screen.getByText(/^Read-only: BuildFlow can see your meetings and never changes them\./)).toBeInTheDocument();
+    // everyone connects their own (2026-09-26): nothing here says an Owner has to
+    expect(screen.getByText(/everyone on the team connects their own, and nobody else sees your meetings/)).toBeInTheDocument();
   });
 
   it("becomes the calendar once connected: the week, every meeting on it, and what is up next", async () => {

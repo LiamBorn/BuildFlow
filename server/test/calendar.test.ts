@@ -19,6 +19,9 @@ import request from "supertest";
 import type { Server } from "node:http";
 import { createApp } from "../src/app.js";
 import { calendarPopupPage, conferenceName, plainNotes, readGraphEvents } from "../src/calendar.js";
+import type { DesktopInbox } from "../src/desktopInbox.js";
+import { can, ROUTE_POLICY } from "../src/permissions.js";
+import { asMac, connectMac, teammate } from "./support/mac.js";
 
 const CLIENT_ID = "test-google-client";
 
@@ -141,8 +144,8 @@ describe("Google Calendar and Outlook", () => {
 
   /**
    * A workspace with its owner signed in. Every route here is gated — reading your own
-   * calendar is "signed-in" and connecting one needs `integrations.connect` — so an
-   * unauthenticated agent gets 401 and proves nothing about the calendar.
+   * calendar is "signed-in" and connecting one needs `meetings.connect`, which every level
+   * holds for their own — so an unauthenticated agent gets 401 and proves nothing about the calendar.
    */
   const signedIn = async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-calendar-"));
@@ -416,6 +419,132 @@ describe("Google Calendar and Outlook", () => {
     // …and a tab's sign-in still goes back to the app the way it always has
     const tab = await agent.get("/api/calendar/google/callback?code=cal-code&state=r.lost").expect(302);
     expect(tab.headers.location).toContain("reason=state_mismatch");
+  });
+
+  /* Everyone connects their own calendar (2026-09-26, decision 3 of the Mac plan). */
+  const consentFor = async (agent: ReturnType<typeof request.agent>) => {
+    const start = await agent.get("/api/calendar/google/start").expect(302);
+    const provider = await fetch(new URL(start.headers.location), { redirect: "manual" });
+    const back = new URL(provider.headers.get("location")!);
+    const calCookie = (start.headers["set-cookie"] as unknown as string[]).find((cookie) => cookie.startsWith("bf_cal="))!.split(";")[0];
+    return { callback: `${back.pathname}${back.search}`, calCookie };
+  };
+
+  it("lets a Member connect and disconnect their own calendar, and never touch anyone else's", async () => {
+    configure();
+    const { app, agent: owner } = await signedIn();
+    const orgId = (await owner.get("/api/auth/me").expect(200)).body.org.id as string;
+    const member = (await teammate(app, owner, orgId, "sam@asphaltco.com")).agent;
+    const connected = async (agent: ReturnType<typeof request.agent>) =>
+      (await agent.get("/api/calendar/status").expect(200)).body.providers.google.connected as boolean;
+
+    // a Member's consent that comes back under the Owner's session is not the Owner's to keep, nor the Member's
+    const stolen = await consentFor(member);
+    const ownerSession = (
+      (await request(app).post("/api/auth/login").send({ email: "dana@asphaltco.com", password: "Roller-Tack-2026" }).expect(200)).headers[
+        "set-cookie"
+      ] as unknown as string[]
+    )
+      .find((cookie) => cookie.startsWith("bf_session="))!
+      .split(";")[0];
+    const crossed = await request(app).get(stolen.callback).set("Cookie", `${ownerSession}; ${stolen.calCookie}`).expect(302);
+    expect(crossed.headers.location).toContain("reason=state_mismatch");
+    expect(await connected(owner)).toBe(false);
+    expect(await connected(member)).toBe(false);
+
+    // their own, through the same routes the Owner uses
+    const mine = await consentFor(member);
+    expect((await member.get(mine.callback).expect(302)).headers.location).toContain("calendar=connected");
+    expect(await connected(member)).toBe(true);
+    expect(await connected(owner), "connecting yours connects nobody else's").toBe(false);
+
+    const ownersOwn = await consentFor(owner);
+    await owner.get(ownersOwn.callback).expect(302);
+    expect(await connected(owner)).toBe(true);
+
+    // disconnecting takes the caller's own, and there is no way to name anybody else's
+    await member.delete("/api/calendar/google").expect(200);
+    expect(await connected(member)).toBe(false);
+    expect(await connected(owner), "the Owner's connection is untouched").toBe(true);
+  });
+
+  it("gives every level its own calendar, and keeps connecting the workspace to the Owner", () => {
+    for (const level of ["owner", "admin", "member"] as const) expect(can(level, "meetings.connect"), level).toBe(true);
+    expect(can("admin", "integrations.connect")).toBe(false);
+    expect(can("member", "integrations.connect")).toBe(false);
+    for (const route of ["GET /api/calendar/:provider/start", "GET /api/calendar/:provider/callback", "DELETE /api/calendar/:provider"]) {
+      expect(ROUTE_POLICY[route], route).toBe("meetings.connect");
+    }
+  });
+
+  it("will not let the shared public demo hold a calendar, which every visitor would see", async () => {
+    configure();
+    process.env.DEMO_READ_ONLY = "on";
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-calendar-demo-"));
+      const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
+      const visitor = request.agent(app);
+      await visitor.post("/api/auth/demo").expect(200);
+      const start = await visitor.get("/api/calendar/google/start").expect(302);
+      expect(start.headers.location).toContain("calendar=error");
+      expect(start.headers.location).toContain("reason=demo");
+      expect(calendarPopupPage({ calendar: "error", provider: "google", reason: "demo" }, "http://localhost:5432")).toContain(
+        "The demo is shared by every visitor"
+      );
+    } finally {
+      delete process.env.DEMO_READ_ONLY;
+    }
+  });
+
+  it("puts a person's meetings in their Mac's inbox, read from their own midnight and kept five minutes", async () => {
+    configure();
+    const { app, agent } = await signedIn();
+    const { callback } = await consentFor(agent);
+    await agent.get(callback).expect(302);
+    const start = new Date(Date.now() + 2 * 60 * 60_000);
+    setEvents([
+      {
+        id: "evt-mac",
+        summary: "Standup",
+        hangoutLink: "https://meet.example/standup",
+        start: { dateTime: start.toISOString() },
+        end: { dateTime: new Date(start.getTime() + 30 * 60_000).toISOString() }
+      }
+    ]);
+    const mac = asMac(app, (await connectMac(app, agent)).key);
+    const reads = eventReads();
+
+    const inbox = (await mac.get("/api/desktop/inbox?tz=America/New_York").expect(200)).body as DesktopInbox;
+    expect(inbox.calendar).toEqual({ connected: ["google"], failed: [] });
+    expect(inbox.meetings).toEqual([
+      expect.objectContaining({
+        id: "google:evt-mac",
+        title: "Standup",
+        joinUrl: "https://meet.example/standup",
+        url: expect.stringMatching(/\/#open\/dashboard\/meetings$/)
+      })
+    ]);
+    // the range starts at midnight in New York, whatever the server's own zone, so it is the same range all day
+    const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+    const clock = (at: number) =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/New_York",
+        hourCycle: "h23",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      })
+        .format(new Date(at))
+        .replace(",", "");
+    const asked = Date.parse(lastWindow()!.timeMin);
+    expect(clock(asked)).toBe(`${day} 00:00`);
+
+    // read again, and again from the Meetings panel's week: Google is asked once for the Mac's range
+    await mac.get("/api/desktop/inbox?tz=America/New_York").expect(200);
+    await mac.get("/api/desktop/inbox?tz=America/New_York").expect(200);
+    expect(eventReads() - reads).toBe(1);
   });
 
   it("never lets a reason out of the page's script or text", () => {
