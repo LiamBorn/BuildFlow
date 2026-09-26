@@ -1,0 +1,457 @@
+{
+  "default": [
+    {
+      "id": "inspection-insp-1",
+      "title": "Inspection scheduled",
+      "detail": "Foundation Inspection is upcoming for Riverside Office Building.",
+      "timestamp": "2026-06-23T10:00:00.000Z",
+      "tone": "violet",
+      "icon": "CircleCheck",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "panel",
+        "panelId": "inspections"
+      }
+    },
+    {
+      "id": "weather-wa-1",
+      "title": "Weather alert added",
+      "detail": "Heavy rain expected for Riverside Office Building - Rain and gusts.",
+      "timestamp": "2026-06-18T12:00:00.000Z",
+      "tone": "amber",
+      "icon": "CloudSun",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "equipment-eq-pump",
+      "title": "Equipment status updated",
+      "detail": "Concrete Pump #2 is in use for Riverside Office Building.",
+      "timestamp": "<now>",
+      "tone": "amber",
+      "icon": "Wrench",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "eq-pump"
+      }
+    },
+    {
+      "id": "field-fu-1",
+      "title": "Field update posted",
+      "detail": "Carlos Ramirez updated Riverside Office Building: Steel framing installation progressing.",
+      "timestamp": "2026-06-16T09:18:00.000Z",
+      "tone": "green",
+      "icon": "ClipboardList",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "field",
+        "recordId": "fu-1"
+      }
+    },
+    {
+      "id": "material-mat-concrete",
+      "title": "Material status updated",
+      "detail": "Ready Mix Concrete is ready for Riverside Office Building.",
+      "timestamp": "2026-06-16",
+      "tone": "green",
+      "icon": "PackageCheck",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "mat-concrete"
+      }
+    },
+    {
+      "id": "assignment-as-1",
+      "title": "Schedule assignment updated",
+      "detail": "Concrete Crew 1 is assigned to Riverside Office Building with confirmed status.",
+      "timestamp": "2026-06-15",
+      "tone": "blue",
+      "icon": "CalendarDays",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "schedule",
+        "date": "2026-06-15",
+        "crewId": "crew-concrete"
+      }
+    },
+    {
+      "id": "delayIQ-delayIQ-rain",
+      "title": "DelayIQ being tracked",
+      "detail": "Heavy Rain DelayIQ is monitoring on Riverside Office Building with 4 day impact.",
+      "timestamp": "2026-06-12",
+      "tone": "amber",
+      "icon": "ShieldAlert",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "delayIQs",
+        "recordId": "delayIQ-rain"
+      }
+    }
+  ],
+  "rich": [
+    {
+      "id": "inspection-insp-1",
+      "title": "Inspection scheduled",
+      "detail": "Foundation Inspection is upcoming for Riverside Office Building.",
+      "timestamp": "2026-06-23T10:00:00.000Z",
+      "tone": "violet",
+      "icon": "CircleCheck",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "panel",
+        "panelId": "inspections"
+      }
+    },
+    {
+      "id": "material-mat-anchor",
+      "title": "Material status updated",
+      "detail": "Anchor bolts is waiting on delivery for Harbor Point.",
+      "timestamp": "2026-06-20",
+      "tone": "amber",
+      "icon": "PackageCheck",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "mat-anchor"
+      }
+    },
+    {
+      "id": "weather-wa-3",
+      "title": "Weather alert added",
+      "detail": "Cold snap for all projects - Lows near freezing.",
+      "timestamp": "2026-06-19T06:00:00.000Z",
+      "tone": "blue",
+      "icon": "CloudSun",
+      "projectId": null,
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "material-mat-forms",
+      "title": "Material status updated",
+      "detail": "Form ply is ordered for Riverside Office Building.",
+      "timestamp": "2026-06-19",
+      "tone": "amber",
+      "icon": "PackageCheck",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "mat-forms"
+      }
+    },
+    {
+      "id": "weather-wa-1",
+      "title": "Weather alert added",
+      "detail": "Heavy rain expected for Riverside Office Building - Rain and gusts.",
+      "timestamp": "2026-06-18T12:00:00.000Z",
+      "tone": "amber",
+      "icon": "CloudSun",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "assignment-as-clash",
+      "title": "Schedule assignment updated",
+      "detail": "Concrete Crew 1 is assigned to Harbor Point with planned status.",
+      "timestamp": "2026-06-18",
+      "tone": "red",
+      "icon": "CalendarDays",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "schedule",
+        "date": "2026-06-18",
+        "crewId": "crew-concrete"
+      }
+    },
+    {
+      "id": "weather-wa-2",
+      "title": "Weather alert added",
+      "detail": "Storm warning for Harbor Point - Lightning likely.",
+      "timestamp": "2026-06-17T18:00:00.000Z",
+      "tone": "red",
+      "icon": "CloudSun",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "material-mat-rebar",
+      "title": "Material status updated",
+      "detail": "Rebar #5 is missing for Harbor Point.",
+      "timestamp": "2026-06-17",
+      "tone": "red",
+      "icon": "PackageCheck",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "mat-rebar"
+      }
+    },
+    {
+      "id": "equipment-eq-pump",
+      "title": "Equipment status updated",
+      "detail": "Concrete Pump #2 is in use for Riverside Office Building.",
+      "timestamp": "<now>",
+      "tone": "amber",
+      "icon": "Wrench",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "eq-pump"
+      }
+    },
+    {
+      "id": "equipment-eq-dozer",
+      "title": "Equipment status updated",
+      "detail": "Dozer D6 is maintenance for Harbor Point.",
+      "timestamp": "<now>",
+      "tone": "red",
+      "icon": "Wrench",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "eq-dozer"
+      }
+    },
+    {
+      "id": "equipment-eq-loader",
+      "title": "Equipment status updated",
+      "detail": "Loader 950 is available for the fleet.",
+      "timestamp": "<now>",
+      "tone": "green",
+      "icon": "Wrench",
+      "projectId": null,
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "eq-loader"
+      }
+    },
+    {
+      "id": "equipment-eq-roller",
+      "title": "Equipment status updated",
+      "detail": "Roller is in use for Unassigned.",
+      "timestamp": "<now>",
+      "tone": "amber",
+      "icon": "Wrench",
+      "projectId": "p-gone",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "eq-roller"
+      }
+    },
+    {
+      "id": "delayIQ-delayIQ-rebar",
+      "title": "DelayIQ being tracked",
+      "detail": "Rebar delivery slipping is open on Harbor Point with 2 day impact.",
+      "timestamp": "2026-06-16T11:48:00.000Z",
+      "tone": "red",
+      "icon": "ShieldAlert",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "record",
+        "page": "delayIQs",
+        "recordId": "delayIQ-rebar"
+      }
+    },
+    {
+      "id": "field-fu-1",
+      "title": "Field update posted",
+      "detail": "Carlos Ramirez updated Riverside Office Building: Steel framing installation progressing.",
+      "timestamp": "2026-06-16T09:18:00.000Z",
+      "tone": "green",
+      "icon": "ClipboardList",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "field",
+        "recordId": "fu-1"
+      }
+    },
+    {
+      "id": "field-fu-3",
+      "title": "Field update posted",
+      "detail": "Matt Johnson updated Unassigned: Crew waiting on the pump.",
+      "timestamp": "2026-06-16T09:18:00.000Z",
+      "tone": "red",
+      "icon": "ClipboardList",
+      "projectId": "p-gone",
+      "target": {
+        "kind": "record",
+        "page": "field",
+        "recordId": "fu-3"
+      }
+    },
+    {
+      "id": "inspection-insp-3",
+      "title": "Inspection scheduled",
+      "detail": "Rebar inspection is ready for Harbor Point.",
+      "timestamp": "2026-06-16T09:18:00.000Z",
+      "tone": "violet",
+      "icon": "CircleCheck",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "panel",
+        "panelId": "inspections"
+      }
+    },
+    {
+      "id": "weather-conflict-wx-hold",
+      "title": "Weather may stop Concrete - Level 3 Slab",
+      "detail": "Lightning: thunderstorms, Wednesday 1–3 PM, at Riverside Office Building, inside the job's hours. Call it off or keep it on.",
+      "timestamp": "2026-06-16T08:30:00.000Z",
+      "tone": "red",
+      "icon": "CloudSun",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "weather-conflict-wx-called",
+      "title": "Concrete - Level 3 Slab was called off for weather",
+      "detail": "Wind Wednesday 7–9:30 AM at Riverside Office Building. A reschedule is suggested.",
+      "timestamp": "2026-06-16T08:30:00.000Z",
+      "tone": "violet",
+      "icon": "CloudSun",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "weather-conflict-wx-watch",
+      "title": "Weather may stop Site grading",
+      "detail": "Rain: 0.20 in of rain, Thursday 10:30 AM–1 PM, at Harbor Point, inside the job's hours. Call it off or keep it on.",
+      "timestamp": "2026-06-16T08:00:00.000Z",
+      "tone": "amber",
+      "icon": "CloudSun",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "panel",
+        "panelId": "weather"
+      }
+    },
+    {
+      "id": "assignment-as-ghost",
+      "title": "Schedule assignment updated",
+      "detail": "Crew is assigned to scheduled work with ready status.",
+      "timestamp": "2026-06-16",
+      "tone": "blue",
+      "icon": "CalendarDays",
+      "projectId": null,
+      "target": {
+        "kind": "schedule",
+        "date": "2026-06-16",
+        "crewId": "crew-deleted"
+      }
+    },
+    {
+      "id": "material-mat-concrete",
+      "title": "Material status updated",
+      "detail": "Ready Mix Concrete is ready for Riverside Office Building.",
+      "timestamp": "2026-06-16",
+      "tone": "green",
+      "icon": "PackageCheck",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "mat-concrete"
+      }
+    },
+    {
+      "id": "field-fu-2",
+      "title": "Field update posted",
+      "detail": "Matt Johnson updated Harbor Point: Stopped: the excavator is down.",
+      "timestamp": "2026-06-15T14:05:00.000Z",
+      "tone": "red",
+      "icon": "ClipboardList",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "record",
+        "page": "field",
+        "recordId": "fu-2"
+      }
+    },
+    {
+      "id": "assignment-as-1",
+      "title": "Schedule assignment updated",
+      "detail": "Concrete Crew 1 is assigned to Riverside Office Building with confirmed status.",
+      "timestamp": "2026-06-15",
+      "tone": "blue",
+      "icon": "CalendarDays",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "schedule",
+        "date": "2026-06-15",
+        "crewId": "crew-concrete"
+      }
+    },
+    {
+      "id": "inspection-insp-2",
+      "title": "Inspection scheduled",
+      "detail": "Footing inspection is complete for Harbor Point.",
+      "timestamp": "2026-06-12T15:00:00.000Z",
+      "tone": "green",
+      "icon": "CircleCheck",
+      "projectId": "p-harbor",
+      "target": {
+        "kind": "panel",
+        "panelId": "inspections"
+      }
+    },
+    {
+      "id": "delayIQ-delayIQ-rain",
+      "title": "DelayIQ being tracked",
+      "detail": "Heavy Rain DelayIQ is monitoring on Riverside Office Building with 4 day impact.",
+      "timestamp": "2026-06-12",
+      "tone": "amber",
+      "icon": "ShieldAlert",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "delayIQs",
+        "recordId": "delayIQ-rain"
+      }
+    },
+    {
+      "id": "delayIQ-delayIQ-permit",
+      "title": "DelayIQ being tracked",
+      "detail": "Permit posted late is resolved on Riverside Office Building with 0 day impact.",
+      "timestamp": "2026-06-10",
+      "tone": "slate",
+      "icon": "ShieldAlert",
+      "projectId": "p-riverside",
+      "target": {
+        "kind": "record",
+        "page": "delayIQs",
+        "recordId": "delayIQ-permit"
+      }
+    }
+  ]
+}

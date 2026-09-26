@@ -27,8 +27,8 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Check, ChevronRight, MoreHorizontal, Search, Settings, X } from "lucide-react";
-import type { BootstrapPayload } from "@buildflow/shared";
-import type { NotificationItem, NotificationTarget } from "./App";
+import { notificationNeedsAttention, projectsManagedBy, type BootstrapPayload } from "@buildflow/shared";
+import type { NotificationItem, NotificationTarget } from "./notifications/bellItems";
 
 export type NotificationTab = "all" | "attention" | "mine";
 
@@ -39,7 +39,7 @@ const TABS: Array<{ id: NotificationTab; label: string }> = [
 ];
 
 /** Red and amber are the two tones that mean someone has to do something. */
-const needsAttention = (item: NotificationItem) => item.tone === "red" || item.tone === "amber";
+const needsAttention = notificationNeedsAttention;
 
 const readKey = (userId: string) => `bf:notifications:read:${userId}`;
 const seenKey = (userId: string) => `bf:notifications:seen:${userId}`;
@@ -165,10 +165,7 @@ export function NotificationsPanel({ id, items, data, onClose, onOpenSettings, o
   }, [moreOpen]);
 
   /** The projects this person manages, which is what the third tab filters on. */
-  const myProjects = useMemo(
-    () => new Set(data.projects.filter((project) => project.managerId === data.activeUser.id).map((project) => project.id)),
-    [data.projects, data.activeUser.id]
-  );
+  const myProjects = useMemo(() => projectsManagedBy(data.projects, data.activeUser.id), [data.projects, data.activeUser.id]);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();

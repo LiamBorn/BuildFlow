@@ -987,3 +987,30 @@ export type WeeklyDigest = {
   slippedMilestones: WeeklyDigestMilestone[];
   totals: { jobs: number; bookings: number; conflicts: number };
 };
+
+/* ── One inbox for the website and the Mac (notch plan, step 3, 2026-09-26) ──────────────────
+   The bell's notification list, the Dashboard's greeting and the Meetings panel's clock moved here
+   from the client, so the website and the Mac's notch show the same thing. */
+export {
+  buildNotificationItems,
+  notificationNeedsAttention,
+  projectsManagedBy,
+  type InboxNotification,
+  type NotificationDestination,
+  type NotificationKind,
+  type NotificationRecordRef,
+  type NotificationSources,
+  type NotificationTone
+} from "./notifications";
+export {
+  GREETING_WORDS,
+  WELCOME_BACK_AFTER_MS,
+  firstNameOf,
+  greetingFor,
+  hourOf,
+  partOfDay,
+  type Greeting,
+  type GreetingKind
+} from "./greeting";
+export { MEETING_SOON_MS, allDaySpan, meetingState, upNext, type MeetingState, type MeetingTimes } from "./meetings";
+export { WEATHER_CAUSE_LABEL, weatherClockWords, weatherTimeRange, weekdayName } from "./weatherWords";

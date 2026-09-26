@@ -162,6 +162,7 @@ import {
   plannedPercentAt,
   scheduleCalendar
 } from "@buildflow/shared";
+import { greetingFor } from "@buildflow/shared";
 import {
   applyBusinessProfile,
   startCheckout as apiStartCheckout,
@@ -286,12 +287,10 @@ import {
 } from "./board/panelBoard";
 import { MeetingsPanel } from "./MeetingsPanel";
 import { WeatherIQPanel } from "./weather/WeatherIQPanel";
-import {
-  approvalPrefix as weatherApprovalPrefix,
-  CAUSE_LABEL as WEATHER_CAUSE_LABEL,
-  timeRange as weatherTimeRange
-} from "./weather/weatherIQ";
+import { approvalPrefix as weatherApprovalPrefix } from "./weather/weatherIQ";
 import { NotificationsPanel, useReadNotifications } from "./NotificationsPanel";
+import { bellNotificationItems, type NotificationTarget } from "./notifications/bellItems";
+import { useLastActive } from "./lastActive";
 import { FeedbackTab } from "./FeedbackTab";
 import { SectionPicker, type SectionOption } from "./SectionPicker";
 import { useRecordFocus, type RecordFocusRequest } from "./recordFocus";
@@ -19131,178 +19130,12 @@ function Sidebar({
   );
 }
 
-/**
- * Where the work a notification is about actually lives — what "bring me to it" resolves to.
- *
- * Three shapes, because BuildFlow keeps these seven kinds of thing in three different sorts of
- * place. Materials, equipment, field updates and DelayIQs each have a page of their own, so the
- * target is a record on that page's index. Weather alerts and inspections do NOT have a page —
- * they are read on the Dashboard — so the target is the panel that holds them, and pretending
- * otherwise would land the reader on a page that does not exist. A schedule assignment lives on
- * the board, which is addressed by week and crew rather than by row.
- */
 /** The className for an index row: selected, and/or lit because a notification pointed at it. */
 const indexRowClass = (selected: boolean, focused: boolean) =>
   [selected ? "is-selected" : "", focused ? "is-bf-focused" : ""].filter(Boolean).join(" ") || undefined;
 
-export type NotificationTarget =
-  | { kind: "record"; page: Page; recordId: string }
-  | { kind: "panel"; panelId: string }
-  | { kind: "schedule"; date: string; crewId: string };
-
-export type NotificationItem = {
-  id: string;
-  title: string;
-  detail: string;
-  timestamp: string;
-  tone: "blue" | "green" | "amber" | "red" | "violet" | "slate";
-  icon: typeof Grid2X2;
-  /**
-   * The project the notification is about, where there is one. Added 2026-09-14 so the
-   * panel's third tab can mean something real — "the projects I manage" is derivable from
-   * `project.managerId`, where an "assigned to me" tab would have nothing behind it.
-   */
-  projectId?: string;
-  /**
-   * Where clicking the row goes. Optional in the type because a future source might have
-   * nowhere to send anyone — the panel renders such a row as plain text rather than a link,
-   * which is better than a control that looks live and does nothing.
-   */
-  target?: NotificationTarget;
-};
-
-function buildNotificationItems(data: BootstrapPayload): NotificationItem[] {
-  const items: NotificationItem[] = [];
-
-  data.fieldUpdates.forEach((update) => {
-    const user = data.users.find((item) => item.id === update.userId) ?? data.activeUser;
-    items.push({
-      id: `field-${update.id}`,
-      title: "Field update posted",
-      detail: `${user.name} updated ${projectName(data, update.projectId)}: ${update.message}`,
-      timestamp: update.createdAt,
-      tone: update.status === "DelayIQed" || update.status === "At Risk" ? "red" : "green",
-      icon: ClipboardList,
-      projectId: update.projectId,
-      target: { kind: "record", page: "field", recordId: update.id }
-    });
-  });
-
-  /* WeatherIQ's job days (2026-09-23): each open one is a suggestion for the person in charge — the
-     project's manager, which is what the panel's "projects I manage" tab reads — and a called-off one
-     says a reschedule is waiting. Both land on the WeatherIQ section, where the decision is made. */
-  (data.weatherConflicts ?? []).forEach((conflict) => {
-    if (conflict.status !== "open" && conflict.status !== "cancelled") return;
-    const job = data.jobs.find((item) => item.id === conflict.jobId);
-    if (!job) return;
-    const when = `${new Date(`${conflict.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" })} ${weatherTimeRange(conflict.start, conflict.end)}`;
-    items.push({
-      id: `weather-conflict-${conflict.id}`,
-      title: conflict.status === "open" ? `Weather may stop ${job.phase}` : `${job.phase} was called off for weather`,
-      detail:
-        conflict.status === "open"
-          ? `${WEATHER_CAUSE_LABEL[conflict.cause]}: ${conflict.reason}, ${when}, at ${projectName(data, conflict.projectId)}, inside the job's hours. Call it off or keep it on.`
-          : `${WEATHER_CAUSE_LABEL[conflict.cause]} ${when} at ${projectName(data, conflict.projectId)}. A reschedule is suggested.`,
-      timestamp: conflict.updatedAt || conflict.detectedAt,
-      tone: conflict.status === "cancelled" ? "violet" : conflict.severity === "hold" ? "red" : "amber",
-      icon: CloudSun,
-      projectId: conflict.projectId,
-      target: { kind: "panel", panelId: "weather" }
-    });
-  });
-
-  data.weatherAlerts.forEach((alert) => {
-    items.push({
-      id: `weather-${alert.id}`,
-      title: "Weather alert added",
-      detail: `${alert.title} for ${alert.projectId ? projectName(data, alert.projectId) : "all projects"} - ${alert.details}`,
-      timestamp: alert.startsAt,
-      tone: alert.severity === "High" ? "red" : alert.severity === "Medium" ? "amber" : "blue",
-      icon: CloudSun,
-      projectId: alert.projectId ?? undefined,
-      // weather has no page of its own: it is read in the Dashboard's Weather Impact panel
-      target: { kind: "panel", panelId: "weather" }
-    });
-  });
-
-  data.delayIQs.forEach((delayIQ) => {
-    items.push({
-      id: `delayIQ-${delayIQ.id}`,
-      title: "DelayIQ being tracked",
-      detail: `${delayIQ.title} is ${delayIQ.status.toLowerCase()} on ${projectName(data, delayIQ.projectId)} with ${delayIQ.impactDays} day impact.`,
-      timestamp: delayIQ.reportedAt,
-      tone: delayIQ.severity === "High" ? "red" : delayIQ.severity === "Medium" ? "amber" : "slate",
-      icon: ShieldAlert,
-      projectId: delayIQ.projectId,
-      target: { kind: "record", page: "delayIQs", recordId: delayIQ.id }
-    });
-  });
-
-  data.assignments.forEach((assignment) => {
-    const job = data.jobs.find((item) => item.id === assignment.jobId);
-    const crew = data.crews.find((item) => item.id === assignment.crewId);
-    items.push({
-      id: `assignment-${assignment.id}`,
-      title: "Schedule assignment updated",
-      detail: `${crew?.name ?? "Crew"} is assigned to ${job?.name ?? "scheduled work"} with ${assignment.status.toLowerCase()} status.`,
-      timestamp: assignment.date,
-      tone: assignment.conflicts.length ? "red" : "blue",
-      icon: CalendarDays,
-      projectId: job?.projectId,
-      // the board, at the week this booking sits in and filtered to the crew it belongs to
-      target: { kind: "schedule", date: assignment.date, crewId: assignment.crewId }
-    });
-  });
-
-  data.inspections.forEach((inspection) => {
-    items.push({
-      id: `inspection-${inspection.id}`,
-      title: "Inspection scheduled",
-      detail: `${inspection.title} is ${inspection.status.toLowerCase()} for ${projectName(data, inspection.projectId)}.`,
-      timestamp: inspection.scheduledAt,
-      tone: inspection.status === "Complete" ? "green" : "violet",
-      icon: CheckCircle2,
-      projectId: inspection.projectId,
-      // likewise no page: inspections are read in the Dashboard's Upcoming Inspections panel
-      target: { kind: "panel", panelId: "inspections" }
-    });
-  });
-
-  data.materials.forEach((material) => {
-    items.push({
-      id: `material-${material.id}`,
-      title: "Material status updated",
-      detail: `${material.name} is ${material.status.toLowerCase()} for ${projectName(data, material.projectId)}.`,
-      timestamp: material.deliveryDate,
-      tone: material.status === "Missing" ? "red" : material.status === "Ready" ? "green" : "amber",
-      icon: PackageCheck,
-      projectId: material.projectId,
-      target: { kind: "record", page: "inventory", recordId: material.id }
-    });
-  });
-
-  data.equipment.forEach((equipment) => {
-    const assignedProject = equipment.assignedTo ? projectName(data, equipment.assignedTo) : "the fleet";
-    items.push({
-      id: `equipment-${equipment.id}`,
-      title: "Equipment status updated",
-      detail: `${equipment.name} is ${equipment.status.toLowerCase()} for ${assignedProject}.`,
-      timestamp: new Date().toISOString(),
-      tone: equipment.status === "Maintenance" ? "red" : equipment.status === "In Use" ? "amber" : "green",
-      icon: Wrench,
-      projectId: equipment.assignedTo ?? undefined,
-      target: { kind: "record", page: "inventory", recordId: equipment.id }
-    });
-  });
-
-  /**
-   * ALL of them, newest first. This used to end `.slice(0, 7)`, so the bell had been showing
-   * the seven most recent and silently dropping the rest — which is the first thing the
-   * 2026-09-14 redesign had to fix, because "show all notifications" was the ask. The panel
-   * scrolls and filters instead of the builder truncating.
-   */
-  return items.sort((first, second) => new Date(second.timestamp).getTime() - new Date(first.timestamp).getTime());
-}
+/* The bell's list — what used to be buildNotificationItems here — is @buildflow/shared's since
+   2026-09-26, so the server can build the same list for the Mac: notifications/bellItems.ts. */
 
 /**
  * The top bar's "Upgrade" button and the menu behind it.
@@ -19478,7 +19311,7 @@ function TopBar({
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
   const bookmarkMenuRef = useRef<HTMLDivElement | null>(null);
-  const notificationItems = useMemo(() => buildNotificationItems(data), [data]);
+  const notificationItems = useMemo(() => bellNotificationItems(data), [data]);
   const readNotifications = useReadNotifications(data.activeUser.id);
   /* The badge counts what this person has NOT BEEN SHOWN yet — not the total, which never goes
      down, and not the unread rows, which stay unread until each is clicked and would leave the
@@ -24812,12 +24645,10 @@ function Dashboard({
     day: "numeric",
     year: "numeric"
   });
-  const hsHour = new Date().getHours();
-  const hsGreeting = hsHour < 12 ? "Good morning" : hsHour < 17 ? "Good afternoon" : "Good evening";
-  const hsFirstName = (() => {
-    const first = (data.activeUser?.name ?? "").trim().split(/\s+/)[0] || "there";
-    return first.charAt(0).toUpperCase() + first.slice(1);
-  })();
+  // one wording with the Mac's notch (@buildflow/shared greeting): "Working late" after 10 PM, and
+  // "Welcome back" after three hours or more away
+  const lastActiveAt = useLastActive(data.activeUser?.id);
+  const hsGreeting = greetingFor({ name: data.activeUser?.name, now: Date.now(), lastActiveAt });
 
   const panelBodies: Record<string, ReactNode> = { ...sectionBodies, ...railBodies };
   const panelTitles: Record<string, string> = { ...DASH_SECTION_TITLES, ...DASH_RAIL_TITLES };
@@ -24926,7 +24757,7 @@ function Dashboard({
           </div>
           <h1 className="hs-home-greeting">
             {/* the title sharpens character by character — docs/motion-spec.md §2.4 */}
-            <TextReveal text={`${hsGreeting}, ${hsFirstName}`} />
+            <TextReveal text={hsGreeting.text} />
           </h1>
           <div className="hs-home-subline">
             <p className="hs-home-sub">Your AI-powered hub for construction scheduling, insights, and execution.</p>
