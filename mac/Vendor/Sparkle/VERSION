@@ -1,0 +1,28 @@
+Sparkle 2.10.0 (https://sparkle-project.org), the update framework in BuildFlow for Mac.
+
+Source:  https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz
+sha256:  c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+Taken:   2026-09-26
+
+Kept, byte for byte as released:
+  Sparkle.framework        the framework the app links (universal, signed ad hoc with the hardened runtime,
+                           macOS 12+). embed-sparkle.sh copies it into the app and re-signs it there.
+  LICENSE                  Sparkle's licence. It has to travel with the framework: embed-sparkle.sh copies it
+                           into the app as Contents/Resources/Sparkle-LICENSE.
+  bin/sign_update          signs a DMG with the EdDSA key in the login Keychain (release.sh).
+  bin/generate_appcast     not used by release.sh, which writes the appcast from a template; kept so a
+                           person can rebuild one from a folder of DMGs by hand.
+  bin/generate_keys        `generate_keys --account buildflow-mac -p` prints the PUBLIC key, to compare
+                           with SUPublicEDKey in mac/Resources/Info.plist.
+
+Left out of the tarball: Symbols/ (dSYMs), Sparkle Test App.app, bin/BinaryDelta (no delta updates),
+bin/old_dsa_scripts (DSA is retired), SampleAppcast.xml, INSTALL, CHANGELOG.
+
+The framework's XPCServices (Installer.xpc, Downloader.xpc) stay here but are NOT copied into the app:
+BuildFlow is not sandboxed, and Sparkle's sandboxing guide says an app that does not enable its XPC
+services (SUEnableInstallerLauncherService / SUEnableDownloaderService) "may choose to remove these
+services in a post install script when copying the framework to your application". embed-sparkle.sh
+is that script.
+
+To upgrade: download the new tarball, check its sha256 against the GitHub release, replace the files
+above, update this file, and read Sparkle's CHANGELOG for new Info.plist keys or appcast elements.
