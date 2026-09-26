@@ -1085,3 +1085,62 @@ export type WeeklyDigest = {
   slippedMilestones: WeeklyDigestMilestone[];
   totals: { jobs: number; bookings: number; conflicts: number };
 };
+
+/* ── One inbox for the website and the Mac (notch plan, step 3, 2026-09-26) ──────────────────
+   The bell's notification list, the Dashboard's greeting and the Meetings panel's clock moved here
+   from the client, so the website and the Mac's notch show the same thing. */
+export {
+  buildNotificationItems,
+  notificationNeedsAttention,
+  projectsManagedBy,
+  type InboxNotification,
+  type NotificationDestination,
+  type NotificationKind,
+  type NotificationRecordRef,
+  type NotificationSources,
+  type NotificationTone
+} from "./notifications";
+export {
+  GREETING_WORDS,
+  WELCOME_BACK_AFTER_MS,
+  firstNameOf,
+  greetingFor,
+  hourOf,
+  partOfDay,
+  type Greeting,
+  type GreetingKind
+} from "./greeting";
+export { MEETING_SOON_MS, allDaySpan, meetingState, upNext, type MeetingState, type MeetingTimes } from "./meetings";
+export { WEATHER_CAUSE_LABEL, weatherClockWords, weatherTimeRange, weekdayName } from "./weatherWords";
+
+/* The Mac's Jobs and Tasks tabs: the coming week's jobs, yours first, and what is waiting on you. */
+export { addIsoDays, isWorkday, upcomingJobs, type UpcomingJob, type UpcomingJobWeather, type UpcomingJobsSources } from "./upcomingJobs";
+export {
+  NEEDS_YOU_LEVELS,
+  needsYou,
+  type NeedsYouAction,
+  type NeedsYouCapability,
+  type NeedsYouKind,
+  type NeedsYouOptions,
+  type NeedsYouSources,
+  type NeedsYouTask,
+  type PendingTimeEntry
+} from "./needsYou";
+
+/* Seen and read notifications, kept on the server per person so the bell and the Mac agree. */
+export {
+  NOTIFICATION_STATE_BUDGET,
+  NOTIFICATION_STATE_SETTING,
+  decodeNotificationState,
+  emptyNotificationState,
+  encodeNotificationState,
+  isNotificationRead,
+  isNotificationSeen,
+  markNotifications,
+  mergeNotificationStateValues,
+  mergeNotificationStates,
+  notificationKey,
+  unseenNotificationCount,
+  type NotificationReadState,
+  type NotificationStamp
+} from "./notificationState";

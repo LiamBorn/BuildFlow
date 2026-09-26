@@ -589,3 +589,92 @@ export function sortEvents(events: CalendarEvent[]): CalendarEvent[] {
     return left.startsAt.localeCompare(right.startsAt);
   });
 }
+
+/* ── the five-minute cache (2026-09-26, notch step 3) ─────────────────────────
+   Every read of the Meetings panel went out to Google or Microsoft, and the Mac's
+   inbox is about to ask every minute. So a person's meetings for a range are kept
+   for five minutes, per account, per provider, per exact range: the panel asks for
+   its month grid, whose range is the same all month, and the Mac will ask for its
+   own day-aligned week.
+
+   What it will not do: keep a failure (the next read asks again), keep a range it
+   did not fetch, stand in the way of the panel's Sync (which asks for `fresh`: the
+   provider is read then and the answer kept), or outlive a connection. Connecting
+   and disconnecting clear the
+   account, and so does a refresh token the provider refused. A clear that lands
+   while a read is in flight wins: that read's answer is handed back but not kept. */
+
+/** How long a person's meetings are kept before the provider is asked again. */
+export const CALENDAR_CACHE_MS = 5 * 60 * 1000;
+
+type CachedRead = { at: number; events: CalendarEvent[] };
+
+export class CalendarEventCache {
+  private readonly entries = new Map<string, CachedRead>();
+  private readonly inFlight = new Map<string, Promise<CalendarEvent[]>>();
+  /** Bumped by every clear of an account, so a read that started before it is not kept. */
+  private readonly generations = new Map<string, number>();
+
+  constructor(
+    private readonly ttlMs = CALENDAR_CACHE_MS,
+    private readonly clock: () => number = Date.now,
+    /** A ceiling on what is kept, so a busy server cannot grow it without bound; oldest go first. */
+    private readonly maxEntries = 2_000
+  ) {}
+
+  private key(accountId: string, provider: CalendarProvider, from: Date, to: Date) {
+    return `${accountId}\u0000${provider}\u0000${from.toISOString()}\u0000${to.toISOString()}`;
+  }
+
+  /**
+   * The meetings for this range: from the cache while fresh, otherwise from `load`, which is then
+   * kept. `fresh` skips what is kept — a person pressing Sync wants the provider asked now.
+   */
+  async read(
+    accountId: string,
+    provider: CalendarProvider,
+    from: Date,
+    to: Date,
+    load: () => Promise<CalendarEvent[]>,
+    options: { fresh?: boolean } = {}
+  ): Promise<CalendarEvent[]> {
+    const key = this.key(accountId, provider, from, to);
+    const cached = this.entries.get(key);
+    if (!options.fresh && cached && this.clock() - cached.at < this.ttlMs) return cached.events;
+    const pending = this.inFlight.get(key);
+    if (pending) return pending;
+    const generation = this.generations.get(accountId) ?? 0;
+    const fetching = Promise.resolve()
+      .then(load)
+      .then((events) => {
+        if ((this.generations.get(accountId) ?? 0) === generation) {
+          this.entries.delete(key);
+          this.entries.set(key, { at: this.clock(), events });
+          while (this.entries.size > this.maxEntries) this.entries.delete(this.entries.keys().next().value as string);
+        }
+        return events;
+      })
+      .finally(() => {
+        // only this read's own mark: a clear may have let a newer read start for the same range
+        if (this.inFlight.get(key) === fetching) this.inFlight.delete(key);
+      });
+    this.inFlight.set(key, fetching);
+    return fetching;
+  }
+
+  /** Forget an account's meetings — all of them, or one provider's — because its connection changed. */
+  clear(accountId: string, provider?: CalendarProvider): void {
+    this.generations.set(accountId, (this.generations.get(accountId) ?? 0) + 1);
+    const prefix = provider ? `${accountId}\u0000${provider}\u0000` : `${accountId}\u0000`;
+    for (const key of [...this.entries.keys()]) if (key.startsWith(prefix)) this.entries.delete(key);
+    for (const key of [...this.inFlight.keys()]) if (key.startsWith(prefix)) this.inFlight.delete(key);
+  }
+
+  /** How many ranges are kept (for tests and metrics). */
+  get size(): number {
+    return this.entries.size;
+  }
+}
+
+/** The server's one cache: the Meetings routes read through it, and the Mac's inbox will too. */
+export const calendarEventCache = new CalendarEventCache();

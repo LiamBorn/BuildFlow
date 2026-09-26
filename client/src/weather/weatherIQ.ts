@@ -29,6 +29,7 @@ import type {
   WeatherSeverity,
   WeatherWindow
 } from "@buildflow/shared";
+import { WEATHER_CAUSE_LABEL, weatherClockWords, weatherTimeRange } from "@buildflow/shared";
 
 /** What a WMO weather code looks like, for the icon and the words beside it. */
 export type ConditionKind = "clear" | "partly" | "cloudy" | "fog" | "drizzle" | "rain" | "snow" | "storm";
@@ -56,16 +57,10 @@ export function conditionOf(code: number): Condition {
   return named("cloudy", "Cloudy");
 }
 
-/** How each cause is named where a person reads it. */
-export const CAUSE_LABEL: Record<WeatherCause, string> = {
-  lightning: "Lightning",
-  rain: "Rain",
-  snow: "Snow",
-  wind: "Wind",
-  heat: "Heat",
-  cold: "Freeze",
-  fog: "Fog"
-};
+/* How each cause is named, and when a stretch of weather runs, the way a person says it: moved to
+   @buildflow/shared (2026-09-26) because the notification list is built on the server too, for the
+   Mac, and has to word weather the same way. Re-exported under the names this file always had. */
+export { WEATHER_CAUSE_LABEL as CAUSE_LABEL, weatherClockWords as clockWords, weatherTimeRange as timeRange };
 
 const weekday = (date: string, style: "short" | "long") => new Date(`${date}T12:00:00`).toLocaleDateString("en-US", { weekday: style });
 
@@ -93,19 +88,6 @@ export function spanWords(start: string, end: string): string {
   return start === end ? dateWords(start) : `${dateWords(start)} – ${dateWords(end)}`;
 }
 
-/** A site-local "YYYY-MM-DDTHH:mm" as the hour and its half of the day: { text: "1" | "3:30", meridiem: "PM" }. */
-function clockParts(time: string) {
-  const [hours, minutes] = (time.split("T")[1] ?? "00:00").split(":").map(Number);
-  const twelve = hours % 12 === 0 ? 12 : hours % 12;
-  return { text: minutes ? `${twelve}:${String(minutes).padStart(2, "0")}` : String(twelve), meridiem: hours < 12 ? "AM" : "PM" };
-}
-
-/** "1 PM", "3:30 PM". */
-export function clockWords(time: string): string {
-  const parts = clockParts(time);
-  return `${parts.text} ${parts.meridiem}`;
-}
-
 /**
  * When a site's reading was taken, on the reader's own clock — the clock the section's "updated"
  * time is on, which is what it is read beside: "10:45 AM" today, "Tue 11:45 PM" another day.
@@ -117,15 +99,6 @@ export function readingWhen(at: string, today: string): string {
   const date = `${moment.getFullYear()}-${pad(moment.getMonth() + 1)}-${pad(moment.getDate())}`;
   const clock = moment.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return date === today ? clock : `${dayName(date, today)} ${clock}`;
-}
-
-/** "1–3 PM", "11 AM–1 PM": when a stretch of weather runs, the way a person says it. */
-export function timeRange(start: string, end: string): string {
-  const from = clockParts(start);
-  const to = clockParts(end);
-  return from.meridiem === to.meridiem
-    ? `${from.text}–${to.text} ${to.meridiem}`
-    : `${from.text} ${from.meridiem}–${to.text} ${to.meridiem}`;
 }
 
 /* ---- the days: what a tile says ----------------------------------------------------------- */
@@ -353,7 +326,7 @@ export function conflictRows(conflicts: WeatherConflict[], jobs: Job[], variance
           date: conflict.date,
           cause: conflict.cause,
           severity: conflict.severity,
-          when: `${dayName(conflict.date, today)} ${timeRange(conflict.start, conflict.end)}`,
+          when: `${dayName(conflict.date, today)} ${weatherTimeRange(conflict.start, conflict.end)}`,
           reason: conflict.reason,
           state: rowState(conflict, variances)
         }

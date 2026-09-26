@@ -1,0 +1,388 @@
+{
+  "meetingState": {
+    "sep14-06:00": {
+      "standup": "later",
+      "walkthrough": "later",
+      "early": "later",
+      "declined": "later",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "later"
+    },
+    "sep14-09:00": {
+      "standup": "later",
+      "walkthrough": "later",
+      "early": "past",
+      "declined": "later",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "later"
+    },
+    "sep14-09:15": {
+      "standup": "soon",
+      "walkthrough": "later",
+      "early": "past",
+      "declined": "later",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "later"
+    },
+    "sep14-09:16": {
+      "standup": "soon",
+      "walkthrough": "later",
+      "early": "past",
+      "declined": "later",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "later"
+    },
+    "sep14-09:30": {
+      "standup": "now",
+      "walkthrough": "later",
+      "early": "past",
+      "declined": "later",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "later"
+    },
+    "sep14-09:45": {
+      "standup": "past",
+      "walkthrough": "later",
+      "early": "past",
+      "declined": "soon",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "later"
+    },
+    "sep14-12:50": {
+      "standup": "past",
+      "walkthrough": "soon",
+      "early": "past",
+      "declined": "past",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "later",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "soon"
+    },
+    "sep14-23:59": {
+      "standup": "past",
+      "walkthrough": "past",
+      "early": "past",
+      "declined": "past",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "now",
+      "holiday": "now",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "past"
+    },
+    "sep15-00:30": {
+      "standup": "past",
+      "walkthrough": "past",
+      "early": "past",
+      "declined": "past",
+      "organizer": "later",
+      "tentative": "later",
+      "overnight": "now",
+      "holiday": "past",
+      "offsite": "later",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "past"
+    },
+    "sep17-12:00": {
+      "standup": "past",
+      "walkthrough": "past",
+      "early": "past",
+      "declined": "past",
+      "organizer": "past",
+      "tentative": "past",
+      "overnight": "past",
+      "holiday": "past",
+      "offsite": "now",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "past"
+    },
+    "sep19-00:00": {
+      "standup": "past",
+      "walkthrough": "past",
+      "early": "past",
+      "declined": "past",
+      "organizer": "past",
+      "tentative": "past",
+      "overnight": "past",
+      "holiday": "past",
+      "offsite": "past",
+      "graph-all-day": "past",
+      "next-week": "later",
+      "far": "later",
+      "same-start": "past"
+    }
+  },
+  "upNext": {
+    "sep14-06:00": {
+      "1": [
+        "early"
+      ],
+      "4": [
+        "early",
+        "standup",
+        "walkthrough",
+        "same-start"
+      ],
+      "20": [
+        "early",
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-09:00": {
+      "1": [
+        "standup"
+      ],
+      "4": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight"
+      ],
+      "20": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-09:15": {
+      "1": [
+        "standup"
+      ],
+      "4": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight"
+      ],
+      "20": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-09:16": {
+      "1": [
+        "standup"
+      ],
+      "4": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight"
+      ],
+      "20": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-09:30": {
+      "1": [
+        "standup"
+      ],
+      "4": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight"
+      ],
+      "20": [
+        "standup",
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-09:45": {
+      "1": [
+        "walkthrough"
+      ],
+      "4": [
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer"
+      ],
+      "20": [
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-12:50": {
+      "1": [
+        "walkthrough"
+      ],
+      "4": [
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer"
+      ],
+      "20": [
+        "walkthrough",
+        "same-start",
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep14-23:59": {
+      "1": [
+        "overnight"
+      ],
+      "4": [
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week"
+      ],
+      "20": [
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "holiday",
+        "offsite"
+      ]
+    },
+    "sep15-00:30": {
+      "1": [
+        "overnight"
+      ],
+      "4": [
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week"
+      ],
+      "20": [
+        "overnight",
+        "organizer",
+        "tentative",
+        "next-week",
+        "offsite"
+      ]
+    },
+    "sep17-12:00": {
+      "1": [
+        "next-week"
+      ],
+      "4": [
+        "next-week",
+        "far",
+        "offsite"
+      ],
+      "20": [
+        "next-week",
+        "far",
+        "offsite"
+      ]
+    },
+    "sep19-00:00": {
+      "1": [
+        "next-week"
+      ],
+      "4": [
+        "next-week",
+        "far"
+      ],
+      "20": [
+        "next-week",
+        "far"
+      ]
+    }
+  }
+}

@@ -9,6 +9,12 @@
  * its date is read straight off the string and never moved by a time zone.
  */
 import type { CalendarMeeting, CalendarProviderId, CalendarResponse } from "../api";
+import { allDaySpan, meetingState } from "@buildflow/shared";
+
+/* Where a meeting stands against the clock, and which are next, moved to @buildflow/shared
+   (2026-09-26, notch step 3) so the Mac's notch counts down to the same meetings as this panel.
+   Re-exported here under the same names; behaviour is unchanged (tests/parity holds it). */
+export { allDaySpan, meetingState, upNext, type MeetingState } from "@buildflow/shared";
 
 export type CalendarView = "day" | "week" | "month";
 
@@ -99,13 +105,6 @@ export function fetchRange(anchor: string): { from: Date; to: Date } {
   return { from: fromKey(days[0]), to: fromKey(addDays(days[days.length - 1], 1)) };
 }
 
-/** The days an all-day entry covers, from its own dates (the end is exclusive, as both providers send it). */
-export function allDaySpan(event: Pick<CalendarMeeting, "startsAt" | "endsAt">): { first: string; last: string } {
-  const first = event.startsAt.slice(0, 10);
-  const end = event.endsAt.slice(0, 10);
-  return { first, last: end > first ? addDays(end, -1) : first };
-}
-
 /** The meetings on one day: all-day entries that cover it, and timed ones that touch it. */
 export function meetingsOn(events: CalendarMeeting[], key: string): { allDay: CalendarMeeting[]; timed: CalendarMeeting[] } {
   const start = fromKey(key).getTime();
@@ -180,23 +179,6 @@ export function layoutDay(timed: CalendarMeeting[], key: string): PlacedMeeting[
   return placed;
 }
 
-/** Where a meeting stands against the clock. */
-export type MeetingState = "past" | "now" | "soon" | "later";
-
-export function meetingState(event: Pick<CalendarMeeting, "startsAt" | "endsAt" | "allDay">, now: number): MeetingState {
-  const start = new Date(event.startsAt).getTime();
-  const end = new Date(event.endsAt).getTime();
-  if (event.allDay) {
-    const span = allDaySpan(event);
-    const today = dayKey(new Date(now));
-    if (span.last < today) return "past";
-    return span.first <= today ? "now" : "later";
-  }
-  if (now >= end) return "past";
-  if (now >= start) return "now";
-  return start - now <= 15 * 60_000 ? "soon" : "later";
-}
-
 /** "In 5 min.", "Now", "In 2 h 10 min.", "9:00 AM" — what the pill says about one meeting. */
 export function countdownLabel(startsAt: string, endsAt: string, now: number): string {
   const start = new Date(startsAt).getTime();
@@ -264,16 +246,6 @@ export function whenLabel(event: CalendarMeeting, now: number): string {
   const day = dayLabel(event.startsAt, now);
   const short = day === "Today" || day === "Tomorrow" ? day : new Date(start).toLocaleDateString("en-US", { weekday: "short" });
   return `${short} · ${clock(event.startsAt)}`;
-}
-
-/** The meetings still to come in the next seven days, soonest first; one you declined is not coming. */
-export function upNext(events: CalendarMeeting[], now: number, limit = 4): CalendarMeeting[] {
-  const horizon = now + 7 * 24 * 60 * 60_000;
-  return events
-    .filter((event) => event.myResponse !== "declined" && meetingState(event, now) !== "past")
-    .filter((event) => new Date(event.allDay ? fromKey(allDaySpan(event).first) : event.startsAt).getTime() < horizon)
-    .sort((a, b) => Number(a.allDay) - Number(b.allDay) || a.startsAt.localeCompare(b.startsAt))
-    .slice(0, limit);
 }
 
 /** "Sep 21 – 27, 2026", "Sep 28 – Oct 4, 2026", "Wednesday, Sep 23, 2026", "September 2026". */

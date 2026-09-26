@@ -156,7 +156,8 @@ export function MeetingsCalendar({
     setAnchor(key);
   };
 
-  const load = useCallback(async () => {
+  /** `fresh`: Sync, which asks the provider now rather than the server's five-minute copy. */
+  const load = useCallback(async (fresh = false) => {
     const mine = ++ticket.current;
     const key = rangeKeyOf(anchorRef.current);
     const { from, to } = fetchRange(anchorRef.current);
@@ -165,8 +166,8 @@ export function MeetingsCalendar({
     setSyncing(true);
     try {
       const [main, next] = await Promise.all([
-        calendarFeed({ from, to }),
-        holdsAhead ? Promise.resolve(null) : calendarFeed({ from: new Date(at), to: new Date(at + WEEK_MS) })
+        calendarFeed({ from, to }, { fresh }),
+        holdsAhead ? Promise.resolve(null) : calendarFeed({ from: new Date(at), to: new Date(at + WEEK_MS) }, { fresh })
       ]);
       // a read that a newer one has overtaken (the calendar was paged on) is dropped
       if (!alive.current || mine !== ticket.current) return;
@@ -300,7 +301,7 @@ export function MeetingsCalendar({
             title={feed ? `Last synced ${clock(new Date(feed.fetchedAt).toISOString())}` : undefined}
             onClick={() => {
               onSync();
-              void load();
+              void load(true);
             }}
           >
             <RefreshCw size={13} /> {syncing ? "Syncing" : "Sync"}

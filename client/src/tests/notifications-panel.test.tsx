@@ -9,9 +9,18 @@
  * tutorial.test.tsx finds it by them and still passes untouched.
  */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  NOTIFICATION_STATE_SETTING,
+  decodeNotificationState,
+  emptyNotificationState,
+  encodeNotificationState,
+  isNotificationRead,
+  isNotificationSeen,
+  markNotifications
+} from "@buildflow/shared";
 import App from "../App";
-import { enterDashboard, installAppHarness, state } from "../test/appHarness";
+import { enterDashboard, installAppHarness, respondToBuildflowApi, state } from "../test/appHarness";
 import { bootstrapFixture } from "../test/fixture";
 
 /**
@@ -312,5 +321,125 @@ describe("the notifications drawer", () => {
       });
     });
     expect(await screen.findByRole("heading", { level: 1, name: /^Month/ })).toBeInTheDocument();
+  });
+});
+
+/* ── read and seen state on the server (2026-09-26, notch step 3) ──────────────────────────────
+   The bell and the Mac's notch read the same list; for their counts to agree, what has been seen
+   and read has to live with the person, not in one browser. */
+describe("the notifications drawer's read state, kept on the server", () => {
+  installAppHarness();
+  beforeEach(() => {
+    for (const key of Object.keys(window.localStorage)) if (key.startsWith("bf:notifications:")) window.localStorage.removeItem(key);
+  });
+
+  const SETTING_URL = `/api/me/settings/${encodeURIComponent(NOTIFICATION_STATE_SETTING)}`;
+  /** Every PUT of the read state, and what the fake server answers it with. */
+  const recordPuts = (answer: (value: string) => Response) => {
+    const puts: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes(SETTING_URL) && init?.method === "PUT") {
+          const value = (JSON.parse(String(init.body)) as { value: string }).value;
+          puts.push(value);
+          return answer(value);
+        }
+        return respondToBuildflowApi(input);
+      })
+    );
+    return puts;
+  };
+  const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it("starts from what the server remembers — marked on the Mac, quiet on the website", async () => {
+    // the Mac saw three and opened the DelayIQ
+    let marked = markNotifications(emptyNotificationState(), ["field-fu-1", "weather-wa-1", "delayIQ-delayIQ-rain"], "seen");
+    marked = markNotifications(marked, ["delayIQ-delayIQ-rain"], "read");
+    state.bootstrapPayload = { ...bootstrapFixture, userSettings: { [NOTIFICATION_STATE_SETTING]: encodeNotificationState(marked) } };
+    render(<App />);
+    await enterDashboard();
+
+    expect(badge()).toBe(String(bootstrapNotificationCount() - 3));
+    const panel = openBell();
+    expect(rowFor(panel, /Heavy Rain DelayIQ/).className).toContain("is-read");
+    expect(rowFor(panel, /Steel framing/).className).not.toContain("is-read");
+  });
+
+  it("tells the server once for a run of changes", async () => {
+    const puts = recordPuts((value) => new Response(JSON.stringify({ ok: true, key: NOTIFICATION_STATE_SETTING, value }), { status: 200 }));
+    render(<App />);
+    await enterDashboard();
+
+    const panel = openBell(); // seeing them all is one change...
+    fireEvent.click(within(panel).getByRole("button", { name: "More notification actions" }));
+    fireEvent.click(within(panel).getByRole("menuitem", { name: /Mark all as read/ })); // ...reading them all, a second
+    expect(puts).toHaveLength(0); // nothing yet: it waits for the run to end
+
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 4000 });
+    await settle(1_300);
+    expect(puts).toHaveLength(1);
+    const sent = decodeNotificationState(puts[0]);
+    expect(isNotificationRead(sent, { id: "field-fu-1", timestamp: "2026-06-16T09:18:00.000Z" })).toBe(true);
+    expect(isNotificationRead(sent, { id: "equipment-eq-pump", timestamp: new Date().toISOString() })).toBe(true);
+  });
+
+  it("takes back the server's merge, so what the Mac marked meanwhile shows here too", async () => {
+    // the server's answer carries something the Mac marked meanwhile: the inspection, read
+    const puts = recordPuts((value) => {
+      const merged = markNotifications(decodeNotificationState(value), ["inspection-insp-1"], "read");
+      return new Response(JSON.stringify({ ok: true, key: NOTIFICATION_STATE_SETTING, value: encodeNotificationState(merged) }), {
+        status: 200
+      });
+    });
+    render(<App />);
+    await enterDashboard();
+
+    const panel = openBell(); // seen, not read
+    expect(rowFor(panel, /Foundation Inspection/).className).not.toContain("is-read");
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 4000 });
+    expect(isNotificationSeen(decodeNotificationState(puts[0]), { id: "inspection-insp-1", timestamp: "2026-06-23T10:00:00.000Z" })).toBe(
+      true
+    );
+    await waitFor(() => expect(rowFor(panel, /Foundation Inspection/).className).toContain("is-read"));
+    expect(rowFor(panel, /Steel framing/).className).not.toContain("is-read");
+  });
+
+  it("keeps working when the server will not take it — the shared demo is read-only", async () => {
+    const puts = recordPuts(
+      () =>
+        new Response(JSON.stringify({ error: "The demo workspace is shared and read-only.", code: "demo-read-only" }), {
+          status: 403
+        })
+    );
+    const first = render(<App />);
+    await enterDashboard();
+    fireEvent.click(rowFor(openBell(), /Ready Mix Concrete/));
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 4000 });
+
+    // refused: this page stops asking...
+    const again = openBell();
+    fireEvent.click(within(again).getByRole("button", { name: "More notification actions" }));
+    fireEvent.click(within(again).getByRole("menuitem", { name: /Mark all as read/ }));
+    await settle(1_300);
+    expect(puts).toHaveLength(1);
+    first.unmount();
+
+    // ...and this browser still remembers, as it always did
+    render(<App />);
+    await enterDashboard();
+    expect(badge()).toBeNull();
+    const reopened = openBell();
+    fireEvent.click(within(reopened).getByText("Unread only"));
+    expect(rows(reopened)).toHaveLength(0);
+  });
+
+  it("still honours what this browser kept before the server did", async () => {
+    window.localStorage.setItem("bf:notifications:seen:u-matt", JSON.stringify(["field-fu-1", "weather-wa-1"]));
+    window.localStorage.setItem("bf:notifications:read:u-matt", JSON.stringify(["weather-wa-1"]));
+    render(<App />);
+    await enterDashboard();
+    expect(badge()).toBe(String(bootstrapNotificationCount() - 2));
+    expect(rowFor(openBell(), /Heavy rain expected/).className).toContain("is-read");
   });
 });

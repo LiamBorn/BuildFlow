@@ -69,6 +69,7 @@ import {
   CALENDAR_PROVIDERS,
   calendarAuthorizeUrl,
   calendarConfigured,
+  calendarEventCache,
   calendarPopupPage,
   exchangeCalendarCode,
   fetchCalendarEvents,
@@ -77,6 +78,7 @@ import {
   type CalendarEvent,
   type CalendarProvider
 } from "./calendar.js";
+import { NOTIFICATION_STATE_SETTING, buildNotificationItems, mergeNotificationStateValues } from "@buildflow/shared";
 import { assertRoutePolicyCovers, can, demoLockOn, installRoutePolicy, outranks } from "./permissions.js";
 import { authenticateDevice, DESKTOP_TOKEN_PATH, isDesktopApiPath, LAST_SEEN_INTERVAL_MS, registerDesktopRoutes } from "./desktop.js";
 import crypto from "node:crypto";
@@ -1327,6 +1329,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       // A refresh token the provider has revoked cannot be recovered, and leaving the row would
       // make the panel claim a connection that no longer works. Drop it; the panel offers Connect.
       mainStore.deleteCalendarConnection(accountId, provider);
+      calendarEventCache.clear(accountId, provider);
       return null;
     }
   };
@@ -1414,6 +1417,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         accessToken: tokens.accessToken,
         expiresAt: tokens.expiresAt
       });
+      calendarEventCache.clear(req.account!.id, provider);
       calDone(res, returnTo, { calendar: "connected", provider }, popup);
     } catch (error) {
       calDone(res, returnTo, { calendar: "error", reason: error instanceof Error ? error.message.slice(0, 80) : "exchange_failed" }, popup);
@@ -1443,11 +1447,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     const events: CalendarEvent[] = [];
     const failed: CalendarProvider[] = [];
+    const fresh = req.query.fresh === "1"; // the panel's Sync: ask the provider now, not the cache
     for (const provider of CALENDAR_PROVIDERS) {
       const token = await calendarAccessToken(req.account!.id, provider);
       if (!token) continue;
       try {
-        events.push(...(await fetchCalendarEvents(provider, token, from, to)));
+        // five minutes per account and range (calendar.ts): the panel re-reads, the provider is not asked again
+        events.push(
+          ...(await calendarEventCache.read(req.account!.id, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
+            fresh
+          }))
+        );
       } catch {
         // one provider being unreachable must not blank the other's meetings
         failed.push(provider);
@@ -1463,6 +1473,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       return;
     }
     mainStore.deleteCalendarConnection(req.account!.id, provider);
+    calendarEventCache.clear(req.account!.id, provider);
     res.json({ ok: true });
   });
 
@@ -2352,13 +2363,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     // The person behind the request: their linked workspace user, or the demo's
     // active user when signed in to the shared demo store.
-    const me = store.bootstrap(req.account?.id).activeUser;
+    const data = store.bootstrap(req.account?.id);
+    const me = data.activeUser;
     if (!me) {
       res.status(404).json({ error: "No workspace user for this login yet." });
       return;
     }
-    store.setUserSetting(me.id, key, parsed.data.value);
-    res.json({ ok: true, key, value: parsed.data.value });
+    /* Seen and read notifications MERGE with what is kept, against the server's own list, so the
+       bell and the Mac can each mark things without undoing the other (shared notificationState). */
+    const value =
+      key === NOTIFICATION_STATE_SETTING
+        ? mergeNotificationStateValues(store.userSettings(me.id)[key], parsed.data.value, buildNotificationItems(data))
+        : parsed.data.value;
+    store.setUserSetting(me.id, key, value);
+    res.json({ ok: true, key, value });
   });
 
   /* ── Workspaces: one login, several BuildFlow programs (2026-09-15) ──────────

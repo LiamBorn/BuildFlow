@@ -330,6 +330,26 @@ describe("the Meetings panel", () => {
     ).toBeInTheDocument();
   });
 
+  /* The server keeps a person's meetings for five minutes (2026-09-26), so an ordinary read may be
+     that copy — but Sync is someone asking for the calendar as it is NOW, and says so. */
+  it("asks for a fresh read on Sync, and only then", async () => {
+    const fetch = calendarApi(GOOGLE(), [WALKTHROUGH]);
+    vi.stubGlobal("fetch", fetch);
+    render(<MeetingsPanel />);
+    await screen.findByRole("button", { name: /^Sync/ });
+    await waitFor(() => expect(eventCalls(fetch).length).toBeGreaterThan(0));
+    expect(eventCalls(fetch).every((url) => !url.includes("fresh="))).toBe(true);
+
+    const before = eventCalls(fetch).length;
+    fireEvent.click(screen.getByRole("button", { name: /^Sync/ }));
+    await waitFor(() => expect(eventCalls(fetch).length).toBeGreaterThan(before));
+    expect(
+      eventCalls(fetch)
+        .slice(before)
+        .every((url) => url.includes("fresh=1"))
+    ).toBe(true);
+  });
+
   it("goes back to the sign-in pitch when the last calendar is disconnected", async () => {
     vi.stubGlobal("fetch", calendarApi(GOOGLE(), [WALKTHROUGH]));
     render(<MeetingsPanel />);
