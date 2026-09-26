@@ -14,6 +14,7 @@ import {
   type CreateProjectInput,
   type CreateJobInput
 } from "@buildflow/shared";
+import type Anthropic from "@anthropic-ai/sdk";
 
 /* Claude Opus 5 — the current generation, and the same price per token as the Opus 4.8 this
    asked for before ($5/$25 per MTok). ANTHROPIC_MODEL still overrides it, so an operator can
@@ -24,6 +25,15 @@ import {
    Opus 5 has it on by default. Setting it explicitly is what makes this behave the same
    whichever of the two the env var names. `budget_tokens` is rejected outright on both. */
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-5";
+/** The model every BuildFlow AI call uses: the website's questions and imports, and the Mac's voice. */
+export const AI_MODEL = MODEL;
+
+/**
+ * How many questions a person may ask BuildFlow AI in an hour, whichever door they come in by: the
+ * website's "Ask BuildFlow AI" and the Mac's voice (desktopAsk.ts) count against ONE allowance, so a
+ * second door is not a second forty. Each question is a paid call once credit is on the account.
+ */
+export const AI_QUESTION_LIMIT = { bucket: "ai-ask", max: 40, windowMs: 60 * 60 * 1000 } as const;
 
 // A project + its jobs, ready to create through the backend (matches the client's
 // ImportProjectSpec). crewId is optional (round-robin assignment).
@@ -61,6 +71,63 @@ export function aiConnection(
 /** True when a Claude credential is configured, either way aiConnection accepts. */
 export function isAiConfigured(): boolean {
   return aiConnection() !== null;
+}
+
+/** The SDK's client class. A type only: the module itself is imported lazily, in aiClient. */
+type AnthropicSdk = typeof Anthropic;
+
+/**
+ * A client on whichever connection aiConnection found, with the SDK it came from (for its error
+ * classes), or null in demo mode. The SDK is imported here, lazily, so the server runs without it.
+ */
+export async function aiClient(): Promise<{ client: InstanceType<AnthropicSdk>; sdk: AnthropicSdk; via: "anthropic" | "replit" } | null> {
+  const connection = aiConnection();
+  if (!connection) return null;
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  return { client: new Anthropic(connection.options), sdk: Anthropic, via: connection.via };
+}
+
+/**
+ * The refusal fallback, for a request that can take it, or null.
+ *
+ * Claude Opus 5 runs safety classifiers, and one can decline a request: HTTP 200 with
+ * `stop_reason: "refusal"`, not an error. Anthropic's recommendation for this model is to opt into
+ * server-side fallbacks, and `"default"` lets Anthropic pick the substitute by the refusal's category
+ * (a cyber-category one goes to Claude Opus 4.8) instead of this code pinning a model that will one
+ * day be retired. A declined request is then answered by the fallback inside the same call and the
+ * same stream; a refusal that still comes back means the whole chain declined.
+ *
+ * Only on Anthropic's own API, and only for the models that have the classifiers. Fallbacks are a
+ * Claude API feature: the Replit AI Integrations endpoint is a proxy that nothing here has seen pass
+ * the beta through, and a 400 there would silence every voice answer. An ANTHROPIC_MODEL that names
+ * an older model gets nothing to fall back from.
+ */
+export function refusalFallback(via: "anthropic" | "replit", model: string = MODEL): { betas: string[]; fallbacks: "default" } | null {
+  if (via !== "anthropic") return null;
+  if (!/^claude-(opus-5|fable-5|mythos-5)/.test(model)) return null;
+  return { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" };
+}
+
+/**
+ * What a failed call means for the person asking.
+ *
+ * - "not-connected": retrying will not help until the operator does something. The key is wrong or
+ *   revoked (401), not allowed (403), the model is not available to the account (404; Replit's
+ *   production endpoint answered exactly that for claude-opus-5 on 2026-09-25), or the account cannot
+ *   pay (a 402 billing_error, or the 400 "Your credit balance is too low" this account answered the
+ *   same day -- a plain invalid_request_error, whose message is the only thing that says so).
+ *   This is demo mode, as much as having no key is.
+ * - "aborted": we stopped it ourselves, because the person hung up.
+ * - "unavailable": anything else -- overloaded, rate limited, a network failure. Worth another try.
+ */
+export function aiFailure(error: unknown, sdk: AnthropicSdk): "not-connected" | "aborted" | "unavailable" {
+  if (error instanceof sdk.APIUserAbortError) return "aborted";
+  if (error instanceof sdk.AuthenticationError || error instanceof sdk.PermissionDeniedError || error instanceof sdk.NotFoundError) {
+    return "not-connected";
+  }
+  if (error instanceof sdk.APIError && (error.status === 402 || error.type === "billing_error")) return "not-connected";
+  if (error instanceof sdk.BadRequestError && /credit balance/i.test(error.message)) return "not-connected";
+  return "unavailable";
 }
 
 export type AiResult = { mode: "live" | "demo"; answer?: string };
@@ -140,29 +207,31 @@ export function buildAiContext(data: BootstrapPayload): string {
   return lines.join("\n");
 }
 
-/** Ask Claude a question about the workspace. Returns {mode:"demo"} (no answer)
-    when unconfigured or on error, so the caller can fall back to the simulation. */
 /**
- * The trade the customer runs, folded into the system prompt so answers use the
- * trade's own vocabulary and constraints (plant slots for asphalt, pour cards
- * for concrete, dry-in windows for roofing) instead of generic construction talk.
+ * The trade the customer runs, as a paragraph for a system prompt, so answers use the trade's own
+ * vocabulary and constraints (plant slots for asphalt, pour cards for concrete, dry-in windows for
+ * roofing) instead of generic construction talk. Empty when the workspace has no trade.
  */
-export function tradeSystemPrompt(businessType: BusinessTypeId | "" | undefined): string {
+export function tradeContext(businessType: BusinessTypeId | "" | undefined): string {
   const profile = tradeProfileFor(businessType ?? "");
-  if (!profile) return SYSTEM;
-  return `${SYSTEM}
-
-TRADE: ${profile.aiContext}
+  if (!profile) return "";
+  return `TRADE: ${profile.aiContext}
 The crews this business fields: ${profile.crewTypes.join(", ")}. Its production phases run: ${profile.phases.join(" → ")}. The ways it typically loses days: ${profile.delayIQCategories.join("; ")}. Weather rule it plans around: ${profile.weather.rule} Use this trade's units (${profile.materialUnits.join(", ")}) and terms when they fit the question.`;
 }
 
+/** The website assistant's system prompt, with the trade folded in. */
+export function tradeSystemPrompt(businessType: BusinessTypeId | "" | undefined): string {
+  const trade = tradeContext(businessType);
+  return trade ? `${SYSTEM}\n\n${trade}` : SYSTEM;
+}
+
+/** Ask Claude a question about the workspace. Returns {mode:"demo"} (no answer)
+    when unconfigured or on error, so the caller can fall back to the simulation. */
 export async function askBuildFlowAI(question: string, context: string, businessType?: BusinessTypeId | ""): Promise<AiResult> {
-  const connection = aiConnection();
-  if (!connection) return { mode: "demo" };
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic(connection.options);
-    const stream = client.messages.stream({
+    const ai = await aiClient();
+    if (!ai) return { mode: "demo" };
+    const stream = ai.client.messages.stream({
       model: MODEL,
       max_tokens: 4096,
       thinking: { type: "adaptive" },
@@ -218,17 +287,16 @@ Respond with ONLY a JSON object — no prose, no markdown, no code fences — of
 Rules: extract the REAL names, phases, and dates visible in the image. If a field isn't shown, infer a sensible value (near-term dates within the next ~8 weeks, labor 3–8). Only include projects/jobs actually present. Keep it under 6 projects.`;
 
 export async function importScheduleFromImages(imageUrls: string[], data: BootstrapPayload): Promise<ImportResult> {
-  const connection = aiConnection();
-  if (!connection) return { mode: "demo" };
+  if (!aiConnection()) return { mode: "demo" };
   const images = imageUrls
     .map(parseDataUrl)
     .filter((x): x is DataUrlImage => x !== null)
     .slice(0, 6);
   if (images.length === 0) return { mode: "demo" }; // nothing Claude can read (e.g. only a video)
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic(connection.options);
-    const message = await client.messages
+    const ai = await aiClient();
+    if (!ai) return { mode: "demo" };
+    const message = await ai.client.messages
       .stream({
         model: MODEL,
         max_tokens: 4096,
