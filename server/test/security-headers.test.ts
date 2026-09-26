@@ -46,7 +46,7 @@ describe("the page's Content-Security-Policy", () => {
     serveClient(app, clientBuild());
     const res = await request(app).get("/").expect(200);
     expect(res.headers["content-security-policy"]).toBeDefined();
-    expect(res.headers["permissions-policy"]).toBe("camera=(), microphone=(), geolocation=()");
+    expect(res.headers["permissions-policy"]).toBeDefined();
   });
 
   it("is NOT sent with the API, where a document policy means nothing", async () => {
@@ -97,6 +97,41 @@ describe("the page's Content-Security-Policy", () => {
     serveClient(app, clientBuild());
     const res = await request(app).get("/").expect(200);
     expect(res.headers["content-security-policy"]).toBeUndefined();
+  });
+});
+
+describe("the page's Permissions-Policy", () => {
+  /* The assistant's "Talk to BuildFlow AI" button listens through the browser's speech recognition,
+     which the microphone permission governs. `microphone=()` refused it on the published site without
+     the browser ever asking (fixed 2026-09-26), while development, where Vite serves the page without
+     these headers, never showed it. Written out whole on purpose: the point is the exact policy, so a
+     change to any of its three parts has to be made here too. */
+  it("lets BuildFlow's own page use the microphone, and nothing use the camera or a location", async () => {
+    const app = await freshApp();
+    serveClient(app, clientBuild());
+    for (const page of ["/", "/index.html", "/some/deep/link"]) {
+      const res = await request(app).get(page).expect(200);
+      expect(res.headers["permissions-policy"], page).toBe("camera=(), microphone=(self), geolocation=()");
+    }
+  });
+
+  it("never opens the microphone to another origin, or to everyone", async () => {
+    const app = await freshApp();
+    serveClient(app, clientBuild());
+    const policy = String((await request(app).get("/")).headers["permissions-policy"]);
+    const microphone = policy
+      .split(",")
+      .find((part) => part.trim().startsWith("microphone="))
+      ?.trim();
+    expect(microphone).toBe("microphone=(self)");
+    expect(policy).not.toContain("*");
+    expect(policy).not.toMatch(/https?:/);
+  });
+
+  it("is a page header, not an API one", async () => {
+    const app = await freshApp();
+    serveClient(app, clientBuild());
+    expect((await request(app).get("/api/health").expect(200)).headers["permissions-policy"]).toBeUndefined();
   });
 });
 

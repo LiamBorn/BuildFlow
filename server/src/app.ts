@@ -35,8 +35,6 @@ import {
 import {
   BuildFlowStore,
   DependencyError,
-  RebookConflictError,
-  StaleWriteError,
   clashMessage,
   toAccount,
   DEMO_ACCOUNT_EMAIL,
@@ -47,6 +45,7 @@ import {
 } from "./database.js";
 import type { ScheduleAssignment, ScheduleLiveEvent, WeatherWindow } from "@buildflow/shared";
 import { StoreManager } from "./stores.js";
+import { editJob, rebookJobs, SPAN_MESSAGE, spanIsForwards } from "./jobWrites.js";
 import { ScheduleLiveHub } from "./schedule/live.js";
 import { sendWeeklyDigest, weeklyDigestFor } from "./schedule/digest.js";
 import { createRateLimiter, createLoginGuard, createBackendFromEnv, humanSeconds, clientIp } from "./rateLimit.js";
@@ -75,7 +74,6 @@ import {
   fetchCalendarEvents,
   refreshCalendarTokens,
   sortEvents,
-  type CalendarEvent,
   type CalendarProvider
 } from "./calendar.js";
 import { NOTIFICATION_STATE_SETTING, buildNotificationItems, mergeNotificationStateValues } from "@buildflow/shared";
@@ -91,7 +89,7 @@ import {
   SESSION_TTL_MS,
   sessionCookieOptions
 } from "./auth.js";
-import { askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
+import { AI_QUESTION_LIMIT, askBuildFlowAI, buildAiContext, importScheduleFromImages } from "./ai.js";
 import { analyzeSchedule, buildImportPlan, parseSchedule, ScheduleImportError } from "./import/index.js";
 import { detectDelayRisks } from "./delayiq.js";
 import { activeSites, forecastForSites, placeForQuery, WeatherUnavailableError } from "./weather.js";
@@ -153,10 +151,6 @@ const scheduleHealthValues = ["On Track", "Monitor", "At Risk", "Complete"] as c
 
 /** Every date a schedule route takes is a plain day. "banana", a timestamp or a half-typed date is a 400, not a row. */
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date as YYYY-MM-DD");
-/** A job's span cannot run backwards; the message says which way round it should be. */
-const spanIsForwards = <T extends { startDate?: string; endDate?: string }>(value: T) =>
-  !value.startDate || !value.endDate || value.endDate >= value.startDate;
-const SPAN_MESSAGE = { message: "The finish cannot be before the start", path: ["endDate"] };
 
 /* A booking has no status of its own — it wears its job's — so none of these accept one. */
 const assignSchema = z.object({
@@ -468,6 +462,24 @@ const billingPortalSchema = z.object({
   origin: z.string().url().optional(),
   returnTo: z.enum(["plans", "settings"]).optional()
 });
+
+/** The promise's answer, or a rejection once `ms` have passed; the work itself carries on either way. */
+function within<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`gave up after ${ms} ms`)), ms);
+    timer.unref?.();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
 
 /* Map a verified Stripe webhook event onto our subscriptions table. Only the
    events we care about are handled; anything else is acknowledged and ignored.
@@ -1334,6 +1346,42 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
   };
 
+  /**
+   * A person's meetings between two instants, from every calendar they connected, through the
+   * five-minute cache (calendar.ts). One provider being unreachable must not blank the other's
+   * meetings, so a provider that fails is named in `failed` and the rest are answered.
+   *
+   * `waitMs` bounds how long a provider may take, for a caller that cannot wait on it: the Mac's voice
+   * answers without meetings rather than keep the person listening to silence. A provider past it is
+   * reported failed, and its read carries on into the cache for the next question.
+   */
+  const meetingsFor = async (accountId: string, from: Date, to: Date, options: { fresh?: boolean; waitMs?: number } = {}) => {
+    const reads = await Promise.all(
+      CALENDAR_PROVIDERS.map(async (provider) => {
+        if (!mainStore.calendarConnection(accountId, provider)) return { provider, state: "none" as const };
+        const read = (async () => {
+          const token = await calendarAccessToken(accountId, provider);
+          if (!token) return null; // the provider refused the refresh, and the connection is gone
+          return calendarEventCache.read(accountId, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
+            fresh: options.fresh
+          });
+        })();
+        read.catch(() => undefined); // a read that loses the race below still settles somewhere
+        try {
+          const events = await (options.waitMs ? within(read, options.waitMs) : read);
+          return events ? { provider, state: "read" as const, events } : { provider, state: "none" as const };
+        } catch {
+          return { provider, state: "failed" as const };
+        }
+      })
+    );
+    return {
+      events: sortEvents(reads.flatMap((one) => (one.state === "read" ? one.events : []))),
+      connected: reads.filter((one) => one.state !== "none").map((one) => one.provider),
+      failed: reads.filter((one) => one.state === "failed").map((one) => one.provider)
+    };
+  };
+
   app.get("/api/calendar/status", (req, res) => {
     const configured = calendarConfigured();
     const rows = mainStore.calendarConnectionsForAccount(req.account!.id);
@@ -1445,25 +1493,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       from = start;
       to = end;
     }
-    const events: CalendarEvent[] = [];
-    const failed: CalendarProvider[] = [];
-    const fresh = req.query.fresh === "1"; // the panel's Sync: ask the provider now, not the cache
-    for (const provider of CALENDAR_PROVIDERS) {
-      const token = await calendarAccessToken(req.account!.id, provider);
-      if (!token) continue;
-      try {
-        // five minutes per account and range (calendar.ts): the panel re-reads, the provider is not asked again
-        events.push(
-          ...(await calendarEventCache.read(req.account!.id, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
-            fresh
-          }))
-        );
-      } catch {
-        // one provider being unreachable must not blank the other's meetings
-        failed.push(provider);
-      }
-    }
-    res.json({ events: sortEvents(events), failed, fetchedAt: new Date().toISOString(), from: from.toISOString(), to: to.toISOString() });
+    // the panel's Sync asks the provider now; otherwise five minutes per account and range, so a re-read asks nobody
+    const { events, failed } = await meetingsFor(req.account!.id, from, to, { fresh: req.query.fresh === "1" });
+    res.json({ events, failed, fetchedAt: new Date().toISOString(), from: from.toISOString(), to: to.toISOString() });
   });
 
   app.delete("/api/calendar/:provider", (req, res) => {
@@ -1905,11 +1937,13 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    */
   const countedActor = (req: express.Request) =>
     req.account && req.account.email !== DEMO_ACCOUNT_EMAIL ? `acct:${req.account.id}` : clientIp(req);
+  /** One hit against a cost bucket for this caller. The Mac's voice spends the AI allowance through it too. */
+  const costHit = (req: express.Request, bucket: string, max: number, windowMs: number) =>
+    limiter.hit(bucket, countedActor(req), max, windowMs);
   const costLimit =
     (bucket: string, max: number, windowMs: number): express.RequestHandler =>
     (req, res, next) => {
-      limiter
-        .hit(bucket, countedActor(req), max, windowMs)
+      costHit(req, bucket, max, windowMs)
         .then((result) => {
           if (result.ok) return next();
           res.setHeader("Retry-After", String(result.retryAfterSec));
@@ -1924,7 +1958,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
         });
     };
 
-  app.post("/api/ai/ask", costLimit("ai-ask", 40, HOUR), async (req, res) => {
+  app.post("/api/ai/ask", costLimit(AI_QUESTION_LIMIT.bucket, AI_QUESTION_LIMIT.max, AI_QUESTION_LIMIT.windowMs), async (req, res) => {
     const parsed = aiAskSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Ask a question." });
@@ -2736,41 +2770,20 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     announce(req, { kind: "jobs", op: "job", ids: [job.id] });
   });
 
+  /* The span rule, the version check and the write are jobWrites.ts's, shared with the Mac's Accept. */
   app.patch("/api/jobs/:id", (req, res) => {
     const parsed = jobPatchSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    const current = store.job(String(req.params.id));
-    if (!current) {
-      res.status(404).json({ error: "Job not found" });
+    const saved = editJob(store, String(req.params.id), parsed.data);
+    if (!saved.ok) {
+      res.status(saved.status).json(saved.body);
       return;
     }
-    // one date may move on its own; what counts is the span the job ends up with
-    const span = { startDate: parsed.data.startDate ?? current.startDate, endDate: parsed.data.endDate ?? current.endDate };
-    if (!spanIsForwards(span)) {
-      res.status(400).json({ error: "The finish cannot be before the start", field: "endDate" });
-      return;
-    }
-    const { version, ...edits } = parsed.data;
-    let job;
-    try {
-      job = store.updateJob(String(req.params.id), edits, version);
-    } catch (error) {
-      // Somebody else replaced the row between the read and this write: say so and change nothing.
-      if (error instanceof StaleWriteError) {
-        res.status(409).json({ error: error.message, code: error.code, current: error.current });
-        return;
-      }
-      throw error;
-    }
-    if (!job) {
-      res.status(404).json({ error: "Job not found" });
-      return;
-    }
-    res.json(job);
-    announce(req, { kind: "jobs", op: "job", ids: [job.id] });
+    res.json(saved.value);
+    announce(req, { kind: "jobs", op: "job", ids: [saved.value.id] });
   });
 
   app.get("/api/schedule", (_req, res) => {
@@ -2992,36 +3005,29 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     announce(req, { kind: "assignments", op: "unbook", ids: [id] });
   });
 
-  /* Everything one drop touches, in one transaction: a failed re-book changes nothing. */
+  /* Everything one drop touches, in one transaction: a failed re-book changes nothing. The write and
+     its refusals are jobWrites.ts's, shared with the Mac's Accept. */
   app.post("/api/schedule/rebook", (req, res) => {
     const parsed = rebookSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
     }
-    try {
-      const result = store.rebook(parsed.data.moves, { force: parsed.data.force });
-      res.json(result);
-      const booksSomething = parsed.data.moves.some((move) => move.op === "book");
-      announce(req, {
-        kind: "assignments",
-        op: booksSomething ? "book" : "move",
-        ids: [...result.assignments.flatMap((a) => [a.id, a.jobId]), ...result.removed, ...result.jobs.map((job) => job.id)]
-      });
-      for (const assignment of result.assignments) {
-        if (assignment.conflicts.length > 0 || booksSomething) notifyAssignment(req, assignment);
-      }
-    } catch (error) {
-      if (error instanceof RebookConflictError) {
-        answerClash(res, error.clashes);
-        return;
-      }
-      // A step written against a row somebody else has replaced: the whole batch is refused.
-      if (error instanceof StaleWriteError) {
-        res.status(409).json({ error: error.message, code: error.code, current: error.current });
-        return;
-      }
-      res.status(404).json({ error: error instanceof Error ? error.message : "Re-book failed" });
+    const saved = rebookJobs(store, parsed.data.moves, { force: parsed.data.force });
+    if (!saved.ok) {
+      res.status(saved.status).json(saved.body);
+      return;
+    }
+    const result = saved.value;
+    res.json(result);
+    const booksSomething = parsed.data.moves.some((move) => move.op === "book");
+    announce(req, {
+      kind: "assignments",
+      op: booksSomething ? "book" : "move",
+      ids: [...result.assignments.flatMap((a) => [a.id, a.jobId]), ...result.removed, ...result.jobs.map((job) => job.id)]
+    });
+    for (const assignment of result.assignments) {
+      if (assignment.conflicts.length > 0 || booksSomething) notifyAssignment(req, assignment);
     }
   });
 
@@ -4290,7 +4296,17 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
 
   /* BuildFlow for Mac: the Connect page, the token exchange, the device's own routes and Settings ›
      Devices. The device gate above is what makes /api/desktop answer to a key and nothing else. */
-  registerDesktopRoutes(app, { mainStore, store, limiter, webOrigin: () => clientUrl });
+  registerDesktopRoutes(app, {
+    mainStore,
+    store,
+    limiter,
+    webOrigin: () => clientUrl,
+    voice: {
+      countQuestion: (req) => costHit(req, AI_QUESTION_LIMIT.bucket, AI_QUESTION_LIMIT.max, AI_QUESTION_LIMIT.windowMs),
+      meetingsFor,
+      announce
+    }
+  });
 
   /* Last thing before the app is handed back: prove the policy and the router still agree. */
   assertRoutePolicyCovers(app);

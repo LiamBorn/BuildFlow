@@ -69,13 +69,23 @@ const CSP = [
   `connect-src 'self' https://www.google-analytics.com ${ANALYTICS.join(" ")}`
 ].join("; ");
 
+/**
+ * What the page may ask the browser for.
+ *
+ * The microphone is BuildFlow's own: the assistant's "Talk to BuildFlow AI" button listens through the
+ * browser's speech recognition, which the microphone permission governs. This said `microphone=()`
+ * until 2026-09-26, which refused that button on the published site without the browser ever asking,
+ * while it kept working in development, where Vite serves the page without these headers. `(self)` is
+ * this origin only, so nothing framed into a page can listen. Nothing asks for a camera or a location,
+ * so nothing gets one.
+ */
+export const PERMISSIONS_POLICY = "camera=(), microphone=(self), geolocation=()";
+
 /** The headers BuildFlow's own page carries, over and above the API's. */
 export function pageHeaders(res: express.Response) {
   if ((process.env.CONTENT_SECURITY_POLICY ?? "on").trim().toLowerCase() === "off") return;
   res.setHeader("Content-Security-Policy", CSP);
-  /* Nothing in BuildFlow asks for a camera, a microphone or a location, so nothing embedded in it
-     should be able to either. */
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Permissions-Policy", PERMISSIONS_POLICY);
 }
 
 /** Serves the built client in `dir`. False, with nothing added, when there is no build there. */

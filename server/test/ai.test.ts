@@ -15,7 +15,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BootstrapPayload } from "@buildflow/shared";
-import { aiConnection, askBuildFlowAI, buildAiContext, importScheduleFromImages, isAiConfigured } from "../src/ai.js";
+import { aiConnection, askBuildFlowAI, buildAiContext, importScheduleFromImages, isAiConfigured, refusalFallback } from "../src/ai.js";
 
 const KEYS = [
   "ANTHROPIC_API_KEY",
@@ -152,6 +152,23 @@ describe("calling Claude through Replit AI Integrations", () => {
     ]);
     vi.doUnmock("@anthropic-ai/sdk");
     vi.resetModules();
+  });
+});
+
+/**
+ * Claude Opus 5's classifiers can decline a request; the server-side fallback answers it with another
+ * model inside the same call. It is a Claude API feature, so it is only asked for on Anthropic's own
+ * API, and only for a model that has something to fall back from.
+ */
+describe("the refusal fallback", () => {
+  it("is asked for on Anthropic's own API, in its default form", () => {
+    expect(refusalFallback("anthropic", "claude-opus-5")).toEqual({ betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" });
+  });
+
+  it("is not sent through Replit's proxy, or for a model without the classifiers", () => {
+    expect(refusalFallback("replit", "claude-opus-5")).toBeNull();
+    expect(refusalFallback("anthropic", "claude-opus-4-8")).toBeNull();
+    expect(refusalFallback("anthropic", "claude-sonnet-5")).toBeNull();
   });
 });
 

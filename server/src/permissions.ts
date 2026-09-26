@@ -384,6 +384,14 @@ export const ROUTE_POLICY: Record<string, Policy> = {
      at that login's level. Who you are is all these two read, like the settings row above. */
   "GET /api/desktop/me": "signed-in",
   "POST /api/desktop/disconnect": "signed-in",
+  /* BuildFlow for Mac, step 6: voice (desktopAsk.ts). Asking is a read that needs a body, like
+     POST /api/ai/ask, whose capability it shares. Every proposal changes a job, so accepting one needs
+     jobs.write at the door; the handler then checks the capability of the exact write it makes, as the
+     website's endpoint for it would (assignments.write when the job's bookings move). Rejecting one
+     changes nothing, and only its own Mac can reach it. */
+  "POST /api/desktop/ask": "schedule.read",
+  "POST /api/desktop/proposals/:id/accept": "jobs.write",
+  "POST /api/desktop/proposals/:id/reject": "signed-in",
   /* Settings › Devices: your OWN connected Macs, per person like /api/me/settings. Revoking is limited
      to your own devices in the handler; an Owner or Admin cuts off a teammate's Macs by removing the
      teammate, which deletes the login and every key it holds. See desktop.ts. */
