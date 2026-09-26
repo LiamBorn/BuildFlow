@@ -480,8 +480,8 @@ describe("Google Calendar and Outlook", () => {
   it("will not let the shared public demo hold a calendar, which every visitor would see", async () => {
     configure();
     process.env.DEMO_READ_ONLY = "on";
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-calendar-demo-"));
     try {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "buildflow-calendar-demo-"));
       const app = await createApp({ dataFile: path.join(dir, "test.sqlite"), reset: true });
       const visitor = request.agent(app);
       await visitor.post("/api/auth/demo").expect(200);
@@ -493,6 +493,7 @@ describe("Google Calendar and Outlook", () => {
       );
     } finally {
       delete process.env.DEMO_READ_ONLY;
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 
