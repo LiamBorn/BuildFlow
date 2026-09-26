@@ -10078,13 +10078,20 @@ body.bf-shell > .schedule-dialog-backdrop {
    none` when it is hidden — so it is placed to land on the spot the Hide arrow
    occupies, and the numbers below are that spot, derived rather than eyeballed:
 
-     top   the rail sticks at `--hs-topbar-h + 14px` and pads 10px, so its first
-           control starts at `--hs-topbar-h + 24px`
+     top   the rail sticks at `--hs-topbar-h + 14px` and has no top padding (below),
+           so its first control starts at `--hs-topbar-h + 14px`
      left  the rail's own margin is 18px and it is 52px wide, so a 36px button
            inside it starts at 18 + (52 - 36) / 2 = 26px
 
    Both sit inside the shell's `zoom`, so the two scale together and cannot come
    apart at another --bf-ui-scale. ---- */
+/* EVEN AT BOTH ENDS (2026-09-26: "move the left sidebar up a little more to make it even with the
+   bottom part"). The rail kept a 14px margin at each end but also padded 10px above the arrow, so
+   the column started 24px under the top bar and ended 14px above the window's foot. Dropping the
+   top padding makes both gaps 14px; the bottom keeps its 10px so Settings stays off the pill's end. */
+.app-shell.hs-shell.bf-shell .sidebar.hs-rail {
+  padding-top: 0;
+}
 .app-shell.hs-shell.bf-shell .hs-rail-top {
   display: grid;
   place-items: center;
@@ -10112,16 +10119,17 @@ body.bf-shell > .schedule-dialog-backdrop {
 }
 /* AND THE PILL STARTS WELL BELOW IT. The rail's face is a `::before` at `inset: 0` (section 43a),
    so left alone it paints behind the arrow and swallows it. `top` resolves against the rail's
-   PADDING box, not its border box, so these are padding-box numbers: the arrow occupies 0-52 and
-   carries 30px beneath it, putting the nav at 82; 72 gives the pill 10px of its own above the
-   first icon and leaves 20px of daylight between the two boxes.
+   PADDING box, not its border box, so these are padding-box numbers: with no top padding the
+   arrow occupies 0-52 and carries 30px beneath it plus the rail's 8px gap, putting the nav at 90;
+   62 leaves 10px of daylight under the arrow and gives the pill 28px of its own above the first
+   icon — the same spacing it had before the top padding came off, all of it 10px higher.
 
    20 AND NOT 8. Eight was the first try and it read as touching — the shadow is only `0 1px 2px`,
    so nothing separates two white shapes but the gap itself, and at 8px they merge into one long
    control again at a glance. Twenty is two and a half times the rail's own 8px icon rhythm, which
    is what says "a different thing" rather than "the next item down". */
 .app-shell.hs-shell.bf-shell .sidebar.hs-rail::before {
-  top: 72px;
+  top: 62px;
 }
 .app-shell.hs-shell.bf-shell .sidebar.hs-rail.is-hidden {
   display: none;
@@ -10142,7 +10150,7 @@ body.bf-shell > .schedule-dialog-backdrop {
 }
 .app-shell.hs-shell.bf-shell .hs-rail-show {
   position: fixed;
-  top: calc(var(--hs-topbar-h) + 24px);
+  top: calc(var(--hs-topbar-h) + 14px);
   /* 18px is the rail's own margin: at 52 wide the box stands on the rail's left edge, not
      inset from it the way a 36px control had to be */
   left: 18px;

@@ -1275,14 +1275,14 @@ describe("the Client Desk skin", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     expect(declsOf(`${S} .sidebar.hs-rail.is-hidden`).display).toBe("none");
 
-    /* THE ARITHMETIC IS THE POINT. The rail sticks at `--hs-topbar-h + 14px` and pads 10px, so
-       its head is at + 24px; its margin is 18px and it is 52px wide, so a 36px control inside it
-       starts at 18 + (52 - 36) / 2 = 26px. The Show arrow cannot BE the hide arrow — the rail is
-       display:none when hidden — so it is placed on those same two numbers. Verified in the
-       running app: both rects land on x 24.4, y 75.1. */
+    /* THE ARITHMETIC IS THE POINT. The rail sticks at `--hs-topbar-h + 14px` with no top padding
+       (2026-09-26: "make it even with the bottom part" — 14px under the top bar, the same 14px it
+       keeps above the window's foot), so its head is at + 14px. The Show arrow cannot BE the hide
+       arrow — the rail is display:none when hidden — so it is placed on that same number. */
+    expect(declsOf(`${S} .sidebar.hs-rail`)["padding-top"], "the rail would start lower than it ends").toBe("0");
     const show = declsOf(`${S} .hs-rail-show`);
     expect(show.position).toBe("fixed");
-    expect(show.top).toBe("calc(var(--hs-topbar-h) + 24px)");
+    expect(show.top).toBe("calc(var(--hs-topbar-h) + 14px)");
     expect(show.left).toBe("18px");
     // the hide arrow's box exactly, because it is meant to read as the same control
     expect(show.width).toBe("52px");
@@ -1313,7 +1313,7 @@ describe("the Client Desk skin", () => {
        56 and not 44: at 8px of daylight they still read as touching — the shadow is only
        `0 1px 2px`, so nothing separates two white shapes but the gap. 20px is two and a half
        times the rail's own icon rhythm, which is what says "a different thing". */
-    expect(declsOf(`${S} .sidebar.hs-rail::before`).top, "the pill would touch the arrow").toBe("72px");
+    expect(declsOf(`${S} .sidebar.hs-rail::before`).top, "the pill would touch the arrow").toBe("62px");
     expect(declsOf(`${S} .hs-rail-top`)["margin-bottom"], "and the nav would ride up into it").toBe("30px");
 
     /* And the page keeps a lane for the arrow to float in. Without it the page reclaims the
