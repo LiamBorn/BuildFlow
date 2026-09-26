@@ -20,6 +20,7 @@ cp "$BIN" "$APP/Contents/MacOS/BuildFlow"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 cp "$ROOT/Resources/example-inbox.json" "$APP/Contents/Resources/"
+cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/" # CFBundleIconFile; made by make-icon.sh
 # Bundled fonts, with their licences (the OFL requires Sacramento's to travel with it).
 # Without them the greeting falls back to Snell Roundhand, which macOS ships.
 shopt -s nullglob
