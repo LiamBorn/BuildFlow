@@ -18,9 +18,11 @@ import {
   isNotificationSeen,
   markNotifications,
   notificationKey,
+  unseenNotificationCount,
   type BootstrapPayload
 } from "@buildflow/shared";
 import { createApp } from "../src/app.js";
+import { buildDesktopInbox } from "../src/desktopInbox.js";
 
 const SETTING = `/api/me/settings/${encodeURIComponent(NOTIFICATION_STATE_SETTING)}`;
 
@@ -101,6 +103,37 @@ describe("notification read state on the server", () => {
     );
     expect(saved.seen.has(notificationKey(items[0].id))).toBe(true);
     expect(saved.seen.has(notificationKey("delayIQ-long-gone"))).toBe(false);
+  });
+
+  it("gives the bell's badge and the Mac's count the same number", async () => {
+    const { agent, data } = await demoAgent();
+    const items = buildNotificationItems(data);
+    const seen = markNotifications(
+      emptyNotificationState(),
+      items.slice(0, 4).map((item) => item.id),
+      "seen"
+    );
+    await agent
+      .put(SETTING)
+      .send({ value: encodeNotificationState(seen, items) })
+      .expect(200);
+    const fresh = (await agent.get("/api/bootstrap").expect(200)).body as BootstrapPayload;
+
+    // the bell: its own list, and the state bootstrap brought down
+    const now = Date.now();
+    const badge = unseenNotificationCount(
+      decodeNotificationState(fresh.userSettings?.[NOTIFICATION_STATE_SETTING]),
+      buildNotificationItems(fresh, now)
+    );
+    // the notch: the inbox built from the same store
+    const { inbox } = buildDesktopInbox({
+      data: fresh,
+      account: { id: "acct-demo", name: fresh.activeUser.name, role: "owner" },
+      workspace: { name: "Demo" },
+      now
+    });
+    expect(inbox.counts.unseen).toBe(badge);
+    expect(badge).toBe(items.length - 4);
   });
 
   it("still takes any other setting as it always did, replaced whole", async () => {
