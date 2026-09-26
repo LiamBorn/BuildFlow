@@ -173,8 +173,8 @@ export function MacDownloadPage({ footer }: { footer?: ReactNode }) {
           {/* The notch, drawn: example data, as on the plan's mock-up. */}
           <figure className="mdl-screen" aria-label="The BuildFlow notch, showing example data">
             <div className="mdl-menubar" aria-hidden="true">
-              <span className="mdl-menubar-left">Finder&nbsp;&nbsp;File&nbsp;&nbsp;Edit&nbsp;&nbsp;View</span>
-              <span className="mdl-menubar-right">Sat 8:12 AM</span>
+              <span className="mdl-menubar-left">Finder</span>
+              <span className="mdl-menubar-right">8:12 AM</span>
             </div>
             <div className="mdl-notch" aria-hidden="true">
               <p className="mdl-hello">Good morning, Liam</p>
