@@ -7710,6 +7710,25 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
   background: var(--cc-red-soft);
   box-shadow: none;
 }
+/* The armed button of the two-step confirm is a word, not the icon circle above. The circle is the
+   more specific rule, so without this it kept its 40px and clipped "Remove" (Team) and "Revoke"
+   (Devices) to four letters under the Cancel pill. It sits on the red confirm capsule
+   (.settings-member-confirm), so it takes the capsule's colour rather than a surface of its own. */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove.is-confirming {
+  width: auto;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-weight: 650;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove.is-confirming:hover,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-member-remove.is-confirming:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+  color: inherit;
+}
 /* ---- 31f. plans and add-ons ---- */
 .app-shell.hs-shell.bf-shell .settings-rx .sx-plans-title {
   font-family: var(--bf-font-display);
