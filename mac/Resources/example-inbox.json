@@ -1,75 +1,102 @@
 {
-  "me": { "firstName": "Liam", "workspace": "Keating Paving", "role": "owner" },
-  "calendars": ["Google", "Outlook"],
+  "version": 1,
+  "today": "2026-09-26",
+  "me": {
+    "userId": "example", "name": "Liam Santos", "firstName": "Liam", "workspace": "Keating Paving", "role": "owner",
+    "greeting": { "kind": "morning", "text": "Good morning, Liam" }
+  },
+  "counts": { "notifications": 3, "unseen": 3, "unread": 3, "tasks": 3, "jobsToday": 3, "meetingsToday": 3 },
   "notifications": [
     {
-      "id": "delayIQ-d12", "kind": "delayIQ", "title": "Rebar delivery slipping 2 days",
-      "project": "Harbor Point", "tone": "amber",
-      "at": "2026-09-26T12:53:00Z", "read": false, "link": "#open/delayIQs/d12"
+      "id": "delayIQ-d12", "kind": "delayIQ", "title": "Rebar delivery slipping 2 days", "sub": "Harbor Point · DelayIQ",
+      "tone": "amber", "at": "2026-09-26T12:53:00.000Z", "seen": false, "read": false, "alertable": true,
+      "projectId": "p-harbor", "target": { "kind": "delayIQ", "id": "d12" }, "url": null
     },
     {
-      "id": "field-f88", "kind": "fieldUpdate", "title": "Crew 2 reported framing at 60%",
-      "project": "Oak Ridge", "tone": "green",
-      "at": "2026-09-26T12:25:00Z", "read": false, "link": "#open/fieldUpdates/f88"
+      "id": "field-f88", "kind": "fieldUpdate", "title": "Crew 2 reported framing at 60%", "sub": "Oak Ridge · Field update",
+      "tone": "green", "at": "2026-09-26T12:25:00.000Z", "seen": false, "read": false, "alertable": true,
+      "projectId": "p-oak", "target": { "kind": "fieldUpdate", "id": "f88" }, "url": null
     },
     {
-      "id": "inspection-i7", "kind": "inspection", "title": "Footing inspection moved to Thu",
-      "project": "Maple St. Plaza", "tone": "purple",
-      "at": "2026-09-26T12:05:00Z", "read": false, "link": "#open/inspections/i7"
+      "id": "inspection-i7", "kind": "inspection", "title": "Footing inspection moved to Thu", "sub": "Maple St. Plaza · Inspection",
+      "tone": "violet", "at": "2026-09-26T12:05:00.000Z", "seen": false, "read": false, "alertable": true,
+      "projectId": "p-maple", "target": { "kind": "inspection", "id": "i7" }, "url": null
     }
   ],
   "jobs": [
     {
-      "id": "j31", "name": "Footings pour", "project": "Maple St. Plaza", "crews": ["Crew 2"],
-      "date": "2026-09-26", "start": "07:00", "end": "15:30",
-      "status": "Confirmed", "weather": "hold", "mine": true
+      "id": "j31", "name": "Footings pour", "projectId": "p-maple", "project": "Maple St. Plaza", "date": "2026-09-26",
+      "start": "07:00", "end": "15:30", "crews": ["Crew 2"], "crewIds": ["c2"], "status": "Confirmed",
+      "weather": { "severity": "hold", "cause": "rain", "status": "open", "reason": "0.30 in of rain",
+                   "start": "2026-09-26T14:00", "end": "2026-09-26T15:30", "conflictId": "wx-j31" },
+      "mine": true, "days": ["2026-09-26"], "url": null
     },
     {
-      "id": "j32", "name": "Framing, level 2", "project": "Oak Ridge", "crews": ["Crew 4"],
-      "date": "2026-09-26", "start": "07:30", "end": "16:00",
-      "status": "In Progress", "mine": true
+      "id": "j32", "name": "Framing, level 2", "projectId": "p-oak", "project": "Oak Ridge", "date": "2026-09-26",
+      "start": "07:30", "end": "16:00", "crews": ["Crew 4"], "crewIds": ["c4"], "status": "In Progress",
+      "weather": null, "mine": true, "days": ["2026-09-26"], "url": null
     },
     {
-      "id": "j35", "name": "Curb forms", "project": "Riverside Lot", "crews": ["Crew 3"],
-      "date": "2026-09-26", "start": "08:00", "end": "14:30",
-      "status": "Confirmed", "mine": false
+      "id": "j35", "name": "Curb forms", "projectId": "p-river", "project": "Riverside Lot", "date": "2026-09-26",
+      "start": "08:00", "end": "14:30", "crews": ["Crew 3"], "crewIds": ["c3"], "status": "Confirmed",
+      "weather": null, "mine": false, "days": ["2026-09-26"], "url": null
     },
     {
-      "id": "j40", "name": "Site grading", "project": "Harbor Point", "crews": ["Crew 1"],
-      "date": "2026-09-28", "start": "06:30", "end": "14:30",
-      "status": "Confirmed", "weather": "watch", "mine": true
+      "id": "j40", "name": "Site grading", "projectId": "p-harbor", "project": "Harbor Point", "date": "2026-09-28",
+      "start": "06:30", "end": "14:30", "crews": ["Crew 1"], "crewIds": ["c1"], "status": "Confirmed",
+      "weather": { "severity": "watch", "cause": "rain", "status": "open", "reason": "rain likely",
+                   "start": "2026-09-28T09:00", "end": "2026-09-28T12:00", "conflictId": "wx-j40" },
+      "mine": true, "days": ["2026-09-28"], "url": null
     }
   ],
   "meetings": [
     {
-      "id": "m1", "title": "Standup",
-      "startsAt": "2026-09-26T13:30:00Z", "endsAt": "2026-09-26T13:45:00Z",
-      "joinUrl": "https://meet.google.com/", "location": "Google Meet", "attendees": 6
+      "id": "m1", "provider": "google", "title": "Standup",
+      "startsAt": "2026-09-26T13:30:00.000Z", "endsAt": "2026-09-26T13:45:00.000Z", "allDay": false,
+      "joinUrl": "https://meet.google.com/", "conference": "Google Meet", "location": "", "myResponse": "accepted",
+      "state": "later", "url": null
     },
     {
-      "id": "m2", "title": "Owner walkthrough",
-      "startsAt": "2026-09-26T17:00:00Z", "endsAt": "2026-09-26T18:00:00Z",
-      "location": "Maple St. Plaza · on site"
+      "id": "m2", "provider": "google", "title": "Owner walkthrough",
+      "startsAt": "2026-09-26T17:00:00.000Z", "endsAt": "2026-09-26T18:00:00.000Z", "allDay": false,
+      "joinUrl": "", "conference": "", "location": "Maple St. Plaza · on site", "myResponse": "accepted",
+      "state": "later", "url": null
     },
     {
-      "id": "m3", "title": "Sub coordination",
-      "startsAt": "2026-09-26T19:30:00Z", "endsAt": "2026-09-26T20:00:00Z",
-      "joinUrl": "https://teams.microsoft.com/", "location": "Microsoft Teams"
+      "id": "m3", "provider": "microsoft", "title": "Sub coordination",
+      "startsAt": "2026-09-26T19:30:00.000Z", "endsAt": "2026-09-26T20:00:00.000Z", "allDay": false,
+      "joinUrl": "https://teams.microsoft.com/", "conference": "Microsoft Teams", "location": "", "myResponse": "accepted",
+      "state": "later", "url": null
     }
   ],
+  "calendar": { "connected": ["google", "microsoft"], "failed": [] },
   "tasks": [
     {
-      "id": "wc-j31", "kind": "weather-call", "title": "Call the rain day",
-      "context": "Maple St. Plaza", "source": "WeatherIQ", "due": "14:00", "actions": ["cancel", "keep"]
+      "id": "weather-call-wx-j31", "kind": "weather-call", "title": "Call the rain day", "detail": "Maple St. Plaza · WeatherIQ",
+      "projectId": "p-maple", "project": "Maple St. Plaza", "due": "2026-09-26T14:00", "tone": "red",
+      "target": { "kind": "weatherConflict", "id": "wx-j31" },
+      "actions": [
+        { "id": "cancel", "label": "Call it off", "capability": "assignments.write",
+          "request": { "method": "POST", "path": "/api/desktop/tasks/weather-call-wx-j31/cancel", "body": {} } },
+        { "id": "keep", "label": "Keep it on", "capability": "assignments.write",
+          "request": { "method": "POST", "path": "/api/desktop/tasks/weather-call-wx-j31/keep", "body": {} } }
+      ],
+      "url": null
     },
     {
-      "id": "tc-0921", "kind": "time-cards", "title": "Approve 2 time cards",
-      "context": "Week of Sep 21", "source": "Time cards", "due": "2026-09-26", "actions": ["open"]
+      "id": "time-cards-2026-09-21", "kind": "time-cards", "title": "Approve 2 time cards", "detail": "Week of Sep 21 · Time cards",
+      "projectId": null, "project": "", "due": "2026-09-26", "tone": "amber",
+      "target": { "kind": "timeCards", "id": "2026-09-21" },
+      "actions": [
+        { "id": "approve", "label": "Approve", "capability": "timecard.approve",
+          "request": { "method": "POST", "path": "/api/desktop/tasks/time-cards-2026-09-21/approve", "body": { "ids": ["t1", "t2"] } } }
+      ],
+      "url": null
     },
     {
-      "id": "rd-r3", "kind": "readiness", "title": "Permit posted on site",
-      "context": "Oak Ridge", "source": "Readiness", "due": "2026-10-02", "actions": ["open"]
+      "id": "readiness-r3", "kind": "readiness", "title": "Permit posted on site", "detail": "Oak Ridge · Readiness",
+      "projectId": "p-oak", "project": "Oak Ridge", "due": "2026-10-02", "tone": "slate",
+      "target": { "kind": "readiness", "id": "r3" }, "actions": [], "url": null
     }
-  ],
-  "weather": { "project": "Maple St. Plaza", "site": "Maple St.", "tempF": 61, "rainFrom": "14:00" }
+  ]
 }

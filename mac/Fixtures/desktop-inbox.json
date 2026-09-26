@@ -1,0 +1,416 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-26T14:00:00.000Z",
+  "today": "2026-09-26",
+  "me": {
+    "userId": "u-liam",
+    "name": "liam santos",
+    "firstName": "Liam",
+    "workspace": "Keating Paving",
+    "role": "owner",
+    "greeting": {
+      "kind": "morning",
+      "text": "Good morning, Liam"
+    }
+  },
+  "counts": {
+    "notifications": 6,
+    "unseen": 6,
+    "unread": 6,
+    "tasks": 4,
+    "jobsToday": 2,
+    "meetingsToday": 2
+  },
+  "notifications": [
+    {
+      "id": "equipment-eq-1",
+      "kind": "equipment",
+      "title": "Equipment status updated",
+      "sub": "Concrete Pump #2 is in use for Maple St. Plaza.",
+      "tone": "amber",
+      "at": "2026-09-26T14:00:00.000Z",
+      "seen": false,
+      "read": false,
+      "alertable": false,
+      "projectId": "p-maple",
+      "target": {
+        "kind": "equipment",
+        "id": "eq-1"
+      },
+      "opens": {
+        "kind": "record",
+        "page": "inventory",
+        "recordId": "eq-1"
+      },
+      "url": "https://build-flow.replit.app/inventory/eq-1"
+    },
+    {
+      "id": "delayIQ-d12",
+      "kind": "delayIQ",
+      "title": "DelayIQ being tracked",
+      "sub": "Rebar delivery slipping is open on Maple St. Plaza with 2 day impact.",
+      "tone": "red",
+      "at": "2026-09-26T13:48:00.000Z",
+      "seen": false,
+      "read": false,
+      "alertable": true,
+      "projectId": "p-maple",
+      "target": {
+        "kind": "delayIQ",
+        "id": "d12"
+      },
+      "opens": {
+        "kind": "record",
+        "page": "delayIQs",
+        "recordId": "d12"
+      },
+      "url": "https://build-flow.replit.app/delayIQs/d12"
+    },
+    {
+      "id": "field-fu-9",
+      "kind": "fieldUpdate",
+      "title": "Field update posted",
+      "sub": "Carlos Ramirez updated Oak Ridge: Crew 4 reported framing at 60%.",
+      "tone": "green",
+      "at": "2026-09-26T13:20:00.000Z",
+      "seen": false,
+      "read": false,
+      "alertable": true,
+      "projectId": "p-oak",
+      "target": {
+        "kind": "fieldUpdate",
+        "id": "fu-9"
+      },
+      "opens": {
+        "kind": "record",
+        "page": "field",
+        "recordId": "fu-9"
+      },
+      "url": "https://build-flow.replit.app/field/fu-9"
+    },
+    {
+      "id": "weather-conflict-wx-j31-2026-09-26",
+      "kind": "weatherConflict",
+      "title": "Weather may stop Footings pour",
+      "sub": "Rain: 0.30 in of rain, Saturday 2–3:30 PM, at Maple St. Plaza, inside the job's hours. Call it off or keep it on.",
+      "tone": "red",
+      "at": "2026-09-26T12:00:00.000Z",
+      "seen": false,
+      "read": false,
+      "alertable": true,
+      "projectId": "p-maple",
+      "target": {
+        "kind": "weatherConflict",
+        "id": "wx-j31-2026-09-26"
+      },
+      "opens": {
+        "kind": "panel",
+        "panelId": "weather"
+      },
+      "url": "https://build-flow.replit.app/dashboard?panel=weather"
+    },
+    {
+      "id": "assignment-a1",
+      "kind": "assignment",
+      "title": "Schedule assignment updated",
+      "sub": "Crew 2 is assigned to Footings pour with confirmed status.",
+      "tone": "blue",
+      "at": "2026-09-26",
+      "seen": false,
+      "read": false,
+      "alertable": true,
+      "projectId": "p-maple",
+      "target": {
+        "kind": "assignment",
+        "id": "a1"
+      },
+      "opens": {
+        "kind": "schedule",
+        "date": "2026-09-26",
+        "crewId": "c2"
+      },
+      "url": "https://build-flow.replit.app/schedule/week?date=2026-09-26&crew=c2"
+    },
+    {
+      "id": "assignment-a2",
+      "kind": "assignment",
+      "title": "Schedule assignment updated",
+      "sub": "Crew 4 is assigned to Framing, level 2 with in progress status.",
+      "tone": "blue",
+      "at": "2026-09-26",
+      "seen": false,
+      "read": false,
+      "alertable": true,
+      "projectId": "p-oak",
+      "target": {
+        "kind": "assignment",
+        "id": "a2"
+      },
+      "opens": {
+        "kind": "schedule",
+        "date": "2026-09-26",
+        "crewId": "c4"
+      },
+      "url": "https://build-flow.replit.app/schedule/week?date=2026-09-26&crew=c4"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "j31",
+      "name": "Footings pour",
+      "projectId": "p-maple",
+      "project": "Maple St. Plaza",
+      "date": "2026-09-26",
+      "start": "07:00",
+      "end": "15:30",
+      "crews": [
+        "Crew 2"
+      ],
+      "crewIds": [
+        "c2"
+      ],
+      "status": "Confirmed",
+      "weather": {
+        "severity": "hold",
+        "cause": "rain",
+        "status": "open",
+        "reason": "0.30 in of rain",
+        "start": "2026-09-26T14:00",
+        "end": "2026-09-26T15:30",
+        "conflictId": "wx-j31-2026-09-26"
+      },
+      "mine": true,
+      "days": [
+        "2026-09-26"
+      ],
+      "url": "https://build-flow.replit.app/jobs/j31"
+    },
+    {
+      "id": "j50",
+      "name": "Curb forms",
+      "projectId": "p-maple",
+      "project": "Maple St. Plaza",
+      "date": "2026-09-29",
+      "start": "07:00",
+      "end": "15:30",
+      "crews": [],
+      "crewIds": [],
+      "status": "Confirmed",
+      "weather": null,
+      "mine": true,
+      "days": [
+        "2026-09-29",
+        "2026-09-30"
+      ],
+      "url": "https://build-flow.replit.app/jobs/j50"
+    },
+    {
+      "id": "j40",
+      "name": "Framing, level 2",
+      "projectId": "p-oak",
+      "project": "Oak Ridge",
+      "date": "2026-09-26",
+      "start": "07:30",
+      "end": "15:30",
+      "crews": [
+        "Crew 4"
+      ],
+      "crewIds": [
+        "c4"
+      ],
+      "status": "In Progress",
+      "weather": null,
+      "mine": false,
+      "days": [
+        "2026-09-26",
+        "2026-09-27",
+        "2026-09-28",
+        "2026-09-29",
+        "2026-09-30",
+        "2026-10-01",
+        "2026-10-02"
+      ],
+      "url": "https://build-flow.replit.app/jobs/j40"
+    }
+  ],
+  "meetings": [
+    {
+      "id": "Standup",
+      "provider": "google",
+      "title": "Standup",
+      "startsAt": "2026-09-26T14:10:00.000Z",
+      "endsAt": "2026-09-26T14:25:00.000Z",
+      "allDay": false,
+      "joinUrl": "https://meet.google.com/abc-defg-hij",
+      "conference": "Google Meet",
+      "location": "",
+      "myResponse": "accepted",
+      "state": "soon",
+      "url": "https://build-flow.replit.app/dashboard?panel=meetings"
+    },
+    {
+      "id": "Owner walkthrough",
+      "provider": "microsoft",
+      "title": "Owner walkthrough",
+      "startsAt": "2026-09-26T18:00:00.000Z",
+      "endsAt": "2026-09-26T19:00:00.000Z",
+      "allDay": false,
+      "joinUrl": "",
+      "conference": "",
+      "location": "Maple St. Plaza",
+      "myResponse": "accepted",
+      "state": "later",
+      "url": "https://build-flow.replit.app/dashboard?panel=meetings"
+    },
+    {
+      "id": "Monday review",
+      "provider": "google",
+      "title": "Monday review",
+      "startsAt": "2026-09-28T15:00:00.000Z",
+      "endsAt": "2026-09-28T15:30:00.000Z",
+      "allDay": false,
+      "joinUrl": "",
+      "conference": "",
+      "location": "",
+      "myResponse": "accepted",
+      "state": "later",
+      "url": "https://build-flow.replit.app/dashboard?panel=meetings"
+    }
+  ],
+  "calendar": {
+    "connected": [
+      "google",
+      "microsoft"
+    ],
+    "failed": []
+  },
+  "tasks": [
+    {
+      "id": "variance-v7",
+      "kind": "schedule-change",
+      "title": "Schedule change: Footings pour",
+      "detail": "Maple St. Plaza · Field report · 2 working days later",
+      "projectId": "p-maple",
+      "project": "Maple St. Plaza",
+      "due": "2026-09-26",
+      "tone": "amber",
+      "target": {
+        "kind": "variance",
+        "id": "v7"
+      },
+      "actions": [
+        {
+          "id": "accept",
+          "label": "Accept",
+          "capability": "variance.resolve",
+          "request": {
+            "method": "POST",
+            "path": "/api/desktop/tasks/variance-v7/accept",
+            "body": {
+              "userId": "u-liam"
+            }
+          }
+        },
+        {
+          "id": "reject",
+          "label": "Reject",
+          "capability": "variance.resolve",
+          "request": {
+            "method": "POST",
+            "path": "/api/desktop/tasks/variance-v7/reject",
+            "body": {
+              "userId": "u-liam"
+            }
+          }
+        }
+      ],
+      "url": "https://build-flow.replit.app/tasks/variance-v7"
+    },
+    {
+      "id": "weather-call-wx-j31-2026-09-26",
+      "kind": "weather-call",
+      "title": "Call the rain day",
+      "detail": "Footings pour · Maple St. Plaza · Rain: 0.30 in of rain, Saturday 2–3:30 PM",
+      "projectId": "p-maple",
+      "project": "Maple St. Plaza",
+      "due": "2026-09-26T14:00",
+      "tone": "red",
+      "target": {
+        "kind": "weatherConflict",
+        "id": "wx-j31-2026-09-26"
+      },
+      "actions": [
+        {
+          "id": "cancel",
+          "label": "Call it off",
+          "capability": "assignments.write",
+          "request": {
+            "method": "POST",
+            "path": "/api/desktop/tasks/weather-call-wx-j31-2026-09-26/cancel",
+            "body": {}
+          }
+        },
+        {
+          "id": "keep",
+          "label": "Keep it on",
+          "capability": "assignments.write",
+          "request": {
+            "method": "POST",
+            "path": "/api/desktop/tasks/weather-call-wx-j31-2026-09-26/keep",
+            "body": {}
+          }
+        }
+      ],
+      "url": "https://build-flow.replit.app/tasks/weather-call-wx-j31-2026-09-26"
+    },
+    {
+      "id": "unbooked-j50",
+      "kind": "unbooked-job",
+      "title": "No crew on Curb forms",
+      "detail": "Maple St. Plaza · from Tue, Sep 29 · Confirmed",
+      "projectId": "p-maple",
+      "project": "Maple St. Plaza",
+      "due": "2026-09-29",
+      "tone": "amber",
+      "target": {
+        "kind": "job",
+        "id": "j50"
+      },
+      "actions": [
+        {
+          "id": "book",
+          "label": "Book a crew",
+          "capability": "assignments.write",
+          "request": {
+            "method": "POST",
+            "path": "/api/desktop/tasks/unbooked-j50/book",
+            "body": {
+              "jobId": "j50",
+              "date": "2026-09-29"
+            },
+            "needs": [
+              "crewId"
+            ]
+          }
+        }
+      ],
+      "url": "https://build-flow.replit.app/tasks/unbooked-j50"
+    },
+    {
+      "id": "readiness-r1",
+      "kind": "readiness",
+      "title": "Permit posted on site",
+      "detail": "Maple St. Plaza · Readiness",
+      "projectId": "p-maple",
+      "project": "Maple St. Plaza",
+      "due": "2026-10-02",
+      "tone": "slate",
+      "target": {
+        "kind": "readiness",
+        "id": "r1"
+      },
+      "actions": [],
+      "url": null
+    }
+  ]
+}
