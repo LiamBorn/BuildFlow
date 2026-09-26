@@ -1444,7 +1444,7 @@ export class BuildFlowStore {
   /**
    * Hear about every write that reaches this store's file, whatever made it: a route, a transaction's
    * commit, the schedule repository's flush, WeatherIQ reconciling conflicts inside a GET. The Mac's
-   * live nudges hang off this (desktopInboxRoutes.ts), so a write cannot change what a person's inbox
+   * live nudges hang off this (desktopNudges.ts), so a write cannot change what a person's inbox
    * shows without their Mac hearing about it, and no route has to remember to say so.
    *
    * Called synchronously after the file is written, never before and never for a failed write. A

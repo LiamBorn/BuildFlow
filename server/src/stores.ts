@@ -127,7 +127,7 @@ export class StoreManager {
 
   /**
    * Hear which workspace just wrote to its file: every write to a tenant store, from any route or
-   * none. The Mac's live nudges are this (desktopInboxRoutes.ts). The demo workspace is the main
+   * none. The Mac's live nudges are this (desktopNudges.ts). The demo workspace is the main
    * store, which also holds every login's sessions and is written constantly; it is left out on
    * purpose, and the demo can never connect a Mac to be nudged. Returns the way to stop listening.
    */
