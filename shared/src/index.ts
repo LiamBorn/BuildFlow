@@ -1014,3 +1014,17 @@ export {
 } from "./greeting";
 export { MEETING_SOON_MS, allDaySpan, meetingState, upNext, type MeetingState, type MeetingTimes } from "./meetings";
 export { WEATHER_CAUSE_LABEL, weatherClockWords, weatherTimeRange, weekdayName } from "./weatherWords";
+
+/* The Mac's Jobs and Tasks tabs: the coming week's jobs, yours first, and what is waiting on you. */
+export { addIsoDays, isWorkday, upcomingJobs, type UpcomingJob, type UpcomingJobWeather, type UpcomingJobsSources } from "./upcomingJobs";
+export {
+  NEEDS_YOU_LEVELS,
+  needsYou,
+  type NeedsYouAction,
+  type NeedsYouCapability,
+  type NeedsYouKind,
+  type NeedsYouOptions,
+  type NeedsYouSources,
+  type NeedsYouTask,
+  type PendingTimeEntry
+} from "./needsYou";
