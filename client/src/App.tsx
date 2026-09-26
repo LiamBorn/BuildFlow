@@ -78,6 +78,7 @@ import {
   History,
   Image as ImageIcon,
   ImagePlus,
+  Laptop,
   Layers,
   Lightbulb,
   LineChart,
@@ -215,6 +216,8 @@ import {
   importSchedule as apiImportSchedule
 } from "./api";
 import { announcementIsLive } from "./announcements";
+import { forgetDesktopConnect, pendingDesktopConnect, rememberDesktopConnect, resumeDesktopConnect } from "./desktopConnect";
+import { DevicesSettingsPanel } from "./DevicesSettingsPanel";
 import { statusTone, toLocalIsoDate, weekDays } from "./schedule/scheduleUtils";
 import { startOfScheduleWeek } from "./schedule/week";
 import {
@@ -2621,6 +2624,8 @@ function App() {
   }, [data?.selectedPlan, data?.selectedProducts]);
 
   const runBootstrap = () => {
+    // Arriving from the Mac's Connect page to sign in: keep the way back for after the sign-in.
+    rememberDesktopConnect();
     setError(null);
     setIsLoading(true);
     loadWorkspace()
@@ -2808,9 +2813,15 @@ function App() {
     // org — not when the workspace happens to contain people (the owner is
     // one from signup onward).
     if (!payload.onboardingCompletedAt) {
+      // A workspace that is not set up yet has onboarding to do first; a Mac waiting on the Connect
+      // page is not held open that long, so the way back to it is dropped rather than sprung later.
+      forgetDesktopConnect();
       showOnboarding();
       return;
     }
+    /* Signed in on the way to connecting a Mac: back to the server's Connect page, which now has a
+       real session to show "Connect this Mac" to (desktopConnect.ts). */
+    if (resumeDesktopConnect()) return;
     /* SIGNING IN LANDS ON THE DASHBOARD, always. The pending schedule link is drained
        first so it cannot redirect the way in.
 
@@ -3915,7 +3926,8 @@ function WelcomePage({
   const showPlanDetailPage = (planId: ProductPlanId) => showWelcomeSubpage(productPlanViews[planId], productPlanHashes[planId]);
   const showBuildFlowAiPage = () => showWelcomeSubpage("scheduleAi", "#buildflow-ai");
   const showScheduleAiPage = () => showWelcomeSubpage("scheduleAi", "#schedule-ai");
-  const [accountMode, setAccountMode] = useState<"login" | "signup">("signup");
+  // Sent here by the Mac's Connect page, the person has an account to sign in to, so the form opens on it.
+  const [accountMode, setAccountMode] = useState<"login" | "signup">(() => (pendingDesktopConnect() ? "login" : "signup"));
   const showCreateAccountPage = () => {
     setAccountMode("signup");
     showWelcomeSubpage("createAccount", "#create-account");
@@ -20926,6 +20938,7 @@ type SettingsView =
   | "preferences"
   | "notifications"
   | "mailCalendar"
+  | "devices"
   | "general"
   | "workCalendar"
   | "people"
@@ -20997,7 +21010,8 @@ function SettingsPage({
         { id: "profile", label: profileLabel, icon: Users },
         { id: "preferences", label: "Preferences", icon: SlidersHorizontal },
         { id: "notifications", label: "Notifications", icon: Bell },
-        { id: "mailCalendar", label: "Mail & Calendar", icon: CalendarDays }
+        { id: "mailCalendar", label: "Mail & Calendar", icon: CalendarDays },
+        { id: "devices", label: "Devices", icon: Laptop }
       ]
     },
     {
@@ -21211,6 +21225,13 @@ function SettingsPage({
           ]
         }
       ]
+    },
+    devices: {
+      eyebrow: "Account settings",
+      title: "Devices",
+      description: "The Macs running BuildFlow for Mac as you. Disconnect one you no longer use, or have lost.",
+      feature: <DevicesSettingsPanel />,
+      sections: []
     },
     general: {
       eyebrow: "Workspace settings",

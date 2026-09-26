@@ -3,7 +3,7 @@ import { savedFile } from "./fileDurability.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
-import { hashPassword, hashToken, newAuthToken, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
+import { hashPassword, hashToken, newAuthToken, newDeviceKey, newSessionToken, newId, SESSION_TTL_MS } from "./auth.js";
 import { createBusinessProfile } from "./businessProfiles.js";
 import { isPermissionLevel, type PermissionLevel } from "@buildflow/shared";
 import { metrics } from "./metrics.js";
@@ -76,6 +76,23 @@ export type Account = {
 };
 
 export type AuthTokenKind = "verify" | "reset";
+
+/** A Mac connected to one login in one workspace (migration 29). `keyHash` never leaves the server. */
+export type DesktopDeviceRow = {
+  id: string;
+  accountId: string;
+  orgId: string;
+  name: string;
+  keyHash: string;
+  platform: string | null;
+  appVersion: string | null;
+  createdAt: string;
+  lastSeenAt: string | null;
+  revokedAt: string | null;
+};
+
+/** A redeemed connect code: who approved it, for which workspace, and the challenge it was bound to. */
+export type DesktopConnectCode = { accountId: string; orgId: string; challenge: string; deviceName: string };
 
 export type InviteRow = {
   id: string;
@@ -1243,6 +1260,55 @@ SCHEMA_MIGRATIONS.push({
     const names = new Set((columns?.values ?? []).map((row) => String(row[1])));
     if (!names.has("approvedBy")) db.exec("ALTER TABLE time_entries ADD COLUMN approvedBy TEXT");
     if (!names.has("approvedAt")) db.exec("ALTER TABLE time_entries ADD COLUMN approvedAt TEXT");
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 29,
+  name: "BuildFlow for Mac: connected devices and their one-time connect codes",
+  up: (db) => {
+    // 2026-09-26, step 2 of the "BuildFlow for Mac" plan. The notch app talks to /api/desktop/*,
+    // which accepts ONLY a device key, and this is where those keys are kept -- as a SHA-256 hash,
+    // never the key, exactly like auth_tokens. A key is bound to one login in one workspace;
+    // `revokedAt` is set by Settings › Devices or by the Mac disconnecting itself, and a revoked row
+    // is kept so the refusal can say "revoked" rather than "unknown". `lastSeenAt` is written at most
+    // once an hour, because every write here rewrites the whole control database file.
+    //
+    // `desktop_connect_codes` holds the other half of the PKCE hand-off: the single-use code the
+    // Connect page redirects to buildflow://connect with, bound to the Mac's code_challenge, the
+    // workspace and the name the person approved. Also hashed; it lives five minutes.
+    //
+    // Numbered 29 because 27 and 28 are TimeCard's (time entries and their approval), which were
+    // written alongside this. The runner skips every version at or below the stored user_version, so
+    // a build carrying 29 without 27 and 28 must never open a data file that matters: that file
+    // would record v29 and skip TimeCard's two for good. Both tables are created in every file this
+    // runner visits (like auth_tokens), and used only in the control database.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS desktop_devices (
+        id TEXT PRIMARY KEY,
+        accountId TEXT NOT NULL,
+        orgId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        keyHash TEXT NOT NULL UNIQUE,
+        platform TEXT,
+        appVersion TEXT,
+        createdAt TEXT NOT NULL,
+        lastSeenAt TEXT,
+        revokedAt TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_desktop_devices_account ON desktop_devices(accountId, revokedAt);
+      CREATE TABLE IF NOT EXISTS desktop_connect_codes (
+        id TEXT PRIMARY KEY,
+        codeHash TEXT NOT NULL UNIQUE,
+        accountId TEXT NOT NULL,
+        orgId TEXT NOT NULL,
+        challenge TEXT NOT NULL,
+        deviceName TEXT NOT NULL,
+        expiresAt TEXT NOT NULL,
+        usedAt TEXT,
+        createdAt TEXT NOT NULL
+      );
+    `);
   }
 });
 
@@ -3050,6 +3116,9 @@ export class BuildFlowStore {
     this.run("DELETE FROM workspace_members WHERE orgId = ?", [orgId]);
     this.run("DELETE FROM sessions WHERE orgId = ?", [orgId]);
     this.run("DELETE FROM invites WHERE orgId = ?", [orgId]);
+    // Macs connected to this workspace, or to a login that is about to go with it (migration 29)
+    this.run("DELETE FROM desktop_devices WHERE orgId = ? OR accountId IN (SELECT id FROM accounts WHERE orgId = ?)", [orgId, orgId]);
+    this.run("DELETE FROM desktop_connect_codes WHERE orgId = ?", [orgId]);
     this.run("DELETE FROM accounts WHERE orgId = ?", [orgId]);
     this.run("DELETE FROM orgs WHERE id = ?", [orgId]);
     this.save();
@@ -3069,8 +3138,11 @@ export class BuildFlowStore {
    * row whose account has gone is never pruned anywhere -- getSession returns undefined but leaves
    * the row -- so it has to go while the account is still there to find. Then auth tokens, because
    * consumeAuthToken never re-checks that the account exists, which would let an outstanding
-   * password-reset link be redeemed against a deleted login and report success. The account row
-   * last, so a failure part-way leaves a usable login rather than an unreachable orphan.
+   * password-reset link be redeemed against a deleted login and report success. Then the Macs it
+   * connected and any connect code still outstanding: a device key is a credential exactly like a
+   * session, and the device gate refuses a key whose login is gone, but a row nothing can ever use
+   * again is only cost. The account row last, so a failure part-way leaves a usable login rather
+   * than an unreachable orphan.
    *
    * The email is UNIQUE, so deleting the row is also what makes the address invitable again.
    */
@@ -3079,6 +3151,8 @@ export class BuildFlowStore {
     this.transaction(() => {
       this.run("DELETE FROM sessions WHERE accountId = ?", [accountId]);
       this.run("DELETE FROM auth_tokens WHERE accountId = ?", [accountId]);
+      this.run("DELETE FROM desktop_devices WHERE accountId = ?", [accountId]);
+      this.run("DELETE FROM desktop_connect_codes WHERE accountId = ?", [accountId]);
       this.run("DELETE FROM accounts WHERE id = ?", [accountId]);
     });
     return true;
@@ -3328,10 +3402,15 @@ export class BuildFlowStore {
     return this.getAccountById(accountId);
   }
 
-  /** New password + every other session signed out (a reset is how you evict whoever had the old one). */
+  /**
+   * New password + every other session signed out (a reset is how you evict whoever had the old one).
+   * Every connected Mac is disconnected too: whoever had the old password could have connected one,
+   * and a device key outlives the session that approved it, so leaving them would leave that person in.
+   */
   setAccountPassword(accountId: string, password: string) {
     this.run("UPDATE accounts SET passwordHash = ? WHERE id = ?", [hashPassword(password), accountId]);
     this.run("DELETE FROM sessions WHERE accountId = ?", [accountId]);
+    this.run("UPDATE desktop_devices SET revokedAt = ? WHERE accountId = ? AND revokedAt IS NULL", [new Date().toISOString(), accountId]);
     this.save();
   }
 
@@ -3391,16 +3470,133 @@ export class BuildFlowStore {
    */
   pruneExpiredAuth(): { sessions: number; tokens: number } {
     const now = new Date().toISOString();
-    const countExpired = (table: "sessions" | "auth_tokens") =>
+    const countExpired = (table: "sessions" | "auth_tokens" | "desktop_connect_codes") =>
       this.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${table} WHERE expiresAt < ?`, [now])?.n ?? 0;
     const sessions = countExpired("sessions");
-    const tokens = countExpired("auth_tokens");
+    // A Mac's connect code is a one-time token like the emailed ones, so it is counted with them.
+    const tokens = countExpired("auth_tokens") + countExpired("desktop_connect_codes");
     if (sessions === 0 && tokens === 0) return { sessions: 0, tokens: 0 };
     this.transaction(() => {
       this.run("DELETE FROM sessions WHERE expiresAt < ?", [now]);
       this.run("DELETE FROM auth_tokens WHERE expiresAt < ?", [now]);
+      this.run("DELETE FROM desktop_connect_codes WHERE expiresAt < ?", [now]);
     });
     return { sessions, tokens };
+  }
+
+  /* ── BuildFlow for Mac: connect codes and device keys (migration 29) ──────────
+     Both are credentials, so both are stored the way auth_tokens are: the SHA-256 of the raw value,
+     which never touches the database, a log line or a second response. */
+
+  /**
+   * The single-use code the Connect page hands the Mac, bound to the Mac's PKCE challenge, the
+   * workspace the person was in and the name they approved. Returns the RAW code.
+   */
+  createDesktopConnectCode(input: { accountId: string; orgId: string; challenge: string; deviceName: string; ttlMs: number }): string {
+    const raw = newAuthToken();
+    const now = new Date();
+    this.insert("desktop_connect_codes", {
+      id: newId("dcc"),
+      codeHash: hashToken(raw),
+      accountId: input.accountId,
+      orgId: input.orgId,
+      challenge: input.challenge,
+      deviceName: input.deviceName,
+      expiresAt: new Date(now.getTime() + input.ttlMs).toISOString(),
+      usedAt: null,
+      createdAt: now.toISOString()
+    });
+    this.save();
+    return raw;
+  }
+
+  /**
+   * Redeem a connect code, once. It is spent by the attempt, not by a successful one: a code
+   * presented with the wrong verifier is gone too, so whoever intercepted it gets one guess, not
+   * as many as they like. Unknown, used and expired codes all answer undefined.
+   */
+  consumeDesktopConnectCode(raw: string): DesktopConnectCode | undefined {
+    if (!raw) return undefined;
+    const row = this.get<DesktopConnectCode & { id: string; expiresAt: string; usedAt: string | null }>(
+      "SELECT id, accountId, orgId, challenge, deviceName, expiresAt, usedAt FROM desktop_connect_codes WHERE codeHash = ?",
+      [hashToken(raw)]
+    );
+    if (!row || row.usedAt) return undefined;
+    this.run("UPDATE desktop_connect_codes SET usedAt = ? WHERE id = ?", [new Date().toISOString(), row.id]);
+    this.save();
+    if (new Date(row.expiresAt).getTime() < Date.now()) return undefined;
+    return { accountId: row.accountId, orgId: row.orgId, challenge: row.challenge, deviceName: row.deviceName };
+  }
+
+  /** Connect a Mac. Returns the RAW key, which exists here and in this one response and nowhere else. */
+  createDesktopDevice(input: { accountId: string; orgId: string; name: string; platform?: string | null; appVersion?: string | null }): {
+    key: string;
+    device: DesktopDeviceRow;
+  } {
+    const key = newDeviceKey();
+    const now = new Date().toISOString();
+    const device: DesktopDeviceRow = {
+      id: newId("dev"),
+      accountId: input.accountId,
+      orgId: input.orgId,
+      name: input.name,
+      keyHash: hashToken(key),
+      platform: input.platform ?? null,
+      appVersion: input.appVersion ?? null,
+      createdAt: now,
+      // connecting is being seen, and it spares the first request an hour's-worth write
+      lastSeenAt: now,
+      revokedAt: null
+    };
+    this.insert("desktop_devices", device);
+    this.save();
+    return { key, device };
+  }
+
+  /** The device a raw key belongs to, revoked or not -- the gate tells the two apart. */
+  desktopDeviceByKey(raw: string): DesktopDeviceRow | undefined {
+    if (!raw) return undefined;
+    return this.get<DesktopDeviceRow>("SELECT * FROM desktop_devices WHERE keyHash = ?", [hashToken(raw)]);
+  }
+
+  desktopDevice(id: string): DesktopDeviceRow | undefined {
+    return this.get<DesktopDeviceRow>("SELECT * FROM desktop_devices WHERE id = ?", [id]);
+  }
+
+  /** One login's connected Macs, newest first. Revoked ones are history and are left out. */
+  desktopDevicesForAccount(accountId: string): DesktopDeviceRow[] {
+    return this.all<DesktopDeviceRow>("SELECT * FROM desktop_devices WHERE accountId = ? AND revokedAt IS NULL ORDER BY createdAt DESC", [
+      accountId
+    ]);
+  }
+
+  /**
+   * Note that a device was seen, at most once per `minIntervalMs`. Every write here rewrites the whole
+   * control database, and a Mac reads every minute, so "last seen" is kept to the hour: the answer to
+   * "is this Mac still in use", not a heartbeat. Returns whether it wrote.
+   */
+  touchDesktopDevice(device: DesktopDeviceRow, minIntervalMs: number, appVersion?: string | null): boolean {
+    const last = device.lastSeenAt ? new Date(device.lastSeenAt).getTime() : 0;
+    if (Date.now() - last < minIntervalMs) return false;
+    const now = new Date().toISOString();
+    this.run("UPDATE desktop_devices SET lastSeenAt = ?, appVersion = COALESCE(?, appVersion) WHERE id = ?", [
+      now,
+      appVersion ?? null,
+      device.id
+    ]);
+    this.save();
+    return true;
+  }
+
+  /** Disconnect a Mac. Idempotent; answers the row as it now stands, or undefined for an unknown id. */
+  revokeDesktopDevice(id: string): DesktopDeviceRow | undefined {
+    const device = this.desktopDevice(id);
+    if (!device) return undefined;
+    if (device.revokedAt) return device;
+    const revokedAt = new Date().toISOString();
+    this.run("UPDATE desktop_devices SET revokedAt = ? WHERE id = ?", [revokedAt, id]);
+    this.save();
+    return { ...device, revokedAt };
   }
 
   /** Idempotently seed the demo org + demo account so the credential-free

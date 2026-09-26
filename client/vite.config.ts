@@ -112,6 +112,12 @@ export default defineConfig({
             }
           });
         }
+      },
+      /* BuildFlow for Mac's Connect page is rendered by the API, not by this app (server/src/desktop.ts).
+         Signing in from it comes back to /desktop/connect on THIS origin, so it is passed through too. */
+      "/desktop": {
+        target: `http://localhost:${BACKEND_PORT}`,
+        changeOrigin: true
       }
     }
   },

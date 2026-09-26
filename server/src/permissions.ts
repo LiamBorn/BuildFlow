@@ -372,6 +372,23 @@ export const ROUTE_POLICY: Record<string, Policy> = {
      request, so every level has it and no capability describes it. The one row in the table
      that is deliberately "signed-in" rather than a capability. */
   "PUT /api/me/settings/:key": "signed-in",
+  /* BuildFlow for Mac (2026-09-26). The Connect page and its form are "public" to this ladder because
+     they answer a signed-out visitor with a page rather than a JSON 401 -- a sign-in link -- and the
+     handlers themselves require a real session, refuse the demo, and check a signed, session-bound
+     approval on the post (desktop.ts). The token exchange is how a key is obtained, so it cannot need
+     one; the code and PKCE verifier it carries are the proof. */
+  "GET /desktop/connect": "public",
+  "POST /desktop/connect": "public",
+  "POST /api/desktop/token": "public",
+  /* Under the device gate: a device key IS a signed-in caller, acting as the login that connected it
+     at that login's level. Who you are is all these two read, like the settings row above. */
+  "GET /api/desktop/me": "signed-in",
+  "POST /api/desktop/disconnect": "signed-in",
+  /* Settings › Devices: your OWN connected Macs, per person like /api/me/settings. Revoking is limited
+     to your own devices in the handler; an Owner or Admin cuts off a teammate's Macs by removing the
+     teammate, which deletes the login and every key it holds. See desktop.ts. */
+  "GET /api/me/devices": "signed-in",
+  "DELETE /api/me/devices/:id": "signed-in",
   "PUT /api/schedule-tool/projects/:projectId/activities/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/baselines/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/calendars/:id": "scheduletool.write",

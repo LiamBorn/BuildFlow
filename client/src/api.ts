@@ -1,6 +1,8 @@
 import type {
   BootstrapPayload,
   BusinessTypeId,
+  DesktopDevice,
+  DesktopDevicesPayload,
   CreateCrewInput,
   PermissionLevel,
   CreateEquipmentInput,
@@ -186,6 +188,15 @@ export function updateTeamMemberPermission(id: string, permission: PermissionLev
 }
 export function removeSampleUser(id: string) {
   return request<void>(`/api/team/users/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+/* ── Settings › Devices: the Macs connected through BuildFlow for Mac ──────── */
+/** Your own connected Macs, newest first. Never a key: the server keeps only its hash. */
+export function fetchMyDevices() {
+  return request<DesktopDevicesPayload>("/api/me/devices");
+}
+/** Disconnect one of your Macs. Its key stops working on its next request. */
+export function revokeMyDevice(id: string) {
+  return request<{ device: DesktopDevice }>(`/api/me/devices/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 /** What an invited person sees before accepting (public; the token is the credential). */
 export function fetchInvitePreview(token: string) {

@@ -16,7 +16,12 @@
       read far more casually than a database is, and the same care that put
       `Referrer-Policy: no-referrer` on these responses applies to writing the
       URL down here. Parameter NAMES are kept, which is enough to tell which
-      shape of request it was.
+      shape of request it was. HEADERS AND BODIES are never logged either,
+      which is what keeps BuildFlow for Mac's secrets out: its device key
+      travels only as `Authorization: Bearer bfd_…`, and the connect code,
+      PKCE verifier and freshly issued key only in the body of
+      POST /api/desktop/token or the query of the Connect page and its
+      buildflow:// redirect (test/desktop.test.ts checks all of them).
    2. NOTHING UNTRUSTED GOES IN RAW. Express leaves `req.path` percent-encoded,
       but it DECODES query parameter names — a request to `?bad%0Akey=1` arrives
       as the key `"bad\nkey"`, a real newline. A newline in a log line is a

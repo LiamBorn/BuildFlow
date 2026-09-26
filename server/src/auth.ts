@@ -74,6 +74,39 @@ export function newSessionToken(): string {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+/**
+ * A BuildFlow for Mac device key: `bfd_` and 256 random bits. The prefix is there so a key is
+ * recognisable wherever it turns up -- a secret scanner, a pasted log, a support ticket -- and so the
+ * device gate can refuse anything that is not even shaped like one before touching the database.
+ */
+export const DEVICE_KEY_PREFIX = "bfd_";
+const DEVICE_KEY_SHAPE = /^bfd_[A-Za-z0-9_-]{43}$/;
+
+export function newDeviceKey(): string {
+  return `${DEVICE_KEY_PREFIX}${crypto.randomBytes(32).toString("base64url")}`;
+}
+
+export function isDeviceKeyShape(value: string): boolean {
+  return DEVICE_KEY_SHAPE.test(value);
+}
+
+/**
+ * The device key in an `Authorization: Bearer bfd_…` header, or null. The one place a device key is
+ * read from: never a cookie, a query string or a body, so it cannot ride along on a link or a form.
+ */
+export function bearerDeviceKey(header: string | undefined): string | null {
+  if (!header) return null;
+  const match = /^Bearer\s+(\S+)\s*$/i.exec(header);
+  if (!match) return null;
+  return isDeviceKeyShape(match[1]) ? match[1] : null;
+}
+
+/** PKCE S256 (RFC 7636 §4.6): does this verifier hash to the challenge the code was bound to? Constant-time. */
+export function pkceVerifierMatches(verifier: string, challenge: string): boolean {
+  const computed = crypto.createHash("sha256").update(verifier).digest("base64url");
+  return secretsMatch(computed, challenge);
+}
+
 /** A short unique id for orgs/accounts (prefix + random). */
 export function newId(prefix: string): string {
   return `${prefix}-${crypto.randomBytes(9).toString("base64url")}`;
