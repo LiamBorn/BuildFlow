@@ -10,6 +10,7 @@ import {
   NEEDS_YOU_LEVELS,
   NOTIFICATION_STATE_SETTING,
   buildNotificationItems,
+  parseLinkHash,
   emptyNotificationState,
   encodeNotificationState,
   markNotifications,
@@ -252,7 +253,9 @@ describe("the Mac's inbox", () => {
       alertable: true,
       projectId: "p-maple",
       target: { kind: "delayIQ", id: "d12" },
-      opens: { kind: "record", page: "delayIQs", recordId: "d12" }
+      opens: { kind: "record", page: "delayIQs", recordId: "d12" },
+      // no website origin given, so no link: the route passes the one emailed links use
+      url: null
     });
     expect(inbox.notifications.filter((item) => !item.alertable).map((item) => item.kind)).toEqual(["equipment"]);
   });
@@ -300,15 +303,16 @@ describe("the Mac's inbox", () => {
     expect(inbox.calendar).toEqual({ connected: ["google", "microsoft"], failed: [] });
   });
 
-  it("lists what is waiting on you, with the endpoint for each answer", () => {
+  it("lists what is waiting on you, each answer pointed at the Mac's own mirror of the website's endpoint", () => {
     const { inbox } = build();
     expect(inbox.tasks.map((task) => [task.kind, task.title, task.due, task.actions.map((action) => action.id)])).toEqual([
       ["weather-call", "Call the rain day", "2026-09-26T14:00", ["cancel", "keep"]],
       ["readiness", "Permit posted on site", "2026-10-02", []]
     ]);
+    // a device key cannot call the website's /api/weather/…; the mirror re-derives the task and runs the same operation
     expect(inbox.tasks[0].actions[0].request).toEqual({
       method: "POST",
-      path: "/api/weather/conflicts/wx-j31-2026-09-26/cancel",
+      path: "/api/desktop/tasks/weather-call-wx-j31-2026-09-26/cancel",
       body: {}
     });
     expect(inbox.counts.tasks).toBe(2);
@@ -372,6 +376,27 @@ describe("the Mac's inbox", () => {
     const before = JSON.stringify(data);
     build({ data });
     expect(JSON.stringify(data)).toBe(before);
+  });
+
+  it("gives every notification, job, meeting and task the website address that opens it on a cold load", () => {
+    const { inbox } = build({ webOrigin: "https://build-flow.replit.app/" });
+    const byId = Object.fromEntries(inbox.notifications.map((item) => [item.id, item.url]));
+    expect(byId["delayIQ-d12"]).toBe("https://build-flow.replit.app/#open/delayIQs/d12");
+    expect(byId["field-fu-9"]).toBe("https://build-flow.replit.app/#open/field/fu-9");
+    expect(byId["weather-conflict-wx-j31-2026-09-26"]).toBe("https://build-flow.replit.app/#open/dashboard/weather");
+    expect(byId["equipment-eq-1"]).toBe("https://build-flow.replit.app/#open/inventory/eq-1");
+    expect(byId["assignment-a1"]).toMatch(/^https:\/\/build-flow\.replit\.app\/#open\/schedule\/\d{4}-\d{2}-\d{2}\//);
+    // the link is the bell's own destination, spelled as an address
+    for (const item of inbox.notifications) expect(parseLinkHash(new URL(item.url!).hash)).toEqual(item.opens);
+    expect(inbox.jobs.map((row) => row.url)).toEqual([
+      "https://build-flow.replit.app/#open/job/j31?d=2026-09-26",
+      "https://build-flow.replit.app/#open/job/j40?d=2026-09-26"
+    ]);
+    expect(new Set(inbox.meetings.map((item) => item.url))).toEqual(new Set(["https://build-flow.replit.app/#open/dashboard/meetings"]));
+    expect(inbox.tasks.map((task) => task.url)).toEqual([
+      "https://build-flow.replit.app/#open/dashboard/weather",
+      "https://build-flow.replit.app/#open/dashboard/readiness"
+    ]);
   });
 
   it("decides who can act the way the server's permissions do", () => {

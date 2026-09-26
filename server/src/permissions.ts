@@ -184,12 +184,13 @@ export const outranks = (actor: PermissionLevel, subject: PermissionLevel): bool
    The one inline role check the codebase used to have, owner-only job-title changes, is now
    the "team.permission" row below and the conditional is gone from its handler.
 
-   Two checks are still deliberately NOT here, because a route-level capability cannot express
-   either. The commercial fields of POST /api/business-profile: one route carrying two
+   Three checks are still deliberately NOT here, because a route-level capability cannot express
+   them. The commercial fields of POST /api/business-profile: one route carrying two
    permissions, since naming the trade is a workspace setting and the plan is the commercial
-   relationship. And the rank rule on DELETE /api/team/users/:id, where the answer depends on
-   the subject as well as the caller. Both are can()/outranks() calls that say so where they
-   are.
+   relationship. The rank rule on DELETE /api/team/users/:id, where the answer depends on
+   the subject as well as the caller. And the Mac's POST /api/desktop/tasks/:taskId/:actionId,
+   one route for every kind of task, which asks the capability of the answer given. All are
+   can()/outranks() calls that say so where they are.
 
    The keys are "METHOD <the path as Express registered it>". The boot assertion compares
    them against the live router, so a typo here is a startup failure rather than a hole. */
@@ -389,6 +390,16 @@ export const ROUTE_POLICY: Record<string, Policy> = {
      teammate, which deletes the login and every key it holds. See desktop.ts. */
   "GET /api/me/devices": "signed-in",
   "DELETE /api/me/devices/:id": "signed-in",
+  /* BuildFlow for Mac, step 5: the live inbox (desktopInboxRoutes.ts), under the device gate. Reading
+     the inbox and hearing its nudges is reading as yourself, like /api/desktop/me; the read state is
+     your own, like /api/me/settings. Answering a task is "signed-in" at the route because one route
+     carries every kind of task: the handler re-derives the task and asks the capability of THAT
+     answer -- variance.resolve, assignments.write or timecard.approve, exactly what the website's own
+     endpoint for it asks -- and runs the website's own operation, so the two cannot disagree. */
+  "GET /api/desktop/inbox": "signed-in",
+  "POST /api/desktop/inbox/state": "signed-in",
+  "POST /api/desktop/tasks/:taskId/:actionId": "signed-in",
+  "GET /api/desktop/events": "signed-in",
   "PUT /api/schedule-tool/projects/:projectId/activities/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/baselines/:id": "scheduletool.write",
   "PUT /api/schedule-tool/projects/:projectId/calendars/:id": "scheduletool.write",

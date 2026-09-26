@@ -61,6 +61,8 @@ export class StoreManager {
   private readonly dataDir: string;
 
   private readonly maxResident: number;
+  /** Told the workspace's id after every write to a tenant store (see onOrgSaved). */
+  private readonly orgSavedListeners = new Set<(orgId: string) => void>();
 
   constructor(
     private readonly mainStore: BuildFlowStore,
@@ -88,6 +90,15 @@ export class StoreManager {
     }
     const file = path.join(this.dataDir, `org-${orgId}.sqlite`);
     const store = await BuildFlowStore.create(file, false, { seedDemo: false });
+    store.onSaved(() => {
+      for (const listener of this.orgSavedListeners) {
+        try {
+          listener(orgId);
+        } catch {
+          /* one listener failing never stops the next hearing it */
+        }
+      }
+    });
     this.cache.set(orgId, store);
     this.evictColdStores(orgId);
     return store;
@@ -112,6 +123,19 @@ export class StoreManager {
     const held = (this.pins.get(orgId) ?? 0) - 1;
     if (held > 0) this.pins.set(orgId, held);
     else this.pins.delete(orgId);
+  }
+
+  /**
+   * Hear which workspace just wrote to its file: every write to a tenant store, from any route or
+   * none. The Mac's live nudges are this (desktopInboxRoutes.ts). The demo workspace is the main
+   * store, which also holds every login's sessions and is written constantly; it is left out on
+   * purpose, and the demo can never connect a Mac to be nudged. Returns the way to stop listening.
+   */
+  onOrgSaved(listener: (orgId: string) => void): () => void {
+    this.orgSavedListeners.add(listener);
+    return () => {
+      this.orgSavedListeners.delete(listener);
+    };
   }
 
   /** Resident tenant stores, and how many are held by a request. Read by /api/ops/metrics. */

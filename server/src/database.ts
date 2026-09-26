@@ -1438,7 +1438,27 @@ export class BuildFlowStore {
   /** While a transaction runs, save() waits for its commit: sql.js's export() closes the database, which would end the transaction. */
   private inTransaction = false;
 
-  private save() {
+  /** Told after every write reaches the file (see onSaved). */
+  private readonly savedListeners = new Set<() => void>();
+
+  /**
+   * Hear about every write that reaches this store's file, whatever made it: a route, a transaction's
+   * commit, the schedule repository's flush, WeatherIQ reconciling conflicts inside a GET. The Mac's
+   * live nudges hang off this (desktopInboxRoutes.ts), so a write cannot change what a person's inbox
+   * shows without their Mac hearing about it, and no route has to remember to say so.
+   *
+   * Called synchronously after the file is written, never before and never for a failed write. A
+   * listener must be cheap and must not write; one that throws is ignored rather than allowed to
+   * fail the write it is hearing about. Returns the way to stop listening.
+   */
+  onSaved(listener: () => void): () => void {
+    this.savedListeners.add(listener);
+    return () => {
+      this.savedListeners.delete(listener);
+    };
+  }
+
+  private save(options: { quiet?: boolean } = {}) {
     if (this.inTransaction) return;
     const data = Buffer.from(this.db.export());
     /**
@@ -1481,6 +1501,14 @@ export class BuildFlowStore {
         /* nothing to clean up */
       }
       throw error;
+    }
+    if (options.quiet) return;
+    for (const listener of this.savedListeners) {
+      try {
+        listener();
+      } catch {
+        /* a listener never fails the write it hears about */
+      }
     }
   }
 
@@ -1575,7 +1603,8 @@ export class BuildFlowStore {
   /** Write a timestamped snapshot of this store's file into <dataDir>/backups/,
    *  pruning to the newest `retain`. Returns the backup file path. */
   backup(retain = 20): string {
-    this.save(); // snapshot the latest in-memory state to disk first
+    // snapshot the latest in-memory state to disk first; nothing changed, so nobody is told it did
+    this.save({ quiet: true });
     return BuildFlowStore.backupFile(this.dataFile, retain);
   }
 

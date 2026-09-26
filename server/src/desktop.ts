@@ -31,6 +31,7 @@ import { DEMO_ACCOUNT_EMAIL, DEMO_ORG_ID, type Account, type BuildFlowStore, typ
 import { bearerDeviceKey, hashToken, parseCookies, pkceVerifierMatches, secretsMatch, SESSION_COOKIE } from "./auth.js";
 import { readState, signState } from "./oauth.js";
 import type { RateLimiter } from "./rateLimit.js";
+import { registerDesktopInboxRoutes, type DesktopInboxDeps } from "./desktopInboxRoutes.js";
 
 /** The only place a connect code may be sent. The Mac registers this scheme; nothing else is accepted. */
 export const DESKTOP_REDIRECT_URI = "buildflow://connect";
@@ -253,9 +254,11 @@ export type DesktopRouteDeps = {
   limiter: RateLimiter;
   /** The website's origin, for the sign-in link when this process does not serve the pages itself. */
   webOrigin: () => string;
+  /** Step 5, the live inbox: what its routes need beyond the two stores (desktopInboxRoutes.ts). */
+  inbox: Omit<DesktopInboxDeps, "mainStore" | "store">;
 };
 
-export function registerDesktopRoutes(app: express.Application, { mainStore, store, limiter, webOrigin }: DesktopRouteDeps) {
+export function registerDesktopRoutes(app: express.Application, { mainStore, store, limiter, webOrigin, inbox }: DesktopRouteDeps) {
   const workspaceName = (orgId: string) => mainStore.getOrg(orgId)?.name ?? "";
 
   /** The website's sign-in, set to come back to this exact Connect page once it has a real session. */
@@ -456,6 +459,9 @@ export function registerDesktopRoutes(app: express.Application, { mainStore, sto
     mainStore.revokeDesktopDevice(req.device!.id);
     res.json({ ok: true });
   });
+
+  /* Step 5: the live inbox, its task answers, read state and nudges. */
+  registerDesktopInboxRoutes(app, { mainStore, store, ...inbox });
 
   /* 5. The website's half: your own connected Macs, and taking one back. Session cookie, as ever. */
   app.get("/api/me/devices", (req, res) => {
