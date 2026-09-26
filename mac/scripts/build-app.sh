@@ -20,6 +20,7 @@ cp "$BIN" "$APP/Contents/MacOS/BuildFlow"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 cp "$ROOT/Resources/example-inbox.json" "$APP/Contents/Resources/"
+cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/" # CFBundleIconFile; made by make-icon.sh
 # Bundled fonts, with their licences (the OFL requires Sacramento's to travel with it).
 # Without them the greeting falls back to Snell Roundhand, which macOS ships.
 shopt -s nullglob
@@ -31,5 +32,6 @@ shopt -u nullglob
 plutil -lint "$APP/Contents/Info.plist" > /dev/null
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --strict "$APP"
+"$ROOT/scripts/embed-sparkle.sh" "$APP" # Sparkle into Contents/Frameworks, then signs it all again (DEVELOPER_ID, or ad hoc)
 
 echo "Built $APP ($CONFIG, signed ad hoc)"

@@ -790,6 +790,18 @@
   font-weight: 500;
   line-height: 1.5;
 }
+/* …and the way to get the app: the site's #mac page, in a new tab */
+.settings-rx .settings-devices-download {
+  color: var(--wx-ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.settings-rx .settings-devices-download:focus-visible {
+  outline: 2px solid var(--wx-ink);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
 
 .settings-rx .settings-invite-form {
   container-type: inline-size;

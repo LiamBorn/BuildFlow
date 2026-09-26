@@ -88,6 +88,11 @@ export function DevicesSettingsPanel() {
           </span>
           <h2 id="settings-devices-title">Connected Macs</h2>
           <p>Each Mac signs in as you, in the workspace you connected it from. Revoke one and it is signed out at once.</p>
+          <p>
+            <a className="settings-devices-download" href="/#mac" target="_blank" rel="noopener noreferrer">
+              Download BuildFlow for Mac
+            </a>
+          </p>
         </div>
         {devices && <span className="settings-owner-summary">{count} connected</span>}
       </div>

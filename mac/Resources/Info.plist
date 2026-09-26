@@ -20,6 +20,21 @@
 	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<!-- Shipping (step 7): the icon, and Sparkle updates from the BuildFlow server. release.sh bumps
+	     the two versions above; SUPublicEDKey is the public half of the EdDSA key in the login
+	     Keychain (account buildflow-mac) that signs every update. -->
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>SUFeedURL</key>
+	<string>https://build-flow.replit.app/downloads/mac/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>hu48PigT+7WGy3X2oUR0k1e3AX8bRWNIGE9pT6ASrIA=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -118,6 +118,12 @@ export default defineConfig({
       "/desktop": {
         target: `http://localhost:${BACKEND_PORT}`,
         changeOrigin: true
+      },
+      /* BuildFlow for Mac's appcast, latest.json and disk images are the API server's files too
+         (server/src/macDownloads.ts); the #mac page reads latest.json from this origin. */
+      "/downloads": {
+        target: `http://localhost:${BACKEND_PORT}`,
+        changeOrigin: true
       }
     }
   },

@@ -47,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ScriptFont.registerBundledFonts()
+        Updater.shared.start()
 
         controller = NotchController(model: model)
         controller.install()
