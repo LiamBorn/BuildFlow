@@ -1,0 +1,302 @@
+/* =========================================================================
+   BuildFlow for Mac (#mac) — the download page (MacDownloadPage.tsx).
+   On the site's `.cpx-page` system: the --cpx-* tokens (crew-scheduling-apple.css),
+   .cpx-section rhythm, [data-reveal], wx-btn. `.mdl-*` = Mac download.
+   The notch drawing is always dark, like the hardware it stands for; everything
+   else takes the page's tokens.
+   ========================================================================= */
+
+.welcome-rx .mdl-page {
+  --mdl-notch: #050506;
+  --mdl-notch-ink: #f4f2ed;
+  --mdl-notch-mut: rgba(244, 242, 237, 0.62);
+  --mdl-orange: #f7881f;
+  --mdl-amber: #fdd663;
+  --mdl-green: #81c995;
+  --mdl-warn: #b86e12;
+}
+
+/* ── 1 · hero ─────────────────────────────────────────────────────────── */
+.welcome-rx .mdl-hero {
+  padding-top: clamp(96px, 12vw, 150px);
+}
+.welcome-rx .mdl-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 72px);
+}
+.welcome-rx .mdl-hero-copy {
+  text-align: left;
+}
+.welcome-rx .mdl-hero-copy .pov-title {
+  margin-top: 14px;
+}
+.welcome-rx .mdl-lede {
+  margin: 0;
+  max-width: 34rem;
+}
+.welcome-rx .mdl-download {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 30px;
+}
+.welcome-rx .mdl-download .wx-btn {
+  text-decoration: none;
+}
+.welcome-rx .mdl-download .wx-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.welcome-rx .mdl-download-meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--cpx-faint);
+}
+
+/* the notch, drawn */
+.welcome-rx .mdl-screen {
+  position: relative;
+  margin: 0;
+  min-height: 330px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 85% 0%, rgba(247, 136, 31, 0.35), transparent 60%),
+    linear-gradient(160deg, #2a3140 0%, #151a23 55%, #0d1118 100%);
+  box-shadow: 0 44px 90px -48px rgba(12, 16, 24, 0.75);
+}
+.welcome-rx .mdl-menubar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 30px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+.welcome-rx .mdl-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(86%, 420px);
+  transform: translateX(-50%);
+  padding: 22px 26px 20px;
+  border-radius: 0 0 30px 30px;
+  background: var(--mdl-notch);
+  color: var(--mdl-notch-ink);
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.8);
+}
+.welcome-rx .mdl-hello {
+  margin: 0;
+  font-family: "Snell Roundhand", "Apple Chancery", "Segoe Script", cursive;
+  font-size: clamp(30px, 3.4vw, 40px);
+  line-height: 1.15;
+  text-align: center;
+}
+.welcome-rx .mdl-day {
+  margin: 6px 0 16px;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--mdl-notch-mut);
+}
+.welcome-rx .mdl-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.welcome-rx .mdl-rows li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 13px;
+}
+.welcome-rx .mdl-rows em,
+.welcome-rx .mdl-rows b {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--mdl-notch-mut);
+}
+.welcome-rx .mdl-rows b {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--mdl-green);
+  color: #0d1a12;
+  font-weight: 600;
+}
+.welcome-rx .mdl-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mdl-orange);
+}
+.welcome-rx .mdl-dot.is-amber {
+  background: var(--mdl-amber);
+}
+.welcome-rx .mdl-dot.is-green {
+  background: var(--mdl-green);
+}
+.welcome-rx .mdl-example {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ── 2 · features ─────────────────────────────────────────────────────── */
+.welcome-rx .mdl-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: clamp(28px, 4vw, 48px);
+}
+.welcome-rx .mdl-feature,
+.welcome-rx .mdl-card {
+  border-radius: 18px;
+  border: 1px solid var(--cpx-line-soft);
+  background: var(--cpx-card);
+  box-shadow: 0 34px 66px -50px rgba(28, 28, 26, 0.5);
+  padding: clamp(22px, 2.4vw, 30px);
+}
+.welcome-rx .mdl-feature h3,
+.welcome-rx .mdl-card h3 {
+  margin: 16px 0 8px;
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  color: var(--cpx-ink);
+}
+.welcome-rx .mdl-feature p,
+.welcome-rx .mdl-card p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--cpx-mut);
+}
+.welcome-rx .mdl-feature-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(247, 136, 31, 0.14);
+  color: var(--mdl-orange);
+}
+.welcome-rx .mdl-feature-ic.is-warn {
+  background: rgba(184, 110, 18, 0.14);
+  color: var(--mdl-warn);
+}
+.welcome-rx .mdl-footnote {
+  margin: 26px auto 0;
+  max-width: 44rem;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--cpx-faint);
+}
+
+/* ── 3 · requirements and the first open ──────────────────────────────── */
+.welcome-rx .mdl-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: clamp(28px, 4vw, 48px);
+}
+.welcome-rx .mdl-checks {
+  display: grid;
+  gap: 12px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.welcome-rx .mdl-checks li {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 10px;
+  line-height: 1.5;
+  color: var(--cpx-mut);
+}
+.welcome-rx .mdl-checks svg {
+  margin-top: 4px;
+  color: var(--cpx-green);
+}
+.welcome-rx .mdl-first-open {
+  border-color: rgba(184, 110, 18, 0.35);
+}
+.welcome-rx .mdl-steps {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding-left: 1.3em;
+  line-height: 1.55;
+  color: var(--cpx-mut);
+}
+.welcome-rx .mdl-steps b {
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .mdl-card .mdl-once {
+  margin-top: 16px;
+  color: var(--cpx-ink);
+}
+.welcome-rx .mdl-card .mdl-sha {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.welcome-rx .mdl-sha code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.welcome-rx .mdl-hash {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: var(--cpx-ink);
+}
+
+/* ── responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .welcome-rx .mdl-hero-grid,
+  .welcome-rx .mdl-setup-grid,
+  .welcome-rx .mdl-feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .welcome-rx .mdl-hero-copy {
+    text-align: center;
+  }
+  .welcome-rx .mdl-lede {
+    margin: 0 auto;
+  }
+  .welcome-rx .mdl-download {
+    align-items: center;
+  }
+}
+@media (max-width: 480px) {
+  .welcome-rx .mdl-notch {
+    width: 92%;
+    padding: 18px 16px 16px;
+  }
+  .welcome-rx .mdl-menubar-left {
+    display: none;
+  }
+}
+.welcome-rx .mdl-footnote.mdl-keys {
+  margin-top: 30px;
+  font-weight: 600;
+  color: var(--cpx-ink);
+}
+.welcome-rx .mdl-keys + .mdl-footnote {
+  margin-top: 8px;
+}

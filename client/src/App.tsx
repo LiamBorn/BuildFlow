@@ -219,6 +219,7 @@ import {
 import { announcementIsLive } from "./announcements";
 import { forgetDesktopConnect, pendingDesktopConnect, rememberDesktopConnect, resumeDesktopConnect } from "./desktopConnect";
 import { DevicesSettingsPanel } from "./DevicesSettingsPanel";
+import { MacDownloadPage } from "./MacDownloadPage";
 import { statusTone, toLocalIsoDate, weekDays } from "./schedule/scheduleUtils";
 import { startOfScheduleWeek } from "./schedule/week";
 import {
@@ -397,6 +398,7 @@ type WelcomeView =
   | "templates"
   | "partners"
   | "integrations"
+  | "mac" // BuildFlow for Mac, the download page
   | "waitlist"; // waitlist (removable feature)
 
 type WelcomeHash =
@@ -574,6 +576,7 @@ const welcomeRoutes: Record<string, WelcomeView> = {
   "#equipment-tracking": "equipmentTracking",
   "#production-reports": "productionReports",
   "#tonnage-tracking": "tonnageTracking",
+  "#mac": "mac", // BuildFlow for Mac: the download page
   // plans
   "#free-plan": "freePlan",
   "#pro-plan": "proPlan",
@@ -644,6 +647,7 @@ const welcomeTitles: Partial<Record<WelcomeView, string>> = {
   equipmentTracking: "Equipment Tracking",
   productionReports: "Production Reports",
   tonnageTracking: "Tonnage Tracking",
+  mac: "BuildFlow for Mac",
   freePlan: "Free plan",
   proPlan: "Pro plan",
   businessPlan: "Business plan",
@@ -3718,6 +3722,7 @@ function WelcomePage({
     welcomeView === "templates" ||
     welcomeView === "partners" ||
     welcomeView === "integrations" ||
+    welcomeView === "mac" ||
     welcomeView === "about" ||
     welcomeView === "customers" ||
     welcomeView === "careers" ||
@@ -4495,6 +4500,12 @@ function WelcomePage({
         <WelcomePartnersPage onBack={showWelcomeHome} onGetStarted={showCreateAccountPage} onContactSales={showContactSalesPage} />
       ) : welcomeView === "integrations" ? (
         <WelcomeIntegrationsPage onBack={showWelcomeHome} onGetStarted={showCreateAccountPage} onContactSales={showContactSalesPage} />
+      ) : welcomeView === "mac" ? (
+        <MacDownloadPage
+          footer={
+            <WelcomeSharedFooter onBack={showWelcomeHome} onGetStarted={showCreateAccountPage} onContactSales={showContactSalesPage} />
+          }
+        />
       ) : activePlanId ? (
         <WelcomePlanShowcase
           plan={planById[activePlanId]}
@@ -6189,6 +6200,7 @@ function WelcomeProductOverviewPage({
                   {product.label}
                 </a>
               ))}
+              <a href="#mac">BuildFlow for Mac</a>
             </div>
             <div>
               <h3>Resources</h3>
@@ -11706,6 +11718,7 @@ function WelcomeCrewSchedulingPage({
                   {product.label}
                 </a>
               ))}
+              <a href="#mac">BuildFlow for Mac</a>
             </div>
             <div>
               <h3>Resources</h3>
