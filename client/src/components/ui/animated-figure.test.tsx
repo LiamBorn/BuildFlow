@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
+import { canCountUp, useCountUp } from "../../motion/useCountUp";
 import { AnimatedFigure } from "./animated-figure";
 
 /* The count-up keeps the pages' own formatting and, where it cannot animate (jsdom has no
@@ -28,5 +29,29 @@ describe("AnimatedFigure", () => {
     const plain = render(<AnimatedFigure text="42" />).container;
     expect(plain.querySelector("i, em")).toBeNull();
     expect(plain.textContent).toBe("42");
+  });
+
+  /* A page that is still loading shows "—" and the number once it arrives (TimeCard's Team's time,
+     2026-09-25). The render that had no number leaves NaN in the roll's state, and the effect that
+     starts the roll runs after that render is on screen — so the figure has to start from the start
+     of its roll, not from NaN, or "NaN" is painted for a frame. */
+  it("starts a figure that arrives late from the start of its roll, never from NaN", () => {
+    // a browser that rolls figures: jsdom has no document.fonts, so lend it one for this case
+    Object.defineProperty(document, "fonts", { configurable: true, value: {} });
+    onTestFinished(() => {
+      delete (document as { fonts?: unknown }).fonts;
+    });
+    expect(canCountUp(), "the case needs the rolling path").toBe(true);
+    const seen: number[] = [];
+    function Probe({ target }: { target: number }) {
+      seen.push(useCountUp(target));
+      return null;
+    }
+    const { rerender, unmount } = render(<Probe target={Number.NaN} />);
+    const arrived = seen.length;
+    rerender(<Probe target={59} />);
+    expect(seen.slice(arrived).length).toBeGreaterThan(0);
+    expect(seen.slice(arrived).filter((value) => !Number.isFinite(value))).toEqual([]);
+    unmount();
   });
 });

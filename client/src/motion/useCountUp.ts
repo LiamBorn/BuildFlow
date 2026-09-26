@@ -45,5 +45,8 @@ export function useCountUp(target: number, { duration = DUR.count, from = 0 }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, duration, rolls]);
 
-  return rolls ? value : target;
+  /* A figure that arrives after the page — "—" while it loads, then a number — has NaN in its state
+     from the render that had no number, and the roll only replaces it once the effect has run: the
+     frame between would paint "NaN". It starts where every roll starts instead. */
+  return rolls ? (Number.isFinite(value) ? value : from) : target;
 }
