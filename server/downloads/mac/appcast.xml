@@ -5,5 +5,19 @@
     <link>https://build-flow.replit.app/#mac</link>
     <description>Updates to BuildFlow for Mac, newest first.</description>
     <language>en</language>
+    <item>
+      <title>Version 0.1.0</title>
+      <pubDate>Sat, 26 Sep 2026 23:56:20 +0000</pubDate>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[**The first BuildFlow for Mac.** Your MacBook's notch becomes a small BuildFlow window.
+
+- **A greeting** when you open the lid or unlock: "Good morning", with one line about your day.
+- **Your inbox**: notifications, upcoming jobs, meetings, and what's waiting on you. Press Control + Option (left side) to open BuildFlow in the notch, or hover it.
+- **Voice**: hold Control + Option to talk, and ask about your schedule. Nothing changes until you press Accept.
+- **Updates** arrive on their own from now on. You can also choose Check for Updates… in the menu bar.]]></description>
+      <enclosure url="https://build-flow.replit.app/downloads/mac/BuildFlow-0.1.0.dmg" length="3654194" type="application/x-apple-diskimage" sparkle:edSignature="eJEU2u9/uSIgxd35sOssJxKbnS8Z+gqIW378aZV+eVl5lahe6UUfY0cj6wKsi+8J2NeNVQJFe0JcUGU9YIbgAg=="/>
+    </item>
   </channel>
 </rss>

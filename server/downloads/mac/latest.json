@@ -1,0 +1,12 @@
+{
+  "name": "BuildFlow for Mac",
+  "version": "0.1.0",
+  "build": 1,
+  "file": "BuildFlow-0.1.0.dmg",
+  "url": "https://build-flow.replit.app/downloads/mac/BuildFlow-0.1.0.dmg",
+  "length": 3654194,
+  "sha256": "cab06eb82aa5ebf60b05c6580820297b7e26c432a65ecb90ff3c03593880f47a",
+  "minimumSystemVersion": "13.0",
+  "hardware": "universal",
+  "publishedAt": "2026-09-26T23:56:20.627Z"
+}
