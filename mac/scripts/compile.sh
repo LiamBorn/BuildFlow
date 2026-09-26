@@ -18,7 +18,7 @@ CONFIG="${2:-release}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/.build/swiftc/$CONFIG"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
-TARGET="$(uname -m)-apple-macos13.0"
+TARGET="${BUILDFLOW_ARCH:-$(uname -m)}-apple-macos13.0" # release.sh sets BUILDFLOW_ARCH for the other half of a universal build
 mkdir -p "$OUT"
 
 if [ "$CONFIG" = release ]; then OPT=(-O -wmo); else OPT=(-Onone -g); fi
