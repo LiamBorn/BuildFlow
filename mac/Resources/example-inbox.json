@@ -1,0 +1,75 @@
+{
+  "me": { "firstName": "Liam", "workspace": "Keating Paving", "role": "owner" },
+  "calendars": ["Google", "Outlook"],
+  "notifications": [
+    {
+      "id": "delayIQ-d12", "kind": "delayIQ", "title": "Rebar delivery slipping 2 days",
+      "project": "Harbor Point", "tone": "amber",
+      "at": "2026-09-26T12:53:00Z", "read": false, "link": "#open/delayIQs/d12"
+    },
+    {
+      "id": "field-f88", "kind": "fieldUpdate", "title": "Crew 2 reported framing at 60%",
+      "project": "Oak Ridge", "tone": "green",
+      "at": "2026-09-26T12:25:00Z", "read": false, "link": "#open/fieldUpdates/f88"
+    },
+    {
+      "id": "inspection-i7", "kind": "inspection", "title": "Footing inspection moved to Thu",
+      "project": "Maple St. Plaza", "tone": "purple",
+      "at": "2026-09-26T12:05:00Z", "read": false, "link": "#open/inspections/i7"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "j31", "name": "Footings pour", "project": "Maple St. Plaza", "crews": ["Crew 2"],
+      "date": "2026-09-26", "start": "07:00", "end": "15:30",
+      "status": "Confirmed", "weather": "hold", "mine": true
+    },
+    {
+      "id": "j32", "name": "Framing, level 2", "project": "Oak Ridge", "crews": ["Crew 4"],
+      "date": "2026-09-26", "start": "07:30", "end": "16:00",
+      "status": "In Progress", "mine": true
+    },
+    {
+      "id": "j35", "name": "Curb forms", "project": "Riverside Lot", "crews": ["Crew 3"],
+      "date": "2026-09-26", "start": "08:00", "end": "14:30",
+      "status": "Confirmed", "mine": false
+    },
+    {
+      "id": "j40", "name": "Site grading", "project": "Harbor Point", "crews": ["Crew 1"],
+      "date": "2026-09-28", "start": "06:30", "end": "14:30",
+      "status": "Confirmed", "weather": "watch", "mine": true
+    }
+  ],
+  "meetings": [
+    {
+      "id": "m1", "title": "Standup",
+      "startsAt": "2026-09-26T13:30:00Z", "endsAt": "2026-09-26T13:45:00Z",
+      "joinUrl": "https://meet.google.com/", "location": "Google Meet", "attendees": 6
+    },
+    {
+      "id": "m2", "title": "Owner walkthrough",
+      "startsAt": "2026-09-26T17:00:00Z", "endsAt": "2026-09-26T18:00:00Z",
+      "location": "Maple St. Plaza · on site"
+    },
+    {
+      "id": "m3", "title": "Sub coordination",
+      "startsAt": "2026-09-26T19:30:00Z", "endsAt": "2026-09-26T20:00:00Z",
+      "joinUrl": "https://teams.microsoft.com/", "location": "Microsoft Teams"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "wc-j31", "kind": "weather-call", "title": "Call the rain day",
+      "context": "Maple St. Plaza", "source": "WeatherIQ", "due": "14:00", "actions": ["cancel", "keep"]
+    },
+    {
+      "id": "tc-0921", "kind": "time-cards", "title": "Approve 2 time cards",
+      "context": "Week of Sep 21", "source": "Time cards", "due": "2026-09-26", "actions": ["open"]
+    },
+    {
+      "id": "rd-r3", "kind": "readiness", "title": "Permit posted on site",
+      "context": "Oak Ridge", "source": "Readiness", "due": "2026-10-02", "actions": ["open"]
+    }
+  ],
+  "weather": { "project": "Maple St. Plaza", "site": "Maple St.", "tempF": 61, "rainFrom": "14:00" }
+}
