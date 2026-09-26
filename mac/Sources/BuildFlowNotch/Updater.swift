@@ -120,10 +120,14 @@ extension Updater: SPUUpdaterDelegate {
         Log.info("updates: download of \(item.displayVersionString) failed: \(error.localizedDescription)")
     }
 
+    /// Not yet proof of anything: a tampered image is reported here too, and fails its signature
+    /// check just after ("The update is improperly signed…" through didAbortWithError).
     func updater(_ updater: SPUUpdater, didExtractUpdate item: SUAppcastItem) {
-        Log.info("updates: \(item.displayVersionString) passed its signature check and was extracted")
+        Log.info("updates: \(item.displayVersionString) unpacked; checking its signature")
     }
 
+    /// Only reached once the update has passed Sparkle's checks (its EdDSA signature against
+    /// SUPublicEDKey, and the new app's code signature).
     func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem,
                  immediateInstallationBlock immediateInstallHandler: @escaping () -> Void) -> Bool {
         Log.info("updates: \(item.displayVersionString) is validated and installs when BuildFlow quits")
