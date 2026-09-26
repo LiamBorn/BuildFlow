@@ -54,8 +54,7 @@ export const PILL_GROUPS = [
   ".hs-home-seg", // Dashboard — Pending Approvals: Open / Resolved
   ".pref-segmented", // Preferences — every radio row
   ".hs-views", // Projects, Crews, Equipment, Materials, Field, DelayIQ, Contacts, Deals, Companies
-  ".tc-seg", // Timecards — the breakdown dimension
-  ".tc-tabs", // Timecards — its sections
+  ".tc-seg", // Timecards — the breakdown dimension and the approval queue's filter (its sections are .hs-views)
   ".gantt-seg", // Gantt — the timeline range
   ".bfnt-tabs", // the notifications drawer's filters
   ".bfmd-tabs", // the meeting drawer's Details / Participants (meetings/MeetingDrawer.tsx)

@@ -27,6 +27,8 @@ import {
   projectScheduleStatus,
   scheduleCalendarFor,
   type ScheduleVariance,
+  type TimeEntry,
+  clockMinutes,
   type WorkspaceSummary,
   type WorkspacesPayload
 } from "@buildflow/shared";
@@ -888,7 +890,9 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
        Billing is here because the plan makes it Owner-only, and a permission cannot be
        checked on a request that has no account attached. */
     "/api/ai",
-    "/api/billing"
+    "/api/billing",
+    // A person's own time (TimeCard): whose it is comes from the session, so it must have one.
+    "/api/time-entries"
   ];
   /**
    * Paths that sit UNDER a gated prefix but must stay public, checked before the prefix
@@ -3295,6 +3299,185 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     store.clearWeatherLocation(project.id);
     res.status(204).end();
+  });
+
+  /* ── TimeCard: the time a person puts in on their own (2026-09-25) ───────────
+     A Member's TimeCard is where they put in the day they worked and when they clocked in and
+     out. Whose time it is comes from the session and from nothing else: no body or query here
+     carries an account, so no level can read or write a teammate's time through these routes. */
+  const clockTime = (what: string) => z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, `Put in the time you ${what}.`);
+  const timeEntrySchema = z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the day you worked."),
+    clockIn: clockTime("started"),
+    clockOut: clockTime("finished"),
+    breakMinutes: z.number().int("A break is a whole number of minutes.").min(0).max(240, "A break can be up to four hours.").default(0),
+    projectId: z.string().trim().max(120).nullish(),
+    notes: z.string().trim().max(500, "Keep the note under 500 characters.").default("")
+  });
+  const refuseEntry = (res: express.Response, status: number, field: string, error: string) => {
+    res.status(status).json({ error, field });
+  };
+
+  app.get("/api/time-entries", (req, res) => {
+    res.json({ entries: store.timeEntriesFor(req.account!.id) });
+  });
+
+  app.post("/api/time-entries", (req, res) => {
+    const parsed = timeEntrySchema.safeParse(req.body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      refuseEntry(res, 400, String(issue?.path[0] ?? ""), issue?.message ?? "Check the time and try again.");
+      return;
+    }
+    const input = parsed.data;
+    const day = new Date(`${input.date}T00:00:00Z`);
+    if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== input.date) {
+      refuseEntry(res, 400, "date", "That day is not on the calendar.");
+      return;
+    }
+    // A day that has not come yet, with a day's grace: the server's clock is not the jobsite's.
+    if (input.date > localIsoDate(new Date(Date.now() + 86_400_000))) {
+      refuseEntry(res, 400, "date", "Time can only be put in for a day you have worked.");
+      return;
+    }
+    const worked = clockMinutes(input.clockOut) - clockMinutes(input.clockIn);
+    if (worked <= 0) {
+      refuseEntry(res, 400, "clockOut", "Clocking out has to come after clocking in.");
+      return;
+    }
+    if (input.breakMinutes >= worked) {
+      refuseEntry(res, 400, "breakMinutes", "The break is as long as the time worked.");
+      return;
+    }
+    const projectId = input.projectId || null;
+    if (projectId && !store.projects().some((project) => project.id === projectId)) {
+      refuseEntry(res, 400, "projectId", "That project is not in this workspace.");
+      return;
+    }
+    // Two stretches of the same day may not cover the same minutes: the hours would count twice.
+    const start = clockMinutes(input.clockIn);
+    const end = clockMinutes(input.clockOut);
+    const clash = store
+      .timeEntriesOn(req.account!.id, input.date)
+      .find((entry) => start < clockMinutes(entry.clockOut) && clockMinutes(entry.clockIn) < end);
+    if (clash) {
+      refuseEntry(res, 409, "clockIn", `That overlaps the time you already put in for this day, ${clash.clockIn}–${clash.clockOut}.`);
+      return;
+    }
+    const entry: TimeEntry = {
+      id: `te-${crypto.randomUUID()}`,
+      accountId: req.account!.id,
+      userId: store.users().find((user) => user.accountId === req.account!.id)?.id ?? "",
+      date: input.date,
+      clockIn: input.clockIn,
+      clockOut: input.clockOut,
+      breakMinutes: input.breakMinutes,
+      projectId,
+      notes: input.notes,
+      status: "Submitted",
+      approvedBy: null,
+      approvedAt: null,
+      createdAt: new Date().toISOString()
+    };
+    res.status(201).json(store.addTimeEntry(entry));
+  });
+
+  /**
+   * Taking a mistake back out. Somebody else's entry answers exactly as a missing one does; an
+   * approved one of your own is refused, because it is past being yours alone to change.
+   */
+  app.delete("/api/time-entries/:id", (req, res) => {
+    const id = String(req.params.id);
+    const mine = store.timeEntryOf(id, req.account!.id);
+    if (!mine) {
+      res.status(404).json({ error: "There is no time of yours with that id." });
+      return;
+    }
+    if (mine.status === "Approved") {
+      res.status(409).json({ error: "That time has been approved. Ask an Owner or Admin to reopen it before you take it out." });
+      return;
+    }
+    store.removeTimeEntry(id, req.account!.id);
+    res.status(204).end();
+  });
+
+  /* Approving a person's time (2026-09-25), for an Owner or an Admin: the route asks for
+     `timecard.approve`. It takes the entries the approver was shown, by id, so time put in after
+     they looked is not approved unseen, and time that has gone since simply answers as nothing.
+     Reopening takes an approval back, for the approval made by mistake. */
+  const entryIds = (req: express.Request, res: express.Response, verb: "approve" | "reopen") => {
+    const parsed = z
+      .object({
+        ids: z
+          .array(z.string().trim().min(1).max(120), `Choose the time to ${verb}.`)
+          .min(1, `Choose the time to ${verb}.`)
+          .max(500, `${verb === "approve" ? "Approve" : "Reopen"} up to 500 entries at a time.`)
+      })
+      .safeParse(req.body);
+    if (!parsed.success) {
+      refuseEntry(res, 400, "ids", parsed.error.issues[0]?.message ?? `Choose the time to ${verb}.`);
+      return null;
+    }
+    return [...new Set(parsed.data.ids)];
+  };
+  app.post("/api/time-entries/approve", (req, res) => {
+    const ids = entryIds(req, res, "approve");
+    if (!ids) return;
+    const entries = store.approveTimeEntries(ids, req.account!.id);
+    if (!entries.length) {
+      res.status(404).json({ error: "None of that time is here any more." });
+      return;
+    }
+    res.json({ entries });
+  });
+  app.post("/api/time-entries/reopen", (req, res) => {
+    const ids = entryIds(req, res, "reopen");
+    if (!ids) return;
+    const entries = store.reopenTimeEntries(ids);
+    if (!entries.length) {
+      res.status(404).json({ error: "None of that time is here any more." });
+      return;
+    }
+    res.json({ entries });
+  });
+
+  /* The team's time, for the people who approve it (2026-09-25). An Owner and an Admin see what
+     everybody put in, a stretch of days at a time; a Member cannot, because the route asks for
+     `timecard.approve` and a Member's capability is `timecard.log`. The people come with the time:
+     a name then resolves for someone who joined after the page loaded, and the view can say who
+     has put nothing in. A removed person is among them only while they have time in the range. */
+  const TEAM_RANGE_DAYS = 92;
+  const calendarDay = (value: unknown) => {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const day = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === value ? day : null;
+  };
+  app.get("/api/time-entries/team", (req, res) => {
+    const from = calendarDay(req.query.from);
+    if (!from) {
+      refuseEntry(res, 400, "from", "The first day has to be a date, YYYY-MM-DD.");
+      return;
+    }
+    const to = calendarDay(req.query.to);
+    if (!to) {
+      refuseEntry(res, 400, "to", "The last day has to be a date, YYYY-MM-DD.");
+      return;
+    }
+    const span = (to.getTime() - from.getTime()) / 86_400_000;
+    if (span < 0) {
+      refuseEntry(res, 400, "to", "The last day comes before the first.");
+      return;
+    }
+    if (span >= TEAM_RANGE_DAYS) {
+      refuseEntry(res, 400, "to", `Ask for up to ${TEAM_RANGE_DAYS} days at a time.`);
+      return;
+    }
+    const entries = store.timeEntriesBetween(String(req.query.from), String(req.query.to));
+    /* By roster row, not by login: removing someone clears the row's accountId but keeps the row,
+       so the row is what still names a removed person's time. */
+    const withTime = new Set(entries.map((entry) => entry.userId));
+    const people = withPermissions({ users: store.users() }, req.org!.id).users.filter((user) => user.permission || withTime.has(user.id));
+    res.json({ entries, people });
   });
 
   app.get("/api/schedule/status", (_req, res) => {

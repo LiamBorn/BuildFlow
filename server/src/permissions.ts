@@ -61,6 +61,10 @@ export const capabilities = [
   // reporting and time
   "reports.read",
   "timecard.read",
+  /* Putting in your OWN time (2026-09-25): every level holds it, because everyone who works can
+     log what they worked. Whose time it is comes from the session, so the capability never
+     reaches anybody else's entries. */
+  "timecard.log",
   "timecard.approve",
   "feeds.read",
   "notify.send",
@@ -99,6 +103,7 @@ const MEMBER: readonly Capability[] = [
   "export.data",
   "reports.read",
   "timecard.read",
+  "timecard.log",
   "team.read",
   "org.leave"
 ];
@@ -207,6 +212,18 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   /* "Give feedback": every signed-in person may write to the product team. The session, not
      the body, says which workspace and which person it came from. */
   "POST /api/feedback": "signed-in",
+  /* A person's own time: listing it is reading time cards, putting it in or taking a mistake back
+     out is logging it. The handlers only ever touch the caller's own entries, so a Member's
+     capability cannot reach a teammate's. */
+  "GET /api/time-entries": "timecard.read",
+  "POST /api/time-entries": "timecard.log",
+  "DELETE /api/time-entries/:id": "timecard.log",
+  /* Everybody's time, a week at a time: the people who approve time are the people who see all of
+     it, so it rides the approval capability rather than a new one. A Member does not hold it. */
+  "GET /api/time-entries/team": "timecard.approve",
+  /* Approving a person's time, and taking an approval back. */
+  "POST /api/time-entries/approve": "timecard.approve",
+  "POST /api/time-entries/reopen": "timecard.approve",
   "DELETE /api/crews/:id": "resources.delete",
   "DELETE /api/equipment/:id": "resources.delete",
   "DELETE /api/jobs/:id": "jobs.delete",

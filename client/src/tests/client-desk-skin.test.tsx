@@ -408,14 +408,14 @@ describe("the Client Desk skin", () => {
 
   it("plays the same entrance on the Projects and Crews pages: KPI tiles, then the card, then its rows", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    const tile = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi`);
+    const tile = declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpis > .hs-kpi`);
     // 2026-09-19: the figures beat, not a pair of numbers this page owned (skin §75)
     expect(tile.animation).toContain("bfe-lift");
     expect(tile["animation-delay"]).toBe(
       "max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)))"
     );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-main > .hs-index-card`)[
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-index-main > .hs-index-card`)[
         "animation-delay"
       ]
     ).toBe("max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)))");
@@ -430,43 +430,48 @@ describe("the Client Desk skin", () => {
 
   it("lays the Projects and Crews pages' tiles and tables out the reference's way, in their colours", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi`)["flex-direction"]).toBe(
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi`)["flex-direction"]).toBe(
       "row-reverse"
     );
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-value`)["font-size"]).toBe(
-      "32px"
-    );
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-down`).color).toBe(
-      "var(--cc-red)"
-    );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th`)["letter-spacing"]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-value`)["font-size"]
+    ).toBe("32px");
+    expect(
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-delta.is-down`).color
+    ).toBe("var(--cc-red)");
+    expect(
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table thead th`)["letter-spacing"]
     ).toBe("0.14em");
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody td`)["border-bottom"]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table tbody td`)["border-bottom"]
     ).toBe("1px solid var(--bf-line-solid)");
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-avatar`).background).toContain(
-      "var(--bf-color-face"
-    );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-red i`).background
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-avatar`).background
+    ).toContain("var(--bf-color-face");
+    expect(
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-progress-track.tone-red i`)
+        .background
     ).toBe("var(--cc-red)");
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf.is-set`).background).toBe(
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf.is-set`).background).toBe(
       "var(--bf-accent-fill)"
     );
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip.active`).background).toBe(
+    expect(
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip.active`).background
+    ).toBe("var(--bf-ink)");
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-link`).color).toBe(
       "var(--bf-ink)"
     );
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-link`).color).toBe("var(--bf-ink)");
     // the panels beside the table: cards with chip rows, the health figure in the display face
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel`)["border-radius"]).toBe(
-      "var(--bf-radius-card)"
-    );
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-row`).background).toBe(
+    expect(
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-panel`)["border-radius"]
+    ).toBe("var(--bf-radius-card)");
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-row`).background).toBe(
       "var(--bf-hover)"
     );
     expect(
-      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-center strong`)["font-size"]
+      declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-center strong`)[
+        "font-size"
+      ]
     ).toBe("32px");
   });
 
@@ -476,7 +481,7 @@ describe("the Client Desk skin", () => {
      lists and has no dialog of its own to dress. */
   it("reaches the Inventory through the index pages' own lists, with no dialog of its own to dress", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi`)["flex-direction"]).toBe(
+    expect(declsOf(`${S} :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi`)["flex-direction"]).toBe(
       "row-reverse"
     );
     expect(
@@ -534,23 +539,38 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .reports-page .reports-kpi-grid > .reports-kpi-card`)["animation-delay"]).toContain("var(--bfe-r, 0)");
   });
 
-  it("gives TimeCard the card language: KPI tiles, a pill-track tab bar, cards, semantic pills, an entrance", () => {
+  /* TimeCard was rebuilt on 2026-09-25 from the index pages' parts under the Month page's head
+     ("similar to the Month page and Crews page"). So what is pinned here is that it reaches the
+     family's rules at all — through the lists, not through copies of them — and the few rules that
+     are its own: the head's beats, the panels' cascade, and the rows that arrive as one block. */
+  it("builds TimeCard from the index pages' parts under the Month page's head, with its own entrance", () => {
     const S = ".app-shell.hs-shell.bf-shell";
-    const stat = declsOf(`${S} .tc-page .tc-stat`);
-    expect(stat["flex-direction"]).toBe("row-reverse");
-    expect(stat["border-radius"]).toBe("var(--bf-radius-card)");
-    expect(declsOf(`${S} .tc-page .tc-stat strong`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} .tc-page .tc-tabs`)["border-radius"]).toBe("999px");
-    expect(declsOf(`${S} .tc-page .tc-tab.active`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .tc-page .tc-card`).background).toBe("var(--bf-surface)");
-    expect(declsOf(`${S} .tc-page .tc-card-head h3 svg`).color).toBe("var(--bf-ink-faint)");
-    expect(declsOf(`${S} .tc-page .tc-pill.red`).color).toBe("var(--cc-red)");
-    expect(declsOf(`${S} .tc-page .tc-table th`)["letter-spacing"]).toBe("0.14em");
-    expect(declsOf(`${S} .tc-page .tc-avatar`).background).toContain("var(--bf-color-face");
-    expect(declsOf(`${S} .tc-page .tc-field input`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .tc-page .tc-seg button.active`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .tc-page .tc-composition-total strong`).color).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .tc-page .tc-stat-grid > .tc-stat`)["animation-delay"]).toContain("var(--bfe-r, 0)");
+    const IDX = ":is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)";
+    // the Crews page's tiles, cascade, panels, tables and badges, because it is one of the family
+    expect(declsOf(`${S} ${IDX} .hs-kpi`)["flex-direction"]).toBe("row-reverse");
+    expect(declsOf(`${S} ${IDX} .hs-kpis > .hs-kpi`).animation).toContain("bfe-lift");
+    expect(declsOf(`${S} ${IDX} .hs-index-main > .hs-index-card`)["animation-delay"]).toContain("var(--bfm-beat-board)");
+    expect(declsOf(`${S} ${IDX} .hs-panel`)["border-radius"]).toBe("var(--bf-radius-card)");
+    expect(declsOf(`${S} ${IDX} .hs-table thead th`)["letter-spacing"]).toBe("0.14em");
+    expect(declsOf(`${S} ${IDX} .hs-badge.tone-red`).color).toBeDefined();
+    // ...but not the rows' cascade: a table of hours arrives as one block (§4)
+    expect(declsOf(`${S} ${IDX} .hs-table tbody > tr`).animation).toBeUndefined();
+    const rows = declsOf(`${S} .tc-rx .tc-table tbody`);
+    expect(rows.animation).toContain("bfe-fade");
+    expect(rows["animation-delay"]).toContain("var(--bfm-beat-board-content)");
+    expect(rows["animation-delay"]).not.toContain("--bfe-r");
+    // the Month page's head leads, on the title's beat, and its line reads at the Schedule pages' scale
+    expect(declsOf(`${S} .tc-rx .tc-eyebrow`)["animation-delay"]).toBe("max(0ms, calc(var(--bfm-beat-title) - var(--bfm-shift)))");
+    expect(declsOf(`${S} .tc-rx .tc-controls`)["animation-delay"]).toBe("max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)))");
+    // the section's panels rise in reading order; a section chosen later rises on its own short beat
+    expect(declsOf(`${S} .tc-rx .tc-grid > .tc-panel`)["animation-delay"]).toContain("var(--bfe-r, 0)");
+    expect(declsOf(`${S} .tc-rx .tc-grid > .tc-panel:nth-child(3)`)["--bfe-r"]).toBe("2");
+    expect(declsOf(`${S} .tc-rx .tc-grid.is-switched > .tc-panel`)["animation-delay"]).not.toContain("--bfm-beat");
+    // a bar is a quantity: it extends from its left edge
+    expect(declsOf(`${S} .tc-rx .tc-panel .hs-progress-track i`).animation).toContain("bfe-span");
+    // the choice inside a card keeps its travelling pill (§78), and what the tiles say is never cut off
+    expect(declsOf(`${S} .tc-page .tc-seg[data-bfm-pill] button.active`).background).toBe("transparent");
+    expect(declsOf(`${S} .tc-rx .hs-kpi-note`)["white-space"]).toBe("normal");
   });
 
   it("gives the Field Updates entry the card language: display head, second-surface fields, an ink slider, an ink submit", () => {
@@ -1493,7 +1513,7 @@ describe("the Client Desk skin", () => {
     // the index pages and every .dx-title read this one token
     expect(declsOf(".bf-shell")["--bf-page-display"]).toBe("clamp(34px, 3.4vw, 48px)");
     // Reports, TimeCard and Settings wrote a literal 28px; each reads the token now
-    for (const one of [`${S} .reports-page .page-title h1`, `${S} .tc-page .page-title h1`, `${S} .settings-rx .settings-page-header h1`]) {
+    for (const one of [`${S} .reports-page .page-title h1`, `${S} .tc-rx .tc-title`, `${S} .settings-rx .settings-page-header h1`]) {
       const title = declsOf(one);
       expect(title["font-size"], one).toBe("var(--bf-page-display)");
       expect(title["line-height"], one).toBe("var(--bf-page-display-lead)");

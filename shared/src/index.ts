@@ -703,6 +703,79 @@ export type WeatherLocation = {
   updatedBy: string;
 };
 
+/**
+ * Time a person put in on their own TimeCard (2026-09-25): the day they worked, when they clocked
+ * in and out, and the unpaid break in between. Whose time it is comes from the session, never from
+ * the body — a Member can only ever put in their own.
+ */
+export type TimeEntry = {
+  id: string;
+  /** The login the time belongs to. */
+  accountId: string;
+  /** The roster row of that login in this workspace, when it has one. */
+  userId: string;
+  /** YYYY-MM-DD, the day worked. */
+  date: string;
+  /** HH:MM on a 24-hour clock, the jobsite's local time. */
+  clockIn: string;
+  clockOut: string;
+  /** Unpaid, in minutes. */
+  breakMinutes: number;
+  /** The project the time was for, when they said. */
+  projectId: string | null;
+  notes: string;
+  /** Submitted when it is put in; Approved once an Owner or Admin has approved it. */
+  status: TimeEntryStatus;
+  /** The login that approved it and when, both null until somebody has. */
+  approvedBy: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+};
+
+/**
+ * Where a stretch of time stands (2026-09-25). An Owner or an Admin approves a person's week, entry
+ * by entry, and can reopen it; an approved entry is no longer its person's to take back out.
+ */
+export type TimeEntryStatus = "Submitted" | "Approved";
+
+/** What a person sends to put their time in: everything but who, when it was made and its state. */
+export type TimeEntryInput = Pick<TimeEntry, "date" | "clockIn" | "clockOut" | "breakMinutes" | "projectId" | "notes">;
+
+/**
+ * The team's time over a stretch of days, for an Owner or an Admin: every entry in it, and the
+ * people it can belong to — everyone with a login here, and anyone removed who has time in it.
+ */
+export type TeamTimeEntries = { entries: TimeEntry[]; people: User[] };
+
+/** Hours past this many in one day are overtime, the same line the TimeCard sample week draws. */
+export const DAILY_OVERTIME_HOURS = 8;
+
+/** "07:30" as minutes after midnight; NaN for anything that is not a clock time. */
+export function clockMinutes(value: string): number {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : Number.NaN;
+}
+
+/** The minutes a stretch of time was worked: clocked out less clocked in, less the unpaid break. */
+export function workedMinutes(entry: Pick<TimeEntry, "clockIn" | "clockOut" | "breakMinutes">): number {
+  return clockMinutes(entry.clockOut) - clockMinutes(entry.clockIn) - entry.breakMinutes;
+}
+
+/**
+ * One day's worked hours split into regular and overtime. Overtime is counted per DAY, across every
+ * stretch put in for it, so a morning and an afternoon of five hours each are ten hours with two of
+ * overtime — not two five-hour shifts with none.
+ */
+export function dayHours(entries: Array<Pick<TimeEntry, "clockIn" | "clockOut" | "breakMinutes">>): {
+  total: number;
+  regular: number;
+  overtime: number;
+} {
+  const total = entries.reduce((sum, entry) => sum + Math.max(0, workedMinutes(entry)), 0) / 60;
+  const overtime = Math.max(0, total - DAILY_OVERTIME_HOURS);
+  return { total, regular: total - overtime, overtime };
+}
+
 export type WeatherForecastPayload = {
   /** The provider, named so the panel can credit it: Open-Meteo's data is CC BY 4.0. */
   source: "open-meteo";

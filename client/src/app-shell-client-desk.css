@@ -1147,7 +1147,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog {
 .app-shell.hs-shell.bf-shell .outline-button,
 .app-shell.hs-shell.bf-shell .cc-btn,
 .app-shell.hs-shell.bf-shell .cc-quick-btn,
-.app-shell.hs-shell.bf-shell .tc-btn,
 .app-shell.hs-shell.bf-shell .hs-upd-btn,
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-cancel,
 .app-shell.hs-shell.bf-shell .dash-rx .dash-reset,
@@ -1173,7 +1172,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-cancel,
 .app-shell.hs-shell.bf-shell .outline-button:hover,
 .app-shell.hs-shell.bf-shell .cc-btn:hover,
 .app-shell.hs-shell.bf-shell .cc-quick-btn:hover,
-.app-shell.hs-shell.bf-shell .tc-btn:hover,
 .app-shell.hs-shell.bf-shell .hs-upd-btn:hover,
 body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-cancel:hover,
 .app-shell.hs-shell.bf-shell .dash-rx .dash-reset:hover,
@@ -1192,7 +1190,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-cancel:hover,
 /* ---- 9b. the primary pill, in ink ---- */
 .app-shell.hs-shell.bf-shell .hs-btn.hs-btn-primary,
 .app-shell.hs-shell.bf-shell .cc-btn.primary,
-.app-shell.hs-shell.bf-shell .tc-btn.primary,
 .app-shell.hs-shell.bf-shell .outline-button.active,
 .app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity,
 .app-shell.hs-shell.bf-shell .acct-primary,
@@ -1215,7 +1212,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-save:not(.pdx-dang
 }
 .app-shell.hs-shell.bf-shell .hs-btn.hs-btn-primary:hover,
 .app-shell.hs-shell.bf-shell .cc-btn.primary:hover,
-.app-shell.hs-shell.bf-shell .tc-btn.primary:hover,
 .app-shell.hs-shell.bf-shell .outline-button.active:hover,
 .app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity:hover,
 .app-shell.hs-shell.bf-shell .acct-primary:hover:not(:disabled),
@@ -1241,7 +1237,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-danger {
 .app-shell.hs-shell.bf-shell .hs-btn:disabled,
 .app-shell.hs-shell.bf-shell .outline-button:disabled,
 .app-shell.hs-shell.bf-shell .cc-btn:disabled,
-.app-shell.hs-shell.bf-shell .tc-btn:disabled,
 .app-shell.hs-shell.bf-shell .dash-rx .dash-reset:disabled,
 .app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity:disabled,
 .app-shell.hs-shell.bf-shell .acct-primary:disabled,
@@ -1417,7 +1412,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close:hover {
 .app-shell.hs-shell.bf-shell .outline-button svg,
 .app-shell.hs-shell.bf-shell .cc-btn svg,
 .app-shell.hs-shell.bf-shell .cc-quick-btn svg,
-.app-shell.hs-shell.bf-shell .tc-btn svg,
 .app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity svg,
 .app-shell.hs-shell.bf-shell .topbar.hs-topbar .hs-upgrade-btn svg,
 .app-shell.hs-shell.bf-shell .dash-rx .dash-reset svg,
@@ -1449,7 +1443,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   .app-shell.hs-shell.bf-shell .outline-button:hover,
   .app-shell.hs-shell.bf-shell .cc-btn:hover,
   .app-shell.hs-shell.bf-shell .cc-quick-btn:hover,
-  .app-shell.hs-shell.bf-shell .tc-btn:hover,
   .app-shell.hs-shell.bf-shell .hs-upd-btn:hover,
   body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-cancel:hover,
   .app-shell.hs-shell.bf-shell .dash-rx .dash-reset:hover,
@@ -1457,7 +1450,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   .app-shell.hs-shell.bf-shell .user-settings-button:hover,
   .app-shell.hs-shell.bf-shell .hs-btn.hs-btn-primary:hover,
   .app-shell.hs-shell.bf-shell .cc-btn.primary:hover,
-  .app-shell.hs-shell.bf-shell .tc-btn.primary:hover,
   .app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity:hover,
   .app-shell.hs-shell.bf-shell .acct-primary:hover:not(:disabled),
   .app-shell.hs-shell.bf-shell .hs-upd-btn-primary:hover,
@@ -4553,49 +4545,79 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    the entrance plays again. Fills `backwards`, as section 20 does, so the
    rows' hover slide and the card's states are free once it has played.
    ============================================================================ */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpis > .hs-kpi {
   --bfe-r: 0;
   --bfe-y: var(--bfm-rise);
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(2) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-kpis
+  > .hs-kpi:nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(3) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-kpis
+  > .hs-kpi:nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(4) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-kpis
+  > .hs-kpi:nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi:nth-child(n + 5) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-kpis
+  > .hs-kpi:nth-child(n + 5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-main > .hs-index-card {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-index-main
+  > .hs-index-card {
   --bfe-y: var(--bfm-rise-l);
   --bfe-blur: var(--bfm-blur);
   animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-board) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > * {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-index-card > * {
   --bfe-r: 0;
   --bfe-y: 8px;
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
   animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(2) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-index-card
+  > :nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(3) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-index-card
+  > :nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(4) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-index-card
+  > :nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(5) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-index-card
+  > :nth-child(5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > :nth-child(n + 6) {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-index-card
+  > :nth-child(n + 6) {
   --bfe-r: 5;
 }
 /* the table's rows, top to bottom, once the table itself is in */
@@ -4634,9 +4656,12 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   --bfe-r: 8;
 }
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis > .hs-kpi,
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-main > .hs-index-card,
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-card > *,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpis > .hs-kpi,
+  .app-shell.hs-shell.bf-shell
+    :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+    .hs-index-main
+    > .hs-index-card,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-index-card > *,
   .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody > tr {
     animation: none;
   }
@@ -4663,39 +4688,39 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    colour, the value in the display face; the empty state a chip.
    ============================================================================ */
 /* ---- 22a. the KPI tiles ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpis {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpis {
   gap: 12px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi {
   flex-direction: row-reverse;
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
   padding: 16px 18px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-ico {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-ico {
   width: 30px;
   height: 30px;
   border-radius: 50%;
   background: var(--bf-hover);
   box-shadow: none;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-ico svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-ico svg {
   width: 14px;
   height: 14px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-body {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-body {
   flex: 1;
   gap: 0;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-label {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-label {
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: none;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-value {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-value {
   margin: 6px 0 4px;
   font-family: var(--bf-font-display);
   font-size: 32px;
@@ -4704,33 +4729,35 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   line-height: 1;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-note {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-note {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-delta {
   font-weight: 600;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-up {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-delta.is-up {
   color: var(--cc-green);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-down {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-delta.is-down {
   color: var(--cc-red);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-up::before {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-kpi-delta.is-up::before {
   content: "↗ ";
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-kpi-delta.is-down::before {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-kpi-delta.is-down::before {
   content: "↘ ";
 }
 
 /* ---- 22b. the toolbar and the quick filters ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-toolbar {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-toolbar {
   gap: 8px;
   margin-bottom: 10px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-search {
   min-height: 40px;
   padding: 0 12px 0 14px;
   border: 0;
@@ -4739,16 +4766,16 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink-faint);
   box-shadow: var(--bf-shadow-card);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search:focus-within {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-search:focus-within {
   border-color: transparent;
   box-shadow: 0 0 0 2px var(--bf-focus-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search input {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-search input {
   font-size: 12.5px;
   font-weight: 500;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-search kbd {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-search kbd {
   border: 0;
   border-radius: 999px;
   padding: 2px 7px;
@@ -4756,7 +4783,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink-faint);
   font-size: 10.5px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip {
   min-height: 40px;
   padding: 0 16px;
   border: 0;
@@ -4770,35 +4797,35 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
     transform var(--bf-dur-press) var(--bf-ease),
     box-shadow var(--bf-dur-hover) var(--bf-ease);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip svg {
   width: 15px;
   height: 15px;
   color: inherit;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip:hover {
   background: var(--bf-surface);
   color: var(--bf-ink);
   transform: translateY(-2px);
   box-shadow: var(--bf-shadow-raised);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip.active {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip.active {
   border-color: transparent;
   background: var(--bf-ink);
   color: var(--bf-surface);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip.active svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip.active svg {
   color: inherit;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-toolbar-right {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-toolbar-right {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-quickfilters {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-quickfilters {
   gap: 6px 8px;
   margin-bottom: 14px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf {
   min-height: 30px;
   padding: 0 24px 0 12px;
   border-radius: 999px;
@@ -4807,26 +4834,26 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-size: 11.5px;
   font-weight: 500;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf select {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf select {
   padding: 0 14px 0 0;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf > svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf > svg {
   right: 9px;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf:hover {
   background: var(--bf-hover);
 }
 /* a filter that is set is the reference's lime chip */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf.is-set {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf.is-set {
   background: var(--bf-accent-fill);
   color: var(--bf-on-accent);
   font-weight: 600;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf.is-set > svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf.is-set > svg {
   color: var(--bf-on-accent);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf-link {
   height: 30px;
   padding: 0 12px;
   border-radius: 999px;
@@ -4836,21 +4863,21 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-weight: 500;
   box-shadow: var(--bf-shadow-card);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf-link:hover {
   text-decoration: none;
   transform: translateY(-2px);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf-link svg {
   width: 14px;
   height: 14px;
 }
 
 /* ---- 22c. the table ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table-wrap {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table-wrap {
   border: 1px solid var(--bf-line-solid);
   border-radius: var(--bf-radius-panel);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table thead th {
   height: 40px;
   background: var(--bf-surface);
   border-bottom: 1px solid var(--bf-line-solid);
@@ -4860,40 +4887,50 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   text-transform: uppercase;
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th.sorted,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th.sorted button svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table thead th.sorted,
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-table
+  thead
+  th.sorted
+  button
+  svg {
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody td {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table tbody td {
   height: 52px;
   border-bottom: 1px solid var(--bf-line-solid);
   font-size: 12.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody tr:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table tbody tr:hover {
   background: var(--bf-hover);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table tbody tr.is-selected {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-table
+  tbody
+  tr.is-selected {
   background: var(--cc-blue-soft);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-link {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-link {
   font-size: 13px;
   font-weight: 600;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-link:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-link:hover {
   color: var(--bf-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-row-sub {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-row-sub {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-faint);
 }
 /* the avatar: the reference's faces — three gradients, by row */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-avatar {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-avatar {
   width: 30px;
   height: 30px;
   background: var(--bf-color-face-2);
@@ -4904,7 +4941,7 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   letter-spacing: 0;
 }
 .app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx)
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
   .hs-table
   tbody
   tr:nth-child(3n + 1)
@@ -4912,18 +4949,18 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   background: var(--bf-color-face-1);
 }
 .app-shell.hs-shell.bf-shell
-  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx)
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
   .hs-table
   tbody
   tr:nth-child(3n)
   .hs-avatar {
   background: var(--bf-color-face-3);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-cell-muted {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-cell-muted {
   font-size: 12.5px;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-cell-num {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-cell-num {
   font-family: var(--bf-font-display);
   font-size: 13px;
   font-weight: 600;
@@ -4931,9 +4968,9 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink);
 }
 /* every status, health and ± days: the small pill on the semantic pairs */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-delta {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-delta {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -4948,77 +4985,86 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   text-transform: none;
   white-space: nowrap;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge {
   background: var(--bf-hover);
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.confirmed,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.on-site,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.complete,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.available,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.scheduled,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.upcoming,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-green,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-delta.ahead {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.confirmed,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.on-site,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.complete,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.available,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.scheduled,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.upcoming,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge.tone-green,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-delta.ahead {
   background: var(--cc-green-soft);
   color: var(--cc-green);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.ready,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.ready-to-start,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-violet {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.ready,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.ready-to-start,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge.tone-violet {
   background: var(--cc-violet-soft);
   color: var(--cc-violet);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.in-progress,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-blue {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.in-progress,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge.tone-blue {
   background: var(--cc-blue-soft);
   color: var(--cc-blue);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.planned,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.not-started {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.planned,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.not-started {
   background: var(--bf-hover);
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.medium,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.monitor,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.ordered,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.waiting-on-delivery,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-amber {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.medium,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.monitor,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.ordered,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.waiting-on-delivery,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge.tone-amber {
   background: var(--cc-amber-soft);
   color: var(--cc-amber);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.delayIQed,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.delayiqed,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.high,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.maintenance,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.missing,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.at-risk,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.open,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .badge.overbooked,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-badge.tone-red,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-delta.behind {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.delayIQed,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.delayiqed,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.high,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.maintenance,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.missing,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.at-risk,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.open,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .badge.overbooked,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-badge.tone-red,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-delta.behind {
   background: var(--cc-red-soft);
   color: var(--cc-red);
 }
 /* progress: a semantic fill on the line colour, the figure in the display face */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-progress-track {
   height: 8px;
   background: var(--bf-line-solid);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-progress-track i {
   background: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-green i {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-progress-track.tone-green
+  i {
   background: var(--cc-green);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-amber i {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-progress-track.tone-amber
+  i {
   background: var(--cc-amber);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress-track.tone-red i {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-progress-track.tone-red
+  i {
   background: var(--cc-red);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-progress b {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-progress b {
   font-family: var(--bf-font-display);
   font-size: 13px;
   font-weight: 600;
@@ -5026,52 +5072,52 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   color: var(--bf-ink);
 }
 /* the empty state and the footer's count */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-empty {
   margin: 14px 0 0;
   padding: 28px 20px;
   border-radius: var(--bf-radius-panel);
   background: var(--bf-hover);
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-empty svg {
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty strong {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-empty strong {
   font-family: var(--bf-font-display);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.022em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-empty span {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-empty span {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-index-foot {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-index-foot {
   margin-top: 14px;
 }
 
 /* ---- 22d. the three panels beside the table: alerts, milestones, portfolio health ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-panel {
   padding: 18px 20px;
   border: 0;
   border-radius: var(--bf-radius-card);
   background: var(--bf-surface);
   box-shadow: var(--bf-shadow-card);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-head {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-panel-head {
   gap: 10px;
   margin-bottom: 10px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-head h2 {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-panel-head h2 {
   font-family: var(--bf-font-display);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.022em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-link {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-panel-link {
   display: inline-flex;
   align-items: center;
   height: 30px;
@@ -5082,90 +5128,90 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
   font-size: 11.5px;
   font-weight: 500;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-panel-link:hover {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-panel-link:hover {
   text-decoration: none;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-list,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-miles-list,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-legend {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-list,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-miles-list,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-legend {
   gap: 8px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-row,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-empty-line {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-alert,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-row,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-empty-line {
   padding: 8px 12px;
   border-radius: var(--bf-radius-control);
   background: var(--bf-hover);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-ico,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-ico {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-alert-ico,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-ico {
   width: 30px;
   height: 30px;
   border-radius: 50%;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-ico svg,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-ico svg {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-alert-ico svg,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-ico svg {
   width: 15px;
   height: 15px;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-body strong,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-body strong {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-alert-body strong,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-body strong {
   font-size: 13px;
   font-weight: 600;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-body span,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-body span,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-empty-line {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-alert-body span,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-body span,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-empty-line {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .cc-alert-time,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-mile-date {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .cc-alert-time,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-mile-date {
   font-size: 11px;
   font-weight: 500;
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-center strong {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-center strong {
   font-family: var(--bf-font-display);
   font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.036em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-center span {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-center span {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.14em;
   color: var(--bf-ink-faint);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-row {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-row {
   padding: 6px 12px;
   border-radius: var(--bf-radius-control);
   background: var(--bf-hover);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-key {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-key {
   font-size: 11.5px;
   font-weight: 500;
   color: var(--bf-ink-muted);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-key i {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-key i {
   border-radius: 50%;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-bar {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-bar {
   height: 8px;
   background: var(--bf-line-solid);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-pct {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-pct {
   font-family: var(--bf-font-display);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .proj-health-empty {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .proj-health-empty {
   border-radius: var(--bf-radius-panel);
   background: var(--bf-hover);
   font-size: 11.5px;
@@ -5173,8 +5219,8 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-chip:hover,
-  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-qf-link:hover {
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-chip:hover,
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-qf-link:hover {
     transform: none;
   }
 }
@@ -5190,14 +5236,19 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close svg,
    picker — takes from the shell (23b).
    ============================================================================ */
 /* ---- 23a. the index table's extra tones ---- */
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th button {
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table thead th button {
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
 }
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th button:hover,
-.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx) .hs-table thead th.sorted {
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx)
+  .hs-table
+  thead
+  th
+  button:hover,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .contacts-page, .inv-rx, .delayIQ-rx, .field-rx, .tc-rx) .hs-table thead th.sorted {
   color: var(--bf-ink);
 }
 
@@ -6106,748 +6157,258 @@ body:has(.app-shell.hs-shell.bf-shell[data-bf-theme="dark"]) .bfsp {
 }
 
 /* ============================================================================
-   29. THE TIMECARD PAGE, INSIDE: the summary tiles, the tab bar and every card
+   29. THE TIMECARD PAGE, INSIDE: the Month page's head over the Crews page's parts
    ----------------------------------------------------------------------------
-   TimeCard is its own module (TimeCard.tsx + timecard.css, tokens `--tc-*` on
-   `.tc-page`): a title row with the week chip, six summary tiles, a tab bar
-   and, per tab, cards — the entry form with its verify toggles and quick
-   chips, the entries table, labor cost with its composition and budget rows,
-   attendance and roster cards, approvals with their chain of steps, the audit
-   list, compliance with certified payroll, integrations. Here the tiles are
-   the reference's KPI tile (label over a 32px display figure that counts up,
-   a 30px disc at the right), the tab bar a pill track with an ink marker,
-   every card the reference's card with a 15px display head, the pills on the
-   semantic pairs, the tables with eyebrow heads and hairlines, the avatars
-   gradient faces, the bars 8px hairline tracks with semantic fills, the
-   inner tiles on the second surface, the segmented switches pill tracks, the
-   orange accents gone to ink — and the whole page enters in the cascade.
+   Rebuilt 2026-09-25 ("make it similar to the Month page and Crews page"). The
+   page is `.tc-page.tc-rx.hs-index`, and `.tc-rx` is one of the index family in
+   §21-§23, so its KPI strip, its board card, the views, the tables, badges,
+   faces, progress tracks, panels and alert rows ARE the Crews and Projects
+   parts rather than drawings of them. Over them sits the Month page's head: the
+   crumb chip with its dot, the display title that writes itself in, one line of
+   what the page is, and the controls as white pills. timecard.css lays out what
+   is the page's own (the board's date stamp, the grid of panels, the week, the
+   form, the tiles, the approval chain). What is left for here:
+     29a. what has to outrank the kit: the small pills, the panel head's rhythm;
+     29b. the entrance: the head leads, the notice follows, the KPI tiles and the
+          board take §21's cascade, the section's panels rise in turn, the rows
+          of a table arrive as one block (§4: a table of hours is not a cascade,
+          which is why `.tc-rx` stays out of §21's row stagger), and the bars
+          grow from their left edge once their panel has landed. A section
+          chosen later runs the same rise on its own short beat;
+     29c. the gestures: the chips and toggles answer the pointer and give when
+          pressed, and an approval's steps change colour rather than jump.
    ============================================================================ */
-/* ---- 29a. the title row and the buttons ---- */
-.app-shell.hs-shell.bf-shell .tc-page .page-title h1 {
-  font-family: var(--bf-font-display);
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .page-title p {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-week-chip {
-  min-height: 40px;
-  padding: 0 14px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 12.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-btn.amber {
-  border-color: transparent;
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-btn.small {
-  min-height: 30px;
-  height: 30px;
+/* ---- 29a. what has to outrank the kit ---- */
+.app-shell.hs-shell.bf-shell .tc-rx .hs-btn.tc-btn-sm {
+  min-height: 32px;
+  height: 32px;
   padding: 0 12px;
-  font-size: 11.5px;
-  box-shadow: none;
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-btn.small.primary {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-}
-/* ---- 29b. the summary tiles ---- */
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat {
-  display: flex;
-  flex-direction: row-reverse;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px 20px;
-  border: 0;
-  border-radius: var(--bf-radius-card);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-icon {
-  flex: none;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-icon svg {
-  width: 15px;
-  height: 15px;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat p {
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat strong {
-  font-family: var(--bf-font-display);
-  font-size: 32px;
-  font-weight: 600;
-  letter-spacing: -0.036em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat strong .af-pre,
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat strong .af-frac,
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat strong .af-unit {
-  font-size: 0.55em;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-faint);
-}
-/* ---- 29c. the tab bar: a pill track with an ink marker ---- */
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs {
-  gap: 2px;
-  padding: 3px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-tab {
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--bf-ink-muted);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-tab:hover {
-  background: transparent;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-tab.active {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-}
-/* ---- 29d. the cards ---- */
-.app-shell.hs-shell.bf-shell .tc-page .tc-card {
-  padding: 18px 20px 20px;
-  border: 0;
-  border-radius: var(--bf-radius-card);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-card-head h3 {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.022em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-card-head h3 svg {
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-card-head p {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill {
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill.green {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill.blue,
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill.violet {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill.amber {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill.red {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-pill.slate {
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-}
-/* the tables: eyebrow heads, hairlines, display figures */
-.app-shell.hs-shell.bf-shell .tc-page .tc-table {
-  font-size: 12.5px;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-table th {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--bf-line-solid);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-table td {
-  padding: 11px 12px;
-  border-bottom: 1px solid var(--bf-line-solid);
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-table tfoot td {
-  border-top: 2px solid var(--bf-line-solid);
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-table .num {
-  font-family: var(--bf-font-display);
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-cell-strong {
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-cell-em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-worker-cell em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-unit {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-worker-cell strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-ot {
-  color: var(--cc-red);
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-under {
-  color: var(--cc-green);
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--bf-color-face-2);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-avatar.sm {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  font-size: 10px;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-bar,
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-bar {
-  height: 8px;
-  background: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-bar i.green,
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-bar i.under {
-  background: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-bar i.blue,
-.app-shell.hs-shell.bf-shell .tc-page .tc-bar i.violet {
-  background: var(--cc-violet);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-bar i.amber {
-  background: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-bar i.red,
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-bar i.over {
-  background: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-empty {
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-note,
-.app-shell.hs-shell.bf-shell .tc-page .tc-legend,
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-meta,
-.app-shell.hs-shell.bf-shell .tc-page .tc-attend-count {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-/* ---- 29e. the entry form ---- */
-.app-shell.hs-shell.bf-shell .tc-page .tc-field span,
-.app-shell.hs-shell.bf-shell .tc-page .tc-quick-label {
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-field input,
-.app-shell.hs-shell.bf-shell .tc-page .tc-field select,
-.app-shell.hs-shell.bf-shell .tc-page .tc-field textarea {
-  border: 0;
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-hover);
-  color: var(--bf-ink);
-  font-size: 13px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-field input:focus,
-.app-shell.hs-shell.bf-shell .tc-page .tc-field select:focus,
-.app-shell.hs-shell.bf-shell .tc-page .tc-field textarea:focus {
-  border-color: transparent;
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-verify {
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-hover);
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-verify.on {
-  border-color: transparent;
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-entry-cost {
-  font-family: var(--bf-font-display);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-entry-cost em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-inline-success {
-  border-radius: var(--bf-radius-control);
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-quick-chips {
-  border-top: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-quick-chip,
-.app-shell.hs-shell.bf-shell .tc-page .tc-format-chip {
-  min-height: 30px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-size: 11.5px;
-  font-weight: 500;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-quick-chip:hover {
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-raised);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-offline-banner {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-offline-banner.pending {
-  border-color: transparent;
-  background: var(--cc-amber-soft);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-offline-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--bf-surface);
-  color: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-offline-banner.synced .tc-offline-icon {
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-offline-banner strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-offline-banner em {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-verify-icons i {
-  border-radius: 50%;
-  background: var(--bf-hover);
-  color: var(--bf-ink-faint);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-verify-icons i.on {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-}
-/* ---- 29f. labor cost, budgets, attendance, roster ---- */
-.app-shell.hs-shell.bf-shell .tc-page .tc-seg {
-  gap: 2px;
-  padding: 3px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-seg button {
-  min-height: 28px;
-  border-radius: 999px;
-  color: var(--bf-ink-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-seg button.active {
-  background: var(--bf-ink);
-  color: var(--bf-surface);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-composition li,
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-row,
-.app-shell.hs-shell.bf-shell .tc-page .tc-flag-list li,
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-list li,
-.app-shell.hs-shell.bf-shell .tc-page .tc-wage-list li,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-list li {
-  border-bottom-color: var(--bf-line-solid);
-  font-size: 12.5px;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-composition li span {
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-composition li strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-cost,
-.app-shell.hs-shell.bf-shell .tc-page .tc-wage-scale b,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-hrs {
-  font-family: var(--bf-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-composition-total {
-  border-top-color: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-composition-total strong {
-  color: var(--bf-ink);
-  font-size: 17px !important;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-label strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-flag-list strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-list strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-name strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-attend-card header strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-card header strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-integration-card header strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-label em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-flag-list em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-list small,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-name em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-card header em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-wage-scale em,
-.app-shell.hs-shell.bf-shell .tc-page .tc-integration-card p {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-list em {
-  font-size: 12.5px;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-meta b.under {
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-budget-meta b.over {
-  color: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-flag-dot {
-  background: var(--cc-red);
-  box-shadow: 0 0 0 4px var(--cc-red-soft);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-attend-card,
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-card,
-.app-shell.hs-shell.bf-shell .tc-page .tc-integration-card,
-.app-shell.hs-shell.bf-shell .tc-page .tc-approval-card,
-.app-shell.hs-shell.bf-shell .tc-page .tc-mini-stats div,
-.app-shell.hs-shell.bf-shell .tc-page .tc-payroll-summary div {
-  border: 0;
-  border-radius: var(--bf-radius-panel);
-  background: var(--bf-hover);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-card header {
-  background: transparent;
-  border-bottom: 1px solid var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-attend-count b,
-.app-shell.hs-shell.bf-shell .tc-page .tc-mini-stats strong,
-.app-shell.hs-shell.bf-shell .tc-page .tc-payroll-summary strong {
-  font-family: var(--bf-font-display);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-mini-stats span,
-.app-shell.hs-shell.bf-shell .tc-page .tc-payroll-summary span {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-replace {
-  color: var(--cc-violet);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-hours {
-  font-family: var(--bf-font-display);
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-roster-list li {
-  border-bottom-color: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-skill-tags b {
-  padding: 2px 8px;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  font-weight: 600;
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-target b.up {
-  color: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-target b.down {
-  color: var(--cc-violet);
-}
-/* ---- 29g. approvals, the chain, the audit and integrations ---- */
-.app-shell.hs-shell.bf-shell .tc-page .tc-approval-card.flagged {
-  border-color: transparent;
-  background: var(--cc-red-soft);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-step {
-  border-radius: var(--bf-radius-control);
-  background: var(--bf-surface);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-step::after {
-  background: var(--bf-line-solid);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-dot {
-  background: var(--bf-ink-faint);
-  color: var(--bf-surface);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-step.green .tc-chain-dot {
-  background: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-step.amber .tc-chain-dot {
-  background: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-step.red .tc-chain-dot {
-  background: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-label strong {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--bf-ink);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-chain-label em {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-flag-reason {
-  border-radius: var(--bf-radius-control);
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-dot.green {
-  background: var(--cc-green);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-dot.blue,
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-dot.violet {
-  background: var(--cc-violet);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-dot.amber {
-  background: var(--cc-amber);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-audit-dot.red {
-  background: var(--cc-red);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--bf-surface);
-  color: var(--bf-ink);
-  box-shadow: var(--bf-shadow-card);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon.green {
-  background: var(--cc-green-soft);
-  color: var(--cc-green);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon.blue,
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon.violet {
-  background: var(--cc-violet-soft);
-  color: var(--cc-violet);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon.amber {
-  background: var(--cc-amber-soft);
-  color: var(--cc-amber);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon.red {
-  background: var(--cc-red-soft);
-  color: var(--cc-red);
-  box-shadow: none;
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-int-icon.slate {
-  background: var(--bf-surface);
-  color: var(--bf-ink-muted);
-}
-.app-shell.hs-shell.bf-shell .tc-page .tc-integration-card ul li {
   font-size: 12px;
-  color: var(--bf-ink);
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-integration-card ul li svg {
-  color: var(--cc-green);
+.app-shell.hs-shell.bf-shell .tc-rx .hs-btn.tc-btn-amber {
+  background: var(--cc-amber-soft);
+  color: var(--cc-amber);
+  box-shadow: none;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-class-legend li {
-  font-size: 12.5px;
-  color: var(--bf-ink);
+/* a KPI's label and its line say what the figure is and what it is made of: they wrap rather than
+   being cut off */
+.app-shell.hs-shell.bf-shell .tc-rx .hs-kpi-label,
+.app-shell.hs-shell.bf-shell .tc-rx .hs-kpi-note {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-class-legend li span {
-  color: var(--bf-ink-muted);
+/* a timecard's tables sit in cards a third or two thirds of the page wide: they fit their card and
+   wrap their words, where an index page's one wide table keeps its rows on one line and scrolls */
+.app-shell.hs-shell.bf-shell .tc-rx .hs-table.tc-table {
+  min-width: 0;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-class-legend li strong {
-  font-family: var(--bf-font-display);
-  font-size: 14px;
-  font-weight: 600;
+.app-shell.hs-shell.bf-shell .tc-rx .hs-table.tc-table :is(th, td) {
+  padding: 8px 10px;
+  white-space: normal;
 }
-/* ---- 29h. the entrance: title fades, tiles rise, the tab bar and cards follow, rows last ---- */
-.app-shell.hs-shell.bf-shell .tc-page .page-title {
-  animation: bfe-fade var(--bf-dur-enter) var(--bf-ease) backwards;
+.app-shell.hs-shell.bf-shell .tc-rx .hs-table.tc-table :is(th, td):first-child {
+  padding-left: 14px;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs,
-.app-shell.hs-shell.bf-shell .tc-page .tc-body > * {
-  --bfe-r: 0;
+.app-shell.hs-shell.bf-shell .tc-rx .hs-table.tc-table :is(th, td):last-child {
+  padding-right: 14px;
+}
+.app-shell.hs-shell.bf-shell .tc-rx .hs-table.tc-table :is(td.num, .tc-nowrap, td:has(> .hs-badge)) {
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell .tc-rx .hs-table.tc-table tbody td {
+  height: 50px;
+}
+/* a person's role and a crew's job are information here, not a caption: they wrap rather than trail off */
+.app-shell.hs-shell.bf-shell .tc-rx .hs-row-sub {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* the panel's head sits in the panel's own gap, not in a margin on top of it */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-panel > .hs-panel-head {
+  align-items: flex-start;
+  margin-bottom: 0;
+}
+
+/* ---- 29b. the entrance ---- */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-eyebrow,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-title-tag,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-sub,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-controls,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-preview {
   --bfe-y: var(--bfm-rise);
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-kpi-cols) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+  animation-delay: max(0ms, calc(var(--bfm-beat-title) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat:nth-child(2) {
+/* the tag once the title has written itself, the line under it, then the pills and the notice */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-title-tag {
+  animation-name: bfe-pop;
+  animation-delay: max(0ms, calc(var(--bfm-beat-title) + 3 * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-sub {
+  animation-delay: max(0ms, calc(var(--bfm-beat-title) + var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-controls {
+  animation-delay: max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-preview {
+  animation-delay: max(0ms, calc(var(--bfm-beat-kpi) - var(--bfm-shift)));
+}
+/* the section's panels, in reading order, once the board has risen */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel {
+  --bfe-r: 0;
+  --bfe-y: var(--bfm-rise-l);
+  --bfe-blur: var(--bfm-blur);
+  animation: bfe-lift var(--bfm-dur-slow) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfe-r, 0) * var(--bfm-stagger-card) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel:nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat:nth-child(3) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel:nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat:nth-child(4) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel:nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat:nth-child(5) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel:nth-child(5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat:nth-child(n + 6) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel:nth-child(n + 6) {
   --bfe-r: 5;
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs {
-  --bfe-r: 6;
+/* a timecard's rows arrive as one block, after their panel */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-table tbody,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-week tbody {
+  animation: bfe-fade var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + var(--bfm-stagger-card) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-body > * {
-  --bfe-r: 7;
+/* a bar is a quantity, so it extends from its left edge rather than lifting (§77's reading) */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-panel .hs-progress-track i,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-stack i {
+  transform-origin: left center;
+  animation: bfe-span var(--bfm-dur-chart) var(--bfm-ease-bar) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) + 2 * var(--bfm-stagger-card) - var(--bfm-shift)));
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-body > :nth-child(2) {
-  --bfe-r: 8;
+/* a section chosen once the page is open: the same rise on its own beat, not the opening's */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid.is-switched > .tc-panel {
+  animation-duration: var(--bfm-dur-base);
+  animation-delay: calc(var(--bfe-r, 0) * var(--bfm-stagger-card));
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-body > :nth-child(3) {
-  --bfe-r: 9;
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid.is-switched :is(.tc-table, .tc-week) tbody {
+  animation-delay: var(--bfm-stagger-card);
 }
-.app-shell.hs-shell.bf-shell .tc-page .tc-body > :nth-child(n + 4) {
-  --bfe-r: 10;
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid.is-switched :is(.hs-progress-track i, .tc-stack i) {
+  animation-delay: calc(2 * var(--bfm-stagger-card));
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > * {
+
+/* a Member's week: its days rise in turn after their panel, as the Month calendar's do */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day {
   --bfe-r: 0;
   --bfe-y: 8px;
   animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
-  animation-delay: max(0ms, calc(var(--bfm-beat-board-content) - var(--bfm-shift)));
+  animation-delay: max(
+    0ms,
+    calc(var(--bfm-beat-board-content) + var(--bfm-stagger-card) + var(--bfe-r, 0) * var(--bfm-stagger-icon) - var(--bfm-shift))
+  );
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > :nth-child(2) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day:nth-child(2) {
   --bfe-r: 1;
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > :nth-child(3) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day:nth-child(3) {
   --bfe-r: 2;
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > :nth-child(4) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day:nth-child(4) {
   --bfe-r: 3;
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > :nth-child(5) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day:nth-child(5) {
   --bfe-r: 4;
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > :nth-child(6) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day:nth-child(6) {
   --bfe-r: 5;
 }
-.app-shell.hs-shell.bf-shell
-  .tc-page
-  :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-  > :nth-child(n + 7) {
+.app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day:nth-child(n + 7) {
   --bfe-r: 6;
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-grid.is-switched .tc-days > .tc-day {
+  animation-delay: calc(var(--bfe-r, 0) * var(--bfm-stagger-icon));
+}
+
+/* ---- 29c. the gestures ---- */
+.app-shell.hs-shell.bf-shell .tc-rx :is(.tc-quick-chip, .tc-verify) {
+  transition:
+    background-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    color var(--bfm-dur-fast) var(--bfm-ease-out),
+    transform var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-quick-chip:hover {
+  background: var(--bf-line-solid);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-verify:not(.on):hover {
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell .tc-rx :is(.tc-quick-chip, .tc-verify):active {
+  transform: scale(var(--bfm-scale));
+}
+.app-shell.hs-shell.bf-shell .tc-rx :is(.tc-quick-chip, .tc-verify):focus-visible {
+  outline: 2px solid var(--bf-ink);
+  outline-offset: 2px;
+}
+/* a day of a Member's week is a button: it lifts to the pointer and gives when pressed */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day {
+  transition:
+    background-color var(--bfm-dur-fast) var(--bfm-ease-out),
+    box-shadow var(--bfm-dur-fast) var(--bfm-ease-out),
+    transform var(--bfm-dur-fast) var(--bfm-ease-out);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day:not(:disabled):not(.is-picked):hover {
+  transform: translateY(-2px);
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-raised);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day.is-today:not(:disabled):not(.is-picked):hover {
+  box-shadow:
+    inset 0 0 0 1.5px var(--bf-ink),
+    var(--bf-shadow-raised);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day:not(:disabled):active {
+  transform: scale(var(--bfm-scale));
+}
+/* an approval moves along its chain: the step changes colour, the card its tone */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-chain-dot,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-approval,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-sync {
+  transition:
+    background-color var(--bfm-dur-base) var(--bfm-ease-out),
+    box-shadow var(--bfm-dur-base) var(--bfm-ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell.hs-shell.bf-shell .tc-page .page-title,
-  .app-shell.hs-shell.bf-shell .tc-page .tc-stat-grid > .tc-stat,
-  .app-shell.hs-shell.bf-shell .tc-page .tc-tabs,
-  .app-shell.hs-shell.bf-shell .tc-page .tc-body > *,
-  .app-shell.hs-shell.bf-shell
-    .tc-page
-    :is(.tc-table tbody, .tc-approval-list, .tc-budget-list, .tc-flag-list, .tc-audit-list, .tc-roster-list, .tc-composition, .tc-wage-list)
-    > * {
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-eyebrow,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-title-tag,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-sub,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-controls,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-preview,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-grid > .tc-panel,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-table tbody,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-week tbody,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-panel .hs-progress-track i,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-stack i,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-days > .tc-day {
     animation: none;
+  }
+  .app-shell.hs-shell.bf-shell .tc-rx :is(.tc-quick-chip, .tc-verify),
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-chain-dot,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-approval,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-sync,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-day {
+    transition: none;
+  }
+  .app-shell.hs-shell.bf-shell .tc-rx :is(.tc-quick-chip, .tc-verify):active,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-day:not(:disabled):not(.is-picked):hover,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-day:not(:disabled):active {
+    transform: none;
   }
 }
 
@@ -10969,7 +10530,9 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus {
 
 /* ---- 46b. what the page-by-page audit still found ---------------------------------------- */
 /* every -rx page carries the same three auroras; the first was Google blue on all of them */
-.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-aurora-1 {
+.app-shell.hs-shell.bf-shell
+  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx, .tc-rx)
+  .dx-aurora-1 {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-fill-rgb), 0.2), transparent 62%);
 }
 /* the index pages' avatars: the blue tone is plum, slate is the ink's own grey */
@@ -11141,7 +10704,9 @@ body:has(.app-shell.hs-shell.bf-shell) .hs-addon-where-ico {
 }
 /* the contact record's composer check and information notice */
 /* every -rx page's cursor glow and hero icon shadow; the selected card's ring */
-.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-cursor {
+.app-shell.hs-shell.bf-shell
+  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx, .tc-rx)
+  .dx-cursor {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-fill-rgb), 0.12), transparent 62%);
 }
 .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .delayIQ-rx) .cc-hero-icon {
@@ -11307,10 +10872,14 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
   color: var(--bf-ink-muted);
 }
 /* the second and third auroras were a violet and a coral haze: they read the set now */
-.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-aurora-2 {
+.app-shell.hs-shell.bf-shell
+  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx, .tc-rx)
+  .dx-aurora-2 {
   background: radial-gradient(circle, rgba(var(--bf-color-info-rgb), 0.08), transparent 62%);
 }
-.app-shell.hs-shell.bf-shell :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx) .dx-aurora-3 {
+.app-shell.hs-shell.bf-shell
+  :is(.dash-rx, .sched-rx, .delayIQ-rx, .proj-rx, .crew-rx, .inv-rx, .field-rx, .settings-rx, .tc-rx)
+  .dx-aurora-3 {
   background: radial-gradient(circle, rgba(var(--bf-color-accent-rgb), 0.05), transparent 60%);
 }
 
@@ -11542,10 +11111,11 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
    — Reports, TimeCard and Settings — so they join it here, and the subtitle
    beside each title grows with it: a 12.5px caption under a 40px heading reads
    as an afterthought. The furniture inside a title (the page-switcher chevron,
-   the NEW tag) steps up so the row keeps its proportions.
+   the NEW tag) steps up so the row keeps its proportions. TimeCard's head is the Month
+   page's since 2026-09-25, so its title and line join the Schedule pages' here.
    ============================================================================ */
 .app-shell.hs-shell.bf-shell .reports-page .page-title h1,
-.app-shell.hs-shell.bf-shell .tc-page .page-title h1,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-title,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-page-header h1 {
   font-size: var(--bf-page-display);
   font-weight: var(--bf-page-display-weight);
@@ -11554,13 +11124,13 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
 }
 /* the line under a page title: it reads with the heading now, on a full measure */
 .app-shell.hs-shell.bf-shell .reports-page .page-title p,
-.app-shell.hs-shell.bf-shell .tc-page .page-title p,
 .app-shell.hs-shell.bf-shell .settings-rx .settings-page-header p {
   max-width: min(68ch, 760px);
   font-size: clamp(14px, 1.15vw, 16px);
   line-height: 1.45;
 }
-.app-shell.hs-shell.bf-shell .sched-rx .dx-sub {
+.app-shell.hs-shell.bf-shell .sched-rx .dx-sub,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-sub {
   max-width: min(68ch, 760px);
   font-size: clamp(14px, 1.15vw, 16px);
   line-height: 1.5;
@@ -11587,9 +11157,9 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
     --bf-page-display: clamp(26px, 6.2vw, 34px);
   }
   .app-shell.hs-shell.bf-shell .reports-page .page-title p,
-  .app-shell.hs-shell.bf-shell .tc-page .page-title p,
   .app-shell.hs-shell.bf-shell .settings-rx .settings-page-header p,
-  .app-shell.hs-shell.bf-shell .sched-rx .dx-sub {
+  .app-shell.hs-shell.bf-shell .sched-rx .dx-sub,
+  .app-shell.hs-shell.bf-shell .tc-rx .tc-sub {
     font-size: 13.5px;
   }
 }
@@ -14203,7 +13773,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-segmented,
 .app-shell.hs-shell.bf-shell .hs-index .hs-views,
 .app-shell.hs-shell.bf-shell .tc-page .tc-seg,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs,
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg,
 .app-shell.hs-shell.bf-shell .bfnt-tabs,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav,
@@ -14217,7 +13786,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill]::before,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill]::before,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill]::before,
@@ -14241,7 +13809,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill="live"]::before,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,
@@ -14257,7 +13824,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill] > *,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] > *,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] > *,
@@ -14273,7 +13839,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] .pref-seg[aria-checked="true"],
 .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill] .hs-view.active,
 .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill] button.active,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill] .tc-tab.active,
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] button.active,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active,
@@ -14282,7 +13847,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
 .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill] .pref-seg[aria-checked="true"]:hover,
 .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill] .hs-view.active:hover,
 .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill] button.active:hover,
-.app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill] .tc-tab.active:hover,
 .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill] button.active:hover,
 .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill] .bfnt-tab.is-active:hover,
 .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill] button.active:hover,
@@ -14312,7 +13876,6 @@ body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-grid > :nth-child(n + 8) {
   .app-shell.hs-shell.bf-shell .pref-segmented[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .hs-index .hs-views[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .tc-page .tc-seg[data-bfm-pill="live"]::before,
-  .app-shell.hs-shell.bf-shell .tc-page .tc-tabs[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .gantt-page.gantt-chart .gantt-seg[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .bfnt-tabs[data-bfm-pill="live"]::before,
   .app-shell.hs-shell.bf-shell .bf-breeze-nav[data-bfm-pill="live"]::before,

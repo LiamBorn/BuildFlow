@@ -39,6 +39,9 @@ import type {
   WeatherConflict,
   WeatherForecastPayload,
   WeatherLocation,
+  TeamTimeEntries,
+  TimeEntry,
+  TimeEntryInput,
   WorkspacesPayload
 } from "@buildflow/shared";
 
@@ -957,6 +960,37 @@ export function setWeatherLocation(projectId: string, query: string) {
 /** Back to the project's own address. */
 export function clearWeatherLocation(projectId: string) {
   return request<void>(`/api/weather/locations/${encodeURIComponent(projectId)}`, { method: "DELETE" });
+}
+
+// ── TimeCard: your own time ─────────────────────────────────────────────────
+/** The signed-in person's own time, the latest day first. Nobody else's is ever sent. */
+export function fetchTimeEntries() {
+  return request<{ entries: TimeEntry[] }>("/api/time-entries");
+}
+
+/** Put a stretch of time in: the day, when you clocked in and out, the unpaid break. */
+export function createTimeEntry(input: TimeEntryInput) {
+  return request<TimeEntry>("/api/time-entries", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** Take a mistake back out. Only your own entries can be. */
+export function deleteTimeEntry(id: string) {
+  return request<void>(`/api/time-entries/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+/** The whole team's time from one day to another, both included, with who it belongs to. Owners and Admins only. */
+export function fetchTeamTimeEntries(from: string, to: string) {
+  return request<TeamTimeEntries>(`/api/time-entries/team?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+}
+
+/** Approve these entries, the ones the approver was shown; answers with them as they now stand. Owners and Admins only. */
+export function approveTimeEntries(ids: string[]) {
+  return request<{ entries: TimeEntry[] }>("/api/time-entries/approve", { method: "POST", body: JSON.stringify({ ids }) });
+}
+
+/** Take an approval back: these entries are Submitted again. Owners and Admins only. */
+export function reopenTimeEntries(ids: string[]) {
+  return request<{ entries: TimeEntry[] }>("/api/time-entries/reopen", { method: "POST", body: JSON.stringify({ ids }) });
 }
 
 /**

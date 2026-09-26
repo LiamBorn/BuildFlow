@@ -106,6 +106,12 @@ export function respondToBuildflowApi(input: RequestInfo | URL) {
   if (url.includes("/api/workspaces")) {
     return new Response(JSON.stringify(state.workspacesPayload), { status: 200 });
   }
+  // TimeCard: nobody has put time in. An Owner's page opens on the team's week, a Member's on their own.
+  if (url.includes("/api/time-entries")) {
+    return new Response(JSON.stringify(url.includes("/api/time-entries/team") ? { entries: [], people: [] } : { entries: [] }), {
+      status: 200
+    });
+  }
   // Everything else (auth, creates, patches) just needs a 200 with a plausible body.
   return new Response(JSON.stringify(bootstrapFixture), { status: 200 });
 }

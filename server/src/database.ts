@@ -43,7 +43,8 @@ import type {
   VarianceProposal,
   WeatherAlert,
   WeatherConflict,
-  WeatherLocation
+  WeatherLocation,
+  TimeEntry
 } from "@buildflow/shared";
 import { businessTypeOptions, onboardingProductOptions, planOptions, type OnboardingProductId, type PlanId } from "@buildflow/shared";
 import { defaultCrewRate, normalizeWorkCalendar, type WorkCalendarSetting } from "@buildflow/shared";
@@ -343,6 +344,19 @@ function toWeatherConflict(row: WeatherConflictRow): WeatherConflict {
   if (varianceId) conflict.varianceId = varianceId;
   if (delayIQId) conflict.delayIQId = delayIQId;
   return conflict;
+}
+
+/* SQLite hands a missing project back as NULL or '' and the break as whatever it stored; the
+   domain says null and a number. */
+function toTimeEntry(row: TimeEntry): TimeEntry {
+  return {
+    ...row,
+    projectId: row.projectId || null,
+    breakMinutes: Number(row.breakMinutes),
+    status: row.status === "Approved" ? "Approved" : "Submitted",
+    approvedBy: row.approvedBy || null,
+    approvedAt: row.approvedAt || null
+  };
 }
 
 /** The server's own calendar day, YYYY-MM-DD — what "from today on" means for the conflicts bootstrap sends. */
@@ -1186,6 +1200,49 @@ SCHEMA_MIGRATIONS.push({
         updatedBy TEXT NOT NULL
       );
     `);
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 27,
+  name: "TimeCard: the time a person puts in on their own",
+  up: (db) => {
+    // 2026-09-25. One row per stretch of time a person worked: the day, when they clocked in and
+    // out, the unpaid break. `accountId` is the login it belongs to — the session's, never the
+    // body's — and the index is how a person's own week is read back. No row is touched by
+    // clearWorkspace(): this is what people did, not sample data.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS time_entries (
+        id TEXT PRIMARY KEY,
+        accountId TEXT NOT NULL,
+        userId TEXT NOT NULL DEFAULT '',
+        date TEXT NOT NULL,
+        clockIn TEXT NOT NULL,
+        clockOut TEXT NOT NULL,
+        breakMinutes INTEGER NOT NULL DEFAULT 0,
+        projectId TEXT,
+        notes TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'Submitted',
+        createdAt TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_time_entries_account_date ON time_entries(accountId, date);
+    `);
+  }
+});
+
+SCHEMA_MIGRATIONS.push({
+  version: 28,
+  name: "TimeCard: an Owner or Admin approves a person's time",
+  up: (db) => {
+    // 2026-09-25. Who approved a stretch of time and when: the approver's login and the moment, both
+    // null until somebody has. The state itself is 27's `status`, which reads "Approved" from then
+    // on. Guarded as 22 is, so a column already there is left alone.
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='time_entries'");
+    if (!tables[0]) return;
+    const columns = db.exec("PRAGMA table_info(time_entries)")[0];
+    const names = new Set((columns?.values ?? []).map((row) => String(row[1])));
+    if (!names.has("approvedBy")) db.exec("ALTER TABLE time_entries ADD COLUMN approvedBy TEXT");
+    if (!names.has("approvedAt")) db.exec("ALTER TABLE time_entries ADD COLUMN approvedAt TEXT");
   }
 });
 
@@ -5277,5 +5334,99 @@ export class BuildFlowStore {
     this.run("DELETE FROM weather_locations WHERE projectId = ?", [projectId]);
     this.save();
     return true;
+  }
+
+  /* ── TimeCard: the time a person puts in on their own ─────────────────────────
+     Every writer here, and every reader but one, takes the login it is acting for, so none of them
+     can reach somebody else's time: the route passes the session's account, and that is the only
+     place an account id comes from. The ones that do not are the team's week and approving it,
+     timeEntriesBetween(), approveTimeEntries() and reopenTimeEntries(), which only the routes
+     behind `timecard.approve` call. */
+
+  /** A person's own time, the latest day first and the latest stretch of a day first. */
+  timeEntriesFor(accountId: string): TimeEntry[] {
+    return this.all<TimeEntry>("SELECT * FROM time_entries WHERE accountId = ? ORDER BY date DESC, clockIn DESC, createdAt DESC", [
+      accountId
+    ]).map(toTimeEntry);
+  }
+
+  /**
+   * Everybody's time from one day to another, both included: the Owner's and Admin's view of the
+   * team (2026-09-25). In the order a person's own list reads, the latest day and stretch first.
+   */
+  timeEntriesBetween(from: string, to: string): TimeEntry[] {
+    return this.all<TimeEntry>(
+      "SELECT * FROM time_entries WHERE date >= ? AND date <= ? ORDER BY date DESC, clockIn DESC, createdAt DESC",
+      [from, to]
+    ).map(toTimeEntry);
+  }
+
+  /** The stretches a person already has on one day, for the overlap check before another goes in. */
+  timeEntriesOn(accountId: string, date: string): TimeEntry[] {
+    return this.timeEntriesFor(accountId).filter((entry) => entry.date === date);
+  }
+
+  addTimeEntry(entry: TimeEntry): TimeEntry {
+    this.insert("time_entries", { ...entry, projectId: entry.projectId ?? null });
+    this.save();
+    return entry;
+  }
+
+  /** One entry of this person's; somebody else's id is simply not found. */
+  timeEntryOf(id: string, accountId: string): TimeEntry | undefined {
+    const row = this.get<TimeEntry>("SELECT * FROM time_entries WHERE id = ? AND accountId = ?", [id, accountId]);
+    return row ? toTimeEntry(row) : undefined;
+  }
+
+  /**
+   * True when the entry was this person's and is gone. An approved entry stays: it is no longer its
+   * person's to take back, and the route says so before it gets here.
+   */
+  removeTimeEntry(id: string, accountId: string): boolean {
+    const row = this.get<{ id: string }>("SELECT id FROM time_entries WHERE id = ? AND accountId = ? AND status != 'Approved'", [
+      id,
+      accountId
+    ]);
+    if (!row) return false;
+    this.run("DELETE FROM time_entries WHERE id = ? AND accountId = ?", [id, accountId]);
+    this.save();
+    return true;
+  }
+
+  /**
+   * Approving time (2026-09-25): of these ids, the entries still Submitted become Approved, by this
+   * login, now. The ids are the ones the approver was shown, so time put in after they looked is not
+   * approved unseen, and approving twice leaves the first approval as it was. Answers with every one
+   * of the ids that still exists, as it now stands.
+   */
+  approveTimeEntries(ids: string[], approvedBy: string, at = new Date().toISOString()): TimeEntry[] {
+    const marks = ids.map(() => "?").join(", ");
+    this.transaction(() => {
+      this.run(
+        `UPDATE time_entries SET status = 'Approved', approvedBy = ?, approvedAt = ? WHERE status = 'Submitted' AND id IN (${marks})`,
+        [approvedBy, at, ...ids]
+      );
+    });
+    return this.timeEntriesWithIds(ids);
+  }
+
+  /** Taking an approval back: of these ids, the Approved ones are Submitted again, approved by nobody. */
+  reopenTimeEntries(ids: string[]): TimeEntry[] {
+    const marks = ids.map(() => "?").join(", ");
+    this.transaction(() => {
+      this.run(
+        `UPDATE time_entries SET status = 'Submitted', approvedBy = NULL, approvedAt = NULL WHERE status = 'Approved' AND id IN (${marks})`,
+        ids
+      );
+    });
+    return this.timeEntriesWithIds(ids);
+  }
+
+  private timeEntriesWithIds(ids: string[]): TimeEntry[] {
+    const marks = ids.map(() => "?").join(", ");
+    return this.all<TimeEntry>(
+      `SELECT * FROM time_entries WHERE id IN (${marks}) ORDER BY date DESC, clockIn DESC, createdAt DESC`,
+      ids
+    ).map(toTimeEntry);
   }
 }
