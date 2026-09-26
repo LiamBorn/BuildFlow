@@ -598,7 +598,9 @@ export function sortEvents(events: CalendarEvent[]): CalendarEvent[] {
    own day-aligned week.
 
    What it will not do: keep a failure (the next read asks again), keep a range it
-   did not fetch, or outlive a connection. Connecting and disconnecting clear the
+   did not fetch, stand in the way of the panel's Sync (which asks for `fresh`: the
+   provider is read then and the answer kept), or outlive a connection. Connecting
+   and disconnecting clear the
    account, and so does a refresh token the provider refused. A clear that lands
    while a read is in flight wins: that read's answer is handed back but not kept. */
 
@@ -624,17 +626,21 @@ export class CalendarEventCache {
     return `${accountId}\u0000${provider}\u0000${from.toISOString()}\u0000${to.toISOString()}`;
   }
 
-  /** The meetings for this range: from the cache while fresh, otherwise from `load`, which is then kept. */
+  /**
+   * The meetings for this range: from the cache while fresh, otherwise from `load`, which is then
+   * kept. `fresh` skips what is kept — a person pressing Sync wants the provider asked now.
+   */
   async read(
     accountId: string,
     provider: CalendarProvider,
     from: Date,
     to: Date,
-    load: () => Promise<CalendarEvent[]>
+    load: () => Promise<CalendarEvent[]>,
+    options: { fresh?: boolean } = {}
   ): Promise<CalendarEvent[]> {
     const key = this.key(accountId, provider, from, to);
     const cached = this.entries.get(key);
-    if (cached && this.clock() - cached.at < this.ttlMs) return cached.events;
+    if (!options.fresh && cached && this.clock() - cached.at < this.ttlMs) return cached.events;
     const pending = this.inFlight.get(key);
     if (pending) return pending;
     const generation = this.generations.get(accountId) ?? 0;

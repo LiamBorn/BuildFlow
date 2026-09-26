@@ -915,10 +915,20 @@ export function calendarStatus(): Promise<CalendarStatus> {
   return request<CalendarStatus>("/api/calendar/status");
 }
 
-/** The meetings between two instants — at most 62 days apart; without them, the next two days. */
-export function calendarFeed(range?: { from: Date; to: Date }): Promise<CalendarFeed> {
-  const query = range ? `?from=${encodeURIComponent(range.from.toISOString())}&to=${encodeURIComponent(range.to.toISOString())}` : "";
-  return request<CalendarFeed>(`/api/calendar/events${query}`);
+/**
+ * The meetings between two instants — at most 62 days apart; without them, the next two days. The
+ * server keeps a person's meetings for five minutes (calendar.ts); `fresh` is Sync, which asks the
+ * provider now instead.
+ */
+export function calendarFeed(range?: { from: Date; to: Date }, options: { fresh?: boolean } = {}): Promise<CalendarFeed> {
+  const params = new URLSearchParams();
+  if (range) {
+    params.set("from", range.from.toISOString());
+    params.set("to", range.to.toISOString());
+  }
+  if (options.fresh) params.set("fresh", "1");
+  const query = params.toString();
+  return request<CalendarFeed>(`/api/calendar/events${query ? `?${query}` : ""}`);
 }
 
 /**

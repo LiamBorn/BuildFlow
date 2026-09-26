@@ -307,7 +307,7 @@ describe("Google Calendar and Outlook", () => {
 
   /* The five-minute cache (2026-09-26, notch step 3): the panel's month and the Mac's week are the
      same range all day, so reading them again must not ask Google again — until the connection changes. */
-  it("asks the provider once in five minutes for the same range, and afresh after reconnecting", async () => {
+  it("asks the provider once in five minutes for the same range, on Sync, and afresh after reconnecting", async () => {
     configure();
     const { agent } = await signedIn();
     const connect = async () => {
@@ -330,13 +330,18 @@ describe("Google Calendar and Outlook", () => {
     // the same range again inside five minutes: the kept answer, and no call to Google
     expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Standup"]);
     expect(eventReads() - before).toBe(1);
+    // Sync asks Google now, and what it gets is kept for the next ordinary read
+    expect(titles((await agent.get(`${week}&fresh=1`).expect(200)).body)).toEqual(["Moved standup"]);
+    expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Moved standup"]);
+    expect(eventReads() - before).toBe(2);
+    setEvents(titled("Moved again"));
 
     // disconnecting forgets it, and a new connection reads the calendar as it is now
     await agent.delete("/api/calendar/google").expect(200);
     expect((await agent.get(week).expect(200)).body.events).toEqual([]);
     await connect();
-    expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Moved standup"]);
-    expect(eventReads() - before).toBe(2);
+    expect(titles((await agent.get(week).expect(200)).body)).toEqual(["Moved again"]);
+    expect(eventReads() - before).toBe(3);
   });
 
   it("forgets a connection on request", async () => {

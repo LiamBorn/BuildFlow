@@ -47,6 +47,17 @@ describe("the calendar cache", () => {
     expect(fresh[0].id).toBe("read-2");
   });
 
+  it("asks the provider now when the read is fresh (Sync), and keeps that answer", async () => {
+    const { cache, load } = setup();
+    await cache.read("acct-1", "google", FROM, TO, load);
+    const synced = await cache.read("acct-1", "google", FROM, TO, load, { fresh: true });
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(synced[0].id).toBe("read-2");
+    // and the next ordinary read is the synced answer, not a third call
+    expect(await cache.read("acct-1", "google", FROM, TO, load)).toBe(synced);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps each person, provider and range apart", async () => {
     const { cache, load } = setup();
     await cache.read("acct-1", "google", FROM, TO, load);

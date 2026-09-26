@@ -1392,13 +1392,16 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     }
     const events: CalendarEvent[] = [];
     const failed: CalendarProvider[] = [];
+    const fresh = req.query.fresh === "1"; // the panel's Sync: ask the provider now, not the cache
     for (const provider of CALENDAR_PROVIDERS) {
       const token = await calendarAccessToken(req.account!.id, provider);
       if (!token) continue;
       try {
         // five minutes per account and range (calendar.ts): the panel re-reads, the provider is not asked again
         events.push(
-          ...(await calendarEventCache.read(req.account!.id, provider, from, to, () => fetchCalendarEvents(provider, token, from, to)))
+          ...(await calendarEventCache.read(req.account!.id, provider, from, to, () => fetchCalendarEvents(provider, token, from, to), {
+            fresh
+          }))
         );
       } catch {
         // one provider being unreachable must not blank the other's meetings
