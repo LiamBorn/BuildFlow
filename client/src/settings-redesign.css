@@ -781,6 +781,16 @@
   box-shadow: 0 8px 18px rgba(197, 34, 31, 0.16);
 }
 
+/* Settings › Devices (BuildFlow for Mac): the list's own line when there is nothing in it */
+.settings-rx .settings-devices-empty {
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--wx-faint);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
 .settings-rx .settings-invite-form {
   container-type: inline-size;
   display: grid;
