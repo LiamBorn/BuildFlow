@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "product-film-skill": {
+      "source": {
+        "source": "github",
+        "repo": "Rieranthony/product-film-skill"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "product-film@product-film-skill": true
+  }
+}
