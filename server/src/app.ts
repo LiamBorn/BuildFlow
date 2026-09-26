@@ -39,6 +39,7 @@ import {
   toAccount,
   DEMO_ACCOUNT_EMAIL,
   type Account,
+  type DesktopDeviceRow,
   type Org,
   type WorkspaceMemberRow
 } from "./database.js";
@@ -75,6 +76,7 @@ import {
   type CalendarProvider
 } from "./calendar.js";
 import { assertRoutePolicyCovers, can, demoLockOn, installRoutePolicy, outranks } from "./permissions.js";
+import { authenticateDevice, DESKTOP_TOKEN_PATH, isDesktopApiPath, LAST_SEEN_INTERVAL_MS, registerDesktopRoutes } from "./desktop.js";
 import crypto from "node:crypto";
 import {
   parseCookies,
@@ -100,6 +102,8 @@ declare module "express-serve-static-core" {
     org?: Org;
     /** This session is the shared demo: it may read, and change nothing (permissions.ts). */
     readOnlyDemo?: boolean;
+    /** The Mac a request under /api/desktop came from, set by the device gate (desktop.ts). */
+    device?: DesktopDeviceRow;
   }
 }
 import {
@@ -877,6 +881,12 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     "/api/me",
     // A person's own workspaces: listing, creating and switching all need the login resolved.
     "/api/workspaces",
+    /* BuildFlow for Mac (2026-09-26). Gated by a DEVICE KEY, not the session: the branch at the top
+       of the gate below handles this prefix before a cookie is even read, and binds the device's
+       workspace the same way. It is listed here all the same because this list is what the
+       tenant-binding test in permissions.test.ts reads, and because every route under it reaches for
+       the caller's workspace -- the inbox the Mac reads next is nothing but `store`. */
+    "/api/desktop",
     /* Step 1 of the workspace-permissions plan. These were public, and being public was
        not merely a missing permission check — it was a live defect. `store` (:551) is a
        Proxy that resolves to `orgStoreALS.getStore() ?? mainStore`, so a route outside
@@ -898,6 +908,8 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    *   stronger check for that caller.
    * - Billing status is the plan catalogue and whether Stripe is wired. It holds no
    *   workspace data, and the public pricing page is its natural caller.
+   * - The Mac's token exchange is how a device key is obtained, so it cannot require one. The code and
+   *   PKCE verifier it carries are the proof (desktop.ts).
    * - Checkout must answer a visitor who has no workspace yet, because requiring a session
    *   would mean you have to sign up before you can pay. A caller who DOES have a session
    *   is buying for their workspace, and the route policy requires the Owner for that --
@@ -906,7 +918,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    *   identity on a public path, "open to a visitor, Owner-only inside a workspace" is not
    *   expressible.
    */
-  const PUBLIC_EXCEPTIONS = new Set(["/api/billing/webhook", "/api/billing/status", "/api/billing/checkout"]);
+  const PUBLIC_EXCEPTIONS = new Set(["/api/billing/webhook", "/api/billing/status", "/api/billing/checkout", DESKTOP_TOKEN_PATH]);
   /**
    * Whether this path needs a session, compared in one case so no spelling of it can disagree
    * with the router about which route it is. `/api/delayIQs` is the one prefix with capitals of
@@ -946,7 +958,65 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
    * resolves to mainStore there exactly as before. The extra work on an unauthenticated
    * request is one short-circuit on a missing cookie.
    */
+  /**
+   * Runs the rest of the request inside a workspace's store: `store` resolves to it for every handler
+   * that follows. Shared by the session gate and the device gate so the two cannot bind differently.
+   */
+  const bindTenant = async (orgId: string, res: express.Response, next: express.NextFunction) => {
+    try {
+      const orgStore = await manager.getOrgStore(orgId);
+      /* Held for the life of the request, so the store cache's eviction cannot close it underneath a
+         handler. This binding lasts the whole request and handlers write AFTER awaits — an AI answer,
+         a calendar read, a notification — so an evictor that ignored this would either throw on the
+         next write or, worse, leave two live stores writing whole-file images of one file with the
+         last save winning. See StoreManager.pin.
+
+         Released on 'close', which fires whether the response finished or the connection died. Work
+         that OUTLIVES the response is not covered: a `void store.something()` left running past the
+         reply would lose its pin while still writing. Nothing does that today — the fire-and-forget
+         paths here send mail, and the one that writes a token writes to the main store, which is
+         never evicted — but a new one would need its own pin rather than this. */
+      manager.pin(orgId);
+      res.on("close", () => manager.unpin(orgId));
+      orgStoreALS.run(orgStore, () => next());
+    } catch {
+      res.status(500).json({ error: "Workspace unavailable." });
+    }
+  };
+
+  /**
+   * BuildFlow for Mac's gate, for everything under /api/desktop. Only a device key opens it -- a
+   * session cookie is never read here, so a signed-in browser gets the same 401 as a stranger, and
+   * the feature exists only in the downloaded app. The token exchange is the one path it lets
+   * through, keyless and identity-less: that is where a key comes from.
+   *
+   * A good key binds its own workspace exactly as a session does, and its "last seen" is written at
+   * most hourly (a Mac reads every minute; each write rewrites the whole control database). The
+   * demo can never hold a key, so `readOnlyDemo` is false here by construction.
+   */
+  const deviceGate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path.toLowerCase() === DESKTOP_TOKEN_PATH) return next();
+    const auth = authenticateDevice(mainStore, req.headers.authorization);
+    if (!auth.ok) {
+      res.setHeader("WWW-Authenticate", 'Bearer realm="BuildFlow for Mac"');
+      res.status(401).json(auth.body);
+      return;
+    }
+    req.account = auth.account;
+    req.org = auth.org;
+    req.device = auth.device;
+    req.readOnlyDemo = false;
+    const version = req.headers["x-buildflow-app-version"];
+    mainStore.touchDesktopDevice(
+      auth.device,
+      LAST_SEEN_INTERVAL_MS,
+      typeof version === "string" ? version.trim().slice(0, 40) || null : null
+    );
+    await bindTenant(auth.org.id, res, next);
+  };
+
   app.use(async (req, res, next) => {
+    if (isDesktopApiPath(req.path)) return deviceGate(req, res, next);
     const gated = isOpsPath(req.path);
     const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
     const session = token ? mainStore.getSession(token) : undefined;
@@ -969,26 +1039,7 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
     req.readOnlyDemo = demoLockOn() && session.account.email === DEMO_ACCOUNT_EMAIL;
     // Identity is enough for a public path; only a gated one binds the tenant store.
     if (!gated) return next();
-    try {
-      const orgId = session.org.id;
-      const orgStore = await manager.getOrgStore(orgId);
-      /* Held for the life of the request, so the store cache's eviction cannot close it underneath a
-         handler. This binding lasts the whole request and handlers write AFTER awaits — an AI answer,
-         a calendar read, a notification — so an evictor that ignored this would either throw on the
-         next write or, worse, leave two live stores writing whole-file images of one file with the
-         last save winning. See StoreManager.pin.
-
-         Released on 'close', which fires whether the response finished or the connection died. Work
-         that OUTLIVES the response is not covered: a `void store.something()` left running past the
-         reply would lose its pin while still writing. Nothing does that today — the fire-and-forget
-         paths here send mail, and the one that writes a token writes to the main store, which is
-         never evicted — but a new one would need its own pin rather than this. */
-      manager.pin(orgId);
-      res.on("close", () => manager.unpin(orgId));
-      orgStoreALS.run(orgStore, () => next());
-    } catch {
-      res.status(500).json({ error: "Workspace unavailable." });
-    }
+    await bindTenant(session.org.id, res, next);
   });
 
   app.get("/", (req, res, next) => {
@@ -4035,6 +4086,10 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
   /* ─────────────────────────── end ops ─────────────────────────────────────── */
 
   registerScheduleToolRoutes(app, store);
+
+  /* BuildFlow for Mac: the Connect page, the token exchange, the device's own routes and Settings ›
+     Devices. The device gate above is what makes /api/desktop answer to a key and nothing else. */
+  registerDesktopRoutes(app, { mainStore, store, limiter, webOrigin: () => clientUrl });
 
   /* Last thing before the app is handed back: prove the policy and the router still agree. */
   assertRoutePolicyCovers(app);

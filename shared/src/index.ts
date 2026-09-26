@@ -806,6 +806,31 @@ export type WorkspacesPayload = {
   remaining: number;
 };
 
+/**
+ * A Mac connected to BuildFlow through BuildFlow for Mac, as Settings › Devices and the Mac itself
+ * see it. The device key is never part of it: the server keeps only its hash, and the Mac keeps the
+ * key in its Keychain. A device belongs to one login in one workspace.
+ */
+export type DesktopDevice = {
+  id: string;
+  /** What the person approved on the Connect page, e.g. "Liam's MacBook Air". */
+  name: string;
+  /** What the app reported when it connected, e.g. "macOS 14.6". */
+  platform: string | null;
+  appVersion: string | null;
+  workspace: { id: string; name: string };
+  createdAt: string;
+  /** Kept to the hour, not a heartbeat. */
+  lastSeenAt: string | null;
+  revokedAt: string | null;
+};
+/** GET /api/me/devices: the signed-in person's connected Macs, newest first. */
+export type DesktopDevicesPayload = { devices: DesktopDevice[] };
+/** GET /api/desktop/me: who a device key acts as. `workspace` is the workspace's name. */
+export type DesktopMe = { firstName: string; name: string; workspace: string; role: PermissionLevel; device: DesktopDevice };
+/** POST /api/desktop/token: the key, exactly once. */
+export type DesktopTokenResponse = { key: string; device: DesktopDevice };
+
 /* Schedule Creation Tool — the §3 contract and (soon) the CPM engine, kept in
    their own namespace so `Project` / `Crew` don't collide with the existing
    BuildFlow domain types above. Usage: `import type { Schedule } from "@buildflow/shared"`. */
