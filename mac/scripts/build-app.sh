@@ -32,5 +32,6 @@ shopt -u nullglob
 plutil -lint "$APP/Contents/Info.plist" > /dev/null
 codesign --force --sign - --timestamp=none "$APP"
 codesign --verify --strict "$APP"
+"$ROOT/scripts/embed-sparkle.sh" "$APP" # Sparkle into Contents/Frameworks, then signs it all again (DEVELOPER_ID, or ad hoc)
 
 echo "Built $APP ($CONFIG, signed ad hoc)"

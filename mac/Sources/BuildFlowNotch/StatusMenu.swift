@@ -48,6 +48,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(greetItem)
         menu.addItem(speakItem)
         menu.addItem(loginItem)
+        menu.addItem(Updater.shared.menuItem)
         menu.addItem(.separator())
         menu.addItem(open)
         menu.addItem(quit)

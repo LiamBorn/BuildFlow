@@ -40,6 +40,8 @@ while IFS= read -r f; do APP_SOURCES+=("$f"); done < <(sources "$PRODUCT")
 EXTRA=()
 # The app uses @main; the checks use top-level code in main.swift.
 [ "$PRODUCT" = BuildFlowNotch ] && EXTRA+=(-parse-as-library)
+# The app links Sparkle (mac/Vendor/Sparkle) and finds it in Contents/Frameworks (embed-sparkle.sh).
+[ "$PRODUCT" = BuildFlowNotch ] && EXTRA+=(-F "$ROOT/Vendor/Sparkle" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks)
 swiftc "${COMMON[@]}" ${EXTRA[@]+"${EXTRA[@]}"} -module-name "$PRODUCT" \
     -I "$OUT" -L "$OUT" -lBuildFlowNotchKit \
     -o "$OUT/$PRODUCT" "${APP_SOURCES[@]}"

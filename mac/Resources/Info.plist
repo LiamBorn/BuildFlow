@@ -25,6 +25,16 @@
 	     Keychain (account buildflow-mac) that signs every update. -->
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
+	<key>SUFeedURL</key>
+	<string>https://build-flow.replit.app/downloads/mac/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>hu48PigT+7WGy3X2oUR0k1e3AX8bRWNIGE9pT6ASrIA=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
