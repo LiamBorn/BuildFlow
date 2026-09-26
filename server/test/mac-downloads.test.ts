@@ -36,6 +36,17 @@ function releaseFolder() {
   return { root, dir };
 }
 
+/** GETs `url` and keeps the body as raw bytes; supertest would otherwise try to read a DMG as text. */
+function getBytes(app: express.Express, url: string, range?: string) {
+  const req = request(app).get(url);
+  if (range) req.set("Range", range);
+  return req.buffer(true).parse((response, done) => {
+    const chunks: Buffer[] = [];
+    response.on("data", (chunk: Buffer) => chunks.push(chunk));
+    response.on("end", () => done(null, Buffer.concat(chunks)));
+  });
+}
+
 function downloadsApp() {
   const folder = releaseFolder();
   const app = express();
@@ -65,15 +76,7 @@ describe("/downloads/mac/: what is served, and how", () => {
 
   it("serves a disk image whole, as a disk image, cached for a year and never revalidated", async () => {
     const { app } = downloadsApp();
-    const res = await request(app)
-      .get(`/downloads/mac/${DMG}`)
-      .buffer(true)
-      .parse((response, done) => {
-        const chunks: Buffer[] = [];
-        response.on("data", (chunk: Buffer) => chunks.push(chunk));
-        response.on("end", () => done(null, Buffer.concat(chunks)));
-      })
-      .expect(200);
+    const res = await getBytes(app, `/downloads/mac/${DMG}`).expect(200);
     expect(res.headers["content-type"]).toBe("application/x-apple-diskimage");
     expect(res.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
     expect(res.headers["content-length"]).toBe(String(DMG_BYTES.length));
@@ -93,17 +96,12 @@ describe("/downloads/mac/: what is served, and how", () => {
 
   it("answers a Range with exactly those bytes, so a download can resume", async () => {
     const { app } = downloadsApp();
-    const binary = (response: NodeJS.ReadableStream, done: (err: Error | null, body: Buffer) => void) => {
-      const chunks: Buffer[] = [];
-      response.on("data", (chunk: Buffer) => chunks.push(chunk));
-      response.on("end", () => done(null, Buffer.concat(chunks)));
-    };
-    const first = await request(app).get(`/downloads/mac/${DMG}`).set("Range", "bytes=0-99").buffer(true).parse(binary).expect(206);
+    const first = await getBytes(app, `/downloads/mac/${DMG}`, "bytes=0-99").expect(206);
     expect(first.headers["content-range"]).toBe(`bytes 0-99/${DMG_BYTES.length}`);
     expect(first.headers["content-length"]).toBe("100");
     expect(Buffer.compare(first.body as Buffer, DMG_BYTES.subarray(0, 100))).toBe(0);
 
-    const rest = await request(app).get(`/downloads/mac/${DMG}`).set("Range", "bytes=150000-").buffer(true).parse(binary).expect(206);
+    const rest = await getBytes(app, `/downloads/mac/${DMG}`, "bytes=150000-").expect(206);
     expect(rest.headers["content-range"]).toBe(`bytes 150000-${DMG_BYTES.length - 1}/${DMG_BYTES.length}`);
     expect(Buffer.compare(rest.body as Buffer, DMG_BYTES.subarray(150000))).toBe(0);
 
