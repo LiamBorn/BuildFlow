@@ -92,7 +92,9 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 DMG_NAME="BuildFlow-$VERSION.dmg"
 [ -e "$OUT_DIR/$DMG_NAME" ] && die "$OUT_DIR/$DMG_NAME already exists; a released version is never replaced, so pick a new version"
 if [ -f "$OUT_DIR/appcast.xml" ]; then
-    NEWEST="$( (grep -oE '<sparkle:version>[0-9]+</sparkle:version>' "$OUT_DIR/appcast.xml" || true) | grep -oE '[0-9]+' | sort -n | tail -1)"
+    # An appcast with no releases yet has no build numbers: under pipefail the second grep's "no match"
+    # would fail the assignment and stop the script with no message, so the pipeline answers "" instead.
+    NEWEST="$(grep -oE '<sparkle:version>[0-9]+</sparkle:version>' "$OUT_DIR/appcast.xml" | grep -oE '[0-9]+' | sort -n | tail -1 || true)"
     [ -z "$NEWEST" ] || [ "$BUILD" -gt "$NEWEST" ] || die "build $BUILD is not above build $NEWEST in the current appcast; Sparkle would never offer it"
 fi
 echo "BuildFlow $VERSION ($BUILD) → $OUT_DIR${DRY_RUN:+ (dry run)}"
