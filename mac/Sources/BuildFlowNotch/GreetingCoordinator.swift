@@ -4,6 +4,7 @@ import BuildFlowNotchKit
 
 /// Listens for launch, lid-open (wake) and unlock, asks the logic target whether
 /// to greet, and shows (and optionally speaks) the greeting.
+@MainActor
 final class GreetingCoordinator: NSObject {
     let store: GreetingStore
     private let controller: NotchController
@@ -58,7 +59,7 @@ final class GreetingCoordinator: NSObject {
         }
         let fullScreen = trigger == .replay ? false : FullScreenProbe.frontmostIsFullScreen()
         let decision = GreetingPlanner.decide(now: Date(), trigger: trigger, memory: store.memory,
-                                              firstName: model.inbox.me.firstName, enabled: store.enabled,
+                                              firstName: model.greetingFirstName, enabled: store.enabled,
                                               fullScreenFrontmost: fullScreen, calendar: model.calendar)
         store.memory = GreetingPlanner.remember(decision, trigger: trigger, memory: store.memory)
         switch decision {
@@ -66,7 +67,7 @@ final class GreetingCoordinator: NSObject {
             Log.info("greeting: \(trigger.rawValue) skipped (\(reason.rawValue))")
         case let .show(text, _, welcomeBack, key):
             Log.info("greeting: \(trigger.rawValue) shows \"\(text)\" (\(key)\(welcomeBack ? ", welcome back" : ""))")
-            controller.presentGreeting(text: text, dayLine: model.presenter().dayLine())
+            controller.presentGreeting(text: text, dayLine: model.greetingDayLine())
             if store.speakAloud { speak(text) }
         }
     }

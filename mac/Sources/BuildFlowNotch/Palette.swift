@@ -31,6 +31,7 @@ enum Palette {
     static let proposal = Color(hex: 0x161616)
     static let proposalBorder = Color(hex: 0x5A3A1E)
     static let proposalButton = Color(hex: 0x262626)
+    static let banner = Color(hex: 0x202020)
 
     static func white(_ o: Double) -> Color { Color.white.opacity(o) }
 

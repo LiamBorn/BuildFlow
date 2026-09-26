@@ -9,9 +9,30 @@ enum NotchAction {
     case startVoice
     case markAllRead
     case proposal(ProposalChoice)
+    /// Open a row's record in BuildFlow (and mark a notification read).
+    case open(RowTarget)
+    /// A task's button: `actionId` of `taskId`.
+    case task(taskId: String, actionId: String)
+    case connect
+    case voiceButton(VoiceButton)
+    /// A tab was chosen (showing Notifications marks them seen).
+    case tabShown(InboxTab)
 }
 
 enum ProposalChoice { case edit, reject, accept }
+
+/// Is this Mac connected to a BuildFlow account?
+enum ConnectionState: Equatable {
+    /// Not connected: the inbox shows the example. `reason` says why, when it was taken away.
+    case notConnected(reason: String?)
+    case connecting
+    case connected(name: String, workspace: String)
+
+    var isConnected: Bool {
+        if case .connected = self { return true }
+        return false
+    }
+}
 
 /// Everything the SwiftUI views read. The controller changes `state` inside
 /// `withAnimation`, and the shape and content follow.
@@ -19,6 +40,17 @@ final class NotchModel: ObservableObject {
     @Published var state: NotchState = .resting
     @Published var tab: InboxTab = .notifications
     @Published var inbox: InboxSnapshot = .empty
+    @Published var connection: ConnectionState = .notConnected(reason: nil)
+    /// Why the live inbox can't be read right now, in plain words.
+    @Published var inboxProblem: String?
+    /// A task's outcome, shown for a few seconds at the bottom of the inbox.
+    @Published var banner: String?
+    @Published var busyTasks: Set<String> = []
+    /// The alert on screen (or next up).
+    @Published var alert: AlertContent?
+    @Published var voice: VoiceContent = .idle
+    /// Microphone level, 0…1, for the sound bars.
+    @Published var voiceLevel: Double = 0
     @Published var greetingText = ""
     @Published var greetingDayLine: [String] = []
     @Published var greetingStartedAt = Date.distantPast
@@ -44,8 +76,27 @@ final class NotchModel: ObservableObject {
 
     func now() -> Date { fixedNow ?? Date() }
 
+    /// While not connected, the inbox is the bundled example.
+    var isExample: Bool { !connection.isConnected }
+
     func presenter(at date: Date? = nil) -> InboxPresenter {
         InboxPresenter(inbox: inbox, now: date ?? now(), calendar: calendar)
+    }
+
+    /// The name the greeting uses: the account's, or this Mac's owner's until it's connected.
+    var greetingFirstName: String {
+        if connection.isConnected, !inbox.me.firstName.isEmpty { return inbox.me.firstName }
+        if case let .connected(name, _) = connection, let first = name.split(separator: " ").first { return String(first).capitalized }
+        return Self.macFirstName
+    }
+
+    static var macFirstName: String {
+        let full = NSFullUserName().trimmingCharacters(in: .whitespaces)
+        return full.split(separator: " ").first.map(String.init) ?? NSUserName()
+    }
+
+    func greetingDayLine(at date: Date? = nil) -> [String] {
+        isExample ? ["Connect BuildFlow to see your day"] : presenter(at: date).dayLine()
     }
 
     var spec: ShapeSpec { spec(for: state) }
@@ -59,7 +110,7 @@ final class NotchModel: ObservableObject {
     }
 
     func alertContent() -> AlertContent {
-        presenter().weatherHoldAlert()
+        alert ?? presenter().previewAlert()
             ?? AlertContent(icon: .bell, tone: .muted, status: "Nothing new", title: "All caught up", subtitle: "New items that need you drop down here.")
     }
 
@@ -79,9 +130,5 @@ final class NotchModel: ObservableObject {
     var notchZone: CGRect {
         let c = NotchMetrics.canvas
         return CGRect(x: c.width / 2 - notchSize.width / 2, y: 0, width: notchSize.width, height: notchSize.height)
-    }
-
-    func markAllRead() {
-        inbox.notifications = inbox.notifications.map { var n = $0; n.read = true; return n }
     }
 }

@@ -56,8 +56,14 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>BuildFlow. Sacramento font © 2012 Brian J. Bonislawsky (Astigmatic), SIL Open Font License 1.1.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Only for the hidden serverOrigin setting pointed at this Mac (http://127.0.0.1:…); everything else is HTTPS. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>BuildFlow listens only while you hold ⌥ Space, so you can ask about your schedule out loud.</string>
+	<string>BuildFlow listens only while you hold ⌃ ⌥ (left Control and left Option), so you can ask about your schedule out loud.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

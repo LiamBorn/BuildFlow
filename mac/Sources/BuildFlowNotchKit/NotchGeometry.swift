@@ -130,44 +130,6 @@ public struct NotchGeometry: Equatable {
     }
 }
 
-// MARK: - ⌥Space: tap or hold
-
-/// Tells a tap from a hold on the hot key. A tap toggles the inbox; holding past
-/// the threshold starts voice, and letting go ends it.
-public struct HoldTapRecognizer {
-    public enum Event: Equatable { case tap, holdBegan, holdEnded }
-
-    public let holdThreshold: TimeInterval
-    public private(set) var pressedAt: Date?
-    public private(set) var holding = false
-
-    public init(holdThreshold: TimeInterval = 0.3) {
-        self.holdThreshold = holdThreshold
-    }
-
-    /// Key down. Repeats while already down are ignored.
-    public mutating func press(at t: Date) {
-        guard pressedAt == nil else { return }
-        pressedAt = t
-        holding = false
-    }
-
-    /// Call from a timer while the key is down.
-    public mutating func tick(at t: Date) -> Event? {
-        guard let p = pressedAt, !holding, t.timeIntervalSince(p) >= holdThreshold else { return nil }
-        holding = true
-        return .holdBegan
-    }
-
-    /// Key up.
-    public mutating func release(at t: Date) -> Event? {
-        defer { pressedAt = nil; holding = false }
-        guard let p = pressedAt else { return nil }
-        if holding { return .holdEnded }
-        return t.timeIntervalSince(p) < holdThreshold ? .tap : .holdEnded
-    }
-}
-
 // MARK: - Is a full-screen app in front?
 
 public struct WindowFacts: Equatable {
