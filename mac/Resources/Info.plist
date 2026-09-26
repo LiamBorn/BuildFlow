@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>BuildFlow</string>
+	<key>CFBundleExecutable</key>
+	<string>BuildFlow</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.buildflow.mac</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>BuildFlow</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.buildflow.mac.signin</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>buildflow</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>BuildFlow. Sacramento font © 2012 Brian J. Bonislawsky (Astigmatic), SIL Open Font License 1.1.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BuildFlow listens only while you hold ⌥ Space, so you can ask about your schedule out loud.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BuildFlow turns what you say into text on this Mac, so your voice never leaves it.</string>
+</dict>
+</plist>
