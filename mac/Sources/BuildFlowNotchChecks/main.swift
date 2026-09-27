@@ -3,6 +3,7 @@
 // It prints each failure and exits 1 if there were any.
 import BuildFlowNotchKit
 import CoreGraphics
+import CoreText
 import Foundation
 
 var failures = 0
@@ -340,6 +341,133 @@ do {
     equal(NotchMetrics.liveWidth(leftContent: 22 + 8 + 52.1, rightContent: 12 + 6 + 30, notchWidth: 179), 384, "live width for Standup")
     equal(NotchMetrics.liveWidth(leftContent: 22 + 8 + 20, rightContent: 40, notchWidth: 179), 356, "short label keeps 356")
     equal(NotchMetrics.liveWidth(leftContent: 600, rightContent: 40, notchWidth: 179), 520, "very long label is capped")
+}
+
+// MARK: BuildFlow's theme: the website's tokens, Light and Dark
+
+do {
+    near(ThemeColor(0x000000).contrast(on: ThemeColor(0xFFFFFF)), 21, 1e-9, "WCAG: black on white is 21:1")
+    near(ThemeColor(0xFFFFFF).contrast(on: ThemeColor(0xFFFFFF)), 1, 1e-9, "WCAG: white on white is 1:1")
+    near(ThemeColor(0x767676).contrast(on: ThemeColor(0xFFFFFF)), 4.54, 0.01, "WCAG: #767676 on white is the classic 4.54:1")
+    equal(ThemeColor(0xFFFFFF, alpha: 0.16).over(ThemeColor(0x1C1C1C)), ThemeColor(0x404040), "a translucent colour laid over another")
+
+    for set in [BuildFlowTheme.light, BuildFlowTheme.dark] {
+        let name = set.scheme.rawValue
+        // Every token, in both sets.
+        equal(Set(set.colors.keys), Set(ThemeToken.allCases), "\(name) defines every colour token")
+        equal(Set(set.shadows.keys), Set(ShadowToken.allCases), "\(name) defines every shadow")
+        equal(Set(set.type.keys), Set(TypeToken.allCases), "\(name) defines every type style")
+        check(!set.colors.values.contains(BuildFlowTheme.missing), "\(name) has no placeholder colour")
+        // Text on every surface: 4.5:1 or better.
+        for text in ThemeToken.text {
+            for surface in ThemeToken.surfaces {
+                let c = set[text].contrast(on: set[surface])
+                check(c >= 4.5, "\(name): \(text.rawValue) on \(surface.rawValue) is \(String(format: "%.2f", c)):1, under 4.5")
+            }
+        }
+        // A tone as text: on its own wash (chips, the AI note), on the white card and on the ground (an alert's eyebrow).
+        for pair in ThemeToken.tonePairs {
+            for background in [pair.wash, .surface, .ground] {
+                let c = set[pair.color].contrast(on: set[background])
+                check(c >= 4.5, "\(name): \(pair.color.rawValue) on \(background.rawValue) is \(String(format: "%.2f", c)):1, under 4.5")
+            }
+        }
+        // The ink pill's label, the accent's own pair, and the chosen tab's count on its ink.
+        check(set[.surface].contrast(on: set[.ink]) >= 4.5, "\(name): a primary pill's label on its ink")
+        check(set[.onAccent].contrast(on: set[.accentFill]) >= 4.5, "\(name): on-accent on the accent fill")
+        check(set[.surface].contrast(on: set[.surface].opacity(0.16).over(set[.ink])) >= 4.5, "\(name): the chosen tab's count")
+        check(set[.inkMuted].contrast(on: set[.hover]) >= 4.5, "\(name): a tab's label on the hover grey")
+        equal(set[.frame], ThemeColor(0x000000), "\(name): the frame is the hardware's black")
+        equal(set.radii, ThemeRadii(stage: 28, card: 20, panel: 14, control: 10, chip: 6, pill: 999), "\(name): the radius ladder")
+        equal(set[.title], TypeStyle(.display, 22, 600, tracking: -0.03), "\(name): the drawer's title")
+        equal(set[.eyebrow], TypeStyle(.text, 11, 600, tracking: 0.14, uppercase: true), "\(name): an eyebrow")
+    }
+    // The black band and the live activity read the dark set on the hardware black.
+    let frame = BuildFlowTheme.frame
+    for t in [ThemeToken.ink, .inkMuted, .ok, .warn] {
+        check(frame[t].contrast(on: frame[.frame]) >= 4.5, "the band's \(t.rawValue) on the black")
+    }
+    equal(frame.scheme, .dark, "the frame reads BuildFlow's dark tokens")
+
+    // The website's values (app-shell-client-desk.css §1, §47; app-shell-daylight.css §29b).
+    let light = BuildFlowTheme.light, dark = BuildFlowTheme.dark
+    equal([light[.ground], light[.surface], light[.hover], light[.ink], light[.inkMuted]],
+          [ThemeColor(0xF4F4F4), ThemeColor(0xFFFFFF), ThemeColor(0xF1F1F1), ThemeColor(0x1C1C1C), ThemeColor(0x626262)], "light surfaces and ink")
+    equal([light[.lineSolid], light[.lineSoft], light[.accentFill], light[.onAccent], light[.accentWash]],
+          [ThemeColor(0xE4E4E4), ThemeColor(0xEDEDED), ThemeColor(0x1C1C1C), ThemeColor(0xFFFFFF), ThemeColor(0xECECEC)], "light lines and accent")
+    equal([light[.ok], light[.okWash], light[.warn], light[.warnWash], light[.bad], light[.badWash], light[.info], light[.infoWash]],
+          [ThemeColor(0x1A7F43), ThemeColor(0xEAF6EE), ThemeColor(0x8A5709), ThemeColor(0xFDF4E6),
+           ThemeColor(0x9E1F18), ThemeColor(0xFCEAE8), ThemeColor(0x5C357A), ThemeColor(0xF3EBF7)], "light tones")
+    equal([dark[.ground], dark[.surface], dark[.surfaceRaised], dark[.hover], dark[.ink], dark[.inkMuted]],
+          [ThemeColor(0x121211), ThemeColor(0x1B1B19), ThemeColor(0x232320), ThemeColor(0x262623), ThemeColor(0xF4F3F0), ThemeColor(0xB5B2AB)],
+          "dark surfaces and ink")
+    equal([dark[.ok], dark[.okWash], dark[.warn], dark[.warnWash], dark[.bad], dark[.badWash], dark[.info], dark[.infoWash]],
+          [ThemeColor(0x80D19B), ThemeColor(0x1C2C21), ThemeColor(0xE0A64A), ThemeColor(0x2A2318),
+           ThemeColor(0xEB8178), ThemeColor(0x2D1D1C), ThemeColor(0xAB7FC2), ThemeColor(0x241C2A)], "dark tones")
+    equal([dark[.accentFill], dark[.accentWash]], [ThemeColor(0xF4F4F4), ThemeColor(0x2A2A2A)], "dark accent")
+    // The one departure: the website's faint greys are too light for text, so the Mac's are the
+    // nearest greys that clear 4.5:1 (a step lighter would not).
+    check(BuildFlowTheme.websiteInkFaint.light.contrast(on: light[.surface]) < 4.5, "the website's light faint is under 4.5:1 on white")
+    check(BuildFlowTheme.websiteInkFaint.dark.contrast(on: dark[.hover]) < 4.5, "the website's dark faint is under 4.5:1 on the hover surface")
+    check(ThemeColor(0x6F6F6F).contrast(on: light[.hover]) < 4.5, "the light faint is as light as 4.5:1 allows")
+    check(ThemeColor(0x8E8B82).contrast(on: dark[.hover]) < 4.5, "the dark faint is as dark as 4.5:1 allows")
+
+    equal(BuildFlowTheme.tone(.brand).color, .orange, "a job's tone is the Default set's grey hint")
+    equal(BuildFlowTheme.tone(.muted).wash, .hover, "a quiet row sits on the hover grey")
+    equal(BuildFlowTheme.tone(.warn).wash, .warnWash, "warn on its wash")
+}
+
+do {
+    // Appearance: Light by default (the website's), Dark, or whatever macOS shows.
+    equal(Appearance.light.theme(systemIsDark: true).scheme, .light, "Light stays light")
+    equal(Appearance.dark.theme(systemIsDark: false).scheme, .dark, "Dark stays dark")
+    equal(Appearance.system.theme(systemIsDark: true).scheme, .dark, "Match macOS in dark mode")
+    equal(Appearance.system.theme(systemIsDark: false).scheme, .light, "Match macOS in light mode")
+    equal(Appearance.allCases.map(\.label), ["Light", "Dark", "Match macOS"], "the menu's words")
+    let suite = "com.buildflow.mac.checks.appearance"
+    let defaults = UserDefaults(suiteName: suite)!
+    defaults.removePersistentDomain(forName: suite)
+    let store = AppearanceStore(defaults: defaults)
+    equal(store.appearance, .light, "light until chosen")
+    store.appearance = .system
+    equal(AppearanceStore(defaults: defaults).appearance, .system, "the choice is kept")
+    defaults.set("sepia", forKey: AppearanceStore.key)
+    equal(store.appearance, .light, "an unknown value reads as light")
+    defaults.removePersistentDomain(forName: suite)
+}
+
+// MARK: Inter and Inter Tight, at their real weights
+
+do {
+    let folder = ThemeFonts.folder()
+    check(folder != nil, "the fonts folder is found")
+    let registered = ThemeFonts.load(from: folder)
+    check(!registered.isEmpty && registered.allSatisfy { $0.problem == nil }, "every bundled font registers: \(registered)")
+    check(ThemeFonts.isAvailable(.display), "Inter Tight is loaded")
+    check(ThemeFonts.isAvailable(.text), "Inter is loaded")
+    for file in ["InterTight[wght].ttf", "Inter[opsz,wght].ttf", "OFL-InterTight.txt", "OFL-Inter.txt", "Sacramento-Regular.ttf", "OFL.txt"] {
+        check(folder.map { FileManager.default.fileExists(atPath: $0.appendingPathComponent(file).path) } ?? false,
+              "\(file) ships in Resources/Fonts")
+    }
+    for face in [TypeFace.display, .text] {
+        var widths: [Int: CGFloat] = [:]
+        for weight in [400, 500, 600] {
+            guard let font = ThemeFonts.font(TypeStyle(face, 13, weight)) else { check(false, "\(face) \(weight) builds"); continue }
+            near(ThemeFonts.drawnWeight(font) ?? 0, Double(weight), 0.5, "\(face) is drawn at wght \(weight)")
+            widths[weight] = ThemeFonts.width(of: "Notifications", font: font)
+        }
+        // A heavier weight sets wider: the axis really moves (a 600 title isn't a 400 one).
+        check((widths[600] ?? 0) > (widths[500] ?? 0) && (widths[500] ?? 0) > (widths[400] ?? 0),
+              "\(face): 600 sets wider than 500 than 400 (\(widths))")
+    }
+    let tabular = ThemeFonts.font(TypeStyle(.text, 12, 500, tabular: true))!
+    near(Double(ThemeFonts.width(of: "1111", font: tabular)), Double(ThemeFonts.width(of: "0000", font: tabular)), 0.01,
+         "tabular figures are all one width")
+    check(ThemeFonts.font(TypeStyle(.script, 42, 400)) == nil, "the script is Sacramento's, not Inter's")
+    let a = ThemeFonts.font(TypeStyle(.text, 13, 600)).map(CTFontCopyPostScriptName) as String?
+    check(a?.hasPrefix("Inter") ?? false, "text is Inter: \(a ?? "none")")
+    let d = ThemeFonts.font(TypeStyle(.display, 22, 600)).map(CTFontCopyPostScriptName) as String?
+    check(d?.hasPrefix("InterTight") ?? false, "display is Inter Tight: \(d ?? "none")")
 }
 
 // MARK: Left ⌃ + left ⌥: tap for the inbox, hold to talk
