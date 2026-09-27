@@ -2,7 +2,7 @@
  * The Dashboard's greeting, now the shared one the Mac's notch uses (2026-09-26): the time of day,
  * "Working late" from 10 PM, and "Welcome back" after three hours or more away.
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { __forgetLastActive } from "../lastActive";
@@ -20,7 +20,9 @@ describe("the Dashboard greeting", () => {
     render(<App />);
     await enterDashboard();
     expect(greeting()).toBe("Good afternoon, Matt");
-    expect(Number(window.localStorage.getItem("bf:last-active:u-matt"))).toBe(PINNED.getTime());
+    // the visit's time is written by an effect after the Dashboard commits; on a busy machine that is a
+    // moment after the search box appears, so wait for it rather than read it the same instant
+    await waitFor(() => expect(Number(window.localStorage.getItem("bf:last-active:u-matt"))).toBe(PINNED.getTime()));
   });
 
   it("says Working late at 1 AM, where it used to say good morning", async () => {
@@ -36,7 +38,7 @@ describe("the Dashboard greeting", () => {
     await enterDashboard();
     expect(greeting()).toBe("Welcome back, Matt");
     // the visit wrote its own time, but the greeting was decided when it started
-    expect(Number(window.localStorage.getItem("bf:last-active:u-matt"))).toBe(PINNED.getTime());
+    await waitFor(() => expect(Number(window.localStorage.getItem("bf:last-active:u-matt"))).toBe(PINNED.getTime()));
     expect(screen.getByRole("heading", { name: "Welcome back, Matt" })).toBeInTheDocument();
   });
 
