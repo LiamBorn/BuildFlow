@@ -5,7 +5,8 @@ import BuildFlowNotchKit
 ///
 ///     BuildFlow                        run the app
 ///     BuildFlow --snapshot <dir>       render every state to PNG and exit
-///     BuildFlow --snapshot <dir> --notch-outline   …with the hardware notch outlined
+///     BuildFlow --snapshot <dir> --appearance dark  …in BuildFlow's dark look (light is the default)
+///     BuildFlow --snapshot <dir> --notch-outline   …with the hardware notch outlined in every one
 ///     BuildFlow --quit-after 13 --cycle-states     smoke test: greet, step through
 ///                                                   every state, then quit
 @main
@@ -14,12 +15,20 @@ enum BuildFlowNotchMain {
     static func main() {
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot") {
+            var appearance = Appearance.light
+            if let a = args.firstIndex(of: "--appearance") {
+                guard a + 1 < args.count, let chosen = Appearance(rawValue: args[a + 1]), chosen != .system else {
+                    FileHandle.standardError.write(Data("usage: BuildFlow --snapshot <dir> [--appearance light|dark] [--notch-outline]\n".utf8))
+                    exit(2)
+                }
+                appearance = chosen
+            }
             guard i + 1 < args.count else {
-                FileHandle.standardError.write(Data("usage: BuildFlow --snapshot <dir> [--notch-outline]\n".utf8))
+                FileHandle.standardError.write(Data("usage: BuildFlow --snapshot <dir> [--appearance light|dark] [--notch-outline]\n".utf8))
                 exit(2)
             }
             _ = NSApplication.shared
-            exit(Snapshotter.run(outputDirectory: args[i + 1], outlineNotch: args.contains("--notch-outline")))
+            exit(Snapshotter.run(outputDirectory: args[i + 1], appearance: appearance, outlineNotch: args.contains("--notch-outline")))
         }
 
         let app = NSApplication.shared
@@ -44,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var session: BuildFlowSession!
     private var connector: ConnectCoordinator!
     private var voice: VoiceController!
+    private let appearanceStore = AppearanceStore()
+    private var appearanceWatch: NSKeyValueObservation?
     var quitAfter: Double?
     var cycleStates = false
 
@@ -51,6 +62,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         ScriptFont.registerBundledFonts()
         Updater.shared.start()
+
+        // Appearance: Light (the website's default), Dark, or whatever macOS is showing.
+        model.appearance = appearanceStore.appearance
+        model.systemIsDark = Self.isDark(NSApp.effectiveAppearance)
+        let model = self.model
+        appearanceWatch = NSApp.observe(\.effectiveAppearance, options: [.new]) { _, _ in
+            DispatchQueue.main.async { model.systemIsDark = Self.isDark(NSApp.effectiveAppearance) }
+        }
+        Log.info("appearance: \(model.appearance.label)" + (model.appearance == .system ? " (macOS is \(model.systemIsDark ? "dark" : "light"))" : ""))
+        // Reduce Motion: no springs, no writing, no sliding; things simply appear.
+        model.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+                                                          object: nil, queue: .main) { [weak self] _ in
+            self?.model.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        }
 
         controller = NotchController(model: model)
         controller.install()
@@ -79,6 +105,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !self.model.connection.isConnected, self.model.state == .live || self.model.state == .alert { self.controller.rest() }
         }
         controller.onOpenSettings = { [weak self] in self?.statusMenu.popUp() }
+        let setAppearance: (Appearance) -> Void = { [weak self] appearance in
+            guard let self else { return }
+            self.appearanceStore.appearance = appearance
+            self.model.appearance = appearance
+            Log.info("appearance: \(appearance.rawValue)")
+        }
+        controller.onAppearance = setAppearance
+        statusMenu.onAppearance = setAppearance
 
         // Left ⌃ + left ⌥: tap for the inbox, hold to talk.
         chord = ChordMonitor()
@@ -119,5 +153,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         DeepLinks.handle(urls)
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        greeter?.appWillQuit()
+    }
+
+    nonisolated static func isDark(_ appearance: NSAppearance) -> Bool {
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
     }
 }

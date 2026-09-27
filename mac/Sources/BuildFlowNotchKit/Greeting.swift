@@ -250,3 +250,88 @@ public struct CubicBezier: Equatable {
         return sampleY(solveX(x))
     }
 }
+
+// MARK: - The dropdown's header: the greeting every time it opens
+
+/// How the inbox was brought up, which decides whether its greeting plays.
+public enum InboxOpening: String, CaseIterable {
+    /// Left ⌃ + left ⌥ tapped while it was closed.
+    case chord
+    /// A click on the notch (at rest, a countdown, an alert), or Show Inbox in the menu.
+    case click
+    /// The pointer resting on the notch.
+    case hover
+}
+
+/// The greeting at the top of the dropdown, in the website Dashboard's words (@buildflow/shared
+/// `greetingFor`): the time of day, "Working late" from 22:00 to 4:59, and "Welcome back" for the
+/// whole visit when it began after three hours or more away.
+public enum HeaderGreeting {
+    public static func text(now: Date, firstName: String, awayBeforeVisit: TimeInterval?, calendar: Calendar) -> String {
+        let welcomeBack = (awayBeforeVisit ?? 0) >= GreetingPlanner.welcomeBackAfter
+        return GreetingWording.text(part: PartOfDay.at(now, calendar: calendar), firstName: firstName, welcomeBack: welcomeBack)
+    }
+}
+
+extension GreetingPlanner {
+    /// How long the Mac had been away (asleep, locked, or BuildFlow not running) when this visit
+    /// began, if it knows: read at launch, wake and unlock, before `remember` clears it.
+    public static func awayBefore(now: Date, memory: GreetingMemory) -> TimeInterval? {
+        memory.awaySince.map { max(0, now.timeIntervalSince($0)) }
+    }
+}
+
+/// The dropdown's opening, as numbers: the greeting writes itself at the top (quicker than the lid
+/// greeting), its day line comes in as chips, and then the tab track, the list and the Today card
+/// cascade in beneath it while the script finishes. Opened by ⌃⌥ or a click it plays; opened by
+/// hovering, or with Reduce Motion on, everything is simply there.
+public enum InboxIntro {
+    public enum Part: Int, CaseIterable {
+        case chips, tabs, list, today
+    }
+
+    public static let writeDelay: Double = 0.2
+    public static let writeDuration: Double = 1.2
+    public static let writeEasing = CubicBezier(0.45, 0.05, 0.4, 1)
+    /// Each part's entrance: the website's base duration on its entrance curve (motion/tokens.ts DUR.base, EASE.out).
+    public static let partDuration: Double = 0.4
+    public static let partEasing = CubicBezier(0.22, 1, 0.36, 1)
+    /// How far a part rises as it comes in, in points.
+    public static let rise: Double = 10
+
+    /// When a part starts coming in, in seconds after the dropdown opened: the chips with the
+    /// script, then the tabs, the list and the Today card a card-stagger apart (STAGGER.card).
+    public static func start(_ part: Part) -> Double {
+        switch part {
+        case .chips: return 0.42
+        case .tabs: return 0.6
+        case .list: return 0.69
+        case .today: return 0.78
+        }
+    }
+
+    /// Everything written and in place.
+    public static var settled: Double { max(writeDelay + writeDuration, start(.today) + partDuration) }
+
+    public static func plays(_ opening: InboxOpening, reduceMotion: Bool) -> Bool {
+        guard !reduceMotion else { return false }
+        switch opening {
+        case .chord, .click: return true
+        case .hover: return false
+        }
+    }
+
+    /// The script's mask edge, -0.08 (nothing written) … 1 (all written); written at once when the
+    /// opening doesn't play.
+    public static func reveal(at elapsed: Double, playing: Bool) -> Double {
+        guard playing else { return 1 }
+        let t = min(max((elapsed - writeDelay) / writeDuration, 0), 1)
+        return -0.08 + 1.08 * writeEasing.value(at: t)
+    }
+
+    /// How far a part has come in, 0…1.
+    public static func progress(_ part: Part, at elapsed: Double, playing: Bool) -> Double {
+        guard playing else { return 1 }
+        return partEasing.value(at: min(max((elapsed - start(part)) / partDuration, 0), 1))
+    }
+}

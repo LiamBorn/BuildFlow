@@ -42,6 +42,8 @@ enum IconPaths {
             return ["m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 10.5", rect(2, 6, 14, 12, 2)]
         case .mark:
             return ["M12 2.5 20.5 7.3v9.4L12 21.5l-8.5-4.8V7.3z", "M12 12 20.5 7.3M12 12 3.5 7.3M12 12v9.5"]
+        case .chevronRight:
+            return ["m9 18 6-6-6-6"]
         }
     }
 
@@ -77,32 +79,16 @@ struct IconShape: Shape {
     }
 }
 
-/// A stroked icon, `size` points square, with the mock-up's 2-unit line.
+/// A stroked icon, `size` points square. The website draws its lucide icons at 1.8 units (skin §10).
 struct IconView: View {
     let icon: NotchIcon
     var size: CGFloat = 14
-    var lineWidth: CGFloat = 2
+    var lineWidth: CGFloat = 1.8
 
     var body: some View {
         IconShape(icon: icon)
             .stroke(style: StrokeStyle(lineWidth: lineWidth * size / 24, lineCap: .round, lineJoin: .round))
             .frame(width: size, height: size)
-    }
-}
-
-/// The coloured square behind an icon (26 pt, or 22 pt small).
-struct IconTile: View {
-    let icon: NotchIcon
-    let tone: NotchTone
-    var small = false
-
-    var body: some View {
-        let c = Palette.tile(tone)
-        ZStack {
-            RoundedRectangle(cornerRadius: small ? 6 : 8, style: .continuous).fill(c.bg)
-            IconView(icon: icon, size: small ? 13 : 14).foregroundColor(c.fg)
-        }
-        .frame(width: small ? 22 : 26, height: small ? 22 : 26)
     }
 }
 

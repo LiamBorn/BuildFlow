@@ -6,10 +6,10 @@ import Foundation
 public enum NotchIcon: String, CaseIterable {
     case bell, hardHat, hardHatSmall, calendar, calendarPlain, listChecks, listSmall
     case mic, settings, triangleAlert, activity, checkSquare, cloudRain, cloudRainSmall
-    case clock, video, mark
+    case clock, video, mark, chevronRight
 }
 
-/// The website's tones, in their dark notch colours.
+/// The website's tones; BuildFlowTheme.tone(_:) gives each its colour and wash.
 public enum NotchTone: String {
     case ok, warn, bad, info, brand, muted
 
@@ -82,14 +82,88 @@ public enum InboxTab: String, CaseIterable {
     case notifications, jobs, meetings, tasks
 }
 
+/// What a list shows when it has nothing, as the website's empty state has it: a disc, a display
+/// line, a sentence, and (when there is one) a way out.
+public struct EmptyState: Equatable {
+    public var icon: NotchIcon
+    public var title: String
+    public var detail: String
+    public var action: EmptyAction?
+
+    public init(icon: NotchIcon, title: String, detail: String, action: EmptyAction? = nil) {
+        self.icon = icon
+        self.title = title
+        self.detail = detail
+        self.action = action
+    }
+
+    /// The words the app shows while the first read of a newly connected inbox is on its way.
+    public static let loadingWords = "Loading your inbox…"
+
+    /// The inbox can't be read (or is still loading): the problem, in its plain words.
+    public static func problem(_ words: String) -> EmptyState {
+        if words == loadingWords {
+            return EmptyState(icon: .clock, title: "Loading your inbox", detail: "It takes a moment the first time.")
+        }
+        return EmptyState(icon: .triangleAlert, title: "Can't show your inbox", detail: words, action: .retry)
+    }
+}
+
+public enum EmptyAction: Equatable {
+    /// Opens BuildFlow in the browser.
+    case openBuildFlow
+    /// Reads the inbox again now.
+    case retry
+
+    public var label: String {
+        switch self {
+        case .openBuildFlow: return "Open BuildFlow"
+        case .retry: return "Try again"
+        }
+    }
+}
+
+/// One chip of the greeting's day line; a tone when it is news ("Rain after 2 PM").
+public struct DayChip: Equatable {
+    public var text: String
+    public var tone: NotchTone?
+
+    public init(_ text: String, tone: NotchTone? = nil) {
+        self.text = text
+        self.tone = tone
+    }
+}
+
+/// The status in the black band, right of the camera.
+public enum BandStatus: Equatable {
+    case connected, connecting, example
+
+    public var label: String {
+        switch self {
+        case .connected: return "Connected"
+        case .connecting: return "Connecting…"
+        case .example: return "Example"
+        }
+    }
+
+    public var tone: NotchTone {
+        switch self {
+        case .connected: return .ok
+        case .connecting: return .muted
+        case .example: return .warn
+        }
+    }
+}
+
 public struct CardContent: Equatable {
     public var title: String
     public var note: String
     public var rows: [InboxRow]
     /// Shown instead of rows when there are none.
-    public var empty: String
+    public var empty: EmptyState
 
-    public init(title: String, note: String, rows: [InboxRow], empty: String = "") {
+    public init(title: String, note: String, rows: [InboxRow],
+                empty: EmptyState = EmptyState(icon: .bell, title: "Nothing here", detail: "")) {
         self.title = title
         self.note = note
         self.rows = rows
@@ -111,6 +185,26 @@ public struct LiveActivity: Equatable {
     }
 }
 
+/// A button on an alert.
+public enum AlertAction: Equatable {
+    /// Open what it is about in BuildFlow (and mark it read).
+    case open(RowTarget)
+    /// Put it away now; it waits in the inbox.
+    case later
+
+    public var label: String {
+        switch self {
+        case .open: return "Open"
+        case .later: return "Later"
+        }
+    }
+
+    public var primary: Bool {
+        if case .open = self { return true }
+        return false
+    }
+}
+
 public struct AlertContent: Equatable {
     public var icon: NotchIcon
     public var tone: NotchTone
@@ -127,6 +221,11 @@ public struct AlertContent: Equatable {
         self.title = title
         self.subtitle = subtitle
         self.notificationId = notificationId
+    }
+
+    /// Its buttons: Open and Later for a notification; Later alone for anything else.
+    public var actions: [AlertAction] {
+        notificationId.map { [.open(.notification($0)), .later] } ?? [.later]
     }
 }
 
@@ -254,18 +353,25 @@ public struct InboxPresenter {
         switch tab {
         case .notifications:
             return CardContent(title: "Notifications", note: unreadCount > 0 ? "Mark all read" : "All read",
-                               rows: notificationRows(limit: limit), empty: "Nothing new.")
+                               rows: notificationRows(limit: limit),
+                               empty: EmptyState(icon: .bell, title: "No notifications",
+                                                 detail: "Delays, weather and field updates show up here as your crews report.",
+                                                 action: .openBuildFlow))
         case .jobs:
             return CardContent(title: "Upcoming jobs", note: "Mine first", rows: jobRows(limit: limit),
-                               empty: "No jobs in the next seven days.")
+                               empty: EmptyState(icon: .hardHat, title: "No jobs this week",
+                                                 detail: "Nothing is booked for you in the next seven days.", action: .openBuildFlow))
         case .meetings:
             return CardContent(title: "Meetings", note: calendarsNote, rows: meetingRows(limit: limit),
                                empty: (inbox.calendar?.connected ?? []).isEmpty
-                                   ? "Connect Google or Outlook in BuildFlow to see meetings here."
-                                   : "No more meetings this week.")
+                                   ? EmptyState(icon: .calendar, title: "No calendar connected",
+                                                detail: "Connect Google or Outlook in BuildFlow to see meetings here.", action: .openBuildFlow)
+                                   : EmptyState(icon: .calendar, title: "No more meetings",
+                                                detail: "Nothing else is on your calendars this week."))
         case .tasks:
             return CardContent(title: "Waiting on you", note: "\(tasksDueToday) today", rows: taskRows(limit: limit),
-                               empty: "Nothing is waiting on you.")
+                               empty: EmptyState(icon: .listChecks, title: "Nothing waiting on you",
+                                                 detail: "Rain calls, approvals and crews to book show up here when they need you."))
         }
     }
 
@@ -584,23 +690,26 @@ public struct InboxPresenter {
 
     // The greeting's day line: jobs today · next meeting · weather (· tasks when there's room)
 
-    public func dayLine() -> [String] {
-        var parts: [String] = []
+    public func dayLine() -> [String] { dayChips().map(\.text) }
+
+    /// The day line as chips: the weather, when there is some, in the warn tone.
+    public func dayChips() -> [DayChip] {
+        var parts: [DayChip] = []
         let n = jobsToday.count
-        parts.append(n == 0 ? "No jobs today" : n == 1 ? "1 job today" : "\(n) jobs today")
+        parts.append(DayChip(n == 0 ? "No jobs today" : n == 1 ? "1 job today" : "\(n) jobs today"))
         if let m = meetingsLeftToday().first(where: { $0.startsAt > now }) {
-            parts.append("\(m.title) at \(TimeText.clock(m.startsAt, calendar: calendar, style: .compact))")
+            parts.append(DayChip("\(m.title) at \(TimeText.clock(m.startsAt, calendar: calendar, style: .compact))"))
         }
         if let (_, w) = weatherToday {
             let cause = Self.causeWord(w.cause)
             if let hm = w.startClock, let start = TimeText.date(on: now, hm: hm, calendar: calendar), start > now {
-                parts.append("\(cause) after \(TimeText.clock(start, calendar: calendar, style: .hourly))")
+                parts.append(DayChip("\(cause) after \(TimeText.clock(start, calendar: calendar, style: .hourly))", tone: .warn))
             } else {
-                parts.append("\(cause) today")
+                parts.append(DayChip("\(cause) today", tone: .warn))
             }
         }
         if parts.count < 3, tasksDueToday > 0 {
-            parts.append(tasksDueToday == 1 ? "1 task waiting" : "\(tasksDueToday) tasks waiting")
+            parts.append(DayChip(tasksDueToday == 1 ? "1 task waiting" : "\(tasksDueToday) tasks waiting"))
         }
         return parts
     }

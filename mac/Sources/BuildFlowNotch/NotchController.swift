@@ -31,6 +31,8 @@ final class NotchController {
     private var pollTimer: Timer?
 
     var onOpenSettings: (() -> Void)?
+    /// Appearance chosen in the dropdown's gear menu (the app delegate keeps it and tells the status menu).
+    var onAppearance: ((Appearance) -> Void)?
     /// Set by the app delegate once the account and voice exist.
     var session: BuildFlowSession?
     var voice: VoiceController?
@@ -41,6 +43,8 @@ final class NotchController {
     private var ambientTimer: Timer?
     /// A menu (the crew picker) is open over the inbox: don't fold it away.
     private var menuOpen = false
+    /// When a button inside an alert was last pressed: that click was the button's, not "open the inbox".
+    private var alertButtonAt = Date.distantPast
 
     init(model: NotchModel) {
         self.model = model
@@ -119,7 +123,9 @@ final class NotchController {
 
     // MARK: Moving between states
 
-    func show(_ state: NotchState, opener: Opener) {
+    /// `via` says how the dropdown was brought up (⌃⌥, a click, hovering), which decides whether its
+    /// greeting plays; the other states ignore it.
+    func show(_ state: NotchState, opener: Opener, via: InboxOpening? = nil) {
         hoverWork?.cancel()
         leaveWork?.cancel()
         autoCloseWork?.cancel()
@@ -128,7 +134,12 @@ final class NotchController {
         pointerWasInside = false
         if model.state == .voice && state != .voice { voice?.dismiss() }
         if state == model.state && state != .greeting && state != .alert { refreshPointer(); return }
-        withAnimation(state == .resting ? Motion.close : Motion.open) {
+        if state == .inbox {
+            let opening = via ?? (opener == .hover ? .hover : .click)
+            model.beginInbox(opening, at: openedAt)
+            Log.info("inbox: opened by \(opening.rawValue)" + (model.introPlays ? ", greeting plays" : ""))
+        }
+        withAnimation(Motion.shape(opening: state != .resting, reduceMotion: model.reduceMotion)) {
             model.state = state
         }
         refreshPointer()
@@ -196,11 +207,11 @@ final class NotchController {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
-    func toggleInbox(opener: Opener = .click) {
-        if model.state == .inbox { rest() } else { show(.inbox, opener: opener) }
+    func toggleInbox(opener: Opener = .click, via: InboxOpening = .click) {
+        if model.state == .inbox { rest() } else { show(.inbox, opener: opener, via: via) }
     }
 
-    func presentGreeting(text: String, dayLine: [String]) {
+    func presentGreeting(text: String, dayLine: [DayChip]) {
         model.greetingText = text
         model.greetingDayLine = dayLine
         model.greetingStartedAt = Date()
@@ -215,7 +226,7 @@ final class NotchController {
         } else {
             if state == .voice, model.voice == .idle { model.voice = .example }
             if state == .alert { model.alert = nil }
-            show(state, opener: state == .resting ? .system : .click)
+            show(state, opener: state == .resting ? .system : .click, via: .click)
         }
     }
 
@@ -272,7 +283,7 @@ final class NotchController {
                     n.size.height += 1
                     let still = n.contains(NSEvent.mouseLocation) || (self.hitRect()?.contains(NSEvent.mouseLocation) ?? false)
                     if still && (self.model.state == .resting || self.model.state == .live) {
-                        self.show(.inbox, opener: .hover)
+                        self.show(.inbox, opener: .hover, via: .hover)
                     }
                 }
                 hoverWork = work
@@ -317,8 +328,15 @@ final class NotchController {
         switch model.state {
         case .greeting:
             rest()                                  // click dismisses the greeting early
-        case .resting, .live, .alert:
-            show(.inbox, opener: .click)
+        case .resting, .live:
+            show(.inbox, opener: .click, via: .click)
+        case .alert:
+            // A click on the alert opens the inbox, unless it was one of the alert's buttons, whose
+            // action arrives in the same pass of the run loop: look once it has.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.model.state == .alert, Date().timeIntervalSince(self.alertButtonAt) > 0.3 else { return }
+                self.show(.inbox, opener: .click, via: .click)
+            }
         case .inbox, .voice:
             // Only the notch itself toggles closed; the rest of the panel is controls.
             let justHovered = opener == .hover && Date().timeIntervalSince(openedAt) < 0.6
@@ -337,6 +355,7 @@ final class NotchController {
         case let .join(url):
             NSWorkspace.shared.open(url)
         case .openSettings:
+            model.settingsMenuOpen = false
             onOpenSettings?()
         case .startVoice:
             show(.voice, opener: .click)
@@ -354,7 +373,30 @@ final class NotchController {
         case let .voiceButton(b):
             voice?.button(b)
         case let .tabShown(tab):
+            if model.settingsMenuOpen { withAnimation(.easeOut(duration: 0.15)) { model.settingsMenuOpen = false } }
             if tab == .notifications && model.state == .inbox { session?.markShownSeen() }
+        case .toggleSettingsMenu:
+            withAnimation(model.reduceMotion ? Motion.reduced : .spring(response: 0.3, dampingFraction: 0.86)) {
+                model.settingsMenuOpen.toggle()
+            }
+        case let .setAppearance(appearance):
+            onAppearance?(appearance)
+        case let .empty(action):
+            switch action {
+            case .openBuildFlow:
+                NSWorkspace.shared.open(session?.website ?? ServerOrigin.defaultOrigin)
+            case .retry:
+                session?.refresh()
+            }
+        case let .alert(action):
+            alertButtonAt = Date()
+            switch action {
+            case let .open(target):
+                session?.open(target)
+                rest()
+            case .later:
+                rest()
+            }
         }
     }
 
@@ -399,8 +441,9 @@ final class NotchController {
     func chord(_ event: ChordEvent) {
         switch event {
         case .toggleInbox:
-            // Opens from resting, a countdown, an alert or the greeting; closes an open inbox.
-            toggleInbox(opener: .click)
+            // Opens from resting, a countdown, an alert or the greeting (and plays the dropdown's
+            // greeting); closes an open inbox.
+            toggleInbox(opener: .click, via: .chord)
         case .stopSpeaking:
             voice?.stopSpeaking()
         case .talkBegan:

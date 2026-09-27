@@ -318,11 +318,33 @@ do {
               "\(state) plus its spring overshoot fits the canvas")
         check(s.radius <= s.height - s.ear, "\(state) radius fits under its ears")
     }
-    equal(NotchMetrics.spec(for: .inbox, notch: g.notchSize), ShapeSpec(width: 690, height: 306, radius: 36, ear: 14), "inbox size")
+    // The four that drop down: a 36 pt band beside the camera, the BuildFlow window, 8 pt of black at its foot.
+    equal(NotchMetrics.spec(for: .inbox, notch: g.notchSize), ShapeSpec(width: 720, height: 424, radius: 36, ear: 14), "inbox size")
     equal(NotchMetrics.spec(for: .greeting, notch: g.notchSize), ShapeSpec(width: 580, height: 190, radius: 36, ear: 14), "greeting size")
-    equal(NotchMetrics.spec(for: .alert, notch: g.notchSize), ShapeSpec(width: 450, height: 108, radius: 28, ear: 12), "alert size")
-    equal(NotchMetrics.spec(for: .voice, notch: g.notchSize), ShapeSpec(width: 570, height: 250, radius: 34, ear: 14), "voice size")
+    equal(NotchMetrics.spec(for: .alert, notch: g.notchSize), ShapeSpec(width: 520, height: 144, radius: 36, ear: 12), "alert size")
+    equal(NotchMetrics.spec(for: .voice, notch: g.notchSize), ShapeSpec(width: 600, height: 268, radius: 36, ear: 14), "voice size")
     equal(NotchMetrics.spec(for: .live, notch: g.notchSize), ShapeSpec(width: 356, height: 32, radius: 12, ear: 7), "live size")
+    check(NotchMetrics.spec(for: .inbox, notch: g.notchSize).width < 740, "the dropdown stays under 740 pt wide")
+
+    // The BuildFlow window inside the frame, and the band beside the camera.
+    for state in NotchState.allCases where NotchMetrics.hasCard(state) {
+        let s = NotchMetrics.spec(for: state, notch: g.notchSize)
+        let card = NotchMetrics.card(in: s, notch: g.notchSize)
+        let camera = NotchMetrics.notchZone(in: s, notch: g.notchSize)
+        check(card.minY >= camera.maxY && !card.intersects(camera), "\(state): the window starts below the camera")
+        equal(card.minX, 8, "\(state): 8 pt of black at the left")
+        equal(s.width - card.maxX, 8, "\(state): 8 pt of black at the right")
+        equal(s.height - card.maxY, 8, "\(state): 8 pt of black at the foot")
+        equal(NotchMetrics.cardRadius(in: s), BuildFlowTheme.light.radii.stage, "\(state): the window's corners are BuildFlow's stage radius, concentric with the frame's")
+        let slots = NotchMetrics.bandSlots(in: s, notch: g.notchSize)
+        check(slots.left.maxX <= camera.minX - NotchMetrics.notchGap && slots.right.minX >= camera.maxX + NotchMetrics.notchGap,
+              "\(state): the mark and the status stay clear of the camera")
+        check(slots.left.width >= 90 && slots.right.width >= 90, "\(state): the band has room for the mark and the status")
+        check(slots.left.maxY <= card.minY && slots.right.maxY <= card.minY, "\(state): the band sits above the window")
+    }
+    check(!NotchMetrics.hasCard(.resting) && !NotchMetrics.hasCard(.live), "at rest and the live activity are only black")
+    let externalCard = NotchMetrics.card(in: NotchMetrics.spec(for: .inbox, notch: CGSize(width: 179, height: 24)), notch: CGSize(width: 179, height: 24))
+    equal(externalCard.minY, 28, "on a screen without a notch the window starts below the drawn one")
 
     let external = ScreenFacts(frame: CGRect(x: 1470, y: 0, width: 1920, height: 1080),
                                visibleFrame: CGRect(x: 1470, y: 0, width: 1920, height: 1055), safeAreaTop: 0,
@@ -468,6 +490,106 @@ do {
     check(a?.hasPrefix("Inter") ?? false, "text is Inter: \(a ?? "none")")
     let d = ThemeFonts.font(TypeStyle(.display, 22, 600)).map(CTFontCopyPostScriptName) as String?
     check(d?.hasPrefix("InterTight") ?? false, "display is Inter Tight: \(d ?? "none")")
+}
+
+// MARK: The dropdown's greeting, every time it opens
+
+do {
+    func header(_ time: String, away: TimeInterval? = nil) -> String {
+        HeaderGreeting.text(now: at("2026-09-26 \(time)"), firstName: "Liam", awayBeforeVisit: away, calendar: ny)
+    }
+    // The website Dashboard's words, by the hour.
+    equal(header("05:00"), "Good morning, Liam", "5 AM")
+    equal(header("08:12"), "Good morning, Liam", "8:12 AM")
+    equal(header("12:00"), "Good afternoon, Liam", "noon")
+    equal(header("16:59"), "Good afternoon, Liam", "4:59 PM")
+    equal(header("17:00"), "Good evening, Liam", "5 PM")
+    equal(header("21:59"), "Good evening, Liam", "9:59 PM")
+    equal(header("22:00"), "Working late, Liam", "10 PM is working late")
+    equal(header("23:30"), "Working late, Liam", "11:30 PM")
+    equal(header("01:00"), "Working late, Liam", "1 AM is working late, not good morning")
+    equal(header("04:59"), "Working late, Liam", "4:59 AM")
+    // Three hours or more away: "Welcome back", which wins over the time of day, late included.
+    equal(header("13:00", away: 3 * 3600), "Welcome back, Liam", "exactly 3 h away")
+    equal(header("13:00", away: 5 * 3600), "Welcome back, Liam", "5 h away")
+    equal(header("23:00", away: 4 * 3600), "Welcome back, Liam", "welcome back wins over working late")
+    equal(header("13:00", away: 3 * 3600 - 60), "Good afternoon, Liam", "2 h 59 min is not away enough")
+    equal(header("13:00", away: nil), "Good afternoon, Liam", "no away time known")
+    equal(HeaderGreeting.text(now: at("2026-09-26 13:00"), firstName: "", awayBeforeVisit: nil, calendar: ny), "Good afternoon",
+          "no first name")
+    // The visit's away time, read before `remember` clears it.
+    let away = GreetingMemory(lastPartKey: "2026-09-26#morning", awaySince: at("2026-09-26 09:00"))
+    near(GreetingPlanner.awayBefore(now: at("2026-09-26 12:30"), memory: away) ?? -1, 3.5 * 3600, 0.001, "away 3.5 h")
+    equal(GreetingPlanner.awayBefore(now: at("2026-09-26 12:30"), memory: GreetingMemory()), nil, "never away")
+}
+
+do {
+    // ⌃⌥ and a click play it: the greeting first, then the content; hovering doesn't replay it.
+    check(InboxIntro.plays(.chord, reduceMotion: false), "a ⌃⌥ open plays the greeting")
+    check(InboxIntro.plays(.click, reduceMotion: false), "a click open plays the greeting")
+    check(!InboxIntro.plays(.hover, reduceMotion: false), "a hover open doesn't replay it")
+    check(!InboxIntro.plays(.chord, reduceMotion: true) && !InboxIntro.plays(.click, reduceMotion: true),
+          "Reduce Motion: nothing writes")
+
+    let parts = InboxIntro.Part.allCases
+    // Just opened: nothing written, nothing in yet.
+    check(InboxIntro.reveal(at: 0, playing: true) <= -0.07, "nothing written as it opens")
+    check(parts.allSatisfy { InboxIntro.progress($0, at: 0, playing: true) == 0 }, "no content as it opens")
+    // The greeting before the content; the content cascades in 0.6–0.9 s after opening, in order.
+    check(InboxIntro.writeDelay < InboxIntro.start(.tabs), "the greeting starts writing before the content comes")
+    check(InboxIntro.start(.tabs) >= 0.6 && InboxIntro.start(.today) <= 0.9, "tabs, list and Today come in between 0.6 and 0.9 s")
+    check(InboxIntro.start(.chips) < InboxIntro.start(.tabs) && InboxIntro.start(.tabs) < InboxIntro.start(.list)
+          && InboxIntro.start(.list) < InboxIntro.start(.today), "chips, tabs, list, Today, in that order")
+    check(InboxIntro.start(.today) + InboxIntro.partDuration <= InboxIntro.writeDelay + InboxIntro.writeDuration,
+          "everything is in while the script finishes")
+    near(InboxIntro.writeDuration, 1.2, 0.001, "the script writes in about 1.2 s")
+    check(InboxIntro.writeDuration < GreetingTimeline.writeDuration, "quicker than the lid greeting")
+    // Mid-writing: part written, the tabs arriving.
+    let mid = InboxIntro.reveal(at: 0.8, playing: true)
+    check(mid > 0.2 && mid < 0.9, "half-way through writing at 0.8 s: \(mid)")
+    check(InboxIntro.progress(.tabs, at: 0.8, playing: true) > 0.5 && InboxIntro.progress(.today, at: 0.8, playing: true) < 0.3,
+          "at 0.8 s the tabs are nearly in and Today is just starting")
+    // Settled: written, everything in.
+    near(InboxIntro.reveal(at: InboxIntro.settled, playing: true), 1, 1e-9, "written when settled")
+    check(parts.allSatisfy { InboxIntro.progress($0, at: InboxIntro.settled, playing: true) == 1 }, "all in when settled")
+    // Hovering (or Reduce Motion): the header already written and everything there at once.
+    near(InboxIntro.reveal(at: 0, playing: false), 1, 1e-9, "hover: already written")
+    check(parts.allSatisfy { InboxIntro.progress($0, at: 0, playing: false) == 1 }, "hover: everything there at once")
+}
+
+// MARK: The window's parts: day chips, alert buttons, empty states, the band
+
+do {
+    let p = InboxPresenter(inbox: inbox, now: at("2026-09-26 08:12"), calendar: ny)
+    equal(p.dayChips(), [DayChip("3 jobs today"), DayChip("Standup at 9:30"), DayChip("Rain after 2 PM", tone: .warn)],
+          "the day line as chips, the rain in the warn tone")
+    equal(p.dayLine(), ["3 jobs today", "Standup at 9:30", "Rain after 2 PM"], "the same words as before")
+
+    let n = inbox.notifications[0]
+    let alert = InboxPresenter.alert(for: n)
+    equal(alert.actions, [.open(.notification(n.id)), .later], "a notification's alert: Open and Later")
+    equal(alert.actions.map(\.label), ["Open", "Later"], "their words")
+    equal(alert.actions.map(\.primary), [true, false], "Open is the ink pill")
+    equal(p.weatherHoldAlert()?.actions, [.later], "an alert with nothing to open only offers Later")
+
+    let blank = InboxPresenter(inbox: InboxSnapshot(me: inbox.me), now: at("2026-09-26 09:00"), calendar: ny)
+    check(InboxSnapshot(me: inbox.me).isBlank && !inbox.isBlank, "a blank inbox knows it")
+    equal(blank.card(for: .notifications).empty.title, "No notifications", "empty notifications")
+    equal(blank.card(for: .notifications).empty.action, .openBuildFlow, "…with a way to BuildFlow")
+    equal(blank.card(for: .meetings).empty.title, "No calendar connected", "no calendar connected")
+    let calendars = InboxSnapshot(me: inbox.me, calendar: InboxCalendars(connected: ["google"]))
+    equal(InboxPresenter(inbox: calendars, now: at("2026-09-26 09:00"), calendar: ny).card(for: .meetings).empty.title,
+          "No more meetings", "a calendar with nothing left")
+    equal(blank.card(for: .tasks).empty.action, nil, "nothing waiting: no button")
+    equal(EmptyState.problem(EmptyState.loadingWords).title, "Loading your inbox", "loading")
+    equal(EmptyState.problem(EmptyState.loadingWords).action, nil, "loading has no button")
+    let offline = EmptyState.problem(DesktopError.network("x").plainWords)
+    equal(offline.detail, DesktopError.network("x").plainWords, "the problem in its plain words")
+    equal(offline.action, .retry, "…and Try again")
+    equal(EmptyAction.retry.label, "Try again", "retry's words")
+
+    equal([BandStatus.connected, .connecting, .example].map(\.label), ["Connected", "Connecting…", "Example"], "the band's status")
+    equal([BandStatus.connected, .connecting, .example].map(\.tone), [.ok, .muted, .warn], "…and its dot")
 }
 
 // MARK: Left ⌃ + left ⌥: tap for the inbox, hold to talk

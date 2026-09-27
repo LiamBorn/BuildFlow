@@ -11,7 +11,8 @@ let package = Package(
         .executable(name: "BuildFlowNotchChecks", targets: ["BuildFlowNotchChecks"]),
     ],
     targets: [
-        // Pure logic: inbox model and wording, greeting rules, notch geometry. No AppKit.
+        // Pure logic: inbox model and wording, greeting rules, notch geometry, and BuildFlow's
+        // theme (the website's tokens, Light and Dark) with its fonts (CoreText). No AppKit.
         .target(name: "BuildFlowNotchKit", path: "Sources/BuildFlowNotchKit"),
         // The menu-bar app: panel, SwiftUI states, the ⌃⌥ chord, status menu, triggers.
         .executableTarget(name: "BuildFlowNotch", dependencies: ["BuildFlowNotchKit"], path: "Sources/BuildFlowNotch"),

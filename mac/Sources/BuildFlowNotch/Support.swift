@@ -1,6 +1,5 @@
 import AppKit
 import BuildFlowNotchKit
-import CoreText
 
 enum Log {
     static func info(_ message: String) {
@@ -8,39 +7,39 @@ enum Log {
     }
 }
 
-/// The greeting's script. Sacramento ships in the bundle (Resources/Fonts, with
-/// its OFL licence) and is registered for this process at launch; if that ever
-/// fails, Snell Roundhand, which macOS ships, stands in.
+/// The bundled fonts. Sacramento, the greeting's script, and the website's Inter and Inter Tight ship
+/// in Resources/Fonts with their OFL licences and are registered for this process at launch. If
+/// Sacramento fails, Snell Roundhand, which macOS ships, stands in; if Inter or Inter Tight fails,
+/// the text is set in SF Pro at the same sizes and weights (ThemeFonts, NotchFonts).
 enum ScriptFont {
     static let preferred = "Sacramento-Regular"
     static let fallback = "SnellRoundhand"
 
     private(set) static var name = fallback
-    private(set) static var size: CGFloat = 52
-    /// The font's natural line height at `size` (ascender + descender + leading).
-    private(set) static var lineHeight: CGFloat = 65
+    /// Snell Roundhand runs larger than Sacramento: the theme's script sizes are scaled by this.
+    private(set) static var scale: CGFloat = 52.0 / 60.0
+    /// The chosen face's natural line height (ascender + descender + leading) per point of size.
+    private(set) static var lineHeightRatio: CGFloat = 65.0 / 52.0
 
-    static var fontsFolder: URL? {
-        if let res = Bundle.main.resourceURL?.appendingPathComponent("Fonts"),
-           FileManager.default.fileExists(atPath: res.path) { return res }
-        // `swift run` / a bare binary: the source tree's copy.
-        let tree = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Resources/Fonts")
-        return FileManager.default.fileExists(atPath: tree.path) ? tree : nil
-    }
+    static var fontsFolder: URL? { ThemeFonts.folder() }
 
     static func registerBundledFonts() {
-        if let folder = fontsFolder,
-           let files = try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil) {
-            for url in files where ["ttf", "otf"].contains(url.pathExtension.lowercased()) {
-                var error: Unmanaged<CFError>?
-                if CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
-                    Log.info("font: registered \(url.lastPathComponent)")
-                } else {
-                    let why = error?.takeRetainedValue().localizedDescription ?? "unknown error"
-                    Log.info("font: couldn't register \(url.lastPathComponent): \(why)")
+        for r in ThemeFonts.load(from: fontsFolder) {
+            if let problem = r.problem {
+                Log.info("font: couldn't register \(r.file): \(problem)")
+            } else {
+                Log.info("font: registered \(r.file)")
+            }
+        }
+        for face in [TypeFace.display, .text] {
+            let family = face == .display ? ThemeFonts.displayFamily : ThemeFonts.textFamily
+            if ThemeFonts.isAvailable(face) {
+                let weights = [400, 500, 600].compactMap { w -> String? in
+                    ThemeFonts.font(TypeStyle(face, 13, w)).flatMap(ThemeFonts.drawnWeight).map { String(Int($0)) }
                 }
+                Log.info("font: \(family) drawn at wght \(weights.joined(separator: " / "))")
+            } else {
+                Log.info("font: \(family) not available; SF Pro stands in")
             }
         }
         choose()
@@ -49,15 +48,20 @@ enum ScriptFont {
     static func choose() {
         if let f = NSFont(name: preferred, size: 60) {
             name = preferred
-            size = 60
-            lineHeight = ceil(f.ascender - f.descender + f.leading)
+            scale = 1
+            lineHeightRatio = ceil(f.ascender - f.descender + f.leading) / 60
         } else if let f = NSFont(name: fallback, size: 52) {
             name = fallback
-            size = 52
-            lineHeight = ceil(f.ascender - f.descender + f.leading)
+            scale = 52.0 / 60.0
+            lineHeightRatio = ceil(f.ascender - f.descender + f.leading) / 52
         }
-        Log.info("font: greeting script is \(name) \(Int(size)) pt")
+        Log.info("font: greeting script is \(name)")
     }
+
+    /// The point size to draw a theme script size at, in the face that was chosen.
+    static func fontSize(for themeSize: CGFloat) -> CGFloat { (themeSize * scale).rounded() }
+
+    static func lineHeight(at size: CGFloat) -> CGFloat { ceil(size * lineHeightRatio) }
 }
 
 /// Is the login window covering the screen right now?
