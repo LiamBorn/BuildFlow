@@ -6,6 +6,20 @@
     <description>Updates to BuildFlow for Mac, newest first.</description>
     <language>en</language>
     <item>
+      <title>Version 0.2.0</title>
+      <pubDate>Sun, 27 Sep 2026 01:46:32 +0000</pubDate>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[**BuildFlow's look, in your notch.**
+
+- **The dropdown is a BuildFlow window now**: the same cards, tabs, colours and type (Inter and Inter Tight) as the website.
+- **Light and Dark.** Choose Light, Dark or Match macOS from the gear in the dropdown, or from the menu-bar icon.
+- **A greeting each time you open it.** Press Control + Option (left side) and it says good morning, good afternoon or good evening before showing your day.
+- **Alerts have Open and Later buttons.**]]></description>
+      <enclosure url="https://build-flow.replit.app/downloads/mac/BuildFlow-0.2.0.dmg" length="4753209" type="application/x-apple-diskimage" sparkle:edSignature="okYq5djqZCYztbCbcDbXuaHMvCwXmcscJuCKrXMIjjt4+j4JHZHHacsG/si56wvc5zZtnrzh+p76b5cOmrx/Cg=="/>
+    </item>
+    <item>
       <title>Version 0.1.0</title>
       <pubDate>Sat, 26 Sep 2026 23:56:20 +0000</pubDate>
       <sparkle:version>1</sparkle:version>
