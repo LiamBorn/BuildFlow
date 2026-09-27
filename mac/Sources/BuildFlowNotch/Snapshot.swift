@@ -3,12 +3,16 @@ import BuildFlowNotchKit
 import ImageIO
 import SwiftUI
 
-/// `--snapshot <dir>`: renders each state against the mock-up's dark desktop with
-/// SwiftUI's ImageRenderer, at the mock-up's moments of the example day
-/// (Sat 26 Sep 2026, New York time) and, for the live states, at 9:00 AM in
-/// Chicago against mac/Fixtures/desktop-inbox.json, then exits.
+/// `--snapshot <dir> [--appearance light|dark]`: renders each state against the mock-up's dark
+/// desktop with SwiftUI's ImageRenderer, in BuildFlow's light look (the website's default) or its
+/// dark one, at the mock-up's moments of the example day (Sat 26 Sep 2026, New York time) and, for
+/// the live states, at 9:00 AM in Chicago against mac/Fixtures/desktop-inbox.json, then exits.
 enum Snapshotter {
-    enum Data { case example, fixture }
+    enum Data {
+        case example, fixture
+        /// The fixture's account with nothing in it: the empty states.
+        case empty
+    }
 
     struct Scene {
         let file: String
@@ -23,6 +27,13 @@ enum Snapshotter {
         var alertFrom: String?
         var banner: String?
         var busy: Set<String> = []
+        /// How the dropdown was opened, and how far into its opening it is drawn (settled by default).
+        var opening: InboxOpening = .chord
+        var inboxElapsed: Double = 10
+        var problem: String?
+        var settingsMenu = false
+        /// Outline the hardware notch, to see that nothing sits under the camera.
+        var outline = false
     }
 
     static let proposal = ProposalCard(id: "p1", jobId: "j40", subject: "Oak Ridge · Framing, level 2", verb: "starts", from: "7:30 AM", to: "6:30 AM")
@@ -68,10 +79,27 @@ enum Snapshotter {
                                   proposal: { var p = proposal; p.phase = .settled(ProposalOutcome.conflict(nil).plainWords, ok: false); return p }())),
         Scene(file: "10e-voice-permission", state: .voice, time: "09:00", data: .fixture, connected: true,
               voice: VoiceContent(status: "Can't listen", answer: VoiceProblem.microphoneDenied.words, button: .openPrivacy("Privacy_Microphone"))),
+        // Opened with ⌃⌥: the greeting writes itself, then the rest comes in beneath it.
+        Scene(file: "11-opening-just-opened", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 0.5),
+        Scene(file: "11b-opening-mid-writing", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 0.8),
+        Scene(file: "11c-opening-settled", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 1.6),
+        // Nothing in the lists: the website's empty state.
+        Scene(file: "12-empty-notifications", state: .inbox, time: "09:00", data: .empty, connected: true),
+        Scene(file: "12b-empty-jobs", state: .inbox, time: "09:00", tab: .jobs, data: .empty, connected: true),
+        Scene(file: "12c-empty-meetings", state: .inbox, time: "09:00", tab: .meetings, data: .empty, connected: true),
+        Scene(file: "12d-empty-tasks", state: .inbox, time: "09:00", tab: .tasks, data: .empty, connected: true),
+        Scene(file: "12e-inbox-loading", state: .inbox, time: "09:00", data: .empty, connected: true, problem: EmptyState.loadingWords),
+        Scene(file: "12f-inbox-offline", state: .inbox, time: "09:00", data: .empty, connected: true,
+              problem: DesktopError.network("offline").plainWords),
+        // The gear's menu: Appearance, and the way to the rest.
+        Scene(file: "13-inbox-settings", state: .inbox, time: "09:00", data: .fixture, connected: true, settingsMenu: true),
+        // The hardware notch outlined: nothing may sit under the camera.
+        Scene(file: "14-outline-inbox", state: .inbox, time: "09:00", data: .fixture, connected: true, outline: true),
+        Scene(file: "14b-outline-live", state: .live, time: "09:00:00", data: .fixture, connected: true, outline: true),
     ]
 
     @MainActor
-    static func run(outputDirectory: String, outlineNotch: Bool) -> Int32 {
+    static func run(outputDirectory: String, appearance: Appearance, outlineNotch: Bool) -> Int32 {
         ScriptFont.registerBundledFonts()
         let dir = URL(fileURLWithPath: outputDirectory, isDirectory: true)
         do {
@@ -96,13 +124,20 @@ enum Snapshotter {
 
         var failed = 0
         for scene in scenes {
-            let calendar = scene.data == .fixture ? chicago : newYork
-            guard let inbox = scene.data == .fixture ? fixture : example else {
+            let calendar = scene.data == .example ? newYork : chicago
+            let inbox: InboxSnapshot?
+            switch scene.data {
+            case .example: inbox = example
+            case .fixture: inbox = fixture
+            case .empty: inbox = fixture.map { InboxSnapshot(me: $0.me, today: $0.today) }
+            }
+            guard let inbox else {
                 Log.info("snapshot: skipped \(scene.file) (mac/Fixtures/desktop-inbox.json not found)")
                 continue
             }
             let now = date("2026-09-26 " + scene.time, calendar)
             let model = NotchModel(fixedNow: now, calendar: calendar)
+            model.appearance = appearance
             model.inbox = inbox
             model.connection = scene.connected
                 ? .connected(name: inbox.me.name ?? inbox.me.firstName, workspace: inbox.me.workspace ?? "")
@@ -110,22 +145,28 @@ enum Snapshotter {
             model.notchSize = CGSize(width: 179, height: 32)
             model.state = scene.state
             model.tab = scene.tab
-            model.greetingText = GreetingWording.text(part: PartOfDay.at(now, calendar: calendar),
-                                                      firstName: scene.connected ? inbox.me.firstName : "Liam")
+            let firstName = scene.connected ? inbox.me.firstName : "Liam"
+            model.greetingText = GreetingWording.text(part: PartOfDay.at(now, calendar: calendar), firstName: firstName)
             model.greetingDayLine = model.greetingDayLine()
             model.greetingElapsedOverride = scene.greetingElapsed
+            model.beginInbox(scene.opening, at: now)
+            model.headerGreeting = HeaderGreeting.text(now: now, firstName: firstName, awayBeforeVisit: nil, calendar: calendar)
+            model.inboxElapsedOverride = scene.inboxElapsed
+            model.settingsMenuOpen = scene.settingsMenu
+            model.inboxProblem = scene.problem
             model.voice = scene.voice ?? .idle
             model.banner = scene.banner
             model.busyTasks = scene.busy
             if let id = scene.alertFrom, let n = inbox.notifications.first(where: { $0.id == id }) {
                 model.alert = InboxPresenter.alert(for: n)
             }
-            model.showsCameraDot = true
-            model.showsNotchOutline = outlineNotch
 
             let clock = "Sat Sep 26  " + TimeText.clock(now, calendar: calendar, style: .full)
-            let label = scene.data == .fixture ? "FIXTURE · SERVER buildDesktopInbox" : scene.connected ? "EXAMPLE DATA" : "EXAMPLE DATA · NOT CONNECTED"
-            let renderer = ImageRenderer(content: SnapshotStage(model: model, clock: clock, label: label))
+            let source = scene.data == .fixture ? "FIXTURE · SERVER buildDesktopInbox" : scene.data == .empty ? "EMPTY INBOX"
+                : scene.connected ? "EXAMPLE DATA" : "EXAMPLE DATA · NOT CONNECTED"
+            let label = source + " · " + appearance.label.uppercased()
+            let stage = SnapshotStage(model: model, clock: clock, label: label, outline: outlineNotch || scene.outline)
+            let renderer = ImageRenderer(content: stage)
             renderer.scale = 2
             renderer.isOpaque = true
             let out = dir.appendingPathComponent(scene.file + ".png")
@@ -155,23 +196,28 @@ enum Snapshotter {
     }
 }
 
-/// The mock-up's stage: 960×400 pt of dark desktop with a 37 pt menu bar.
+/// The mock-up's stage: 960×500 pt of dark desktop with a 37 pt menu bar, the camera drawn where
+/// the real one is. It is a picture of macOS around the notch, not part of BuildFlow's look, so its
+/// colours are its own.
 struct SnapshotStage: View {
     @ObservedObject var model: NotchModel
     let clock: String
     var label = "EXAMPLE DATA"
+    var outline = false
+
+    static func rgb(_ hex: UInt32, _ opacity: Double = 1) -> Color { Color(ThemeColor(hex, alpha: opacity)) }
 
     var body: some View {
         ZStack(alignment: .top) {
             ZStack {
-                LinearGradient(stops: [.init(color: Color(hex: 0x151515), location: 0),
-                                       .init(color: Color(hex: 0x1B1A1A), location: 0.55),
-                                       .init(color: Color(hex: 0x231D19), location: 1)],
+                LinearGradient(stops: [.init(color: Self.rgb(0x151515), location: 0),
+                                       .init(color: Self.rgb(0x1B1A1A), location: 0.55),
+                                       .init(color: Self.rgb(0x231D19), location: 1)],
                                startPoint: .top, endPoint: .bottom)
-                RadialGradient(colors: [Color(hex: 0x3B2718), Color(hex: 0x3B2718, opacity: 0)],
+                RadialGradient(colors: [Self.rgb(0x3B2718), Self.rgb(0x3B2718, 0)],
                                center: UnitPoint(x: 0.5, y: 1.15), startRadius: 0, endRadius: 420)
                     .scaleEffect(x: 1.6, y: 1)
-                RadialGradient(colors: [Color(hex: 0x1D2430), Color(hex: 0x1D2430, opacity: 0)],
+                RadialGradient(colors: [Self.rgb(0x1D2430), Self.rgb(0x1D2430, 0)],
                                center: UnitPoint(x: 0.12, y: 1), startRadius: 0, endRadius: 300)
             }
 
@@ -180,13 +226,13 @@ struct SnapshotStage: View {
                     Text("Finder").fontWeight(.bold)
                     ForEach(["File", "Edit", "View", "Go", "Window", "Help"], id: \.self) { Text($0) }
                 }
-                .foregroundColor(Palette.white(0.88))
+                .foregroundColor(.white.opacity(0.88))
                 Spacer()
                 HStack(spacing: 12) {
-                    IconView(icon: .mark, size: 16).foregroundColor(Palette.orangeText)
+                    IconView(icon: .mark, size: 16).foregroundColor(.white.opacity(0.9))
                     Text(clock).monospacedDigit()
                 }
-                .foregroundColor(Palette.white(0.9))
+                .foregroundColor(.white.opacity(0.9))
             }
             .font(.system(size: 13.5))
             .padding(.horizontal, 18)
@@ -195,18 +241,30 @@ struct SnapshotStage: View {
 
             NotchRootView(model: model)
 
+            // The camera, as the mock-up draws it; on the Mac the real one is there.
+            Circle()
+                .fill(RadialGradient(colors: [Self.rgb(0x2B3550), Self.rgb(0x121726), Self.rgb(0x06070B)],
+                                     center: UnitPoint(x: 0.35, y: 0.35), startRadius: 0, endRadius: 5))
+                .frame(width: 8, height: 8)
+                .padding(.top, 12)
+            if outline {
+                Rectangle()
+                    .strokeBorder(Color.red.opacity(0.85), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                    .frame(width: model.notchSize.width, height: model.notchSize.height)
+            }
+
             VStack {
                 Spacer()
                 HStack {
                     Text(label).font(.system(size: 10.5, weight: .semibold)).kerning(0.84)
-                        .foregroundColor(Palette.white(0.4))
+                        .foregroundColor(.white.opacity(0.4))
                     Spacer()
                 }
             }
             .padding(.leading, 16)
             .padding(.bottom, 14)
         }
-        .frame(width: 960, height: 400)
+        .frame(width: 960, height: 500)
         .clipped()
         .environment(\.colorScheme, .dark)
     }

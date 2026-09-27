@@ -41,6 +41,9 @@ public struct InboxSnapshot: Decodable, Equatable {
 
     public static let empty = InboxSnapshot(me: Me(firstName: ""))
 
+    /// Nothing in any list: a newly connected inbox before its first read, or one that couldn't be read.
+    public var isBlank: Bool { notifications.isEmpty && jobs.isEmpty && meetings.isEmpty && tasks.isEmpty }
+
     enum CodingKeys: String, CodingKey {
         case version, today, me, counts, notifications, jobs, meetings, calendar, tasks, crews
     }

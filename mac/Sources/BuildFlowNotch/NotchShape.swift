@@ -53,3 +53,42 @@ struct NotchShape: Shape {
         return p
     }
 }
+
+/// The BuildFlow window inside the black frame: `NotchMetrics.cardInset` in from the frame's sides
+/// and foot, below the band, with corners concentric with the frame's. It is drawn from the same
+/// animated numbers as the frame, so it grows and shrinks with the frame's spring, and it vanishes
+/// in the states too small to hold it (at rest, the live activity).
+struct CardShape: Shape {
+    var width: CGFloat
+    var height: CGFloat
+    var radius: CGFloat
+    let band: CGFloat
+    /// Drawn this far inside the window (for a hairline along its edge).
+    var inset: CGFloat = 0
+
+    init(_ spec: ShapeSpec, band: CGFloat, inset: CGFloat = 0) {
+        width = spec.width
+        height = spec.height
+        radius = spec.radius
+        self.band = band
+        self.inset = inset
+    }
+
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(width, height), radius) }
+        set {
+            width = newValue.first.first
+            height = newValue.first.second
+            radius = newValue.second
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let i = NotchMetrics.cardInset
+        let w = width - 2 * i, h = height - band - i
+        guard w > 2, h > 2 else { return Path() }
+        let box = CGRect(x: rect.midX - w / 2, y: rect.minY + band, width: w, height: h).insetBy(dx: inset, dy: inset)
+        let r = max(0, min(radius - i - inset, box.height / 2, box.width / 2))
+        return Path(roundedRect: box, cornerRadius: r)
+    }
+}

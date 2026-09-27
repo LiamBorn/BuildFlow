@@ -17,6 +17,14 @@ enum NotchAction {
     case voiceButton(VoiceButton)
     /// A tab was chosen (showing Notifications marks them seen).
     case tabShown(InboxTab)
+    /// The gear in the dropdown: open or close its little menu.
+    case toggleSettingsMenu
+    /// Appearance, chosen in that menu.
+    case setAppearance(Appearance)
+    /// An empty list's way out.
+    case empty(EmptyAction)
+    /// An alert's button.
+    case alert(AlertAction)
 }
 
 enum ProposalChoice { case edit, reject, accept }
@@ -52,19 +60,32 @@ final class NotchModel: ObservableObject {
     /// Microphone level, 0…1, for the sound bars.
     @Published var voiceLevel: Double = 0
     @Published var greetingText = ""
-    @Published var greetingDayLine: [String] = []
+    @Published var greetingDayLine: [DayChip] = []
     @Published var greetingStartedAt = Date.distantPast
     @Published var notchSize = CGSize(width: 179, height: 32)
     @Published var hasNotch = true
 
+    /// Light, Dark or Match macOS (the status menu and the dropdown's gear), and what macOS is showing.
+    @Published var appearance: Appearance = .light
+    @Published var systemIsDark = false
+    /// System Settings › Accessibility › Display › Reduce motion: nothing springs, writes or slides.
+    @Published var reduceMotion = false
+    /// The gear's menu in the dropdown.
+    @Published var settingsMenuOpen = false
+
+    /// How the dropdown was last opened, when, and the greeting at its top.
+    @Published var inboxOpening: InboxOpening = .hover
+    @Published var inboxOpenedAt = Date.distantPast
+    @Published var headerGreeting = ""
+    /// How long the Mac had been away when this visit began ("Welcome back" after 3 h or more).
+    var visitAwayBefore: TimeInterval?
+
     /// Snapshot mode freezes the clock and the greeting's animation time.
     let fixedNow: Date?
     var greetingElapsedOverride: Double?
+    /// Snapshots: how far into its opening the dropdown is drawn.
+    var inboxElapsedOverride: Double?
     let calendar: Calendar
-    /// Drawn only in snapshots, like the mock-up; on the Mac the real camera is there.
-    var showsCameraDot = false
-    /// Snapshots only: outline the hardware notch to check nothing sits under it.
-    var showsNotchOutline = false
 
     var onTap: ((CGPoint) -> Void)?
     var onAction: ((NotchAction) -> Void)?
@@ -95,8 +116,34 @@ final class NotchModel: ObservableObject {
         return full.split(separator: " ").first.map(String.init) ?? NSUserName()
     }
 
-    func greetingDayLine(at date: Date? = nil) -> [String] {
-        isExample ? ["Connect BuildFlow to see your day"] : presenter(at: date).dayLine()
+    func greetingDayLine(at date: Date? = nil) -> [DayChip] {
+        if isExample { return [DayChip("Connect BuildFlow to see your day")] }
+        // Nothing read yet: say nothing about the day rather than "No jobs today".
+        if inboxProblem != nil && inbox.isBlank { return [] }
+        return presenter(at: date).dayChips()
+    }
+
+    /// The set the views draw with.
+    var theme: NotchTheme { NotchTheme(appearance.theme(systemIsDark: systemIsDark)) }
+
+    /// The status in the black band, right of the camera.
+    var bandStatus: BandStatus {
+        switch connection {
+        case .connected: return .connected
+        case .connecting: return .connecting
+        case .notConnected: return .example
+        }
+    }
+
+    /// Whether the dropdown's opening plays (⌃⌥ or a click) or everything is simply there (hover, Reduce Motion).
+    var introPlays: Bool { InboxIntro.plays(inboxOpening, reduceMotion: reduceMotion) }
+
+    /// The dropdown is opening: remember how, and write its greeting for this moment.
+    func beginInbox(_ opening: InboxOpening, at date: Date) {
+        inboxOpening = opening
+        inboxOpenedAt = date
+        settingsMenuOpen = false
+        headerGreeting = HeaderGreeting.text(now: date, firstName: greetingFirstName, awayBeforeVisit: visitAwayBefore, calendar: calendar)
     }
 
     var spec: ShapeSpec { spec(for: state) }
@@ -114,15 +161,17 @@ final class NotchModel: ObservableObject {
             ?? AlertContent(icon: .bell, tone: .muted, status: "Nothing new", title: "All caught up", subtitle: "New items that need you drop down here.")
     }
 
-    /// The live activity's width for its label, so the label clears the camera.
+    /// The live activity's width for its label, so the label clears the camera. Measured in the
+    /// faces it is drawn in (LiveContent).
     func liveWidth(for live: LiveActivity) -> CGFloat {
-        let label = (live.label as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width
-        let inWidth = ("in" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13, weight: .medium)]).width
+        let set = BuildFlowTheme.frame
+        let label = NotchFonts.width(live.label, set[.live])
+        let inWidth = NotchFonts.width("in", set[.live])
         // Measure the countdown with zeros so the width doesn't twitch every second.
         let digits = String(live.countdown.map { $0.isNumber ? "0" : $0 })
-        let countFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
-        let count = (digits as NSString).size(withAttributes: [.font: countFont]).width
-        return NotchMetrics.liveWidth(leftContent: 22 + 8 + ceil(label), rightContent: ceil(inWidth) + 6 + ceil(count),
+        let count = NotchFonts.width(digits, set[.liveFigure])
+        return NotchMetrics.liveWidth(leftContent: LiveContent.discSize + LiveContent.discGap + label,
+                                      rightContent: inWidth + LiveContent.figureGap + count,
                                       notchWidth: notchSize.width)
     }
 

@@ -52,7 +52,17 @@ final class GreetingCoordinator: NSObject {
 
     func replay() { trigger(.replay) }
 
+    /// BuildFlow is quitting: until it runs again counts as away, for the next visit's "Welcome back".
+    func appWillQuit() {
+        store.memory = GreetingPlanner.wentAway(at: Date(), memory: store.memory)
+    }
+
     func trigger(_ trigger: GreetingTrigger) {
+        if trigger != .replay {
+            // A visit begins (launch, wake, unlock): the dropdown's header says "Welcome back" for all
+            // of it when the Mac was away three hours or more, as the website's Dashboard does.
+            model.visitAwayBefore = GreetingPlanner.awayBefore(now: Date(), memory: store.memory)
+        }
         if trigger != .replay && !controller.isResting {
             Log.info("greeting: \(trigger.rawValue) while the notch is busy, not now")
             return

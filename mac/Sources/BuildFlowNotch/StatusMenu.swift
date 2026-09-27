@@ -3,8 +3,8 @@ import BuildFlowNotchKit
 import ServiceManagement
 
 /// The menu-bar item: the connection (Connect this Mac… / Connected as … /
-/// Disconnect), Show Inbox (⌃⌥), Replay Greeting, Preview State, the greeting and
-/// alert settings (quiet hours), Launch at Login and Quit.
+/// Disconnect), Show Inbox (⌃⌥), Replay Greeting, Preview State, Appearance, the
+/// greeting and alert settings (quiet hours), Launch at Login and Quit.
 @MainActor
 final class StatusMenu: NSObject, NSMenuDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -23,11 +23,14 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     private let speakItem = NSMenuItem(title: "Speak the Greeting Aloud", action: #selector(toggleSpeak), keyEquivalent: "")
     private let alertsItem = NSMenuItem(title: "Show Alerts", action: #selector(toggleAlerts), keyEquivalent: "")
     private let quietItem = NSMenuItem(title: "Quiet Hours", action: nil, keyEquivalent: "")
+    private let appearanceItem = NSMenuItem(title: "Appearance", action: nil, keyEquivalent: "")
     private let loginItem = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
     private let askItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let shortcutHelpItem = NSMenuItem(title: "Let BuildFlow See ⌃⌥…", action: #selector(explainShortcutPermission), keyEquivalent: "")
     /// Set by the app delegate: whether the ⌃⌥ shortcut can see the keys.
     var chord: ChordMonitor?
+    /// Set by the app delegate: keeps an Appearance choice (the dropdown's gear menu offers the same).
+    var onAppearance: ((Appearance) -> Void)?
 
     /// Quiet-hours choices: off, or a span in minutes after midnight.
     private static let quietChoices: [QuietHours] = [
@@ -67,6 +70,15 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         }
         quietItem.submenu = quiet
 
+        let appearances = NSMenu()
+        for a in Appearance.allCases {
+            let i = NSMenuItem(title: a.label, action: #selector(pickAppearance(_:)), keyEquivalent: "")
+            i.representedObject = a.rawValue
+            i.target = self
+            appearances.addItem(i)
+        }
+        appearanceItem.submenu = appearances
+
         let replay = NSMenuItem(title: "Replay Greeting", action: #selector(replayGreeting), keyEquivalent: "")
         let open = NSMenuItem(title: "Open BuildFlow", action: #selector(openWebsite), keyEquivalent: "")
         let quit = NSMenuItem(title: "Quit BuildFlow", action: #selector(quit), keyEquivalent: "q")
@@ -92,6 +104,7 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         menu.addItem(shortcutHelpItem)
         menu.addItem(replay)
         menu.addItem(previewItem)
+        menu.addItem(appearanceItem)
         menu.addItem(.separator())
         menu.addItem(greetItem)
         menu.addItem(speakItem)
@@ -162,6 +175,11 @@ final class StatusMenu: NSObject, NSMenuDelegate {
         for q in quietItem.submenu?.items ?? [] {
             q.state = Self.quietChoices[q.tag] == quiet || (!quiet.enabled && q.tag == 0) ? .on : .off
         }
+        let appearance = controller.model.appearance
+        appearanceItem.title = "Appearance: \(appearance.label)"
+        for i in appearanceItem.submenu?.items ?? [] {
+            i.state = (i.representedObject as? String) == appearance.rawValue ? .on : .off
+        }
         switch SMAppService.mainApp.status {
         case .enabled: loginItem.state = .on
         case .requiresApproval: loginItem.state = .mixed
@@ -208,6 +226,11 @@ final class StatusMenu: NSObject, NSMenuDelegate {
     @objc private func toggleSpeak() { greeter.store.speakAloud.toggle() }
 
     @objc private func toggleAlerts() { session.settings.alertsEnabled.toggle() }
+
+    @objc private func pickAppearance(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let appearance = Appearance(rawValue: raw) else { return }
+        onAppearance?(appearance)
+    }
 
     @objc private func pickQuietHours(_ sender: NSMenuItem) {
         session.settings.quietHours = Self.quietChoices[sender.tag]

@@ -3,12 +3,18 @@ import SwiftUI
 
 /// Motion measured from the NotchView video: the shape springs open in about
 /// 0.4 s with a small overshoot; content blurs in about 0.15 s after the shape
-/// starts; closing is quicker and doesn't bounce.
+/// starts; closing is quicker and doesn't bounce. With Reduce Motion on, the
+/// shape eases without overshoot and content only fades (the website's 150 ms).
 enum Motion {
     static let open = Animation.spring(response: 0.42, dampingFraction: 0.74, blendDuration: 0)
     static let close = Animation.timingCurve(0.4, 0, 0.2, 1, duration: 0.3)
     static let contentIn = Animation.easeOut(duration: 0.26).delay(0.15)
     static let contentOut = Animation.easeIn(duration: 0.12)
+    static let reduced = Animation.easeInOut(duration: 0.15)
+
+    static func shape(opening: Bool, reduceMotion: Bool) -> Animation {
+        reduceMotion ? reduced : opening ? open : close
+    }
 }
 
 struct BlurFade: ViewModifier {
@@ -27,51 +33,57 @@ extension AnyTransition {
             insertion: .modifier(active: BlurFade(amount: 1), identity: BlurFade(amount: 0)).animation(Motion.contentIn),
             removal: .modifier(active: BlurFade(amount: 1), identity: BlurFade(amount: 0)).animation(Motion.contentOut))
     }
+
+    /// Reduce Motion: content simply appears and goes.
+    static var notchContentReduced: AnyTransition { .opacity.animation(Motion.reduced) }
+
+    static func notchContent(reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .notchContentReduced : .notchContent
+    }
 }
 
-/// The whole panel: a transparent canvas with the black shape at the top centre.
+/// The whole panel: a transparent canvas with the black frame at the top centre, and, in the four
+/// states that drop down, the BuildFlow window inside it with the band above.
 struct NotchRootView: View {
     @ObservedObject var model: NotchModel
 
     var body: some View {
+        let theme = model.theme
         let spec = model.spec
         let canvas = NotchMetrics.canvas
+        let band = NotchMetrics.band(notch: model.notchSize)
+        let transition = AnyTransition.notchContent(reduceMotion: model.reduceMotion)
         ZStack(alignment: .top) {
-            NotchShape(spec).fill(Color.black)
+            NotchShape(spec).fill(theme.frame(.frame))
+            CardShape(spec, band: band).fill(theme[.ground])
+            CardShape(spec, band: band, inset: 0.5).stroke(theme[.lineSoft], lineWidth: 1)
 
             ZStack(alignment: .top) {
+                if NotchMetrics.hasCard(model.state) {
+                    BandView(model: model, spec: spec).transition(transition)
+                }
                 switch model.state {
                 case .resting:
                     Color.clear.frame(width: 1, height: 1)
                 case .greeting:
-                    GreetingContent(model: model, spec: model.spec(for: .greeting)).transition(.notchContent)
+                    GreetingContent(model: model, spec: model.spec(for: .greeting)).transition(transition)
                 case .live:
-                    LiveContent(model: model, spec: model.spec(for: .live)).transition(.notchContent)
+                    LiveContent(model: model, spec: model.spec(for: .live)).transition(transition)
                 case .alert:
-                    AlertView(content: model.alertContent(), spec: model.spec(for: .alert)).transition(.notchContent)
+                    AlertView(model: model, content: model.alertContent(), spec: model.spec(for: .alert)).transition(transition)
                 case .inbox:
-                    InboxContent(model: model, spec: model.spec(for: .inbox)).transition(.notchContent)
+                    InboxContent(model: model, spec: model.spec(for: .inbox)).transition(transition)
                 case .voice:
-                    VoiceView(model: model, content: model.voice, spec: model.spec(for: .voice)).transition(.notchContent)
+                    VoiceView(model: model, content: model.voice, spec: model.spec(for: .voice)).transition(transition)
                 }
             }
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
             .clipShape(NotchShape(spec))
-
-            if model.showsCameraDot {
-                Circle()
-                    .fill(RadialGradient(colors: [Color(hex: 0x2B3550), Color(hex: 0x121726), Color(hex: 0x06070B)],
-                                         center: UnitPoint(x: 0.35, y: 0.35), startRadius: 0, endRadius: 5))
-                    .frame(width: 8, height: 8)
-                    .padding(.top, 12)
-            }
-            if model.showsNotchOutline {
-                Rectangle()
-                    .strokeBorder(Color.red.opacity(0.8), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                    .frame(width: model.notchSize.width, height: model.notchSize.height)
-            }
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
+        .environment(\.notchTheme, theme)
+        .environment(\.notchReduceMotion, model.reduceMotion)
+        .environment(\.colorScheme, theme.colorScheme)
         .contentShape(NotchShape(spec))
         // Simultaneous, so it can never take a click away from a button inside;
         // the controller ignores taps in the inbox and voice that miss the notch.
