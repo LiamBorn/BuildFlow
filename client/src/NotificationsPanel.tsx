@@ -27,7 +27,7 @@
  * A row whose notification has no target stays a plain row rather than a dead control.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Check, ChevronRight, MoreHorizontal, Search, Settings, X } from "lucide-react";
+import { Bell, Check, ChevronRight, Laptop, MoreHorizontal, Search, Settings, X } from "lucide-react";
 import { notificationNeedsAttention, projectsManagedBy, type BootstrapPayload } from "@buildflow/shared";
 import type { NotificationItem, NotificationTarget } from "./notifications/bellItems";
 import type { useReadNotifications } from "./notifications/readState";
@@ -68,6 +68,26 @@ function targetLabel(target?: NotificationTarget): string {
   return "the Month calendar";
 }
 
+/**
+ * BuildFlow for Mac puts these same notifications in the MacBook's notch (2026-09-26), so the drawer
+ * offers it at its foot to someone reading on a Mac, until they hide it; the "more" menu keeps the way
+ * there either way. Its page opens in a new tab, as Settings › Devices opens it, so the app stays put.
+ */
+const MAC_PAGE = "/#mac";
+/** A Mac's browser says "Macintosh", and so does an iPad's Safari, which a touch screen tells apart. */
+function readingOnAMac(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Macintosh/.test(navigator.userAgent) && (navigator.maxTouchPoints ?? 0) < 2;
+}
+const macOfferKey = (userId: string) => `bf:mac-offer:hidden:${userId}`;
+function macOfferHidden(userId: string): boolean {
+  try {
+    return window.localStorage.getItem(macOfferKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /** "3m ago" / "in 4d" — the same shape the rest of the app uses. */
 function relativeStamp(iso: string, now = Date.now()): string {
   const at = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).getTime();
@@ -98,6 +118,15 @@ export function NotificationsPanel({ id, items, data, onClose, onOpenSettings, o
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const [macOffer, setMacOffer] = useState(() => readingOnAMac() && !macOfferHidden(data.activeUser.id));
+  const hideMacOffer = () => {
+    setMacOffer(false);
+    try {
+      window.localStorage.setItem(macOfferKey(data.activeUser.id), "1");
+    } catch {
+      // storage refused: the offer comes back next time the drawer opens, which is all that is lost
+    }
+  };
 
   useEffect(() => {
     if (!moreOpen) return undefined;
@@ -165,6 +194,9 @@ export function NotificationsPanel({ id, items, data, onClose, onOpenSettings, o
                 >
                   <Check size={15} /> Mark all as read
                 </button>
+                <a role="menuitem" href={MAC_PAGE} target="_blank" rel="noopener noreferrer" onClick={() => setMoreOpen(false)}>
+                  <Laptop size={15} /> Get BuildFlow for Mac
+                </a>
               </div>
             )}
           </div>
@@ -276,6 +308,24 @@ export function NotificationsPanel({ id, items, data, onClose, onOpenSettings, o
             );
           })}
         </div>
+      )}
+
+      {macOffer && (
+        <aside className="bfnt-mac" aria-label="BuildFlow for Mac">
+          <span className="bfnt-mac-mark" aria-hidden="true">
+            <Laptop size={17} />
+          </span>
+          <span className="bfnt-mac-body">
+            <strong>Get these in your Mac's notch</strong>
+            <p>BuildFlow for Mac shows new notifications at the top of your screen. Press Control + Option to open them.</p>
+          </span>
+          <a className="bfnt-mac-get" href={MAC_PAGE} target="_blank" rel="noopener noreferrer">
+            Get BuildFlow for Mac
+          </a>
+          <button type="button" className="bfnt-mac-hide" aria-label="Hide the BuildFlow for Mac offer" onClick={hideMacOffer}>
+            <X size={15} />
+          </button>
+        </aside>
       )}
     </section>
   );
