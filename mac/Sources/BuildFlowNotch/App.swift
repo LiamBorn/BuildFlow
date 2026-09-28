@@ -5,7 +5,7 @@ import BuildFlowNotchKit
 ///
 ///     BuildFlow                        run the app
 ///     BuildFlow --snapshot <dir>       render every state to PNG and exit
-///     BuildFlow --snapshot <dir> --appearance dark  …in BuildFlow's dark look (light is the default)
+///     BuildFlow --snapshot <dir> --appearance light  …with light cards (dark, the reference's look, is the default)
 ///     BuildFlow --snapshot <dir> --notch-outline   …with the hardware notch outlined in every one
 ///     BuildFlow --quit-after 13 --cycle-states     smoke test: greet, step through
 ///                                                   every state, then quit
@@ -15,7 +15,7 @@ enum BuildFlowNotchMain {
     static func main() {
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot") {
-            var appearance = Appearance.light
+            var appearance = AppearanceStore.fallback
             if let a = args.firstIndex(of: "--appearance") {
                 guard a + 1 < args.count, let chosen = Appearance(rawValue: args[a + 1]), chosen != .system else {
                     FileHandle.standardError.write(Data("usage: BuildFlow --snapshot <dir> [--appearance light|dark] [--notch-outline]\n".utf8))
@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ScriptFont.registerBundledFonts()
         Updater.shared.start()
 
-        // Appearance: Light (the website's default), Dark, or whatever macOS is showing.
+        // Appearance: Dark (the reference's look, the default), Light, or whatever macOS is showing.
         model.appearance = appearanceStore.appearance
         model.systemIsDark = Self.isDark(NSApp.effectiveAppearance)
         let model = self.model

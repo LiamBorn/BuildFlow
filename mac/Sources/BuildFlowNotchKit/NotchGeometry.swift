@@ -39,65 +39,69 @@ public struct ShapeSpec: Equatable {
 
 public enum NotchMetrics {
     /// The sizes of the six states, in points (1 CSS px = 1 pt on the MacBook Air). The four that drop
-    /// down are a black frame with a BuildFlow window inside: the band beside the camera, the card below
-    /// it, and `cardInset` of black at the card's sides and foot.
+    /// down are one black shape, as the reference's are: a band beside the camera (the tabs, the
+    /// status, an alert's tile), `bandGap` of black, the content, and `contentInset` of black at the
+    /// content's sides and foot.
     public static func spec(for state: NotchState, notch: CGSize, liveWidth: CGFloat? = nil) -> ShapeSpec {
         switch state {
         case .resting: return ShapeSpec(width: notch.width, height: notch.height, radius: 10, ear: 6)
         case .live: return ShapeSpec(width: liveWidth ?? liveMinimumWidth, height: notch.height, radius: 12, ear: 7)
         case .greeting, .alert, .inbox, .voice:
-            let card = cardSize(for: state)
-            return ShapeSpec(width: card.width + 2 * cardInset, height: band(notch: notch) + card.height + cardInset,
+            let content = contentSize(for: state)
+            return ShapeSpec(width: content.width + 2 * contentInset, height: band(notch: notch) + content.height + contentInset,
                              radius: frameRadius, ear: state == .alert ? 12 : 14)
         }
     }
 
-    /// The BuildFlow window's size in each state that drops down.
-    public static func cardSize(for state: NotchState) -> CGSize {
+    /// The content's size in each state that drops down: the greeting's script and day line, an
+    /// alert's words and buttons, the dropdown's two cards, and voice.
+    public static func contentSize(for state: NotchState) -> CGSize {
         switch state {
-        case .greeting: return CGSize(width: 564, height: 146)
-        case .alert: return CGSize(width: 504, height: 100)
-        case .inbox: return CGSize(width: 704, height: 380)
-        case .voice: return CGSize(width: 584, height: 224)
+        case .greeting: return CGSize(width: 528, height: 118)
+        case .alert: return CGSize(width: 508, height: 60)
+        case .inbox: return CGSize(width: 668, height: 220)
+        case .voice: return CGSize(width: 568, height: 176)
         case .resting, .live: return .zero
         }
     }
 
-    /// Whether a state has the BuildFlow window in it (the resting notch and the live activity are only black).
-    public static func hasCard(_ state: NotchState) -> Bool { cardSize(for: state) != .zero }
+    /// Whether a state drops down below the camera (the resting notch and the live activity don't).
+    public static func dropsDown(_ state: NotchState) -> Bool { contentSize(for: state) != .zero }
 
-    /// Black between the card and the frame's edge, at the sides and the foot.
-    public static let cardInset: CGFloat = 8
-    /// Black between the camera's band and the card's top.
-    public static let bandGap: CGFloat = 4
-    /// The corner radius of every state that drops down. The card inside it is `cardInset` less:
-    /// 28, BuildFlow's stage radius, so the two corners are concentric.
-    public static let frameRadius: CGFloat = 36
+    /// Black between the content and the shape's edge, at the sides and the foot (the reference's 16 pt).
+    public static let contentInset: CGFloat = 16
+    /// Black between the band beside the camera and the content's top.
+    public static let bandGap: CGFloat = 10
+    /// The corner radius of every state that drops down. A card inside it is `contentInset` less, 16,
+    /// so the two corners are concentric.
+    public static let frameRadius: CGFloat = 32
 
-    /// The black band across the top: the camera housing's height, plus a little air above the card.
+    /// The black band across the top: the camera housing's height, plus the gap above the content.
     public static func band(notch: CGSize) -> CGFloat { notch.height + bandGap }
 
-    /// The card in a shape's own coordinates (x from the body's left edge, y down from the screen's top).
-    public static func card(in spec: ShapeSpec, notch: CGSize) -> CGRect {
+    /// The content in a shape's own coordinates (x from the body's left edge, y down from the screen's top).
+    public static func content(in spec: ShapeSpec, notch: CGSize) -> CGRect {
         let top = band(notch: notch)
-        return CGRect(x: cardInset, y: top, width: max(0, spec.width - 2 * cardInset), height: max(0, spec.height - top - cardInset))
+        return CGRect(x: contentInset, y: top, width: max(0, spec.width - 2 * contentInset),
+                      height: max(0, spec.height - top - contentInset))
     }
 
-    public static func cardRadius(in spec: ShapeSpec) -> CGFloat { max(0, spec.radius - cardInset) }
+    /// The corner radius of a card that fills the content's corners.
+    public static func innerRadius(in spec: ShapeSpec) -> CGFloat { max(0, spec.radius - contentInset) }
 
     /// The hardware notch in a shape's own coordinates.
     public static func notchZone(in spec: ShapeSpec, notch: CGSize) -> CGRect {
         CGRect(x: (spec.width - notch.width) / 2, y: 0, width: notch.width, height: notch.height)
     }
 
-    /// The band's two places beside the camera, in a shape's own coordinates: the mark on the left,
-    /// the status on the right. Each stops `notchGap` short of the camera housing.
-    public static let bandPadding: CGFloat = 20
+    /// The band's two places beside the camera, a camera housing tall, in a shape's own coordinates:
+    /// the tabs (or an alert's tile) on the left, the status and the buttons on the right. Each starts
+    /// at the content's edge and stops `notchGap` short of the camera housing.
+    public static let bandPadding: CGFloat = contentInset
     public static func bandSlots(in spec: ShapeSpec, notch: CGSize) -> (left: CGRect, right: CGRect) {
         let side = max(0, (spec.width - notch.width) / 2 - notchGap - bandPadding)
-        let h = band(notch: notch)
-        return (CGRect(x: bandPadding, y: 0, width: side, height: h),
-                CGRect(x: spec.width - bandPadding - side, y: 0, width: side, height: h))
+        return (CGRect(x: bandPadding, y: 0, width: side, height: notch.height),
+                CGRect(x: spec.width - bandPadding - side, y: 0, width: side, height: notch.height))
     }
 
     public static let liveMinimumWidth: CGFloat = 356
@@ -116,7 +120,8 @@ public enum NotchMetrics {
     }
 
     /// The panel is one fixed canvas, big enough for the largest state plus the
-    /// spring's overshoot; everything outside the shape passes clicks through.
+    /// spring's overshoot and the rim light's glow; everything outside the shape
+    /// passes clicks through.
     public static let canvas = CGSize(width: 780, height: 460)
 }
 

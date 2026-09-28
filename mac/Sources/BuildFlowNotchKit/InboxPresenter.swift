@@ -176,13 +176,29 @@ public struct LiveActivity: Equatable {
     public var tone: NotchTone
     public var label: String
     public var countdown: String
+    /// Seconds until it starts, and the window it counts down through (15 min for a meeting, 30 for a
+    /// job): the ring beside the figures empties as the time runs out.
+    public var left: TimeInterval
+    public var window: TimeInterval
 
-    public init(icon: NotchIcon, tone: NotchTone, label: String, countdown: String) {
+    public init(icon: NotchIcon, tone: NotchTone, label: String, countdown: String, left: TimeInterval = 0, window: TimeInterval = 0) {
         self.icon = icon
         self.tone = tone
         self.label = label
         self.countdown = countdown
+        self.left = left
+        self.window = window
     }
+
+    /// The share of the window still to go, 1 (the countdown just began) … 0 (it starts now).
+    public var fractionLeft: Double {
+        guard window > 0 else { return 0 }
+        return min(max(left / window, 0), 1)
+    }
+
+    /// The windows: a meeting counts down from 15 minutes, a job from 30.
+    public static let meetingWindow: TimeInterval = 15 * 60
+    public static let jobWindow: TimeInterval = 30 * 60
 }
 
 /// A button on an alert.
@@ -635,16 +651,18 @@ public struct InboxPresenter {
     // Live activity: a meeting within 15 minutes, else one of my jobs within 30
 
     public func liveActivity() -> LiveActivity? {
-        if let m = nextMeeting, m.startsAt > now, m.startsAt.timeIntervalSince(now) <= 15 * 60 {
-            return LiveActivity(icon: .video, tone: .ok, label: m.title, countdown: TimeText.countdown(from: now, to: m.startsAt))
+        if let m = nextMeeting, m.startsAt > now, m.startsAt.timeIntervalSince(now) <= LiveActivity.meetingWindow {
+            return LiveActivity(icon: .video, tone: .ok, label: m.title, countdown: TimeText.countdown(from: now, to: m.startsAt),
+                                left: m.startsAt.timeIntervalSince(now), window: LiveActivity.meetingWindow)
         }
         let starts = jobsToday.filter(\.mine).compactMap { j -> (InboxJob, Date)? in
             guard let s = j.start, let d = TimeText.date(on: now, hm: s, calendar: calendar),
-                  d > now, d.timeIntervalSince(now) <= 30 * 60 else { return nil }
+                  d > now, d.timeIntervalSince(now) <= LiveActivity.jobWindow else { return nil }
             return (j, d)
         }.sorted { $0.1 < $1.1 }
         if let (j, d) = starts.first {
-            return LiveActivity(icon: .hardHatSmall, tone: .brand, label: j.name, countdown: TimeText.countdown(from: now, to: d))
+            return LiveActivity(icon: .hardHatSmall, tone: .brand, label: j.name, countdown: TimeText.countdown(from: now, to: d),
+                                left: d.timeIntervalSince(now), window: LiveActivity.jobWindow)
         }
         return nil
     }
@@ -653,7 +671,8 @@ public struct InboxPresenter {
     public func previewLiveActivity() -> LiveActivity {
         if let live = liveActivity() { return live }
         if let m = nextMeeting ?? meetingsAhead().first(where: { !$0.allDay }) {
-            return LiveActivity(icon: .video, tone: .ok, label: m.title, countdown: TimeText.countdown(from: now, to: max(now, m.startsAt)))
+            return LiveActivity(icon: .video, tone: .ok, label: m.title, countdown: TimeText.countdown(from: now, to: max(now, m.startsAt)),
+                                left: max(0, m.startsAt.timeIntervalSince(now)), window: LiveActivity.meetingWindow)
         }
         return LiveActivity(icon: .hardHatSmall, tone: .brand, label: "Nothing next", countdown: "—")
     }

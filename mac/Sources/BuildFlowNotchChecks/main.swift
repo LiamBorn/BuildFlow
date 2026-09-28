@@ -161,10 +161,16 @@ do {
     near(GreetingTimeline.reveal(at: 2.05), 1, 1e-9, "all written after 1.7 s")
     let mid = GreetingTimeline.reveal(at: 1.2)
     check(mid > 0.2 && mid < 0.9, "half-way through writing: \(mid)")
-    equal(GreetingTimeline.trace(at: 0).opacity, 0, "edge light off at first")
-    near(GreetingTimeline.trace(at: 0.3 + 1.05).opacity, 1, 1e-9, "edge light on mid-way")
-    near(GreetingTimeline.trace(at: 0.3 + 1.05).angle, -160, 1e-9, "edge light half-way round")
-    near(GreetingTimeline.trace(at: 2.5).opacity, 0, 1e-9, "edge light off after ~2 s")
+    equal(GreetingTimeline.trace(at: 0).opacity, 0, "rim light off at first")
+    near(GreetingTimeline.trace(at: 0.3 + 1.05).opacity, 1, 1e-9, "rim light on mid-way")
+    near(GreetingTimeline.trace(at: 0.3 + 1.05).head, 0.5, 1e-9, "rim light half-way along the rim")
+    near(GreetingTimeline.trace(at: 2.5).opacity, 0, 1e-9, "rim light off after ~2 s")
+    check(GreetingTimeline.trace(at: 0.5).head < GreetingTimeline.trace(at: 2.1).head, "the light runs once, from the left ear round to the right")
+    // Any other opening (an alert, voice, a hover): a quicker run, done in about a second.
+    equal(RimTrace.opening(at: 0), .off, "an opening's light not yet running")
+    near(RimTrace.opening(at: RimTrace.openDelay + RimTrace.openDuration / 2).opacity, 1, 1e-9, "…then running")
+    equal(RimTrace.opening(at: RimTrace.openDelay + RimTrace.openDuration + 0.01), .off, "…and done")
+    check(RimTrace.openDelay + RimTrace.openDuration <= 1.5, "an opening's light is over within 1.5 s")
 }
 
 // MARK: Example inbox → the mock-up's words
@@ -239,13 +245,18 @@ do {
 
 do {
     let p = InboxPresenter(inbox: inbox, now: at("2026-09-26 09:25:08"), calendar: ny)
-    equal(p.liveActivity(), LiveActivity(icon: .video, tone: .ok, label: "Standup", countdown: "4:52"), "live: Standup in 4:52")
+    equal(p.liveActivity(), LiveActivity(icon: .video, tone: .ok, label: "Standup", countdown: "4:52", left: 292, window: 15 * 60),
+          "live: Standup in 4:52")
+    near(p.liveActivity()?.fractionLeft ?? -1, 292.0 / 900, 1e-9, "the ring: 4:52 of the meeting's 15 minutes left")
     let early = InboxPresenter(inbox: inbox, now: at("2026-09-26 09:05"), calendar: ny)
     equal(early.liveActivity(), nil, "no live activity 25 min out")
     equal(early.previewLiveActivity().label, "Standup", "preview still shows the next meeting")
     let jobSoon = InboxPresenter(inbox: inbox, now: at("2026-09-26 06:35"), calendar: ny)
     equal(jobSoon.liveActivity()?.label, "Footings pour", "a job within 30 min")
     equal(jobSoon.liveActivity()?.countdown, "25:00", "job countdown")
+    near(jobSoon.liveActivity()?.fractionLeft ?? -1, 25.0 / 30, 1e-9, "the ring: 25 of the job's 30 minutes left")
+    equal(LiveActivity(icon: .video, tone: .ok, label: "x", countdown: "—").fractionLeft, 0, "no window, no ring")
+    equal(early.previewLiveActivity().fractionLeft, 1, "a preview further out than 15 min shows a full ring")
 
     equal(p.weatherHoldAlert(), AlertContent(icon: .cloudRain, tone: .warn, status: "Weather hold",
                                               title: "Maple St. Plaza · Footings pour",
@@ -318,33 +329,39 @@ do {
               "\(state) plus its spring overshoot fits the canvas")
         check(s.radius <= s.height - s.ear, "\(state) radius fits under its ears")
     }
-    // The four that drop down: a 36 pt band beside the camera, the BuildFlow window, 8 pt of black at its foot.
-    equal(NotchMetrics.spec(for: .inbox, notch: g.notchSize), ShapeSpec(width: 720, height: 424, radius: 36, ear: 14), "inbox size")
-    equal(NotchMetrics.spec(for: .greeting, notch: g.notchSize), ShapeSpec(width: 580, height: 190, radius: 36, ear: 14), "greeting size")
-    equal(NotchMetrics.spec(for: .alert, notch: g.notchSize), ShapeSpec(width: 520, height: 144, radius: 36, ear: 12), "alert size")
-    equal(NotchMetrics.spec(for: .voice, notch: g.notchSize), ShapeSpec(width: 600, height: 268, radius: 36, ear: 14), "voice size")
+    // The four that drop down: the band beside the camera, 10 pt of black, the content, 16 pt of black at its sides and foot.
+    let inbox = NotchMetrics.spec(for: .inbox, notch: g.notchSize)
+    equal(inbox, ShapeSpec(width: 700, height: 278, radius: 32, ear: 14), "inbox size")
+    equal(NotchMetrics.spec(for: .greeting, notch: g.notchSize), ShapeSpec(width: 560, height: 176, radius: 32, ear: 14), "greeting size")
+    equal(NotchMetrics.spec(for: .alert, notch: g.notchSize), ShapeSpec(width: 540, height: 118, radius: 32, ear: 12), "alert size")
+    equal(NotchMetrics.spec(for: .voice, notch: g.notchSize), ShapeSpec(width: 600, height: 234, radius: 32, ear: 14), "voice size")
     equal(NotchMetrics.spec(for: .live, notch: g.notchSize), ShapeSpec(width: 356, height: 32, radius: 12, ear: 7), "live size")
-    check(NotchMetrics.spec(for: .inbox, notch: g.notchSize).width < 740, "the dropdown stays under 740 pt wide")
+    check(inbox.width <= 700, "the dropdown is 700 pt wide at most")
+    let greeting = NotchMetrics.spec(for: .greeting, notch: g.notchSize)
+    check(greeting.width < inbox.width && greeting.height < inbox.height, "the greeting is smaller than the dropdown it springs into")
+    check((canvas.width - inbox.outerWidth) / 2 >= 20 && canvas.height - inbox.height >= 40, "the canvas leaves room for the rim's glow")
 
-    // The BuildFlow window inside the frame, and the band beside the camera.
-    for state in NotchState.allCases where NotchMetrics.hasCard(state) {
+    // The content inside the black, and the band beside the camera.
+    for state in NotchState.allCases where NotchMetrics.dropsDown(state) {
         let s = NotchMetrics.spec(for: state, notch: g.notchSize)
-        let card = NotchMetrics.card(in: s, notch: g.notchSize)
+        let content = NotchMetrics.content(in: s, notch: g.notchSize)
         let camera = NotchMetrics.notchZone(in: s, notch: g.notchSize)
-        check(card.minY >= camera.maxY && !card.intersects(camera), "\(state): the window starts below the camera")
-        equal(card.minX, 8, "\(state): 8 pt of black at the left")
-        equal(s.width - card.maxX, 8, "\(state): 8 pt of black at the right")
-        equal(s.height - card.maxY, 8, "\(state): 8 pt of black at the foot")
-        equal(NotchMetrics.cardRadius(in: s), BuildFlowTheme.light.radii.stage, "\(state): the window's corners are BuildFlow's stage radius, concentric with the frame's")
+        check(content.minY >= camera.maxY && !content.intersects(camera), "\(state): the content starts below the camera")
+        equal(content.minX, 16, "\(state): 16 pt of black at the left")
+        equal(s.width - content.maxX, 16, "\(state): 16 pt of black at the right")
+        equal(s.height - content.maxY, 16, "\(state): 16 pt of black at the foot")
+        equal(NotchMetrics.innerRadius(in: s), BuildFlowTheme.dark.radii.card, "\(state): a card's corners sit concentric with the shape's")
         let slots = NotchMetrics.bandSlots(in: s, notch: g.notchSize)
         check(slots.left.maxX <= camera.minX - NotchMetrics.notchGap && slots.right.minX >= camera.maxX + NotchMetrics.notchGap,
-              "\(state): the mark and the status stay clear of the camera")
-        check(slots.left.width >= 90 && slots.right.width >= 90, "\(state): the band has room for the mark and the status")
-        check(slots.left.maxY <= card.minY && slots.right.maxY <= card.minY, "\(state): the band sits above the window")
+              "\(state): the tabs and the status stay clear of the camera")
+        check(slots.left.width >= 150 && slots.right.width >= 150, "\(state): the band has room for the tabs and the buttons")
+        check(slots.left.maxY <= content.minY && slots.right.maxY <= content.minY, "\(state): the band sits above the content")
+        equal(slots.left.height, g.notchSize.height, "\(state): the band is the camera's height, so its parts centre on the camera")
+        equal(slots.left.minX, content.minX, "\(state): the band lines up with the content")
     }
-    check(!NotchMetrics.hasCard(.resting) && !NotchMetrics.hasCard(.live), "at rest and the live activity are only black")
-    let externalCard = NotchMetrics.card(in: NotchMetrics.spec(for: .inbox, notch: CGSize(width: 179, height: 24)), notch: CGSize(width: 179, height: 24))
-    equal(externalCard.minY, 28, "on a screen without a notch the window starts below the drawn one")
+    check(!NotchMetrics.dropsDown(.resting) && !NotchMetrics.dropsDown(.live), "at rest and the live activity stay in the camera's band")
+    let externalContent = NotchMetrics.content(in: NotchMetrics.spec(for: .inbox, notch: CGSize(width: 179, height: 24)), notch: CGSize(width: 179, height: 24))
+    equal(externalContent.minY, 34, "on a screen without a notch the content starts below the drawn one")
 
     let external = ScreenFacts(frame: CGRect(x: 1470, y: 0, width: 1920, height: 1080),
                                visibleFrame: CGRect(x: 1470, y: 0, width: 1920, height: 1055), safeAreaTop: 0,
@@ -365,7 +382,7 @@ do {
     equal(NotchMetrics.liveWidth(leftContent: 600, rightContent: 40, notchWidth: 179), 520, "very long label is capped")
 }
 
-// MARK: BuildFlow's theme: the website's tokens, Light and Dark
+// MARK: The theme: the reference's black and near-black cards, Dark and Light
 
 do {
     near(ThemeColor(0x000000).contrast(on: ThemeColor(0xFFFFFF)), 21, 1e-9, "WCAG: black on white is 21:1")
@@ -380,67 +397,74 @@ do {
         equal(Set(set.shadows.keys), Set(ShadowToken.allCases), "\(name) defines every shadow")
         equal(Set(set.type.keys), Set(TypeToken.allCases), "\(name) defines every type style")
         check(!set.colors.values.contains(BuildFlowTheme.missing), "\(name) has no placeholder colour")
-        // Text on every surface: 4.5:1 or better.
+        // Text on every surface inside the cards and menus: 4.5:1 or better.
         for text in ThemeToken.text {
             for surface in ThemeToken.surfaces {
                 let c = set[text].contrast(on: set[surface])
                 check(c >= 4.5, "\(name): \(text.rawValue) on \(surface.rawValue) is \(String(format: "%.2f", c)):1, under 4.5")
             }
         }
-        // A tone as text: on its own wash (chips, the AI note), on the white card and on the ground (an alert's eyebrow).
+        // A tone as text: on its own wash (the AI note) and on the card (a settled proposal's words).
         for pair in ThemeToken.tonePairs {
-            for background in [pair.wash, .surface, .ground] {
+            for background in [pair.wash, .surface] {
                 let c = set[pair.color].contrast(on: set[background])
                 check(c >= 4.5, "\(name): \(pair.color.rawValue) on \(background.rawValue) is \(String(format: "%.2f", c)):1, under 4.5")
             }
         }
-        // The ink pill's label, the accent's own pair, and the chosen tab's count on its ink.
-        check(set[.surface].contrast(on: set[.ink]) >= 4.5, "\(name): a primary pill's label on its ink")
+        // The pills' labels: the light pill's on its ink, the dark grey pill's on the control grey and
+        // under the pointer; a badge's count; a segment's label on the hover grey.
+        check(set[.surface].contrast(on: set[.ink]) >= 4.5, "\(name): a light pill's label on its ink")
+        check(set[.ink].contrast(on: set[.control]) >= 4.5, "\(name): a dark grey pill's label (Join, Later)")
+        check(set[.ink].contrast(on: set[.selection]) >= 4.5, "\(name): a pill's label under the pointer")
         check(set[.onAccent].contrast(on: set[.accentFill]) >= 4.5, "\(name): on-accent on the accent fill")
-        check(set[.surface].contrast(on: set[.surface].opacity(0.16).over(set[.ink])) >= 4.5, "\(name): the chosen tab's count")
-        check(set[.inkMuted].contrast(on: set[.hover]) >= 4.5, "\(name): a tab's label on the hover grey")
+        check(set[.inkMuted].contrast(on: set[.hover]) >= 4.5, "\(name): a segment's label on the hover grey")
+        check(set[.lineSolid] != set[.surface], "\(name): a card has a hairline edge")
         equal(set[.frame], ThemeColor(0x000000), "\(name): the frame is the hardware's black")
-        equal(set.radii, ThemeRadii(stage: 28, card: 20, panel: 14, control: 10, chip: 6, pill: 999), "\(name): the radius ladder")
-        equal(set[.title], TypeStyle(.display, 22, 600, tracking: -0.03), "\(name): the drawer's title")
-        equal(set[.eyebrow], TypeStyle(.text, 11, 600, tracking: 0.14, uppercase: true), "\(name): an eyebrow")
+        equal(set[.track], BuildFlowTheme.frame[.track], "\(name): the tab track is the black's own")
+        equal(set[.rim], BuildFlowTheme.frame[.rim], "\(name): the rim light is the black's own")
+        equal(set.radii, ThemeRadii(stage: 32, card: 16, panel: 12, control: 10, chip: 7, pill: 999), "\(name): the radius ladder")
+        equal(set[.title], TypeStyle(.display, 17, 700, tracking: -0.02), "\(name): an alert's title, bold and tight")
+        equal(set[.eyebrow], TypeStyle(.text, 12, 600, tracking: -0.005), "\(name): a card's header")
+        equal(set[.liveFigure], TypeStyle(.display, 17, 700, tabular: true), "\(name): a countdown's big tabular figures")
     }
-    // The black band and the live activity read the dark set on the hardware black.
+    // Everything set straight on the black reads the dark set: the tabs, the status, the greeting,
+    // an alert, a countdown, voice.
     let frame = BuildFlowTheme.frame
-    for t in [ThemeToken.ink, .inkMuted, .ok, .warn] {
-        check(frame[t].contrast(on: frame[.frame]) >= 4.5, "the band's \(t.rawValue) on the black")
+    for t in ThemeToken.text + [.ok, .warn, .bad, .info, .orange, .accent] {
+        check(frame[t].contrast(on: frame[.frame]) >= 4.5, "\(t.rawValue) on the black")
     }
-    equal(frame.scheme, .dark, "the frame reads BuildFlow's dark tokens")
+    for t in [ThemeToken.ink, .inkMuted] { check(frame[t].contrast(on: frame[.track]) >= 4.5, "a tab's icon (\(t.rawValue)) on the track") }
+    check(frame[.ink].contrast(on: frame[.selection]) >= 4.5, "the chosen tab's icon on its pill")
+    for t in [ThemeToken.inkMuted, .warn] { check(frame[t].contrast(on: frame[.surface]) >= 4.5, "a day chip's words (\(t.rawValue)) on its pill") }
+    equal(frame.scheme, .dark, "the black reads the dark set")
 
-    // The website's values (app-shell-client-desk.css §1, §47; app-shell-daylight.css §29b).
+    // The reference's values: the black, the near-black cards, white titles, grey values, its accents.
     let light = BuildFlowTheme.light, dark = BuildFlowTheme.dark
-    equal([light[.ground], light[.surface], light[.hover], light[.ink], light[.inkMuted]],
-          [ThemeColor(0xF4F4F4), ThemeColor(0xFFFFFF), ThemeColor(0xF1F1F1), ThemeColor(0x1C1C1C), ThemeColor(0x626262)], "light surfaces and ink")
-    equal([light[.lineSolid], light[.lineSoft], light[.accentFill], light[.onAccent], light[.accentWash]],
-          [ThemeColor(0xE4E4E4), ThemeColor(0xEDEDED), ThemeColor(0x1C1C1C), ThemeColor(0xFFFFFF), ThemeColor(0xECECEC)], "light lines and accent")
-    equal([light[.ok], light[.okWash], light[.warn], light[.warnWash], light[.bad], light[.badWash], light[.info], light[.infoWash]],
-          [ThemeColor(0x1A7F43), ThemeColor(0xEAF6EE), ThemeColor(0x8A5709), ThemeColor(0xFDF4E6),
-           ThemeColor(0x9E1F18), ThemeColor(0xFCEAE8), ThemeColor(0x5C357A), ThemeColor(0xF3EBF7)], "light tones")
-    equal([dark[.ground], dark[.surface], dark[.surfaceRaised], dark[.hover], dark[.ink], dark[.inkMuted]],
-          [ThemeColor(0x121211), ThemeColor(0x1B1B19), ThemeColor(0x232320), ThemeColor(0x262623), ThemeColor(0xF4F3F0), ThemeColor(0xB5B2AB)],
-          "dark surfaces and ink")
-    equal([dark[.ok], dark[.okWash], dark[.warn], dark[.warnWash], dark[.bad], dark[.badWash], dark[.info], dark[.infoWash]],
-          [ThemeColor(0x80D19B), ThemeColor(0x1C2C21), ThemeColor(0xE0A64A), ThemeColor(0x2A2318),
-           ThemeColor(0xEB8178), ThemeColor(0x2D1D1C), ThemeColor(0xAB7FC2), ThemeColor(0x241C2A)], "dark tones")
-    equal([dark[.accentFill], dark[.accentWash]], [ThemeColor(0xF4F4F4), ThemeColor(0x2A2A2A)], "dark accent")
-    // The one departure: the website's faint greys are too light for text, so the Mac's are the
-    // nearest greys that clear 4.5:1 (a step lighter would not).
-    check(BuildFlowTheme.websiteInkFaint.light.contrast(on: light[.surface]) < 4.5, "the website's light faint is under 4.5:1 on white")
-    check(BuildFlowTheme.websiteInkFaint.dark.contrast(on: dark[.hover]) < 4.5, "the website's dark faint is under 4.5:1 on the hover surface")
-    check(ThemeColor(0x6F6F6F).contrast(on: light[.hover]) < 4.5, "the light faint is as light as 4.5:1 allows")
-    check(ThemeColor(0x8E8B82).contrast(on: dark[.hover]) < 4.5, "the dark faint is as dark as 4.5:1 allows")
+    equal([dark[.frame], dark[.surface], dark[.control], dark[.ink], dark[.inkMuted]],
+          [ThemeColor(0x000000), ThemeColor(0x1E1E20), ThemeColor(0x3A3A3D), ThemeColor(0xF5F5F7), ThemeColor(0xA1A1A6)],
+          "dark: the reference's black, cards, pills and type")
+    equal([dark[.ok], dark[.warn], dark[.bad], dark[.info], dark[.orange]],
+          [ThemeColor(0x30D158), ThemeColor(0xFF9F0A), ThemeColor(0xFF6B85), ThemeColor(0xBF8CFF), ThemeColor(0xF47B20)],
+          "dark: green, amber, pink-red, purple and BuildFlow orange")
+    equal(dark[.accentFill], ThemeColor(0xF47B20), "the accent is BuildFlow orange")
+    equal([light[.surface], light[.ink]], [ThemeColor(0xF2F2F7), ThemeColor(0x1C1C1E)], "light: #f2f2f7 cards, dark text")
+    // Each dark wash is its tone laid thinly over the card, as the reference's tinted discs are.
+    for pair in ThemeToken.tonePairs {
+        let wash = dark[pair.wash], card = dark[.surface], tone = dark[pair.color]
+        check(wash.luminance > card.luminance && wash.luminance < tone.luminance / 4,
+              "dark: \(pair.wash.rawValue) is a thin tint of \(pair.color.rawValue) over the card")
+    }
+    // The one departure: the reference's faint grey is too light for text on a menu, so the faint is
+    // the nearest grey that clears 4.5:1.
+    check(ThemeColor(0x8E8E93).contrast(on: dark[.surfaceRaised]) < 4.5, "the reference's #8e8e93 is under 4.5:1 on a menu")
 
-    equal(BuildFlowTheme.tone(.brand).color, .orange, "a job's tone is the Default set's grey hint")
-    equal(BuildFlowTheme.tone(.muted).wash, .hover, "a quiet row sits on the hover grey")
+    equal(BuildFlowTheme.tone(.brand).color, .orange, "a job's tone is BuildFlow orange")
+    equal(BuildFlowTheme.tone(.muted).wash, .control, "a quiet row's disc is the control grey")
     equal(BuildFlowTheme.tone(.warn).wash, .warnWash, "warn on its wash")
 }
 
 do {
-    // Appearance: Light by default (the website's), Dark, or whatever macOS shows.
+    // Appearance: Dark by default (the reference's), Light, or whatever macOS shows.
     equal(Appearance.light.theme(systemIsDark: true).scheme, .light, "Light stays light")
     equal(Appearance.dark.theme(systemIsDark: false).scheme, .dark, "Dark stays dark")
     equal(Appearance.system.theme(systemIsDark: true).scheme, .dark, "Match macOS in dark mode")
@@ -450,11 +474,11 @@ do {
     let defaults = UserDefaults(suiteName: suite)!
     defaults.removePersistentDomain(forName: suite)
     let store = AppearanceStore(defaults: defaults)
-    equal(store.appearance, .light, "light until chosen")
+    equal(store.appearance, .dark, "dark until chosen")
     store.appearance = .system
     equal(AppearanceStore(defaults: defaults).appearance, .system, "the choice is kept")
     defaults.set("sepia", forKey: AppearanceStore.key)
-    equal(store.appearance, .light, "an unknown value reads as light")
+    equal(store.appearance, .dark, "an unknown value reads as dark")
     defaults.removePersistentDomain(forName: suite)
 }
 
@@ -524,37 +548,42 @@ do {
 }
 
 do {
-    // ⌃⌥ and a click play it: the greeting first, then the content; hovering doesn't replay it.
-    check(InboxIntro.plays(.chord, reduceMotion: false), "a ⌃⌥ open plays the greeting")
-    check(InboxIntro.plays(.click, reduceMotion: false), "a click open plays the greeting")
-    check(!InboxIntro.plays(.hover, reduceMotion: false), "a hover open doesn't replay it")
+    // ⌃⌥ and a click open as the greeting first; hovering goes straight to the dropdown.
+    check(InboxIntro.plays(.chord, reduceMotion: false), "a ⌃⌥ open greets first")
+    check(InboxIntro.plays(.click, reduceMotion: false), "a click open greets first")
+    check(!InboxIntro.plays(.hover, reduceMotion: false), "a hover open goes straight to the dropdown")
     check(!InboxIntro.plays(.chord, reduceMotion: true) && !InboxIntro.plays(.click, reduceMotion: true),
           "Reduce Motion: nothing writes")
 
     let parts = InboxIntro.Part.allCases
-    // Just opened: nothing written, nothing in yet.
+    // Just opened: the greeting, nothing written yet, nothing in.
+    check(InboxIntro.showsGreeting(at: 0, playing: true), "it opens as the greeting")
     check(InboxIntro.reveal(at: 0, playing: true) <= -0.07, "nothing written as it opens")
     check(parts.allSatisfy { InboxIntro.progress($0, at: 0, playing: true) == 0 }, "no content as it opens")
-    // The greeting before the content; the content cascades in 0.6–0.9 s after opening, in order.
-    check(InboxIntro.writeDelay < InboxIntro.start(.tabs), "the greeting starts writing before the content comes")
-    check(InboxIntro.start(.tabs) >= 0.6 && InboxIntro.start(.today) <= 0.9, "tabs, list and Today come in between 0.6 and 0.9 s")
-    check(InboxIntro.start(.chips) < InboxIntro.start(.tabs) && InboxIntro.start(.tabs) < InboxIntro.start(.list)
-          && InboxIntro.start(.list) < InboxIntro.start(.today), "chips, tabs, list, Today, in that order")
-    check(InboxIntro.start(.today) + InboxIntro.partDuration <= InboxIntro.writeDelay + InboxIntro.writeDuration,
-          "everything is in while the script finishes")
-    near(InboxIntro.writeDuration, 1.2, 0.001, "the script writes in about 1.2 s")
+    // The greeting: written, its day line in and the rim's light run, all before the shape springs open at about 1.3 s.
+    near(InboxIntro.greetingHold, 1.3, 0.05, "the greeting shows for about 1.3 s")
+    near(InboxIntro.reveal(at: InboxIntro.greetingHold, playing: true), 1, 1e-9, "written before it springs open")
     check(InboxIntro.writeDuration < GreetingTimeline.writeDuration, "quicker than the lid greeting")
-    // Mid-writing: part written, the tabs arriving.
-    let mid = InboxIntro.reveal(at: 0.8, playing: true)
-    check(mid > 0.2 && mid < 0.9, "half-way through writing at 0.8 s: \(mid)")
-    check(InboxIntro.progress(.tabs, at: 0.8, playing: true) > 0.5 && InboxIntro.progress(.today, at: 0.8, playing: true) < 0.3,
-          "at 0.8 s the tabs are nearly in and Today is just starting")
-    // Settled: written, everything in.
-    near(InboxIntro.reveal(at: InboxIntro.settled, playing: true), 1, 1e-9, "written when settled")
-    check(parts.allSatisfy { InboxIntro.progress($0, at: InboxIntro.settled, playing: true) == 1 }, "all in when settled")
-    // Hovering (or Reduce Motion): the header already written and everything there at once.
-    near(InboxIntro.reveal(at: 0, playing: false), 1, 1e-9, "hover: already written")
+    near(InboxIntro.progress(.chips, at: InboxIntro.greetingHold, playing: true), 1, 1e-9, "the day line is in before it springs open")
+    check(InboxIntro.traceDelay + InboxIntro.traceDuration <= InboxIntro.greetingHold, "the rim's light has run before it springs open")
+    let mid = InboxIntro.reveal(at: 0.6, playing: true)
+    check(mid > 0.2 && mid < 0.9, "half-way through writing at 0.6 s: \(mid)")
+    near(InboxIntro.trace(at: 0.7, playing: true).opacity, 1, 1e-9, "the rim's light is running at 0.7 s")
+    // Then the dropdown: the tabs, the list and Today cascade in, in that order.
+    check(!InboxIntro.showsGreeting(at: InboxIntro.greetingHold, playing: true), "then the dropdown")
+    check(InboxIntro.start(.tabs) > InboxIntro.greetingHold, "the dropdown's parts come after the greeting")
+    check(InboxIntro.start(.chips) < InboxIntro.start(.tabs) && InboxIntro.start(.tabs) < InboxIntro.start(.list)
+          && InboxIntro.start(.list) < InboxIntro.start(.today), "day line, tabs, list, Today, in that order")
+    check(InboxIntro.settled < 2.1, "everything in within about 2 s")
+    check(InboxIntro.progress(.tabs, at: 1.56, playing: true) > 0.5 && InboxIntro.progress(.today, at: 1.56, playing: true) < 0.5,
+          "at 1.56 s the tabs are nearly in and Today is still coming")
+    // Settled: everything in.
+    check(parts.allSatisfy { InboxIntro.progress($0, at: InboxIntro.settled, playing: true) > 1 - 1e-9 }, "all in when settled")
+    // Hovering (or Reduce Motion): no greeting, everything there at once; a hover still runs the rim's light.
+    check(!InboxIntro.showsGreeting(at: 0, playing: false), "hover: no greeting")
+    near(InboxIntro.reveal(at: 0, playing: false), 1, 1e-9, "hover: nothing to write")
     check(parts.allSatisfy { InboxIntro.progress($0, at: 0, playing: false) == 1 }, "hover: everything there at once")
+    check(InboxIntro.trace(at: RimTrace.openDelay + 0.5, playing: false).opacity > 0, "hover: the rim's light still runs")
 }
 
 // MARK: The window's parts: day chips, alert buttons, empty states, the band
@@ -1035,9 +1064,11 @@ do {
     equal(t.rows[0].subtitle, "By 2 PM · Footings pour · Maple St. Plaza · Rain: 0.30 in of rain, Saturday 2–3:30 PM", "rain call subtitle")
     equal(p.todayRows().map(\.subtitle), ["Standup in 10 min", "Footings pour · 7:00", "Rain from 2 PM · Maple St. Plaza"], "real today card")
     equal(p.dayLine(), ["2 jobs today", "Standup at 9:10", "Rain after 2 PM"], "real greeting day line")
-    equal(p.liveActivity(), LiveActivity(icon: .video, tone: .ok, label: "Standup", countdown: "10:00"), "meeting countdown")
+    equal(p.liveActivity(), LiveActivity(icon: .video, tone: .ok, label: "Standup", countdown: "10:00", left: 600, window: 15 * 60),
+          "meeting countdown")
     let dawn = InboxPresenter(inbox: real, now: InboxDecoding.parseISO8601("2026-09-26T11:40:00Z")!, calendar: chicago)
-    equal(dawn.liveActivity(), LiveActivity(icon: .hardHatSmall, tone: .brand, label: "Footings pour", countdown: "20:00"), "job countdown")
+    equal(dawn.liveActivity(), LiveActivity(icon: .hardHatSmall, tone: .brand, label: "Footings pour", countdown: "20:00", left: 1200, window: 30 * 60),
+          "job countdown")
     let quiet = InboxPresenter(inbox: real, now: InboxDecoding.parseISO8601("2026-09-26T13:40:00Z")!, calendar: chicago)
     equal(quiet.liveActivity(), nil, "30 min before the meeting and no job soon: rest")
     equal(InboxPresenter.alert(for: d), AlertContent(icon: .triangleAlert, tone: .bad, status: "DelayIQ", title: "DelayIQ being tracked",

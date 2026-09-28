@@ -176,9 +176,8 @@ public final class GreetingStore {
 
 // MARK: - The greeting's motion, as numbers
 
-/// Timings for the written script and the edge light, measured from the video and
-/// matching the mock-up's CSS (`write 1.7s cubic-bezier(.45,.05,.4,1) .35s`,
-/// `trace 2.1s linear .3s`).
+/// Timings for the written script and the rim light, measured from the video: the script writes in
+/// 1.7 s after 0.35 s, while a light runs once along the shape's rim.
 public enum GreetingTimeline {
     public static let writeDelay: Double = 0.35
     public static let writeDuration: Double = 1.7
@@ -194,16 +193,40 @@ public enum GreetingTimeline {
         return -0.08 + 1.08 * writeEasing.value(at: t)
     }
 
-    /// The edge light: opacity (fades in over the first 12 %, out over the last 15 %)
-    /// and the angle of its bright end in CSS conic degrees (20° → -340°, one full turn).
-    public static func trace(at elapsed: Double) -> (opacity: Double, angle: Double) {
-        let t = (elapsed - traceDelay) / traceDuration
-        if t <= 0 { return (0, 20) }
-        if t >= 1 { return (0, -340) }
+    /// The rim light as the greeting opens.
+    public static func trace(at elapsed: Double) -> RimTrace {
+        RimTrace.at(elapsed, delay: traceDelay, duration: traceDuration)
+    }
+}
+
+/// The light that runs once along the black shape's rim as it opens (f01 of the reference): down
+/// the left side from under the ear, round the foot, and up the right side.
+public struct RimTrace: Equatable {
+    /// 0 … 1: faded in over the first 12 % of its run and out over the last 15 %.
+    public let opacity: Double
+    /// How far along the rim the light has run: 0 at the left ear, 1 at the right.
+    public let head: Double
+
+    public init(opacity: Double, head: Double) {
+        self.opacity = opacity
+        self.head = head
+    }
+
+    public static let off = RimTrace(opacity: 0, head: 0)
+
+    /// The trace `elapsed` seconds after a shape opened; off before `delay` and after `delay + duration`.
+    public static func at(_ elapsed: Double, delay: Double, duration: Double) -> RimTrace {
+        let t = (elapsed - delay) / duration
+        guard t > 0, t < 1 else { return .off }
         let opacity: Double
         if t < 0.12 { opacity = t / 0.12 } else if t > 0.85 { opacity = (1 - t) / 0.15 } else { opacity = 1 }
-        return (opacity, 20 - 360 * t)
+        return RimTrace(opacity: opacity, head: t)
     }
+
+    /// Any other opening (an alert, voice, the dropdown opened by hovering): a quicker run.
+    public static let openDelay: Double = 0.18
+    public static let openDuration: Double = 1.1
+    public static func opening(at elapsed: Double) -> RimTrace { at(elapsed, delay: openDelay, duration: openDuration) }
 }
 
 /// CSS-style cubic-bezier easing (the same solver browsers use).
@@ -281,37 +304,44 @@ extension GreetingPlanner {
     }
 }
 
-/// The dropdown's opening, as numbers: the greeting writes itself at the top (quicker than the lid
-/// greeting), its day line comes in as chips, and then the tab track, the list and the Today card
-/// cascade in beneath it while the script finishes. Opened by ⌃⌥ or a click it plays; opened by
-/// hovering, or with Reduce Motion on, everything is simply there.
+/// The dropdown's opening, as numbers. Opened by ⌃⌥ or a click, the shape opens first as the
+/// greeting (the reference's f01): the script writes itself in white while a light runs along the
+/// rim, and the day line comes in under it. After `greetingHold` the shape springs into the full
+/// dropdown and its parts cascade in: the tabs and the buttons beside the camera, the list, and the
+/// Today card. Opened by hovering, or with Reduce Motion on, the dropdown is simply there.
 public enum InboxIntro {
     public enum Part: Int, CaseIterable {
         case chips, tabs, list, today
     }
 
-    public static let writeDelay: Double = 0.2
-    public static let writeDuration: Double = 1.2
+    /// The script, written within the greeting (quicker than the lid's).
+    public static let writeDelay: Double = 0.15
+    public static let writeDuration: Double = 0.95
     public static let writeEasing = CubicBezier(0.45, 0.05, 0.4, 1)
+    /// The rim light, run once while the greeting shows.
+    public static let traceDelay: Double = 0.25
+    public static let traceDuration: Double = 0.95
+    /// How long the greeting shows before the shape springs into the dropdown.
+    public static let greetingHold: Double = 1.3
     /// Each part's entrance: the website's base duration on its entrance curve (motion/tokens.ts DUR.base, EASE.out).
     public static let partDuration: Double = 0.4
     public static let partEasing = CubicBezier(0.22, 1, 0.36, 1)
     /// How far a part rises as it comes in, in points.
     public static let rise: Double = 10
 
-    /// When a part starts coming in, in seconds after the dropdown opened: the chips with the
-    /// script, then the tabs, the list and the Today card a card-stagger apart (STAGGER.card).
+    /// When a part starts coming in, in seconds after the dropdown was asked for: the day line under
+    /// the script, then, once the shape has sprung open, the tabs, the list and Today a card-stagger apart.
     public static func start(_ part: Part) -> Double {
         switch part {
-        case .chips: return 0.42
-        case .tabs: return 0.6
-        case .list: return 0.69
-        case .today: return 0.78
+        case .chips: return 0.55
+        case .tabs: return greetingHold + 0.08
+        case .list: return greetingHold + 0.16
+        case .today: return greetingHold + 0.24
         }
     }
 
-    /// Everything written and in place.
-    public static var settled: Double { max(writeDelay + writeDuration, start(.today) + partDuration) }
+    /// Everything in place.
+    public static var settled: Double { start(.today) + partDuration }
 
     public static func plays(_ opening: InboxOpening, reduceMotion: Bool) -> Bool {
         guard !reduceMotion else { return false }
@@ -321,12 +351,22 @@ public enum InboxIntro {
         }
     }
 
+    /// Whether the shape is still the greeting, `elapsed` seconds after the dropdown was asked for.
+    public static func showsGreeting(at elapsed: Double, playing: Bool) -> Bool {
+        playing && elapsed < greetingHold
+    }
+
     /// The script's mask edge, -0.08 (nothing written) … 1 (all written); written at once when the
     /// opening doesn't play.
     public static func reveal(at elapsed: Double, playing: Bool) -> Double {
         guard playing else { return 1 }
         let t = min(max((elapsed - writeDelay) / writeDuration, 0), 1)
         return -0.08 + 1.08 * writeEasing.value(at: t)
+    }
+
+    /// The rim light while the greeting shows; opened by hovering, the quicker run of any opening.
+    public static func trace(at elapsed: Double, playing: Bool) -> RimTrace {
+        playing ? RimTrace.at(elapsed, delay: traceDelay, duration: traceDuration) : RimTrace.opening(at: elapsed)
     }
 
     /// How far a part has come in, 0…1.

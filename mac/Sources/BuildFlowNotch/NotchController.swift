@@ -28,6 +28,8 @@ final class NotchController {
     private var hoverWork: DispatchWorkItem?
     private var leaveWork: DispatchWorkItem?
     private var autoCloseWork: DispatchWorkItem?
+    /// The dropdown's greeting springing into the full dropdown.
+    private var greetingWork: DispatchWorkItem?
     private var pollTimer: Timer?
 
     var onOpenSettings: (() -> Void)?
@@ -129,6 +131,7 @@ final class NotchController {
         hoverWork?.cancel()
         leaveWork?.cancel()
         autoCloseWork?.cancel()
+        greetingWork?.cancel()
         self.opener = opener
         openedAt = Date()
         pointerWasInside = false
@@ -139,6 +142,7 @@ final class NotchController {
             model.beginInbox(opening, at: openedAt)
             Log.info("inbox: opened by \(opening.rawValue)" + (model.introPlays ? ", greeting plays" : ""))
         }
+        model.shownAt = openedAt
         withAnimation(Motion.shape(opening: state != .resting, reduceMotion: model.reduceMotion)) {
             model.state = state
         }
@@ -153,6 +157,7 @@ final class NotchController {
             // Opening the inbox shows every alert there is: none needs to drop down later.
             pendingAlerts.removeAll()
             if model.tab == .notifications { session?.markShownSeen() }
+            if model.inboxGreeting { springOpenLater() }
         default:
             break
         }
@@ -207,6 +212,26 @@ final class NotchController {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
+    /// Opened by ⌃⌥ or a click, the dropdown greets first; then the shape springs into the dropdown.
+    private func springOpenLater() {
+        let startedAt = openedAt
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.model.state == .inbox, self.openedAt == startedAt else { return }
+            self.springOpen()
+        }
+        greetingWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + InboxIntro.greetingHold, execute: work)
+    }
+
+    private func springOpen() {
+        greetingWork?.cancel()
+        guard model.state == .inbox, model.inboxGreeting else { return }
+        withAnimation(Motion.shape(opening: true, reduceMotion: model.reduceMotion)) {
+            model.inboxGreeting = false
+        }
+        refreshPointer()
+    }
+
     func toggleInbox(opener: Opener = .click, via: InboxOpening = .click) {
         if model.state == .inbox { rest() } else { show(.inbox, opener: opener, via: via) }
     }
@@ -236,6 +261,15 @@ final class NotchController {
         guard let g = geometry else { return nil }
         // Include the screen's very top row, which NSRect.contains leaves out.
         var r = g.shapeRect(model.spec)
+        r.size.height += 1
+        return r
+    }
+
+    /// Where the pointer may go without the dropdown closing: the dropdown's own rect, even while its
+    /// smaller greeting shows (the pointer may already be on its way to where the list will be).
+    private func leaveRect() -> CGRect? {
+        guard let g = geometry else { return nil }
+        var r = g.shapeRect(model.dropdownSpec)
         r.size.height += 1
         return r
     }
@@ -293,7 +327,7 @@ final class NotchController {
                 hoverWork = nil
             }
         case .inbox:
-            let zone = r.insetBy(dx: -10, dy: -10)
+            let zone = (leaveRect() ?? r).insetBy(dx: -10, dy: -10)
             if menuOpen {
                 leaveWork?.cancel()
                 leaveWork = nil
@@ -306,7 +340,7 @@ final class NotchController {
                 let work = DispatchWorkItem { [weak self] in
                     guard let self else { return }
                     self.leaveWork = nil
-                    guard self.model.state == .inbox, let r = self.hitRect(),
+                    guard self.model.state == .inbox, let r = self.leaveRect(),
                           !r.insetBy(dx: -10, dy: -10).contains(NSEvent.mouseLocation) else { return }
                     self.rest()
                 }
@@ -337,6 +371,8 @@ final class NotchController {
                 guard let self, self.model.state == .alert, Date().timeIntervalSince(self.alertButtonAt) > 0.3 else { return }
                 self.show(.inbox, opener: .click, via: .click)
             }
+        case .inbox where model.inboxGreeting:
+            springOpen()                            // a click on the greeting opens the dropdown now
         case .inbox, .voice:
             // Only the notch itself toggles closed; the rest of the panel is controls.
             let justHovered = opener == .hover && Date().timeIntervalSince(openedAt) < 0.6

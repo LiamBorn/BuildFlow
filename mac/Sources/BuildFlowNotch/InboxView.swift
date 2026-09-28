@@ -1,25 +1,23 @@
 import BuildFlowNotchKit
 import SwiftUI
 
-// MARK: - 2 · The dropdown
+// MARK: - 2 · The dropdown (the reference's f05)
 
-/// The dropdown's measurements, inside its BuildFlow window.
+/// The dropdown's measurements.
 enum InboxLayout {
-    static let padding: CGFloat = 18
-    static let top: CGFloat = 14
-    static let bottom: CGFloat = 16
-    /// The greeting and its chips.
-    static let header: CGFloat = 86
-    static let gap: CGFloat = 12
-    static let tabs: CGFloat = 34
-    static let cardGap: CGFloat = 12
-    static let rowHeight: CGFloat = 48
-    /// The Today card's share of the width beside the list.
-    static let todayShare: CGFloat = 0.42
-
-    static func bodyHeight(card: CGSize) -> CGFloat {
-        card.height - top - header - gap - tabs - gap - bottom
-    }
+    /// Black between the two cards.
+    static let cardGap: CGFloat = 10
+    /// The list's share of the two cards' width: the reference's split, the wider card holding the list.
+    static let listShare: CGFloat = 0.53
+    /// A card's header ("Notifications", "Today").
+    static let header: CGFloat = 34
+    static let rowHeight: CGFloat = 44
+    /// The Today rows share the card's height, up to this.
+    static let todayRowMax: CGFloat = 60
+    /// A tab in the track.
+    static let tab = CGSize(width: 38, height: 26)
+    /// Where the gear's menu hangs, under the band.
+    static let menuTop: CGFloat = 6
 }
 
 /// What the dropdown shows at one moment: read from the inbox once a second, not every frame of
@@ -49,11 +47,12 @@ struct InboxFrame {
     }
 }
 
-/// The dropdown: the greeting at the top (written as it opens), its day in chips, the tab track,
-/// and the list beside the Today card.
+/// The dropdown. Opened by ⌃⌥ or a click it opens as the greeting first (the script writing itself,
+/// the day line under it), then springs into the tabs and the two cards; opened by hovering it is
+/// simply there.
 struct InboxContent: View {
     @ObservedObject var model: NotchModel
-    let spec: ShapeSpec
+    @Environment(\.notchReduceMotion) private var reduceMotion
 
     var body: some View {
         // The words once a second; the opening's frames only move what is already there.
@@ -63,16 +62,26 @@ struct InboxContent: View {
             let settled = date.timeIntervalSince(model.inboxOpenedAt) > InboxIntro.settled + 0.2
             IntroClock(fixedElapsed: model.fixedNow == nil ? nil : model.inboxElapsedOverride ?? .infinity,
                        openedAt: model.inboxOpenedAt, running: playing && !settled) { elapsed in
-                CardContainer(spec: spec, notch: model.notchSize) { size in
-                    InboxWindow(model: model, frame: frame, size: size, elapsed: elapsed, playing: playing)
+                ZStack(alignment: .top) {
+                    if model.inboxGreeting {
+                        GreetingStage(text: model.headerGreeting, chips: frame.waiting ? [] : frame.chips, token: .scriptHeader,
+                                      reveal: InboxIntro.reveal(at: elapsed, playing: playing),
+                                      chipsIn: InboxIntro.progress(.chips, at: elapsed, playing: playing),
+                                      spec: model.spec(for: .greeting), notch: model.notchSize)
+                            .transition(.notchContent(reduceMotion: reduceMotion))
+                    } else {
+                        // Its parts cascade in themselves.
+                        InboxDropdown(model: model, frame: frame, spec: model.dropdownSpec, elapsed: elapsed, playing: playing)
+                            .transition(.identity)
+                    }
                 }
             }
         }
     }
 }
 
-/// The time since the dropdown opened: every frame while its opening plays, and still once it has
-/// settled (the same view either way, so nothing inside it is rebuilt when the frames stop).
+/// The time since the dropdown was asked for: every frame while its opening plays, and still once it
+/// has settled (the same view either way, so nothing inside it is rebuilt when the frames stop).
 struct IntroClock<Content: View>: View {
     let fixedElapsed: Double?
     let openedAt: Date
@@ -90,22 +99,12 @@ struct IntroClock<Content: View>: View {
     }
 }
 
-/// A part of the dropdown coming in beneath the greeting: it rises, sharpens and appears.
-struct IntroEntrance: ViewModifier {
-    let progress: Double
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(progress)
-            .offset(y: (1 - progress) * InboxIntro.rise)
-            .blur(radius: (1 - progress) * 6)
-    }
-}
-
-struct InboxWindow: View {
+/// The black panel: the icon tabs top-left and the status, mic and gear top-right, beside the camera;
+/// below, the list and the Today card side by side.
+struct InboxDropdown: View {
     @ObservedObject var model: NotchModel
     let frame: InboxFrame
-    let size: CGSize
+    let spec: ShapeSpec
     let elapsed: Double
     let playing: Bool
     @Environment(\.notchTheme) private var theme
@@ -114,157 +113,101 @@ struct InboxWindow: View {
     func progress(_ part: InboxIntro.Part) -> Double { InboxIntro.progress(part, at: elapsed, playing: playing) }
 
     var body: some View {
-        let inner = size.width - 2 * InboxLayout.padding
-        let bodyHeight = InboxLayout.bodyHeight(card: size)
-        let todayWidth = ((inner - InboxLayout.cardGap) * InboxLayout.todayShare).rounded()
-        let listWidth = inner - InboxLayout.cardGap - todayWidth
-        let card = frame.card
-        let waiting = frame.waiting
+        let notch = model.notchSize
+        let box = NotchMetrics.content(in: spec, notch: notch)
+        let listWidth = ((box.width - InboxLayout.cardGap) * InboxLayout.listShare).rounded()
+        let todayWidth = box.width - InboxLayout.cardGap - listWidth
+        let cards = model.theme
         ZStack(alignment: .topLeading) {
-            VStack(alignment: .leading, spacing: 0) {
-                header(waiting: waiting)
-                    .frame(height: InboxLayout.header, alignment: .top)
-                tabsRow(card: card, waiting: waiting)
-                    .frame(height: InboxLayout.tabs)
-                    .modifier(IntroEntrance(progress: progress(.tabs)))
-                    .padding(.top, InboxLayout.gap)
-                HStack(alignment: .top, spacing: InboxLayout.cardGap) {
-                    listCard(card, height: bodyHeight)
-                        .frame(width: listWidth, height: bodyHeight)
-                        .whiteCard(theme)
-                        .modifier(IntroEntrance(progress: progress(.list)))
-                    todayCard(height: bodyHeight, waiting: waiting)
-                        .frame(width: todayWidth, height: bodyHeight)
-                        .whiteCard(theme)
-                        .modifier(IntroEntrance(progress: progress(.today)))
-                }
-                .padding(.top, InboxLayout.gap)
+            InBand(side: .left, spec: spec, notch: notch) {
+                TabTrack(model: model, counts: frame.counts)
             }
-            .padding(.top, InboxLayout.top)
-            .padding(.horizontal, InboxLayout.padding)
-            .frame(width: size.width, height: size.height, alignment: .topLeading)
+            .modifier(IntroEntrance(progress: progress(.tabs)))
+            InBand(side: .right, spec: spec, notch: notch) {
+                BandControls(model: model)
+            }
+            .modifier(IntroEntrance(progress: progress(.tabs)))
+
+            HStack(alignment: .top, spacing: InboxLayout.cardGap) {
+                ListCard(model: model, card: frame.card, unread: frame.unread, waiting: frame.waiting, height: box.height)
+                    .frame(width: listWidth, height: box.height)
+                    .notchCard(cards)
+                    .modifier(IntroEntrance(progress: progress(.list)))
+                TodayCard(model: model, frame: frame, height: box.height)
+                    .frame(width: todayWidth, height: box.height)
+                    .notchCard(cards)
+                    .modifier(IntroEntrance(progress: progress(.today)))
+            }
+            .environment(\.notchTheme, cards)
+            .environment(\.colorScheme, cards.colorScheme)
+            .padding(.leading, box.minX)
+            .padding(.top, box.minY)
 
             if model.settingsMenuOpen {
-                // A click anywhere else in the window puts the menu away (and does nothing else).
+                // A click anywhere else in the dropdown puts the menu away (and does nothing else).
                 Color.clear
                     .contentShape(Rectangle())
-                    .frame(width: size.width, height: size.height)
+                    .frame(width: spec.width, height: spec.height)
                     .onTapGesture { model.onAction?(.toggleSettingsMenu) }
                 SettingsMenu(model: model)
-                    .padding(.top, InboxLayout.top + 36 + 8)
-                    .padding(.trailing, InboxLayout.padding)
-                    .frame(width: size.width, height: size.height, alignment: .topTrailing)
+                    .environment(\.notchTheme, cards)
+                    .environment(\.colorScheme, cards.colorScheme)
+                    .padding(.top, notch.height + InboxLayout.menuTop)
+                    .padding(.trailing, NotchMetrics.bandPadding)
+                    .frame(width: spec.width, height: spec.height, alignment: .topTrailing)
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing)))
             }
 
             if let banner = model.banner {
                 theme.text(banner, .toast)
-                    .foregroundColor(theme[.surface])
+                    .foregroundColor(cards[.surface])
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: theme.radii.card).fill(theme[.ink]).themeShadow(.raised, theme))
-                    .frame(maxWidth: size.width - 120)
-                    .padding(.bottom, 14)
-                    .frame(width: size.width, height: size.height, alignment: .bottom)
+                    .background(Capsule().fill(cards[.ink]).themeShadow(.raised, cards))
+                    .frame(maxWidth: spec.width - 140)
+                    .padding(.bottom, NotchMetrics.contentInset + 12)
+                    .frame(width: spec.width, height: spec.height, alignment: .bottom)
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
         }
-        .frame(width: size.width, height: size.height, alignment: .topLeading)
+        .frame(width: spec.width, height: spec.height, alignment: .topLeading)
     }
+}
 
-    // The greeting, its chips, and the buttons.
-    func header(waiting: Bool) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 0) {
-                ScriptLine(text: model.headerGreeting, token: .scriptHeader,
-                           reveal: InboxIntro.reveal(at: elapsed, playing: playing))
-                    .padding(.top, 4)
-                ChipRow(chips: waiting ? [] : frame.chips)
-                    .padding(.top, 14)
-                    .modifier(IntroEntrance(progress: progress(.chips)))
-            }
-            Spacer(minLength: 12)
-            HStack(spacing: 8) {
-                if model.isExample {
-                    PillButton(title: model.connection == .connecting ? "Connecting…" : "Connect", kind: .primary) {
-                        model.onAction?(.connect)
-                    }
-                    .help("Connect this Mac to your BuildFlow account")
+/// Right of the camera: the connection's status in grey (the reference's "Connected"), Connect while
+/// this Mac isn't, the mic on a subtle disc, and the plain gear.
+struct BandControls: View {
+    @ObservedObject var model: NotchModel
+    @Environment(\.notchTheme) private var theme
+
+    var body: some View {
+        let status = model.bandStatus
+        HStack(spacing: 10) {
+            theme.text(status.label, .band)
+                .foregroundColor(status == .example ? theme.tone(status.tone).color : theme[.inkMuted])
+                .lineLimit(1)
+                .fixedSize()
+            if model.isExample {
+                PillButton(title: model.connection == .connecting ? "Connecting…" : "Connect", kind: .primary, size: .small) {
+                    model.onAction?(.connect)
                 }
-                IconDiscButton(icon: .mic, style: .ink, help: "Ask BuildFlow (hold ⌃ ⌥)") { model.onAction?(.startVoice) }
-                IconDiscButton(icon: .settings, style: .white, pressed: model.settingsMenuOpen, help: "Settings") {
+                .help("Connect this Mac to your BuildFlow account")
+            }
+            HStack(spacing: 4) {
+                NotchIconButton(icon: .mic, disc: true, help: "Ask BuildFlow (hold ⌃ ⌥)") { model.onAction?(.startVoice) }
+                NotchIconButton(icon: .settings, pressed: model.settingsMenuOpen, help: "Settings") {
                     model.onAction?(.toggleSettingsMenu)
                 }
             }
         }
     }
-
-    // The tab track, and the list's note or action at the right.
-    func tabsRow(card: CardContent, waiting: Bool) -> some View {
-        HStack(spacing: 12) {
-            TabTrack(model: model, counts: frame.counts)
-            Spacer(minLength: 8)
-            if model.tab == .notifications && frame.unread > 0 && !model.isExample {
-                PillButton(title: card.note, kind: .secondary, size: .small) { model.onAction?(.markAllRead) }
-            } else if !card.note.isEmpty && !card.rows.isEmpty && !waiting {
-                theme.text(card.note, .meta).foregroundColor(theme[.inkFaint]).lineLimit(1)
-            }
-        }
-    }
-
-    @ViewBuilder
-    func listCard(_ card: CardContent, height: CGFloat) -> some View {
-        if card.rows.isEmpty {
-            let empty = model.isExample ? card.empty : (model.inboxProblem.map(EmptyState.problem) ?? card.empty)
-            EmptyStateView(state: empty) { action in model.onAction?(.empty(action)) }
-        } else if model.fixedNow != nil {
-            // Snapshots: ImageRenderer draws no scroll views, so show what fits.
-            rows(card.rows, limit: max(1, Int((height - 8) / InboxLayout.rowHeight)))
-                .padding(.vertical, 4)
-                .frame(maxHeight: .infinity, alignment: .top)
-        } else {
-            ScrollView(.vertical, showsIndicators: false) {
-                rows(card.rows, limit: card.rows.count).padding(.vertical, 4)
-            }
-        }
-    }
-
-    func todayCard(height: CGFloat, waiting: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Eyebrow("Today · \(frame.todayHeader)")
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .padding(.bottom, 4)
-            if waiting {
-                theme.text("Your day shows here once the inbox is read.", .emptyDetail)
-                    .foregroundColor(theme[.inkMuted])
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 6)
-            } else {
-                rows(frame.today, limit: max(1, Int((height - 36) / InboxLayout.rowHeight)))
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    func rows(_ rows: [InboxRow], limit: Int) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(rows.prefix(limit).enumerated()), id: \.element.id) { i, row in
-                RowView(model: model, row: row)
-                    .overlay(alignment: .top) {
-                        if i > 0 { Hairline().padding(.horizontal, 14) }
-                    }
-            }
-        }
-    }
 }
 
-/// "Notifications 6 · Jobs · Meetings · Tasks 2": a pill track, the chosen tab an ink pill with
-/// its count on it, the others muted with theirs.
+/// The four tabs as icons in a dark pill track, the chosen one on a lighter pill; a count shows as a
+/// small badge on its icon (the reference's dot), in the accent when it is unread news.
 struct TabTrack: View {
     @ObservedObject var model: NotchModel
     let counts: [InboxTab: Int]
@@ -280,14 +223,23 @@ struct TabTrack: View {
         }
     }
 
+    static func icon(_ tab: InboxTab) -> NotchIcon {
+        switch tab {
+        case .notifications: return .bell
+        case .jobs: return .hardHat
+        case .meetings: return .video
+        case .tasks: return .listChecks
+        }
+    }
+
     var body: some View {
         HStack(spacing: 2) {
             ForEach(InboxTab.allCases, id: \.self) { tab in
                 TabButton(model: model, tab: tab, count: counts[tab], pill: pill)
             }
         }
-        .padding(3)
-        .background(Capsule().fill(theme[.surface]).themeShadow(.card, theme))
+        .padding(2)
+        .background(Capsule().fill(theme[.track]).overlay(Capsule().strokeBorder(theme[.lineSolid], lineWidth: 1)))
         .fixedSize()
     }
 }
@@ -303,49 +255,169 @@ struct TabButton: View {
 
     var body: some View {
         let selected = model.tab == tab
+        let name = TabTrack.label(tab)
         Button {
             // The website's pill travel: 0.47 s on its fitted curve (motion/tokens.ts DUR.pill, EASE.pill).
             withAnimation(reduceMotion ? nil : .timingCurve(0.3, 1, 0.6, 0.85, duration: 0.47)) { model.tab = tab }
             model.onAction?(.tabShown(tab))
         } label: {
-            HStack(spacing: 6) {
-                theme.text(TabTrack.label(tab), .tab)
-                    .foregroundColor(selected ? theme[.surface] : hovering ? theme[.ink] : theme[.inkMuted])
-                if let count {
-                    theme.text("\(count)", .count)
-                        .foregroundColor(selected ? theme[.surface] : theme[.inkMuted])
-                        .padding(.horizontal, 6)
-                        .frame(minWidth: 18)
-                        .frame(height: 17)
-                        .background(Capsule().fill(selected ? theme[.surface].opacity(0.16) : theme[.hover]))
+            IconView(icon: TabTrack.icon(tab), size: 16, lineWidth: 2.1)
+                .foregroundColor(selected || hovering ? theme[.ink] : theme[.inkMuted])
+                .frame(width: InboxLayout.tab.width, height: InboxLayout.tab.height)
+                .background {
+                    if selected {
+                        Capsule().fill(theme[.selection]).matchedGeometryEffect(id: "pill", in: pill)
+                    } else if hovering {
+                        Capsule().fill(theme[.hover])
+                    }
                 }
-            }
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, 12)
-            .frame(height: 28)
-            .background {
-                if selected {
-                    Capsule().fill(theme[.ink]).matchedGeometryEffect(id: "pill", in: pill)
-                } else if hovering {
-                    Capsule().fill(theme[.hover])
+                .overlay(alignment: .topTrailing) {
+                    if let count {
+                        CountBadge(count: count, strong: tab == .notifications).offset(x: 1, y: -4)
+                    }
                 }
-            }
-            .contentShape(Capsule())
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help(TabTrack.label(tab))
+        .help(count.map { "\(name) · \($0)" } ?? name)
+        .accessibilityLabel(count.map { "\(name), \($0)" } ?? name)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
-/// A BuildFlow row: the tone disc, the title and its line, the time or the row's buttons at the
-/// end, the unread dot, and a chevron on hover when the row opens something.
+/// A tab's count: a small badge ringed in the black, in the accent for unread notifications.
+struct CountBadge: View {
+    let count: Int
+    let strong: Bool
+    @Environment(\.notchTheme) private var theme
+
+    var body: some View {
+        theme.text(count > 99 ? "99+" : "\(count)", .count)
+            .foregroundColor(strong ? theme[.onAccent] : theme[.ink])
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 3.5)
+            .frame(minWidth: 14, minHeight: 14, maxHeight: 14)
+            .background(Capsule().fill(strong ? theme[.accentFill] : theme[.control]))
+            .padding(1.5)
+            .background(Capsule().fill(theme[.frame]))
+            .accessibilityHidden(true)
+    }
+}
+
+/// A card's header: its name in small grey words, and a note or an action at the right.
+struct CardHeader<Trailing: View>: View {
+    let title: String
+    @ViewBuilder let trailing: () -> Trailing
+    @Environment(\.notchTheme) private var theme
+
+    var body: some View {
+        HStack(spacing: 8) {
+            theme.text(title, .eyebrow).foregroundColor(theme[.inkMuted]).lineLimit(1)
+            Spacer(minLength: 8)
+            trailing()
+        }
+        .padding(.horizontal, 14)
+        .frame(height: InboxLayout.header)
+    }
+}
+
+/// The left card: the chosen tab's list.
+struct ListCard: View {
+    @ObservedObject var model: NotchModel
+    let card: CardContent
+    let unread: Int
+    let waiting: Bool
+    let height: CGFloat
+    @Environment(\.notchTheme) private var theme
+
+    var body: some View {
+        VStack(spacing: 0) {
+            CardHeader(title: card.title) {
+                if model.tab == .notifications && unread > 0 && !model.isExample {
+                    TextButton(title: card.note) { model.onAction?(.markAllRead) }
+                } else if !card.note.isEmpty && !card.rows.isEmpty && !waiting {
+                    theme.text(card.note, .eyebrow).foregroundColor(theme[.inkFaint]).lineLimit(1)
+                }
+            }
+            list(height: height - InboxLayout.header)
+        }
+    }
+
+    @ViewBuilder
+    func list(height: CGFloat) -> some View {
+        if card.rows.isEmpty {
+            let empty = model.isExample ? card.empty : (model.inboxProblem.map(EmptyState.problem) ?? card.empty)
+            EmptyStateView(state: empty) { action in model.onAction?(.empty(action)) }
+                .padding(.bottom, 10)
+        } else if model.fixedNow != nil {
+            // Snapshots: ImageRenderer draws no scroll views, so show what fits.
+            rows(limit: max(1, Int((height - 4) / InboxLayout.rowHeight)))
+                .frame(maxHeight: .infinity, alignment: .top)
+        } else {
+            ScrollView(.vertical, showsIndicators: false) {
+                rows(limit: card.rows.count).padding(.bottom, 4)
+            }
+        }
+    }
+
+    func rows(limit: Int) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(card.rows.prefix(limit).enumerated()), id: \.element.id) { i, row in
+                RowView(model: model, row: row)
+                    .overlay(alignment: .top) {
+                        if i > 0 { Hairline().padding(.leading, RowView.textInset).padding(.trailing, 12) }
+                    }
+            }
+        }
+    }
+}
+
+/// The right card, as the reference's right card: a tinted icon, a white label, a grey value, and a
+/// control at the end (Join, a crew, "Hold").
+struct TodayCard: View {
+    @ObservedObject var model: NotchModel
+    let frame: InboxFrame
+    let height: CGFloat
+    @Environment(\.notchTheme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            CardHeader(title: "Today") {
+                theme.text(frame.todayHeader, .eyebrow).foregroundColor(theme[.inkFaint]).lineLimit(1)
+            }
+            if frame.waiting {
+                theme.text("Your day shows here once the inbox is read.", .emptyDetail)
+                    .foregroundColor(theme[.inkMuted])
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 6)
+            } else {
+                let rows = frame.today
+                let rowHeight = min(InboxLayout.todayRowMax, ((height - InboxLayout.header - 6) / CGFloat(max(3, rows.count))).rounded(.down))
+                ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
+                    TodayRow(model: model, row: row, height: rowHeight)
+                        .overlay(alignment: .top) {
+                            if i > 0 { Hairline().padding(.leading, RowView.textInset).padding(.trailing, 12) }
+                        }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+/// A list row: the tinted disc, the white title over its grey line, the time (or the row's buttons)
+/// at the end, the unread dot, and a chevron on hover when the row opens something.
 struct RowView: View {
     @ObservedObject var model: NotchModel
     let row: InboxRow
     @State private var hovering = false
     @Environment(\.notchTheme) private var theme
+
+    /// Where a row's words start: the hairlines between rows start there too, as the reference's do.
+    static let textInset: CGFloat = 12 + 28 + 10
 
     var opensSomething: Bool { row.target != nil && !model.isExample }
 
@@ -364,9 +436,9 @@ struct RowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ToneDisc(icon: row.icon, tone: row.tone)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 theme.text(row.title, isRead ? .rowTitleRead : .rowTitle)
                     .foregroundColor(isRead ? theme[.inkMuted] : theme[.ink])
                     .lineLimit(1)
@@ -377,14 +449,15 @@ struct RowView: View {
             Spacer(minLength: 6)
             trailing
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .frame(height: InboxLayout.rowHeight)
         .background(theme[.hover].opacity(hovering && opensSomething ? 1 : 0))
         // The chevron shows on hover, in the row's own margin, so it never takes room from the words.
         .overlay(alignment: .trailing) {
             if showsChevron {
-                IconView(icon: .chevronRight, size: 14)
+                IconView(icon: .chevronRight, size: 12, lineWidth: 2)
                     .foregroundColor(theme[.ink])
+                    .padding(.trailing, 1)
                     .opacity(hovering ? 1 : 0)
             }
         }
@@ -401,7 +474,7 @@ struct RowView: View {
         case .none:
             if row.unread { UnreadDot() }
         case let .text(s):
-            HStack(spacing: 8) {
+            HStack(spacing: 7) {
                 theme.text(s, .meta).foregroundColor(theme[.inkFaint]).lineLimit(1).fixedSize()
                 if row.unread { UnreadDot() }
             }
@@ -413,16 +486,16 @@ struct RowView: View {
             .foregroundColor(theme[.inkFaint])
             .fixedSize()
         case let .join(url):
-            PillButton(title: "Join", kind: .primary, size: .small) {
+            PillButton(title: "Join", kind: .secondary, size: .small) {
                 if let url = url.flatMap(URL.init(string:)) { model.onAction?(.join(url)) }
             }
         case let .buttons(buttons):
             if model.busyTasks.contains(row.id) {
                 theme.text("Working…", .meta).foregroundColor(theme[.inkMuted]).fixedSize()
             } else {
-                HStack(spacing: 6) {
+                HStack(spacing: 5) {
                     ForEach(buttons) { b in
-                        PillButton(title: b.label, kind: b.primary ? .primary : .secondary, size: .small, onSurface: true) {
+                        PillButton(title: b.label, kind: b.primary ? .primary : .secondary, size: .small) {
                             if !model.isExample { model.onAction?(.task(taskId: row.id, actionId: b.id)) }
                         }
                     }
@@ -433,10 +506,85 @@ struct RowView: View {
     }
 }
 
+/// A Today row, in one line as the reference's are: the label in white, the value in grey at the end,
+/// and the control after it.
+struct TodayRow: View {
+    @ObservedObject var model: NotchModel
+    let row: InboxRow
+    let height: CGFloat
+    @State private var hovering = false
+    @Environment(\.notchTheme) private var theme
+
+    var opensSomething: Bool { row.target != nil && !model.isExample }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ToneDisc(icon: row.icon, tone: row.tone)
+            theme.text(row.title, .todayLabel)
+                .foregroundColor(theme[.ink])
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.leading, 10)
+            Spacer(minLength: 10)
+            value
+            trailing
+        }
+        .padding(.horizontal, 12)
+        .frame(height: height)
+        .background(theme[.hover].opacity(hovering && opensSomething ? 1 : 0))
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .onTapGesture {
+            if opensSomething, let target = row.target { model.onAction?(.open(target)) }
+        }
+        .help(opensSomething ? "Open in BuildFlow" : "")
+    }
+
+    /// The value in one line when it fits; else its parts ("Rain from 2 PM · Maple St. Plaza") one
+    /// under the other.
+    var value: some View {
+        let parts = row.subtitle.components(separatedBy: " · ")
+        return ViewThatFits(in: .horizontal) {
+            theme.text(row.subtitle, .todayValue).lineLimit(1).fixedSize()
+            VStack(alignment: .trailing, spacing: 1) {
+                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                    theme.text(part, .todayValue).lineLimit(1)
+                }
+            }
+        }
+        .foregroundColor(theme[.inkMuted])
+        .multilineTextAlignment(.trailing)
+    }
+
+    @ViewBuilder var trailing: some View {
+        switch row.trailing {
+        case let .join(url):
+            PillButton(title: "Join", kind: .secondary, size: .small) {
+                if let url = url.flatMap(URL.init(string:)) { model.onAction?(.join(url)) }
+            }
+            .padding(.leading, 10)
+        case let .text(s):
+            theme.text(s, .todayValue).foregroundColor(theme[.inkMuted]).lineLimit(1).fixedSize()
+                .frame(minWidth: 38, alignment: .trailing)
+                .padding(.leading, 10)
+        case let .twoLine(a, b):
+            VStack(alignment: .trailing, spacing: 1) {
+                theme.text(a, .meta)
+                theme.text(b, .meta)
+            }
+            .foregroundColor(theme[.inkFaint])
+            .fixedSize()
+            .padding(.leading, 10)
+        case .none, .buttons:
+            EmptyView()
+        }
+    }
+}
+
 // MARK: - The gear's menu
 
-/// A small BuildFlow menu under the gear: Appearance (Light · Dark · Match macOS) and the way to the
-/// rest of the settings in the menu bar.
+/// A small menu under the gear: Appearance (Light · Dark · Match macOS) and the rest of the settings
+/// in the menu bar.
 struct SettingsMenu: View {
     @ObservedObject var model: NotchModel
     @Environment(\.notchTheme) private var theme
@@ -456,14 +604,14 @@ struct SettingsMenu: View {
         .padding(6)
         .fixedSize()
         .background(
-            RoundedRectangle(cornerRadius: theme.radii.panel)
+            RoundedRectangle(cornerRadius: theme.radii.panel, style: .continuous)
                 .fill(theme[.surfaceRaised])
-                .overlay(RoundedRectangle(cornerRadius: theme.radii.panel).strokeBorder(theme[.lineSoft], lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: theme.radii.panel, style: .continuous).strokeBorder(theme[.lineSolid], lineWidth: 1))
                 .themeShadow(.float, theme))
     }
 }
 
-/// The Preferences panel's segmented control: a pill track, the chosen one in ink.
+/// The Preferences panel's segmented control: a pill track, the chosen one in the ink.
 struct AppearanceSegments: View {
     @ObservedObject var model: NotchModel
     @Environment(\.notchTheme) private var theme
@@ -484,7 +632,7 @@ struct AppearanceSegments: View {
                         .lineLimit(1)
                         .fixedSize()
                         .padding(.horizontal, 12)
-                        .frame(height: 28)
+                        .frame(height: 26)
                         .background {
                             if chosen { Capsule().fill(theme[.ink]).matchedGeometryEffect(id: "appearance", in: pill) }
                         }
@@ -509,14 +657,14 @@ struct MenuRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                IconView(icon: icon, size: 15).foregroundColor(theme[.inkMuted])
+                IconView(icon: icon, size: 15, lineWidth: 2).foregroundColor(theme[.inkMuted])
                 theme.text(title, .menuItem).foregroundColor(theme[.ink])
                 Spacer(minLength: 0)
-                IconView(icon: .chevronRight, size: 13).foregroundColor(theme[.inkFaint])
+                IconView(icon: .chevronRight, size: 12, lineWidth: 2).foregroundColor(theme[.inkFaint])
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: theme.radii.control).fill(hovering ? theme[.hover] : .clear))
+            .background(RoundedRectangle(cornerRadius: theme.radii.control, style: .continuous).fill(hovering ? theme[.hover] : .clear))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
