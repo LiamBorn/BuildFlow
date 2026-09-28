@@ -430,4 +430,19 @@ public final class AppearanceStore {
         get { defaults.string(forKey: Self.key).flatMap(Appearance.init(rawValue:)) ?? Self.fallback }
         set { defaults.set(newValue.rawValue, forKey: Self.key) }
     }
+
+    /// Set once the NotchView look has been adopted, so the switch below happens only once.
+    public static let lookKey = "appearance.look"
+
+    /// 0.2.0's whole design was a light BuildFlow card, so "light" is what someone picked when that was
+    /// the only look worth picking. The NotchView look is dark by nature, so on the first launch after it
+    /// arrived a stored Light becomes Dark, once. Match macOS and Dark stay as they are, and whatever is
+    /// chosen after this is kept.
+    public func adoptNotchViewLookOnce() {
+        guard defaults.string(forKey: Self.lookKey) == nil else { return }
+        if defaults.string(forKey: Self.key) == Appearance.light.rawValue {
+            defaults.set(Appearance.dark.rawValue, forKey: Self.key)
+        }
+        defaults.set("notchview", forKey: Self.lookKey)
+    }
 }

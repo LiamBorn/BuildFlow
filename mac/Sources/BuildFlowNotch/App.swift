@@ -64,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.start()
 
         // Appearance: Dark (the reference's look, the default), Light, or whatever macOS is showing.
+        appearanceStore.adoptNotchViewLookOnce()
         model.appearance = appearanceStore.appearance
         model.systemIsDark = Self.isDark(NSApp.effectiveAppearance)
         let model = self.model

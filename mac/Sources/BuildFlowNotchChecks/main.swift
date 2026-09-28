@@ -480,6 +480,23 @@ do {
     defaults.set("sepia", forKey: AppearanceStore.key)
     equal(store.appearance, .dark, "an unknown value reads as dark")
     defaults.removePersistentDomain(forName: suite)
+
+    // 0.2.0 → the NotchView look: a stored Light becomes Dark once; Match macOS stays; later choices stick
+    defaults.set(Appearance.light.rawValue, forKey: AppearanceStore.key)
+    store.adoptNotchViewLookOnce()
+    equal(store.appearance, .dark, "0.2.0's Light becomes the NotchView look's Dark")
+    store.appearance = .light
+    store.adoptNotchViewLookOnce()
+    equal(store.appearance, .light, "Light chosen after the switch is kept")
+    defaults.removePersistentDomain(forName: suite)
+    defaults.set(Appearance.system.rawValue, forKey: AppearanceStore.key)
+    store.adoptNotchViewLookOnce()
+    equal(store.appearance, .system, "Match macOS is left alone")
+    defaults.removePersistentDomain(forName: suite)
+    store.adoptNotchViewLookOnce()
+    equal(store.appearance, .dark, "nothing stored reads as dark, and stays unset")
+    equal(defaults.string(forKey: AppearanceStore.key), nil, "nothing is written for someone who never chose")
+    defaults.removePersistentDomain(forName: suite)
 }
 
 // MARK: Inter and Inter Tight, at their real weights
