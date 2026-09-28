@@ -42,26 +42,23 @@ extension AnyTransition {
     }
 }
 
-/// The whole panel: a transparent canvas with the black frame at the top centre, and, in the four
-/// states that drop down, the BuildFlow window inside it with the band above.
+/// The whole panel: a transparent canvas with the black shape at the top centre, its rim light, and
+/// the state's content. Everything on the black draws with the black's own (dark) set; the cards
+/// inside the dropdown and the proposal card take the Appearance set.
 struct NotchRootView: View {
     @ObservedObject var model: NotchModel
 
     var body: some View {
-        let theme = model.theme
         let spec = model.spec
         let canvas = NotchMetrics.canvas
-        let band = NotchMetrics.band(notch: model.notchSize)
+        let rim = RimStyle.of(model)
         let transition = AnyTransition.notchContent(reduceMotion: model.reduceMotion)
         ZStack(alignment: .top) {
-            NotchShape(spec).fill(theme.frame(.frame))
-            CardShape(spec, band: band).fill(theme[.ground])
-            CardShape(spec, band: band, inset: 0.5).stroke(theme[.lineSoft], lineWidth: 1)
+            RimGlow(spec: spec, style: rim)
+            NotchShape(spec).fill(NotchTheme.onFrame[.frame])
+            RimEdge(spec: spec, style: rim)
 
             ZStack(alignment: .top) {
-                if NotchMetrics.hasCard(model.state) {
-                    BandView(model: model, spec: spec).transition(transition)
-                }
                 switch model.state {
                 case .resting:
                     Color.clear.frame(width: 1, height: 1)
@@ -72,18 +69,20 @@ struct NotchRootView: View {
                 case .alert:
                     AlertView(model: model, content: model.alertContent(), spec: model.spec(for: .alert)).transition(transition)
                 case .inbox:
-                    InboxContent(model: model, spec: model.spec(for: .inbox)).transition(transition)
+                    InboxContent(model: model).transition(transition)
                 case .voice:
                     VoiceView(model: model, content: model.voice, spec: model.spec(for: .voice)).transition(transition)
                 }
             }
             .frame(width: canvas.width, height: canvas.height, alignment: .top)
             .clipShape(NotchShape(spec))
+
+            RimTraceLayer(model: model, spec: spec, color: rim.color)
         }
         .frame(width: canvas.width, height: canvas.height, alignment: .top)
-        .environment(\.notchTheme, theme)
+        .environment(\.notchTheme, .onFrame)
         .environment(\.notchReduceMotion, model.reduceMotion)
-        .environment(\.colorScheme, theme.colorScheme)
+        .environment(\.colorScheme, .dark)
         .contentShape(NotchShape(spec))
         // Simultaneous, so it can never take a click away from a button inside;
         // the controller ignores taps in the inbox and voice that miss the notch.

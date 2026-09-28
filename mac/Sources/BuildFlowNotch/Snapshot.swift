@@ -4,9 +4,9 @@ import ImageIO
 import SwiftUI
 
 /// `--snapshot <dir> [--appearance light|dark]`: renders each state against the mock-up's dark
-/// desktop with SwiftUI's ImageRenderer, in BuildFlow's light look (the website's default) or its
-/// dark one, at the mock-up's moments of the example day (Sat 26 Sep 2026, New York time) and, for
-/// the live states, at 9:00 AM in Chicago against mac/Fixtures/desktop-inbox.json, then exits.
+/// desktop with SwiftUI's ImageRenderer, with dark cards (the reference's look, the default) or light
+/// ones, at the mock-up's moments of the example day (Sat 26 Sep 2026, New York time) and, for the
+/// live states, at 9:00 AM in Chicago against mac/Fixtures/desktop-inbox.json, then exits.
 enum Snapshotter {
     enum Data {
         case example, fixture
@@ -30,6 +30,8 @@ enum Snapshotter {
         /// How the dropdown was opened, and how far into its opening it is drawn (settled by default).
         var opening: InboxOpening = .chord
         var inboxElapsed: Double = 10
+        /// How long ago an alert or voice opened (the rim's light runs for the first second or so).
+        var shownElapsed: Double?
         var problem: String?
         var settingsMenu = false
         /// Outline the hardware notch, to see that nothing sits under the camera.
@@ -42,10 +44,11 @@ enum Snapshotter {
         // The example, not connected (New York time, the mock-up's day).
         Scene(file: "1-resting", state: .resting, time: "08:12"),
         Scene(file: "2-greeting", state: .greeting, time: "08:12", greetingElapsed: 3.0, connected: true),
-        Scene(file: "2b-greeting-writing", state: .greeting, time: "08:12", greetingElapsed: 1.15, connected: true),
+        Scene(file: "2b-greeting-writing", state: .greeting, time: "08:12", greetingElapsed: 0.95, connected: true),
         Scene(file: "2c-greeting-not-connected", state: .greeting, time: "08:12", greetingElapsed: 3.0),
         Scene(file: "3-live", state: .live, time: "09:25:08"),
         Scene(file: "4-alert", state: .alert, time: "08:40"),
+        Scene(file: "4b-alert-arriving", state: .alert, time: "08:40", shownElapsed: 0.85),
         Scene(file: "5-inbox-example", state: .inbox, time: "09:05"),
         Scene(file: "5b-inbox-example-jobs", state: .inbox, time: "09:05", tab: .jobs),
         Scene(file: "5c-inbox-example-meetings", state: .inbox, time: "09:05", tab: .meetings),
@@ -79,10 +82,13 @@ enum Snapshotter {
                                   proposal: { var p = proposal; p.phase = .settled(ProposalOutcome.conflict(nil).plainWords, ok: false); return p }())),
         Scene(file: "10e-voice-permission", state: .voice, time: "09:00", data: .fixture, connected: true,
               voice: VoiceContent(status: "Can't listen", answer: VoiceProblem.microphoneDenied.words, button: .openPrivacy("Privacy_Microphone"))),
-        // Opened with ⌃⌥: the greeting writes itself, then the rest comes in beneath it.
-        Scene(file: "11-opening-just-opened", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 0.5),
-        Scene(file: "11b-opening-mid-writing", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 0.8),
-        Scene(file: "11c-opening-settled", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 1.6),
+        // Opened with ⌃⌥: the greeting writes itself while the rim lights, then the shape springs into the dropdown.
+        Scene(file: "11-opening-greeting", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 0.6),
+        Scene(file: "11b-opening-greeting-written", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 1.2),
+        Scene(file: "11c-opening-cascade", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 1.52),
+        Scene(file: "11d-opening-settled", state: .inbox, time: "09:00", data: .fixture, connected: true, inboxElapsed: 2.3),
+        // Opened by hovering: straight to the dropdown, the rim's light running.
+        Scene(file: "11e-hover-open", state: .inbox, time: "09:00", data: .fixture, connected: true, opening: .hover, inboxElapsed: 0.7),
         // Nothing in the lists: the website's empty state.
         Scene(file: "12-empty-notifications", state: .inbox, time: "09:00", data: .empty, connected: true),
         Scene(file: "12b-empty-jobs", state: .inbox, time: "09:00", tab: .jobs, data: .empty, connected: true),
@@ -96,6 +102,12 @@ enum Snapshotter {
         // The hardware notch outlined: nothing may sit under the camera.
         Scene(file: "14-outline-inbox", state: .inbox, time: "09:00", data: .fixture, connected: true, outline: true),
         Scene(file: "14b-outline-live", state: .live, time: "09:00:00", data: .fixture, connected: true, outline: true),
+        Scene(file: "14c-outline-greeting", state: .greeting, time: "09:00", greetingElapsed: 3.0, data: .fixture, connected: true, outline: true),
+        Scene(file: "14d-outline-alert", state: .alert, time: "09:00", data: .fixture, connected: true, alertFrom: "delayIQ-d12", outline: true),
+        Scene(file: "14e-outline-voice", state: .voice, time: "09:00", data: .fixture, connected: true,
+              voice: VoiceContent(status: "Answered", question: "What's next?", answer: "Standup at 9:10 on Google Meet.", hint: "AI not connected"),
+              outline: true),
+        Scene(file: "14f-outline-example", state: .inbox, time: "09:05", outline: true),
     ]
 
     @MainActor
@@ -152,6 +164,8 @@ enum Snapshotter {
             model.beginInbox(scene.opening, at: now)
             model.headerGreeting = HeaderGreeting.text(now: now, firstName: firstName, awayBeforeVisit: nil, calendar: calendar)
             model.inboxElapsedOverride = scene.inboxElapsed
+            model.inboxGreeting = InboxIntro.showsGreeting(at: scene.inboxElapsed, playing: model.introPlays)
+            model.shownElapsedOverride = scene.shownElapsed
             model.settingsMenuOpen = scene.settingsMenu
             model.inboxProblem = scene.problem
             model.voice = scene.voice ?? .idle

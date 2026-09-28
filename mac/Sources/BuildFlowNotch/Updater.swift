@@ -74,6 +74,16 @@ final class Updater: NSObject, NSMenuItemValidation {
         #endif
     }
 
+    /// Whether a check can start now (Sparkle running and not already checking): the gear menu's
+    /// item follows it, as the status menu's does through validateMenuItem.
+    var canCheckForUpdates: Bool {
+        #if canImport(Sparkle)
+        return controller?.updater.canCheckForUpdates ?? false
+        #else
+        return false
+        #endif
+    }
+
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         #if canImport(Sparkle)
         return controller?.updater.canCheckForUpdates ?? false

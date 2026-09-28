@@ -11,7 +11,9 @@ extension Color {
     }
 }
 
-/// The set the views draw with: BuildFlow's Light or Dark, chosen by Appearance.
+/// A set the views draw with. The black shape and everything set straight on it draw with the dark
+/// set (`NotchTheme.onFrame`); the cards, menus and the proposal card inside it with the Light or Dark
+/// set Appearance chose. The root view puts the right one in the environment for each.
 struct NotchTheme {
     let tokens: BuildFlowTheme
 
@@ -19,10 +21,10 @@ struct NotchTheme {
         self.tokens = tokens
     }
 
-    subscript(_ token: ThemeToken) -> Color { Color(tokens[token]) }
+    /// The black shape's own set.
+    static let onFrame = NotchTheme(BuildFlowTheme.frame)
 
-    /// The black frame and the band beside the camera: BuildFlow's dark tokens, in either appearance.
-    func frame(_ token: ThemeToken) -> Color { Color(BuildFlowTheme.frame[token]) }
+    subscript(_ token: ThemeToken) -> Color { Color(tokens[token]) }
 
     var radii: ThemeRadii { tokens.radii }
     var isDark: Bool { tokens.isDark }
@@ -31,11 +33,10 @@ struct NotchTheme {
     func style(_ token: TypeToken) -> TypeStyle { tokens[token] }
     func font(_ token: TypeToken) -> Font { NotchFonts.font(tokens[token]) }
 
-    /// A tone's colour and wash; `frame` reads them from the dark set, for the black band.
-    func tone(_ tone: NotchTone, frame: Bool = false) -> (color: Color, wash: Color) {
+    /// A tone's colour and wash.
+    func tone(_ tone: NotchTone) -> (color: Color, wash: Color) {
         let pair = BuildFlowTheme.tone(tone)
-        let s = frame ? BuildFlowTheme.frame : tokens
-        return (Color(s[pair.color]), Color(s[pair.wash]))
+        return (Color(tokens[pair.color]), Color(tokens[pair.wash]))
     }
 
     /// A string set in a type token: its face, size, weight, tracking and case.
@@ -90,7 +91,7 @@ enum NotchFonts {
 }
 
 private struct NotchThemeKey: EnvironmentKey {
-    static let defaultValue = NotchTheme(.light)
+    static let defaultValue = NotchTheme.onFrame
 }
 
 private struct ReduceMotionKey: EnvironmentKey {

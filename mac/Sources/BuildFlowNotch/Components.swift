@@ -2,62 +2,72 @@ import AppKit
 import BuildFlowNotchKit
 import SwiftUI
 
-// BuildFlow's parts, as the website draws them (skin §9 buttons, §35 the notifications drawer):
-// the tone disc, the icon discs, the pills, the chips, the eyebrow, the unread dot, the white card
-// and the empty state. Every colour, radius and face comes from the theme.
+// The notch's parts, in the reference's language: the tinted icon disc, an alert's coloured tile,
+// plain icon buttons, pills (light for the one that matters, dark grey for the rest), the day chips,
+// the unread dot, the card and the empty state. Every colour, radius and face comes from the theme
+// in the environment: the black shape's own set on the black, the Appearance set inside the cards.
 
-/// A tone's wash behind its icon on a round disc: a row's mark (36 pt), the live activity's (22 pt).
+/// A tone's icon on a round disc of its wash: a row's mark, as the reference's Keep Awake and Up next are.
 struct ToneDisc: View {
     let icon: NotchIcon
     let tone: NotchTone
-    var size: CGFloat = 36
-    var iconSize: CGFloat = 17
-    /// In the black band or the live activity: the dark set's pair.
-    var onFrame = false
+    var size: CGFloat = 28
+    var iconSize: CGFloat = 14
     @Environment(\.notchTheme) private var theme
 
     var body: some View {
-        let c = theme.tone(tone, frame: onFrame)
+        let c = theme.tone(tone)
         ZStack {
             Circle().fill(c.wash)
-            IconView(icon: icon, size: iconSize).foregroundColor(c.color)
+            IconView(icon: icon, size: iconSize, lineWidth: 2).foregroundColor(c.color)
         }
         .frame(width: size, height: size)
     }
 }
 
-/// A 36 pt round button: the ink disc for the one action that matters (the mic), or the white disc
-/// with the card shadow, which turns ink while its menu is open.
-struct IconDiscButton: View {
-    enum Style { case ink, white }
-
+/// An alert's mark: the icon in white on a rounded tile of its tone (the reference's f12).
+struct ToneTile: View {
     let icon: NotchIcon
-    let style: Style
+    let tone: NotchTone
+    var size: CGFloat = 26
+    @Environment(\.notchTheme) private var theme
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: theme.radii.chip, style: .continuous).fill(theme.tone(tone).color)
+            IconView(icon: icon, size: size * 0.56, lineWidth: 2.2).foregroundColor(theme[.ink])
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// A plain icon button, as the reference's gear is; `disc` sets it on a subtle grey disc (the mic).
+struct NotchIconButton: View {
+    let icon: NotchIcon
+    var disc = false
     var pressed = false
     let help: String
     let action: () -> Void
     @Environment(\.notchTheme) private var theme
-    @Environment(\.notchReduceMotion) private var reduceMotion
     @State private var hovering = false
 
     var body: some View {
-        let ink = style == .ink || pressed
         Button(action: action) {
-            IconView(icon: icon, size: 17)
-                .foregroundColor(ink ? theme[.surface] : hovering ? theme[.ink] : theme[.inkMuted])
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(ink ? theme[.ink] : theme[.surface]).themeShadow(hovering ? .raised : .card, theme))
+            IconView(icon: icon, size: disc ? 14 : 17, lineWidth: 2)
+                .foregroundColor(pressed || hovering || disc ? theme[.ink] : theme[.inkMuted])
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(disc ? (hovering ? theme[.control] : theme[.surfaceRaised]) : pressed || hovering ? theme[.surface] : .clear))
                 .contentShape(Circle())
-                .offset(y: hovering && !reduceMotion ? -1 : 0)
         }
         .buttonStyle(.plain)
         .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hovering = h } }
         .help(help)
+        .accessibilityLabel(help)
     }
 }
 
-/// BuildFlow's pill: ink with the surface's colour on it (primary), or white with the card shadow
-/// (secondary). 32 pt, or 26 pt inside a row.
+/// A pill: light (the ink, with the surface's colour on it) for the one that matters, dark grey (the
+/// control grey) for the rest, as the reference's Join is. 30 pt, or 24 pt inside a row.
 struct PillButton: View {
     enum Kind { case primary, secondary }
     enum Size { case regular, small }
@@ -65,11 +75,8 @@ struct PillButton: View {
     let title: String
     var kind: Kind = .secondary
     var size: Size = .regular
-    /// On a white card a white pill also takes a hairline, or only its shadow would say it's there.
-    var onSurface = false
     let action: () -> Void
     @Environment(\.notchTheme) private var theme
-    @Environment(\.notchReduceMotion) private var reduceMotion
     @State private var hovering = false
 
     var body: some View {
@@ -81,40 +88,55 @@ struct PillButton: View {
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.horizontal, size == .regular ? 14 : 10)
-                .frame(height: size == .regular ? 32 : 26)
-                .background(
-                    Capsule().fill(primary ? theme[.ink] : theme[.surface])
-                        .overlay(Capsule().strokeBorder(theme[.lineSolid], lineWidth: onSurface && !primary ? 1 : 0))
-                        .themeShadow(hovering ? .raised : .card, theme))
+                .frame(height: size == .regular ? 30 : 24)
+                .background(Capsule().fill(primary ? theme[.ink] : hovering ? theme[.selection] : theme[.control]))
+                .opacity(primary && hovering ? 0.88 : 1)
                 .contentShape(Capsule())
-                .offset(y: hovering && !reduceMotion ? -1 : 0)
         }
         .buttonStyle(.plain)
         .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hovering = h } }
     }
 }
 
-/// One chip of the greeting's day line: a white pill on the window's ground, or a tone's wash when
-/// it is news.
+/// Small grey words that act, turning to the ink under the pointer ("Mark all read").
+struct TextButton: View {
+    let title: String
+    let action: () -> Void
+    @Environment(\.notchTheme) private var theme
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            theme.text(title, .eyebrow)
+                .foregroundColor(hovering ? theme[.ink] : theme[.inkMuted])
+                .lineLimit(1)
+                .fixedSize()
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+    }
+}
+
+/// One chip of the greeting's day line: a small dark grey pill with grey words, or the words in a
+/// tone when they are news (the weather).
 struct DayChipView: View {
     let chip: DayChip
     @Environment(\.notchTheme) private var theme
 
     var body: some View {
-        let toned = chip.tone.map { theme.tone($0) }
         theme.text(chip.text, .chip)
-            .foregroundColor(toned?.color ?? theme[.ink])
+            .foregroundColor(chip.tone.map { theme.tone($0).color } ?? theme[.inkMuted])
             .lineLimit(1)
             .fixedSize()
             .padding(.horizontal, 10)
-            .frame(height: 24)
-            .background(Capsule().fill(toned?.wash ?? theme[.surface]).themeShadow(.card, theme))
+            .frame(height: 22)
+            .background(Capsule().fill(theme[.surface]))
     }
 }
 
 struct ChipRow: View {
     let chips: [DayChip]
-    var alignment: HorizontalAlignment = .leading
 
     var body: some View {
         HStack(spacing: 6) {
@@ -124,7 +146,7 @@ struct ChipRow: View {
     }
 }
 
-/// An eyebrow label: 11 pt, upper case, spaced out, in the faint ink (or a tone).
+/// A small grey label: a card's header, a menu's section.
 struct Eyebrow: View {
     let text: String
     var color: Color?
@@ -136,7 +158,7 @@ struct Eyebrow: View {
     }
 
     var body: some View {
-        theme.text(text, .eyebrow).foregroundColor(color ?? theme[.inkFaint]).lineLimit(1)
+        theme.text(text, .eyebrow).foregroundColor(color ?? theme[.inkMuted]).lineLimit(1)
     }
 }
 
@@ -158,15 +180,14 @@ struct StatusPill: View {
     }
 }
 
-/// Unread: the accent fill with an ink ring.
+/// Unread: a small dot in the accent.
 struct UnreadDot: View {
     @Environment(\.notchTheme) private var theme
 
     var body: some View {
         Circle()
             .fill(theme[.accentFill])
-            .overlay(Circle().stroke(theme[.ink], lineWidth: 1))
-            .frame(width: 7, height: 7)
+            .frame(width: 6, height: 6)
             .accessibilityLabel("Unread")
     }
 }
@@ -176,21 +197,22 @@ struct Hairline: View {
     @Environment(\.notchTheme) private var theme
 
     var body: some View {
-        Rectangle().fill(theme[.lineSolid]).frame(height: 1)
+        Rectangle().fill(theme[.lineSoft]).frame(height: 1)
     }
 }
 
 extension View {
-    /// A white card on the ground: the website's 20 pt card with the softest shadow.
-    func whiteCard(_ theme: NotchTheme, radius: CGFloat? = nil) -> some View {
+    /// A card on the black: the surface with a hairline edge (the reference's two cards).
+    func notchCard(_ theme: NotchTheme, radius: CGFloat? = nil) -> some View {
         let r = radius ?? theme.radii.card
-        return clipShape(RoundedRectangle(cornerRadius: r))
-            .background(RoundedRectangle(cornerRadius: r).fill(theme[.surface]).themeShadow(.card, theme))
+        return clipShape(RoundedRectangle(cornerRadius: r, style: .continuous))
+            .background(RoundedRectangle(cornerRadius: r, style: .continuous).fill(theme[.surface]))
+            .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).strokeBorder(theme[.lineSolid], lineWidth: 1))
     }
 }
 
-/// What a list shows when it has nothing (the drawer's empty state): a disc, a display line, a
-/// sentence, and a white pill when there is somewhere to go.
+/// What a list shows when it has nothing: a quiet disc, a title, a sentence, and a pill when there
+/// is somewhere to go.
 struct EmptyStateView: View {
     let state: EmptyState
     var onAction: ((EmptyAction) -> Void)?
@@ -199,24 +221,24 @@ struct EmptyStateView: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                Circle().fill(theme[.hover])
-                IconView(icon: state.icon, size: 20).foregroundColor(theme[.ink])
+                Circle().fill(theme[.control])
+                IconView(icon: state.icon, size: 16, lineWidth: 2).foregroundColor(theme[.inkMuted])
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 34, height: 34)
             theme.text(state.title, .displayLine)
                 .foregroundColor(theme[.ink])
                 .lineLimit(1)
-                .padding(.top, 10)
+                .padding(.top, 9)
             theme.text(state.detail, .emptyDetail)
                 .foregroundColor(theme[.inkMuted])
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
-                .frame(maxWidth: 290)
+                .frame(maxWidth: 270)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 4)
+                .padding(.top, 3)
             if let action = state.action, let onAction {
-                PillButton(title: action.label, kind: .secondary, onSurface: true) { onAction(action) }
-                    .padding(.top, 12)
+                PillButton(title: action.label, kind: .secondary, size: .small) { onAction(action) }
+                    .padding(.top, 10)
             }
         }
         .padding(.horizontal, 16)
@@ -224,74 +246,38 @@ struct EmptyStateView: View {
     }
 }
 
-/// The small BuildFlow mark in the black band: the app icon's logo (Resources/BuildFlowMark.png,
-/// made by scripts/make-mark.sh).
-struct BrandMark: View {
-    var height: CGFloat = 16
-    @Environment(\.notchTheme) private var theme
+/// Puts `content` in one of the band's two places beside the camera, centred on the camera's line.
+struct InBand<Content: View>: View {
+    enum Side { case left, right }
 
-    static let image: NSImage? = {
-        if let url = Bundle.main.url(forResource: "BuildFlowMark", withExtension: "png"), let i = NSImage(contentsOf: url) { return i }
-        // A bare binary (snapshots from .build): the source tree's copy.
-        let tree = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().appendingPathComponent("Resources/BuildFlowMark.png")
-        return NSImage(contentsOf: tree)
-    }()
-
-    var body: some View {
-        if let image = Self.image {
-            Image(nsImage: image)
-                .resizable()
-                .interpolation(.high)
-                .aspectRatio(contentMode: .fit)
-                .frame(height: height)
-                .accessibilityLabel("BuildFlow")
-        } else {
-            IconView(icon: .mark, size: height).foregroundColor(theme.frame(.ink))
-        }
-    }
-}
-
-/// The band beside the camera, in BuildFlow's dark tokens: the mark on the left, the connection's
-/// status on the right, each in its slot clear of the camera housing.
-struct BandView: View {
-    @ObservedObject var model: NotchModel
+    let side: Side
     let spec: ShapeSpec
-    @Environment(\.notchTheme) private var theme
+    let notch: CGSize
+    @ViewBuilder let content: () -> Content
 
     var body: some View {
-        let slots = NotchMetrics.bandSlots(in: spec, notch: model.notchSize)
-        let status = model.bandStatus
-        ZStack(alignment: .topLeading) {
-            BrandMark(height: 16)
-                .frame(width: slots.left.width, height: slots.left.height, alignment: .leading)
-                .offset(x: slots.left.minX)
-            HStack(spacing: 6) {
-                Circle().fill(theme.tone(status.tone, frame: true).color).frame(width: 6, height: 6)
-                theme.text(status.label, .band).foregroundColor(theme.frame(.inkMuted)).lineLimit(1)
-            }
-            .frame(width: slots.right.width, height: slots.right.height, alignment: .trailing)
-            .offset(x: slots.right.minX)
-        }
-        .frame(width: spec.width, height: spec.height, alignment: .topLeading)
-        .allowsHitTesting(false)
+        let slots = NotchMetrics.bandSlots(in: spec, notch: notch)
+        let r = side == .left ? slots.left : slots.right
+        content()
+            .frame(width: r.width, height: r.height, alignment: side == .left ? .leading : .trailing)
+            .padding(.leading, r.minX)
+            .padding(.top, r.minY)
+            .frame(width: spec.width, height: spec.height, alignment: .topLeading)
     }
 }
 
-/// Lays a state's content out in its BuildFlow window (the card below the band, inside the black
-/// frame) and clips it to the window's corners.
-struct CardContainer<Content: View>: View {
+/// Lays a state's content out below the band, `contentInset` in from the shape's sides and foot.
+struct ContentBox<Content: View>: View {
     let spec: ShapeSpec
     let notch: CGSize
     @ViewBuilder let content: (CGSize) -> Content
 
     var body: some View {
-        let card = NotchMetrics.card(in: spec, notch: notch)
-        content(card.size)
-            .frame(width: card.width, height: card.height, alignment: .topLeading)
-            .clipShape(RoundedRectangle(cornerRadius: NotchMetrics.cardRadius(in: spec)))
-            .padding(.leading, card.minX)
-            .padding(.top, card.minY)
+        let box = NotchMetrics.content(in: spec, notch: notch)
+        content(box.size)
+            .frame(width: box.width, height: box.height, alignment: .topLeading)
+            .padding(.leading, box.minX)
+            .padding(.top, box.minY)
             .frame(width: spec.width, height: spec.height, alignment: .topLeading)
     }
 }

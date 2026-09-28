@@ -21,6 +21,8 @@ enum NotchAction {
     case toggleSettingsMenu
     /// Appearance, chosen in that menu.
     case setAppearance(Appearance)
+    /// Check for Updates…, in that menu (Sparkle's check, as the status menu's item runs it).
+    case checkForUpdates
     /// An empty list's way out.
     case empty(EmptyAction)
     /// An alert's button.
@@ -66,25 +68,34 @@ final class NotchModel: ObservableObject {
     @Published var hasNotch = true
 
     /// Light, Dark or Match macOS (the status menu and the dropdown's gear), and what macOS is showing.
-    @Published var appearance: Appearance = .light
+    @Published var appearance: Appearance = AppearanceStore.fallback
     @Published var systemIsDark = false
     /// System Settings › Accessibility › Display › Reduce motion: nothing springs, writes or slides.
     @Published var reduceMotion = false
-    /// The gear's menu in the dropdown.
+    /// The gear's menu in the dropdown, and its update item (disabled when Sparkle isn't running; it
+    /// reads "Update Available…" once a check has found one).
     @Published var settingsMenuOpen = false
+    @Published var canCheckForUpdates = true
+    @Published var updateMenuTitle = Updater.checkTitle
 
-    /// How the dropdown was last opened, when, and the greeting at its top.
+    /// When the current state opened (the rim's light runs from then).
+    @Published var shownAt = Date.distantPast
+
+    /// How the dropdown was last opened, when, and the greeting it opens with.
     @Published var inboxOpening: InboxOpening = .hover
     @Published var inboxOpenedAt = Date.distantPast
     @Published var headerGreeting = ""
+    /// The dropdown is still its greeting: the shape is the greeting's size until it springs open.
+    @Published var inboxGreeting = false
     /// How long the Mac had been away when this visit began ("Welcome back" after 3 h or more).
     var visitAwayBefore: TimeInterval?
 
     /// Snapshot mode freezes the clock and the greeting's animation time.
     let fixedNow: Date?
     var greetingElapsedOverride: Double?
-    /// Snapshots: how far into its opening the dropdown is drawn.
+    /// Snapshots: how far into its opening the dropdown is drawn, and how long ago an alert or voice opened.
     var inboxElapsedOverride: Double?
+    var shownElapsedOverride: Double?
     let calendar: Calendar
 
     var onTap: ((CGPoint) -> Void)?
@@ -126,7 +137,7 @@ final class NotchModel: ObservableObject {
     /// The set the views draw with.
     var theme: NotchTheme { NotchTheme(appearance.theme(systemIsDark: systemIsDark)) }
 
-    /// The status in the black band, right of the camera.
+    /// The status right of the camera.
     var bandStatus: BandStatus {
         switch connection {
         case .connected: return .connected
@@ -138,19 +149,26 @@ final class NotchModel: ObservableObject {
     /// Whether the dropdown's opening plays (⌃⌥ or a click) or everything is simply there (hover, Reduce Motion).
     var introPlays: Bool { InboxIntro.plays(inboxOpening, reduceMotion: reduceMotion) }
 
-    /// The dropdown is opening: remember how, and write its greeting for this moment.
+    /// The dropdown is opening: remember how, and write its greeting for this moment. Opened by ⌃⌥
+    /// or a click, it opens as the greeting first.
     func beginInbox(_ opening: InboxOpening, at date: Date) {
         inboxOpening = opening
         inboxOpenedAt = date
         settingsMenuOpen = false
+        inboxGreeting = InboxIntro.plays(opening, reduceMotion: reduceMotion)
         headerGreeting = HeaderGreeting.text(now: date, firstName: greetingFirstName, awayBeforeVisit: visitAwayBefore, calendar: calendar)
     }
 
     var spec: ShapeSpec { spec(for: state) }
 
+    /// A state's shape; the dropdown is the greeting's size while it greets.
     func spec(for s: NotchState) -> ShapeSpec {
-        NotchMetrics.spec(for: s, notch: notchSize, liveWidth: s == .live ? liveWidth(for: liveActivity()) : nil)
+        if s == .inbox && inboxGreeting { return NotchMetrics.spec(for: .greeting, notch: notchSize) }
+        return NotchMetrics.spec(for: s, notch: notchSize, liveWidth: s == .live ? liveWidth(for: liveActivity()) : nil)
     }
+
+    /// The dropdown's own shape, once it has sprung open.
+    var dropdownSpec: ShapeSpec { NotchMetrics.spec(for: .inbox, notch: notchSize) }
 
     func liveActivity(at date: Date? = nil) -> LiveActivity {
         presenter(at: date).previewLiveActivity()
@@ -166,13 +184,13 @@ final class NotchModel: ObservableObject {
     func liveWidth(for live: LiveActivity) -> CGFloat {
         let set = BuildFlowTheme.frame
         let label = NotchFonts.width(live.label, set[.live])
-        let inWidth = NotchFonts.width("in", set[.live])
         // Measure the countdown with zeros so the width doesn't twitch every second.
         let digits = String(live.countdown.map { $0.isNumber ? "0" : $0 })
         let count = NotchFonts.width(digits, set[.liveFigure])
-        return NotchMetrics.liveWidth(leftContent: LiveContent.discSize + LiveContent.discGap + label,
-                                      rightContent: inWidth + LiveContent.figureGap + count,
-                                      notchWidth: notchSize.width)
+        return NotchMetrics.liveWidth(leftContent: LiveContent.iconSize + LiveContent.iconGap + label,
+                                      rightContent: LiveContent.ringSize + LiveContent.ringGap + count,
+                                      notchWidth: notchSize.width,
+                                      leftInset: LiveContent.leading, rightInset: LiveContent.trailing)
     }
 
     /// The hardware notch in the canvas's coordinates (top-left origin).
