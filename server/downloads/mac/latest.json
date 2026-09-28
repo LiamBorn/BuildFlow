@@ -1,12 +1,12 @@
 {
   "name": "BuildFlow for Mac",
-  "version": "0.2.0",
-  "build": 2,
-  "file": "BuildFlow-0.2.0.dmg",
-  "url": "https://build-flow.replit.app/downloads/mac/BuildFlow-0.2.0.dmg",
-  "length": 4753209,
-  "sha256": "97bfb4afacda946c02857dff32fa859b4312315cfa8b5df0f5651ff299e0b681",
+  "version": "0.3.0",
+  "build": 3,
+  "file": "BuildFlow-0.3.0.dmg",
+  "url": "https://build-flow.replit.app/downloads/mac/BuildFlow-0.3.0.dmg",
+  "length": 4832190,
+  "sha256": "6c4916c2e69a5d7c3caebf65f77e0c571ed11bae7704e7cd435134f63de4a7e1",
   "minimumSystemVersion": "13.0",
   "hardware": "universal",
-  "publishedAt": "2026-09-27T01:46:32.984Z"
+  "publishedAt": "2026-09-28T15:51:49.217Z"
 }

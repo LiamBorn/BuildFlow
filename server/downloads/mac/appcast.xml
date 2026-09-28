@@ -6,6 +6,21 @@
     <description>Updates to BuildFlow for Mac, newest first.</description>
     <language>en</language>
     <item>
+      <title>Version 0.3.0</title>
+      <pubDate>Mon, 28 Sep 2026 15:51:49 +0000</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[**A new look for the notch.**
+
+- **Black and glowing.** The dropdown is black again, with icon tabs beside the camera, your list and Today side by side, and a soft light that runs round the edge as it opens.
+- **A greeting first, every time.** Press Control + Option (left side): it says good morning, good afternoon or good evening, then opens your day.
+- **Alerts and countdowns** glow in their own colour, and meetings and jobs count down with a ring.
+- **Dark is the new default.** Light is still in the gear menu.
+- **Check for Updates…** is in the gear menu too.]]></description>
+      <enclosure url="https://build-flow.replit.app/downloads/mac/BuildFlow-0.3.0.dmg" length="4832190" type="application/x-apple-diskimage" sparkle:edSignature="0AUg0wnoZsGkZcSSPfz2WOlUl/JSe8vQlQyYQHrRy0F7Mywam8TEquoxoPnM/r0ljYBjlVWV2VAn4AIBr/kBAQ=="/>
+    </item>
+    <item>
       <title>Version 0.2.0</title>
       <pubDate>Sun, 27 Sep 2026 01:46:32 +0000</pubDate>
       <sparkle:version>2</sparkle:version>
@@ -18,20 +33,6 @@
 - **A greeting each time you open it.** Press Control + Option (left side) and it says good morning, good afternoon or good evening before showing your day.
 - **Alerts have Open and Later buttons.**]]></description>
       <enclosure url="https://build-flow.replit.app/downloads/mac/BuildFlow-0.2.0.dmg" length="4753209" type="application/x-apple-diskimage" sparkle:edSignature="okYq5djqZCYztbCbcDbXuaHMvCwXmcscJuCKrXMIjjt4+j4JHZHHacsG/si56wvc5zZtnrzh+p76b5cOmrx/Cg=="/>
-    </item>
-    <item>
-      <title>Version 0.1.0</title>
-      <pubDate>Sat, 26 Sep 2026 23:56:20 +0000</pubDate>
-      <sparkle:version>1</sparkle:version>
-      <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <description sparkle:format="markdown"><![CDATA[**The first BuildFlow for Mac.** Your MacBook's notch becomes a small BuildFlow window.
-
-- **A greeting** when you open the lid or unlock: "Good morning", with one line about your day.
-- **Your inbox**: notifications, upcoming jobs, meetings, and what's waiting on you. Press Control + Option (left side) to open BuildFlow in the notch, or hover it.
-- **Voice**: hold Control + Option to talk, and ask about your schedule. Nothing changes until you press Accept.
-- **Updates** arrive on their own from now on. You can also choose Check for Updates… in the menu bar.]]></description>
-      <enclosure url="https://build-flow.replit.app/downloads/mac/BuildFlow-0.1.0.dmg" length="3654194" type="application/x-apple-diskimage" sparkle:edSignature="eJEU2u9/uSIgxd35sOssJxKbnS8Z+gqIW378aZV+eVl5lahe6UUfY0cj6wKsi+8J2NeNVQJFe0JcUGU9YIbgAg=="/>
     </item>
   </channel>
 </rss>
