@@ -21,6 +21,8 @@ enum NotchAction {
     case toggleSettingsMenu
     /// Appearance, chosen in that menu.
     case setAppearance(Appearance)
+    /// Check for Updates…, in that menu (Sparkle's check, as the status menu's item runs it).
+    case checkForUpdates
     /// An empty list's way out.
     case empty(EmptyAction)
     /// An alert's button.
@@ -70,8 +72,11 @@ final class NotchModel: ObservableObject {
     @Published var systemIsDark = false
     /// System Settings › Accessibility › Display › Reduce motion: nothing springs, writes or slides.
     @Published var reduceMotion = false
-    /// The gear's menu in the dropdown.
+    /// The gear's menu in the dropdown, and its update item (disabled when Sparkle isn't running; it
+    /// reads "Update Available…" once a check has found one).
     @Published var settingsMenuOpen = false
+    @Published var canCheckForUpdates = true
+    @Published var updateMenuTitle = Updater.checkTitle
 
     /// When the current state opened (the rim's light runs from then).
     @Published var shownAt = Date.distantPast

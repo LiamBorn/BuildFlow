@@ -6,7 +6,7 @@ import Foundation
 public enum NotchIcon: String, CaseIterable {
     case bell, hardHat, hardHatSmall, calendar, calendarPlain, listChecks, listSmall
     case mic, settings, triangleAlert, activity, checkSquare, cloudRain, cloudRainSmall
-    case clock, video, mark, chevronRight
+    case clock, video, mark, chevronRight, download
 }
 
 /// The website's tones; BuildFlowTheme.tone(_:) gives each its colour and wash.

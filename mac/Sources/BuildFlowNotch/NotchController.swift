@@ -412,9 +412,16 @@ final class NotchController {
             if model.settingsMenuOpen { withAnimation(.easeOut(duration: 0.15)) { model.settingsMenuOpen = false } }
             if tab == .notifications && model.state == .inbox { session?.markShownSeen() }
         case .toggleSettingsMenu:
+            if !model.settingsMenuOpen {
+                model.canCheckForUpdates = Updater.shared.canCheckForUpdates
+                model.updateMenuTitle = Updater.shared.menuItem.title
+            }
             withAnimation(model.reduceMotion ? Motion.reduced : .spring(response: 0.3, dampingFraction: 0.86)) {
                 model.settingsMenuOpen.toggle()
             }
+        case .checkForUpdates:
+            model.settingsMenuOpen = false
+            Updater.shared.checkForUpdates(nil)
         case let .setAppearance(appearance):
             onAppearance?(appearance)
         case let .empty(action):

@@ -51,6 +51,8 @@ enum IconPaths {
             return ["M12 2.5 20.5 7.3v9.4L12 21.5l-8.5-4.8V7.3z", "M12 12 20.5 7.3M12 12 3.5 7.3M12 12v9.5"]
         case .chevronRight:
             return ["m9 18 6-6-6-6"]
+        case .download:
+            return ["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "m7 10 5 5 5-5", "M12 15V3"]
         }
     }
 

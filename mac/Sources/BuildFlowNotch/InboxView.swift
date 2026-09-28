@@ -583,8 +583,9 @@ struct TodayRow: View {
 
 // MARK: - The gear's menu
 
-/// A small menu under the gear: Appearance (Light · Dark · Match macOS) and the rest of the settings
-/// in the menu bar.
+/// A small menu under the gear: Appearance (Light · Dark · Match macOS), Check for Updates… (the
+/// menu-bar icon can sit behind the notch, so this is the way to Sparkle), and the rest of the
+/// settings in the menu bar.
 struct SettingsMenu: View {
     @ObservedObject var model: NotchModel
     @Environment(\.notchTheme) private var theme
@@ -599,6 +600,7 @@ struct SettingsMenu: View {
                 .padding(.horizontal, 4)
             Hairline()
                 .padding(.vertical, 8)
+            MenuRow(title: model.updateMenuTitle, icon: .download, enabled: model.canCheckForUpdates) { model.onAction?(.checkForUpdates) }
             MenuRow(title: "More settings…", icon: .settings) { model.onAction?(.openSettings) }
         }
         .padding(6)
@@ -650,6 +652,7 @@ struct AppearanceSegments: View {
 struct MenuRow: View {
     let title: String
     let icon: NotchIcon
+    var enabled = true
     let action: () -> Void
     @Environment(\.notchTheme) private var theme
     @State private var hovering = false
@@ -664,10 +667,12 @@ struct MenuRow: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: theme.radii.control, style: .continuous).fill(hovering ? theme[.hover] : .clear))
+            .background(RoundedRectangle(cornerRadius: theme.radii.control, style: .continuous).fill(hovering && enabled ? theme[.hover] : .clear))
+            .opacity(enabled ? 1 : 0.45)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
         .onHover { hovering = $0 }
     }
 }
