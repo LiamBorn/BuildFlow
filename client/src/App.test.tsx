@@ -26,107 +26,101 @@ describe("BuildFlow app", () => {
   it("renders the welcome page first", async () => {
     render(<App />);
 
-    // The Frost landing (2026-09-16): heavy + thin headline, the five category
-    // names, the waitlist pill and Login in the nav, and the email capture pill.
-    expect(await screen.findByRole("heading", { name: /^Precision by Default\.\s*Clarity in Everything\.$/ })).toBeInTheDocument();
-    for (const category of ["Product", "Plans", "Resources", "Company", "AI"]) {
-      expect(screen.getByText(category)).toBeInTheDocument();
+    // The landing (2026-09-27): linear.app's homepage in light mode, under the Top Drawer
+    // Navigation — four categories, Log in and the waitlist; every picture is a placeholder.
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "The construction scheduling system for crews and the field" })
+    ).toBeInTheDocument();
+    const nav = screen.getByRole("navigation", { name: "Main navigation" });
+    for (const category of ["Product", "AI", "Resources", "Company"]) {
+      // one in the bar, one in the phone list; both closed
+      for (const button of within(nav).getAllByRole("button", { name: category })) {
+        expect(button).toHaveAttribute("aria-expanded", "false");
+      }
     }
     expect(screen.getByRole("button", { name: /^Login from welcome navigation$/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^Join the waitlist from welcome navigation$/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("Email address")).toHaveAttribute("placeholder", "Enter your email");
-    expect(screen.getByText("4,900+ people already on the waitlist")).toBeInTheDocument();
-    // The old landing's menus and pages are gone.
-    expect(screen.queryByRole("button", { name: /^Preview the live demo$/ })).not.toBeInTheDocument();
-    // The names open dropdowns now rather than routing to pages.
-    expect(screen.getByRole("button", { name: /^Product$/ })).toHaveAttribute("aria-haspopup", "true");
-    expect(screen.queryByRole("region", { name: "Product menu" })).not.toBeInTheDocument();
+    expect(within(nav).getAllByRole("link", { name: "Download" })[0]).toHaveAttribute("href", "#mac");
+    expect(nav).not.toHaveAttribute("data-open");
+    // The Frost hero's stand-in claim went with it.
+    expect(screen.queryByText(/4,900\+/)).not.toBeInTheDocument();
+    // The changelog is the Updates page's four newest entries.
+    expect(within(screen.getByRole("region", { name: "Changelog" })).getAllByRole("listitem")).toHaveLength(4);
   });
 
-  it("joins the waitlist from the landing page's email pill", async () => {
+  it("opens a marketing page from the landing header, at its own address", async () => {
     render(<App />);
 
-    fireEvent.change(await screen.findByLabelText("Email address"), { target: { value: "foreman@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /^Join the Waitlist$/ }));
+    const nav = await screen.findByRole("navigation", { name: "Main navigation" });
+    fireEvent.click(within(nav.querySelector<HTMLElement>('[data-panel="company"]')!).getByRole("link", { name: "Customers" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("You’re on the list");
-    // The harness stubs fetch with a vi.fn per test; the pill must post the address.
-    const calls = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls as Array<[RequestInfo | URL, RequestInit?]>;
-    const call = calls.find(([url]) => String(url) === "/api/waitlist");
-    expect(call).toBeDefined();
-    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ email: "foreman@example.com" });
+    expect(await screen.findByRole("heading", { name: "The teams that build run on BuildFlow." })).toBeInTheDocument();
+    expect(window.location.hash).toBe("#customers");
+    expect(screen.queryByRole("heading", { level: 1, name: /^The construction scheduling/ })).not.toBeInTheDocument();
   });
 
-  it("folds the categories into a side drawer behind the Menu pill on narrow windows", async () => {
+  it("opens the Product drawer from the navigation bar, and closes it on Escape", async () => {
     render(<App />);
+    const nav = await screen.findByRole("navigation", { name: "Main navigation" });
+    const product = nav.querySelector<HTMLButtonElement>('.nav-item[data-menu="product"]')!;
 
-    // The pill is only shown by CSS under 720px; in the DOM it is always there.
-    fireEvent.click(await screen.findByRole("button", { name: "Open menu" }));
-
-    const drawer = await screen.findByRole("dialog", { name: "Menu" });
-    for (const category of ["Product", "Plans", "Resources", "Company", "AI"]) {
-      expect(within(drawer).getByRole("button", { name: category })).toBeInTheDocument();
+    fireEvent.click(product);
+    const panel = nav.querySelector<HTMLElement>('[data-panel="product"]')!;
+    await waitFor(() => expect(panel).toHaveClass("is-active"));
+    for (const item of ["Crew Scheduling", "Schedule AI", "Map & Field Ops", "Production Reports", "Compare plans"]) {
+      expect(within(panel).getByRole("link", { name: item })).toBeInTheDocument();
     }
-    expect(within(drawer).getByRole("button", { name: "Join the Waitlist" })).toBeInTheDocument();
-    expect(within(drawer).getByRole("button", { name: "Log in" })).toBeInTheDocument();
+    expect(product).toHaveAttribute("aria-expanded", "true");
+    expect(nav).toHaveAttribute("data-open");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(nav).not.toHaveAttribute("data-open");
+    expect(product).toHaveAttribute("aria-expanded", "false");
+    expect(product).toHaveFocus();
+  });
+
+  it("takes the header's Download button to the BuildFlow for Mac download page", async () => {
+    render(<App />);
+    const nav = await screen.findByRole("navigation", { name: "Main navigation" });
+
+    fireEvent.click(nav.querySelector<HTMLElement>(".contact")!);
+
+    expect(window.location.hash).toBe("#mac");
+    await waitFor(() => expect(document.title).toBe("BuildFlow for Mac — BuildFlow"));
+    expect(screen.queryByRole("navigation", { name: "Main navigation" })).not.toBeInTheDocument();
+  });
+
+  it("opens a feature's details from a section's Features row", async () => {
+    render(<App />);
+    const entry = await screen.findByRole("button", { name: "Crew Scheduling" });
+
+    fireEvent.click(entry);
+    const sheet = await screen.findByRole("dialog", { name: "Crew Scheduling" });
+    expect(within(sheet).getByText("Double-bookings and crew capacity")).toBeInTheDocument();
     expect(document.body.style.overflow).toBe("hidden");
-    // The page steps back into its black frame while the drawer is open.
-    expect(screen.getByTestId("frost-stage")).toHaveClass("is-open");
 
-    fireEvent.click(within(drawer).getByRole("button", { name: "Close menu" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument());
+    fireEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Crew Scheduling" })).not.toBeInTheDocument());
     expect(document.body.style.overflow).toBe("");
-    expect(screen.getByTestId("frost-stage")).not.toHaveClass("is-open");
+    expect(entry).toHaveFocus();
   });
 
-  it("opens the full-width category band under the bar on click or hover, and closes it on Escape", async () => {
+  it("opens the category list from Menu on narrow windows", async () => {
     render(<App />);
-    await screen.findByRole("heading", { name: /^Precision by Default\./ });
+    const nav = await screen.findByRole("navigation", { name: "Main navigation" });
+    const list = nav.querySelector<HTMLElement>('[data-panel="menu"]')!;
 
-    fireEvent.click(screen.getByRole("button", { name: /^Product$/ }));
-    const menu = await screen.findByRole("region", { name: "Product menu" });
-    for (const item of ["Crew Scheduling", "Schedule AI", "Map & Field Ops", "Production Reports"]) {
-      expect(within(menu).getByRole("button", { name: item })).toBeInTheDocument();
+    // The Menu button is only shown by CSS under 834px; in the DOM it is always there.
+    fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
+    expect(list).toHaveClass("is-active");
+    for (const category of ["Product", "AI", "Resources", "Company"]) {
+      expect(within(list).getByRole("button", { name: category })).toBeInTheDocument();
     }
-    expect(screen.getByRole("button", { name: /^Product$/ })).toHaveAttribute("aria-expanded", "true");
-    // The page steps into the drawer's black frame while the band is open.
-    expect(screen.getByTestId("frost-stage")).toHaveClass("is-open");
+    expect(within(list).getByRole("link", { name: "Download" })).toHaveAttribute("href", "#mac");
+    expect(within(list).getByRole("button", { name: "Log in" })).toBeInTheDocument();
 
-    fireEvent.keyDown(window, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("region", { name: "Product menu" })).not.toBeInTheDocument());
-    expect(screen.getByTestId("frost-stage")).not.toHaveClass("is-open");
-
-    // Hovering a different name opens that one.
-    fireEvent.mouseEnter(screen.getByRole("button", { name: /^Company$/ }));
-    const companyMenu = await screen.findByRole("region", { name: "Company menu" });
-    expect(within(companyMenu).getByRole("button", { name: "Contact Sales" })).toBeInTheDocument();
-    // The band belongs to the whole bar: leaving the bar closes it.
-    fireEvent.mouseLeave(screen.getByRole("navigation", { name: "Welcome" }));
-    await waitFor(() => expect(screen.queryByRole("region", { name: "Company menu" })).not.toBeInTheDocument());
-  });
-
-  it("slides the drawer out when the pointer rests on the right edge, and back when it leaves", async () => {
-    render(<App />);
-    await screen.findByRole("heading", { name: /^Precision by Default\./ });
-    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
-
-    fireEvent.mouseEnter(screen.getByTestId("frost-edge-zone"));
-    const drawer = await screen.findByRole("dialog", { name: "Menu" });
-    expect(within(drawer).getByRole("button", { name: "Product" })).toBeInTheDocument();
-
-    fireEvent.mouseEnter(drawer);
-    fireEvent.mouseLeave(drawer);
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument());
-  });
-
-  it("does not open the drawer for a pointer that only passes the edge", async () => {
-    render(<App />);
-    await screen.findByRole("heading", { name: /^Precision by Default\./ });
-    const zone = screen.getByTestId("frost-edge-zone");
-    fireEvent.mouseEnter(zone);
-    fireEvent.mouseLeave(zone);
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    expect(screen.queryByRole("dialog", { name: "Menu" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close menu" }));
+    expect(nav).not.toHaveAttribute("data-open");
+    await waitFor(() => expect(list).not.toHaveClass("is-closing"));
   });
 
   it("lands a marketing hash on its own page (the routing came back on 2026-09-23)", async () => {
@@ -136,7 +130,7 @@ describe("BuildFlow app", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Help center" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /^Precision by Default\./ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: /^The construction scheduling/ })).not.toBeInTheDocument();
   });
 
   it("opens the create account page from the landing nav", async () => {
@@ -400,7 +394,7 @@ describe("BuildFlow app", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^BuildFlow$/ }));
 
-    expect(await screen.findByRole("heading", { name: /^Precision by Default\./ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /^The construction scheduling/ })).toBeInTheDocument();
     expect(window.location.hash).toBe("");
     expect(screen.queryByRole("heading", { name: "Pending Approvals" })).not.toBeInTheDocument();
   });

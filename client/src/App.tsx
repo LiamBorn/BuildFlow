@@ -17,7 +17,7 @@ import {
   type ReactNode
 } from "react";
 import { createPortal } from "react-dom";
-import FrostLanding from "./components/FrostLanding";
+import LandingPage, { type LandingUpdate } from "./landing/LandingPage";
 import {
   DndContext,
   DragOverlay,
@@ -4297,16 +4297,26 @@ function WelcomePage({
     return `#${menuId}`;
   };
 
-  // The landing page itself: the Frost hero, with nothing of the marketing shell
-  // around it (no light ground, no mega-menu nav, no footer).
+  // The landing page itself (2026-09-27: linear.app's homepage, rebuilt in light mode), with
+  // nothing of the marketing shell around it: it brings its own header and footer.
   if (welcomeView === "home") {
+    // Its links name a marketing page by hash; the route table says which view that is.
+    const navigateFromLanding = (hash: string) => {
+      const view = welcomeRoutes[hash];
+      if (view && view !== "home") showWelcomeSubpage(view, hash as WelcomeHash);
+    };
+    // Its changelog is the Updates page's four newest entries.
+    const landingUpdates: LandingUpdate[] = [...UPDATE_ENTRIES]
+      .sort((a, b) => b.dateTime.localeCompare(a.dateTime))
+      .slice(0, 4)
+      .map((entry) => ({ anchor: `update-${entry.dateTime}`, title: entry.title, summary: entry.description, dateTime: entry.dateTime }));
     return (
-      <FrostLanding
+      <LandingPage
         logo={<BuildFlowLogoMark />}
         onLogin={showLoginPage}
-        onJoinWaitlist={() => {
-          if (typeof window !== "undefined") window.location.hash = "#waitlist";
-        }}
+        onNavigate={navigateFromLanding}
+        updates={landingUpdates}
+        onOpenUpdate={showUpdatesPage}
       />
     );
   }

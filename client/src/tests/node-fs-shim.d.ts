@@ -18,6 +18,8 @@ declare module "node:fs" {
   export function readFileSync(path: string, encoding: "utf8"): string;
   /** Every path under `path`, relative to it (Node 20+); dark-mode-gaps.test.ts walks src with it. */
   export function readdirSync(path: string, options: { recursive: true }): string[];
+  /** landing-page.test.tsx checks every file LANDING_MEDIA names is in client/public. */
+  export function existsSync(path: string): boolean;
 }
 declare module "node:url" {
   export function fileURLToPath(url: string | URL): string;

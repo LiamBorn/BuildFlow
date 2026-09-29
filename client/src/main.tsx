@@ -7,7 +7,8 @@ import "./styles.css";
 import "./redesign.css";
 import "./timecard.css";
 import "./welcome-redesign.css";
-import "./frost-landing.css"; // the landing page (Frost hero)
+import "./landing/landing.css"; // the landing page (linear.app layout, light mode)
+import "./landing/drawer-nav.css"; // its Top Drawer Navigation
 import "./updates-redesign.css";
 import "./reviews-redesign.css";
 import "./help-redesign.css";
