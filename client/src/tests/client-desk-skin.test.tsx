@@ -820,7 +820,14 @@ describe("the Client Desk skin", () => {
        z-index 80; the job panel is stuck below that (70d), so once the action bar moved to the
        bottom edge the pill covered "Open in Schedule" — measured with elementFromPoint, the click
        landed on the pill. The other three are portals above 80 and have always covered it. */
-    const fab = sheet.nodes.filter((node): node is Rule => node.type === "rule" && node.selector.includes(".hc-assistant-fab"));
+    /* Counted among the rules that show or hide it: a page may still paint the pill (the Dashboard
+       trial of 2026-09-28, skin §87, fills it with its accent), but only one rule steps it aside. */
+    const fab = sheet.nodes.filter(
+      (node): node is Rule =>
+        node.type === "rule" &&
+        node.selector.includes(".hc-assistant-fab") &&
+        node.nodes.some((child) => child.type === "decl" && child.prop === "display")
+    );
     expect(fab.length, "one rule, and it names every panel").toBe(1);
     for (const panel of [".pdx", ".gantt-drawer-layer", ".schedule-dialog-backdrop"]) {
       expect(fab[0].selector, panel).toContain(panel);

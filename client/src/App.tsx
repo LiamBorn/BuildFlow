@@ -283,6 +283,7 @@ import { TutorialStage } from "./TutorialStage";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { LabeledSidebar, OPEN_NOTIFICATIONS_EVENT } from "./shell/LabeledSidebar";
 import { LABELED_CREATE, labeledSections } from "./shell/labeledSections";
+import { DashboardHeroArt } from "./dashboard/DashboardHeroArt";
 import { AnimatedFigure } from "./components/ui/animated-figure";
 import { readUserSetting, rememberUserSetting, syncUserSettings } from "./userSettings";
 /* The panel board — move / size / remove / "+" / Reset — lives in its own module since 2026-09-15,
@@ -19754,6 +19755,10 @@ function TopBar({
             className="reports-user-button"
             type="button"
             aria-label={`${me.name} account`}
+            /* the name and level beside the avatar are drawn from these by the EduLearn trial (skin §88):
+               the button is named by aria-label, so they add nothing a screen reader would read twice */
+            data-name={me.name}
+            data-role={me.permission ? permissionLevelLabels[me.permission] : me.title}
             aria-haspopup="menu"
             aria-expanded={isAccountMenuOpen}
             aria-controls={accountMenuId}
@@ -24993,6 +24998,8 @@ function Dashboard({
                 </span>
               ))}
           </p>
+          {/* the banner's button, still life and quote: a trial (2026-09-28, skin §87) */}
+          <DashboardHeroArt onOpenSchedule={() => setPage("schedule")} />
           {customizing && <BoardCustomizeHint />}
           {customizing && panelLayout.hidden.length > 0 && (
             <HiddenPanelChips hidden={panelLayout.hidden} titles={panelTitles} onShow={panelLayout.show} />

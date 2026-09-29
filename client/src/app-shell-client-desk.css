@@ -15980,3 +15980,1939 @@ body.bf-side-resizing:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"
     padding: 0 4px;
   }
 }
+/* ============================================================================
+   87. THE DASHBOARD ON THE EDULEARN REFERENCE — a trial (2026-09-28)
+   ----------------------------------------------------------------------------
+   Asked for with a screenshot of an e-learning dashboard ("EduLearn"): "Redesign
+   the dashboard as a test".
+
+   WHAT THE REFERENCE IS MADE OF, read off the screenshot (a 3x3 box sampler for
+   fills, the darkest eighth of a glyph's pixels for inks):
+   - a pale periwinkle ground (#eff3fc) under white cards on a cool hairline and
+     a soft, cool shadow, the corners about 16-18px;
+   - a GREETING BANNER in a periwinkle-to-lilac wash (#e7e9fe to #ebe6fd): the
+     greeting bold and navy (#20247e), a slate lede, a blue-to-violet pill button
+     with an arrow, a soft 3D still life and a quote on a frosted card;
+   - bold navy card titles with no icon, and "View all ->" in the accent;
+   - PASTEL DISCS: every icon on a round tint of its own hue (periwinkle, mint,
+     lilac, sky, amber), in rows and tiles alike;
+   - STAT TILES: a disc, a gray label, the figure large and bold beside a green
+     trend chip;
+   - COURSE CARDS: a pastel picture with a status chip on it, the title, a gray
+     count, a slim bar and its percent;
+   - ROWS on hairlines rather than on tiles: a disc, the title over a gray line,
+     the time or a chevron at the right;
+   - CHIPS: pastel pills in their status's hue.
+   Its accent is a periwinkle (#5b7cfa). This program holds text to 4.5:1, so the
+   fill is #5566ee (4.63 with white on it), accent text #4a5ee8 (5.2 on white),
+   and the banner's button runs #4f68f0 -> #6c60ec, both ends clearing 4.5.
+
+   HOW IT STAYS A TRIAL ON THE DASHBOARD, as section 86's did on 2026-09-27: every
+   rule hangs off `.dash-rx.hs-home` without `.sched-board-host` (the Schedule page
+   shares the board), the chrome only changes through `:has()` while the Dashboard
+   is the page, the colours are LIGHT only (dark mode keeps its own palette and
+   takes the shapes), and the periwinkle is the Default Colors set's: anyone on
+   another set keeps their set's accent. The board, its layout and its motion are
+   untouched. The banner's button, still life and quote are
+   dashboard/DashboardHeroArt.tsx.
+   TAKING IT OUT: this section; dashboard/DashboardHeroArt.tsx and its line in
+   App.tsx's Dashboard header; public/dashboard/hero-site.svg; and Plus Jakarta Sans
+   from index.html's font link.
+   ============================================================================ */
+
+/* ---- 87a. the trial's measures, in any mode ----
+   Every colour here reads the program's own tokens, so dark mode draws the same
+   shapes from its own palette; 87b gives light mode the reference's values. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) {
+  --edl-card-radius: 18px;
+  --edl-tile-radius: 14px;
+  --edl-hero-radius: 22px;
+  --edl-title: var(--bf-ink);
+  --edl-track: var(--bf-line-solid);
+  --edl-card-shadow: var(--bf-shadow-card);
+  --edl-glass: color-mix(in srgb, var(--bf-surface) 72%, transparent);
+  --edl-glass-line: color-mix(in srgb, var(--bf-surface) 90%, transparent);
+  /* the discs: a hue and its tint */
+  --edl-blue: var(--bf-color-accent);
+  --edl-blue-wash: var(--bf-color-accent-wash);
+  --edl-green: var(--bf-color-ok);
+  --edl-green-wash: var(--bf-color-ok-wash);
+  --edl-amber: var(--bf-color-warn);
+  --edl-amber-wash: var(--bf-color-warn-wash);
+  --edl-orange: var(--bf-color-orange);
+  --edl-orange-wash: var(--bf-color-orange-wash);
+  --edl-red: var(--bf-color-bad);
+  --edl-red-wash: var(--bf-color-bad-wash);
+  --edl-violet: var(--bf-color-info);
+  --edl-violet-wash: var(--bf-color-info-wash);
+  /* the project cards' pictures: the disc hues washed into the card */
+  --edl-thumb-1: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--edl-blue) 14%, var(--bf-surface)),
+    color-mix(in srgb, var(--edl-blue) 30%, var(--bf-surface))
+  );
+  --edl-thumb-2: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--edl-green) 14%, var(--bf-surface)),
+    color-mix(in srgb, var(--edl-green) 30%, var(--bf-surface))
+  );
+  --edl-thumb-3: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--edl-violet) 14%, var(--bf-surface)),
+    color-mix(in srgb, var(--edl-violet) 30%, var(--bf-surface))
+  );
+  --edl-thumb-4: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--edl-amber) 14%, var(--bf-surface)),
+    color-mix(in srgb, var(--edl-amber) 30%, var(--bf-surface))
+  );
+}
+
+/* The accent's part of the trial stands on the SHELL while the Dashboard is the page: the
+   top row's Upgrade and AI buttons and the Ask AI pill wear the banner's button, and they
+   are outside the Dashboard's own element. From the accent in any set and mode; 87d gives
+   the Default set, in light, the reference's periwinkle. */
+.app-shell.hs-shell.bf-shell:has(.dash-rx.hs-home:not(.sched-board-host)) {
+  --edl-link: var(--bf-color-accent);
+  --edl-bar: var(--bf-color-accent-fill);
+  --edl-bar-2: var(--bf-color-accent-fill);
+  --edl-hero: color-mix(in srgb, var(--bf-color-accent-fill) 14%, var(--bf-surface));
+  --edl-hero-shadow: none;
+  --edl-cta: var(--bf-color-accent-fill);
+  --edl-cta-hover: var(--bf-color-accent-fill-2);
+  --edl-cta-ink: var(--bf-color-on-accent);
+  --edl-cta-shadow: none;
+  --edl-promo: color-mix(in srgb, var(--bf-color-accent-fill) 9%, var(--bf-surface));
+  --edl-promo-line: color-mix(in srgb, var(--bf-color-accent-fill) 18%, transparent);
+}
+
+/* ---- 87b. the neutrals and the trial's own colours, light only ----
+   On the Dashboard's own element, where the admin-kit sheet pins ink, line and card
+   shadow: a value on the shell would be shadowed there. */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .dash-rx.hs-home:not(.sched-board-host) {
+  --bf-ink: #1b2150;
+  --bf-ink-muted: #5f6687;
+  --bf-ink-faint: #5f6687;
+  --bf-line-rgb: 36, 44, 104;
+  --bf-line-solid: #e6e9f6;
+  --bf-line-soft: #eef0f9;
+  --bf-hover: #f3f5fd;
+  --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+  --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+  --edl-title: #1c2260;
+  --edl-track: #edf0f8;
+  --edl-glass: rgba(255, 255, 255, 0.62);
+  --edl-glass-line: rgba(255, 255, 255, 0.9);
+  --edl-blue: #4f6cf0;
+  --edl-blue-wash: #eaefff;
+  --edl-green: #14a578;
+  --edl-green-wash: #e1f7ef;
+  --edl-amber: #e3970a;
+  --edl-amber-wash: #fff4dc;
+  --edl-orange: #ee7a2b;
+  --edl-orange-wash: #fff0e5;
+  --edl-red: #e4455e;
+  --edl-red-wash: #ffe9ed;
+  --edl-violet: #8b5cf6;
+  --edl-violet-wash: #f1eafe;
+  --edl-thumb-1: linear-gradient(135deg, #e6ecff, #c9d5ff);
+  --edl-thumb-2: linear-gradient(135deg, #dff7ee, #bdeedb);
+  --edl-thumb-3: linear-gradient(135deg, #f4e9ff, #e3cdfb);
+  --edl-thumb-4: linear-gradient(135deg, #fff2df, #ffe1bc);
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .dash-rx.hs-home:not(.sched-board-host) {
+    --bf-ink: #1b2150;
+    --bf-ink-muted: #5f6687;
+    --bf-ink-faint: #5f6687;
+    --bf-line-rgb: 36, 44, 104;
+    --bf-line-solid: #e6e9f6;
+    --bf-line-soft: #eef0f9;
+    --bf-hover: #f3f5fd;
+    --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+    --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+    --edl-title: #1c2260;
+    --edl-track: #edf0f8;
+    --edl-glass: rgba(255, 255, 255, 0.62);
+    --edl-glass-line: rgba(255, 255, 255, 0.9);
+    --edl-blue: #4f6cf0;
+    --edl-blue-wash: #eaefff;
+    --edl-green: #14a578;
+    --edl-green-wash: #e1f7ef;
+    --edl-amber: #e3970a;
+    --edl-amber-wash: #fff4dc;
+    --edl-orange: #ee7a2b;
+    --edl-orange-wash: #fff0e5;
+    --edl-red: #e4455e;
+    --edl-red-wash: #ffe9ed;
+    --edl-violet: #8b5cf6;
+    --edl-violet-wash: #f1eafe;
+    --edl-thumb-1: linear-gradient(135deg, #e6ecff, #c9d5ff);
+    --edl-thumb-2: linear-gradient(135deg, #dff7ee, #bdeedb);
+    --edl-thumb-3: linear-gradient(135deg, #f4e9ff, #e3cdfb);
+    --edl-thumb-4: linear-gradient(135deg, #fff2df, #ffe1bc);
+  }
+}
+
+/* ---- 87c. the ground and the chrome around the Dashboard, light only ----
+   The shell paints the ground the top row and the sidebar stand on; moving the
+   panel moves both (section 1), never --bf-ground itself. */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host)) {
+  --cd-panel: #f4f6fd;
+  --bf-chrome-rgb: 244, 246, 253;
+  --bf-chrome-ink: #1b2150;
+  --bf-chrome-muted: #5f6687;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host)) {
+    --cd-panel: #f4f6fd;
+    --bf-chrome-rgb: 244, 246, 253;
+    --bf-chrome-ink: #1b2150;
+    --bf-chrome-muted: #5f6687;
+  }
+}
+
+/* ---- 87d. the periwinkle and the status hues: the Default Colors set, light only ----
+   On the shell while the Dashboard is the page, so the chrome around it takes them
+   too; body portals (the dropdown lists, the drawers, BuildFlow AI) keep the
+   program's own set. */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(
+    .dash-rx.hs-home:not(.sched-board-host)
+  ) {
+  --bf-color-accent: #4a5ee8;
+  --bf-color-accent-rgb: 74, 94, 232;
+  --bf-color-accent-fill: #5566ee;
+  --bf-color-accent-fill-rgb: 85, 102, 238;
+  --bf-color-accent-fill-2: #4656e0;
+  --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --bf-color-on-accent: #ffffff;
+  --bf-color-accent-wash: #eef0fe;
+  --bf-color-accent-wash-2: #e3e7fd;
+  --bf-color-accent-wash-3: #d5dbfb;
+  --bf-color-ok: #0f7a5f;
+  --bf-color-ok-wash: #e1f7ef;
+  --bf-color-ok-edge: #b8eadb;
+  --bf-color-warn: #8a5a00;
+  --bf-color-warn-wash: #fff4dc;
+  --bf-color-warn-edge: #f6dca3;
+  --bf-color-bad: #b42341;
+  --bf-color-bad-wash: #ffe9ed;
+  --bf-color-bad-edge: #f7c3cd;
+  --bf-color-info: #6b3fd4;
+  --bf-color-info-rgb: 107, 63, 212;
+  --bf-color-info-wash: #f1eafe;
+  --bf-color-info-edge: #dccdfb;
+  --bf-color-orange: #b0520a;
+  --bf-color-orange-wash: #fff0e5;
+  --bf-color-series-1: #5b7cfa;
+  --bf-color-series-2: #9b7bef;
+  --bf-color-selection: rgba(85, 102, 238, 0.18);
+  --bf-rail-fill: #5566ee;
+  --bf-rail-rgb: 85, 102, 238;
+  --bf-focus-ink: #4a5ee8;
+  --edl-bar: #5b7cfa;
+  --edl-bar-2: #7c6cf6;
+  --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+  --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+  --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+  --edl-promo: #eef0ff;
+  --edl-promo-line: #dfe3fd;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(
+      .dash-rx.hs-home:not(.sched-board-host)
+    ) {
+    --bf-color-accent: #4a5ee8;
+    --bf-color-accent-rgb: 74, 94, 232;
+    --bf-color-accent-fill: #5566ee;
+    --bf-color-accent-fill-rgb: 85, 102, 238;
+    --bf-color-accent-fill-2: #4656e0;
+    --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --bf-color-on-accent: #ffffff;
+    --bf-color-accent-wash: #eef0fe;
+    --bf-color-accent-wash-2: #e3e7fd;
+    --bf-color-accent-wash-3: #d5dbfb;
+    --bf-color-ok: #0f7a5f;
+    --bf-color-ok-wash: #e1f7ef;
+    --bf-color-ok-edge: #b8eadb;
+    --bf-color-warn: #8a5a00;
+    --bf-color-warn-wash: #fff4dc;
+    --bf-color-warn-edge: #f6dca3;
+    --bf-color-bad: #b42341;
+    --bf-color-bad-wash: #ffe9ed;
+    --bf-color-bad-edge: #f7c3cd;
+    --bf-color-info: #6b3fd4;
+    --bf-color-info-rgb: 107, 63, 212;
+    --bf-color-info-wash: #f1eafe;
+    --bf-color-info-edge: #dccdfb;
+    --bf-color-orange: #b0520a;
+    --bf-color-orange-wash: #fff0e5;
+    --bf-color-series-1: #5b7cfa;
+    --bf-color-series-2: #9b7bef;
+    --bf-color-selection: rgba(85, 102, 238, 0.18);
+    --bf-rail-fill: #5566ee;
+    --bf-rail-rgb: 85, 102, 238;
+    --bf-focus-ink: #4a5ee8;
+    --edl-bar: #5b7cfa;
+    --edl-bar-2: #7c6cf6;
+    --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+    --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+    --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+    --edl-promo: #eef0ff;
+    --edl-promo-line: #dfe3fd;
+  }
+}
+
+/* ---- 87e. the reference's face, where nobody chose one of their own ----
+   Plus Jakarta Sans (index.html): the rounded, open geometric face the reference is
+   set in. Preferences promises a chosen font everywhere, so any other choice keeps it. */
+.app-shell.hs-shell.bf-shell:is([data-bf-font="inter"], :not([data-bf-font])) .dash-rx.hs-home:not(.sched-board-host) {
+  --bf-font-active: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bf-font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--bf-font-active);
+}
+
+/* ---- 87f. THE GREETING BANNER ----
+   The header is already a grid (section 48b); here its tracks become the banner's: a
+   toolbar row above it for the date and the layout controls, then the banner itself —
+   drawn by the header's own ::before across the middle rows, so the announcement and
+   the notes below it stay off it — holding the greeting, the lede, the plan line and
+   the button at the left, the still life and the quote card at the right. Gutter
+   tracks at either end are the banner's padding. */
+@media (min-width: 701px) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head {
+    grid-template-columns:
+      34px minmax(260px, 1fr) minmax(0, 290px) minmax(0, 196px)
+      26px;
+    grid-template-rows: auto 30px auto auto auto auto 28px;
+    column-gap: 0;
+    row-gap: 0;
+    align-items: start;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head::before {
+    content: "";
+    grid-column: 1 / -1;
+    grid-row: 2 / 8;
+    align-self: stretch;
+    border-radius: var(--edl-hero-radius);
+    background: var(--edl-hero);
+    box-shadow: var(--edl-hero-shadow);
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-topline {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    align-self: center;
+    margin: 0 0 16px;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-topline-actions {
+    grid-column: 3 / -1;
+    grid-row: 1;
+    flex-direction: row;
+    align-items: center;
+    align-self: center;
+    justify-self: end;
+    gap: 8px;
+    margin: 0 0 16px;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-topline-row {
+    display: flex;
+    gap: 8px;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-greeting {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-sub {
+    grid-column: 2;
+    grid-row: 4;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-meta {
+    grid-column: 2;
+    grid-row: 5;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-cta {
+    grid-column: 2;
+    grid-row: 6;
+    justify-self: start;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-art {
+    grid-column: 3;
+    grid-row: 2 / 8;
+    align-self: end;
+    justify-self: center;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-quote {
+    grid-column: 4;
+    grid-row: 3 / 7;
+    align-self: center;
+  }
+  /* what follows the banner — the customizing notes, the announcement, a billing
+     note — runs the full width under it */
+  .app-shell.hs-shell.bf-shell
+    .dash-rx.hs-home:not(.sched-board-host)
+    .hs-home-head
+    > :not(.hs-home-topline, .hs-home-subline, .hs-home-greeting, .hs-home-meta, .hs-home-cta, .hs-home-art, .hs-home-quote) {
+    grid-column: 1 / -1;
+    margin-top: 18px;
+  }
+}
+/* narrower windows: the quote steps out first, then the still life */
+@media (min-width: 701px) and (max-width: 1180px) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head {
+    grid-template-columns: 34px minmax(260px, 1fr) minmax(0, 280px) 0 26px;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-quote {
+    display: none;
+  }
+}
+@media (min-width: 701px) and (max-width: 940px) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head {
+    grid-template-columns: 34px minmax(0, 1fr) auto 0 26px;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-art {
+    display: none;
+  }
+  /* no room beside the date: the controls go back beside the greeting, in the banner */
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > .hs-home-topline {
+    grid-column: 1 / -1;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-topline-actions {
+    grid-column: 3;
+    grid-row: 3 / 7;
+    flex-direction: column;
+    align-items: flex-end;
+    margin: 0 0 0 16px;
+  }
+  /* with no layout controls (the board is stacked), the still life keeps its place */
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head:not(:has(.hs-home-topline-actions)) {
+    grid-template-columns: 34px minmax(240px, 1fr) minmax(0, 240px) 0 26px;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head:not(:has(.hs-home-topline-actions)) > .hs-home-art {
+    display: block;
+  }
+}
+/* a phone: the header is a column, so the banner is the header's own ground */
+@media (max-width: 700px) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head {
+    padding: 22px 20px 24px;
+    border-radius: var(--edl-hero-radius);
+    background: var(--edl-hero);
+    box-shadow: var(--edl-hero-shadow);
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head > :is(.hs-home-art, .hs-home-quote) {
+    display: none;
+  }
+}
+
+/* the banner's type: the greeting bold and navy, the lede slate, the plan line quiet */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-greeting {
+  margin: 0;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: clamp(26px, 2.5vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-sub {
+  max-width: 58ch;
+  margin: 10px 0 0;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-meta {
+  margin: 6px 0 0;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-date {
+  border: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+  box-shadow: var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-date .dx-dot {
+  background: var(--edl-bar);
+}
+
+/* the button: the reference's blue-to-violet pill with its arrow */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  margin: 20px 0 0;
+  padding: 0 22px 0 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  font-family: var(--bf-font-active);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: var(--edl-cta-shadow);
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta:hover {
+  background: var(--edl-cta-hover);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta:focus-visible {
+  outline: 2px solid var(--bf-focus-ink, var(--bf-color-accent));
+  outline-offset: 3px;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta svg {
+  flex: none;
+  transition: translate var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta:hover svg {
+  translate: 3px 0;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-art {
+  display: block;
+  width: 100%;
+  max-width: 290px;
+  height: auto;
+  margin: 0 0 4px;
+  pointer-events: none;
+  user-select: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-quote {
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--edl-glass-line);
+  border-radius: 16px;
+  background: var(--edl-glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-quote blockquote {
+  margin: 0;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+/* the layout controls on the toolbar row: white pills, the reference's "Last 30 days" */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head :is(.dash-reset, .hs-home-add, .hs-home-customize) {
+  border: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-customize.active {
+  border-color: transparent;
+  background: var(--bf-color-accent-fill);
+  color: var(--bf-color-on-accent);
+}
+
+/* the announcement under the banner: the reference's lilac promotion card */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo {
+  padding: 18px 52px 18px 22px;
+  border: 1px solid var(--edl-promo-line);
+  border-radius: 16px;
+  background: var(--edl-promo);
+  color: var(--bf-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo h2 {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo p {
+  color: var(--bf-ink-muted);
+  font-size: 13px;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo-action {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  font-weight: 700;
+  box-shadow: var(--edl-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo-action:hover {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head .hs-home-promo-close {
+  color: var(--bf-ink-muted);
+}
+
+/* the banner and what it holds arrive on the header's beats (section 74f) */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head::before {
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-topbar-right) - var(--bfm-shift)));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head :is(.hs-home-cta, .hs-home-art, .hs-home-quote) {
+  --bfe-y: var(--bfm-rise);
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: max(0ms, calc(var(--bfm-beat-controls) - var(--bfm-shift)));
+}
+
+/* ---- 87g. the cards and their heads ---- */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal]:not(.ss-band) {
+  border: 0;
+  border-radius: var(--edl-card-radius);
+  background: var(--bf-surface);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block:not(.is-dragging),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal]:not(.ss-band) {
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-card-shadow);
+}
+/* the titles are the reference's: bold, navy, no icon */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block > .hs-widget-head h2,
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  :is(.cc-panel-head, .tc-dash-head)
+  h2 {
+  gap: 8px;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block > .hs-widget-head h2 > svg,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .cc-panel-head h2 > svg:first-child,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-head h2 > svg:first-child {
+  display: none;
+}
+/* "View all ->": a link in the accent, not a button */
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.hs-widget-actions > .cc-link, .cc-legacy-more),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .cc-panel-head > .cc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  min-height: 28px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--edl-link);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.hs-widget-actions > .cc-link, .cc-legacy-more)::after,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .cc-panel-head > .cc-link::after {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transition: translate var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.hs-widget-actions > .cc-link, .cc-legacy-more):hover,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .cc-panel-head > .cc-link:hover {
+  background: none;
+  color: var(--bf-color-accent-fill-2);
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.hs-widget-actions > .cc-link, .cc-legacy-more):hover::after,
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  .cc-panel-head
+  > .cc-link:hover::after {
+  translate: 2px 0;
+}
+
+/* ---- 87h. the discs: every icon on a round tint of its own hue ---- */
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  :is(.kpi-icon, .cc-stat-ico, .cc-alert-ico, .cc-rec-ico, .cc-app-ico, .tc-dash-icon) {
+  --edl-disc: var(--edl-violet-wash);
+  --edl-disc-ink: var(--edl-violet);
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--edl-disc);
+  color: var(--edl-disc-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) :is(.kpi-icon.blue, .tc-dash-icon.blue, [class*="-ico"].tone-blue) {
+  --edl-disc: var(--edl-blue-wash);
+  --edl-disc-ink: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) :is(.kpi-icon.green, .tc-dash-icon.green, [class*="-ico"].tone-green) {
+  --edl-disc: var(--edl-green-wash);
+  --edl-disc-ink: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  :is(.kpi-icon.yellow, .kpi-icon.amber, .tc-dash-icon.amber, [class*="-ico"].tone-amber) {
+  --edl-disc: var(--edl-amber-wash);
+  --edl-disc-ink: var(--edl-amber);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) :is(.kpi-icon.orange, [class*="-ico"].tone-orange) {
+  --edl-disc: var(--edl-orange-wash);
+  --edl-disc-ink: var(--edl-orange);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) :is(.kpi-icon.red, .tc-dash-icon.red, [class*="-ico"].tone-red) {
+  --edl-disc: var(--edl-red-wash);
+  --edl-disc-ink: var(--edl-red);
+}
+/* the icons that were bare glyphs take a disc too: a resource row's, an empty state's */
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.resource-row > svg, .inline-empty-state > svg) {
+  box-sizing: content-box;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  padding: 10px;
+  border-radius: 50%;
+  background: var(--edl-blue-wash);
+  color: var(--edl-blue);
+}
+
+/* ---- 87i. rows: on hairlines, a disc, the title over a gray line ---- */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.cc-list, .cc-legacy-panel) {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.cc-alert, .cc-rec, .resource-row) {
+  gap: 14px;
+  min-height: 60px;
+  padding: 12px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.cc-alert, .cc-rec, .resource-row)
+  + :is(.cc-alert, .cc-rec, .resource-row) {
+  border-top: 1px solid var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.cc-alert-ico, .cc-rec-ico) {
+  width: 40px;
+  height: 40px;
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.cc-alert-body, .cc-rec-body, .resource-row > span)
+  > strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.cc-alert-body, .cc-rec-body, .resource-row > span)
+  > :is(span, em, p) {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-alert-time {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-rec-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-rec-btn:hover {
+  background: var(--bf-color-accent-wash-2);
+  color: var(--bf-color-accent);
+}
+
+/* ---- 87j. chips: pastel pills in their status's hue ---- */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.badge, .cc-sev, .cc-app-badge),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band :is(.ss-delta, .ss-project-days),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] :is(.hs-split-tag, .tc-dash-addon) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 999px;
+  font-family: var(--bf-font-active);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.3;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-tag {
+  background: var(--edl-violet-wash);
+  color: var(--bf-color-info);
+}
+
+/* ---- 87k. stat tiles: a disc, a gray label, the figure bold ---- */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.kpi-card, .cc-stat, .cc-app),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-card {
+  border: 1px solid var(--bf-line-soft);
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.kpi-card-button, .cc-stat, .cc-app):is(:hover, :focus-visible),
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  .tc-dash-card:is(:hover, :focus-visible) {
+  border-color: var(--bf-line-solid);
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .kpi-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  text-align: left;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.kpi-icon, .cc-app-ico),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-icon {
+  width: 44px;
+  height: 44px;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-stat-ico {
+  width: 36px;
+  height: 36px;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .kpi-card p,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-stat-label,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-card p {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.kpi-card strong, .cc-stat-value),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-card strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .kpi-card strong,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-card strong {
+  font-size: 26px;
+  line-height: 1.15;
+}
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  .dash-board
+  .dash-block
+  :is(.kpi-card > div > span, .cc-stat-note, .cc-app p),
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .tc-dash-card em {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+}
+/* a trend is the reference's green chip beside the figure */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-trend.up {
+  background: var(--bf-color-ok-wash);
+  color: var(--bf-color-ok);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-trend.down {
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-app h3 {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+/* ---- 87l. SCHEDULE STATUS: the reference's stats and its course cards ----
+   The four figures are its stat tiles, each with a disc drawn by the tile's own
+   ::before (the tint) and ::after (the glyph); the projects are its course cards —
+   a pastel picture with the project's days chip on it, the name, the finish date
+   and a slim bar with its percent. */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band {
+  gap: 18px;
+  padding: 22px 24px 24px;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-eyebrow {
+  gap: 0;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-eyebrow .dx-dot {
+  display: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-asof {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-figure strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-figure span {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 0;
+  border: 0;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div {
+  --edl-disc: var(--edl-blue-wash);
+  --edl-disc-ink: var(--edl-blue);
+  --edl-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.21 15.89A10 10 0 1 1 8 2.83'/%3E%3Cpath d='M22 12A10 10 0 0 0 12 2v10z'/%3E%3C/svg%3E");
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 76px;
+  padding: 14px 14px 14px 72px;
+  border: 1px solid var(--bf-line-soft);
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div::before,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 44px;
+  height: 44px;
+  translate: 0 -50%;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div::before {
+  border-radius: 50%;
+  background: var(--edl-disc);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div::after {
+  background: var(--edl-disc-ink);
+  -webkit-mask: var(--edl-glyph) center / 20px 20px no-repeat;
+  mask: var(--edl-glyph) center / 20px 20px no-repeat;
+}
+/* a glyph and a hue each: complete (a pie), behind (a clock), reporting (a clipboard), value (coins) */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div:nth-child(2) {
+  --edl-disc: var(--edl-amber-wash);
+  --edl-disc-ink: var(--edl-amber);
+  --edl-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E");
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div:nth-child(3) {
+  --edl-disc: var(--edl-green-wash);
+  --edl-disc-ink: var(--edl-green);
+  --edl-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='8' height='4' x='8' y='2' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='m9 14 2 2 4-4'/%3E%3C/svg%3E");
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts > div:nth-child(4) {
+  --edl-disc: var(--edl-violet-wash);
+  --edl-disc-ink: var(--edl-violet);
+  --edl-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='M18.09 10.37A6 6 0 1 1 10.34 18'/%3E%3Cpath d='M7 6h1v4'/%3E%3Cpath d='m16.71 13.88.7.71-2.82 2.82'/%3E%3C/svg%3E");
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts dt {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-facts dd {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+/* the projects: course cards, three to a row where they fit */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-projects {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding: 0;
+  border: 0;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project {
+  --edl-thumb: var(--edl-thumb-1);
+  --edl-thumb-ink: var(--edl-blue);
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "thumb thumb"
+    "name name"
+    "finish finish"
+    "track pct";
+  align-items: center;
+  row-gap: 6px;
+  column-gap: 12px;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 10px 14px;
+  border: 1px solid var(--bf-line-soft);
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow: none;
+  text-align: left;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project:is(:hover, :focus-visible) {
+  border-color: var(--bf-line-solid);
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card-hover);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band li:nth-child(4n + 2) > .ss-project {
+  --edl-thumb: var(--edl-thumb-2);
+  --edl-thumb-ink: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band li:nth-child(4n + 3) > .ss-project {
+  --edl-thumb: var(--edl-thumb-3);
+  --edl-thumb-ink: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band li:nth-child(4n + 4) > .ss-project {
+  --edl-thumb: var(--edl-thumb-4);
+  --edl-thumb-ink: var(--edl-amber);
+}
+/* the picture: the project's tint with a building on it */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project::before {
+  content: "";
+  grid-area: thumb;
+  height: 96px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: var(--edl-thumb);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: calc(100% - 20px);
+  height: 96px;
+  background: var(--edl-thumb-ink);
+  opacity: 0.85;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z'/%3E%3Cpath d='M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2'/%3E%3Cpath d='M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2'/%3E%3Cpath d='M10 6h4'/%3E%3Cpath d='M10 10h4'/%3E%3Cpath d='M10 14h4'/%3E%3Cpath d='M10 18h4'/%3E%3C/svg%3E")
+    center / 40px 40px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z'/%3E%3Cpath d='M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2'/%3E%3Cpath d='M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2'/%3E%3Cpath d='M10 6h4'/%3E%3Cpath d='M10 10h4'/%3E%3Cpath d='M10 14h4'/%3E%3Cpath d='M10 18h4'/%3E%3C/svg%3E")
+    center / 40px 40px no-repeat;
+  pointer-events: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-name {
+  grid-area: name;
+  padding: 0 4px;
+  overflow: hidden;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-finish {
+  grid-area: finish;
+  padding: 0 4px;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-track {
+  grid-area: track;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--edl-track);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-track i {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--edl-bar), var(--edl-bar-2));
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-track i::after {
+  display: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-pct {
+  grid-area: pct;
+  padding-right: 4px;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-weight: 700;
+}
+/* the days chip rides on the picture, as the reference's status does */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-days {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1;
+  background: var(--bf-surface);
+  color: var(--bf-color-accent);
+  box-shadow: var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-days.ahead {
+  color: var(--bf-color-ok);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .ss-band .ss-project-days.behind {
+  color: var(--bf-color-bad);
+}
+
+/* ---- 87m. what else a card holds ---- */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-quick-btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--bf-line-soft);
+  border-radius: 12px;
+  background: var(--bf-surface);
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-quick-btn:is(:hover, :focus-visible) {
+  border-color: var(--bf-color-accent-wash-2);
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-quick-btn svg {
+  color: var(--bf-color-accent);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block :is(.inline-empty-state, .hs-home-empty) {
+  padding: 16px;
+  border: 1px dashed var(--bf-line-solid);
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-hover);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .inline-empty-state strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .inline-empty-state em {
+  color: var(--bf-ink-muted);
+  font-size: 12.5px;
+  font-style: normal;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .legend-list > span i {
+  border-radius: 50%;
+}
+
+/* ---- 87n. the two sections below the board ---- */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-copy h3 {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-list {
+  gap: 0;
+  border: 0;
+  background: transparent;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-row {
+  min-height: 52px;
+  padding: 10px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-row + .hs-split-row {
+  border-top: 1px solid var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-avatar {
+  border: 0;
+  background: var(--edl-blue-wash);
+  color: var(--edl-blue);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) > .dx-inner > section[data-reveal] .hs-split-text {
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---- 87o. the controls filled with ink take the periwinkle, light only (the sidebar's
+   rows and card are section 88's, on every page) ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host))
+  .topbar.hs-topbar
+  .hs-upgrade-btn:not(.is-urgent),
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host)) .topbar.hs-topbar .hs-ai-button,
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host)) .hc-assistant-fab,
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .dash-rx.hs-home:not(.sched-board-host) :is(.bffb-tab, .hs-home-empty-btn) {
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+}
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host))
+  .topbar.hs-topbar
+  .hs-upgrade-btn:not(.is-urgent):hover,
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host)) .topbar.hs-topbar .hs-ai-button:hover,
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.dash-rx.hs-home:not(.sched-board-host)) .hc-assistant-fab:hover,
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .dash-rx.hs-home:not(.sched-board-host) :is(.bffb-tab, .hs-home-empty-btn):hover {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host))
+    .topbar.hs-topbar
+    .hs-upgrade-btn:not(.is-urgent),
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host)) .topbar.hs-topbar .hs-ai-button,
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host)) .hc-assistant-fab,
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .dash-rx.hs-home:not(.sched-board-host) :is(.bffb-tab, .hs-home-empty-btn) {
+    background: var(--edl-cta);
+    color: var(--edl-cta-ink);
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host))
+    .topbar.hs-topbar
+    .hs-upgrade-btn:not(.is-urgent):hover,
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host)) .topbar.hs-topbar .hs-ai-button:hover,
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.dash-rx.hs-home:not(.sched-board-host)) .hc-assistant-fab:hover,
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .dash-rx.hs-home:not(.sched-board-host) :is(.bffb-tab, .hs-home-empty-btn):hover {
+    background: var(--edl-cta-hover);
+    color: var(--edl-cta-ink);
+  }
+}
+
+/* ---- 87q. the small things ---- */
+/* the Open / Resolved toggle's chosen side is the accent, not the ink */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-seg {
+  --bfm-pill-fill: var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-seg button.active {
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-seg:not([data-bfm-pill]) button.active {
+  background: var(--bf-color-accent-fill);
+}
+/* Quick Actions sit straight on their card, as every other panel's content does */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-quick {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* a stat's sparkline is the accent's */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .cc-spark-line {
+  stroke: var(--edl-bar);
+}
+/* the readiness ring and its legend dots are graphics, not text: inside the chart the
+   status hues are the discs' brighter ones, as the reference's ring is */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .chart-row {
+  --bf-color-ok: var(--edl-green);
+  --bf-color-info: var(--edl-violet);
+  --bf-color-bad: var(--edl-red);
+  --bf-color-warn: var(--edl-amber);
+}
+/* rows and avatars take the reference's run of hues, one after another */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .resource-row:nth-child(4n + 1) > svg,
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  .hs-split-row:nth-child(4n + 1)
+  .hs-split-avatar {
+  background: var(--edl-violet-wash);
+  color: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .resource-row:nth-child(4n + 2) > svg,
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  .hs-split-row:nth-child(4n + 2)
+  .hs-split-avatar {
+  background: var(--edl-green-wash);
+  color: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .resource-row:nth-child(4n + 3) > svg,
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  .hs-split-row:nth-child(4n + 3)
+  .hs-split-avatar {
+  background: var(--edl-blue-wash);
+  color: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .dash-board .dash-block .resource-row:nth-child(4n + 4) > svg,
+.app-shell.hs-shell.bf-shell
+  .dash-rx.hs-home:not(.sched-board-host)
+  > .dx-inner
+  > section[data-reveal]
+  .hs-split-row:nth-child(4n + 4)
+  .hs-split-avatar {
+  background: var(--edl-amber-wash);
+  color: var(--edl-amber);
+}
+
+/* ---- 87p. less motion: the banner and what it holds simply appear ---- */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head::before,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-head :is(.hs-home-cta, .hs-home-art, .hs-home-quote) {
+    animation: none;
+  }
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta,
+  .app-shell.hs-shell.bf-shell .dash-rx.hs-home:not(.sched-board-host) .hs-home-cta svg {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   88. THE TOP BAR AND THE SIDEBAR ON THE EDULEARN REFERENCE — the trial's second step (2026-09-28)
+   ----------------------------------------------------------------------------
+   Asked for right after section 87: "Now looking at the image I gave previously
+   for when you just redesigned the Dashboard, please use it to redesign the top
+   bar, and sidebar." The chrome is the program's, so this reaches EVERY page:
+   what each page holds keeps its own look.
+
+   WHAT THE REFERENCE'S CHROME IS MADE OF, read off the same screenshot:
+   - a WHITE top row on a hairline: a pale periwinkle search pill (#f2f5fd) at the
+     left; at the right, round white icon buttons on a hairline (the bell with a
+     red count), a short divider, and the person — a round portrait, the name
+     bold and navy over a gray level, a chevron;
+   - a WHITE column running the window's height: the logo and the product's name
+     over a gray tagline at its head; rows with room to breathe (about 38px), an
+     outline glyph and a slate label; the current page on a lilac pill (#eaecfe)
+     with its glyph and label in the accent, the label bold; counts as small lilac
+     pills; a lilac card at the foot with a picture, a title, a line and a
+     blue-to-violet button; and the person again under a hairline at the very
+     bottom.
+   Text is held to 4.5:1, so the active label is #4254dc (5.0 on the lilac), the
+   slate #4f5570, the gray #6b7190.
+
+   HOW IT STAYS A TRIAL: its own `--edlc-*` tokens on the shell, from the program's
+   in any mode and set; LIGHT only for its colours (an explicit Light, and System on a
+   light OS, word for word); the periwinkle for the Default Colors set only. The
+   Labeled sidebar runs the window's height again (the reference's) with the name
+   at its head, so the top row starts at its edge; with the rail, or the sidebar
+   hidden, the top row keeps its wordmark. LabeledSidebar.tsx draws the brand and the
+   profile from App's `brand` and `profile`; the top row's name and level come from
+   the account button's data-name and data-role.
+   TAKING IT OUT: this section; App.tsx's `brand` and `profile` props and the two
+   data- attributes; public/dashboard/whats-new.svg.
+   ============================================================================ */
+
+/* ---- 88a. the chrome's measures, from the program's tokens in any mode ---- */
+.app-shell.hs-shell.bf-shell {
+  --edlc-bar: var(--bf-surface);
+  --edlc-line: var(--bf-line-solid);
+  --edlc-search: var(--bf-hover);
+  --edlc-ink: var(--bf-ink);
+  --edlc-muted: var(--bf-ink-muted);
+  --edlc-row-ink: var(--bf-ink-muted);
+  --edlc-icon: var(--bf-ink-muted);
+  --edlc-hover: var(--bf-hover);
+  --edlc-active: var(--bf-color-accent);
+  --edlc-active-wash: var(--bf-color-accent-wash);
+  --edlc-tag: var(--bf-color-accent-wash);
+  --edlc-tag-ink: var(--bf-color-accent);
+  --edlc-cta: var(--bf-color-accent-fill);
+  --edlc-cta-hover: var(--bf-color-accent-fill-2);
+  --edlc-cta-ink: var(--bf-color-on-accent);
+  --edlc-cta-shadow: none;
+  --edlc-promo: color-mix(in srgb, var(--bf-color-accent-fill) 9%, var(--bf-surface));
+  --edlc-promo-line: color-mix(in srgb, var(--bf-color-accent-fill) 18%, transparent);
+  --edlc-avatar: var(--bf-color-face-2);
+  --edlc-badge: var(--bf-color-bad);
+}
+
+/* ---- 88b. the reference's neutrals, light only, in any set ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] {
+  --edlc-bar: #ffffff;
+  --edlc-line: #eceef7;
+  --edlc-search: #f3f5fd;
+  --edlc-ink: #1b2150;
+  --edlc-muted: #6b7190;
+  --edlc-row-ink: #4f5570;
+  --edlc-icon: #6b7090;
+  --edlc-hover: #f4f5fd;
+  --edlc-badge: #e5304f;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] {
+    --edlc-bar: #ffffff;
+    --edlc-line: #eceef7;
+    --edlc-search: #f3f5fd;
+    --edlc-ink: #1b2150;
+    --edlc-muted: #6b7190;
+    --edlc-row-ink: #4f5570;
+    --edlc-icon: #6b7090;
+    --edlc-hover: #f4f5fd;
+    --edlc-badge: #e5304f;
+  }
+}
+
+/* ---- 88c. the reference's periwinkle: the Default Colors set, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors])) {
+  --edlc-active: #4254dc;
+  --edlc-active-wash: #eaecfe;
+  --edlc-tag: #eeecfd;
+  --edlc-tag-ink: #5b47c4;
+  --edlc-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --edlc-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+  --edlc-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+  --edlc-promo: linear-gradient(180deg, #f0f2ff, #e8ecff);
+  --edlc-promo-line: #dfe3fd;
+  --edlc-avatar: linear-gradient(135deg, #7c8ef8, #8a6ef0);
+  --bf-rail-fill: #5566ee;
+  --bf-rail-rgb: 85, 102, 238;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors])) {
+    --edlc-active: #4254dc;
+    --edlc-active-wash: #eaecfe;
+    --edlc-tag: #eeecfd;
+    --edlc-tag-ink: #5b47c4;
+    --edlc-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --edlc-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+    --edlc-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+    --edlc-promo: linear-gradient(180deg, #f0f2ff, #e8ecff);
+    --edlc-promo-line: #dfe3fd;
+    --edlc-avatar: linear-gradient(135deg, #7c8ef8, #8a6ef0);
+    --bf-rail-fill: #5566ee;
+    --bf-rail-rgb: 85, 102, 238;
+  }
+}
+
+/* ---- 88d. THE TOP ROW: white on a hairline ---- */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar {
+  background: var(--edlc-bar);
+  box-shadow: 0 1px 0 var(--edlc-line);
+}
+/* the search: a pale pill with nothing around it, its hint and glyph soft */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .search-box {
+  height: 42px;
+  min-height: 42px;
+  border: 0;
+  background: var(--edlc-search);
+  color: var(--edlc-icon);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .search-box:focus-within {
+  box-shadow: 0 0 0 3px var(--edlc-active-wash);
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .search-box input {
+  color: var(--edlc-ink);
+  font-size: 13.5px;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .search-box input::placeholder {
+  color: var(--edlc-muted);
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .search-box kbd {
+  border: 1px solid var(--edlc-line);
+  background: var(--edlc-bar);
+  color: var(--edlc-muted);
+  box-shadow: none;
+}
+/* the icon buttons: white discs on a hairline, still under the pointer */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button {
+  border: 1px solid var(--edlc-line);
+  background: var(--edlc-bar);
+  color: var(--edlc-icon);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button:hover,
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .topbar-actions .icon-button[aria-expanded="true"] {
+  border-color: var(--edlc-line);
+  background: var(--edlc-hover);
+  color: var(--edlc-active);
+  transform: none;
+  box-shadow: none;
+}
+/* the bell's count: the reference's red dot, cut out of the button by a ring of the bar */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .notification-center .bubble {
+  background: var(--edlc-badge);
+  color: #ffffff;
+  box-shadow: 0 0 0 2px var(--edlc-bar);
+}
+/* the two filled buttons wear the banner's button */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .hs-upgrade-btn:not(.is-urgent),
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .hs-ai-button {
+  background: var(--edlc-cta);
+  color: var(--edlc-cta-ink);
+  box-shadow: var(--edlc-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .hs-upgrade-btn:not(.is-urgent):hover,
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .hs-ai-button:hover {
+  background: var(--edlc-cta-hover);
+  color: var(--edlc-cta-ink);
+  transform: none;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .topbar-verify {
+  border: 1px solid var(--edlc-line);
+  background: var(--edlc-bar);
+  color: var(--edlc-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .topbar-verify:hover {
+  background: var(--edlc-hover);
+}
+/* the short divider before the person */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .hs-topbar-divider {
+  display: block;
+  flex: none;
+  width: 1px;
+  height: 28px;
+  margin: 0 4px;
+  background: var(--edlc-line);
+}
+/* the person: a round portrait, the name over the level, a chevron. The words are the
+   button's data-name and data-role — it is named by its aria-label already */
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 6px 0 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button:hover {
+  background: var(--edlc-hover);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button > .reports-avatar {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  width: 38px;
+  height: 38px;
+  background: var(--edlc-avatar);
+  color: #ffffff;
+  font-size: 12.5px;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button::before {
+  content: attr(data-name);
+  grid-row: 1;
+  grid-column: 2;
+  align-self: end;
+  color: var(--edlc-ink);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: left;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button::after {
+  content: attr(data-role);
+  grid-row: 2;
+  grid-column: 2;
+  align-self: start;
+  color: var(--edlc-muted);
+  font-family: var(--bf-font-active);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button > svg {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  color: var(--edlc-muted);
+}
+/* a narrower window keeps the portrait and lets the words go */
+@media (max-width: 1100px) {
+  .app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button::before,
+  .app-shell.hs-shell.bf-shell .topbar.hs-topbar .reports-user-button::after {
+    display: none;
+  }
+}
+
+/* ---- 88e. THE LABELED SIDEBAR: the window's height, the name at its head ---- */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side {
+  top: 0;
+  padding: 18px 14px 14px;
+  border-top: 0;
+  background: var(--edlc-bar);
+  border-right-color: var(--edlc-line);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell) .topbar.hs-topbar {
+  margin-left: var(--lbl-side-w);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell) .topbar.hs-topbar .hs-topbar-brand {
+  display: none;
+}
+/* the bell's list is wide; beside the column it keeps to the page's own width */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell) .topbar.hs-topbar .bfnt {
+  max-width: calc(100vw / var(--bf-ui-scale, 1) - var(--lbl-side-w) - 40px);
+}
+/* the brand: the mark, the name bold and navy over the tagline */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brandmark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 0 6px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brandmark img {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brandmark-text {
+  display: grid;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brandmark-text strong {
+  overflow: hidden;
+  color: var(--edlc-ink);
+  font-family: var(--bf-font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brandmark-text em {
+  overflow: hidden;
+  color: var(--edlc-muted);
+  font-family: var(--bf-font-active);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* the head's small buttons: discs on a hairline, the compose button the banner's */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-head .lbl-icon-btn:not(.is-round) {
+  border: 1px solid var(--edlc-line);
+  border-radius: 50%;
+  color: var(--edlc-icon);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn.is-round {
+  background: var(--edlc-cta);
+  color: var(--edlc-cta-ink);
+  box-shadow: var(--edlc-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn.is-round:hover,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn.is-round[aria-expanded="true"] {
+  background: var(--edlc-cta-hover);
+  color: var(--edlc-cta-ink);
+}
+/* the rows: room to breathe, a slate label, the glyph a shade lighter */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-list {
+  gap: 2px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item {
+  gap: 12px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--edlc-row-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--edlc-icon);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item:hover {
+  background: var(--edlc-hover);
+  color: var(--edlc-ink);
+}
+/* the page you are on: the lilac pill, its glyph and label in the accent */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item.is-active,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item.is-active:hover {
+  background: var(--edlc-active-wash);
+  color: var(--edlc-active);
+  font-weight: 700;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item.is-active > svg {
+  color: var(--edlc-active);
+}
+/* counts and news: small lilac pills */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-tag {
+  padding: 3px 8px;
+  background: var(--edlc-tag);
+  color: var(--edlc-tag-ink);
+  font-size: 10px;
+  font-weight: 800;
+}
+/* a group's head: small capitals, quiet, over room to breathe */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-group {
+  margin-top: 16px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-group-toggle {
+  height: 24px;
+  padding: 0 12px;
+  color: var(--edlc-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-group-toggle:hover {
+  background: transparent;
+  color: var(--edlc-ink);
+}
+/* the foot's card: the reference's lilac promotion — a picture, the news, a button */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-news {
+  gap: 4px;
+  padding: 98px 14px 14px;
+  border: 1px solid var(--edlc-promo-line);
+  border-radius: 16px;
+  background:
+    url("/dashboard/whats-new.svg") center 6px / 182px auto no-repeat,
+    var(--edlc-promo);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-news-eyebrow {
+  color: var(--edlc-tag-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-news-title {
+  color: var(--edlc-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-news::after {
+  content: "See what\2019s new  \2192";
+  display: block;
+  height: 34px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--edlc-cta);
+  color: var(--edlc-cta-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 34px;
+  text-align: center;
+  white-space: pre;
+  box-shadow: var(--edlc-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-news:hover::after {
+  background: var(--edlc-cta-hover);
+}
+/* and the person at the very foot, under a hairline */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-foot {
+  gap: 12px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-foot-row:has(.lbl-profile) {
+  gap: 2px;
+  padding: 12px 0 0 4px;
+  border-top: 1px solid var(--edlc-line);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-profile {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-profile-avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--edlc-avatar);
+  color: #ffffff;
+  font-family: var(--bf-font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-profile-id {
+  display: grid;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-profile-id strong {
+  overflow: hidden;
+  color: var(--edlc-ink);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-profile-id em {
+  overflow: hidden;
+  color: var(--edlc-muted);
+  font-family: var(--bf-font-active);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-foot-row .lbl-icon-btn {
+  color: var(--edlc-icon);
+}
+
+/* the brand lands with the head, on the brand's beat (section 74), and less motion stills it */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-brandmark {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+  animation-delay: var(--bfm-beat-brand);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-brandmark {
+    animation: bfe-lift var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+    --bfe-y: 0px;
+    --bfe-blur: 0px;
+  }
+}
+
+/* ---- 88f. the column of glyphs under 900px keeps the mark and the portrait ---- */
+@media (max-width: 900px) {
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side {
+    padding: 14px 0 10px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brandmark {
+    justify-content: center;
+    margin-bottom: 12px;
+    padding: 0;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side :is(.lbl-brandmark-text, .lbl-profile-id) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item {
+    width: 40px;
+    height: 36px;
+    padding: 0;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-foot-row:has(.lbl-profile) {
+    align-items: center;
+    padding: 10px 0 0;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-profile {
+    flex: none;
+    justify-content: center;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-group {
+    margin-top: 10px;
+  }
+}

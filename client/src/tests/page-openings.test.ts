@@ -260,7 +260,13 @@ describe("every page opens on the shared beats", () => {
     expect(pill.transform).toBe("translate(var(--bfm-pill-x), var(--bfm-pill-y))");
     expect(pill.width).toBe("var(--bfm-pill-w)");
     expect(pill.background, "the pill IS the selected option's background").toBe("var(--bfm-pill-fill)");
-    expect(declsFor(".hs-home-seg")["--bfm-pill-fill"], "which defaults to the ink every group but one uses").toBe("var(--bf-ink)");
+    // the default is the one the shared rule gives, the rule naming every pill group; a page can
+    // still answer for its own group (the Dashboard trial of 2026-09-28, skin §87, takes its accent)
+    const shared = sheet.nodes.find(
+      (node): node is Rule => node.type === "rule" && node.selector.includes(".hs-home-seg") && node.selector.includes(".hs-rail-list")
+    );
+    const sharedFill = shared?.nodes.find((node): node is Declaration => node.type === "decl" && node.prop === "--bfm-pill-fill");
+    expect(sharedFill?.value, "which defaults to the ink every group but one uses").toBe("var(--bf-ink)");
     // the rail is a column of discs, and says so for itself
     expect(declsFor(".hs-rail-list")["--bfm-pill-fill"]).toBe("var(--bf-rail-fill)");
     expect(declsFor(".hs-rail-list")["--bfm-pill-radius"]).toBe("50%");

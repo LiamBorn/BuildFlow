@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" width="220" height="120" fill="none">
+  <!-- The sidebar's "What's new" card picture (2026-09-28 trial, after the EduLearn reference's
+       "Unlock Your Potential" card): the month on a laptop, a NEW tag and a few sparkles, in the
+       Dashboard banner's pastel 3D. Decorative; the card draws it as a background. -->
+  <defs>
+    <radialGradient id="wn-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="wn-screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#8a6ef0" />
+    </linearGradient>
+    <linearGradient id="wn-deck" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d4d7fc" />
+      <stop offset="1" stop-color="#a9aef3" />
+    </linearGradient>
+    <linearGradient id="wn-tag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#58dcb0" />
+      <stop offset="1" stop-color="#1fa97c" />
+    </linearGradient>
+    <linearGradient id="wn-star" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe08a" />
+      <stop offset="1" stop-color="#f5a524" />
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="110" cy="108" rx="84" ry="9" fill="url(#wn-floor)" />
+
+  <!-- the laptop with the month on it -->
+  <rect x="58" y="18" width="104" height="72" rx="9" fill="url(#wn-screen)" />
+  <rect x="65" y="25" width="90" height="58" rx="5" fill="#eff1ff" />
+  <rect x="71" y="30" width="36" height="5" rx="2.5" fill="#6b7ef6" />
+  <g fill="#dde2fd">
+    <rect x="71" y="40" width="15" height="11" rx="2.5" />
+    <rect x="89" y="40" width="15" height="11" rx="2.5" />
+    <rect x="107" y="40" width="15" height="11" rx="2.5" />
+    <rect x="125" y="40" width="15" height="11" rx="2.5" />
+    <rect x="71" y="54" width="15" height="11" rx="2.5" />
+    <rect x="89" y="54" width="15" height="11" rx="2.5" />
+    <rect x="107" y="54" width="15" height="11" rx="2.5" />
+    <rect x="125" y="54" width="15" height="11" rx="2.5" />
+    <rect x="71" y="68" width="15" height="10" rx="2.5" />
+    <rect x="89" y="68" width="15" height="10" rx="2.5" />
+    <rect x="107" y="68" width="15" height="10" rx="2.5" />
+    <rect x="125" y="68" width="15" height="10" rx="2.5" />
+  </g>
+  <rect x="89" y="40" width="15" height="11" rx="2.5" fill="#3ec79c" />
+  <rect x="125" y="54" width="15" height="11" rx="2.5" fill="#a58af5" />
+  <rect x="71" y="68" width="15" height="10" rx="2.5" fill="#f7b733" />
+  <rect x="143" y="40" width="7" height="38" rx="3.5" fill="#dde2fd" />
+  <path d="M47 90 H173 C 176 90 177.4 92.8 175.6 95.2 L 173.8 97.6 C 172.6 99.1 170.8 100 168.8 100 H51.2 C 49.2 100 47.4 99.1 46.2 97.6 L 44.4 95.2 C 42.6 92.8 44 90 47 90 Z" fill="url(#wn-deck)" />
+  <rect x="96" y="92" width="28" height="3" rx="1.5" fill="#8d93e8" opacity="0.55" />
+
+  <!-- the NEW tag, hung on the screen's corner -->
+  <g transform="rotate(-8 170 26)">
+    <rect x="148" y="16" width="44" height="20" rx="10" fill="url(#wn-tag)" />
+    <text x="170" y="30" text-anchor="middle" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="10" font-weight="800" letter-spacing="0.6" fill="#ffffff">NEW</text>
+  </g>
+
+  <!-- sparkles -->
+  <path d="M40 22 L 43 31 L 52 34 L 43 37 L 40 46 L 37 37 L 28 34 L 37 31 Z" fill="url(#wn-star)" />
+  <path d="M190 58 L 191.6 62.4 L 196 64 L 191.6 65.6 L 190 70 L 188.4 65.6 L 184 64 L 188.4 62.4 Z" fill="#b8a9ff" />
+  <path d="M28 70 L 29.2 73.3 L 32.5 74.5 L 29.2 75.7 L 28 79 L 26.8 75.7 L 23.5 74.5 L 26.8 73.3 Z" fill="#9fb3ff" />
+  <circle cx="58" cy="10" r="2.5" fill="#c9bfff" />
+  <circle cx="200" cy="44" r="2" fill="#a8c0ff" />
+</svg>

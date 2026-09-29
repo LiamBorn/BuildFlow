@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 210" width="360" height="210" fill="none">
+  <!-- The Dashboard hero's illustration (2026-09-28 trial, after the EduLearn reference's
+       graduation-cap still life): a hard hat on a stack of plan binders, a plant and a laptop
+       showing a schedule, in the reference's soft pastel 3D. Decorative; the page gives it alt="". -->
+  <defs>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.28" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#58dcb0" />
+      <stop offset="1" stop-color="#1fa97c" />
+    </linearGradient>
+    <linearGradient id="peri" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fa1fd" />
+      <stop offset="1" stop-color="#5b6ff0" />
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b3cdff" />
+      <stop offset="1" stop-color="#7c9ffa" />
+    </linearGradient>
+    <linearGradient id="dome" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#ffe597" />
+      <stop offset="0.55" stop-color="#fbbf3c" />
+      <stop offset="1" stop-color="#ee9814" />
+    </linearGradient>
+    <linearGradient id="brim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcc34a" />
+      <stop offset="1" stop-color="#e28a0e" />
+    </linearGradient>
+    <linearGradient id="pot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b9adfc" />
+      <stop offset="1" stop-color="#8672ef" />
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8ee8b2" />
+      <stop offset="1" stop-color="#2eae70" />
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#8a6ef0" />
+    </linearGradient>
+    <linearGradient id="deck" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d4d7fc" />
+      <stop offset="1" stop-color="#a9aef3" />
+    </linearGradient>
+  </defs>
+
+  <!-- light behind the still life, and its shadow on the floor -->
+  <circle cx="190" cy="118" r="92" fill="url(#halo)" />
+  <ellipse cx="190" cy="192" rx="156" ry="14" fill="url(#floor)" />
+
+  <!-- the plant -->
+  <ellipse cx="62" cy="190" rx="24" ry="4" fill="#5a61d6" opacity="0.14" />
+  <path d="M62 147 C 44 139, 33 119, 39 99 C 56 107, 65 126, 62 147 Z" fill="url(#leaf)" />
+  <path d="M62 147 C 55 124, 58 101, 71 86 C 82 105, 76 128, 62 147 Z" fill="url(#leaf)" />
+  <path d="M63 147 C 70 130, 84 120, 99 118 C 95 135, 81 145, 63 147 Z" fill="url(#leaf)" />
+  <path d="M61 144 C 52 132, 45 118, 42 104 M63 142 C 64 124, 66 108, 70 92 M65 145 C 74 136, 84 128, 95 122" stroke="#d7f7e4" stroke-width="1.4" stroke-linecap="round" opacity="0.7" />
+  <path d="M41 152 H83 L78 183 C 77.4 186.4 74.8 188.5 71.4 188.5 H52.6 C 49.2 188.5 46.6 186.4 46 183 Z" fill="url(#pot)" />
+  <rect x="37" y="144" width="50" height="10" rx="5" fill="#c9befe" />
+  <rect x="42" y="146" width="18" height="3" rx="1.5" fill="#ffffff" opacity="0.55" />
+
+  <!-- the plan binders -->
+  <ellipse cx="187" cy="190" rx="80" ry="6" fill="#4f57cc" opacity="0.16" />
+  <rect x="110" y="162" width="154" height="27" rx="7" fill="url(#mint)" />
+  <rect x="122" y="169" width="130" height="3" rx="1.5" fill="#ffffff" opacity="0.5" />
+  <rect x="122" y="176" width="130" height="3" rx="1.5" fill="#ffffff" opacity="0.32" />
+  <rect x="176" y="165.5" width="26" height="12" rx="3.5" fill="#ffffff" opacity="0.88" />
+  <rect x="180" y="169.5" width="18" height="2" rx="1" fill="#1fa97c" opacity="0.6" />
+  <rect x="180" y="173" width="12" height="2" rx="1" fill="#1fa97c" opacity="0.4" />
+
+  <rect x="117" y="138" width="140" height="25" rx="7" fill="url(#peri)" />
+  <rect x="128" y="145" width="118" height="3" rx="1.5" fill="#ffffff" opacity="0.5" />
+  <rect x="128" y="151.5" width="118" height="3" rx="1.5" fill="#ffffff" opacity="0.3" />
+  <rect x="167" y="141.5" width="26" height="12" rx="3.5" fill="#ffffff" opacity="0.88" />
+  <rect x="171" y="145.5" width="18" height="2" rx="1" fill="#5b6ff0" opacity="0.6" />
+  <rect x="171" y="149" width="12" height="2" rx="1" fill="#5b6ff0" opacity="0.4" />
+
+  <rect x="126" y="116" width="124" height="23" rx="7" fill="url(#sky)" />
+  <rect x="136" y="122.5" width="104" height="3" rx="1.5" fill="#ffffff" opacity="0.55" />
+  <rect x="136" y="129" width="104" height="3" rx="1.5" fill="#ffffff" opacity="0.32" />
+
+  <!-- the hard hat -->
+  <ellipse cx="188" cy="114" rx="50" ry="8.5" fill="url(#brim)" />
+  <ellipse cx="188" cy="112" rx="45" ry="5" fill="#ffd66e" opacity="0.55" />
+  <path d="M149 112 C 149 85, 165 69, 188 69 C 211 69, 227 85, 227 112 Z" fill="url(#dome)" />
+  <path d="M150 105 C 170 110, 206 110, 226 105 L 227 112 H 149 Z" fill="#e0870b" opacity="0.35" />
+  <rect x="181.5" y="68.5" width="13" height="43" rx="6.5" fill="#ffd45c" />
+  <rect x="184" y="72" width="3" height="36" rx="1.5" fill="#ffffff" opacity="0.55" />
+  <ellipse cx="166" cy="87" rx="7.5" ry="13" transform="rotate(-28 166 87)" fill="#ffffff" opacity="0.5" />
+
+  <!-- the laptop, with the week on it -->
+  <ellipse cx="294" cy="190" rx="50" ry="5" fill="#4f57cc" opacity="0.18" />
+  <rect x="261" y="118" width="70" height="60" rx="8" fill="url(#screen)" />
+  <rect x="267" y="124" width="58" height="46" rx="4.5" fill="#eff1ff" />
+  <rect x="272" y="131" width="28" height="6.5" rx="3.25" fill="#6b7ef6" />
+  <rect x="283" y="142" width="33" height="6.5" rx="3.25" fill="#3ec79c" />
+  <rect x="276" y="153" width="24" height="6.5" rx="3.25" fill="#a58af5" />
+  <rect x="300" y="160" width="18" height="5" rx="2.5" fill="#f7b733" />
+  <path d="M250 178 H342 C 344.8 178 346 180.4 344.4 182.6 L 342.6 185 C 341.4 186.6 339.6 187.5 337.6 187.5 H254.4 C 252.4 187.5 250.6 186.6 249.4 185 L 247.6 182.6 C 246 180.4 247.2 178 250 178 Z" fill="url(#deck)" />
+  <rect x="283" y="180" width="26" height="3" rx="1.5" fill="#8d93e8" opacity="0.55" />
+
+  <!-- sparkles -->
+  <path d="M242 70 L 244.2 76.8 L 251 79 L 244.2 81.2 L 242 88 L 239.8 81.2 L 233 79 L 239.8 76.8 Z" fill="#b8a9ff" />
+  <path d="M121 88 L 122.4 92.1 L 126.5 93.5 L 122.4 94.9 L 121 99 L 119.6 94.9 L 115.5 93.5 L 119.6 92.1 Z" fill="#9fb3ff" />
+  <path d="M312 92 L 313.3 95.7 L 317 97 L 313.3 98.3 L 312 102 L 310.7 98.3 L 307 97 L 310.7 95.7 Z" fill="#c4b8ff" />
+  <circle cx="98" cy="72" r="3" fill="#c9bfff" />
+  <circle cx="276" cy="80" r="2.5" fill="#a8c0ff" />
+</svg>
