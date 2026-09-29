@@ -1544,10 +1544,10 @@ describe("the Client Desk skin", () => {
     const list = declsOf(`${S} .hs-rail-list`);
     expect(list["overflow-y"]).toBe("auto");
     expect(list["min-height"]).toBe("0");
-    // every Sidebar Style variant gets the same correction
-    expect(declsOf(`${S}[data-bf-sidebar="inset"] .sidebar.hs-rail`).height).toBe("var(--bf-rail-length)");
-    expect(declsOf(`${S}[data-bf-sidebar="floating"] .sidebar.hs-rail`).height).toBe("var(--bf-rail-length)");
-    expect(declsOf(`${S}[data-bf-collapse="offcanvas"] .sidebar.hs-rail`).height).toBe("var(--bf-rail-span)");
+    // (Inset and Floating, the other two Sidebar Styles, had the same correction until they left the panel, 2026-09-27)
+    expect(sheet.toString()).not.toMatch(/data-bf-sidebar="(inset|floating)"/);
+    // (Sidebar Collapse Mode's off-canvas rail had its own full-span height here until it left the panel, 2026-09-27)
+    expect(sheet.toString()).not.toContain('data-bf-collapse="offcanvas"');
     // and it stays beside the page at narrow widths, where styles.css would make it static
     const narrow = sheet.toString().split("@media (max-width: 980px)").slice(1).join("\n");
     expect(narrow).toMatch(/\.sidebar\.hs-rail \{[^}]*position: sticky;/);

@@ -72,24 +72,31 @@ describe("the top bar's Preferences panel", () => {
     expect(gear).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("carries all eight topics from the reference, in its order", async () => {
+  it("carries its topics in the reference's order, without Navbar Behavior or Sidebar Collapse Mode", async () => {
     const panel = await openPreferences();
 
     expect(within(panel).getByRole("heading", { name: "Preferences" })).toBeInTheDocument();
     expect(within(panel).getByText("Customize your dashboard layout preferences.")).toBeInTheDocument();
 
-    // The seven labelled topics, in the order the reference puts them in, and
-    // then the eighth: the button at the foot.
+    // The labelled topics, in the order the reference puts them in, and then the button at the
+    // foot. Navbar Behavior and Sidebar Collapse Mode were taken out on 2026-09-27, on request.
     const labels = [...panel.querySelectorAll(".pref-label")].map((node) => node.textContent?.trim());
-    expect(labels).toEqual(["Colors", "Fonts", "Theme Mode", "Page Layout", "Navbar Behavior", "Sidebar Style", "Sidebar Collapse Mode"]);
+    expect(labels).toEqual(["Colors", "Fonts", "Theme Mode", "Page Layout", "Sidebar Style"]);
     expect(within(panel).getByRole("button", { name: /Restore Defaults|Already the defaults/ })).toBeInTheDocument();
+    for (const gone of ["Navbar Behavior", "Sidebar Collapse Mode"]) {
+      expect(within(panel).queryByRole("radiogroup", { name: gone }), gone).toBeNull();
+    }
+    // and Inset and Floating left Sidebar Style the same day
+    for (const gone of ["Sticky", "Scroll", "Icon", "OffCanvas", "Inset", "Floating"]) {
+      expect(within(panel).queryByRole("radio", { name: gone }), gone).toBeNull();
+    }
 
     // Every option the reference shows, by name.
     expect(within(panel).getByRole("radiogroup", { name: "Theme Mode" })).toBeInTheDocument();
     for (const option of ["Light", "Dark", "System"]) {
       expect(within(panel).getByRole("radio", { name: option })).toBeInTheDocument();
     }
-    for (const option of ["Centered", "Full Width", "Sticky", "Scroll", "Inset", "Sidebar", "Floating", "Icon", "OffCanvas"]) {
+    for (const option of ["Centered", "Full Width", "Sidebar", "Labeled"]) {
       expect(within(panel).getByRole("radio", { name: option })).toBeInTheDocument();
     }
   });
@@ -101,7 +108,7 @@ describe("the top bar's Preferences panel", () => {
        which was honest while neither was built. Both are built now, so this asserts
        the absence of BOTH the disabled state and the explanation — a note that
        outlives the limitation it described is worse than no note. */
-    for (const group of ["Theme Mode", "Page Layout", "Navbar Behavior", "Sidebar Style", "Sidebar Collapse Mode"]) {
+    for (const group of ["Theme Mode", "Page Layout", "Sidebar Style"]) {
       const radios = within(panel).getByRole("radiogroup", { name: group });
       for (const radio of within(radios).getAllByRole("radio")) expect(radio).toBeEnabled();
     }
@@ -164,30 +171,44 @@ describe("the top bar's Preferences panel", () => {
     expect(link?.href).toContain("Playfair+Display");
   });
 
-  it("moves the shell for each of the four live layout choices", async () => {
+  it("moves the shell for each of the two live layout choices", async () => {
     const panel = await openPreferences();
     expect(shell().dataset).toMatchObject({
       bfLayout: "centered",
-      bfNavbar: "sticky",
-      bfSidebar: "sidebar",
-      bfCollapse: "icon"
+      bfSidebar: "sidebar"
     });
 
     choose(panel, "Page Layout", "Full Width");
-    choose(panel, "Navbar Behavior", "Scroll");
-    choose(panel, "Sidebar Style", "Floating");
-    choose(panel, "Sidebar Collapse Mode", "OffCanvas");
+    choose(panel, "Sidebar Style", "Labeled");
 
     // The shell's data attributes are what the stylesheet reads, so asserting
     // them is asserting the whole chain short of the paint.
     await waitFor(() =>
       expect(shell().dataset).toMatchObject({
         bfLayout: "full",
-        bfNavbar: "scroll",
-        bfSidebar: "floating",
-        bfCollapse: "offcanvas"
+        bfSidebar: "labeled"
       })
     );
+    // and the two settings that left the panel leave no attribute behind for a stylesheet to answer
+    expect(shell().dataset.bfNavbar).toBeUndefined();
+    expect(shell().dataset.bfCollapse).toBeUndefined();
+  });
+
+  /* Navbar Behavior and Sidebar Collapse Mode came out of the panel on 2026-09-27. A copy saved
+     before that may still say Scroll or OffCanvas; with no control left to undo either, it is read
+     without them, so nobody is stranded on a setting they can no longer see. */
+  it("reads a saved copy without the two settings the panel no longer offers", () => {
+    const read = parsePreferences({ ...DEFAULT_PREFERENCES, layout: "full", navbar: "scroll", collapse: "offcanvas" });
+    expect(read).toEqual({ ...DEFAULT_PREFERENCES, layout: "full" });
+    expect(Object.keys(read)).not.toContain("navbar");
+    expect(Object.keys(read)).not.toContain("collapse");
+  });
+
+  /* Inset and Floating came out of Sidebar Style the same day: a copy saved with either reads as the
+     plain rail, and the two styles that remain read back as themselves. */
+  it("reads a saved Inset or Floating sidebar as the plain rail", () => {
+    for (const gone of ["inset", "floating"]) expect(parsePreferences({ sidebar: gone }).sidebar, gone).toBe("sidebar");
+    for (const kept of ["sidebar", "labeled"]) expect(parsePreferences({ sidebar: kept }).sidebar, kept).toBe(kept);
   });
 
   /* A set the picker offers is one a saved copy may carry. Until 2026-09-23 only Default and Blue
@@ -276,9 +297,9 @@ describe("the top bar's Preferences panel", () => {
     fireEvent.change(within(panel).getByLabelText("Colors"), { target: { value: "blue" } });
     await waitFor(() => expect(shell().dataset.bfColors).toBe("blue"));
     choose(panel, "Page Layout", "Full Width");
-    choose(panel, "Sidebar Style", "Floating");
+    choose(panel, "Sidebar Style", "Labeled");
     await waitFor(() => expect(shell().dataset.bfLayout).toBe("full"));
-    expect(shell().dataset.bfSidebar).toBe("floating");
+    expect(shell().dataset.bfSidebar).toBe("labeled");
 
     fireEvent.click(within(panel).getByRole("button", { name: "Restore Defaults" }));
     await waitFor(() => expect(shell().dataset.bfLayout).toBe(DEFAULT_PREFERENCES.layout));
@@ -290,12 +311,12 @@ describe("the top bar's Preferences panel", () => {
 
   it("keeps the choice on this device", async () => {
     const panel = await openPreferences();
-    choose(panel, "Sidebar Style", "Inset");
+    choose(panel, "Sidebar Style", "Labeled");
 
     await waitFor(() => {
       const key = Object.keys(localStorage).find((name) => name.startsWith("bf:prefs:"));
       expect(key).toBeTruthy();
-      expect(JSON.parse(localStorage.getItem(key as string) as string)).toMatchObject({ sidebar: "inset" });
+      expect(JSON.parse(localStorage.getItem(key as string) as string)).toMatchObject({ sidebar: "labeled" });
     });
   });
 

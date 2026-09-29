@@ -3521,12 +3521,13 @@
 }
 
 /* ============================================================================
-   26. THE TOP BAR'S PREFERENCES PANEL, AND THE FOUR CHOICES IT ACTUALLY MAKES
+   26. THE TOP BAR'S PREFERENCES PANEL, AND THE CHOICES IT ACTUALLY MAKES
    ============================================================================
    The gear in the top bar used to jump to the Settings page. It now opens a
-   dropdown carrying the eight topics from the reference, in its order:
-   Theme Preset, Fonts, Theme Mode, Page Layout, Navbar Behavior, Sidebar Style,
-   Sidebar Collapse Mode, Restore Defaults.
+   dropdown carrying the topics from the reference, in its order: Colors,
+   Fonts, Theme Mode, Page Layout, Sidebar Style, Restore Defaults. (Navbar
+   Behavior and Sidebar Collapse Mode stood between them until 2026-09-27, when
+   they were taken out on request -- 26g and 26i say so where they were.)
 
    THE COLOURS ARE THE APP'S, NOT THE REFERENCE'S. Every value below is already
    in this product: the ink ladder (#1c1c1a / #575550), white over the paper
@@ -3534,21 +3535,19 @@
    other dropdowns use. The reference is set in a monospace face on its own
    greys; neither is adopted.
 
-   26a-26e dress the panel. 26f-26i are the part that matters: the four
-   preferences that DO something, each reading one data attribute the shell
-   stamps from the saved value. Page Layout moves the dashboard's measure — and
-   that is the right scope, because the reference's own subtitle says dashboard
-   layout. Navbar Behavior releases the top bar from sticky. Sidebar Style and
-   Sidebar Collapse Mode re-present the icon rail.
+   26a-26e dress the panel. 26f and 26h are the part that matters: the two
+   layout preferences that DO something, each reading one data attribute the
+   shell stamps from the saved value. Page Layout moves the dashboard's measure —
+   and that is the right scope, because the reference's own subtitle says
+   dashboard layout. Sidebar Style picks the icon rail or the Labeled sidebar.
 
    Theme Mode and Fonts are rendered disabled with the reason in the panel. They
    are not styled as live controls here because they are not live: there is no
    dark palette in this product and one font family ships. A control with no
    handler is the thing this shell has already had to go back and remove.
 
-   NO MOTION except the one place offcanvas needs it, and that one degrades
-   under reduce to the icon rail rather than merely holding still -- a nav you
-   have to hover out of hiding is a trap, not an animation.
+   NO MOTION. (Off-canvas was the one place that had any, and it left with
+   Sidebar Collapse Mode.)
    ------------------------------------------------------------------------- */
 
 /* ---- 26a. the panel ------------------------------------------------------ */
@@ -3783,157 +3782,22 @@
   padding-right: 40px;
 }
 
-/* ---- 26g. Navbar Behavior --------------------------------------------- */
-/* Sticky is the bar as it ships: pinned at the top through the whole page.
-   Scroll lets it leave with the content. Verified by scrolling rather than by
-   reading `position`: at 500px the sticky bar is still at 0 and the scrolling
-   one is at -500.
-
-   `relative`, NOT `static`. Both scroll away, but `static` also drops the bar's
-   z-index -- z-index is ignored on an unpositioned box -- and the bar contains
-   three dropdowns that have to paint above the page and above the rail's own
-   z-index 30. `relative` keeps the stacking and still moves with the content. */
-.bf-shell[data-bf-navbar="scroll"] .topbar.hs-topbar {
-  position: relative;
-}
-
-/* And the rail has to follow, which is the part that actually made Scroll mode
-   look broken. The rail sticks at `top: var(--hs-topbar-h)` because a sticky bar
-   occupies that strip -- so with the bar gone it held a 56px empty gap at the top
-   and sat 56px short of the viewport bottom. Measured at a 600px scroll: bar at
-   -600, rail still starting at 56 in an 834px viewport. With the bar out of the
-   way the rail owns the full height. */
-.bf-shell[data-bf-navbar="scroll"] .sidebar.hs-rail {
-  top: 0;
-  height: 100vh;
-}
+/* ---- 26g. Navbar Behavior — REMOVED (2026-09-27) ----------------------- */
+/* Sticky / Scroll was taken out of the Preferences panel on request, with
+   `data-bf-navbar` and the two rules that answered Scroll. The top bar is
+   sticky, as it always shipped. */
 
 /* ---- 26h. Sidebar Style ----------------------------------------------- */
-/* Three presentations of the same 56px rail: flush to the edge, inset from it,
-   or detached and lifted off the page.
+/* Sidebar is the 56px rail as it ships, flush to the edge; Labeled turns it into
+   a column of named rows (shell/LabeledSidebar.tsx, dressed in the skin's
+   section 86). Inset and Floating -- the rail inset from the edge, and detached
+   and lifted off the page -- were taken out of the panel on 2026-09-27, on
+   request, with the rules that widened their columns and framed the rail. */
 
-   THE COLUMN HAS TO GROW WITH THE MARGIN, which is what the first version got
-   wrong. `.hs-body` is a grid whose first column is `var(--hs-rail-w)` -- 56px,
-   exactly the rail -- so adding a left margin moved the rail right and pushed its
-   far edge INTO the content. Measured: Inset put the rail's right edge 10px over
-   the page, Floating 12px. The rail was overlapping the thing it sits beside, in
-   both non-default modes, which is why neither looked deliberate.
-
-   So each mode widens its column by its own gutters, and the margins are
-   symmetric so the rail sits centred in the space it was given. */
-
-/* Inset: inside the body's edge rather than flush to it. */
-.bf-shell[data-bf-sidebar="inset"] .hs-body {
-  grid-template-columns: calc(var(--hs-rail-w) + 20px) minmax(0, 1fr);
-}
-.bf-shell[data-bf-sidebar="inset"] .sidebar.hs-rail {
-  height: calc(100vh - var(--hs-topbar-h) - 20px);
-  margin: 10px;
-  border-right: 0;
-  border-radius: var(--bf-radius-control);
-}
-
-/* Floating: detached, only as tall as it needs to be, and lifted off the page. */
-.bf-shell[data-bf-sidebar="floating"] .hs-body {
-  grid-template-columns: calc(var(--hs-rail-w) + 24px) minmax(0, 1fr);
-}
-.bf-shell[data-bf-sidebar="floating"] .sidebar.hs-rail {
-  height: auto;
-  max-height: calc(100vh - var(--hs-topbar-h) - 28px);
-  margin: 14px 12px;
-  border-right: 0;
-  border-radius: var(--bf-radius-card);
-  box-shadow: var(--bf-shadow-float);
-}
-
-/* The float shadow is an ink shadow, which says nothing against a dark ground, so
-   in dark the detached rail is read by an edge instead. */
-.bf-shell[data-bf-mode="dark"][data-bf-sidebar="floating"] .sidebar.hs-rail {
-  border: 1px solid rgba(var(--bf-chrome-line-rgb), 0.14);
-}
-@media (prefers-color-scheme: dark) {
-  .bf-shell[data-bf-mode="system"][data-bf-sidebar="floating"] .sidebar.hs-rail {
-    border: 1px solid rgba(var(--bf-chrome-line-rgb), 0.14);
-  }
-}
-
-/* ---- 26i. Sidebar Collapse Mode --------------------------------------- */
-/* Icon is the rail as it ships: 56px of glyphs, always there. OffCanvas hands
-   that width back to the page and leaves a strip to bring the rail out, by hover
-   or by `:focus-within`, so it is reachable without a pointer.
-
-   THIS RULE IS AUTHORITATIVE ABOUT POSITION, and it has to be, because three
-   things fought over it:
-
-   The sliver changed width with Sidebar Style. Floating's `margin: 14px 12px`
-   survived into off-canvas, so the strip was 24px and the rail started 14px
-   lower — a different target depending on an unrelated setting. Margins are
-   zeroed here.
-
-   The rail hung below a bar that had gone. With Navbar Behavior on Scroll the bar
-   scrolls away, but this rule's `top: var(--hs-topbar-h)` beat the navbar rule on
-   source order and pinned the rail 56px down for ever. It now sits at `top: 0`
-   with the FULL height and a z-index BELOW the bar's 40 — so at rest the opaque
-   bar covers its top strip and the rail appears to begin under it, and once the
-   bar scrolls off the rail simply owns the whole side. One rule, correct in both
-   navbar modes, and no specificity contest.
-
-   And a revealed rail lies ON the page, so it needs to read that way: a shadow
-   when it comes out, and an edge on the strip so there is something to aim at.
-   A 12px strip with no marking was a target you had to know about. */
-.bf-shell[data-bf-collapse="offcanvas"] .hs-body {
-  grid-template-columns: var(--bf-rail-sliver) minmax(0, 1fr);
-}
-
-.bf-shell {
-  --bf-rail-sliver: 14px;
-}
-
-.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 35;
-  height: 100vh;
-  max-height: none;
-  margin: 0;
-  border-radius: 0;
-  transform: translateX(calc(-100% + var(--bf-rail-sliver)));
-  /* The parked strip's own marker, as an INSET SHADOW on the rail's right edge --
-     which is the only part of it the strip shows. The obvious build is a ::before
-     with `content`, faded out on hover, and this sheet's guard refused it: that
-     needs three separate mechanisms which can remove content for one decorative
-     line. The hover state below simply REPLACES this with the lift, so nothing is
-     ever hidden and there is one declaration instead of three rules. */
-  box-shadow: inset -2px 0 0 var(--bf-rail-fill);
-}
-
-.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail:hover,
-.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail:focus-within {
-  transform: none;
-  box-shadow: var(--bf-shadow-float);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* OffCanvas degrades to the icon rail rather than to a rail that merely does
-     not slide. Under reduce the honest answer is not "hide it without the
-     animation" -- a navigation you have to hover out of hiding is a trap for
-     anyone who cannot hover, and holding it still does not fix that. */
-  .bf-shell[data-bf-collapse="offcanvas"] .hs-body {
-    grid-template-columns: var(--hs-rail-w) minmax(0, 1fr);
-  }
-  .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
-    position: sticky;
-    top: var(--hs-topbar-h);
-    height: calc(100vh - var(--hs-topbar-h));
-    z-index: 30;
-    transform: none;
-  }
-  /* The strip's marker has no strip to mark once the rail is back in the layout. */
-  .bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
-    box-shadow: none;
-  }
-}
+/* ---- 26i. Sidebar Collapse Mode — REMOVED (2026-09-27) ----------------- */
+/* Icon / OffCanvas was taken out of the Preferences panel on request, with
+   `data-bf-collapse`, the off-canvas rail, its sliver token and its reduce
+   rules. The rail is always there; hiding it is the arrow at its head. */
 
 /* ============================================================================
    27. THE THEMES — REMOVED (2026-09-16)

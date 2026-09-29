@@ -11255,18 +11255,6 @@ body:has(.app-shell.hs-shell.bf-shell) .pdx .sim-ring-value {
 .app-shell.hs-shell.bf-shell .hs-rail-list::-webkit-scrollbar {
   display: none;
 }
-/* the Sidebar Style variants the Preferences panel offers each wrote their own viewport
-   height (inset kept a 20px allowance, floating capped a `height: auto`); the skin gives all
-   three the same margins, so they take the same length */
-.app-shell.hs-shell.bf-shell[data-bf-sidebar="inset"] .sidebar.hs-rail,
-.app-shell.hs-shell.bf-shell[data-bf-sidebar="floating"] .sidebar.hs-rail {
-  height: var(--bf-rail-length);
-  max-height: none;
-}
-.app-shell.hs-shell.bf-shell[data-bf-collapse="offcanvas"] .sidebar.hs-rail {
-  height: var(--bf-rail-span);
-  max-height: none;
-}
 /* the rail stays on its own side at every width: the legacy rule below this one in
    styles.css would make it static, and a static rail scrolls away with the page */
 @media (max-width: 980px) {
@@ -15080,5 +15068,915 @@ body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show {
   }
   .app-shell.hs-shell.bf-shell .bfupd[data-bfupd-leaving="true"] {
     visibility: hidden;
+  }
+}
+
+/* ============================================================================
+   86. THE LABELED SIDEBAR — a Sidebar Style (2026-09-27)
+   ----------------------------------------------------------------------------
+   Asked for with a screenshot of Linear's sidebar: "Make it so that a user is
+   able to change the left sidebar to look like the image reference." So it is a
+   choice under Preferences › Sidebar Style, beside the icon rail
+   (`data-bf-sidebar="labeled"`, shell/LabeledSidebar.tsx); the rail stays the
+   default and nothing around the sidebar changes.
+
+   WHAT THE REFERENCE IS MADE OF: a flat column on the ground, the height of the
+   window under the top bar; at its head the workspace with a chevron, a search
+   and a ROUND compose button; rows of a 16px glyph and a 14px label about 30px
+   apart, the label a shade softer than the ink until it is pointed at or chosen;
+   the chosen row lifted off the ground; small gray group heads with a filled
+   caret that folds them, one with a "+" at its end; a team row with its own
+   tile, folding its pages under it, indented; and a "What's new" card at the
+   foot. Every colour here is one of the program's tokens, so dark mode draws
+   the same column from its own palette, and the Colors set reaches the ring and
+   the tags as it reaches everything else.
+
+   THEN NOTION'S (asked the same day with a screenshot of Notion's sidebar: "move
+   bigger and smaller width wise … separate the sidebar to make it look like its
+   own section"): the column became a section of its own, on the surface with a
+   divider down its edge, under a top bar that keeps the BuildFlow name (86c);
+   and the divider is its handle — drag to resize, click to close, with the
+   reference's tip (86i-2).
+   ============================================================================ */
+
+/* ---- 86a. the measures ----
+   The width is the one a person dragged the divider to (LabeledSidebar.tsx writes --lbl-user-w on
+   the body, between 200px and 420px, and keeps it on this device), or 244px until they do. */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] {
+  --lbl-side-w: var(--lbl-user-w, 244px);
+  --lbl-hover: color-mix(in srgb, var(--bf-ink) 6%, transparent);
+  --lbl-ink-2: color-mix(in srgb, var(--bf-ink) 80%, var(--bf-ink-muted));
+}
+
+/* ---- 86b. the column: the sidebar's own width, whatever the narrow-window rule says ----
+   The sidebar itself is fixed to the window's side (86c), which takes it out of the grid, so the
+   first column only holds its place and the page is put in the second by name. */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell) .hs-body {
+  grid-template-columns: var(--lbl-side-w) minmax(0, 1fr);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell) .hs-body > .main-panel {
+  grid-column: 2;
+}
+
+/* ---- 86c. the sidebar: ITS OWN SECTION, under the top bar ----
+   Asked for next with a screenshot of Notion's sidebar: "separate the sidebar to make it look like
+   its own section". So it is a column of its own — on the surface rather than the ground, a divider
+   down its edge. It first ran from the window's top, the top bar starting at its edge with its
+   wordmark set aside, until the next ask, with the rail's screenshot beside it: "Move the left
+   sidebar down a little more from the top, so a user can see the "BuildFlow" name". So the top bar
+   runs the full width again, wordmark and all, as it does over the rail, and the column starts
+   under it and runs to the window's foot. It is fixed to the window's side, which keeps it whole
+   while the page scrolls; the body grid's first column (86b) holds its place in the layout. It
+   stacks where the rail does (hubspot sheet): over the page at 30, under the top bar's 40, so the
+   bar's menus — the bell's list, the account menu — open over it. */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side {
+  position: fixed;
+  top: var(--hs-topbar-h);
+  bottom: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: var(--lbl-side-w);
+  min-width: 0;
+  padding: 9px 10px 12px 12px;
+  /* a hairline on the two sides that meet the ground: under the top bar, and the divider */
+  border-top: 1px solid var(--bf-line-solid);
+  border-right: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--lbl-ink-2);
+  font-family: var(--bf-font-active);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 38px;
+  margin: 0 0 14px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-ws {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--bf-dur-hover) var(--bf-ease-size),
+    color var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn:hover,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn[aria-expanded="true"] {
+  background: var(--lbl-hover);
+  color: var(--bf-ink);
+}
+/* compose: the reference's round button, lifted off the ground */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn.is-round {
+  width: 34px;
+  height: 34px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: var(--bf-shadow-card);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn.is-round:hover,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-icon-btn.is-round[aria-expanded="true"] {
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-raised);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-create {
+  position: relative;
+  flex: none;
+}
+/* with no workspaces to switch between, the workspace's trade stands where the switcher does */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0 6px;
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] :is(.lbl-brand-tile, .lbl-team-tile) {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--bf-color-face-2);
+  color: #ffffff;
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-brand-tile {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+
+/* ---- 86d. the rows ---- */
+/* the page list scrolls when a short window cannot hold it, the news card under it; the head and
+   the foot never move */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0 -4px;
+  padding: 0 4px 10px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-scroll::-webkit-scrollbar {
+  width: 0;
+}
+/* the list takes the room there is, so on a tall window the card rests at the bottom */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-nav {
+  flex: 1 0 auto;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-scroll > .lbl-news {
+  flex: none;
+  margin-top: 14px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-row {
+  position: relative;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--lbl-ink-2);
+  font-family: var(--bf-font-active);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--bf-dur-hover) var(--bf-ease-size),
+    color var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item > svg {
+  flex: none;
+  color: var(--bf-ink-muted);
+  transition: color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item:hover {
+  background: var(--lbl-hover);
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item:hover > svg {
+  color: var(--bf-ink);
+}
+/* the page you are on: a quiet fill on the column's surface, its words in the full ink */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item.is-active,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item.is-active:hover {
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  font-weight: 600;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item.is-active > svg:first-child {
+  color: var(--bf-ink);
+}
+/* the reference's ring on the row the keyboard is on */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]
+  :is(.lbl-item, .lbl-group-toggle, .lbl-group-add, .lbl-news, .lbl-icon-btn):focus-visible {
+  outline: 2px solid var(--bf-focus-ink, var(--bf-accent));
+  outline-offset: -2px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item.is-locked {
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item > .lbl-lock {
+  color: var(--bf-accent);
+}
+/* a page's release tag, in the flyouts' own pill */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-tag {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(var(--bf-accent-rgb), 0.1);
+  color: var(--bf-accent-dark, var(--bf-accent));
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-item.lbl-more {
+  color: var(--bf-ink-muted);
+}
+
+/* ---- 86e. the groups: a small gray head with a filled caret, a "+" at its end ---- */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group {
+  margin-top: 18px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 4px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--bf-dur-hover) var(--bf-ease-size),
+    color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group-toggle:hover {
+  background: var(--lbl-hover);
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-caret,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team-caret {
+  flex: none;
+  transition: rotate var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group-toggle[aria-expanded="false"] .lbl-caret,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team-row[aria-expanded="false"] .lbl-team-caret {
+  rotate: -90deg;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group-add {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--bf-ink-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--bf-dur-hover) var(--bf-ease-size),
+    color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-group-add:hover {
+  background: var(--lbl-hover);
+  color: var(--bf-ink);
+}
+/* the team: its own tile and name, a caret at the end, and its pages indented under it */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team {
+  display: grid;
+  gap: 1px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team-tile {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  font-size: 10px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team-caret {
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team-list {
+  padding-left: 22px;
+}
+
+/* ---- 86f. the foot: the newest update as a card, then Settings and the hide arrow ---- */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-foot {
+  display: grid;
+  flex: none;
+  gap: 8px;
+  padding-top: 8px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-news {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--bf-line-solid);
+  border-radius: 12px;
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  font-family: var(--bf-font-active);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--bf-shadow-card);
+  transition: box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-news:hover {
+  box-shadow: var(--bf-shadow-raised);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-news-eyebrow {
+  color: var(--bf-ink-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-news-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-foot-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-foot-row > .lbl-item {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+/* ---- 86g. the workspace switcher at the head ----
+   Its own sheet dresses it only inside the Dashboard (workspace-switcher.css), so every part is
+   named here; and on the Dashboard its copy in the header steps aside while the sidebar holds it. */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed) .dash-rx.hs-home .hs-home-topline .bfws {
+  display: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-eyebrow {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  max-width: 100%;
+  height: 34px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bf-ink);
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background-color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger:hover,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger[aria-expanded="true"] {
+  background: var(--lbl-hover);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger:focus-visible {
+  outline: 2px solid var(--bf-focus-ink, var(--bf-accent));
+  outline-offset: -2px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-chevron {
+  flex: none;
+  color: var(--bf-ink-muted);
+  transition: rotate var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws.is-open .bfws-chevron {
+  rotate: 180deg;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-tile {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--bf-color-face-2);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-list > li:nth-child(3n + 2) .bfws-tile {
+  background: var(--bf-color-face-1);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-list > li:nth-child(3n) .bfws-tile {
+  background: var(--bf-color-face-3);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  display: grid;
+  gap: 6px;
+  width: min(300px, calc(100vw - 32px));
+  padding: 10px;
+  border: 0;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: var(--bf-shadow-float);
+  text-align: left;
+  transform-origin: top left;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-search:focus-within {
+  outline: 2px solid var(--bf-focus-ink, var(--bf-accent));
+  outline-offset: -2px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 13px;
+  outline: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-heading {
+  margin: 4px 6px 0;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-list {
+  display: grid;
+  gap: 1px;
+  max-height: 260px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--bf-radius-control);
+  background: transparent;
+  color: var(--bf-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item:hover,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item.is-active {
+  background: var(--bf-hover);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item:focus-visible {
+  outline: 2px solid var(--bf-focus-ink, var(--bf-accent));
+  outline-offset: -2px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item-text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item-title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-item-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-standing {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-standing.is-trial {
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-standing.is-ended {
+  background: var(--bf-color-bad-wash);
+  color: var(--bf-color-bad);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-standing.is-setup {
+  background: var(--bf-color-warn-wash);
+  color: var(--bf-color-warn);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-check {
+  flex: none;
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side :is(.bfws-empty, .bfws-foot) {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-foot svg {
+  flex: none;
+  margin-top: 1px;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-error {
+  margin: 0 6px;
+  color: var(--bf-color-bad);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--bf-dur-hover) var(--bf-ease-size),
+    box-shadow var(--bf-dur-hover) var(--bf-ease);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-add:hover:not(:disabled) {
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-card);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-add:disabled {
+  color: var(--bf-ink-muted);
+  cursor: not-allowed;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-add-count {
+  margin-left: auto;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+/* ---- 86h. the Create menu: the shell's menu card, out of the compose button ---- */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .hs-menu.lbl-create-menu {
+  top: calc(100% + 6px);
+  right: auto;
+  left: 0;
+  min-width: 240px;
+  transform-origin: top left;
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-create-menu .hs-menu-item {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: var(--bf-radius-control);
+  color: var(--bf-ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-create-menu .hs-menu-item svg {
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-create-menu .hs-menu-item:is(:hover, :focus-visible) {
+  background: var(--bf-hover);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-create-menu .lbl-create-where {
+  margin-left: auto;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* ---- 86i. BuildFlow AI docks beside the sidebar, whatever its width, as it docks beside the rail ---- */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell)) > .bf-breeze {
+  left: var(--lbl-user-w, 244px);
+}
+
+/* ---- 86i-2. the divider is the handle: drag to resize, click to close ----
+   The reference's: an 8px strip over the edge with the resize cursor, the edge darkening under the
+   pointer (and while dragging), and after a moment a tip beside the pointer — "Close Click or ⌘\",
+   "Resize Drag". While dragging, the whole page takes the cursor and nothing selects. */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  bottom: 0;
+  z-index: 3;
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 3px;
+  background: transparent;
+  transition: background-color var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize:hover::after,
+body.bf-side-resizing .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize::after {
+  background: color-mix(in srgb, var(--bf-ink) 22%, transparent);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize:focus-visible {
+  outline: 0;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize:focus-visible::after {
+  background: var(--bf-focus-ink, var(--bf-accent));
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize-tip {
+  position: absolute;
+  top: var(--lbl-tip-y, 50%);
+  left: 16px;
+  display: grid;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: var(--bf-radius-control);
+  /* the app's tooltip, the rail flyout's add-on tip (daylight §3): an ink pill, dark on a light page and light on a dark one */
+  background: var(--bf-ink);
+  color: color-mix(in srgb, var(--bf-on-accent) 64%, transparent);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: var(--bf-shadow-pill);
+  opacity: 0;
+  pointer-events: none;
+  translate: 0 -50%;
+  transition: opacity var(--bf-dur-hover) var(--bf-ease-size);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize-tip strong {
+  color: var(--bf-on-accent);
+  font-weight: 600;
+}
+/* a moment after the pointer settles on the edge; never while dragging */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize:hover .lbl-resize-tip {
+  opacity: 1;
+  transition-delay: var(--bfm-dur-base);
+}
+body.bf-side-resizing .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize .lbl-resize-tip {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+body.bf-side-resizing:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]) {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* ---- 86j. the opening: the sidebar assembles on section 74's beats, as the rail does ----
+   The head first, the rows lifting top to bottom on the icon stagger (capped, so a long list
+   lands together), the page you are on popping as the rail's does, the foot last. */
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-head > *,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-row,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-group-head,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-team-row,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-scroll > .lbl-news,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-foot > * {
+  --bfe-y: 8px;
+  animation: bfe-lift var(--bfm-dur-base) var(--bfm-ease-out) backwards;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-head > * {
+  animation-delay: var(--bfm-beat-brand);
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-row,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-group-head,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-team-row {
+  animation-delay: calc(var(--bfm-beat-nav-icons) + min(var(--lbl-i, 0), 12) * var(--bfm-stagger-icon));
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-item.is-active {
+  animation: bfe-pill var(--bfm-dur-base) var(--bfm-ease-soft) var(--bfm-beat-nav-pill) backwards;
+}
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-scroll > .lbl-news,
+.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-foot > * {
+  animation-delay: var(--bfm-beat-rail);
+}
+
+/* ---- 86k. less motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-head > *,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-row,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-group-head,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-team-row,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-scroll > .lbl-news,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-foot > *,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"].bfm-open .lbl-side .lbl-item.is-active {
+    animation: bfe-lift var(--bfm-reduced) linear backwards;
+    animation-delay: 0ms;
+    --bfe-y: 0px;
+    --bfe-blur: 0px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-menu,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .hs-menu.lbl-create-menu {
+    animation: none;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-caret,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-team-caret,
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-chevron {
+    transition: none;
+  }
+}
+
+/* ---- 86l. narrower windows: the column keeps its glyphs and gives up its words ----
+   Under 900px the labels would crowd the page, so the sidebar becomes a 64px column of the same
+   buttons — their names stay for a screen reader — with a hairline where a group's head stood;
+   the heads, the "+" and the What's new card wait for a wider window. */
+@media (max-width: 900px) {
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] {
+    --lbl-side-w: 64px;
+  }
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]:not(.sidebar-collapsed):not(.settings-shell)) > .bf-breeze {
+    left: 64px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side {
+    align-items: stretch;
+    padding: 10px 0;
+  }
+  /* a column of glyphs has one width: the dragged one comes back with the words */
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-resize {
+    display: none;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-head {
+    flex-direction: column;
+    height: auto;
+    gap: 6px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-ws {
+    flex: none;
+    justify-content: center;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-scroll {
+    margin: 0;
+    padding: 0 0 8px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-list {
+    justify-items: center;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"]
+    .lbl-side
+    :is(.lbl-label, .lbl-tag, .lbl-team-caret, .bfws-trigger-title, .bfws-chevron) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item {
+    justify-content: center;
+    width: 40px;
+    height: 36px;
+    padding: 0;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-item > .lbl-lock {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 11px;
+    height: 11px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side :is(.lbl-group-head, .lbl-news) {
+    display: none;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-group {
+    margin: 10px 12px 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--bf-line-solid);
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .lbl-team-list {
+    padding-left: 0;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-foot-row {
+    flex-direction: column;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-foot-row > .lbl-item {
+    flex: none;
+    width: 40px;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"] .lbl-side .bfws-trigger {
+    padding: 0 4px;
   }
 }

@@ -19,10 +19,13 @@
    hints blue, "Red" red, "Green" green and "Yellow" a bright gold on a dark olive-gold for text.
    Light / Dark / System stays a separate control (Theme Mode, `data-bf-mode`).
 
-   ALL EIGHT ARE LIVE. Theme Mode and Fonts each shipped disabled, with the
+   ALL OF THEM ARE LIVE. Theme Mode and Fonts each shipped disabled, with the
    reason on the control, because the product had no dark palette and one font
    family. Both have since been built: the fonts load from Google Fonts, and dark
    mode redefines a semantic surface/ink layer (section 29 of the daylight sheet).
+   Navbar Behavior and Sidebar Collapse Mode were taken out on 2026-09-27, on
+   request; the panel is Colors, Fonts, Theme Mode, Page Layout, Sidebar Style
+   and Restore Defaults.
    ========================================================================= */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -50,9 +53,10 @@ export type FontId =
   | "playfair-display";
 export type ThemeMode = "light" | "dark" | "system";
 export type PageLayout = "centered" | "full";
-export type NavbarBehavior = "sticky" | "scroll";
-export type SidebarStyle = "inset" | "sidebar" | "floating";
-export type SidebarCollapse = "icon" | "offcanvas";
+/** The icon rail ("sidebar"), or "labeled": the rail as a column of named rows, groups that fold
+    and a team that holds its pages (shell/LabeledSidebar.tsx, 2026-09-27). Inset and Floating —
+    two other frames for the rail — were taken out of the panel the same day, on request. */
+export type SidebarStyle = "sidebar" | "labeled";
 
 export type AppPreferences = {
   /** Which set of colour hints the program shows. */
@@ -62,9 +66,11 @@ export type AppPreferences = {
   /** Light, dark, or whatever the operating system is asking for. */
   mode: ThemeMode;
   layout: PageLayout;
-  navbar: NavbarBehavior;
   sidebar: SidebarStyle;
-  collapse: SidebarCollapse;
+  /* Navbar Behavior (sticky / scroll) and Sidebar Collapse Mode (icon / offcanvas) were two more
+     choices here until 2026-09-27, when they were taken out of the panel on request. The top bar
+     is always sticky and the rail always there now; a saved copy that still names either is
+     read without them (parsePreferences keeps only the keys below). */
 };
 
 /** The account-level key. Mirrors `dash:layout`'s convention. */
@@ -75,9 +81,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   font: "inter",
   mode: "light",
   layout: "centered",
-  navbar: "sticky",
-  sidebar: "sidebar",
-  collapse: "icon"
+  sidebar: "sidebar"
 };
 
 /**
@@ -189,16 +193,15 @@ export function parsePreferences(raw: unknown): AppPreferences {
     font: "inter",
     mode: isOneOf(input.mode, ["light", "dark", "system"] as const) ? input.mode : DEFAULT_PREFERENCES.mode,
     layout: isOneOf(input.layout, ["centered", "full"] as const) ? input.layout : DEFAULT_PREFERENCES.layout,
-    navbar: isOneOf(input.navbar, ["sticky", "scroll"] as const) ? input.navbar : DEFAULT_PREFERENCES.navbar,
-    sidebar: isOneOf(input.sidebar, ["inset", "sidebar", "floating"] as const) ? input.sidebar : DEFAULT_PREFERENCES.sidebar,
-    collapse: isOneOf(input.collapse, ["icon", "offcanvas"] as const) ? input.collapse : DEFAULT_PREFERENCES.collapse
+    // a copy saved as Inset or Floating (both taken out 2026-09-27) reads as the plain rail
+    sidebar: isOneOf(input.sidebar, ["sidebar", "labeled"] as const) ? input.sidebar : DEFAULT_PREFERENCES.sidebar
   };
 }
 
 /**
  * What the shell reads. Returned as data attributes rather than classes so the
- * CSS says which preference it is answering — `[data-bf-sidebar="floating"]`
- * reads as a setting, `.floating` reads as anything at all.
+ * CSS says which preference it is answering — `[data-bf-sidebar="labeled"]`
+ * reads as a setting, `.labeled` reads as anything at all.
  */
 export function preferenceAttributes(preferences: AppPreferences): Record<string, string> {
   return {
@@ -206,9 +209,7 @@ export function preferenceAttributes(preferences: AppPreferences): Record<string
     "data-bf-font": preferences.font,
     "data-bf-mode": preferences.mode,
     "data-bf-layout": preferences.layout,
-    "data-bf-navbar": preferences.navbar,
-    "data-bf-sidebar": preferences.sidebar,
-    "data-bf-collapse": preferences.collapse
+    "data-bf-sidebar": preferences.sidebar
   };
 }
 

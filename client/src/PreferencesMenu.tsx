@@ -5,10 +5,12 @@
    the page is still one click away at the foot of the panel, because the panel
    holds the shell's layout choices and the page holds everything else.
 
-   All eight topics from the reference are here, in its order, and all eight are
-   live. Theme Mode and Fonts each shipped disabled with the reason on the
-   control, which was the honest version of something not yet built; both have
-   since been built, so the reasons are gone rather than left to go stale.
+   The reference's topics are here, in its order, and every one is live. Theme
+   Mode and Fonts each shipped disabled with the reason on the control, which was
+   the honest version of something not yet built; both have since been built, so
+   the reasons are gone rather than left to go stale. Navbar Behavior and Sidebar
+   Collapse Mode were taken out on 2026-09-27, on request: the panel is Colors,
+   Fonts, Theme Mode, Page Layout, Sidebar Style, and Restore Defaults.
    ========================================================================= */
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
@@ -24,9 +26,7 @@ import {
   type AppPreferences,
   type FontGroup,
   type FontId,
-  type NavbarBehavior,
   type PageLayout,
-  type SidebarCollapse,
   type SidebarStyle,
   type ThemeMode,
   type ColorPreset
@@ -95,18 +95,10 @@ const LAYOUT_OPTIONS: Array<{ id: PageLayout; label: string }> = [
   { id: "centered", label: "Centered" },
   { id: "full", label: "Full Width" }
 ];
-const NAVBAR_OPTIONS: Array<{ id: NavbarBehavior; label: string }> = [
-  { id: "sticky", label: "Sticky" },
-  { id: "scroll", label: "Scroll" }
-];
 const SIDEBAR_OPTIONS: Array<{ id: SidebarStyle; label: string }> = [
-  { id: "inset", label: "Inset" },
   { id: "sidebar", label: "Sidebar" },
-  { id: "floating", label: "Floating" }
-];
-const COLLAPSE_OPTIONS: Array<{ id: SidebarCollapse; label: string }> = [
-  { id: "icon", label: "Icon" },
-  { id: "offcanvas", label: "OffCanvas" }
+  // every page by name, in groups that fold: shell/LabeledSidebar.tsx
+  { id: "labeled", label: "Labeled" }
 ];
 
 export function PreferencesMenu({
@@ -229,30 +221,12 @@ export function PreferencesMenu({
         <Segmented label="Page Layout" value={preferences.layout} options={LAYOUT_OPTIONS} onChange={(layout) => onUpdate({ layout })} />
       </Field>
 
-      <Field label="Navbar Behavior">
-        <Segmented
-          label="Navbar Behavior"
-          value={preferences.navbar}
-          options={NAVBAR_OPTIONS}
-          onChange={(navbar) => onUpdate({ navbar })}
-        />
-      </Field>
-
       <Field label="Sidebar Style">
         <Segmented
           label="Sidebar Style"
           value={preferences.sidebar}
           options={SIDEBAR_OPTIONS}
           onChange={(sidebar) => onUpdate({ sidebar })}
-        />
-      </Field>
-
-      <Field label="Sidebar Collapse Mode">
-        <Segmented
-          label="Sidebar Collapse Mode"
-          value={preferences.collapse}
-          options={COLLAPSE_OPTIONS}
-          onChange={(collapse) => onUpdate({ collapse })}
         />
       </Field>
 

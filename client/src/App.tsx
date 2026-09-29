@@ -281,6 +281,8 @@ import { PreferencesMenu } from "./PreferencesMenu";
 import { SetupStage, useSetupStage } from "./SetupStage";
 import { TutorialStage } from "./TutorialStage";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { LabeledSidebar, OPEN_NOTIFICATIONS_EVENT } from "./shell/LabeledSidebar";
+import { LABELED_CREATE, labeledSections } from "./shell/labeledSections";
 import { AnimatedFigure } from "./components/ui/animated-figure";
 import { readUserSetting, rememberUserSetting, syncUserSettings } from "./userSettings";
 /* The panel board — move / size / remove / "+" / Reset — lives in its own module since 2026-09-15,
@@ -3282,6 +3284,25 @@ function App() {
   ]
     .filter(Boolean)
     .join(" ");
+  /* Choosing the page already on screen plays its opening again — either sidebar */
+  const navigateFromSidebar = (target: Page) => {
+    if (
+      target === page &&
+      (target === "dashboard" ||
+        target === "schedule" ||
+        target === "projects" ||
+        target === "crews" ||
+        target === "inventory" ||
+        target === "delayIQs" ||
+        target === "reports" ||
+        target === "timecard" ||
+        target === "field" ||
+        target === "bookmarks")
+    ) {
+      setPageEntrance((count) => count + 1);
+    }
+    setPage(target);
+  };
 
   return (
     <div className={`${shellClassName} hs-shell`} {...preferenceAttributes(appPreferences.preferences)}>
@@ -3326,38 +3347,73 @@ function App() {
         onOpenNotificationTarget={openNotificationTarget}
       />
       <div className="hs-body">
-        {page !== "settings" && (
-          <Sidebar
-            collapsed={isSidebarCollapsed}
-            onToggleCollapsed={() => setIsSidebarCollapsed((current) => !current)}
-            page={page}
-            selectedProductIds={selectedProductIds}
-            selectedPlanId={selectedPlanId}
-            setPage={(target) => {
-              if (
-                target === page &&
-                (target === "dashboard" ||
-                  target === "schedule" ||
-                  target === "projects" ||
-                  target === "crews" ||
-                  target === "inventory" ||
-                  target === "delayIQs" ||
-                  target === "reports" ||
-                  target === "timecard" ||
-                  target === "field" ||
-                  target === "bookmarks")
-              ) {
-                setPageEntrance((count) => count + 1);
+        {page !== "settings" &&
+          /* Preferences › Sidebar Style › Labeled (2026-09-27): every page by name, in groups that
+             fold, instead of the icon rail — shell/LabeledSidebar.tsx, skin §86 */
+          (appPreferences.preferences.sidebar === "labeled" ? (
+            <LabeledSidebar
+              page={page}
+              switcher={
+                workspaces ? (
+                  <WorkspaceSwitcher
+                    workspaces={workspaces}
+                    onSwitch={handleSwitchWorkspace}
+                    onCreate={handleCreateWorkspace}
+                    busy={workspaceBusy}
+                    error={workspaceError}
+                  />
+                ) : (
+                  <span className="lbl-brand">
+                    <span className="lbl-brand-tile" aria-hidden="true">
+                      {(data.businessType || "BuildFlow").slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="lbl-label">{data.businessType || "BuildFlow"}</span>
+                  </span>
+                )
               }
-              setPage(target);
-            }}
-            onOpenSettings={openSettingsPage}
-            onRequestAddOn={setAddOnPrompt}
-            bookmarks={bookmarks}
-            onToggleBookmark={toggleBookmark}
-            scheduleViews={<SavedViewsFlyout data={data} onOpenPage={openAppPage} />}
-          />
-        )}
+              onOpenSearch={() => setPaletteOpen(true)}
+              createItems={LABELED_CREATE}
+              {...labeledSections({
+                onOpenInbox: () => window.dispatchEvent(new CustomEvent(OPEN_NOTIFICATIONS_EVENT)),
+                onAskAi: toggleAssistant,
+                onOpenSetting: openSettingsView,
+                workspaceTitle:
+                  workspaces?.workspaces.find((workspace) => workspace.id === workspaces.activeId)?.title ||
+                  data.businessType ||
+                  "BuildFlow",
+                onAddWorkspace: workspaces && workspaces.remaining > 0 ? () => void handleCreateWorkspace() : null
+              })}
+              whatsNew={UPDATE_ENTRIES[0] ? { title: UPDATE_ENTRIES[0].title, onOpen: () => setPendingUpdate(UPDATE_ENTRIES[0]) } : null}
+              onNavigate={(target) => navigateFromSidebar(target as Page)}
+              lockedFor={(target) => lockedAddOnForPage(target as Page)}
+              onRequestAddOn={(addOn) => setAddOnPrompt(addOn as OnboardingProductId)}
+              tagFor={(target) => pageReleaseTag(target as Page)}
+              onOpenSettings={openSettingsPage}
+              /* the brand and the person at the ends of the column: the EduLearn trial (2026-09-28, skin §88) */
+              brand={{ name: "BuildFlow", tagline: "Plan. Build. Deliver.", logo: "/buildflow-logo.png" }}
+              profile={{
+                initials: data.activeUser.avatar,
+                name: data.activeUser.name,
+                role: data.activeUser.permission ? permissionLevelLabels[data.activeUser.permission] : data.activeUser.title
+              }}
+              collapsed={isSidebarCollapsed}
+              onToggleCollapsed={() => setIsSidebarCollapsed((current) => !current)}
+            />
+          ) : (
+            <Sidebar
+              collapsed={isSidebarCollapsed}
+              onToggleCollapsed={() => setIsSidebarCollapsed((current) => !current)}
+              page={page}
+              selectedProductIds={selectedProductIds}
+              selectedPlanId={selectedPlanId}
+              setPage={navigateFromSidebar}
+              onOpenSettings={openSettingsPage}
+              onRequestAddOn={setAddOnPrompt}
+              bookmarks={bookmarks}
+              onToggleBookmark={toggleBookmark}
+              scheduleViews={<SavedViewsFlyout data={data} onOpenPage={openAppPage} />}
+            />
+          ))}
         <main className={page === "settings" ? "main-panel settings-main-panel" : "main-panel"}>
           {/* Said before anything is clicked, not after a refusal. Everyone who opens BuildFlow
               without signing in shares this one workspace, so the server refuses its writes
@@ -19472,6 +19528,18 @@ function TopBar({
     document.addEventListener("mousedown", closeOnOutsideClick);
     return () => document.removeEventListener("mousedown", closeOnOutsideClick);
   }, [isBookmarksOpen]);
+
+  // the Labeled sidebar's Inbox row opens the bell's list (shell/LabeledSidebar.tsx)
+  useEffect(() => {
+    const openInbox = () => {
+      setIsAccountMenuOpen(false);
+      setIsPreferencesOpen(false);
+      setIsBookmarksOpen(false);
+      setIsNotificationsOpen(true);
+    };
+    window.addEventListener(OPEN_NOTIFICATIONS_EVENT, openInbox);
+    return () => window.removeEventListener(OPEN_NOTIFICATIONS_EVENT, openInbox);
+  }, []);
 
   const goTo = (page: Page) => {
     setIsNotificationsOpen(false);

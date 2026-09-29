@@ -573,101 +573,22 @@ describe("the ink ladder holds against every ground the design uses", () => {
     }
   });
 
-  it("lets OffCanvas win the three contests it has to win", () => {
-    /* OffCanvas parks the rail off the side and brings it back on hover or focus. Three
-       other rules had a claim on the same properties, and it lost all three before this:
-
-       SIDEBAR STYLE. Floating's `margin: 14px 12px` survived into off-canvas, so the strip
-       you aim at was 24px wide and started 14px lower than in the other styles — a moving
-       target that depended on an unrelated setting. Measured; margins are zeroed here.
-
-       NAVBAR BEHAVIOR. This rule's `top: var(--hs-topbar-h)` beat the navbar rule on source
-       order, so with the bar set to scroll away the rail stayed pinned 56px down for ever.
-       It now sits at `top: 0` with the full height and a z-index UNDER the bar's 40, so the
-       opaque bar covers its top strip at rest and the rail owns the whole side once the bar
-       leaves. One rule, right in both navbar modes, no specificity contest to lose.
-
-       AND THE GUARD ITSELF, which is the one worth keeping. The parked strip needs a visible
-       marker, and the obvious build — a ::before with `content`, faded out on hover — needs
-       three mechanisms that can remove content for one decorative line. It is an inset
-       shadow on the rail instead, which the hover state REPLACES with the lift, so nothing
-       is ever hidden. That is the second time this sheet's content rule has produced a
-       simpler design than the one I reached for. */
-    const css = read(SHEET);
-    const rule = css.match(/\.bf-shell\[data-bf-collapse="offcanvas"\]\s+\.sidebar\.hs-rail\s*\{([^}]*)\}/);
-    expect(rule, "OffCanvas repositions the rail").not.toBeNull();
-    const body = norm(rule![1]);
-
-    expect(body, "a Sidebar Style margin must not change the strip").toMatch(/margin:\s*0/);
-    expect(body, "the rail must not hang below a bar that has scrolled away").toMatch(/top:\s*0/);
-    expect(body).toMatch(/height:\s*100vh/);
-    expect(body, "the parked strip carries its own marker").toMatch(/box-shadow:\s*inset/);
-
-    // under the bar, so the bar hides the rail's top strip instead of the rail covering it
-    const railZ = Number(body.match(/z-index:\s*(\d+)/)?.[1]);
-    const barRule = css.match(/\.hs-shell\.bf-shell\s+\.topbar\.hs-topbar\s*\{([^}]*)\}/);
-    const barZ = Number(norm(barRule?.[1] ?? "").match(/z-index:\s*(\d+)/)?.[1] ?? 40);
-    expect(railZ, "the off-canvas rail sits under the top bar").toBeLessThan(barZ || 40);
-
-    // and the strip's width is one token, so the column and the translate cannot disagree
-    const column = css.match(/\.bf-shell\[data-bf-collapse="offcanvas"\]\s+\.hs-body\s*\{([^}]*)\}/);
-    expect(norm(column![1])).toContain("var(--bf-rail-sliver)");
-    expect(body).toContain("var(--bf-rail-sliver)");
-  });
-
-  it("widens the rail's own grid column for every style that insets it", () => {
-    /* `.hs-body`'s first column is `var(--hs-rail-w)` -- 56px, exactly the rail -- so a
-       margin on the rail moves it right and pushes its far edge INTO the page. Measured
-       before the fix: Inset put the rail's right edge 10px over the content, Floating 12px.
-       Both non-default styles were overlapping the thing the rail sits beside.
-
-       Each inset style therefore has to widen its own column, and the margin has to be
-       symmetric so the rail is centred in the space it was given. Measured after: gutters
-       10/10 and 12/12, overlap 0 in all three styles. */
-    const css = read(SHEET);
-    for (const [style, gutter] of [
-      ["inset", 20],
-      ["floating", 24]
-    ] as Array<[string, number]>) {
-      const column = css.match(new RegExp(`\\.bf-shell\\[data-bf-sidebar="${style}"\\]\\s+\\.hs-body\\s*\\{([^}]*)\\}`));
-      expect(column, `${style} widens the rail's column`).not.toBeNull();
-      // the column is the rail plus its own gutters, expressed off the rail token so the
-      // two cannot drift apart
-      expect(norm(column![1])).toContain("var(--hs-rail-w)");
-      expect(norm(column![1])).toContain(`${gutter}px`);
-
-      const rule = css.match(new RegExp(`\\.bf-shell\\[data-bf-sidebar="${style}"\\]\\s+\\.sidebar\\.hs-rail\\s*\\{([^}]*)\\}`));
-      expect(rule, `${style} restyles the rail`).not.toBeNull();
-      const margin =
-        norm(rule![1])
-          .match(/margin:\s*([^;]+)/)?.[1]
-          ?.trim()
-          .split(/\s+/) ?? [];
-      // one or two values only: either is symmetric left-to-right, three or four is not
-      expect(margin.length, `${style}'s margin is symmetric`).toBeLessThanOrEqual(2);
-    }
-  });
-
-  it("makes Scroll mode move the rail as well as the bar, and keep the bar's stacking", () => {
-    /* Two halves, and the second is the one that made Scroll mode look broken. The rail
-       sticks at `top: var(--hs-topbar-h)` because a sticky bar occupies that strip, so with
-       the bar scrolling away the rail held a 56px empty gap at the top and sat 56px short of
-       the viewport. Measured at a 600px scroll before the fix: bar at -600, rail still
-       starting at 56.
-
-       And the bar must be `relative`, not `static`: both scroll away, but an unpositioned box
-       ignores z-index, and the bar carries three dropdowns that have to paint above the rail's
-       z-index 30. Verified in a browser by hit-testing the open panel, which lands inside it. */
-    const css = read(SHEET);
-    const bar = css.match(/\.bf-shell\[data-bf-navbar="scroll"\]\s+\.topbar\.hs-topbar\s*\{([^}]*)\}/);
-    expect(bar, "Scroll mode repositions the bar").not.toBeNull();
-    expect(norm(bar![1]), "static would drop the bar's z-index").toMatch(/position:\s*relative/);
-    expect(norm(bar![1])).not.toMatch(/position:\s*static/);
-
-    const rail = css.match(/\.bf-shell\[data-bf-navbar="scroll"\]\s+\.sidebar\.hs-rail\s*\{([^}]*)\}/);
-    expect(rail, "Scroll mode moves the rail up with the bar").not.toBeNull();
-    expect(norm(rail![1])).toMatch(/top:\s*0/);
-    expect(norm(rail![1])).toMatch(/height:\s*100vh/);
+  /* Sidebar Collapse Mode (Icon / OffCanvas) and Navbar Behavior (Sticky / Scroll) were taken out
+     of the Preferences panel on 2026-09-27, on request, and the rules that answered them went with
+     them; so, the same day, did Sidebar Style's Inset and Floating. Three cases here held those
+     rules to their measured fixes; this one holds the removal: no control offers any of them, the
+     shell stamps neither attribute, and no sheet answers one. */
+  it("offers neither Sidebar Collapse Mode nor Navbar Behavior, nor an Inset or Floating sidebar, and answers none anywhere", () => {
+    const panel = read("PreferencesMenu.tsx");
+    // (its header comment says they went, so it is the controls that are looked for, not the words)
+    expect(panel).not.toMatch(/label="(Navbar Behavior|Sidebar Collapse Mode)"|NAVBAR_OPTIONS|COLLAPSE_OPTIONS/);
+    const model = read("preferences.ts");
+    expect(model).not.toMatch(/"data-bf-navbar"|"data-bf-collapse"/);
+    const sheets = readdirSync(SRC, { recursive: true })
+      .filter((name) => String(name).endsWith(".css"))
+      .map(String);
+    for (const name of sheets) expect(read(name), name).not.toMatch(/\[data-bf-(navbar|collapse)=|\[data-bf-sidebar="(inset|floating)"\]/);
+    expect(panel).not.toMatch(/id: "(inset|floating)"/);
   });
 
   it("makes Full Width release both the measure and the gutter", () => {
