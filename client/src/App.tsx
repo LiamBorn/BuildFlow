@@ -244,6 +244,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { SelectMenuLayer } from "./components/ui/selectMenu";
 import { DateMenuLayer } from "./components/ui/dateMenu";
 import { TimeMenuLayer } from "./components/ui/timeMenu";
+import { UpdateNotice } from "./updates/UpdateNotice";
 import { PanelExitLayer } from "./components/ui/panelExit";
 import { OnboardingFlow } from "./onboarding/OnboardingFlow";
 import { LoginPage } from "./onboarding/LoginPage";
@@ -3289,6 +3290,8 @@ function App() {
       <SelectMenuLayer />
       <DateMenuLayer />
       <TimeMenuLayer />
+      {/* a newer release published on the server: update now, schedule it, or skip it (skin §85) */}
+      <UpdateNotice />
       <PanelExitLayer />
       {/* the opening: the shell arrives, then the chrome assembles (skin §74) */}
       <AppFrame />
@@ -15814,9 +15817,9 @@ const UPDATE_ENTRIES: UpdateEntryData[] = [
     position: "CEO",
     title: "Month and Kanban: the Schedule's views, each on its own page",
     description:
-      "Five new pages under Schedule. Month is the calendar — every job on its start day with milestones and holidays; drag a chip to another day to move the job, click a day to add one. Week is the crew-by-day board on a page of its own — a row per crew, seven days across, a card per booked job; drag a card to another crew or day to re-book it, or add a job straight into a cell. List is the same week as a day-by-day list — time, job, crew and status — where a row dragged onto another day re-books it. Kanban is every job by status — Planned, Ready, In Progress, Blocked, Complete — where a card dragged into another lane changes its status. Matrix is the crew-by-day load grid — how booked each crew is, where the conflicts are, and each crew's utilisation.",
+      "Two new pages under Schedule. Month is the calendar, with every job on its start day alongside milestones and holidays; Kanban sorts every job by status into five lanes. Drag a chip to another day to move a job, or a card into another lane to change its status.",
     quote: {
-      text: "Who's where this week, without scrolling a month.",
+      text: "What starts when, and what's stuck.",
       cite: "Every foreman"
     },
     sections: [

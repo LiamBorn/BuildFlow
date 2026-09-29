@@ -14793,3 +14793,292 @@ body.bf-job-drawer-open .app-shell.hs-shell.bf-shell .hs-rail-show {
 .app-shell.hs-shell.bf-shell .sched-rx .gantt-bar-label .gantt-calledoff {
   color: var(--bf-color-bad);
 }
+
+/* ============================================================================
+   85. AN UPDATE IS AVAILABLE (2026-09-27)
+   ----------------------------------------------------------------------------
+   Asked for: "add a Update Notification to the BuildFlow Program, showing the
+   user if there is an update available … schedule it, update it right then and
+   there, and or deny it … the same colors, animations, effects, and tweens."
+
+   updates/UpdateNotice.tsx. It is not a new look; it is the top bar's other
+   floating cards. The Upgrade menu's card (section 40): the panel radius and
+   the float shadow on 8px of padding, the second-surface tile with an eyebrow
+   over a 20px display name and a muted meta line, 52px rows that fill on
+   hover, the chip pill at the foot. The section 9 pills for its buttons, white
+   and ink. Its parts on the same bfe-row stagger. And it comes OUT OF THE BELL
+   on section 64's gooey entrance — measured from the bell the way the dropdown
+   list is measured from its control — and goes back into it on the same
+   keyframe, reversed.
+
+   It waits under the job and milestone panels (95) and every popup layer (100):
+   an offer of an update never covers the work in front of someone.
+   ============================================================================ */
+.app-shell.hs-shell.bf-shell .bfupd {
+  position: fixed;
+  top: calc(var(--hs-topbar-h) + 10px);
+  right: 24px;
+  z-index: 94;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 340px;
+  max-width: calc(100vw / var(--bf-ui-scale, 1) - 32px);
+  padding: 8px;
+  border-radius: var(--bf-radius-panel);
+  background: var(--bf-surface);
+  box-shadow: var(--bf-shadow-float);
+  color: var(--bf-ink);
+  /* the measured numbers are from the card's top-left corner to the bell's, so it scales about that corner */
+  transform-origin: top left;
+}
+/* in only once it is placed and measured, like the dropdown list, so its first frame IS the bell */
+.app-shell.hs-shell.bf-shell .bfupd[data-bfupd-ready="true"] {
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) backwards;
+}
+/* and back into the bell: a fresh element, so the reversed keyframe plays rather than snapping shut */
+.app-shell.hs-shell.bf-shell .bfupd[data-bfupd-leaving="true"] {
+  animation: bfe-goo var(--bf-dur-panel) var(--bf-ease-size) reverse both;
+  pointer-events: none;
+}
+/* ---- 85a. the parts arrive in a stagger, as the Upgrade menu's do (40e) ---- */
+.app-shell.hs-shell.bf-shell .bfupd > * {
+  --bfe-r: 0;
+  animation: bfe-row var(--bf-dur-enter) var(--bf-ease) backwards;
+  animation-delay: calc(var(--bfm-overlay) + var(--bfe-r, 0) * var(--bfm-stagger-icon));
+}
+/* (the first child is the screen reader's line, so the count starts at the second) */
+.app-shell.hs-shell.bf-shell .bfupd > :nth-child(3) {
+  --bfe-r: 1;
+}
+.app-shell.hs-shell.bf-shell .bfupd > :nth-child(4) {
+  --bfe-r: 2;
+}
+.app-shell.hs-shell.bf-shell .bfupd > :nth-child(5) {
+  --bfe-r: 3;
+}
+.app-shell.hs-shell.bf-shell .bfupd > :nth-child(6) {
+  --bfe-r: 4;
+}
+.app-shell.hs-shell.bf-shell .bfupd > :nth-child(n + 7) {
+  --bfe-r: 5;
+}
+/* the leaving copy is re-mounted, and its parts must not arrive again on the way out */
+.app-shell.hs-shell.bf-shell .bfupd[data-bfupd-leaving="true"] > * {
+  animation: none;
+}
+/* ---- 85b. the tile: what is on offer, or when it is due ---- */
+.app-shell.hs-shell.bf-shell .bfupd-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 13px;
+  border-radius: var(--bf-radius-control);
+  background: var(--bf-hover);
+}
+.app-shell.hs-shell.bf-shell .bfupd-tile-body,
+.app-shell.hs-shell.bf-shell .bfupd-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell .bfupd-head {
+  padding: 10px 10px 6px;
+}
+.app-shell.hs-shell.bf-shell .bfupd-eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bf-ink-faint);
+}
+.app-shell.hs-shell.bf-shell .bfupd-tile strong {
+  font-family: var(--bf-font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell .bfupd-head strong {
+  font-family: var(--bf-font-display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell .bfupd-meta {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell .bfupd-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bf-ink);
+  color: var(--bf-surface);
+}
+.app-shell.hs-shell.bf-shell .bfupd-count {
+  font-variant-numeric: tabular-nums;
+}
+/* ---- 85c. what changed, and the one thing to know before updating ---- */
+.app-shell.hs-shell.bf-shell .bfupd-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 4px;
+}
+.app-shell.hs-shell.bf-shell .bfupd-copy strong {
+  font-family: var(--bf-font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell .bfupd-copy ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 16px;
+}
+.app-shell.hs-shell.bf-shell .bfupd-copy li {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell .bfupd-note {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--bf-ink-faint);
+}
+.app-shell.hs-shell.bf-shell .bfupd-copy .bfupd-note {
+  padding: 2px 0 0;
+}
+/* ---- 85d. the choices: section 9's pills, then the chip pill at the foot ---- */
+.app-shell.hs-shell.bf-shell .bfupd-actions {
+  display: flex;
+  gap: 8px;
+  padding: 6px 2px 2px;
+}
+.app-shell.hs-shell.bf-shell .bfupd-actions .hs-btn {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.app-shell.hs-shell.bf-shell .bfupd-quiet {
+  width: 100%;
+  min-height: 36px;
+  margin: 2px 0 0;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.app-shell.hs-shell.bf-shell .bfupd-quiet:hover,
+.app-shell.hs-shell.bf-shell .bfupd-quiet:focus-visible {
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  outline: none;
+  box-shadow: var(--bf-shadow-card);
+}
+/* ---- 85e. the times on offer: the Upgrade menu's rows (40c) ---- */
+.app-shell.hs-shell.bf-shell .bfupd-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--bf-radius-control);
+  background: transparent;
+  color: var(--bf-ink);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--bf-dur-hover) ease,
+    box-shadow var(--bf-dur-hover) ease;
+}
+.app-shell.hs-shell.bf-shell .bfupd-option:hover,
+.app-shell.hs-shell.bf-shell .bfupd-option:focus-visible {
+  background: var(--bf-hover);
+  outline: none;
+}
+.app-shell.hs-shell.bf-shell .bfupd-option:focus-visible {
+  box-shadow: 0 0 0 2px var(--bf-ink);
+}
+.app-shell.hs-shell.bf-shell .bfupd-option .bfupd-mark {
+  background: var(--bf-hover);
+  color: var(--bf-ink);
+  transition: background var(--bf-dur-hover) ease;
+}
+.app-shell.hs-shell.bf-shell .bfupd-option:hover .bfupd-mark,
+.app-shell.hs-shell.bf-shell .bfupd-option:focus-visible .bfupd-mark {
+  background: var(--bf-surface);
+}
+.app-shell.hs-shell.bf-shell .bfupd-option-label {
+  flex: 1 1 auto;
+  font-family: var(--bf-font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.app-shell.hs-shell.bf-shell .bfupd-option-time {
+  font-size: 12px;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--bf-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* the line a screen reader hears when the card appears or changes step */
+.app-shell.hs-shell.bf-shell .bfupd-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* a phone: the card takes the width, clear of both edges */
+@media (max-width: 480px) {
+  .app-shell.hs-shell.bf-shell .bfupd {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+  }
+}
+/* RULE R: no morph and no stagger, and a card that is leaving is simply gone */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.hs-shell.bf-shell .bfupd[data-bfupd-ready="true"],
+  .app-shell.hs-shell.bf-shell .bfupd[data-bfupd-leaving="true"],
+  .app-shell.hs-shell.bf-shell .bfupd > * {
+    animation: none;
+  }
+  .app-shell.hs-shell.bf-shell .bfupd[data-bfupd-leaving="true"] {
+    visibility: hidden;
+  }
+}

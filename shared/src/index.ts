@@ -1158,3 +1158,7 @@ export {
   type LinkDestination,
   type LinkPanelId
 } from "./recordLinks";
+
+/* The release this code is, for the update notification (2026-09-27): the server answers /api/release
+   with it, the website compares its own against that, and only a raised number offers an update. */
+export { CURRENT_RELEASE, compareVersions, isNewerRelease, type AppRelease } from "./release";

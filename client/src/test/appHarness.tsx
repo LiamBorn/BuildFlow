@@ -5,7 +5,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 import { bootstrapFixture } from "./fixture";
-import type { WorkspacesPayload } from "@buildflow/shared";
+import { CURRENT_RELEASE, type WorkspacesPayload } from "@buildflow/shared";
 
 // Every test renders the whole app; under a full-suite run the default 5s is not enough.
 vi.setConfig({ testTimeout: 20_000, hookTimeout: 20_000 });
@@ -111,6 +111,10 @@ export function respondToBuildflowApi(input: RequestInfo | URL) {
     return new Response(JSON.stringify(url.includes("/api/time-entries/team") ? { entries: [], people: [] } : { entries: [] }), {
       status: 200
     });
+  }
+  // The update notification asks which release the server is: the same one, so nothing is on offer.
+  if (url.includes("/api/release")) {
+    return new Response(JSON.stringify(CURRENT_RELEASE), { status: 200 });
   }
   // Everything else (auth, creates, patches) just needs a 200 with a plausible body.
   return new Response(JSON.stringify(bootstrapFixture), { status: 200 });

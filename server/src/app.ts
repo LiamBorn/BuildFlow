@@ -75,6 +75,7 @@ import {
   type CalendarProvider
 } from "./calendar.js";
 import { NOTIFICATION_STATE_SETTING, buildNotificationItems } from "@buildflow/shared";
+import { CURRENT_RELEASE } from "@buildflow/shared";
 import { assertRoutePolicyCovers, can, demoLockOn, installRoutePolicy, outranks } from "./permissions.js";
 import { authenticateDevice, DESKTOP_TOKEN_PATH, isDesktopApiPath, LAST_SEEN_INTERVAL_MS, registerDesktopRoutes } from "./desktop.js";
 import { mergeNotificationStateSetting, type TaskOutcome } from "./desktopInboxRoutes.js";
@@ -1123,6 +1124,15 @@ export async function createApp(options: { dataFile?: string; reset?: boolean } 
       console.error("[health] database unreachable:", error instanceof Error ? error.message : error);
       res.status(503).json({ ok: false, error: "Database unavailable." });
     }
+  });
+
+  /* The release this server was built from (shared/src/release.ts), which every open copy of the
+     website compares with the one IT was built from: a newer one here is what offers people an
+     update (2026-09-27). Never cached — a copy that read yesterday's answer from a cache would
+     never learn it is out of date — and it touches no database, so it answers while one is down. */
+  app.get("/api/release", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(CURRENT_RELEASE);
   });
 
   // ── Authentication (public) ───────────────────────────────────────────────

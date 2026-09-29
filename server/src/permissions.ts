@@ -288,6 +288,9 @@ export const ROUTE_POLICY: Record<string, Policy> = {
   "GET /api/ops/stats": "public",
   "GET /api/projects": "schedule.read",
   "GET /api/projects/:id": "schedule.read",
+  /* Which release of BuildFlow this server is (shared/src/release.ts), for the website's update
+     notification: the same answer for everyone, and asked before anybody may be signed in. */
+  "GET /api/release": "public",
   "GET /api/resources": "schedule.read",
   "GET /api/schedule": "schedule.read",
   "GET /api/schedule-tool/projects/:projectId": "schedule.read",
