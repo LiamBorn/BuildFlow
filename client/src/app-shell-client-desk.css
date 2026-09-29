@@ -11796,6 +11796,18 @@ body.bf-shell > .bfdate .bfdate-action:focus-visible {
 body.bf-shell :is(.app-shell.hs-shell, .pdx, .bf-breeze, .schedule-dialog-backdrop) input[type="date"]::-webkit-calendar-picker-indicator {
   pointer-events: none;
 }
+/* 57b. AND THE TIME FIELDS (2026-09-27: "When a user is putting their time in & Time Out make the
+   drop down look the same to all other dropdowns"). The clock glyph on `<input type="time">`
+   opened Chrome's dark hour / minute / AM-PM columns. It is made inert the same way, on the same
+   scope, and components/ui/timeMenu.tsx answers the press with the program's dropdown list — it
+   IS a `.bfsel`, so section 53 dresses it and section 64 brings it out of the field. */
+body.bf-shell :is(.app-shell.hs-shell, .pdx, .bf-breeze, .schedule-dialog-backdrop) input[type="time"]::-webkit-calendar-picker-indicator {
+  pointer-events: none;
+}
+/* times in a column read down their digits, so they sit on tabular figures */
+body.bf-shell > .bfsel.bftime .bfsel-label {
+  font-variant-numeric: tabular-nums;
+}
 
 /* ============================================================================
    58. A TREND IS NOT A VERDICT (colour pass phase two, 2026-09-17)

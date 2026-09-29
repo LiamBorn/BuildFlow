@@ -183,6 +183,30 @@ describe("the program's dropdown list", () => {
     expect(screen.getByRole("listbox", { name: "Crew level" })).toBeInTheDocument();
   });
 
+  /* A label that WRAPS its select (TimeCard's Member form) has every option inside it, so its
+     textContent named the list "Unpaid breakNo break15 min30 min45 min1 hr" (2026-09-27). */
+  it("names the list after a wrapping label's own words, not the options inside it", () => {
+    render(
+      <>
+        <SelectMenuLayer />
+        <div className="app-shell hs-shell bf-shell">
+          <label className="tc-field">
+            <span>Unpaid break</span>
+            <select defaultValue="0">
+              <option value="0">No break</option>
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 hr</option>
+            </select>
+          </label>
+        </div>
+      </>
+    );
+    press(screen.getByRole("combobox"));
+    expect(screen.getByRole("listbox", { name: "Unpaid break" })).toBeInTheDocument();
+  });
+
   /* The list is a body portal that the skin zooms by `--bf-ui-scale`, and it is positioned from
      the control's rect divided by the CONTROL's zoom — so the two must be the same zoom or the
      list opens short of its control and at the wrong size. Inside the shell they were equal by

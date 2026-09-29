@@ -1683,6 +1683,18 @@ describe("the Client Desk skin", () => {
        picker on a signup date field with nothing to replace it. Add a date field to a signup screen
        and all three move — the gate here, the rule above, and a mounted DateMenuLayer. */
     expect(readFileSync(join(SRC, "components", "ui", "selectMenu.tsx"), "utf8")).toContain(`.closest("${SURFACES}, .onb")`);
+
+    /* AND THE TIME FIELDS (57b, 2026-09-27: "make the drop down look the same to all other
+       dropdowns"). The clock glyph is made inert on the SAME scope, the time layer enhances that
+       scope, and it is mounted beside the other two. Its list is a `.bfsel`, so it is dressed and
+       animated by the dropdown's own rules rather than a copy of them. */
+    expect(sheet.toString().replace(/\s+/g, " ")).toContain(
+      `body.bf-shell :is(${SURFACES}) input[type="time"]::-webkit-calendar-picker-indicator { pointer-events: none;`
+    );
+    expect(app).toContain("<TimeMenuLayer />");
+    const timeLayer = readFileSync(join(SRC, "components", "ui", "timeMenu.tsx"), "utf8");
+    expect(timeLayer).toContain(`const SURFACES = "${SURFACES}";`);
+    expect(timeLayer).toContain('className="bfsel bftime"');
   });
 
   /* THE GOOEY OPEN (section 64, asked for 2026-09-17 with a screen recording): every dropdown

@@ -243,6 +243,7 @@ import { scheduleCommands } from "./schedule/commands";
 import { CommandPalette } from "./components/CommandPalette";
 import { SelectMenuLayer } from "./components/ui/selectMenu";
 import { DateMenuLayer } from "./components/ui/dateMenu";
+import { TimeMenuLayer } from "./components/ui/timeMenu";
 import { PanelExitLayer } from "./components/ui/panelExit";
 import { OnboardingFlow } from "./onboarding/OnboardingFlow";
 import { LoginPage } from "./onboarding/LoginPage";
@@ -3287,6 +3288,7 @@ function App() {
       {/* every <select> in the program opens this list instead of the system panel (skin §53) */}
       <SelectMenuLayer />
       <DateMenuLayer />
+      <TimeMenuLayer />
       <PanelExitLayer />
       {/* the opening: the shell arrives, then the chrome assembles (skin §74) */}
       <AppFrame />

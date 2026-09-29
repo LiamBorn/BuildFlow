@@ -124,10 +124,19 @@ export const isInOwnPopup = (target: EventTarget | null): boolean => {
  * The list is named after its control, however the control is named: an `aria-label`, or a
  * `<label for>` — the signup screens label their selects the second way, and a list that only
  * read the first opened nameless there (2026-09-22), which a screen reader announces as just
- * "list box".
+ * "list box". A label can also WRAP its select (TimeCard's Member form), and then its textContent
+ * carries every option's text too — the break list was named "Unpaid breakNo break15 min30 min…"
+ * (2026-09-27) — so the label is read without the controls inside it.
  */
+const labelText = (label: HTMLLabelElement | undefined): string | undefined => {
+  if (!label) return undefined;
+  const copy = label.cloneNode(true) as HTMLLabelElement;
+  copy.querySelectorAll("select, input, textarea, button").forEach((control) => control.remove());
+  return copy.textContent?.trim() || undefined;
+};
+
 const nameOf = (select: HTMLSelectElement): string | undefined =>
-  select.getAttribute("aria-label") ?? (select.labels?.[0]?.textContent?.trim() || undefined);
+  select.getAttribute("aria-label") ?? labelText(select.labels?.[0]);
 
 /** A select the layer takes over: inside the program, and a plain single-choice list. */
 const isEnhanceable = (select: HTMLSelectElement): boolean => {
