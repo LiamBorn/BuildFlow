@@ -48,7 +48,8 @@ export function ScheduleLinkTiles({
   if (links.length === 0) return null;
   return (
     <div className="bm-groups">
-      <section className="bm-group" aria-label="Schedule views">
+      {/* the Schedule's own views: the Bookmarks page gives the group the Schedule category's hue */}
+      <section className="bm-group" data-hub="schedule" aria-label="Schedule views">
         <h2>
           <Link2 size={15} />
           Schedule views

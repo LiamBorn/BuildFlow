@@ -19033,7 +19033,7 @@ function BookmarksPage({
               {grouped.map(({ hub, pages }) => {
                 const HubIcon = hub.icon;
                 return (
-                  <section className="bm-group" key={hub.id}>
+                  <section className="bm-group" data-hub={hub.id} key={hub.id}>
                     <h2>
                       <HubIcon size={15} />
                       {hub.label}
@@ -19082,7 +19082,7 @@ function BookmarksPage({
               const pages = hub.pages.filter((hubPage) => hubPage !== "bookmarks");
               if (pages.length === 0) return null;
               return (
-                <section className="bm-group" key={hub.id}>
+                <section className="bm-group" data-hub={hub.id} key={hub.id}>
                   <h2>
                     <HubIcon size={15} />
                     {hub.label}

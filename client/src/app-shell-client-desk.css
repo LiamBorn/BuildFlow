@@ -18803,3 +18803,507 @@ body.bf-side-resizing:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"
   border-radius: var(--edl-tile-radius);
   background: var(--edl-soft);
 }
+
+/* ============================================================================
+   90. THE BOOKMARKS PAGE ON THE DASHBOARD'S DESIGN (2026-09-28)
+   ----------------------------------------------------------------------------
+   Asked for after the Schedule category (section 89): "Change the "Bookmark"
+   page to the new style". So Bookmarks takes the Dashboard's language, read off
+   the same EduLearn reference: the pale periwinkle ground; the page's head the
+   periwinkle-to-lilac BANNER with a still life of its own
+   (public/dashboard/bookmarks-art.svg: a stack of pages marked with a ribbon,
+   and a star), the count a white pill under the title; the starred pages and
+   the whole catalogue on white cards on a hairline and a soft cool shadow; each
+   category's head a small-caps label beside a pastel disc in the category's
+   hue, and its tiles white, the page's icon on the same disc, the name bold and
+   navy; the star a round button, the periwinkle with a white star when it is
+   on; and the empty state a card with the star on a lilac disc.
+
+   THE BANNER IS THE FIRST CARD'S HEAD. The page is two cards and its title is in
+   the first, so that card lets go of its own ground: its head is the banner, and
+   what it holds under the head (the starred pages, the saved Schedule views, or
+   the empty state) each stand as a white card of their own.
+
+   THE HUES FOLLOW THE CATEGORY, not the place: each category's section carries
+   `data-hub`, the rail's hub id (App.tsx navHubs; the saved views are the
+   Schedule's), so a page wears the same disc in both cards.
+
+   HOW IT IS SCOPED, as sections 87 and 89 are: every rule hangs off
+   `.bookmarks-page`; the chrome changes only through `:has(.bookmarks-page)`; the
+   colours are LIGHT only, word for word for System on a light OS, and the
+   periwinkle is the Default Colors set's. The page's entrance (section 32) and
+   its markup are unchanged but for that attribute.
+   ============================================================================ */
+
+/* ---- 90a. the accent's part, on the shell while the page shows (the Default set's
+   periwinkle is declared there too, and a value on the page would shadow it) — from the
+   accent in any set and mode ---- */
+.app-shell.hs-shell.bf-shell:has(.bookmarks-page) {
+  --edl-link: var(--bf-color-accent);
+  --edl-bar: var(--bf-color-accent-fill);
+  --edl-hero: color-mix(in srgb, var(--bf-color-accent-fill) 14%, var(--bf-surface));
+  --edl-hero-shadow: none;
+}
+
+/* ---- 90b. the page's measures and discs, from the program's tokens in any mode ---- */
+.app-shell.hs-shell.bf-shell .bookmarks-page {
+  --edl-card-radius: 18px;
+  --edl-tile-radius: 14px;
+  --edl-hero-radius: 22px;
+  --edl-title: var(--bf-ink);
+  --edl-card-shadow: var(--bf-shadow-card);
+  --edl-chip-shadow: var(--bf-shadow-card);
+  --edl-lift: var(--bf-shadow-card-hover);
+  --edl-soft: var(--bf-hover);
+  --edl-blue: var(--bf-color-accent);
+  --edl-blue-wash: var(--bf-color-accent-wash);
+  --edl-green: var(--bf-color-ok);
+  --edl-green-wash: var(--bf-color-ok-wash);
+  --edl-amber: var(--bf-color-warn);
+  --edl-amber-wash: var(--bf-color-warn-wash);
+  --edl-orange: var(--bf-color-orange);
+  --edl-orange-wash: var(--bf-color-orange-wash);
+  --edl-red: var(--bf-color-bad);
+  --edl-red-wash: var(--bf-color-bad-wash);
+  --edl-violet: var(--bf-color-info);
+  --edl-violet-wash: var(--bf-color-info-wash);
+}
+
+/* ---- 90c. the neutrals and the discs' pastels, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .bookmarks-page {
+  --bf-ink: #1b2150;
+  --bf-ink-muted: #5f6687;
+  --bf-ink-faint: #5f6687;
+  --bf-line-rgb: 36, 44, 104;
+  --bf-line-solid: #e6e9f6;
+  --bf-line-soft: #eef0f9;
+  --bf-hover: #f3f5fd;
+  --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+  --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+  --edl-title: #1c2260;
+  --edl-soft: #f6f7fd;
+  --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.16);
+  --edl-lift: 0 12px 24px -14px rgba(36, 44, 104, 0.28);
+  --edl-blue: #4f6cf0;
+  --edl-blue-wash: #eaefff;
+  --edl-green: #14a578;
+  --edl-green-wash: #e1f7ef;
+  --edl-amber: #e3970a;
+  --edl-amber-wash: #fff4dc;
+  --edl-orange: #ee7a2b;
+  --edl-orange-wash: #fff0e5;
+  --edl-red: #e4455e;
+  --edl-red-wash: #ffe9ed;
+  --edl-violet: #8b5cf6;
+  --edl-violet-wash: #f1eafe;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .bookmarks-page {
+    --bf-ink: #1b2150;
+    --bf-ink-muted: #5f6687;
+    --bf-ink-faint: #5f6687;
+    --bf-line-rgb: 36, 44, 104;
+    --bf-line-solid: #e6e9f6;
+    --bf-line-soft: #eef0f9;
+    --bf-hover: #f3f5fd;
+    --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+    --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+    --edl-title: #1c2260;
+    --edl-soft: #f6f7fd;
+    --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.16);
+    --edl-lift: 0 12px 24px -14px rgba(36, 44, 104, 0.28);
+    --edl-blue: #4f6cf0;
+    --edl-blue-wash: #eaefff;
+    --edl-green: #14a578;
+    --edl-green-wash: #e1f7ef;
+    --edl-amber: #e3970a;
+    --edl-amber-wash: #fff4dc;
+    --edl-orange: #ee7a2b;
+    --edl-orange-wash: #fff0e5;
+    --edl-red: #e4455e;
+    --edl-red-wash: #ffe9ed;
+    --edl-violet: #8b5cf6;
+    --edl-violet-wash: #f1eafe;
+  }
+}
+
+/* ---- 90d. the ground under the page, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.bookmarks-page) {
+  --cd-panel: #f4f6fd;
+  --bf-chrome-rgb: 244, 246, 253;
+  --bf-chrome-ink: #1b2150;
+  --bf-chrome-muted: #5f6687;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.bookmarks-page) {
+    --cd-panel: #f4f6fd;
+    --bf-chrome-rgb: 244, 246, 253;
+    --bf-chrome-ink: #1b2150;
+    --bf-chrome-muted: #5f6687;
+  }
+}
+
+/* ---- 90e. the periwinkle and the status hues: the Default Colors set, light only (the
+   same set the Dashboard and the Schedule pages wear, so the chrome holds still between
+   them) ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(.bookmarks-page) {
+  --bf-color-accent: #4a5ee8;
+  --bf-color-accent-rgb: 74, 94, 232;
+  --bf-color-accent-fill: #5566ee;
+  --bf-color-accent-fill-rgb: 85, 102, 238;
+  --bf-color-accent-fill-2: #4656e0;
+  --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --bf-color-on-accent: #ffffff;
+  --bf-color-accent-wash: #eef0fe;
+  --bf-color-accent-wash-2: #e3e7fd;
+  --bf-color-accent-wash-3: #d5dbfb;
+  --bf-color-ok: #0f7a5f;
+  --bf-color-ok-wash: #e1f7ef;
+  --bf-color-ok-edge: #b8eadb;
+  --bf-color-warn: #8a5a00;
+  --bf-color-warn-wash: #fff4dc;
+  --bf-color-warn-edge: #f6dca3;
+  --bf-color-bad: #b42341;
+  --bf-color-bad-wash: #ffe9ed;
+  --bf-color-bad-edge: #f7c3cd;
+  --bf-color-info: #6b3fd4;
+  --bf-color-info-rgb: 107, 63, 212;
+  --bf-color-info-wash: #f1eafe;
+  --bf-color-info-edge: #dccdfb;
+  --bf-color-orange: #b0520a;
+  --bf-color-orange-wash: #fff0e5;
+  --bf-color-series-1: #5b7cfa;
+  --bf-color-series-2: #9b7bef;
+  --bf-color-selection: rgba(85, 102, 238, 0.18);
+  --bf-focus-ink: #4a5ee8;
+  --edl-bar: #5b7cfa;
+  --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+  --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(.bookmarks-page) {
+    --bf-color-accent: #4a5ee8;
+    --bf-color-accent-rgb: 74, 94, 232;
+    --bf-color-accent-fill: #5566ee;
+    --bf-color-accent-fill-rgb: 85, 102, 238;
+    --bf-color-accent-fill-2: #4656e0;
+    --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --bf-color-on-accent: #ffffff;
+    --bf-color-accent-wash: #eef0fe;
+    --bf-color-accent-wash-2: #e3e7fd;
+    --bf-color-accent-wash-3: #d5dbfb;
+    --bf-color-ok: #0f7a5f;
+    --bf-color-ok-wash: #e1f7ef;
+    --bf-color-ok-edge: #b8eadb;
+    --bf-color-warn: #8a5a00;
+    --bf-color-warn-wash: #fff4dc;
+    --bf-color-warn-edge: #f6dca3;
+    --bf-color-bad: #b42341;
+    --bf-color-bad-wash: #ffe9ed;
+    --bf-color-bad-edge: #f7c3cd;
+    --bf-color-info: #6b3fd4;
+    --bf-color-info-rgb: 107, 63, 212;
+    --bf-color-info-wash: #f1eafe;
+    --bf-color-info-edge: #dccdfb;
+    --bf-color-orange: #b0520a;
+    --bf-color-orange-wash: #fff0e5;
+    --bf-color-series-1: #5b7cfa;
+    --bf-color-series-2: #9b7bef;
+    --bf-color-selection: rgba(85, 102, 238, 0.18);
+    --bf-focus-ink: #4a5ee8;
+    --edl-bar: #5b7cfa;
+    --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+    --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  }
+}
+
+/* ---- 90f. the reference's face, where nobody chose one of their own ---- */
+.app-shell.hs-shell.bf-shell:is([data-bf-font="inter"], :not([data-bf-font])) .bookmarks-page {
+  --bf-font-active: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bf-font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--bf-font-active);
+}
+
+/* ---- 90g. THE PAGE'S HEAD: the Dashboard's banner, with the Bookmarks' still life ----
+   The first card lets go of its ground and its padding; its head is the banner, the title
+   bold and navy over the count in a white pill, the picture at the right. */
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .hs-index-head {
+  display: grid;
+  align-content: center;
+  justify-content: start;
+  justify-items: start;
+  gap: 12px;
+  min-height: 176px;
+  margin: 0;
+  padding: 26px min(42%, 330px) 26px 30px;
+  border-radius: var(--edl-hero-radius);
+  background:
+    url("/dashboard/bookmarks-art.svg") right 26px bottom 4px / auto 168px no-repeat,
+    var(--edl-hero);
+  box-shadow: var(--edl-hero-shadow);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .hs-index-head .hs-index-title {
+  margin: 0;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: clamp(26px, 2.5vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .hs-index-head .hs-page-tag {
+  border: 0;
+  background: var(--edl-violet-wash);
+  color: var(--bf-color-info);
+  font-family: var(--bf-font-active);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .hs-index-head .bm-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0 13px;
+  border: 1px solid var(--bf-line-solid);
+  border-radius: 999px;
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .hs-index-head .bm-count::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--edl-bar);
+}
+
+/* ---- 90h. the cards: under the banner, the starred pages, the saved views or the empty
+   state, each a white card of its own; then every page, in the second card ---- */
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > :is(.bm-groups, .bm-empty),
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card + .hs-index-card {
+  border: 0;
+  border-radius: var(--edl-card-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .bm-groups {
+  padding: 22px 24px 24px;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card + .hs-index-card {
+  padding: 24px 24px 26px;
+}
+/* the second card's head: a card's title, bold and navy, and its note, quiet, at the right */
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card + .hs-index-card > .hs-index-head {
+  align-items: baseline;
+  margin: 0 0 20px;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card + .hs-index-card > .hs-index-head .hs-index-title {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card + .hs-index-card > .hs-index-head .bm-count {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* ---- 90i. the categories: a small-caps head beside a pastel disc in the category's hue
+   (blue unless named: Home and Reporting; neighbours in the rail's order never share one) ---- */
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-card .bm-groups {
+  gap: 24px;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group {
+  --edl-disc: var(--edl-blue-wash);
+  --edl-disc-ink: var(--edl-blue);
+  gap: 12px;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group[data-hub="schedule"] {
+  --edl-disc: var(--edl-violet-wash);
+  --edl-disc-ink: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group[data-hub="operations"] {
+  --edl-disc: var(--edl-green-wash);
+  --edl-disc-ink: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group[data-hub="resources"] {
+  --edl-disc: var(--edl-amber-wash);
+  --edl-disc-ink: var(--edl-amber);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group[data-hub="field"] {
+  --edl-disc: var(--edl-red-wash);
+  --edl-disc-ink: var(--edl-red);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group[data-hub="timecard"] {
+  --edl-disc: var(--edl-orange-wash);
+  --edl-disc-ink: var(--edl-orange);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group > h2 {
+  gap: 9px;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group > h2 svg {
+  width: 26px;
+  height: 26px;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--edl-disc);
+  color: var(--edl-disc-ink);
+}
+
+/* ---- 90j. the tiles: white on a hairline, the page's icon on its category's disc, the
+   name bold and navy; the star a round button, the periwinkle with a white star when on ---- */
+.app-shell.hs-shell.bf-shell .bookmarks-page section.bm-group > .bm-tiles {
+  grid-template-columns: repeat(auto-fill, minmax(min(232px, 100%), 1fr));
+  gap: 12px;
+}
+/* the starred pages are a few in a few categories: the categories stand side by side, each
+   a column of its tiles, so a short list does not run down one side of a wide card */
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .bm-groups {
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  align-items: start;
+  gap: 24px 20px;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .bm-groups > section.bm-group > .bm-tiles {
+  grid-template-columns: minmax(0, 1fr);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile {
+  gap: 6px;
+  padding: 0 12px 0 0;
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-chip-shadow);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile:hover {
+  background: var(--bf-surface);
+  transform: none;
+  box-shadow:
+    0 0 0 1px var(--bf-color-accent-wash-3),
+    var(--edl-lift);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-open {
+  gap: 12px;
+  padding: 11px 6px 11px 11px;
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--edl-disc);
+  color: var(--edl-disc-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-icon svg {
+  width: 17px;
+  height: 17px;
+}
+/* a saved view's second line: where it opens */
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-label small {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  color: var(--bf-ink-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-lock {
+  color: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-star {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--edl-soft);
+  color: var(--bf-ink-muted);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-star:hover {
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-star.is-on,
+.app-shell.hs-shell.bf-shell .bookmarks-page .bm-tile-star.is-on:hover {
+  background: var(--bf-color-accent-fill);
+  color: var(--bf-color-on-accent);
+}
+
+/* ---- 90k. the empty state: a card, the star on a lilac disc ---- */
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-card > .bm-empty {
+  gap: 8px;
+  padding: 34px 24px 38px;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-card > .bm-empty svg {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 6px;
+  padding: 17px;
+  border-radius: 50%;
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+  fill: var(--bf-color-accent-wash-3);
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-card > .bm-empty strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+.app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-card > .bm-empty span {
+  max-width: 460px;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+/* ---- 90l. a narrow window: the banner keeps the words and lets the picture go, and the
+   cards draw in closer ---- */
+@media (max-width: 760px) {
+  .app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .hs-index-head {
+    min-height: 0;
+    padding: 22px 20px 24px;
+    background: var(--edl-hero);
+  }
+  .app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card:first-child > .bm-groups,
+  .app-shell.hs-shell.bf-shell .bookmarks-page .hs-index-main > .hs-index-card + .hs-index-card {
+    padding: 18px 16px 20px;
+  }
+}

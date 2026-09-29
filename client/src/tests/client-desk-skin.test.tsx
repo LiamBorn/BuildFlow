@@ -252,17 +252,20 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .sched-rx .sv-sev-pill.sv-sev-high`).color).toBe("var(--cc-red)");
   });
 
-  it("gives the Bookmarks page's tiles the same interiors: surface-2 tiles, a 30px disc, an ink star when on", () => {
+  it("gives the Bookmarks page's tiles the Dashboard's design: white tiles, a pastel disc, the periwinkle star when on", () => {
+    // section 90 since 2026-09-28 (tests/bookmarks-design.test.tsx has the rest); section 13's
+    // surface-2 tiles, 30px white discs and ink star stand under it
     const S = ".app-shell.hs-shell.bf-shell";
-    const tile = declsOf(`${S} .bm-tile`);
-    expect(tile.background).toBe("var(--bf-hover)");
+    const tile = declsOf(`${S} .bookmarks-page .bm-tile`);
+    expect(tile.background).toBe("var(--bf-surface)");
     expect(tile.border).toBe("0");
-    expect(tile["border-radius"]).toBe("var(--bf-radius-panel)");
-    expect(declsOf(`${S} .bm-tile-icon`).width).toBe("30px");
-    const on = declsOf(`${S} .bm-tile-star.is-on`);
-    expect(on.background).toBe("var(--bf-ink)");
-    expect(on.color).toBe("var(--bf-accent-fill)");
-    expect(declsOf(`${S} .bookmarks-page .bm-group h2`)["letter-spacing"]).toBe("0.14em");
+    expect(tile["border-radius"]).toBe("var(--edl-tile-radius)");
+    const icon = declsOf(`${S} .bookmarks-page .bm-tile-icon`);
+    expect(icon).toMatchObject({ width: "38px", "border-radius": "50%", background: "var(--edl-disc)" });
+    const on = declsOf(`${S} .bookmarks-page .bm-tile-star.is-on`);
+    expect(on.background).toBe("var(--bf-color-accent-fill)");
+    expect(on.color).toBe("var(--bf-color-on-accent)");
+    expect(declsOf(`${S} .bookmarks-page section.bm-group > h2`)["letter-spacing"]).toBe("0.09em");
     expect(declsOf(`${S} .bm-empty`).border).toBe("0");
     expect(declsOf(".bf-shell:not([data-bf-theme]) .hs-index")["--hsx-violet"]).toBe("var(--bf-color-info)");
   });
