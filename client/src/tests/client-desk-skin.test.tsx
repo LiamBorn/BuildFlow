@@ -267,14 +267,20 @@ describe("the Client Desk skin", () => {
     expect(declsOf(".bf-shell:not([data-bf-theme]) .hs-index")["--hsx-violet"]).toBe("var(--bf-color-info)");
   });
 
-  it("draws the Month page's calendar as tiles on a gap, today in the lime, chips white with their trade dot", () => {
+  it("draws the Month page's calendar as soft tiles on a gap, today ringed in the accent, chips white with their trade dot", () => {
     const S = ".app-shell.hs-shell.bf-shell";
+    /* The Dashboard's design on the Schedule category (2026-09-28, skin §89): a day is a soft
+       tile — `--edl-soft` is the mode's own hover everywhere but light mode, where §89 gives it
+       the reference's periwinkle white — and today is a white tile ringed in the accent, its
+       number in the accent's disc. */
     const cell = declsOf(`${S} .sched-rx .sched-cal-cell`);
-    expect(cell.background).toBe("var(--bf-hover)");
-    expect(cell["border-radius"]).toBe("var(--bf-radius-control)");
+    expect(cell.background).toBe("var(--edl-soft)");
+    expect(cell["border-radius"]).toBe("12px");
     expect(declsOf(`${S} .sched-rx .sched-cal-grid`).gap).toBe("6px");
-    expect(declsOf(`${S} .sched-rx .sched-cal-cell.is-today`).background).toContain("var(--bf-accent-fill)");
-    expect(declsOf(`${S} .sched-rx .sched-cal-cell.is-today .sched-cal-daynum`).background).toBe("var(--bf-ink)");
+    const today = declsOf(`${S} .sched-rx .sched-cal-cell.is-today`);
+    expect(today.background).toBe("var(--bf-surface)");
+    expect(today["box-shadow"]).toContain("var(--bf-color-accent-fill)");
+    expect(declsOf(`${S} .sched-rx .sched-cal-cell.is-today .sched-cal-daynum`).background).toBe("var(--bf-color-accent-fill)");
     // the hover is still an image over the wash, never a colour
     const hover = declsOf(`${S} .sched-rx .sched-cal-cell.is-addable:hover`);
     expect(hover["background-image"]).toMatch(/^linear-gradient\(/);
@@ -283,7 +289,9 @@ describe("the Client Desk skin", () => {
        --cd-surface-3, which nothing declares, so the light fallback painted #e2e2e2 days into dark
        mode. And the 45% white lift that is subtle on a light tile flashed on a dark one, so dark mode
        (chosen, or System on a dark OS) lifts toward the light ink instead. */
-    expect(declsOf(`${S} .sched-rx .sched-cal-cell.is-weekend`).background).toBe("color-mix(in srgb, var(--bf-ink) 7%, var(--bf-hover))");
+    expect(declsOf(`${S} .sched-rx .sched-cal-cell.is-weekend`).background).toBe(
+      "color-mix(in srgb, var(--edl-soft) 55%, var(--bf-line-soft))"
+    );
     const darkLift = "linear-gradient(rgba(var(--bf-line-rgb), 0.08), rgba(var(--bf-line-rgb), 0.08))";
     expect(declsOf(`${S}[data-bf-mode="dark"] .sched-rx .sched-cal-cell.is-addable:hover`)["background-image"]).toBe(darkLift);
     let systemLift: string | undefined;
@@ -314,10 +322,11 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .sched-rx .badge.planned`).background).toBe("var(--bf-hover)");
   });
 
-  it("draws the Kanban lanes as surface-2 tiles on the semantic tones, with white cards", () => {
+  it("draws the Kanban lanes as soft tiles on the semantic tones, with white cards on a hairline", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     const lane = declsOf(`${S} .sched-rx .sched-kan-lane`);
-    expect(lane.background).toBe("var(--bf-hover)");
+    // the Dashboard's design (2026-09-28, skin §89): the mode's hover, periwinkle white in light mode
+    expect(lane.background).toBe("var(--edl-soft)");
     expect(lane.border).toBe("0");
     expect(declsOf(`${S} .sched-rx .sched-kan-lane.tone-green`)["--kan-tone"]).toBe("var(--cc-green)");
     expect(declsOf(`${S} .sched-rx .sched-kan-lane.tone-violet`)["--kan-tone"]).toBe("var(--bf-accent)");
@@ -344,8 +353,9 @@ describe("the Client Desk skin", () => {
     });
     const card = declsOf(`${S} .sched-rx .sched-kan-card`);
     expect(card.background).toBe("var(--bf-surface)");
-    expect(card["box-shadow"]).toBe("var(--bf-shadow-card)");
-    expect(declsOf(`${S} .sched-rx .sched-kan-empty`).border).toBe("0");
+    expect(card["box-shadow"]).toContain("0 0 0 1px var(--bf-line-soft)");
+    // an empty lane asks for a drop with a dashed lilac outline
+    expect(declsOf(`${S} .sched-rx .sched-kan-empty`).border).toBe("1.5px dashed var(--bf-color-accent-wash-3)");
   });
 
   it("gives the Gantt chart the pill nav, eyebrow heads, a lime today and pill bars, and leaves the bar's fill and overflow to the guard", () => {

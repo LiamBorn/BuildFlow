@@ -17916,3 +17916,890 @@ body.bf-side-resizing:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"
     margin-top: 10px;
   }
 }
+
+/* ============================================================================
+   89. THE SCHEDULE CATEGORY ON THE DASHBOARD'S DESIGN (2026-09-28)
+   ----------------------------------------------------------------------------
+   Asked for once section 87 was kept: "I like how the Dashboard looks now, lets
+   keep this design and move on to redesigning the pages within the "Schedule"
+   category." So the Schedule landing, the Month, the Kanban and the Gantt Chart
+   take the Dashboard's language, read off the same EduLearn reference: a pale
+   periwinkle ground; the page's head a periwinkle-to-lilac BANNER with a still life
+   (public/dashboard/schedule-art.svg: a desk calendar, a clock, a hard hat); white
+   cards on a hairline and a soft cool shadow; bold navy titles; stat tiles on
+   pastel discs; white pill controls, the primary one the banner's blue-to-violet
+   button; pastel chips; and each view's own parts in the same hand — the month's
+   days as soft tiles with today ringed in the accent, the Kanban's lanes as pale
+   columns of white cards, the Gantt on a white frame with its markers as pills.
+
+   HOW IT IS SCOPED, as section 87 is: every rule hangs off `.sched-rx`, which every
+   Schedule page carries (the landing's panel board is a `.dash-rx.hs-home` inside
+   it, marked `.sched-board-host`, and is named where its tokens are pinned); the
+   chrome changes only through `:has(.sched-rx)`; the colours are LIGHT only, word
+   for word for System on a light OS, and the periwinkle is the Default Colors
+   set's. Nothing about the pages' layout, dragging or data changes.
+   ============================================================================ */
+
+/* ---- 89a. the accent's part, on the shell while a Schedule page shows (the top row
+   and the Ask AI pill are outside the page) — from the accent in any set and mode ---- */
+.app-shell.hs-shell.bf-shell:has(.sched-rx) {
+  --edl-link: var(--bf-color-accent);
+  --edl-bar: var(--bf-color-accent-fill);
+  --edl-bar-2: var(--bf-color-accent-fill);
+  --edl-hero: color-mix(in srgb, var(--bf-color-accent-fill) 14%, var(--bf-surface));
+  --edl-hero-shadow: none;
+  --edl-cta: var(--bf-color-accent-fill);
+  --edl-cta-hover: var(--bf-color-accent-fill-2);
+  --edl-cta-ink: var(--bf-color-on-accent);
+  --edl-cta-shadow: none;
+  --edl-promo: color-mix(in srgb, var(--bf-color-accent-fill) 9%, var(--bf-surface));
+  --edl-promo-line: color-mix(in srgb, var(--bf-color-accent-fill) 18%, transparent);
+}
+
+/* ---- 89b. the pages' measures and discs, from the program's tokens in any mode ---- */
+.app-shell.hs-shell.bf-shell .sched-rx {
+  --edl-card-radius: 18px;
+  --edl-tile-radius: 14px;
+  --edl-hero-radius: 22px;
+  --edl-title: var(--bf-ink);
+  --edl-track: var(--bf-line-solid);
+  --edl-card-shadow: var(--bf-shadow-card);
+  --edl-chip-shadow: var(--bf-shadow-card);
+  --edl-lift: var(--bf-shadow-card);
+  --edl-soft: var(--bf-hover);
+  --edl-blue: var(--bf-color-accent);
+  --edl-blue-wash: var(--bf-color-accent-wash);
+  --edl-green: var(--bf-color-ok);
+  --edl-green-wash: var(--bf-color-ok-wash);
+  --edl-amber: var(--bf-color-warn);
+  --edl-amber-wash: var(--bf-color-warn-wash);
+  --edl-orange: var(--bf-color-orange);
+  --edl-orange-wash: var(--bf-color-orange-wash);
+  --edl-red: var(--bf-color-bad);
+  --edl-red-wash: var(--bf-color-bad-wash);
+  --edl-violet: var(--bf-color-info);
+  --edl-violet-wash: var(--bf-color-info-wash);
+}
+
+/* ---- 89c. the neutrals and the discs' pastels, light only ----
+   On the page, and on the landing's board as well: the admin-kit sheet pins ink and line
+   on every `.dash-rx`, and a value on the page would stop at that boundary. The Gantt
+   carries its own `--hsx-*` set on `.gantt`, so it takes them there. */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .sched-rx,
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .sched-rx .dash-rx.hs-home.sched-board-host {
+  --bf-ink: #1b2150;
+  --bf-ink-muted: #5f6687;
+  --bf-ink-faint: #5f6687;
+  --bf-line-rgb: 36, 44, 104;
+  --bf-line-solid: #e6e9f6;
+  --bf-line-soft: #eef0f9;
+  --bf-hover: #f3f5fd;
+  --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+  --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+  --edl-title: #1c2260;
+  --edl-track: #edf0f8;
+  --edl-soft: #f6f7fd;
+  --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.18);
+  --edl-lift: 0 4px 12px -8px rgba(36, 44, 104, 0.22);
+  --edl-blue: #4f6cf0;
+  --edl-blue-wash: #eaefff;
+  --edl-green: #14a578;
+  --edl-green-wash: #e1f7ef;
+  --edl-amber: #e3970a;
+  --edl-amber-wash: #fff4dc;
+  --edl-orange: #ee7a2b;
+  --edl-orange-wash: #fff0e5;
+  --edl-red: #e4455e;
+  --edl-red-wash: #ffe9ed;
+  --edl-violet: #8b5cf6;
+  --edl-violet-wash: #f1eafe;
+}
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] .sched-rx .gantt {
+  --hsx-ink: #1b2150;
+  --hsx-text: #1b2150;
+  --hsx-mut: #5f6687;
+  --hsx-faint: #5f6687;
+  --hsx-line: #e6e9f6;
+  --hsx-line-soft: #eef0f9;
+  --hsx-paper: #f6f7fd;
+  --hsx-hover: #f3f5fd;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .sched-rx,
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .sched-rx .dash-rx.hs-home.sched-board-host {
+    --bf-ink: #1b2150;
+    --bf-ink-muted: #5f6687;
+    --bf-ink-faint: #5f6687;
+    --bf-line-rgb: 36, 44, 104;
+    --bf-line-solid: #e6e9f6;
+    --bf-line-soft: #eef0f9;
+    --bf-hover: #f3f5fd;
+    --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+    --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+    --edl-title: #1c2260;
+    --edl-track: #edf0f8;
+    --edl-soft: #f6f7fd;
+    --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.18);
+    --edl-lift: 0 4px 12px -8px rgba(36, 44, 104, 0.22);
+    --edl-blue: #4f6cf0;
+    --edl-blue-wash: #eaefff;
+    --edl-green: #14a578;
+    --edl-green-wash: #e1f7ef;
+    --edl-amber: #e3970a;
+    --edl-amber-wash: #fff4dc;
+    --edl-orange: #ee7a2b;
+    --edl-orange-wash: #fff0e5;
+    --edl-red: #e4455e;
+    --edl-red-wash: #ffe9ed;
+    --edl-violet: #8b5cf6;
+    --edl-violet-wash: #f1eafe;
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] .sched-rx .gantt {
+    --hsx-ink: #1b2150;
+    --hsx-text: #1b2150;
+    --hsx-mut: #5f6687;
+    --hsx-faint: #5f6687;
+    --hsx-line: #e6e9f6;
+    --hsx-line-soft: #eef0f9;
+    --hsx-paper: #f6f7fd;
+    --hsx-hover: #f3f5fd;
+  }
+}
+
+/* ---- 89d. the ground under a Schedule page, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(.sched-rx) {
+  --cd-panel: #f4f6fd;
+  --bf-chrome-rgb: 244, 246, 253;
+  --bf-chrome-ink: #1b2150;
+  --bf-chrome-muted: #5f6687;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(.sched-rx) {
+    --cd-panel: #f4f6fd;
+    --bf-chrome-rgb: 244, 246, 253;
+    --bf-chrome-ink: #1b2150;
+    --bf-chrome-muted: #5f6687;
+  }
+}
+
+/* ---- 89e. the periwinkle and the status hues: the Default Colors set, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(.sched-rx) {
+  --bf-color-accent: #4a5ee8;
+  --bf-color-accent-rgb: 74, 94, 232;
+  --bf-color-accent-fill: #5566ee;
+  --bf-color-accent-fill-rgb: 85, 102, 238;
+  --bf-color-accent-fill-2: #4656e0;
+  --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --bf-color-on-accent: #ffffff;
+  --bf-color-accent-wash: #eef0fe;
+  --bf-color-accent-wash-2: #e3e7fd;
+  --bf-color-accent-wash-3: #d5dbfb;
+  --bf-color-ok: #0f7a5f;
+  --bf-color-ok-wash: #e1f7ef;
+  --bf-color-ok-edge: #b8eadb;
+  --bf-color-warn: #8a5a00;
+  --bf-color-warn-wash: #fff4dc;
+  --bf-color-warn-edge: #f6dca3;
+  --bf-color-bad: #b42341;
+  --bf-color-bad-wash: #ffe9ed;
+  --bf-color-bad-edge: #f7c3cd;
+  --bf-color-info: #6b3fd4;
+  --bf-color-info-rgb: 107, 63, 212;
+  --bf-color-info-wash: #f1eafe;
+  --bf-color-info-edge: #dccdfb;
+  --bf-color-orange: #b0520a;
+  --bf-color-orange-wash: #fff0e5;
+  --bf-color-series-1: #5b7cfa;
+  --bf-color-series-2: #9b7bef;
+  --bf-color-selection: rgba(85, 102, 238, 0.18);
+  --bf-focus-ink: #4a5ee8;
+  --edl-bar: #5b7cfa;
+  --edl-bar-2: #7c6cf6;
+  --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+  --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+  --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+  --edl-promo: #eef0ff;
+  --edl-promo-line: #dfe3fd;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(.sched-rx) {
+    --bf-color-accent: #4a5ee8;
+    --bf-color-accent-rgb: 74, 94, 232;
+    --bf-color-accent-fill: #5566ee;
+    --bf-color-accent-fill-rgb: 85, 102, 238;
+    --bf-color-accent-fill-2: #4656e0;
+    --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --bf-color-on-accent: #ffffff;
+    --bf-color-accent-wash: #eef0fe;
+    --bf-color-accent-wash-2: #e3e7fd;
+    --bf-color-accent-wash-3: #d5dbfb;
+    --bf-color-ok: #0f7a5f;
+    --bf-color-ok-wash: #e1f7ef;
+    --bf-color-ok-edge: #b8eadb;
+    --bf-color-warn: #8a5a00;
+    --bf-color-warn-wash: #fff4dc;
+    --bf-color-warn-edge: #f6dca3;
+    --bf-color-bad: #b42341;
+    --bf-color-bad-wash: #ffe9ed;
+    --bf-color-bad-edge: #f7c3cd;
+    --bf-color-info: #6b3fd4;
+    --bf-color-info-rgb: 107, 63, 212;
+    --bf-color-info-wash: #f1eafe;
+    --bf-color-info-edge: #dccdfb;
+    --bf-color-orange: #b0520a;
+    --bf-color-orange-wash: #fff0e5;
+    --bf-color-series-1: #5b7cfa;
+    --bf-color-series-2: #9b7bef;
+    --bf-color-selection: rgba(85, 102, 238, 0.18);
+    --bf-focus-ink: #4a5ee8;
+    --edl-bar: #5b7cfa;
+    --edl-bar-2: #7c6cf6;
+    --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+    --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+    --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+    --edl-promo: #eef0ff;
+    --edl-promo-line: #dfe3fd;
+  }
+}
+
+/* ---- 89f. the reference's face, where nobody chose one of their own ---- */
+.app-shell.hs-shell.bf-shell:is([data-bf-font="inter"], :not([data-bf-font])) .sched-rx {
+  --bf-font-active: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bf-font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cc-sans: var(--bf-font-active);
+  font-family: var(--bf-font-active);
+}
+
+/* ---- 89g. THE PAGE'S HEAD: the Dashboard's banner, with the Schedule's still life ----
+   Each page's title row becomes the banner — the periwinkle wash, the picture at its
+   right — and the landing's layout controls stand above it on the right, as the
+   Dashboard's do over its own. */
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero {
+  position: relative;
+  /* the older sheets measure a hero at 40-44ch and give the landing's a 320px basis: the banner
+     spans the page, and its lede keeps a reading measure of its own (below) */
+  flex: none;
+  max-width: none;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 176px;
+  padding: 26px min(42%, 330px) 26px 30px;
+  border-radius: var(--edl-hero-radius);
+  background:
+    url("/dashboard/schedule-art.svg") right 22px bottom 4px / auto 172px no-repeat,
+    var(--edl-hero);
+  box-shadow: var(--edl-hero-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero .dx-eyebrow {
+  justify-self: start;
+  border: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+  box-shadow: var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero .dx-eyebrow .dx-dot {
+  background: var(--edl-bar);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero .dx-title {
+  margin: 4px 0 0;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: clamp(26px, 2.5vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero .dx-title em {
+  color: var(--edl-link);
+  font-style: normal;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero .dx-sub {
+  max-width: 62ch;
+  margin: 2px 0 0;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero .hs-page-tag {
+  border: 0;
+  background: var(--edl-violet-wash);
+  color: var(--bf-color-info);
+  font-family: var(--bf-font-active);
+  font-weight: 800;
+}
+/* the landing: its layout controls above the banner, on the right */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-board-topline {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 14px;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-board-topline .hs-home-topline-actions {
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-board-topline .hs-home-topline-row {
+  display: flex;
+  gap: 8px;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-board-topline :is(.dash-reset, .hs-home-add, .hs-home-customize) {
+  border: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: var(--edl-card-shadow);
+}
+/* a narrow window gives the words the room and lets the picture go */
+@media (max-width: 760px) {
+  .app-shell.hs-shell.bf-shell .sched-rx .schedule-title-row.dx-hero {
+    padding-right: 30px;
+    background: var(--edl-hero);
+  }
+}
+
+/* ---- 89h. the cards ---- */
+.app-shell.hs-shell.bf-shell .sched-rx :is(section.schedule-board, .sched-alerts-under, .ss-strip),
+.app-shell.hs-shell.bf-shell .sched-rx .dash-rx.hs-home.sched-board-host .dash-board .dash-block {
+  border: 0;
+  border-radius: var(--edl-card-radius);
+  background: var(--bf-surface);
+}
+.app-shell.hs-shell.bf-shell .sched-rx :is(section.schedule-board, .sched-alerts-under, .ss-strip),
+.app-shell.hs-shell.bf-shell .sched-rx .dash-rx.hs-home.sched-board-host .dash-board .dash-block:not(.is-dragging) {
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-card-shadow);
+}
+/* the titles: bold and navy, with no icon, as the Dashboard's */
+.app-shell.hs-shell.bf-shell .sched-rx .dash-rx.hs-home.sched-board-host .dash-board .dash-block > .hs-widget-head h2,
+.app-shell.hs-shell.bf-shell .sched-rx .sched-rail-head h2 {
+  gap: 8px;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .dash-rx.hs-home.sched-board-host .dash-board .dash-block > .hs-widget-head h2 > svg {
+  display: none;
+}
+/* "View all ->", a link in the accent */
+.app-shell.hs-shell.bf-shell
+  .sched-rx
+  .dash-rx.hs-home.sched-board-host
+  .dash-board
+  .dash-block
+  .hs-widget-actions
+  > :is(.cc-link, .sched-rail-link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--edl-link);
+  font-family: var(--bf-font-active);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell
+  .sched-rx
+  .dash-rx.hs-home.sched-board-host
+  .dash-board
+  .dash-block
+  .hs-widget-actions
+  > :is(.cc-link, .sched-rail-link)::after {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+/* the status strip: the plan's figure bold, its facts quiet */
+.app-shell.hs-shell.bf-shell .sched-rx .ss-strip {
+  padding: 14px 22px;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .ss-strip .ss-strip-figure strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .ss-strip .ss-strip-fact {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+}
+/* the plan's summary: a white card, its figures bold over small grey labels */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cpm {
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cpm .sched-cpm-ico {
+  border-radius: 50%;
+  background: var(--edl-blue-wash);
+  color: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cpm .sched-cpm-stat em {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cpm .sched-cpm-stat strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+}
+
+/* ---- 89i. the controls: white pills on a hairline, the one primary action the banner's button ---- */
+.app-shell.hs-shell.bf-shell
+  .sched-rx
+  :is(.outline-button, .export-button, .hs-btn, .sched-cpm-baseline, .sched-icon-btn, .sched-today-btn) {
+  border: 1px solid var(--bf-line-solid);
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell
+  .sched-rx
+  :is(.outline-button, .export-button, .hs-btn, .sched-cpm-baseline, .sched-icon-btn, .sched-today-btn):not(:disabled):hover {
+  border-color: var(--bf-line-solid);
+  background: var(--edl-soft);
+  color: var(--edl-link);
+  transform: none;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity {
+  border: 0;
+  border-radius: 999px;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+  box-shadow: var(--edl-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-new-activity:hover {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+  transform: none;
+}
+/* the filters: white pills, their chevron quiet */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-filters .select-box,
+.app-shell.hs-shell.bf-shell .sched-rx .sched-filters .filter-strip > button {
+  border: 1px solid var(--bf-line-solid);
+  border-radius: 999px;
+  background: var(--bf-surface);
+  color: var(--bf-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-filters .select-box select {
+  color: var(--bf-ink);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-filters .select-box > svg {
+  color: var(--bf-ink-muted);
+}
+/* the Gantt's range: its sliding pill takes the accent (section 78's per-group answer), and the
+   chosen word the accent's own ink */
+.app-shell.hs-shell.bf-shell .sched-rx.gantt-page.gantt-chart .gantt-seg {
+  --bfm-pill-fill: var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .sched-rx.gantt-page.gantt-chart .gantt-seg button.active {
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell .sched-rx.gantt-page.gantt-chart .gantt-seg:not([data-bfm-pill]) button.active {
+  background: var(--bf-color-accent-fill);
+}
+/* saved views: a quiet label, the hint a lilac chip */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-views-bar .sched-views-label {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-views-bar .sched-views-empty {
+  border-radius: 999px;
+  background: var(--edl-promo);
+  color: var(--bf-ink-muted);
+}
+
+/* ---- 89j. the KPI tiles: white, a pastel disc, the figure bold ---- */
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  text-align: left;
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card .kpi-icon {
+  --edl-disc: var(--edl-violet-wash);
+  --edl-disc-ink: var(--edl-violet);
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--edl-disc);
+  color: var(--edl-disc-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card .kpi-icon.blue {
+  --edl-disc: var(--edl-blue-wash);
+  --edl-disc-ink: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card .kpi-icon.green {
+  --edl-disc: var(--edl-green-wash);
+  --edl-disc-ink: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card .kpi-icon:is(.yellow, .amber) {
+  --edl-disc: var(--edl-amber-wash);
+  --edl-disc-ink: var(--edl-amber);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card .kpi-icon.orange {
+  --edl-disc: var(--edl-orange-wash);
+  --edl-disc-ink: var(--edl-orange);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card .kpi-icon.red {
+  --edl-disc: var(--edl-red-wash);
+  --edl-disc-ink: var(--edl-red);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card p {
+  margin: 0 0 2px;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .kpi-card > div > span {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---- 89k. THE MONTH: the days as soft tiles, today ringed in the accent ---- */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-monthbar .sched-datestamp {
+  border: 0;
+  background: var(--edl-blue-wash);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-monthbar .sched-datestamp-month {
+  color: var(--edl-link);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-monthbar .sched-datestamp-day {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-monthbar .sched-month-title {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-dow span {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell {
+  border: 0;
+  border-radius: 12px;
+  background: var(--edl-soft);
+  box-shadow: inset 0 0 0 1px var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell.is-weekend {
+  background: color-mix(in srgb, var(--edl-soft) 55%, var(--bf-line-soft));
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell.is-holiday {
+  background: var(--edl-promo);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell.is-today {
+  background: var(--bf-surface);
+  box-shadow: inset 0 0 0 2px var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-cal-daynum {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+/* today's number sits in the accent's disc, as the reference marks the chosen day */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell.is-today .sched-cal-daynum {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bf-color-accent-fill);
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-holiday-tag {
+  color: var(--bf-color-info);
+  font-weight: 700;
+}
+/* a job on a day: a white chip with its trade's dot */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-act {
+  border: 0;
+  border-radius: 10px;
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-chip-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-act:hover {
+  box-shadow:
+    0 0 0 1px var(--bf-color-accent-wash-2),
+    var(--bf-shadow-card-hover);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-act strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-act em {
+  color: var(--bf-ink-muted);
+  font-style: normal;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-cal-cell .sched-cal-add {
+  border-radius: 999px;
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+}
+
+/* ---- 89l. THE KANBAN: pale lanes of white cards, a count pill in each lane's hue ---- */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-lane {
+  border: 0;
+  border-radius: 16px;
+  background: var(--edl-soft);
+  box-shadow: inset 0 0 0 1px var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-head h3 {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 14px;
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-head b {
+  min-width: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 0 0 1px var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card {
+  border: 0;
+  border-radius: 12px;
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-lift);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card:hover {
+  box-shadow:
+    0 0 0 1px var(--bf-color-accent-wash-2),
+    var(--bf-shadow-card-hover);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card em {
+  color: var(--bf-ink-muted);
+  font-style: normal;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card .sched-kan-phase {
+  border-radius: 999px;
+  background: var(--edl-promo);
+  color: var(--bf-ink-muted);
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-card .sched-kan-meta {
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-kan-empty {
+  border: 1.5px dashed var(--bf-color-accent-wash-3);
+  border-radius: 12px;
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+}
+
+/* ---- 89m. THE GANTT: a white frame, quiet headers, its markers as pills ---- */
+.app-shell.hs-shell.bf-shell .sched-rx .gantt-frame {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 0 0 1px var(--bf-line-solid);
+  overflow: hidden;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt-legend > span {
+  border-radius: 999px;
+  background: var(--edl-soft);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-sidebar-header,
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-content-header-title {
+  color: var(--bf-ink-muted);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-sidebar-group-title {
+  color: var(--edl-title);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-sidebar-group-trailing {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--edl-soft);
+  color: var(--bf-ink-muted);
+  font-weight: 700;
+  text-align: center;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-marker-pill {
+  border: 0;
+  border-radius: 999px;
+  background: var(--edl-promo);
+  color: var(--edl-title);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--edl-promo-line);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-marker.is-today .gantt-marker-pill {
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  box-shadow: var(--edl-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .gantt .gantt-marker.is-today .gantt-marker-line {
+  background: var(--bf-color-accent-fill);
+}
+
+/* ---- 89n. alerts, and the landing's lists: rows on hairlines, a pastel disc, the title bold ---- */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-alert2 {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-alert2 + .sched-alert2 {
+  border-top: 1px solid var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-alert2 .sched-alert2-ico {
+  border-radius: 50%;
+  background: var(--edl-blue-wash);
+  color: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-alert2.danger .sched-alert2-ico {
+  background: var(--edl-red-wash);
+  color: var(--edl-red);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-alert2.warning .sched-alert2-ico {
+  background: var(--edl-amber-wash);
+  color: var(--edl-amber);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-alert2 .sched-alert2-body strong,
+.app-shell.hs-shell.bf-shell .sched-rx .sched-mile-row .sched-mile-body strong,
+.app-shell.hs-shell.bf-shell .sched-rx .sched-avail-row .sched-avail-name {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-mile-row .sched-mile-ico {
+  border-radius: 50%;
+  background: var(--edl-violet-wash);
+  color: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-mile-row .sched-mile-date {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--edl-blue-wash);
+  color: var(--bf-color-accent);
+  font-weight: 700;
+}
+/* the landing's view cards: white tiles with a pastel disc, the key a lilac chip */
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card {
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card:hover {
+  background: var(--bf-surface);
+  transform: none;
+  box-shadow:
+    0 0 0 1px var(--bf-color-accent-wash-2),
+    var(--bf-shadow-card-hover);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card .sched-view-ico {
+  border-radius: 50%;
+  background: var(--edl-blue-wash);
+  color: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card:nth-child(3n + 2) .sched-view-ico {
+  background: var(--edl-green-wash);
+  color: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card:nth-child(3n + 3) .sched-view-ico {
+  background: var(--edl-violet-wash);
+  color: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card .sched-view-key {
+  border: 0;
+  background: var(--edl-promo);
+  color: var(--bf-color-accent);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .sched-rx .sched-view-card strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+}
+/* the insets the landing writes its quiet lines in */
+.app-shell.hs-shell.bf-shell .sched-rx .dash-rx.hs-home.sched-board-host :is(.helper-text, .inline-empty-state) {
+  border: 1px dashed var(--bf-line-solid);
+  border-radius: var(--edl-tile-radius);
+  background: var(--edl-soft);
+}

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180" fill="none">
+  <!-- The Schedule pages' banner picture (2026-09-28, the Dashboard's EduLearn design carried into
+       the Schedule category): a desk calendar with the week's jobs on it, a clock and a hard hat,
+       in the Dashboard banner's pastel 3D. Decorative; the banner draws it as a background. -->
+  <defs>
+    <radialGradient id="sa-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="sa-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="sa-board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#eef0ff" />
+    </linearGradient>
+    <linearGradient id="sa-head" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#8a6ef0" />
+    </linearGradient>
+    <linearGradient id="sa-stand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9cdfb" />
+      <stop offset="1" stop-color="#a3a9f1" />
+    </linearGradient>
+    <linearGradient id="sa-dome" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#ffe597" />
+      <stop offset="0.55" stop-color="#fbbf3c" />
+      <stop offset="1" stop-color="#ee9814" />
+    </linearGradient>
+    <linearGradient id="sa-brim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcc34a" />
+      <stop offset="1" stop-color="#e28a0e" />
+    </linearGradient>
+    <linearGradient id="sa-clock" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9fb3ff" />
+      <stop offset="1" stop-color="#6f7ff5" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="160" cy="92" r="92" fill="url(#sa-halo)" />
+  <ellipse cx="160" cy="166" rx="140" ry="11" fill="url(#sa-floor)" />
+
+  <!-- the desk calendar -->
+  <path d="M86 150 L 100 118 H 220 L 234 150 Z" fill="url(#sa-stand)" />
+  <rect x="84" y="24" width="152" height="122" rx="14" fill="url(#sa-board)" />
+  <rect x="84" y="24" width="152" height="122" rx="14" stroke="#dfe3fd" stroke-width="1.5" />
+  <path d="M84 38 C 84 30.3 90.3 24 98 24 H 222 C 229.7 24 236 30.3 236 38 V 48 H 84 Z" fill="url(#sa-head)" />
+  <rect x="98" y="32" width="44" height="6" rx="3" fill="#ffffff" opacity="0.9" />
+  <rect x="190" y="32" width="32" height="6" rx="3" fill="#ffffff" opacity="0.55" />
+  <rect x="112" y="14" width="8" height="20" rx="4" fill="#5a5fd6" />
+  <rect x="200" y="14" width="8" height="20" rx="4" fill="#5a5fd6" />
+  <g fill="#e6e9ff">
+    <rect x="96" y="58" width="22" height="18" rx="4" />
+    <rect x="124" y="58" width="22" height="18" rx="4" />
+    <rect x="152" y="58" width="22" height="18" rx="4" />
+    <rect x="180" y="58" width="22" height="18" rx="4" />
+    <rect x="208" y="58" width="16" height="18" rx="4" />
+    <rect x="96" y="82" width="22" height="18" rx="4" />
+    <rect x="124" y="82" width="22" height="18" rx="4" />
+    <rect x="152" y="82" width="22" height="18" rx="4" />
+    <rect x="180" y="82" width="22" height="18" rx="4" />
+    <rect x="208" y="82" width="16" height="18" rx="4" />
+    <rect x="96" y="106" width="22" height="18" rx="4" />
+    <rect x="124" y="106" width="22" height="18" rx="4" />
+    <rect x="152" y="106" width="22" height="18" rx="4" />
+    <rect x="180" y="106" width="22" height="18" rx="4" />
+    <rect x="208" y="106" width="16" height="18" rx="4" />
+  </g>
+  <!-- the week's jobs, as chips across the days -->
+  <rect x="124" y="63" width="50" height="8" rx="4" fill="#3ec79c" />
+  <rect x="96" y="87" width="50" height="8" rx="4" fill="#6b7ef6" />
+  <rect x="180" y="87" width="44" height="8" rx="4" fill="#a58af5" />
+  <rect x="152" y="111" width="22" height="8" rx="4" fill="#f7b733" />
+  <rect x="124" y="111" width="22" height="8" rx="4" fill="#ff8fa3" />
+
+  <!-- the clock -->
+  <ellipse cx="262" cy="160" rx="26" ry="4.5" fill="#4f57cc" opacity="0.16" />
+  <circle cx="262" cy="122" r="30" fill="url(#sa-clock)" />
+  <circle cx="262" cy="122" r="23" fill="#ffffff" />
+  <g stroke="#c3c9fb" stroke-width="2" stroke-linecap="round">
+    <path d="M262 102 V 105" />
+    <path d="M262 139 V 142" />
+    <path d="M242 122 H 245" />
+    <path d="M279 122 H 282" />
+  </g>
+  <path d="M262 122 V 110" stroke="#1c2260" stroke-width="3" stroke-linecap="round" />
+  <path d="M262 122 L 271 128" stroke="#5566ee" stroke-width="3" stroke-linecap="round" />
+  <circle cx="262" cy="122" r="3" fill="#1c2260" />
+
+  <!-- the hard hat, set down beside it -->
+  <ellipse cx="54" cy="161" rx="36" ry="5" fill="#4f57cc" opacity="0.16" />
+  <ellipse cx="54" cy="152" rx="36" ry="6.5" fill="url(#sa-brim)" />
+  <path d="M26 151 C 26 131, 37 119, 54 119 C 71 119, 82 131, 82 151 Z" fill="url(#sa-dome)" />
+  <rect x="49" y="118.5" width="10" height="32" rx="5" fill="#ffd45c" />
+  <rect x="51" y="122" width="2.4" height="26" rx="1.2" fill="#ffffff" opacity="0.55" />
+  <ellipse cx="38" cy="132" rx="5" ry="9" transform="rotate(-28 38 132)" fill="#ffffff" opacity="0.5" />
+
+  <!-- sparkles -->
+  <path d="M258 40 L 260.6 47.4 L 268 50 L 260.6 52.6 L 258 60 L 255.4 52.6 L 248 50 L 255.4 47.4 Z" fill="#b8a9ff" />
+  <path d="M58 70 L 59.6 74.4 L 64 76 L 59.6 77.6 L 58 82 L 56.4 77.6 L 52 76 L 56.4 74.4 Z" fill="#9fb3ff" />
+  <circle cx="290" cy="72" r="2.5" fill="#c9bfff" />
+  <circle cx="34" cy="96" r="2.5" fill="#a8c0ff" />
+</svg>
