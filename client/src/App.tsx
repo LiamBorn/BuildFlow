@@ -24041,35 +24041,42 @@ function Dashboard({
     root.classList.add("dx-ready");
     const targets = root.querySelectorAll("[data-reveal], [data-reveal-stagger]");
     const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || typeof IntersectionObserver === "undefined") {
-      targets.forEach((el) => el.classList.add("in"));
-      return;
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -5% 0px" }
-    );
-    targets.forEach((el) => observer.observe(el));
+    // Reduced motion, or no IntersectionObserver: nothing to wait for, so a target
+    // shows the moment it is found — the ones here now and, through the watcher
+    // below, the ones that mount later. (This path used to return before the
+    // watcher, which left the status band invisible for reduced-motion readers.)
+    const observer =
+      reduce || typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(
+            (entries, io) => {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add("in");
+                  io.unobserve(entry.target);
+                }
+              });
+            },
+            { threshold: 0.12, rootMargin: "0px 0px -5% 0px" }
+          );
+    const reveal = (el: Element) => {
+      if (observer) observer.observe(el);
+      else el.classList.add("in");
+    };
+    targets.forEach(reveal);
     // Panels that mount after their own fetch resolves — the schedule status
     // band is one — miss that first query, and without this they stay at
-    // opacity 0 for the life of the page. Observe reveal targets as they arrive.
+    // opacity 0 for the life of the page. Reveal targets as they arrive.
     const watch = (node: Node) => {
       if (!(node instanceof HTMLElement)) return;
-      if (node.matches("[data-reveal], [data-reveal-stagger]")) observer.observe(node);
-      node.querySelectorAll("[data-reveal], [data-reveal-stagger]").forEach((el) => observer.observe(el));
+      if (node.matches("[data-reveal], [data-reveal-stagger]")) reveal(node);
+      node.querySelectorAll("[data-reveal], [data-reveal-stagger]").forEach(reveal);
     };
     const mutations = new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach(watch)));
     mutations.observe(root, { childList: true, subtree: true });
     return () => {
       mutations.disconnect();
-      observer.disconnect();
+      observer?.disconnect();
     };
   }, []);
 
