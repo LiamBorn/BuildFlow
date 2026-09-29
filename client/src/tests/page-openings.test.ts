@@ -334,7 +334,8 @@ describe("every page opens on the shared beats", () => {
     // `position: relative`: it is sticky, which is what holds it beside a panel
     // taller than the window, and the layer only needs it POSITIONED.
     const rail = declsOf(".settings-rx .settings-rail");
-    expect(rail["--bfm-pill-fill"]).toBe("var(--bf-ink)");
+    // the ink pill is the Dashboard design's periwinkle since skin section 91 (2026-09-28)
+    expect(rail["--bfm-pill-fill"]).toBe("var(--bf-color-accent-fill)");
     expect(rail["--bfm-pill-radius"]).toBe("999px");
     expect(rail.position, "sticky is the page sheet's, and must not be overridden here").toBeUndefined();
     // and the group it is NOT in is the one that would have done exactly that

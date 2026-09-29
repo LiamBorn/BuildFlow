@@ -25928,10 +25928,29 @@ function ProjectsPage({
         <span className="dx-aurora dx-aurora-3" />
       </div>
       <div className="dx-cursor" aria-hidden="true" />
-      {/* HubSpot-style index page: a compact KPI strip, then a white index card
-          with title ⌄ + Add, saved-view tabs, a Search / Filter / Sort toolbar,
-          quick-filter dropdowns, a checkbox table (every former card field is a
-          column) and a pagination / count / Export footer. */}
+      {/* HubSpot-style index page: the title ⌄ + Add as the page's banner (skin §91), a
+          compact KPI strip, then a white index card with saved-view tabs, a Search /
+          Filter / Sort toolbar, quick-filter dropdowns, a checkbox table (every former
+          card field is a column) and a pagination / count / Export footer. */}
+      <div className="hs-index-head">
+        <h1 className="hs-index-title" id="projects-index-title">
+          <TextReveal text="Projects" nested />
+          <button type="button" aria-label="Show all projects" title="All projects" onClick={() => setProjectView("all")}>
+            <ChevronDown size={16} />
+          </button>
+        </h1>
+        <div className="hs-index-actions">
+          <button className="hs-btn" type="button" onClick={() => setScheduleImportOpen(true)}>
+            <FileUp size={16} />
+            Import schedule
+          </button>
+          <button className="hs-btn hs-btn-primary" type="button" onClick={openCreateProject}>
+            <Plus size={16} />
+            Add project
+          </button>
+        </div>
+      </div>
+
       <div className="hs-kpis">
         {projStats.map((stat) => {
           const Icon = stat.icon;
@@ -25957,25 +25976,6 @@ function ProjectsPage({
       <div className="hs-index-grid">
         <div className="hs-index-main">
           <section className="hs-index-card" aria-labelledby="projects-index-title">
-            <div className="hs-index-head">
-              <h1 className="hs-index-title" id="projects-index-title">
-                <TextReveal text="Projects" nested />
-                <button type="button" aria-label="Show all projects" title="All projects" onClick={() => setProjectView("all")}>
-                  <ChevronDown size={16} />
-                </button>
-              </h1>
-              <div className="hs-index-actions">
-                <button className="hs-btn" type="button" onClick={() => setScheduleImportOpen(true)}>
-                  <FileUp size={16} />
-                  Import schedule
-                </button>
-                <button className="hs-btn hs-btn-primary" type="button" onClick={openCreateProject}>
-                  <Plus size={16} />
-                  Add project
-                </button>
-              </div>
-            </div>
-
             <div className="hs-views" role="tablist" aria-label="Project views">
               {projectViews.map((view) => {
                 const ViewIcon = view.icon;
@@ -26781,9 +26781,23 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
       </div>
       <div className="dx-cursor" aria-hidden="true" />
 
-      {/* HubSpot-style index page: compact KPI strip, then a white index card with
-          title ⌄ + Add, saved-view tabs, Search / Filter / Sort, quick filters, a
-          checkbox table carrying every former card field, and a footer. */}
+      {/* HubSpot-style index page: the title ⌄ + Add as the page's banner (skin §91), a
+          compact KPI strip, then a white index card with saved-view tabs, Search / Filter /
+          Sort, quick filters, a checkbox table carrying every former card field, and a footer. */}
+      <div className="hs-index-head">
+        <h1 className="hs-index-title" id="crews-index-title" data-tutorial-id="crews-page-title">
+          <TextReveal text="Crews" nested />
+          <button type="button" aria-label="Show all crews" title="All crews" onClick={() => setCrewView("all")}>
+            <ChevronDown size={16} />
+          </button>
+        </h1>
+        <div className="hs-index-actions">
+          <button className="hs-btn hs-btn-primary" type="button" data-tutorial-id="crew-add-button" onClick={openAddCrew}>
+            <Plus size={16} /> Add Crew
+          </button>
+        </div>
+      </div>
+
       <div className="hs-kpis">
         <div className="hs-kpi">
           <span className="hs-kpi-ico tone-blue">
@@ -26833,20 +26847,6 @@ function CrewsPage({ data, reload }: { data: BootstrapPayload; reload: () => Pro
 
       <div className="hs-index-main">
         <section className="hs-index-card" aria-labelledby="crews-index-title">
-          <div className="hs-index-head">
-            <h1 className="hs-index-title" id="crews-index-title" data-tutorial-id="crews-page-title">
-              <TextReveal text="Crews" nested />
-              <button type="button" aria-label="Show all crews" title="All crews" onClick={() => setCrewView("all")}>
-                <ChevronDown size={16} />
-              </button>
-            </h1>
-            <div className="hs-index-actions">
-              <button className="hs-btn hs-btn-primary" type="button" data-tutorial-id="crew-add-button" onClick={openAddCrew}>
-                <Plus size={16} /> Add Crew
-              </button>
-            </div>
-          </div>
-
           <div className="hs-views" role="tablist" aria-label="Crew views">
             {crewViews.map((view) => {
               const ViewIcon = view.icon;
@@ -27830,10 +27830,24 @@ function FieldUpdatesPage({
         <span className="dx-aurora dx-aurora-3" />
       </div>
       <div className="dx-cursor" aria-hidden="true" />
-      {/* HubSpot-style index page: compact KPI strip, then a white index card with
-          title ⌄ + Add, saved-view tabs, Search / Filter / Sort, quick filters, a
-          checkbox table carrying every former card field, and a footer. The
-          composer below it (and the variance loop it drives) is unchanged. */}
+      {/* HubSpot-style index page: the title ⌄ + Add as the page's banner (skin §91), a
+          compact KPI strip, then a white index card with saved-view tabs, Search / Filter /
+          Sort, quick filters, a checkbox table carrying every former card field, and a
+          footer. The composer below it (and the variance loop it drives) is unchanged. */}
+      <div className="hs-index-head">
+        <h1 className="hs-index-title" id="field-index-title" data-tutorial-id="field-page-title">
+          <TextReveal text="Field Updates" nested />
+          <button type="button" aria-label="Show all field updates" title="All updates" onClick={() => setFieldView("all")}>
+            <ChevronDown size={16} />
+          </button>
+        </h1>
+        <div className="hs-index-actions">
+          <button className="hs-btn hs-btn-primary" type="button" title="Add Field Update" onClick={jumpToFieldUpdateForm}>
+            <Plus size={16} /> Add Field Update
+          </button>
+        </div>
+      </div>
+
       <div className="hs-kpis">
         <div className="hs-kpi">
           <span className="hs-kpi-ico tone-blue">
@@ -27883,20 +27897,6 @@ function FieldUpdatesPage({
 
       <div className="hs-index-main">
         <section className="hs-index-card" aria-labelledby="field-index-title">
-          <div className="hs-index-head">
-            <h1 className="hs-index-title" id="field-index-title" data-tutorial-id="field-page-title">
-              <TextReveal text="Field Updates" nested />
-              <button type="button" aria-label="Show all field updates" title="All updates" onClick={() => setFieldView("all")}>
-                <ChevronDown size={16} />
-              </button>
-            </h1>
-            <div className="hs-index-actions">
-              <button className="hs-btn hs-btn-primary" type="button" title="Add Field Update" onClick={jumpToFieldUpdateForm}>
-                <Plus size={16} /> Add Field Update
-              </button>
-            </div>
-          </div>
-
           <div className="hs-views" role="tablist" aria-label="Field update views">
             {fieldViews.map((view) => {
               const ViewIcon = view.icon;
@@ -28751,10 +28751,26 @@ function DelayIQsPage({
         <span className="dx-aurora dx-aurora-3" />
       </div>
       <div className="dx-cursor" aria-hidden="true" />
-      {/* HubSpot-style index page: compact KPI strip, then a white index card (the
-          delayIQ log as a checkbox table with views / filters / paging) beside a
-          rail carrying the early-warning card, the log form, the categories and
-          the impact forecast — every panel the page had before. */}
+      {/* HubSpot-style index page: the title and its actions as the page's banner (skin
+          §91), a compact KPI strip, then a white index card (the delayIQ log as a checkbox
+          table with views / filters / paging) beside a rail carrying the early-warning card,
+          the log form, the categories and the impact forecast — every panel the page had before. */}
+      <div className="hs-index-head">
+        <h1 className="hs-index-title" id="delayiqs-index-title" data-tutorial-id="delayIQs-page-title">
+          <TextReveal text="DelayIQs" nested />
+          <button type="button" aria-label="Show all delayIQs" title="All delayIQs" onClick={() => setDelayView("all")}>
+            <ChevronDown size={16} />
+          </button>
+        </h1>
+        {canCreate && (
+          <div className="hs-index-actions">
+            <button className="hs-btn hs-btn-primary" type="button" onClick={focusDelayIQForm}>
+              <Plus size={16} /> Log DelayIQ
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="hs-kpis">
         <div className="hs-kpi">
           <span className="hs-kpi-ico tone-blue">
@@ -28805,22 +28821,6 @@ function DelayIQsPage({
       <div className="hs-index-grid">
         <div className="hs-index-main">
           <section className="hs-index-card" aria-labelledby="delayiqs-index-title">
-            <div className="hs-index-head">
-              <h1 className="hs-index-title" id="delayiqs-index-title" data-tutorial-id="delayIQs-page-title">
-                <TextReveal text="DelayIQs" nested />
-                <button type="button" aria-label="Show all delayIQs" title="All delayIQs" onClick={() => setDelayView("all")}>
-                  <ChevronDown size={16} />
-                </button>
-              </h1>
-              {canCreate && (
-                <div className="hs-index-actions">
-                  <button className="hs-btn hs-btn-primary" type="button" onClick={focusDelayIQForm}>
-                    <Plus size={16} /> Log DelayIQ
-                  </button>
-                </div>
-              )}
-            </div>
-
             <div className="hs-views" role="tablist" aria-label="DelayIQ views">
               {delayViews.map((view) => {
                 const ViewIcon = view.icon;

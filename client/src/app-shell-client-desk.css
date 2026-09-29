@@ -19307,3 +19307,840 @@ body.bf-side-resizing:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"
     padding: 18px 16px 20px;
   }
 }
+
+/* ============================================================================
+   91. THE REST OF THE PROGRAM ON THE DASHBOARD'S DESIGN (2026-09-28)
+   ----------------------------------------------------------------------------
+   Asked for after Bookmarks (section 90): "Please continue with the redesign for
+   all the other pages within the BuildFlow Program." So the pages the rail and
+   the gear still open in the old look take the Dashboard's language, read off the
+   same EduLearn reference: Projects and Crews (Operations), the Inventory
+   (Resources), Field Updates and DelayIQs (Field), Reports, TimeCard and Settings.
+
+   One section, not eight: the pages share their parts. Five are the index page
+   (`.hs-index`: a KPI strip, the index card with its tabs, toolbar, filters,
+   table and footer, and a rail of panels), TimeCard is one as well, and Reports
+   and Settings are their own. So the tokens are written once for all eight roots,
+   and the parts once for every page that has them:
+     - THE BANNER. Each page's head is the Dashboard's periwinkle-to-lilac banner
+       with a still life of its category (public/dashboard/*-art.svg, named per
+       page in `--edl-art`): on the index pages the title ⌄ and its actions, which
+       now open the page above the KPI strip (App.tsx, inventory/InventoryPage.tsx);
+       TimeCard's hero; Reports' title row; Settings' page header.
+     - stat tiles on pastel discs; white cards on a hairline and a soft cool shadow;
+       tabs whose travelling pill is the periwinkle; white pill controls; the one
+       primary action the banner's blue-to-violet button; tables on hairlines.
+
+   HOW IT IS SCOPED, as sections 87-90 are: every rule hangs off one of the eight
+   page roots; the chrome changes only through `:has()` of them; the colours are
+   LIGHT only, word for word for System on a light OS, and the periwinkle is the
+   Default Colors set's.
+   ============================================================================ */
+
+/* ---- 91a. the accent's part, on the shell while one of the pages shows (the Default set's
+   periwinkle is declared there too, and a value on the page would shadow it) — from the
+   accent in any set and mode ---- */
+.app-shell.hs-shell.bf-shell:has(:is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)) {
+  --edl-link: var(--bf-color-accent);
+  --edl-bar: var(--bf-color-accent-fill);
+  --edl-hero: color-mix(in srgb, var(--bf-color-accent-fill) 14%, var(--bf-surface));
+  --edl-hero-shadow: none;
+  --edl-cta: var(--bf-color-accent-fill);
+  --edl-cta-hover: var(--bf-color-accent-fill-2);
+  --edl-cta-ink: var(--bf-color-on-accent);
+  --edl-cta-shadow: none;
+  --edl-promo: color-mix(in srgb, var(--bf-color-accent-fill) 9%, var(--bf-surface));
+}
+
+/* ---- 91b. the pages' measures and discs, from the program's tokens in any mode ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx) {
+  --edl-card-radius: 18px;
+  --edl-tile-radius: 14px;
+  --edl-hero-radius: 22px;
+  --edl-title: var(--bf-ink);
+  --edl-card-shadow: var(--bf-shadow-card);
+  --edl-chip-shadow: var(--bf-shadow-card);
+  --edl-lift: var(--bf-shadow-card-hover);
+  --edl-soft: var(--bf-hover);
+  --edl-blue: var(--bf-color-accent);
+  --edl-blue-wash: var(--bf-color-accent-wash);
+  --edl-green: var(--bf-color-ok);
+  --edl-green-wash: var(--bf-color-ok-wash);
+  --edl-amber: var(--bf-color-warn);
+  --edl-amber-wash: var(--bf-color-warn-wash);
+  --edl-orange: var(--bf-color-orange);
+  --edl-orange-wash: var(--bf-color-orange-wash);
+  --edl-red: var(--bf-color-bad);
+  --edl-red-wash: var(--bf-color-bad-wash);
+  --edl-violet: var(--bf-color-info);
+  --edl-violet-wash: var(--bf-color-info-wash);
+}
+/* each page's still life, by category */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx) {
+  --edl-art: url("/dashboard/operations-art.svg");
+}
+.app-shell.hs-shell.bf-shell .inv-rx {
+  --edl-art: url("/dashboard/resources-art.svg");
+}
+.app-shell.hs-shell.bf-shell :is(.field-rx, .delayIQ-rx) {
+  --edl-art: url("/dashboard/field-art.svg");
+}
+.app-shell.hs-shell.bf-shell .reports-page {
+  --edl-art: url("/dashboard/reports-art.svg");
+}
+.app-shell.hs-shell.bf-shell .tc-rx {
+  --edl-art: url("/dashboard/timecard-art.svg");
+}
+.app-shell.hs-shell.bf-shell .settings-rx {
+  --edl-art: url("/dashboard/settings-art.svg");
+}
+
+/* ---- 91c. the neutrals and the discs' pastels, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]
+  :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx) {
+  --bf-ink: #1b2150;
+  --bf-ink-muted: #5f6687;
+  --bf-ink-faint: #5f6687;
+  --bf-line-rgb: 36, 44, 104;
+  --bf-line-solid: #e6e9f6;
+  --bf-line-soft: #eef0f9;
+  --bf-hover: #f3f5fd;
+  --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+  --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+  --edl-title: #1c2260;
+  --edl-soft: #f6f7fd;
+  --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.16);
+  --edl-lift: 0 12px 24px -14px rgba(36, 44, 104, 0.28);
+  --edl-blue: #4f6cf0;
+  --edl-blue-wash: #eaefff;
+  --edl-green: #14a578;
+  --edl-green-wash: #e1f7ef;
+  --edl-amber: #e3970a;
+  --edl-amber-wash: #fff4dc;
+  --edl-orange: #ee7a2b;
+  --edl-orange-wash: #fff0e5;
+  --edl-red: #e4455e;
+  --edl-red-wash: #ffe9ed;
+  --edl-violet: #8b5cf6;
+  --edl-violet-wash: #f1eafe;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]
+    :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx) {
+    --bf-ink: #1b2150;
+    --bf-ink-muted: #5f6687;
+    --bf-ink-faint: #5f6687;
+    --bf-line-rgb: 36, 44, 104;
+    --bf-line-solid: #e6e9f6;
+    --bf-line-soft: #eef0f9;
+    --bf-hover: #f3f5fd;
+    --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+    --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+    --edl-title: #1c2260;
+    --edl-soft: #f6f7fd;
+    --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.16);
+    --edl-lift: 0 12px 24px -14px rgba(36, 44, 104, 0.28);
+    --edl-blue: #4f6cf0;
+    --edl-blue-wash: #eaefff;
+    --edl-green: #14a578;
+    --edl-green-wash: #e1f7ef;
+    --edl-amber: #e3970a;
+    --edl-amber-wash: #fff4dc;
+    --edl-orange: #ee7a2b;
+    --edl-orange-wash: #fff0e5;
+    --edl-red: #e4455e;
+    --edl-red-wash: #ffe9ed;
+    --edl-violet: #8b5cf6;
+    --edl-violet-wash: #f1eafe;
+  }
+}
+
+/* ---- 91d. the ground under the pages, light only ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:has(
+    :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+  ) {
+  --cd-panel: #f4f6fd;
+  --bf-chrome-rgb: 244, 246, 253;
+  --bf-chrome-ink: #1b2150;
+  --bf-chrome-muted: #5f6687;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:has(
+      :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+    ) {
+    --cd-panel: #f4f6fd;
+    --bf-chrome-rgb: 244, 246, 253;
+    --bf-chrome-ink: #1b2150;
+    --bf-chrome-muted: #5f6687;
+  }
+}
+
+/* ---- 91e. the periwinkle and the status hues: the Default Colors set, light only (the set
+   the Dashboard, the Schedule and Bookmarks wear, so the chrome holds still between them) ---- */
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(
+    :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+  ) {
+  --bf-color-accent: #4a5ee8;
+  --bf-color-accent-rgb: 74, 94, 232;
+  --bf-color-accent-fill: #5566ee;
+  --bf-color-accent-fill-rgb: 85, 102, 238;
+  --bf-color-accent-fill-2: #4656e0;
+  --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --bf-color-on-accent: #ffffff;
+  --bf-color-accent-wash: #eef0fe;
+  --bf-color-accent-wash-2: #e3e7fd;
+  --bf-color-accent-wash-3: #d5dbfb;
+  --bf-color-ok: #0f7a5f;
+  --bf-color-ok-wash: #e1f7ef;
+  --bf-color-ok-edge: #b8eadb;
+  --bf-color-warn: #8a5a00;
+  --bf-color-warn-wash: #fff4dc;
+  --bf-color-warn-edge: #f6dca3;
+  --bf-color-bad: #b42341;
+  --bf-color-bad-wash: #ffe9ed;
+  --bf-color-bad-edge: #f7c3cd;
+  --bf-color-info: #6b3fd4;
+  --bf-color-info-rgb: 107, 63, 212;
+  --bf-color-info-wash: #f1eafe;
+  --bf-color-info-edge: #dccdfb;
+  --bf-color-orange: #b0520a;
+  --bf-color-orange-wash: #fff0e5;
+  --bf-color-series-1: #5b7cfa;
+  --bf-color-series-2: #9b7bef;
+  --bf-color-selection: rgba(85, 102, 238, 0.18);
+  --bf-focus-ink: #4a5ee8;
+  --edl-bar: #5b7cfa;
+  --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+  --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+  --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+  --edl-promo: #eef0ff;
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors])):has(
+      :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+    ) {
+    --bf-color-accent: #4a5ee8;
+    --bf-color-accent-rgb: 74, 94, 232;
+    --bf-color-accent-fill: #5566ee;
+    --bf-color-accent-fill-rgb: 85, 102, 238;
+    --bf-color-accent-fill-2: #4656e0;
+    --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --bf-color-on-accent: #ffffff;
+    --bf-color-accent-wash: #eef0fe;
+    --bf-color-accent-wash-2: #e3e7fd;
+    --bf-color-accent-wash-3: #d5dbfb;
+    --bf-color-ok: #0f7a5f;
+    --bf-color-ok-wash: #e1f7ef;
+    --bf-color-ok-edge: #b8eadb;
+    --bf-color-warn: #8a5a00;
+    --bf-color-warn-wash: #fff4dc;
+    --bf-color-warn-edge: #f6dca3;
+    --bf-color-bad: #b42341;
+    --bf-color-bad-wash: #ffe9ed;
+    --bf-color-bad-edge: #f7c3cd;
+    --bf-color-info: #6b3fd4;
+    --bf-color-info-rgb: 107, 63, 212;
+    --bf-color-info-wash: #f1eafe;
+    --bf-color-info-edge: #dccdfb;
+    --bf-color-orange: #b0520a;
+    --bf-color-orange-wash: #fff0e5;
+    --bf-color-series-1: #5b7cfa;
+    --bf-color-series-2: #9b7bef;
+    --bf-color-selection: rgba(85, 102, 238, 0.18);
+    --bf-focus-ink: #4a5ee8;
+    --edl-bar: #5b7cfa;
+    --edl-hero: linear-gradient(105deg, #e9ecff 0%, #e3e8fd 50%, #ece5fd 100%);
+    --edl-hero-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+    --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+    --edl-promo: #eef0ff;
+  }
+}
+
+/* ---- 91f. the reference's face, where nobody chose one of their own ---- */
+.app-shell.hs-shell.bf-shell:is([data-bf-font="inter"], :not([data-bf-font]))
+  :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx) {
+  --bf-font-active: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bf-font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cc-sans: var(--bf-font-active);
+  font-family: var(--bf-font-active);
+}
+
+/* ---- 91g. THE BANNER: every page's head, the Dashboard's banner with its category's still life ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head,
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero,
+.app-shell.hs-shell.bf-shell .reports-page > .page-title,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-page-header {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-content: start;
+  justify-items: start;
+  gap: 14px;
+  box-sizing: border-box;
+  min-height: 176px;
+  max-width: none;
+  margin: 0;
+  padding: 26px min(42%, 330px) 26px 30px;
+  border: 0;
+  border-radius: var(--edl-hero-radius);
+  background:
+    var(--edl-art, none) right 26px bottom 4px / auto 168px no-repeat,
+    var(--edl-hero);
+  box-shadow: var(--edl-hero-shadow);
+}
+/* the titles: bold and navy, as the Dashboard's greeting */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head .hs-index-title,
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero .tc-title,
+.app-shell.hs-shell.bf-shell .reports-page > .page-title h1,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-page-header h1 {
+  margin: 0;
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: clamp(26px, 2.5vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+/* the ledes, where a page has one */
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero .tc-sub,
+.app-shell.hs-shell.bf-shell .reports-page > .page-title p,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-page-header p {
+  max-width: 62ch;
+  margin: 2px 0 0;
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+/* the eyebrows: a white pill with the accent's dot */
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero .tc-eyebrow,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-page-header .sx-eyebrow {
+  justify-self: start;
+  border: 1px solid var(--bf-line-solid);
+  border-radius: 999px;
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+  box-shadow: var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero .tc-dot,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-page-header .sx-dot {
+  background: var(--edl-bar);
+}
+/* the index pages: the title ⌄ over its actions */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head {
+  flex-wrap: nowrap;
+  gap: 18px;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head .hs-index-title {
+  gap: 12px;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head .hs-index-title button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bf-surface);
+  color: var(--edl-title);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-chip-shadow);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head .hs-index-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+/* Reports: the title and lede over the period and its action, side by side */
+.app-shell.hs-shell.bf-shell .reports-page > .page-title .reports-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+/* TimeCard: the title's own tags on the accent's pastels */
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero .tc-title-tag {
+  border: 0;
+  background: var(--edl-violet-wash);
+  color: var(--bf-color-info);
+  font-family: var(--bf-font-active);
+  font-weight: 800;
+}
+.app-shell.hs-shell.bf-shell .tc-rx > .tc-hero .tc-title-tag.is-neutral {
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+}
+/* Settings: the page's icon on a white disc, and the close button beside the banner a white disc */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-page-header .sx-header-icon,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-close-button {
+  border: 0;
+  border-radius: 50%;
+  background: var(--bf-surface);
+  color: var(--edl-title);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-chip-shadow);
+}
+/* the page tags beside a title */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head .hs-page-tag {
+  border: 0;
+  background: var(--edl-violet-wash);
+  color: var(--bf-color-info);
+  font-family: var(--bf-font-active);
+  font-weight: 800;
+}
+
+/* ---- 91h. the stat tiles: white, a pastel disc, the figure bold ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico {
+  --edl-disc: var(--edl-violet-wash);
+  --edl-disc-ink: var(--edl-violet);
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--edl-disc);
+  color: var(--edl-disc-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico svg {
+  width: 20px;
+  height: 20px;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico.tone-blue {
+  --edl-disc: var(--edl-blue-wash);
+  --edl-disc-ink: var(--edl-blue);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico.tone-green {
+  --edl-disc: var(--edl-green-wash);
+  --edl-disc-ink: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico.tone-amber {
+  --edl-disc: var(--edl-amber-wash);
+  --edl-disc-ink: var(--edl-amber);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico.tone-orange {
+  --edl-disc: var(--edl-orange-wash);
+  --edl-disc-ink: var(--edl-orange);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico.tone-red {
+  --edl-disc: var(--edl-red-wash);
+  --edl-disc-ink: var(--edl-red);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-body {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-label {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-value {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-note {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12px;
+  font-weight: 500;
+}
+/* Reports' stat cards: white tiles, the figure bold */
+.app-shell.hs-shell.bf-shell .reports-page .reports-kpi-card {
+  padding: 18px;
+  border: 0;
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .reports-page .reports-kpi-card > span {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell.hs-shell.bf-shell .reports-page .reports-kpi-card > strong {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.app-shell.hs-shell.bf-shell .reports-page .reports-kpi-card .reports-kpi-basis {
+  font-family: var(--bf-font-active);
+  font-weight: 500;
+}
+
+/* ---- 91i. the cards: white on a hairline and a soft cool shadow ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-index-card,
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-panel,
+.app-shell.hs-shell.bf-shell .delayIQ-rx .hs-index-rail > :is(.panel, .diq-panel),
+.app-shell.hs-shell.bf-shell .field-rx .field-entry-card,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-dash-card,
+.app-shell.hs-shell.bf-shell .reports-page :is(.reports-card, .ss-strip),
+.app-shell.hs-shell.bf-shell .settings-rx :is(.settings-rail, .settings-section) {
+  border: 0;
+  border-radius: var(--edl-card-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-index-card {
+  padding: 20px 22px 18px;
+}
+/* the cards' titles: bold and navy */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-panel-head h2,
+.app-shell.hs-shell.bf-shell .delayIQ-rx .hs-index-rail > :is(.panel, .diq-panel) h2,
+.app-shell.hs-shell.bf-shell .field-rx .field-entry-card .crew-card-header :is(h2, h3, strong),
+.app-shell.hs-shell.bf-shell .reports-page .reports-card > header h2,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-section > h2 {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 700;
+  letter-spacing: -0.012em;
+}
+/* "View all", a link in the accent on a lilac pill */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-panel-link {
+  border: 0;
+  border-radius: 999px;
+  background: var(--edl-promo);
+  color: var(--bf-color-accent);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+  box-shadow: none;
+}
+/* the panels' glyphs on round pastel discs */
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx)
+  :is(.cc-alert-ico, .proj-mile-ico, .crew-card-icon, .tc-dash-icon) {
+  --edl-disc: var(--edl-blue-wash);
+  --edl-disc-ink: var(--edl-blue);
+  border: 0;
+  border-radius: 50%;
+  background: var(--edl-disc);
+  color: var(--edl-disc-ink);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) :is(.cc-alert-ico, .tc-dash-icon).tone-red {
+  --edl-disc: var(--edl-red-wash);
+  --edl-disc-ink: var(--edl-red);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) :is(.cc-alert-ico, .tc-dash-icon).tone-amber {
+  --edl-disc: var(--edl-amber-wash);
+  --edl-disc-ink: var(--edl-amber);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) :is(.cc-alert-ico, .tc-dash-icon).tone-green {
+  --edl-disc: var(--edl-green-wash);
+  --edl-disc-ink: var(--edl-green);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) :is(.proj-mile-ico, .crew-card-icon) {
+  --edl-disc: var(--edl-violet-wash);
+  --edl-disc-ink: var(--edl-violet);
+}
+.app-shell.hs-shell.bf-shell .proj-rx .proj-mile-date {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--edl-blue-wash);
+  color: var(--bf-color-accent);
+  font-weight: 700;
+}
+
+/* ---- 91j. the index card's controls: tabs with the periwinkle pill, white pill controls ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-views,
+.app-shell.hs-shell.bf-shell .tc-rx .tc-seg,
+.app-shell.hs-shell.bf-shell .settings-rx .settings-rail {
+  --bfm-pill-fill: var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-views {
+  background: var(--edl-soft);
+  box-shadow: 0 0 0 1px var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-view {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-view.active {
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-view .hs-view-count {
+  background: var(--bf-surface);
+  color: var(--bf-ink-muted);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-view.active .hs-view-count {
+  background: color-mix(in srgb, var(--bf-color-on-accent) 22%, transparent);
+  color: var(--bf-color-on-accent);
+}
+/* the search field, the Filter and Sort chips, the secondary buttons: white pills on a hairline */
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+  :is(.hs-search, .hs-chip, .hs-btn:not(.hs-btn-primary)),
+.app-shell.hs-shell.bf-shell .reports-page > .page-title .reports-actions select {
+  border: 0;
+  background: var(--bf-surface);
+  color: var(--edl-title);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-chip-shadow);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx) .hs-search {
+  color: var(--bf-ink-muted);
+}
+/* the quick filters and the per-page count: soft pills */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) :is(.hs-qf, .hs-count-pill) {
+  border: 0;
+  background: var(--edl-soft);
+  color: var(--edl-title);
+  box-shadow: 0 0 0 1px var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-qf-link {
+  color: var(--bf-color-accent);
+  font-weight: 700;
+}
+/* the one primary action on a page: the banner's blue-to-violet button */
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+  :is(.hs-btn-primary, .primary-button),
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-page-btn.active {
+  border: 0;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  box-shadow: var(--edl-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell
+  :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx)
+  :is(.hs-btn-primary, .primary-button):hover {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+}
+
+/* ---- 91k. the tables: quiet small-caps heads, rows on hairlines, the name bold and navy ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-table-wrap {
+  border-color: var(--bf-line-soft);
+  border-radius: var(--edl-tile-radius);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-table thead th {
+  background: var(--edl-soft);
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-table tbody tr:hover > td {
+  background: var(--edl-soft);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-row-name strong {
+  color: var(--edl-title);
+  font-weight: 700;
+}
+
+/* ---- 91l. TimeCard's own parts ---- */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-week-chip {
+  border: 0;
+  background: var(--edl-soft);
+  color: var(--edl-title);
+  box-shadow: 0 0 0 1px var(--bf-line-soft);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-preview {
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--edl-promo);
+  color: var(--edl-title);
+  box-shadow: 0 0 0 1px var(--bf-color-accent-wash-2);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-tile {
+  border: 0;
+  border-radius: var(--edl-tile-radius);
+  background: var(--bf-surface);
+  box-shadow:
+    0 0 0 1px var(--bf-line-soft),
+    var(--edl-card-shadow);
+}
+
+/* the week's days: the day the form is on the periwinkle tile, today ringed in it, as on the Month */
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day.is-picked {
+  background: var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day.is-picked :is(.tc-day-dow, .tc-day-date, .tc-day-hours, .tc-day-hours strong, .tc-day-add) {
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day.is-today:not(.is-picked),
+.app-shell.hs-shell.bf-shell .tc-rx .tc-legend i.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-day.is-today:not(:disabled):not(.is-picked):hover {
+  box-shadow:
+    inset 0 0 0 1.5px var(--bf-color-accent-fill),
+    var(--bf-shadow-raised);
+}
+.app-shell.hs-shell.bf-shell .tc-rx .tc-legend i.is-picked {
+  background: var(--bf-color-accent-fill);
+}
+
+/* ---- 91m. Settings' own parts: the categories as rows with the periwinkle pill, the rows
+   of each section on hairlines, the AI button a lilac pill ---- */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-group h2 {
+  color: var(--bf-ink-muted);
+  font-family: var(--bf-font-active);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-item {
+  color: var(--edl-title);
+  font-family: var(--bf-font-active);
+  font-weight: 600;
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-nav-item.active {
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-ai-button {
+  border: 0;
+  background: var(--edl-promo);
+  color: var(--bf-color-accent);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--bf-color-accent-wash-2);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .settings-row strong {
+  color: var(--edl-title);
+  font-weight: 700;
+}
+
+/* Reports' own parts: the period's action the banner's button, the legend's dots the colours of
+   the bars they name, and crew efficiency filled with the periwinkle's gradient */
+.app-shell.hs-shell.bf-shell .reports-page > .page-title .reports-actions button {
+  border: 0;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  box-shadow: var(--edl-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell .reports-page > .page-title .reports-actions button:hover {
+  background: var(--edl-cta-hover);
+}
+.app-shell.hs-shell.bf-shell .reports-page .reports-card .reports-legend .planned {
+  background: var(--bf-color-series-1);
+}
+.app-shell.hs-shell.bf-shell .reports-page .reports-card .reports-legend .actual {
+  background: var(--bf-color-series-2);
+  box-shadow: none;
+}
+.app-shell.hs-shell.bf-shell .reports-page .reports-card .reports-efficiency-row i {
+  background: var(--bf-color-accent-gradient);
+}
+/* Settings' switches: on is the periwinkle */
+.app-shell.hs-shell.bf-shell .settings-rx .settings-row .settings-toggle.active {
+  background: var(--bf-color-accent-fill);
+}
+
+/* ---- 91o. what the monochrome pass filled with ink takes the periwinkle (the reference fills
+   with its accent what the old look filled with ink): the filter that is on, the chip that is
+   pressed, a bar's fill, a slider's thumb, a switch or a day that is on, Settings' own buttons ---- */
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) :is(.hs-btn-icon.active, .hs-chip.active),
+.app-shell.hs-shell.bf-shell .delayIQ-rx .panel-header button[aria-pressed="true"],
+.app-shell.hs-shell.bf-shell .field-rx .field-attachment-remove,
+.app-shell.hs-shell.bf-shell .settings-rx :is(.settings-nav-item.active, .wc-day.is-on),
+.app-shell.hs-shell.bf-shell .settings-rx :is(.settings-ai-button.active, .settings-ai-button:focus-visible) {
+  background: var(--bf-color-accent-fill);
+  color: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-progress-track i,
+.app-shell.hs-shell.bf-shell .settings-rx .sx-seg-ind {
+  background: var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .field-rx .fp-progress-slider::-webkit-slider-thumb {
+  background: var(--bf-color-accent-fill);
+}
+.app-shell.hs-shell.bf-shell .field-rx .fp-progress-slider::-moz-range-thumb {
+  background: var(--bf-color-accent-fill);
+}
+/* Billing's plans: white cards on a hairline, the one you are on ringed in the periwinkle */
+.app-shell.hs-shell.bf-shell .settings-rx .sx-plan-card {
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-card-shadow);
+}
+.app-shell.hs-shell.bf-shell .settings-rx .sx-plan-card.current {
+  box-shadow:
+    0 0 0 2px var(--bf-color-accent-fill),
+    var(--edl-card-shadow);
+}
+/* the forms' own submit buttons and Settings' primary actions: the banner's button */
+.app-shell.hs-shell.bf-shell .field-rx .field-entry-body .primary-button,
+.app-shell.hs-shell.bf-shell
+  .settings-rx
+  :is(.settings-primary-action, .settings-inline-submit, .settings-invite-submit, .acct-primary, .sx-plan-cta.primary, .sx-addon-cta) {
+  border: 0;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  box-shadow: var(--edl-cta-shadow);
+}
+.app-shell.hs-shell.bf-shell .delayIQ-rx .primary-button:hover:not(:disabled),
+.app-shell.hs-shell.bf-shell .field-rx .field-entry-body .primary-button:hover:not(:disabled),
+.app-shell.hs-shell.bf-shell
+  .settings-rx
+  :is(.settings-primary-action, .settings-inline-submit, .settings-invite-submit, .acct-primary, .sx-plan-cta.primary, .sx-addon-cta):is(
+    :hover,
+    :focus-visible
+  ) {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+}
+
+/* ---- 91n. a narrow window: the banners keep the words and let the pictures go, and a stat's
+   disc stands above its words ---- */
+@media (max-width: 760px) {
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx) > .hs-index-head,
+  .app-shell.hs-shell.bf-shell .tc-rx > .tc-hero,
+  .app-shell.hs-shell.bf-shell .reports-page > .page-title,
+  .app-shell.hs-shell.bf-shell .settings-rx .settings-page-header {
+    min-height: 0;
+    padding: 22px 20px 24px;
+    background: var(--edl-hero);
+  }
+  /* two tiles to a row leave the words no room beside a disc: the disc goes above them */
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 14px;
+  }
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-ico {
+    width: 36px;
+    height: 36px;
+  }
+  .app-shell.hs-shell.bf-shell :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx) .hs-kpi-body {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}

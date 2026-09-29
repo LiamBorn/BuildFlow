@@ -19,9 +19,16 @@ function requestBody(fetchMock: { mock: { calls: unknown[] } }, url: string, met
 }
 
 /** The index card for a page: the section labelled by its h1 ("Projects", "Crews", ...). */
+/** The index card a page's title names. The title and its actions open the page as its banner, above
+ * the KPI strip and out of the card (skin section 91, 2026-09-28); the card is still labelled by it. */
 async function findIndexCard(title: string) {
   const heading = await screen.findByRole("heading", { level: 1, name: new RegExp(`^${title}`) });
-  return heading.closest("section") as HTMLElement;
+  return document.querySelector(`section[aria-labelledby="${heading.id}"]`) as HTMLElement;
+}
+/** The page's banner: its title and the actions beside it (Add, Import). */
+async function findIndexHead(title: string) {
+  const heading = await screen.findByRole("heading", { level: 1, name: new RegExp(`^${title}`) });
+  return heading.closest(".hs-index-head") as HTMLElement;
 }
 
 describe("BuildFlow index pages", () => {
@@ -37,7 +44,7 @@ describe("BuildFlow index pages", () => {
 
     const card = await findIndexCard("Projects");
     expect(screen.getByText("Active Projects")).toBeInTheDocument();
-    expect(within(card).getByRole("button", { name: "Add project" })).toBeEnabled();
+    expect(within(await findIndexHead("Projects")).getByRole("button", { name: "Add project" })).toBeEnabled();
 
     const views = within(card).getByRole("tablist", { name: "Project views" });
     expect(within(views).getByRole("tab", { name: /^All projects/ })).toHaveAttribute("aria-selected", "true");
@@ -116,7 +123,7 @@ describe("BuildFlow index pages", () => {
     await openAppPage("Projects");
 
     const card = await findIndexCard("Projects");
-    fireEvent.click(within(card).getByRole("button", { name: "Add project" }));
+    fireEvent.click(within(await findIndexHead("Projects")).getByRole("button", { name: "Add project" }));
     const dialog = screen.getByRole("dialog", { name: "New Project" });
     fireEvent.change(within(dialog).getByLabelText("Project Name"), { target: { value: "South Austin Retail Center" } });
     fireEvent.change(within(dialog).getByLabelText("Location"), { target: { value: "South Austin, TX" } });
@@ -365,7 +372,7 @@ describe("BuildFlow index pages", () => {
     for (const label of ["Equipment", "Materials", "Ready to Use", "Needs Attention"]) {
       expect(screen.getByText(label, { selector: ".hs-kpi-label" })).toBeInTheDocument();
     }
-    expect(within(card).getByRole("button", { name: "Add item" })).toBeEnabled();
+    expect(within(await findIndexHead("Inventory")).getByRole("button", { name: "Add item" })).toBeEnabled();
     const views = within(card).getByRole("tablist", { name: "Inventory views" });
     expect(within(views).getByRole("tab", { name: /^All items/ })).toHaveAttribute("aria-selected", "true");
 
@@ -423,7 +430,7 @@ describe("BuildFlow index pages", () => {
     await openAppPage("Inventory");
 
     const card = await findIndexCard("Inventory");
-    fireEvent.click(within(card).getByRole("button", { name: "Add item" }));
+    fireEvent.click(within(await findIndexHead("Inventory")).getByRole("button", { name: "Add item" }));
     const dialog = screen.getByRole("dialog", { name: "Add item" });
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Forklift #9" } });
     fireEvent.change(within(dialog).getByLabelText("Type"), { target: { value: "Forklift" } });
@@ -543,7 +550,7 @@ describe("BuildFlow index pages", () => {
     await openAppPage("Field Updates");
 
     const card = await findIndexCard("Field Updates");
-    expect(within(card).getByRole("button", { name: "Add Field Update" })).toBeEnabled();
+    expect(within(await findIndexHead("Field Updates")).getByRole("button", { name: "Add Field Update" })).toBeEnabled();
     const views = within(card).getByRole("tablist", { name: "Field update views" });
     expect(within(views).getByRole("tab", { name: /^All updates/ })).toHaveAttribute("aria-selected", "true");
 

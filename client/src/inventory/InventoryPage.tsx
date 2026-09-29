@@ -4,9 +4,10 @@
  * drawer every editing panel in the program uses. See ./inventory.ts for why it is one list and what
  * it replaced.
  *
- * It is the program's index page, not a new design: the KPI strip, the index card (title ⌄ + Add,
- * saved-view tabs with the travelling pill, search / filter / sort, quick filters, the checkbox table,
- * the footer with paging and Export), the aurora field and the cursor glow — the same markup the
+ * It is the program's index page, not a new design: the title ⌄ + Add as the page's banner (skin
+ * §91), the KPI strip, the index card (saved-view tabs with the travelling pill, search / filter /
+ * sort, quick filters, the checkbox table, the footer with paging and Export), the aurora field and
+ * the cursor glow — the same markup the
  * Projects, Crews, Field Updates and DelayIQs pages wear, so the skin's index-page sections, the
  * entrance cascade and the dark palette reach it through its root, `.inv-rx`. The drawer is the
  * `.pdx` editing drawer (skin sections 65 and 70), portalled to <body> for the reason the Crews
@@ -180,6 +181,21 @@ export function InventoryPage({ data, reload, focus, quantityHint = "Example: 24
       </div>
       <div className="dx-cursor" aria-hidden="true" />
 
+      {/* the title and its actions open the page, as the Dashboard's banner (skin §91) */}
+      <div className="hs-index-head">
+        <h1 className="hs-index-title" id="inventory-index-title" data-tutorial-id="inventory-page-title">
+          <TextReveal text="Inventory" nested />
+          <button type="button" aria-label="Show all items" title="All items" onClick={() => setView("all")}>
+            <ChevronDown size={16} />
+          </button>
+        </h1>
+        <div className="hs-index-actions">
+          <button className="hs-btn hs-btn-primary" type="button" onClick={openAdd}>
+            <Plus size={16} /> Add item
+          </button>
+        </div>
+      </div>
+
       <div className="hs-kpis">
         <div className="hs-kpi">
           <span className="hs-kpi-ico tone-blue">
@@ -229,20 +245,6 @@ export function InventoryPage({ data, reload, focus, quantityHint = "Example: 24
 
       <div className="hs-index-main">
         <section className="hs-index-card" aria-labelledby="inventory-index-title">
-          <div className="hs-index-head">
-            <h1 className="hs-index-title" id="inventory-index-title" data-tutorial-id="inventory-page-title">
-              <TextReveal text="Inventory" nested />
-              <button type="button" aria-label="Show all items" title="All items" onClick={() => setView("all")}>
-                <ChevronDown size={16} />
-              </button>
-            </h1>
-            <div className="hs-index-actions">
-              <button className="hs-btn hs-btn-primary" type="button" onClick={openAdd}>
-                <Plus size={16} /> Add item
-              </button>
-            </div>
-          </div>
-
           <div className="hs-views" role="tablist" aria-label="Inventory views">
             {views.map((option) => {
               const ViewIcon = option.icon;

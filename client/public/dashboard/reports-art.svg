@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170" width="300" height="170" fill="none">
+  <!-- The Reporting page's banner picture (Reports, 2026-09-28, the Dashboard's EduLearn design
+       carried to the rest of the program): a chart board with bars and a trend line, and a donut
+       beside it, in the Dashboard banner's pastel 3D. Decorative; the banner draws it as a
+       background. -->
+  <defs>
+    <radialGradient id="rp-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="rp-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="rp-board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#eef0ff" />
+    </linearGradient>
+    <linearGradient id="rp-head" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#8a6ef0" />
+    </linearGradient>
+    <linearGradient id="rp-bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8d9cfb" />
+      <stop offset="1" stop-color="#5b6cf0" />
+    </linearGradient>
+    <linearGradient id="rp-bar-2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c3b1fb" />
+      <stop offset="1" stop-color="#9b7bef" />
+    </linearGradient>
+    <linearGradient id="rp-stand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9cdfb" />
+      <stop offset="1" stop-color="#a3a9f1" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="160" cy="86" r="88" fill="url(#rp-halo)" />
+  <ellipse cx="160" cy="158" rx="132" ry="10" fill="url(#rp-floor)" />
+
+  <!-- the board -->
+  <path d="M142 146 L 150 130 H 186 L 194 146 Z" fill="url(#rp-stand)" />
+  <rect x="96" y="22" width="148" height="112" rx="14" fill="url(#rp-board)" />
+  <rect x="96" y="22" width="148" height="112" rx="14" stroke="#dfe3fd" stroke-width="1.5" />
+  <path d="M96 36 C 96 28.3 102.3 22 110 22 H 230 C 237.7 22 244 28.3 244 36 V 44 H 96 Z" fill="url(#rp-head)" />
+  <rect x="108" y="30" width="44" height="6" rx="3" fill="#ffffff" opacity="0.9" />
+  <rect x="206" y="30" width="26" height="6" rx="3" fill="#ffffff" opacity="0.55" />
+  <g stroke="#e6e9ff" stroke-width="1.5">
+    <path d="M110 66 H 230" />
+    <path d="M110 88 H 230" />
+    <path d="M110 110 H 230" />
+  </g>
+  <rect x="116" y="84" width="16" height="36" rx="4" fill="url(#rp-bar)" />
+  <rect x="140" y="72" width="16" height="48" rx="4" fill="url(#rp-bar-2)" />
+  <rect x="164" y="92" width="16" height="28" rx="4" fill="url(#rp-bar)" />
+  <rect x="188" y="62" width="16" height="58" rx="4" fill="url(#rp-bar-2)" />
+  <rect x="212" y="76" width="16" height="44" rx="4" fill="url(#rp-bar)" />
+  <path d="M124 76 L 148 62 L 172 80 L 196 52 L 220 64" stroke="#f7b733" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <g fill="#ffffff" stroke="#f7b733" stroke-width="2.5">
+    <circle cx="124" cy="76" r="3.5" />
+    <circle cx="148" cy="62" r="3.5" />
+    <circle cx="172" cy="80" r="3.5" />
+    <circle cx="196" cy="52" r="3.5" />
+    <circle cx="220" cy="64" r="3.5" />
+  </g>
+
+  <!-- the donut -->
+  <ellipse cx="56" cy="156" rx="30" ry="5" fill="#4f57cc" opacity="0.16" />
+  <circle cx="56" cy="118" r="30" fill="#e3e7fd" />
+  <circle cx="56" cy="118" r="21" stroke="#5b6cf0" stroke-width="16" stroke-dasharray="62 132" transform="rotate(-90 56 118)" />
+  <circle cx="56" cy="118" r="21" stroke="#3ec79c" stroke-width="16" stroke-dasharray="36 132" stroke-dashoffset="-62" transform="rotate(-90 56 118)" />
+  <circle cx="56" cy="118" r="21" stroke="#f7b733" stroke-width="16" stroke-dasharray="20 132" stroke-dashoffset="-98" transform="rotate(-90 56 118)" />
+  <circle cx="56" cy="118" r="12" fill="#ffffff" />
+
+  <!-- sparkles -->
+  <path d="M266 44 L 268.6 51.4 L 276 54 L 268.6 56.6 L 266 64 L 263.4 56.6 L 256 54 L 263.4 51.4 Z" fill="#b8a9ff" />
+  <path d="M70 52 L 71.4 56.1 L 75.5 57.5 L 71.4 58.9 L 70 63 L 68.6 58.9 L 64.5 57.5 L 68.6 56.1 Z" fill="#9fb3ff" />
+  <circle cx="272" cy="104" r="2.5" fill="#c9bfff" />
+  <circle cx="28" cy="80" r="2.5" fill="#a8c0ff" />
+</svg>

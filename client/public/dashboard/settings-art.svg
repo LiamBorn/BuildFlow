@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170" width="300" height="170" fill="none">
+  <!-- The Settings page's banner picture (2026-09-28, the Dashboard's EduLearn design carried to
+       the rest of the program): two gears turning together and a panel of switches, in the
+       Dashboard banner's pastel 3D. Decorative; the banner draws it as a background. -->
+  <defs>
+    <radialGradient id="st-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="st-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="st-gear" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8d9cfb" />
+      <stop offset="1" stop-color="#5b6cf0" />
+    </linearGradient>
+    <linearGradient id="st-gear-2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c3b1fb" />
+      <stop offset="1" stop-color="#8b6ef0" />
+    </linearGradient>
+    <linearGradient id="st-panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#eef0ff" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="150" cy="86" r="86" fill="url(#st-halo)" />
+  <ellipse cx="156" cy="158" rx="128" ry="10" fill="url(#st-floor)" />
+
+  <!-- the big gear -->
+  <g transform="translate(142 82)" fill="url(#st-gear)">
+    <rect x="-8" y="-54" width="16" height="18" rx="4" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(45)" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(90)" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(135)" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(180)" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(225)" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(270)" />
+    <rect x="-8" y="-54" width="16" height="18" rx="4" transform="rotate(315)" />
+    <circle r="42" />
+  </g>
+  <circle cx="142" cy="82" r="17" fill="#ffffff" />
+  <circle cx="142" cy="82" r="7" fill="#dfe3fd" />
+  <path d="M116 64 C 122 56, 132 51, 142 51" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.45" />
+
+  <!-- the small gear -->
+  <g transform="translate(206 122)" fill="url(#st-gear-2)">
+    <rect x="-5.5" y="-33" width="11" height="12" rx="3" />
+    <rect x="-5.5" y="-33" width="11" height="12" rx="3" transform="rotate(60)" />
+    <rect x="-5.5" y="-33" width="11" height="12" rx="3" transform="rotate(120)" />
+    <rect x="-5.5" y="-33" width="11" height="12" rx="3" transform="rotate(180)" />
+    <rect x="-5.5" y="-33" width="11" height="12" rx="3" transform="rotate(240)" />
+    <rect x="-5.5" y="-33" width="11" height="12" rx="3" transform="rotate(300)" />
+    <circle r="24" />
+  </g>
+  <circle cx="206" cy="122" r="9" fill="#ffffff" />
+
+  <!-- the switches -->
+  <ellipse cx="60" cy="157" rx="34" ry="5" fill="#4f57cc" opacity="0.16" />
+  <rect x="26" y="96" width="68" height="58" rx="12" fill="url(#st-panel)" />
+  <rect x="26" y="96" width="68" height="58" rx="12" stroke="#dfe3fd" stroke-width="1.5" />
+  <rect x="36" y="108" width="30" height="14" rx="7" fill="#5566ee" />
+  <circle cx="59" cy="115" r="5" fill="#ffffff" />
+  <rect x="72" y="112" width="14" height="6" rx="3" fill="#dde2fd" />
+  <rect x="36" y="130" width="30" height="14" rx="7" fill="#dde2fd" />
+  <circle cx="43" cy="137" r="5" fill="#ffffff" />
+  <rect x="72" y="134" width="12" height="6" rx="3" fill="#dde2fd" />
+
+  <!-- sparkles -->
+  <path d="M240 38 L 242.6 45.4 L 250 48 L 242.6 50.6 L 240 58 L 237.4 50.6 L 230 48 L 237.4 45.4 Z" fill="#b8a9ff" />
+  <path d="M70 46 L 71.4 50.1 L 75.5 51.5 L 71.4 52.9 L 70 57 L 68.6 52.9 L 64.5 51.5 L 68.6 50.1 Z" fill="#f7b733" />
+  <circle cx="264" cy="96" r="2.5" fill="#c9bfff" />
+  <circle cx="100" cy="30" r="2.5" fill="#a8c0ff" />
+</svg>

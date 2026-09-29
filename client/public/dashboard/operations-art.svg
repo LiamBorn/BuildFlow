@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170" width="300" height="170" fill="none">
+  <!-- The Operations pages' banner picture (Projects and Crews, 2026-09-28, the Dashboard's EduLearn
+       design carried to the rest of the program): a building's frame going up under a tower crane
+       lifting a beam, and a hard hat set down beside it, in the Dashboard banner's pastel 3D.
+       Decorative; the banner draws it as a background. -->
+  <defs>
+    <radialGradient id="op-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="op-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="op-slab" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9cdfb" />
+      <stop offset="1" stop-color="#a9aef3" />
+    </linearGradient>
+    <linearGradient id="op-column" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#6a5fee" />
+    </linearGradient>
+    <linearGradient id="op-mast" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a6ef0" />
+      <stop offset="1" stop-color="#6a5fee" />
+    </linearGradient>
+    <linearGradient id="op-beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd45c" />
+      <stop offset="1" stop-color="#ee9814" />
+    </linearGradient>
+    <linearGradient id="op-dome" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#ffe597" />
+      <stop offset="0.55" stop-color="#fbbf3c" />
+      <stop offset="1" stop-color="#ee9814" />
+    </linearGradient>
+    <linearGradient id="op-brim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fcc34a" />
+      <stop offset="1" stop-color="#e28a0e" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="160" cy="86" r="86" fill="url(#op-halo)" />
+  <ellipse cx="160" cy="158" rx="128" ry="10" fill="url(#op-floor)" />
+
+  <!-- the frame going up: three slabs on three columns, the lower floor glazed -->
+  <rect x="110" y="121" width="40" height="25" rx="3" fill="#eef0ff" />
+  <rect x="158" y="121" width="40" height="25" rx="3" fill="#e6e9ff" />
+  <rect x="110" y="89" width="40" height="25" rx="3" fill="#e6e9ff" />
+  <path d="M116 142 L 128 125" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+  <path d="M164 142 L 176 125" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+  <rect x="102" y="82" width="8" height="66" rx="2" fill="url(#op-column)" />
+  <rect x="150" y="82" width="8" height="66" rx="2" fill="url(#op-column)" />
+  <rect x="198" y="82" width="8" height="66" rx="2" fill="url(#op-column)" />
+  <rect x="96" y="146" width="116" height="8" rx="3" fill="#8f97f3" />
+  <rect x="96" y="114" width="116" height="7" rx="3" fill="url(#op-slab)" />
+  <rect x="96" y="82" width="116" height="7" rx="3" fill="url(#op-slab)" />
+
+  <!-- the tower crane, lifting the next beam into place -->
+  <rect x="228" y="22" width="10" height="132" rx="2" fill="url(#op-mast)" />
+  <path d="M229.5 30 L 236.5 44 L 229.5 58 L 236.5 72 L 229.5 86 L 236.5 100 L 229.5 114 L 236.5 128 L 229.5 142" stroke="#ffffff" stroke-width="1.4" stroke-linejoin="round" opacity="0.55" />
+  <rect x="116" y="16" width="172" height="8" rx="3" fill="url(#op-mast)" />
+  <rect x="222" y="8" width="22" height="16" rx="4" fill="#5a5fd6" />
+  <rect x="226" y="12" width="9" height="7" rx="2" fill="#dfe3fd" />
+  <rect x="264" y="24" width="20" height="14" rx="3" fill="#a3a9f1" />
+  <path d="M150 24 V 60" stroke="#5a5fd6" stroke-width="1.6" />
+  <path d="M146 60 H 154 L 150 64 Z" fill="#5a5fd6" />
+  <rect x="126" y="64" width="48" height="8" rx="3" fill="url(#op-beam)" />
+  <rect x="130" y="66" width="40" height="2" rx="1" fill="#ffffff" opacity="0.5" />
+
+  <!-- the hard hat, set down beside it -->
+  <ellipse cx="54" cy="160" rx="34" ry="5" fill="#4f57cc" opacity="0.16" />
+  <ellipse cx="54" cy="151" rx="34" ry="6.5" fill="url(#op-brim)" />
+  <path d="M28 150 C 28 131, 38 120, 54 120 C 70 120, 80 131, 80 150 Z" fill="url(#op-dome)" />
+  <rect x="49" y="119.5" width="10" height="30" rx="5" fill="#ffd45c" />
+  <ellipse cx="39" cy="132" rx="4.5" ry="8.5" transform="rotate(-28 39 132)" fill="#ffffff" opacity="0.5" />
+
+  <!-- sparkles -->
+  <path d="M70 52 L 72.4 58.6 L 79 61 L 72.4 63.4 L 70 70 L 67.6 63.4 L 61 61 L 67.6 58.6 Z" fill="#b8a9ff" />
+  <path d="M268 64 L 269.4 68.1 L 273.5 69.5 L 269.4 70.9 L 268 75 L 266.6 70.9 L 262.5 69.5 L 266.6 68.1 Z" fill="#9fb3ff" />
+  <circle cx="276" cy="112" r="2.5" fill="#c9bfff" />
+  <circle cx="34" cy="92" r="2.5" fill="#a8c0ff" />
+</svg>

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170" width="300" height="170" fill="none">
+  <!-- The TimeCard page's banner picture (2026-09-28, the Dashboard's EduLearn design carried to
+       the rest of the program): a timesheet with the crew's hours and a stopwatch, in the Dashboard
+       banner's pastel 3D. Decorative; the banner draws it as a background. -->
+  <defs>
+    <radialGradient id="tc-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="tc-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="tc-sheet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#eef0ff" />
+    </linearGradient>
+    <linearGradient id="tc-head" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#8a6ef0" />
+    </linearGradient>
+    <linearGradient id="tc-watch" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe597" />
+      <stop offset="0.55" stop-color="#fbbf3c" />
+      <stop offset="1" stop-color="#ee9814" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="150" cy="86" r="86" fill="url(#tc-halo)" />
+  <ellipse cx="160" cy="158" rx="130" ry="10" fill="url(#tc-floor)" />
+
+  <!-- the timesheet, a second one behind it -->
+  <rect x="100" y="30" width="116" height="118" rx="14" transform="rotate(6 158 89)" fill="#dfe3fd" />
+  <rect x="92" y="24" width="116" height="124" rx="14" fill="url(#tc-sheet)" />
+  <rect x="92" y="24" width="116" height="124" rx="14" stroke="#dfe3fd" stroke-width="1.5" />
+  <path d="M92 38 C 92 30.3 98.3 24 106 24 H 194 C 201.7 24 208 30.3 208 38 V 46 H 92 Z" fill="url(#tc-head)" />
+  <rect x="104" y="32" width="40" height="6" rx="3" fill="#ffffff" opacity="0.9" />
+  <rect x="172" y="32" width="24" height="6" rx="3" fill="#ffffff" opacity="0.55" />
+  <g>
+    <circle cx="112" cy="64" r="7" fill="#eaefff" />
+    <rect x="124" y="61" width="36" height="6" rx="3" fill="#dde2fd" />
+    <rect x="172" y="58" width="24" height="12" rx="6" fill="#e1f7ef" />
+    <rect x="178" y="62" width="12" height="4" rx="2" fill="#14a578" />
+    <circle cx="112" cy="88" r="7" fill="#f1eafe" />
+    <rect x="124" y="85" width="30" height="6" rx="3" fill="#dde2fd" />
+    <rect x="172" y="82" width="24" height="12" rx="6" fill="#e1f7ef" />
+    <rect x="178" y="86" width="12" height="4" rx="2" fill="#14a578" />
+    <circle cx="112" cy="112" r="7" fill="#fff4dc" />
+    <rect x="124" y="109" width="40" height="6" rx="3" fill="#dde2fd" />
+    <rect x="172" y="106" width="24" height="12" rx="6" fill="#fff4dc" />
+    <rect x="178" y="110" width="12" height="4" rx="2" fill="#e3970a" />
+    <rect x="104" y="128" width="92" height="8" rx="4" fill="#eef0fe" />
+  </g>
+
+  <!-- the stopwatch -->
+  <ellipse cx="248" cy="158" rx="28" ry="4.5" fill="#4f57cc" opacity="0.16" />
+  <rect x="243" y="76" width="10" height="10" rx="3" fill="#e28a0e" />
+  <rect x="239" y="70" width="18" height="8" rx="4" fill="#fbbf3c" />
+  <path d="M270 90 L 276 84" stroke="#e28a0e" stroke-width="5" stroke-linecap="round" />
+  <circle cx="248" cy="120" r="36" fill="url(#tc-watch)" />
+  <circle cx="248" cy="120" r="28" fill="#ffffff" />
+  <g stroke="#f6dca3" stroke-width="2" stroke-linecap="round">
+    <path d="M248 96 V 99" />
+    <path d="M248 141 V 144" />
+    <path d="M224 120 H 227" />
+    <path d="M269 120 H 272" />
+  </g>
+  <path d="M248 120 V 104" stroke="#1c2260" stroke-width="3" stroke-linecap="round" />
+  <path d="M248 120 L 259 127" stroke="#5566ee" stroke-width="3" stroke-linecap="round" />
+  <circle cx="248" cy="120" r="3.5" fill="#1c2260" />
+
+  <!-- sparkles -->
+  <path d="M74 48 L 76.6 55.4 L 84 58 L 76.6 60.6 L 74 68 L 71.4 60.6 L 64 58 L 71.4 55.4 Z" fill="#b8a9ff" />
+  <path d="M232 36 L 233.4 40.1 L 237.5 41.5 L 233.4 42.9 L 232 47 L 230.6 42.9 L 226.5 41.5 L 230.6 40.1 Z" fill="#9fb3ff" />
+  <circle cx="44" cy="120" r="2.5" fill="#c9bfff" />
+  <circle cx="282" cy="72" r="2.5" fill="#a8c0ff" />
+</svg>

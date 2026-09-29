@@ -516,7 +516,12 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .delayIQ-rx .diq-tone-bad .diq-sev`).color).toBe("var(--cc-red)");
     expect(declsOf(`${S} .delayIQ-rx .diq-notify`)["border-radius"]).toBe("999px");
     expect(declsOf(`${S} .delayIQ-rx .form-stack input`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .delayIQ-rx .primary-button`).background).toBe("var(--bf-ink)");
+    // the form's button: the banner's blue-to-violet button since section 91 (2026-09-28)
+    expect(
+      declsOf(
+        `${S} :is(.proj-rx, .crew-rx, .inv-rx, .field-rx, .delayIQ-rx, .tc-rx, .reports-page, .settings-rx) :is(.hs-btn-primary, .primary-button)`
+      ).background
+    ).toBe("var(--edl-cta)");
     expect(declsOf(`${S} .delayIQ-rx .resource-row`).background).toBe("var(--bf-hover)");
     /* The impact chart's bars are NOT painted here any more (colour pass phase two): days
        of delay are drawn in the bad tone, which the chart itself asks for, and the ink
@@ -548,7 +553,8 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .reports-page .recharts-line-curve`).stroke).toBe("var(--bf-color-series-2)");
     expect(declsOf(`${S} .reports-page .recharts-active-dot circle`).fill).toBe("var(--bf-color-series-2)");
     expect(declsOf(`${S} .reports-page .reports-efficiency-row`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .reports-page .reports-actions button`).background).toBe("var(--bf-ink)");
+    // the period's action is the banner's button since section 91 (2026-09-28)
+    expect(declsOf(`${S} .reports-page > .page-title .reports-actions button`).background).toBe("var(--edl-cta)");
     expect(declsOf(`${S} .reports-page .reports-kpi-grid > .reports-kpi-card`)["animation-delay"]).toContain("var(--bfe-r, 0)");
   });
 
@@ -586,7 +592,7 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .tc-rx .hs-kpi-note`)["white-space"]).toBe("normal");
   });
 
-  it("gives the Field Updates entry the card language: display head, second-surface fields, an ink slider, an ink submit", () => {
+  it("gives the Field Updates entry the card language: display head, second-surface fields, a periwinkle slider, the banner's submit", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     expect(declsOf(`${S} .field-rx .crew-directory-card.field-entry-card`)["border-radius"]).toBe("var(--bf-radius-card)");
     expect(declsOf(`${S} .field-rx .crew-card-header h2`)["font-family"]).toBe("var(--bf-font-display)");
@@ -594,30 +600,36 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${S} .field-rx .fp-progress`).background).toBe("var(--bf-hover)");
     expect(declsOf(`${S} .field-rx .fp-progress[data-reporting="on"]`).background).toBe("var(--bf-surface)");
     expect(declsOf(`${S} .field-rx .fp-progress-readout strong`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} .field-rx .fp-progress-slider::-webkit-slider-thumb`).background).toBe("var(--bf-ink)");
+    // the ink the monochrome pass gave the slider and the submit is the periwinkle since section 91 (2026-09-28)
+    expect(declsOf(`${S} .field-rx .fp-progress-slider::-webkit-slider-thumb`).background).toBe("var(--bf-color-accent-fill)");
     expect(declsOf(`${S} .field-rx .fp-drift.behind`).color).toBe("var(--cc-red)");
     expect(declsOf(`${S} .field-rx .field-dropzone`).border).toBe("1px dashed var(--bf-line-solid)");
     expect(declsOf(`${S} .field-rx .field-dropzone.dragging`).background).toBe("var(--bf-color-accent-wash)");
-    expect(declsOf(`${S} .field-rx .field-entry-body .primary-button`).background).toBe("var(--bf-ink)");
+    expect(declsOf(`${S} .field-rx .field-entry-body .primary-button`).background).toBe("var(--edl-cta)");
     expect(declsOf(`${S} .field-rx > .field-entry-card`)["animation-delay"]).toContain("var(--bfm-beat-board)");
   });
 
-  it("gives Settings the card language: a rail card with ink nav pills, display heads, ink switches, a pill-track plan switch", () => {
+  it("gives Settings the card language: a rail card with periwinkle nav pills, display heads, periwinkle switches, a pill-track plan switch", () => {
+    // the monochrome pass's ink is the Dashboard design's periwinkle since section 91 (2026-09-28)
     const S = ".app-shell.hs-shell.bf-shell";
     expect(declsOf(`${S} .settings-rx .settings-rail`)["border-radius"]).toBe("var(--bf-radius-card)");
     expect(declsOf(`${S} .settings-rx .settings-nav-item`)["border-radius"]).toBe("999px");
-    expect(declsOf(`${S} .settings-rx .settings-nav-item.active`).background).toBe("var(--bf-ink)");
+    expect(declsOf(`${S} .settings-rx :is(.settings-nav-item.active, .wc-day.is-on)`).background).toBe("var(--bf-color-accent-fill)");
     expect(declsOf(`${S} .settings-rx .settings-account-card .reports-avatar`).background).toContain("var(--bf-color-face");
     expect(declsOf(`${S} .settings-rx .settings-page-header h1`)["font-family"]).toBe("var(--bf-font-display)");
     expect(declsOf(`${S} .settings-rx .settings-section`)["border-radius"]).toBe("var(--bf-radius-card)");
     expect(declsOf(`${S} .settings-rx .settings-row select`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .settings-rx .settings-toggle.active`).background).toBe("var(--bf-ink)");
-    expect(declsOf(`${S} .settings-rx .settings-primary-action`).background).toBe("var(--bf-ink)");
+    expect(declsOf(`${S} .settings-rx .settings-row .settings-toggle.active`).background).toBe("var(--bf-color-accent-fill)");
+    expect(
+      declsOf(
+        `${S} .settings-rx :is(.settings-primary-action, .settings-inline-submit, .settings-invite-submit, .acct-primary, .sx-plan-cta.primary, .sx-addon-cta)`
+      ).background
+    ).toBe("var(--edl-cta)");
     expect(declsOf(`${S} .settings-rx .sx-plans-title`)["font-family"]).toBe("var(--bf-font-display)");
-    expect(declsOf(`${S} .settings-rx .sx-seg-ind`).background).toBe("var(--bf-ink)");
+    expect(declsOf(`${S} .settings-rx .sx-seg-ind`).background).toBe("var(--bf-color-accent-fill)");
     expect(declsOf(`${S} .settings-rx .sx-plan-price strong`)["font-size"]).toBe("32px");
     expect(declsOf(`${S} .settings-rx .sx-addon-card`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`${S} .settings-rx .wc-day.is-on`).background).toBe("var(--bf-ink)");
+    expect(declsOf(`${S} .settings-rx :is(.settings-nav-item.active, .wc-day.is-on)`).color).toBe("var(--bf-color-on-accent)");
     expect(declsOf(`${S} .settings-rx .settings-panel-inner > *`)["animation-delay"]).toContain("var(--bfe-r, 0)");
   });
 
@@ -1532,11 +1544,16 @@ describe("the Client Desk skin", () => {
     const S = ".app-shell.hs-shell.bf-shell";
     // the index pages and every .dx-title read this one token
     expect(declsOf(".bf-shell")["--bf-page-display"]).toBe("clamp(34px, 3.4vw, 48px)");
-    // Reports, TimeCard and Settings wrote a literal 28px; each reads the token now
-    for (const one of [`${S} .reports-page .page-title h1`, `${S} .tc-rx .tc-title`, `${S} .settings-rx .settings-page-header h1`]) {
+    // Reports, TimeCard and Settings wrote a literal 28px and read the token after it; since section
+    // 91 (2026-09-28) their titles head the Dashboard's banner and take the banner greeting's size
+    for (const one of [
+      `${S} .reports-page > .page-title h1`,
+      `${S} .tc-rx > .tc-hero .tc-title`,
+      `${S} .settings-rx .settings-page-header h1`
+    ]) {
       const title = declsOf(one);
-      expect(title["font-size"], one).toBe("var(--bf-page-display)");
-      expect(title["line-height"], one).toBe("var(--bf-page-display-lead)");
+      expect(title["font-size"], one).toBe("clamp(26px, 2.5vw, 34px)");
+      expect(title["line-height"], one).toBe("1.15");
     }
     // the line under a title grew with it, on a full measure
     const sub = declsOf(`${S} .sched-rx .dx-sub`);

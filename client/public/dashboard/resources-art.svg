@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170" width="300" height="170" fill="none">
+  <!-- The Resources page's banner picture (Inventory, 2026-09-28, the Dashboard's EduLearn design
+       carried to the rest of the program): stacked crates with their labels, a toolbox and a wrench,
+       in the Dashboard banner's pastel 3D. Decorative; the banner draws it as a background. -->
+  <defs>
+    <radialGradient id="rs-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="rs-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="rs-crate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9cdfb" />
+      <stop offset="1" stop-color="#a3a9f1" />
+    </linearGradient>
+    <linearGradient id="rs-crate-2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9cffd" />
+      <stop offset="1" stop-color="#b6a6f6" />
+    </linearGradient>
+    <linearGradient id="rs-box" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#ffe597" />
+      <stop offset="0.55" stop-color="#fbbf3c" />
+      <stop offset="1" stop-color="#ee9814" />
+    </linearGradient>
+    <linearGradient id="rs-steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9fb3ff" />
+      <stop offset="1" stop-color="#6f7ff5" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="150" cy="86" r="86" fill="url(#rs-halo)" />
+  <ellipse cx="156" cy="158" rx="130" ry="10" fill="url(#rs-floor)" />
+
+  <!-- the crates -->
+  <rect x="84" y="96" width="70" height="56" rx="8" fill="url(#rs-crate)" />
+  <rect x="84" y="96" width="70" height="10" rx="5" fill="#dde2fd" />
+  <rect x="114" y="96" width="10" height="56" fill="#ffffff" opacity="0.45" />
+  <rect x="92" y="122" width="18" height="12" rx="3" fill="#ffffff" />
+  <rect x="95" y="126" width="12" height="2" rx="1" fill="#a9aef3" />
+
+  <rect x="158" y="104" width="58" height="48" rx="8" fill="url(#rs-crate-2)" />
+  <rect x="158" y="104" width="58" height="9" rx="4.5" fill="#ece5fd" />
+  <rect x="183" y="104" width="9" height="48" fill="#ffffff" opacity="0.45" />
+  <rect x="198" y="126" width="12" height="10" rx="2.5" fill="#ffffff" />
+
+  <rect x="104" y="52" width="60" height="46" rx="8" fill="url(#rs-crate)" />
+  <rect x="104" y="52" width="60" height="9" rx="4.5" fill="#e6e9ff" />
+  <rect x="129" y="52" width="10" height="46" fill="#ffffff" opacity="0.45" />
+  <rect x="146" y="74" width="12" height="10" rx="2.5" fill="#ffffff" />
+  <path d="M110 80 L 118 72" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.7" />
+
+  <!-- the toolbox -->
+  <ellipse cx="254" cy="156" rx="32" ry="4.5" fill="#4f57cc" opacity="0.16" />
+  <path d="M238 116 V 110 C 238 106, 241 104, 245 104 H 263 C 267 104, 270 106, 270 110 V 116" stroke="#5a5fd6" stroke-width="4" stroke-linecap="round" />
+  <rect x="224" y="114" width="60" height="40" rx="7" fill="url(#rs-box)" />
+  <rect x="224" y="126" width="60" height="4" fill="#e28a0e" opacity="0.55" />
+  <rect x="249" y="122" width="10" height="12" rx="2.5" fill="#fff4dc" />
+
+  <!-- the wrench, leaning on the crates -->
+  <g transform="rotate(-38 60 116)">
+    <rect x="54" y="92" width="11" height="58" rx="5.5" fill="url(#rs-steel)" />
+    <path d="M47 82 C 47 72, 72 72, 72 82 L 72 94 C 72 98, 68 100, 64 100 H 55 C 51 100, 47 98, 47 94 Z" fill="url(#rs-steel)" />
+    <rect x="55" y="74" width="9" height="14" rx="2" fill="#f4f6fd" />
+  </g>
+
+  <!-- sparkles -->
+  <path d="M240 46 L 242.6 53.4 L 250 56 L 242.6 58.6 L 240 66 L 237.4 58.6 L 230 56 L 237.4 53.4 Z" fill="#b8a9ff" />
+  <path d="M76 40 L 77.4 44.1 L 81.5 45.5 L 77.4 46.9 L 76 51 L 74.6 46.9 L 70.5 45.5 L 74.6 44.1 Z" fill="#9fb3ff" />
+  <circle cx="200" cy="72" r="2.5" fill="#c9bfff" />
+  <circle cx="28" cy="120" r="2.5" fill="#a8c0ff" />
+</svg>

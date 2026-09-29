@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 170" width="300" height="170" fill="none">
+  <!-- The Field pages' banner picture (Field Updates and DelayIQs, 2026-09-28, the Dashboard's
+       EduLearn design carried to the rest of the program): a clipboard with the day's checklist, a
+       traffic cone and a small warning flag, in the Dashboard banner's pastel 3D. Decorative; the
+       banner draws it as a background. -->
+  <defs>
+    <radialGradient id="fd-floor" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6f78e8" stop-opacity="0.26" />
+      <stop offset="1" stop-color="#6f78e8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="fd-halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="fd-board" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c8ef8" />
+      <stop offset="1" stop-color="#6a5fee" />
+    </linearGradient>
+    <linearGradient id="fd-paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#eef0ff" />
+    </linearGradient>
+    <linearGradient id="fd-cone" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb070" />
+      <stop offset="1" stop-color="#ee7a2b" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="150" cy="86" r="86" fill="url(#fd-halo)" />
+  <ellipse cx="156" cy="158" rx="128" ry="10" fill="url(#fd-floor)" />
+
+  <!-- the clipboard -->
+  <rect x="104" y="26" width="96" height="126" rx="12" fill="url(#fd-board)" />
+  <rect x="112" y="38" width="80" height="106" rx="7" fill="url(#fd-paper)" />
+  <rect x="134" y="20" width="36" height="16" rx="6" fill="#4a4fc4" />
+  <rect x="142" y="24" width="20" height="6" rx="3" fill="#c9cdfb" />
+  <g>
+    <circle cx="126" cy="60" r="7" fill="#e1f7ef" />
+    <path d="M122.8 60 L 125.3 62.5 L 129.6 57.6" stroke="#14a578" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <rect x="138" y="57" width="42" height="6" rx="3" fill="#dde2fd" />
+    <circle cx="126" cy="82" r="7" fill="#e1f7ef" />
+    <path d="M122.8 82 L 125.3 84.5 L 129.6 79.6" stroke="#14a578" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <rect x="138" y="79" width="34" height="6" rx="3" fill="#dde2fd" />
+    <circle cx="126" cy="104" r="7" fill="#f1eafe" />
+    <circle cx="126" cy="104" r="2.5" fill="#8b5cf6" />
+    <rect x="138" y="101" width="38" height="6" rx="3" fill="#dde2fd" />
+    <circle cx="126" cy="126" r="7" fill="#fff0e5" />
+    <rect x="125" y="121.5" width="2" height="5.5" rx="1" fill="#ee7a2b" />
+    <circle cx="126" cy="129.5" r="1.2" fill="#ee7a2b" />
+    <rect x="138" y="123" width="28" height="6" rx="3" fill="#dde2fd" />
+  </g>
+
+  <!-- the cone -->
+  <ellipse cx="244" cy="157" rx="34" ry="5" fill="#4f57cc" opacity="0.16" />
+  <path d="M236 70 H 252 L 268 146 H 220 Z" fill="url(#fd-cone)" />
+  <path d="M231.6 92 H 256.4 L 259.6 108 H 228.4 Z" fill="#ffffff" opacity="0.9" />
+  <path d="M225.2 124 H 262.8 L 265 134 H 223 Z" fill="#ffffff" opacity="0.9" />
+  <rect x="212" y="144" width="64" height="10" rx="4" fill="#e1661a" />
+  <path d="M238 76 L 234 100" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.45" />
+
+  <!-- the flag: a delay noted -->
+  <path d="M56 70 V 152" stroke="#5a5fd6" stroke-width="4" stroke-linecap="round" />
+  <path d="M58 72 H 90 L 82 84 L 90 96 H 58 Z" fill="#e4455e" />
+  <rect x="71" y="77" width="3" height="9" rx="1.5" fill="#ffffff" />
+  <circle cx="72.5" cy="90" r="1.8" fill="#ffffff" />
+  <ellipse cx="56" cy="155" rx="16" ry="3.5" fill="#4f57cc" opacity="0.16" />
+
+  <!-- sparkles -->
+  <path d="M232 30 L 234.6 37.4 L 242 40 L 234.6 42.6 L 232 50 L 229.4 42.6 L 222 40 L 229.4 37.4 Z" fill="#b8a9ff" />
+  <path d="M84 30 L 85.4 34.1 L 89.5 35.5 L 85.4 36.9 L 84 41 L 82.6 36.9 L 78.5 35.5 L 82.6 34.1 Z" fill="#9fb3ff" />
+  <circle cx="276" cy="92" r="2.5" fill="#c9bfff" />
+  <circle cx="30" cy="112" r="2.5" fill="#a8c0ff" />
+</svg>
