@@ -687,7 +687,7 @@ describe("the Client Desk skin", () => {
   /* The assistant's confirmation prompt (section 62). The reference marks the changed words
      inside the sentence; here those marks are the program's own measured tones, so the card
      never introduces a colour of its own. */
-  it("dresses the assistant's confirmation prompt in the program's tones, with an ink Accept", () => {
+  it("dresses the assistant's confirmation prompt in the program's tones, with the banner's button for Accept", () => {
     const P = "body:has(.app-shell.hs-shell.bf-shell) .bf-breeze";
     const card = declsOf(`${P} .bfai-prop`);
     expect(card.background).toBe("var(--bf-surface)");
@@ -700,8 +700,9 @@ describe("the Client Desk skin", () => {
     expect(declsOf(`${P} .bfai-prop-text del`).color).toBe("var(--bf-color-bad)");
     expect(declsOf(`${P} .bfai-prop-text ins`).background).toBe("var(--bf-color-ok-wash)");
     expect(declsOf(`${P} .bfai-prop-text ins`).color).toBe("var(--bf-color-ok)");
-    // Accept is the program's primary press; Reject is quiet and sits away from it
-    expect(declsOf(`${P} .bfai-prop-actions .bfai-prop-accept`).background).toBe("var(--bf-ink)");
+    // Accept is the program's primary press — the Dashboard design's blue-to-violet button since
+    // skin section 92 (2026-09-28); Reject is quiet and sits away from it
+    expect(declsOf(`${P} .bfai-prop-actions .bfai-prop-accept`).background).toBe("var(--edl-cta)");
     expect(declsOf(`${P} .bfai-prop-actions .bfai-prop-reject`)["margin-left"]).toBe("auto");
     expect(declsOf(`${P} .bfai-prop-actions .bfai-prop-reject`).background).toBe("transparent");
 
@@ -1020,7 +1021,8 @@ describe("the Client Desk skin", () => {
     const shape = declsOf(`body:has(${S}) .pdx .pdx-dialog`);
     expect(shape["border-radius"]).toBe("var(--bf-radius-stage) 0 0 var(--bf-radius-stage)");
     expect(shape.width, "the shared panel width, section 70").toBe("var(--bf-panel-w)");
-    expect(shape["box-shadow"]).toBe("var(--bf-shadow-float)");
+    // section 92 (2026-09-28) sets the Dashboard design's hairline ring over the float shadow
+    expect(shape["box-shadow"]?.replace(/\s+/g, " ")).toBe("0 0 0 1px var(--bf-line-solid), var(--edl-pop-shadow, var(--bf-shadow-float))");
     expect(declsOf(`${P} .pdx .pdx-dialog`)["border-radius"], "the mode-fenced block must not own the shape").toBeUndefined();
     /* A CONFIRM IS THE EXCEPTION (asked for 2026-09-18, right after the drawer landed): it is one
        question with two answers, not a form to work in, so it stays a card in the middle. The
@@ -1060,7 +1062,8 @@ describe("the Client Desk skin", () => {
        `toBeUndefined` reads above are the other half of that — they assert it stays that way. */
     expect(declsOf(`body:has(${S}) .pdx .pdx-title em`).background).toBe("none");
     expect(declsOf(`body:has(${S}) .pdx .pdx-form input`).background).toBe("var(--bf-hover)");
-    expect(declsOf(`body:has(${S}) .pdx .pdx-actions .pdx-save:not(.pdx-danger)`).background).toBe("var(--bf-ink)");
+    // the save is the Dashboard design's blue-to-violet button since section 92 (2026-09-28)
+    expect(declsOf(`body:has(${S}) .pdx .pdx-actions .pdx-save:not(.pdx-danger)`).background).toBe("var(--edl-cta)");
     expect(declsOf(`body:has(${S}) .pdx .pdx-actions .pdx-cancel`)["border-radius"]).toBe("999px");
     /* THE FIELDS LIST IN behind the panel (section 67, asked for 2026-09-18 with a recording of
        another app's panel whose rows arrive after its frame has landed). Unfenced, because motion
@@ -2101,7 +2104,9 @@ describe("the Client Desk skin", () => {
     expect(drawer.width, "the same one number as the other panels").toBe("var(--bf-panel-w)");
     expect([drawer.top, drawer.right, drawer.bottom].join(" "), "docked, not inset 12px").toBe("0 0 0");
     expect(drawer["border-radius"]).toBe("var(--bf-radius-stage) 0 0 var(--bf-radius-stage)");
-    expect(drawer["box-shadow"]).toBe("var(--bf-shadow-float)");
+    expect(drawer["box-shadow"]?.replace(/\s+/g, " ")).toBe(
+      "0 0 0 1px var(--bf-line-solid), var(--edl-pop-shadow, var(--bf-shadow-float))"
+    );
     expect(drawer.background).toBe("var(--bf-surface)");
     // the arrival is the drawer's, not its own keyframe, and at the panel duration
     expect(drawer.animation).toContain("bfe-drawer-in");
@@ -2126,7 +2131,8 @@ describe("the Client Desk skin", () => {
     const close = declsOf(`body:has(${S}) .bfsp .bfsp-close`);
     expect([close.width, close.height].join(" ")).toBe("30px 30px");
     expect(close["border-radius"]).toBe("50%");
-    expect(close.background).toBe("var(--bf-hover)");
+    // a white disc on a hairline since section 92 (2026-09-28), as every pop-up's close
+    expect(close.background).toBe("var(--bf-surface)");
     /* the body: the scroller on the drawer's rhythm, and ONE column — at 480px two columns leave
        211px for a card that carries an eyebrow, a title, three lines and a status */
     const grid = declsOf(`body:has(${S}) .bfsp .bfsp-grid`);

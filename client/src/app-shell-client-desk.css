@@ -20144,3 +20144,565 @@ body.bf-side-resizing:has(.app-shell.hs-shell.bf-shell[data-bf-sidebar="labeled"
     grid-row: 2;
   }
 }
+
+/* ============================================================================
+   92. THE POP-UPS AND DIALOGS ON THE DASHBOARD'S DESIGN (2026-09-28)
+   ----------------------------------------------------------------------------
+   Asked for once every page wore the Dashboard's design (sections 87-91): "Redesign
+   the pop-up panels and dialogs too". So everything that opens OVER a page takes
+   the same EduLearn language: the editing drawers and dialogs (`.pdx`: a project,
+   a crew, an inventory item, a field update, a meeting, WeatherIQ, feedback, the
+   confirmations), the Schedule's dialogs and job drawer, the update and add-on
+   dialogs, Add a section, BuildFlow AI, the notifications, the command palette,
+   Preferences, the account, bookmarks, plans and workspace menus, the rail's
+   flyout, and the select, date and time pickers. Navy ink, a periwinkle accent,
+   white surfaces on a hairline under a soft cool shadow, the primary action the
+   banner's blue-to-violet button, fields ringed in the periwinkle when they have
+   focus, and every choice that the monochrome pass filled with ink — a tab, a
+   day, a chip, a switch, the reply you sent the AI — filled with the periwinkle.
+
+   WHY THE TOKENS ARE WRITTEN AGAIN HERE. Sections 87-91 pin their palette on the
+   page roots and the shell; most of these open as portals to <body> (and the top
+   row's menus sit in the chrome, outside every page), so none of that reaches
+   them. They are declared on each pop-up's own root instead — the same place the
+   dark palette for a portal is declared (section 71), so a token that reads
+   another resolves against the right mode.
+
+   HOW IT IS SCOPED, as sections 87-91 are: every rule names a pop-up's own class;
+   the colours are LIGHT only, word for word for System on a light OS, and the
+   periwinkle is the Default Colors set's. Nothing about what opens, where, or how
+   it moves changes.
+   ============================================================================ */
+
+/* ---- 92a. the measures and the accent's part, on every pop-up's root, from the program's
+   tokens in any mode ---- */
+body:has(.app-shell.hs-shell.bf-shell)
+  :is(
+    .pdx,
+    .schedule-dialog-backdrop,
+    .hs-upd-backdrop,
+    .bfsp,
+    .bf-breeze,
+    .bfsel,
+    .bfdate,
+    .gantt-menu,
+    .gantt-drawer-layer,
+    .bfnt,
+    .cmdk-backdrop,
+    .pref-menu,
+    .user-settings-menu,
+    .hs-menu,
+    .hs-flyout,
+    .bfws-menu,
+    .bftu-panel
+  ) {
+  --edl-card-radius: 18px;
+  --edl-tile-radius: 14px;
+  --edl-title: var(--bf-ink);
+  --edl-soft: var(--bf-hover);
+  --edl-card-shadow: var(--bf-shadow-card);
+  --edl-chip-shadow: var(--bf-shadow-card);
+  --edl-pop-shadow: var(--bf-shadow-float);
+  --edl-cta: var(--bf-color-accent-fill);
+  --edl-cta-hover: var(--bf-color-accent-fill-2);
+  --edl-cta-ink: var(--bf-color-on-accent);
+  --edl-cta-shadow: none;
+  --edl-promo: color-mix(in srgb, var(--bf-color-accent-fill) 9%, var(--bf-surface));
+  --edl-focus: 0 0 0 2px var(--bf-color-accent-fill), 0 0 0 5px var(--bf-color-accent-wash);
+  /* the accent's older names: section 1b declares them on the body too, where they resolve
+     against the body's set — a portal has to resolve them again against its own */
+  --bf-accent: var(--bf-color-accent);
+  --bf-accent-rgb: var(--bf-color-accent-rgb);
+  --bf-accent-fill: var(--bf-color-accent-fill);
+  --bf-on-accent: var(--bf-color-on-accent);
+  --bf-accent-dark: var(--bf-color-accent);
+  --cc-blue: var(--bf-color-accent);
+  --cc-blue-soft: var(--bf-color-accent-wash);
+  --wx-blue: var(--bf-color-accent);
+  --hsh-blue: var(--bf-color-accent);
+  --hsh-blue-soft: var(--bf-color-accent-wash);
+  --hsx-blue: var(--bf-color-accent);
+  --hsx-blue-soft: var(--bf-color-accent-wash);
+}
+
+/* ---- 92b. the neutrals, light only ---- */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="light"])
+  :is(
+    .pdx,
+    .schedule-dialog-backdrop,
+    .hs-upd-backdrop,
+    .bfsp,
+    .bf-breeze,
+    .bfsel,
+    .bfdate,
+    .gantt-menu,
+    .gantt-drawer-layer,
+    .bfnt,
+    .cmdk-backdrop,
+    .pref-menu,
+    .user-settings-menu,
+    .hs-menu,
+    .hs-flyout,
+    .bfws-menu,
+    .bftu-panel
+  ) {
+  --bf-ink: #1b2150;
+  --bf-ink-muted: #5f6687;
+  --bf-ink-faint: #5f6687;
+  --bf-line-rgb: 36, 44, 104;
+  --bf-line-solid: #e6e9f6;
+  --bf-line-soft: #eef0f9;
+  --bf-hover: #f3f5fd;
+  --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+  --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+  --bf-shadow-float: 0 2px 6px rgba(36, 44, 104, 0.06), 0 30px 64px -24px rgba(36, 44, 104, 0.34);
+  --edl-title: #1c2260;
+  --edl-soft: #f6f7fd;
+  --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.16);
+}
+@media (prefers-color-scheme: light) {
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"])
+    :is(
+      .pdx,
+      .schedule-dialog-backdrop,
+      .hs-upd-backdrop,
+      .bfsp,
+      .bf-breeze,
+      .bfsel,
+      .bfdate,
+      .gantt-menu,
+      .gantt-drawer-layer,
+      .bfnt,
+      .cmdk-backdrop,
+      .pref-menu,
+      .user-settings-menu,
+      .hs-menu,
+      .hs-flyout,
+      .bfws-menu,
+      .bftu-panel
+    ) {
+    --bf-ink: #1b2150;
+    --bf-ink-muted: #5f6687;
+    --bf-ink-faint: #5f6687;
+    --bf-line-rgb: 36, 44, 104;
+    --bf-line-solid: #e6e9f6;
+    --bf-line-soft: #eef0f9;
+    --bf-hover: #f3f5fd;
+    --bf-shadow-card: 0 1px 2px rgba(36, 44, 104, 0.04), 0 10px 28px -14px rgba(36, 44, 104, 0.14);
+    --bf-shadow-card-hover: 0 2px 4px rgba(36, 44, 104, 0.05), 0 16px 34px -14px rgba(36, 44, 104, 0.2);
+    --bf-shadow-float: 0 2px 6px rgba(36, 44, 104, 0.06), 0 30px 64px -24px rgba(36, 44, 104, 0.34);
+    --edl-title: #1c2260;
+    --edl-soft: #f6f7fd;
+    --edl-chip-shadow: 0 2px 6px -3px rgba(36, 44, 104, 0.16);
+  }
+}
+
+/* ---- 92c. the periwinkle and the status hues: the Default Colors set, light only (a portal
+   inherits the set from <body>, where the pages' periwinkle never reaches) ---- */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors])))
+  :is(
+    .pdx,
+    .schedule-dialog-backdrop,
+    .hs-upd-backdrop,
+    .bfsp,
+    .bf-breeze,
+    .bfsel,
+    .bfdate,
+    .gantt-menu,
+    .gantt-drawer-layer,
+    .bfnt,
+    .cmdk-backdrop,
+    .pref-menu,
+    .user-settings-menu,
+    .hs-menu,
+    .hs-flyout,
+    .bfws-menu,
+    .bftu-panel
+  ) {
+  --bf-color-accent: #4a5ee8;
+  --bf-color-accent-rgb: 74, 94, 232;
+  --bf-color-accent-fill: #5566ee;
+  --bf-color-accent-fill-rgb: 85, 102, 238;
+  --bf-color-accent-fill-2: #4656e0;
+  --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --bf-color-on-accent: #ffffff;
+  --bf-color-accent-wash: #eef0fe;
+  --bf-color-accent-wash-2: #e3e7fd;
+  --bf-color-accent-wash-3: #d5dbfb;
+  --bf-color-ok: #0f7a5f;
+  --bf-color-ok-wash: #e1f7ef;
+  --bf-color-ok-edge: #b8eadb;
+  --bf-color-warn: #8a5a00;
+  --bf-color-warn-wash: #fff4dc;
+  --bf-color-warn-edge: #f6dca3;
+  --bf-color-bad: #b42341;
+  --bf-color-bad-wash: #ffe9ed;
+  --bf-color-bad-edge: #f7c3cd;
+  --bf-color-info: #6b3fd4;
+  --bf-color-info-rgb: 107, 63, 212;
+  --bf-color-info-wash: #f1eafe;
+  --bf-color-info-edge: #dccdfb;
+  --bf-color-orange: #b0520a;
+  --bf-color-orange-wash: #fff0e5;
+  --bf-color-series-1: #5b7cfa;
+  --bf-color-series-2: #9b7bef;
+  --bf-color-selection: rgba(85, 102, 238, 0.18);
+  --bf-focus-ink: #4a5ee8;
+  --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+  --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+  --edl-promo: #eef0ff;
+}
+@media (prefers-color-scheme: light) {
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors])))
+    :is(
+      .pdx,
+      .schedule-dialog-backdrop,
+      .hs-upd-backdrop,
+      .bfsp,
+      .bf-breeze,
+      .bfsel,
+      .bfdate,
+      .gantt-menu,
+      .gantt-drawer-layer,
+      .bfnt,
+      .cmdk-backdrop,
+      .pref-menu,
+      .user-settings-menu,
+      .hs-menu,
+      .hs-flyout,
+      .bfws-menu,
+      .bftu-panel
+    ) {
+    --bf-color-accent: #4a5ee8;
+    --bf-color-accent-rgb: 74, 94, 232;
+    --bf-color-accent-fill: #5566ee;
+    --bf-color-accent-fill-rgb: 85, 102, 238;
+    --bf-color-accent-fill-2: #4656e0;
+    --bf-color-accent-gradient: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --bf-color-on-accent: #ffffff;
+    --bf-color-accent-wash: #eef0fe;
+    --bf-color-accent-wash-2: #e3e7fd;
+    --bf-color-accent-wash-3: #d5dbfb;
+    --bf-color-ok: #0f7a5f;
+    --bf-color-ok-wash: #e1f7ef;
+    --bf-color-ok-edge: #b8eadb;
+    --bf-color-warn: #8a5a00;
+    --bf-color-warn-wash: #fff4dc;
+    --bf-color-warn-edge: #f6dca3;
+    --bf-color-bad: #b42341;
+    --bf-color-bad-wash: #ffe9ed;
+    --bf-color-bad-edge: #f7c3cd;
+    --bf-color-info: #6b3fd4;
+    --bf-color-info-rgb: 107, 63, 212;
+    --bf-color-info-wash: #f1eafe;
+    --bf-color-info-edge: #dccdfb;
+    --bf-color-orange: #b0520a;
+    --bf-color-orange-wash: #fff0e5;
+    --bf-color-series-1: #5b7cfa;
+    --bf-color-series-2: #9b7bef;
+    --bf-color-selection: rgba(85, 102, 238, 0.18);
+    --bf-focus-ink: #4a5ee8;
+    --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+    --edl-cta-shadow: 0 10px 22px -10px rgba(79, 104, 240, 0.65);
+    --edl-promo: #eef0ff;
+  }
+}
+
+/* ---- 92d. the reference's face, where nobody chose one of their own ---- */
+body:has(.app-shell.hs-shell.bf-shell:is([data-bf-font="inter"], :not([data-bf-font])))
+  :is(
+    .pdx,
+    .schedule-dialog-backdrop,
+    .hs-upd-backdrop,
+    .bfsp,
+    .bf-breeze,
+    .bfsel,
+    .bfdate,
+    .gantt-menu,
+    .gantt-drawer-layer,
+    .bfnt,
+    .cmdk-backdrop,
+    .pref-menu,
+    .user-settings-menu,
+    .hs-menu,
+    .hs-flyout,
+    .bfws-menu,
+    .bftu-panel
+  ) {
+  --bf-font-active: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bf-font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--bf-font-active);
+}
+
+/* ---- 92e. the Ask AI button (and the Dashboard's feedback tab) on every page: the banner's
+   button, as the Dashboard has had it since section 87 ---- */
+body:has(.app-shell.hs-shell.bf-shell) :is(.hc-assistant-fab, .bffb-tab) {
+  --edl-cta: var(--bf-color-accent-fill);
+  --edl-cta-hover: var(--bf-color-accent-fill-2);
+  --edl-cta-ink: var(--bf-color-on-accent);
+}
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"]:is([data-bf-colors="default"], :not([data-bf-colors]))
+  :is(.hc-assistant-fab, .bffb-tab) {
+  --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+  --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+}
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] :is(.hc-assistant-fab, .bffb-tab) {
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+}
+.app-shell.hs-shell.bf-shell[data-bf-mode="light"] :is(.hc-assistant-fab, .bffb-tab):hover {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+}
+@media (prefers-color-scheme: light) {
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"]:is([data-bf-colors="default"], :not([data-bf-colors]))
+    :is(.hc-assistant-fab, .bffb-tab) {
+    --edl-cta: linear-gradient(90deg, #4f68f0, #6c60ec);
+    --edl-cta-hover: linear-gradient(90deg, #4358e2, #5f53e0);
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] :is(.hc-assistant-fab, .bffb-tab) {
+    background: var(--edl-cta);
+    color: var(--edl-cta-ink);
+  }
+  .app-shell.hs-shell.bf-shell[data-bf-mode="system"] :is(.hc-assistant-fab, .bffb-tab):hover {
+    background: var(--edl-cta-hover);
+    color: var(--edl-cta-ink);
+  }
+}
+
+/* ---- 92f. the scrim: the page under a dialog dims to navy, not gray, light only ---- */
+body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="light"])
+  :is(.pdx, .schedule-dialog-backdrop, .hs-upd-backdrop, .gantt-drawer-backdrop, .bfsp-scrim, .cmdk-backdrop) {
+  background: rgba(27, 33, 80, 0.26);
+}
+@media (prefers-color-scheme: light) {
+  body:has(.app-shell.hs-shell.bf-shell[data-bf-mode="system"])
+    :is(.pdx, .schedule-dialog-backdrop, .hs-upd-backdrop, .gantt-drawer-backdrop, .bfsp-scrim, .cmdk-backdrop) {
+    background: rgba(27, 33, 80, 0.26);
+  }
+}
+
+/* ---- 92g. the surfaces: dialogs, drawers, menus and pickers, white on a hairline under a soft
+   cool shadow (their shapes and radii stay their own) ---- */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dialog,
+body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog-backdrop .schedule-dialog,
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-dialog,
+body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-drawer,
+body:has(.app-shell.hs-shell.bf-shell) .gantt-drawer-layer .gantt-drawer,
+body:has(.app-shell.hs-shell.bf-shell) .cmdk-backdrop .cmdk,
+body:has(.app-shell.hs-shell.bf-shell) .bfsel .bfsel-menu,
+body:has(.app-shell.hs-shell.bf-shell) .bfdate .bfdate-panel,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-main,
+body:has(.app-shell.hs-shell.bf-shell)
+  :is(.bfnt, .pref-menu, .user-settings-menu, .hs-menu, .hs-flyout, .bfws-menu, .bfnt-more-menu, .bf-breeze-tools-menu, .sim-dialog) {
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-pop-shadow, var(--bf-shadow-float));
+}
+/* the in-page import dialog is a modal: the dialogs' radius */
+body:has(.app-shell.hs-shell.bf-shell) .sim-dialog {
+  border-radius: 22px;
+}
+
+/* ---- 92h. the heads: an eyebrow in the accent on a lilac pill, the title bold and navy ---- */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-eyebrow,
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-eyebrow {
+  border: 0;
+  background: var(--edl-promo);
+  color: var(--bf-color-accent);
+  font-weight: 700;
+  box-shadow: none;
+}
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-dot {
+  background: var(--bf-color-accent-fill);
+}
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-title,
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-title,
+body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-head h2,
+body:has(.app-shell.hs-shell.bf-shell) .gantt-drawer-layer .gantt-drawer h2,
+body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog-backdrop .schedule-dialog > header h2,
+body:has(.app-shell.hs-shell.bf-shell) .sim-dialog .project-dialog-header h2,
+body:has(.app-shell.hs-shell.bf-shell) .pref-menu .pref-head h2,
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-head h2 {
+  color: var(--edl-title);
+  font-family: var(--bf-font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+/* the one word a title leans on */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-title em {
+  color: var(--bf-color-accent);
+}
+/* the close buttons: a white disc on a hairline */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-close,
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-close,
+body:has(.app-shell.hs-shell.bf-shell) .bfsp .bfsp-close,
+body:has(.app-shell.hs-shell.bf-shell) .gantt-drawer-layer .gantt-drawer-close,
+body:has(.app-shell.hs-shell.bf-shell) .schedule-dialog-backdrop .schedule-dialog > header .icon-button,
+body:has(.app-shell.hs-shell.bf-shell) .sim-dialog .project-dialog-header .icon-button {
+  border: 0;
+  border-radius: 50%;
+  background: var(--bf-surface);
+  color: var(--edl-title);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-chip-shadow);
+}
+
+/* ---- 92i. the fields: ringed in the periwinkle when they have the focus ---- */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form input:focus,
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form select:focus,
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-form textarea:focus,
+body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row input:focus,
+body:has(.app-shell.hs-shell.bf-shell) .pdx .labor-mix-row select:focus,
+body:has(.app-shell.hs-shell.bf-shell) .schedule-job-picker .schedule-job-create-form :is(input, textarea):focus,
+body:has(.app-shell.hs-shell.bf-shell) .schedule-job-picker .schedule-job-create-form select:focus,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-composer:focus-within,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-search:focus-within,
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-search:focus-within,
+body:has(.app-shell.hs-shell.bf-shell) .pref-menu .pref-select:focus-within,
+body:has(.app-shell.hs-shell.bf-shell) .bfws-menu .bfws-search:focus-within,
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .bfws-menu .bfws-search:focus-within {
+  outline: 0;
+  box-shadow: var(--edl-focus);
+}
+
+/* ---- 92j. the actions: the primary one the banner's blue-to-violet button, the others white
+   pills on a hairline ---- */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-save:not(.pdx-danger),
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .primary-button,
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-btn-primary,
+body:has(.app-shell.hs-shell.bf-shell) .pref-menu .pref-full,
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-mac-get,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-send,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bfai-prop-actions .bfai-prop-accept,
+body:has(.app-shell.hs-shell.bf-shell) :is(.schedule-dialog-backdrop, .gantt-drawer-layer) .primary-button,
+body:has(.app-shell.hs-shell.bf-shell) .sim-dialog .primary-button,
+body:has(.app-shell.hs-shell.bf-shell)
+  :is(
+    .pdx,
+    .schedule-dialog-backdrop,
+    .gantt-drawer-layer,
+    .hs-upd-backdrop,
+    .bfsp,
+    .bf-breeze,
+    .bfnt,
+    .cmdk-backdrop,
+    .pref-menu,
+    .user-settings-menu,
+    .hs-menu,
+    .hs-flyout,
+    .bfws-menu
+  )
+  .hs-btn.hs-btn-primary {
+  border: 0;
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+  box-shadow: var(--edl-cta-shadow);
+}
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-save:not(.pdx-danger):hover:not(:disabled),
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .primary-button:hover:not(:disabled),
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-btn-primary:hover,
+body:has(.app-shell.hs-shell.bf-shell) .pref-menu .pref-full:is(:hover, :focus-visible),
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-mac-get:hover,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-send:hover:not(:disabled),
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bfai-prop-actions .bfai-prop-accept:hover,
+body:has(.app-shell.hs-shell.bf-shell) :is(.schedule-dialog-backdrop, .gantt-drawer-layer) .primary-button:hover:not(:disabled),
+body:has(.app-shell.hs-shell.bf-shell) .sim-dialog .primary-button:hover:not(:disabled),
+body:has(.app-shell.hs-shell.bf-shell)
+  :is(
+    .pdx,
+    .schedule-dialog-backdrop,
+    .gantt-drawer-layer,
+    .hs-upd-backdrop,
+    .bfsp,
+    .bf-breeze,
+    .bfnt,
+    .cmdk-backdrop,
+    .pref-menu,
+    .user-settings-menu,
+    .hs-menu,
+    .hs-flyout,
+    .bfws-menu
+  )
+  .hs-btn.hs-btn-primary:hover:not(:disabled) {
+  background: var(--edl-cta-hover);
+  color: var(--edl-cta-ink);
+}
+body:has(.app-shell.hs-shell.bf-shell) .pdx .pdx-actions .pdx-cancel,
+body:has(.app-shell.hs-shell.bf-shell) .hs-upd-backdrop .hs-upd-btn-secondary,
+body:has(.app-shell.hs-shell.bf-shell) :is(.schedule-dialog-backdrop, .gantt-drawer-layer) .outline-button {
+  background: var(--bf-surface);
+  color: var(--edl-title);
+  box-shadow:
+    0 0 0 1px var(--bf-line-solid),
+    var(--edl-chip-shadow);
+}
+
+/* ---- 92k. what the monochrome pass filled with ink takes the periwinkle: the choice that is
+   made, the day that is chosen, the tab and the switch that are on, the AI's mark and the reply
+   you sent it, the workspace you are in ---- */
+body:has(.app-shell.hs-shell.bf-shell) .pdx .bffb-kind[aria-checked="true"],
+body:has(.app-shell.hs-shell.bf-shell) .bfdate .bfdate-day.is-chosen,
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-tab.is-active,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-nav button.active,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-chip.open,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-msg.user .bf-breeze-msg-body,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-tool.on .bf-breeze-tool-icon,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-thumb-remove {
+  border-color: transparent;
+  background: var(--bf-color-accent-fill);
+  color: var(--bf-color-on-accent);
+}
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze :is(.bf-breeze-mark, .bf-breeze-msg-mark, .bf-breeze-hero-mark) {
+  background: var(--edl-cta);
+  color: var(--edl-cta-ink);
+}
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-toggle input:checked + .bfnt-toggle-track {
+  background: var(--bf-color-accent-fill);
+}
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-drop {
+  border-color: var(--bf-color-accent-fill);
+  color: var(--bf-color-accent);
+}
+/* the tab groups' travelling pill: Preferences' switches, the notifications' tabs, the AI's views */
+body:has(.app-shell.hs-shell.bf-shell) .pref-menu .pref-segmented,
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-tabs,
+body:has(.app-shell.hs-shell.bf-shell) .bf-breeze .bf-breeze-nav {
+  --bfm-pill-fill: var(--bf-color-accent-fill);
+}
+/* today in the calendar: a ring in the accent, and the chosen row in a list: a check in it */
+body:has(.app-shell.hs-shell.bf-shell) .bfdate .bfdate-day.is-today:not(.is-chosen) {
+  box-shadow: inset 0 0 0 1.5px var(--bf-color-accent-fill);
+  color: var(--bf-color-accent);
+}
+body:has(.app-shell.hs-shell.bf-shell) .bfsel .bfsel-item[aria-selected="true"] {
+  background: var(--bf-color-accent-wash);
+  color: var(--bf-color-accent);
+}
+body:has(.app-shell.hs-shell.bf-shell) .bfsel .bfsel-item[aria-selected="true"] .bfsel-mark {
+  color: var(--bf-color-accent);
+}
+/* the palette's highlighted command */
+body:has(.app-shell.hs-shell.bf-shell) .cmdk-backdrop .cmdk-item.is-active {
+  background: var(--bf-color-accent-wash);
+  color: var(--edl-title);
+}
+body:has(.app-shell.hs-shell.bf-shell) .cmdk-backdrop .cmdk-item.is-active .cmdk-hint {
+  color: var(--bf-color-accent);
+}
+/* the unread dot sits on the row's own surface, not an ink ring */
+body:has(.app-shell.hs-shell.bf-shell) .bfnt .bfnt-row-dot {
+  background: var(--bf-color-accent-fill);
+  box-shadow: 0 0 0 2px var(--bf-surface);
+}
+/* the workspace you are in, and the switcher while it is open: rings in the accent */
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .bfws-trigger[aria-expanded="true"],
+.app-shell.hs-shell.bf-shell .dash-rx.hs-home .bfws-menu .bfws-item.is-active {
+  box-shadow:
+    0 0 0 2px var(--bf-color-accent-fill),
+    var(--edl-chip-shadow, var(--bf-shadow-card));
+}
